@@ -14,16 +14,8 @@ Platform:
   linux x64
 
 Trace: 
-  Error: https://registry.yarnpkg.com/@openzeppelin/contracts/-/contracts-5.0.2.tgz: ESOCKETTIMEDOUT
-      at ClientRequest.<anonymous> (/usr/local/node18/lib/node_modules/yarn/lib/cli.js:141517:19)
-      at Object.onceWrapper (node:events:627:28)
-      at ClientRequest.emit (node:events:513:28)
-      at TLSSocket.emitRequestTimeout (node:_http_client:848:9)
-      at Object.onceWrapper (node:events:627:28)
-      at TLSSocket.emit (node:events:525:35)
-      at Socket._onTimeout (node:net:570:8)
-      at listOnTimeout (node:internal/timers:569:17)
-      at process.processTimers (node:internal/timers:512:7)
+  Error: getaddrinfo EAI_AGAIN registry.yarnpkg.com
+      at GetAddrInfoReqWrap.onlookup [as oncomplete] (node:dns:107:26)
 
 npm manifest: 
   {
