@@ -44,7 +44,11 @@ contract YAMarket is IYAMarket {
         address lpReceiver
     ) external returns (uint128 lpYaOutAmt, uint128 lpYpOutAmt) {
         cash.transferFrom(msg.sender, address(this), cashAmt);
-        (, lpYaOutAmt, , lpYpOutAmt) = _mintLp(cashAmt, lpReceiver);
+        if (lpReceiver == address(0)) {
+            (, lpYaOutAmt, , lpYpOutAmt) = _mintLp(cashAmt, msg.sender);
+        } else {
+            (, lpYaOutAmt, , lpYpOutAmt) = _mintLp(cashAmt, lpReceiver);
+        }
     }
 
     function _mintLp(
