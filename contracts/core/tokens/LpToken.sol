@@ -19,7 +19,7 @@ contract LpToken is ERC20Permit, Ownable, IMintableERC20 {
         return owner();
     }
 
-    function burn(uint256 amount) external override {
+    function burn(uint256 amount) external override onlyOwner {
         _burn(msg.sender, amount);
     }
 

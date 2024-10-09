@@ -26,11 +26,11 @@ library YAMarketCurve {
         uint32 ltv,
         uint256 daysToMaturity,
         int64 apy,
-        uint128 ypReserve
+        uint256 ypReserve
     ) public pure returns (uint256 yaPlusBeta) {
         // yaReserve + beta = (ypReserve + alpha)/(1 + apy*dayToMaturity/365 - lvt)
         uint ypPlusAlpha = calcYpPlusAlpha(gamma, ypReserve);
-        uint absoluteApy = int256(apy).toUint256();
+        uint absoluteApy = int(apy).toUint256();
         // Use DECIMAL_BASE to solve the problem of precision loss
         if (apy >= 0) {
             yaPlusBeta =
@@ -50,14 +50,13 @@ library YAMarketCurve {
     }
 
     function _calcSellNegYp(
+        uint256 negAmount,
+        uint256 ypReserve,
+        uint256 daysToMaturity,
         uint32 gamma,
         uint32 ltv,
-        uint256 daysToMaturity,
-        uint128 negAmount,
-        uint128 ypReserve,
-        uint128 yaReserve,
         int64 apy
-    ) internal pure returns (uint128, uint128, int64) {
+    ) internal pure returns (int64) {
         uint ypPlusAlpha = calcYpPlusAlpha(gamma, ypReserve);
         uint yaPlusBeta = calcYaPlusBeta(
             gamma,
@@ -67,24 +66,20 @@ library YAMarketCurve {
             ypReserve
         );
         uint b = ypPlusAlpha + yaPlusBeta.mulDiv(ltv, DECIMAL_BASE) - negAmount;
-        uint256 negAc = yaPlusBeta.mulDiv(negAmount * ltv, DECIMAL_BASE);
-        uint256 deltaYa = (((b.sqrt() + 4 * negAc).sqrt() - b) * DECIMAL_BASE) /
+        uint negAc = yaPlusBeta.mulDiv(negAmount * ltv, DECIMAL_BASE);
+        uint deltaYa = (((b.sqrt() + 4 * negAc).sqrt() - b) * DECIMAL_BASE) /
             ltv /
             2;
-        uint256 deltaYp = ypPlusAlpha -
+        uint deltaYp = ypPlusAlpha -
             ypPlusAlpha.mulDiv(yaPlusBeta, yaPlusBeta + deltaYa);
 
-        apy = calcApy(
-            ltv,
-            daysToMaturity,
-            ypPlusAlpha - deltaYp,
-            yaPlusBeta + deltaYa
-        );
-        return (
-            (ypReserve - deltaYp).toUint128(),
-            (yaReserve + deltaYa).toUint128(),
-            apy
-        );
+        return
+            calcApy(
+                ltv,
+                daysToMaturity,
+                ypPlusAlpha - deltaYp,
+                yaPlusBeta + deltaYa
+            );
     }
 
     function calcApy(
@@ -93,14 +88,71 @@ library YAMarketCurve {
         uint256 ypPlusAlpha,
         uint256 yaPlusBeta
     ) public pure returns (int64) {
-        uint256 l = DECIMAL_BASE *
+        uint l = DECIMAL_BASE *
             DAYS_IN_YEAR *
             (ypPlusAlpha * DECIMAL_BASE + yaPlusBeta * ltv);
-        uint256 r = yaPlusBeta * DAYS_IN_YEAR * DECIMAL_BASE_SQRT;
-        int256 numerator = l > r ? int256(l - r) : -int256(r - l);
+        uint r = yaPlusBeta * DAYS_IN_YEAR * DECIMAL_BASE_SQRT;
+        int numerator = l > r ? int(l - r) : -int(r - l);
         return
             (numerator /
                 (uint256(yaPlusBeta) * daysToMaturity * DECIMAL_BASE)
                     .toInt256()).toInt64();
+    }
+
+    // calculate the lp value user will received when provide liquidity
+    function _predictLpOut(
+        uint256 cashAmt,
+        uint256 daysTomaturity,
+        uint256 ypReserve,
+        uint256 lpYpTotalSupply,
+        uint256 yaReserve,
+        uint256 lpYaTotalSupply,
+        uint32 ltv,
+        int64 apy
+    )
+        internal
+        pure
+        returns (
+            uint128 yaMintedAmt,
+            uint128 lpYaOutAmt,
+            uint128 ypMintedAmt,
+            uint128 lpYpOutAmt
+        )
+    {
+        // yaAmt = cashAmt
+        yaMintedAmt = cashAmt.toUint128();
+        lpYaOutAmt = _calculateLpOut(yaReserve, yaMintedAmt, lpYaTotalSupply);
+
+        // deal with case: apy < 0
+        uint absoluteApy = int(apy).toUint256();
+        if (apy >= 0) {
+            ypMintedAmt = cashAmt
+                .mulDiv(
+                    ltv,
+                    DECIMAL_BASE + (absoluteApy * daysTomaturity) / DAYS_IN_YEAR
+                )
+                .toUint128();
+        } else {
+            ypMintedAmt = cashAmt
+                .mulDiv(
+                    ltv,
+                    DECIMAL_BASE - (absoluteApy * daysTomaturity) / DAYS_IN_YEAR
+                )
+                .toUint128();
+        }
+        lpYpOutAmt = _calculateLpOut(ypReserve, ypMintedAmt, lpYpTotalSupply);
+    }
+
+    function _calculateLpOut(
+        uint256 tokenReserve,
+        uint256 tokenIn,
+        uint256 lpTotalSupply
+    ) internal pure returns (uint128 lpOutAmt) {
+        if (lpTotalSupply == 0) {
+            lpOutAmt = tokenIn.toUint128();
+        } else {
+            // lpOutAmt = tokenIn/(tokenReserve/lpTotalSupply) = tokenIn*lpTotalSupply/tokenReserve
+            lpOutAmt = tokenIn.mulDiv(lpTotalSupply, tokenReserve).toUint128();
+        }
     }
 }

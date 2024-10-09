@@ -2,6 +2,13 @@
 pragma solidity ^0.8.27;
 
 interface IYAMarket {
+    event AddLiquidity(
+        address indexed sender,
+        uint256 cashAmount,
+        uint256 ypAmount,
+        uint256 yaAmount
+    );
+
     // bond YpToken, debt YaToken
     function reserves()
         external
@@ -28,7 +35,7 @@ interface IYAMarket {
         uint128 minAmtOut
     ) external returns (uint256 netAmtOut);
 
-    function withdrawYa(uint256 lpAmtIn) external;
+    function withdrawYa(uint256 lpAmtIn, address receiver) external;
 
-    function withdrawYp(uint256 lpAmtIn) external;
+    function withdrawYp(uint256 lpAmtIn, address receiver) external;
 }
