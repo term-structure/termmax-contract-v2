@@ -25,6 +25,13 @@ contract YAMarket is IYAMarket {
     uint32 gamma;
     uint32 immutable ltv; // 9e7
 
+    modifier notExpired() {
+        if (block.timestamp >= maturity) {
+            revert MarketIsExpired();
+        }
+        _;
+    }
+
     function reserves()
         external
         view
@@ -41,14 +48,26 @@ contract YAMarket is IYAMarket {
     // output lp tokens
     function provideLiquidity(
         uint256 cashAmt,
-        address lpReceiver
-    ) external returns (uint128 lpYaOutAmt, uint128 lpYpOutAmt) {
+        address receiver
+    ) external notExpired returns (uint128 lpYaOutAmt, uint128 lpYpOutAmt) {
         cash.transferFrom(msg.sender, address(this), cashAmt);
-        if (lpReceiver == address(0)) {
-            (, lpYaOutAmt, , lpYpOutAmt) = _mintLp(cashAmt, msg.sender);
-        } else {
-            (, lpYaOutAmt, , lpYpOutAmt) = _mintLp(cashAmt, lpReceiver);
+        if (receiver == address(0)) {
+            receiver = msg.sender;
         }
+        uint128 yaMintedAmt;
+        uint128 ypMintedAmt;
+        (yaMintedAmt, lpYaOutAmt, ypMintedAmt, lpYpOutAmt) = _mintLp(
+            cashAmt,
+            receiver
+        );
+        emit AddLiquidity(
+            receiver,
+            cashAmt,
+            ypMintedAmt,
+            lpYpOutAmt,
+            yaMintedAmt,
+            lpYaOutAmt
+        );
     }
 
     function _mintLp(
