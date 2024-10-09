@@ -7,9 +7,12 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {IYAMarket} from "../interfaces/IYAMarket.sol";
 import {IERC20, IMintableERC20} from "../interfaces/IMintableERC20.sol";
 
+import {YAMarketCurve} from "../lib/YAMarketCurve.sol";
+
 contract YAMarket is IYAMarket {
     using Math for uint256;
     using SafeCast for uint256;
+    using SafeCast for int256;
 
     IMintableERC20 ya;
     IMintableERC20 yp;
@@ -18,12 +21,9 @@ contract YAMarket is IYAMarket {
     IERC20 collateral;
     IERC20 cash;
     uint64 maturity;
-    uint32 public interest;
-    uint32 immutable ltvNumerator; // 9e7
-
-    uint32 constant LTV_BASE = 1e8;
-    uint32 constant ONE_DAY_SECONDS = 86400;
-    uint32 constant ONE_YEAR_DAYS = 365;
+    int64 public apy;
+    uint32 gama;
+    uint32 immutable ltv; // 9e7
 
     function reserves()
         external
@@ -107,15 +107,31 @@ contract YAMarket is IYAMarket {
         yaMintedAmt = cashAmt.toUint128();
         lpYaOutAmt = _calculateLpOut(ya, yaMintedAmt, lpYa);
 
-        //ypAmt = (cashAmt*ltvNumerator)/(LTV_BASE + APY*dayTomaturity*LTV_BASE/365)
-        uint dayTomaturity = (maturity - block.timestamp) / ONE_DAY_SECONDS;
-        ypMintedAmt = cashAmt
-            .mulDiv(
-                ltvNumerator,
-                (LTV_BASE +
-                    uint256(interest).mulDiv(dayTomaturity, ONE_YEAR_DAYS))
-            )
-            .toUint128();
+        //ypAmt = (cashAmt*ltvNumerator)/(YAMarketCurve.DECIMAL_BASE + APY*daysTomaturity*YAMarketCurve.DECIMAL_BASE/365)
+        uint daysTomaturity = (maturity - block.timestamp) /
+            YAMarketCurve.SECONDS_IN_DAY;
+
+        // deal with case: apy < 0
+        uint absoluteApy = int256(apy).toUint256();
+        if (apy >= 0) {
+            ypMintedAmt = cashAmt
+                .mulDiv(
+                    ltv,
+                    YAMarketCurve.DECIMAL_BASE +
+                        (absoluteApy * daysTomaturity) /
+                        YAMarketCurve.DAYS_IN_YEAR
+                )
+                .toUint128();
+        } else {
+            ypMintedAmt = cashAmt
+                .mulDiv(
+                    ltv,
+                    YAMarketCurve.DECIMAL_BASE -
+                        (absoluteApy * daysTomaturity) /
+                        YAMarketCurve.DAYS_IN_YEAR
+                )
+                .toUint128();
+        }
         lpYpOutAmt = _calculateLpOut(yp, ypMintedAmt, lpYp);
     }
 
@@ -125,7 +141,11 @@ contract YAMarket is IYAMarket {
         uint128 minAmtOut
     ) external override returns (uint256 netAmtOut) {}
 
-    function withdrawYa(uint128 lpAmtIn) external override {}
+    function withdrawYa(uint256 lpAmtIn) external override {}
 
-    function withdrawYp(uint128 lpAmtIn) external override {}
+    function withdrawYp(uint256 lpAmtIn) external override {
+        uint256 ypReserve = yp.balanceOf(address(this));
+        uint256 lpYpTotalSupply = lpYp.totalSupply();
+        uint removedYp = lpAmtIn.mulDiv(ypReserve, lpYpTotalSupply);
+    }
 }

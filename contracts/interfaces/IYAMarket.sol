@@ -13,8 +13,8 @@ interface IYAMarket {
             uint128 colateralAmt
         );
 
-    // current interest
-    function interest() external view returns (uint32);
+    // current apy
+    function apy() external view returns (int64);
 
     // provide liquidity get lp tokens
     function provideLiquidity(
@@ -28,7 +28,7 @@ interface IYAMarket {
         uint128 minAmtOut
     ) external returns (uint256 netAmtOut);
 
-    function withdrawYa(uint128 lpAmtIn) external;
+    function withdrawYa(uint256 lpAmtIn) external;
 
-    function withdrawYp(uint128 lpAmtIn) external;
+    function withdrawYp(uint256 lpAmtIn) external;
 }
