@@ -137,7 +137,24 @@ contract YAMarket is IYAMarket {
         uint128 minAmtOut
     ) external override returns (uint256 netAmtOut) {}
 
-    function withdrawYa(uint256 lpAmtIn, address receiver) external override {}
+    function withdrawYa(uint256 lpAmtIn, address receiver) external override {
+        lpYa.transferFrom(msg.sender, address(this), lpAmtIn);
+        uint yaReserve = ya.balanceOf(address(this));
+        uint lpYaTotalSupply = lpYa.totalSupply();
+        uint removedYa = lpAmtIn.mulDiv(yaReserve, lpYaTotalSupply);
+
+        uint ypReserve = yp.balanceOf(address(this));
+        apy = YAMarketCurve._sellNegYaApy(
+            removedYa,
+            ypReserve,
+            _daysTomaturity(),
+            gamma,
+            ltv,
+            apy
+        );
+        lpYa.burn(lpAmtIn);
+        ya.transfer(receiver, removedYa);
+    }
 
     function withdrawYp(uint256 lpAmtIn, address receiver) external override {
         lpYp.transferFrom(msg.sender, address(this), lpAmtIn);
@@ -146,7 +163,7 @@ contract YAMarket is IYAMarket {
         uint lpYpTotalSupply = lpYp.totalSupply();
         uint removedYp = lpAmtIn.mulDiv(ypReserve, lpYpTotalSupply);
 
-        apy = YAMarketCurve._calcSellNegYp(
+        apy = YAMarketCurve._sellNegYpApy(
             removedYp,
             ypReserve,
             _daysTomaturity(),
@@ -155,6 +172,6 @@ contract YAMarket is IYAMarket {
             apy
         );
         lpYp.burn(lpAmtIn);
-        ya.transfer(receiver, removedYp);
+        yp.transfer(receiver, removedYp);
     }
 }

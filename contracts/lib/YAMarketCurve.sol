@@ -49,7 +49,7 @@ library YAMarketCurve {
         }
     }
 
-    function _calcSellNegYp(
+    function _sellNegYpApy(
         uint256 negAmount,
         uint256 ypReserve,
         uint256 daysToMaturity,
@@ -79,6 +79,44 @@ library YAMarketCurve {
                 daysToMaturity,
                 ypPlusAlpha - deltaYp,
                 yaPlusBeta + deltaYa
+            );
+    }
+
+    function _sellNegYaApy(
+        uint256 negAmount,
+        uint256 ypReserve,
+        uint256 daysToMaturity,
+        uint32 gamma,
+        uint32 ltv,
+        int64 apy
+    ) internal pure returns (int64) {
+        uint ypPlusAlpha = calcYpPlusAlpha(gamma, ypReserve);
+        uint yaPlusBeta = calcYaPlusBeta(
+            gamma,
+            ltv,
+            daysToMaturity,
+            apy,
+            ypReserve
+        );
+        uint negB = ypPlusAlpha +
+            (yaPlusBeta + negAmount).mulDiv(ltv, DECIMAL_BASE);
+
+        uint ac = (negAmount * yaPlusBeta).mulDiv(
+            uint(ltv).sqrt(),
+            DECIMAL_BASE_SQRT
+        );
+
+        uint deltaYa = ((negB - (negB.sqrt() - 4 * ac).sqrt()) * DECIMAL_BASE) /
+            ltv /
+            2;
+        uint deltaYp = ypPlusAlpha.mulDiv(yaPlusBeta, (yaPlusBeta - deltaYa)) -
+            ypPlusAlpha;
+        return
+            calcApy(
+                ltv,
+                daysToMaturity,
+                uint128(ypPlusAlpha + deltaYp),
+                uint128(yaPlusBeta - deltaYa)
             );
     }
 
