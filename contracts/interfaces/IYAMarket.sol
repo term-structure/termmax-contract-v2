@@ -4,13 +4,18 @@ pragma solidity ^0.8.27;
 interface IYAMarket {
     error MarketIsExpired();
 
-    event AddLiquidity(
+    event ProvideLiquidity(
         address indexed receiver,
         uint256 cashAmount,
-        uint128 ypAmount,
         uint128 lpYpAmount,
-        uint128 yaAmount,
         uint128 lpYaAmount
+    );
+
+    event AddLiquidity(
+        address indexed sender,
+        uint256 cashAmount,
+        uint128 ypMintedAmount,
+        uint128 yaMintedAmount
     );
 
     // bond YpToken, debt YaToken

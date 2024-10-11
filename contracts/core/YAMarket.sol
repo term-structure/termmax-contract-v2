@@ -50,79 +50,48 @@ contract YAMarket is IYAMarket {
         uint256 cashAmt,
         address receiver
     ) external notExpired returns (uint128 lpYaOutAmt, uint128 lpYpOutAmt) {
-        cash.transferFrom(msg.sender, address(this), cashAmt);
+        uint ypReserve = yp.balanceOf(address(this));
+        uint lpYpTotalSupply = lpYp.totalSupply();
+
+        uint yaReserve = ya.balanceOf(address(this));
+        uint lpYaTotalSupply = lpYa.totalSupply();
+        (uint128 ypMintedAmt, uint128 yaMintedAmt) = _addLiquidity(cashAmt);
+
+        lpYpOutAmt = YAMarketCurve._calculateLpOut(
+            ypReserve,
+            ypMintedAmt,
+            lpYpTotalSupply
+        );
+
+        lpYaOutAmt = YAMarketCurve._calculateLpOut(
+            yaReserve,
+            yaMintedAmt,
+            lpYaTotalSupply
+        );
+        // mint LP tokens
         if (receiver == address(0)) {
             receiver = msg.sender;
         }
-        uint128 yaMintedAmt;
-        uint128 ypMintedAmt;
-        (yaMintedAmt, lpYaOutAmt, ypMintedAmt, lpYpOutAmt) = _mintLp(
-            cashAmt,
-            receiver
-        );
-        emit AddLiquidity(
-            receiver,
-            cashAmt,
-            ypMintedAmt,
-            lpYpOutAmt,
-            yaMintedAmt,
-            lpYaOutAmt
-        );
+        lpYa.mint(receiver, lpYaOutAmt);
+        lpYp.mint(receiver, lpYpOutAmt);
+
+        emit ProvideLiquidity(receiver, cashAmt, lpYpOutAmt, lpYaOutAmt);
     }
 
-    function _mintLp(
-        uint256 cashAmt,
-        address lpReceiver
-    )
-        internal
-        returns (
-            uint128 yaMintedAmt,
-            uint128 lpYaOutAmt,
-            uint128 ypMintedAmt,
-            uint128 lpYpOutAmt
-        )
-    {
-        (yaMintedAmt, lpYaOutAmt, ypMintedAmt, lpYpOutAmt) = predictLpOut(
-            cashAmt
-        );
-
-        // Mint ya token to this
-        ya.mint(address(this), yaMintedAmt);
-        // Mint lpYa token to the lpReceiver
-        lpYa.mint(lpReceiver, lpYaOutAmt);
-        // Mint yp token to this
-        yp.mint(address(this), ypMintedAmt);
-        // Mint lpYp token to the lpReceiver
-        lpYp.mint(lpReceiver, lpYpOutAmt);
-    }
-
-    function predictLpOut(
+    function _addLiquidity(
         uint256 cashAmt
-    )
-        public
-        view
-        returns (
-            uint128 yaMintedAmt,
-            uint128 lpYaOutAmt,
-            uint128 ypMintedAmt,
-            uint128 lpYpOutAmt
-        )
-    {
-        uint256 ypReserve = yp.balanceOf(address(this));
-        uint256 lpYpTotalSupply = lpYp.totalSupply();
-        uint256 yaReserve = ya.balanceOf(address(this));
-        uint256 lpYaTotalSupply = lpYa.totalSupply();
-        (yaMintedAmt, lpYaOutAmt, ypMintedAmt, lpYpOutAmt) = YAMarketCurve
-            ._predictLpOut(
-                cashAmt,
-                _daysTomaturity(),
-                ypReserve,
-                lpYpTotalSupply,
-                yaReserve,
-                lpYaTotalSupply,
-                ltv,
-                apy
-            );
+    ) internal returns (uint128 ypMintedAmt, uint128 yaMintedAmt) {
+        cash.transferFrom(msg.sender, address(this), cashAmt);
+
+        ypMintedAmt = cashAmt
+            .mulDiv(ltv, YAMarketCurve.DECIMAL_BASE)
+            .toUint128();
+        yaMintedAmt = cashAmt.toUint128();
+        // Mint tokens to this
+        yp.mint(address(this), ypMintedAmt);
+        ya.mint(address(this), yaMintedAmt);
+
+        emit AddLiquidity(msg.sender, cashAmt, ypMintedAmt, yaMintedAmt);
     }
 
     function _daysTomaturity() internal view returns (uint256 daysToMaturity) {

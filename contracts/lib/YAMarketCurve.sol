@@ -137,50 +137,6 @@ library YAMarketCurve {
                     .toInt256()).toInt64();
     }
 
-    // calculate the lp value user will received when provide liquidity
-    function _predictLpOut(
-        uint256 cashAmt,
-        uint256 daysTomaturity,
-        uint256 ypReserve,
-        uint256 lpYpTotalSupply,
-        uint256 yaReserve,
-        uint256 lpYaTotalSupply,
-        uint32 ltv,
-        int64 apy
-    )
-        internal
-        pure
-        returns (
-            uint128 yaMintedAmt,
-            uint128 lpYaOutAmt,
-            uint128 ypMintedAmt,
-            uint128 lpYpOutAmt
-        )
-    {
-        // yaAmt = cashAmt
-        yaMintedAmt = cashAmt.toUint128();
-        lpYaOutAmt = _calculateLpOut(yaReserve, yaMintedAmt, lpYaTotalSupply);
-
-        // deal with case: apy < 0
-        uint absoluteApy = int(apy).toUint256();
-        if (apy >= 0) {
-            ypMintedAmt = cashAmt
-                .mulDiv(
-                    ltv,
-                    DECIMAL_BASE + (absoluteApy * daysTomaturity) / DAYS_IN_YEAR
-                )
-                .toUint128();
-        } else {
-            ypMintedAmt = cashAmt
-                .mulDiv(
-                    ltv,
-                    DECIMAL_BASE - (absoluteApy * daysTomaturity) / DAYS_IN_YEAR
-                )
-                .toUint128();
-        }
-        lpYpOutAmt = _calculateLpOut(ypReserve, ypMintedAmt, lpYpTotalSupply);
-    }
-
     function _calculateLpOut(
         uint256 tokenReserve,
         uint256 tokenIn,
@@ -192,5 +148,75 @@ library YAMarketCurve {
             // lpOutAmt = tokenIn/(tokenReserve/lpTotalSupply) = tokenIn*lpTotalSupply/tokenReserve
             lpOutAmt = tokenIn.mulDiv(lpTotalSupply, tokenReserve).toUint128();
         }
+    }
+
+    function buy_yp(
+        uint256 amount,
+        uint256 ypReserve,
+        uint256 yaReserve,
+        uint256 daysToMaturity,
+        uint32 gamma,
+        uint32 ltv,
+        int64 apy
+    )
+        public
+        pure
+        returns (uint128 newYpReserve, uint128 newYaReserve, int64 newApy)
+    {
+        uint ypPlusAlpha = calcYpPlusAlpha(gamma, ypReserve);
+        uint yaPlusBeta = calcYaPlusBeta(
+            gamma,
+            ltv,
+            daysToMaturity,
+            apy,
+            ypReserve
+        );
+        uint deltaYaReserve = amount;
+        uint deltaYpReserve = ypPlusAlpha -
+            ypPlusAlpha.mulDiv(yaPlusBeta, (yaPlusBeta + deltaYaReserve));
+        newApy = calcApy(
+            ltv,
+            daysToMaturity,
+            (ypPlusAlpha - deltaYpReserve),
+            (yaPlusBeta + deltaYaReserve)
+        );
+        newYpReserve = (ypReserve - deltaYpReserve).toUint128();
+        newYaReserve = (yaReserve + deltaYaReserve).toUint128();
+    }
+
+    function buy_neg_yp(
+        uint256 negAmount,
+        uint256 ypReserve,
+        uint256 yaReserve,
+        uint256 daysToMaturity,
+        uint32 gamma,
+        uint32 ltv,
+        int64 apy
+    )
+        public
+        pure
+        returns (uint128 newYpReserve, uint128 newYaReserve, int64 newApy)
+    {
+        uint ypPlusAlpha = calcYpPlusAlpha(gamma, ypReserve);
+        uint yaPlusBeta = calcYaPlusBeta(
+            gamma,
+            ltv,
+            daysToMaturity,
+            apy,
+            ypReserve
+        );
+        uint negDeltaYaReserve = negAmount;
+        uint negDeltaYpReserve = ypPlusAlpha.mulDiv(
+            yaPlusBeta,
+            (yaPlusBeta - negDeltaYaReserve)
+        ) - ypPlusAlpha;
+        newApy = calcApy(
+            ltv,
+            daysToMaturity,
+            uint128(ypPlusAlpha + negDeltaYpReserve),
+            uint128(yaPlusBeta - negDeltaYaReserve)
+        );
+        newYpReserve = (ypReserve + negDeltaYpReserve).toUint128();
+        newYaReserve = (yaReserve - negDeltaYaReserve).toUint128();
     }
 }
