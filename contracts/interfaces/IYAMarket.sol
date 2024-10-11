@@ -18,6 +18,22 @@ interface IYAMarket {
         uint128 yaMintedAmount
     );
 
+    event WithdrawYP(
+        address indexed from,
+        uint128 lpYpAmount,
+        uint128 ypAmount,
+        int64 apy,
+        int64 newApy
+    );
+
+    event WithdrawYA(
+        address indexed from,
+        uint128 lpYaAmount,
+        uint128 yaAmount,
+        int64 apy,
+        int64 newApy
+    );
+
     // bond YpToken, debt YaToken
     function reserves()
         external
@@ -46,5 +62,23 @@ interface IYAMarket {
 
     function withdrawYa(uint256 lpAmtIn, address receiver) external;
 
+    // function withdrawYaWithPermit(
+    //     uint256 lpAmtIn,
+    //     address receiver,
+    //     uint256 deadline,
+    //     uint8 v,
+    //     bytes32 r,
+    //     bytes32 s
+    // ) external;
+
     function withdrawYp(uint256 lpAmtIn, address receiver) external;
+
+    // function withdrawYpWithPermit(
+    //     uint256 lpAmtIn,
+    //     address receiver,
+    //     uint256 deadline,
+    //     uint8 v,
+    //     bytes32 r,
+    //     bytes32 s
+    // ) external;
 }

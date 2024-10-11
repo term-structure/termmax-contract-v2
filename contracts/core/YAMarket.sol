@@ -6,7 +6,7 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 import {IYAMarket} from "../interfaces/IYAMarket.sol";
 import {IERC20, IMintableERC20} from "../interfaces/IMintableERC20.sol";
-
+import {LpToken} from "./tokens/LpToken.sol";
 import {YAMarketCurve} from "../lib/YAMarketCurve.sol";
 
 contract YAMarket is IYAMarket {
@@ -16,8 +16,8 @@ contract YAMarket is IYAMarket {
 
     IMintableERC20 ya;
     IMintableERC20 yp;
-    IMintableERC20 lpYa;
-    IMintableERC20 lpYp;
+    LpToken lpYa;
+    LpToken lpYp;
     IERC20 collateral;
     IERC20 cash;
     uint64 maturity;
@@ -107,12 +107,29 @@ contract YAMarket is IYAMarket {
     ) external override returns (uint256 netAmtOut) {}
 
     function withdrawYa(uint256 lpAmtIn, address receiver) external override {
+        _withdrawYa(lpAmtIn, receiver);
+    }
+
+    // function withdrawYaWithPermit(
+    //     uint256 lpAmtIn,
+    //     address sender,
+    //     uint256 deadline,
+    //     uint8 v,
+    //     bytes32 r,
+    //     bytes32 s
+    // ) external override {
+    //     lpYa.permit(sender, address(this), lpAmtIn, deadline, v, r, s);
+    //     _withdrawYa(lpAmtIn, sender);
+    // }
+
+    function _withdrawYa(uint256 lpAmtIn, address receiver) internal {
         lpYa.transferFrom(msg.sender, address(this), lpAmtIn);
         uint yaReserve = ya.balanceOf(address(this));
         uint lpYaTotalSupply = lpYa.totalSupply();
         uint removedYa = lpAmtIn.mulDiv(yaReserve, lpYaTotalSupply);
 
         uint ypReserve = yp.balanceOf(address(this));
+        int64 oldApy = apy;
         apy = YAMarketCurve._sellNegYaApy(
             removedYa,
             ypReserve,
@@ -123,15 +140,39 @@ contract YAMarket is IYAMarket {
         );
         lpYa.burn(lpAmtIn);
         ya.transfer(receiver, removedYa);
+
+        emit WithdrawYA(
+            msg.sender,
+            lpAmtIn.toUint128(),
+            removedYa.toUint128(),
+            oldApy,
+            apy
+        );
     }
 
     function withdrawYp(uint256 lpAmtIn, address receiver) external override {
+        _withdrawYp(lpAmtIn, receiver);
+    }
+
+    // function withdrawYpWithPermit(
+    //     uint256 lpAmtIn,
+    //     address receiver,
+    //     uint256 deadline,
+    //     uint8 v,
+    //     bytes32 r,
+    //     bytes32 s
+    // ) external override {
+    //     lpYp.permit(msg.sender, address(this), lpAmtIn, deadline, v, r, s);
+    //     _withdrawYp(lpAmtIn, receiver);
+    // }
+
+    function _withdrawYp(uint256 lpAmtIn, address receiver) internal {
         lpYp.transferFrom(msg.sender, address(this), lpAmtIn);
 
         uint ypReserve = yp.balanceOf(address(this));
         uint lpYpTotalSupply = lpYp.totalSupply();
         uint removedYp = lpAmtIn.mulDiv(ypReserve, lpYpTotalSupply);
-
+        int64 oldApy = apy;
         apy = YAMarketCurve._sellNegYpApy(
             removedYp,
             ypReserve,
@@ -142,5 +183,13 @@ contract YAMarket is IYAMarket {
         );
         lpYp.burn(lpAmtIn);
         yp.transfer(receiver, removedYp);
+
+        emit WithdrawYP(
+            msg.sender,
+            lpAmtIn.toUint128(),
+            removedYp.toUint128(),
+            oldApy,
+            apy
+        );
     }
 }
