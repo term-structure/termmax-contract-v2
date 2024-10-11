@@ -54,6 +54,43 @@ library YAMarketCurve {
         }
     }
 
+    function sell_yp(
+        uint256 amount,
+        uint256 ypReserve,
+        uint256 yaReserve,
+        uint256 daysToMaturity,
+        uint32 gamma,
+        uint32 ltv,
+        int64 apy
+    )
+        public
+        pure
+        returns (uint128 newYpReserve, uint128 newYaReserve, int64 newApy)
+    {
+        uint ypPlusAlpha = calcYpPlusAlpha(gamma, ypReserve);
+        uint yaPlusBeta = calcYaPlusBeta(
+            gamma,
+            ltv,
+            daysToMaturity,
+            apy,
+            ypReserve
+        );
+        uint negB = ypPlusAlpha + yaPlusBeta.mulDiv(ltv, DECIMAL_BASE) + amount;
+        uint ac = (yaPlusBeta * amount).mulDiv(ltv, DECIMAL_BASE);
+        uint deltaYa = ((negB - (negB.sqrt() - 4 * ac).sqrt()) * DECIMAL_BASE) /
+            ltv /
+            2;
+        uint deltaYp = amount - deltaYa.mulDiv(ltv, DECIMAL_BASE);
+        newApy = calcApy(
+            ltv,
+            daysToMaturity,
+            ypPlusAlpha + deltaYp,
+            yaPlusBeta - deltaYa
+        );
+        newYpReserve = (ypReserve + deltaYp).toUint128();
+        newYaReserve = (yaReserve - deltaYa).toUint128();
+    }
+
     function _sellNegYpApy(
         uint256 negAmount,
         uint256 ypReserve,
@@ -87,6 +124,43 @@ library YAMarketCurve {
             );
     }
 
+    function sell_ya(
+        uint256 amount,
+        uint256 ypReserve,
+        uint256 yaReserve,
+        uint256 daysToMaturity,
+        uint32 gamma,
+        uint32 ltv,
+        int64 apy
+    )
+        public
+        pure
+        returns (uint128 newYpReserve, uint128 newYaReserve, int64 newApy)
+    {
+        uint ypPlusAlpha = calcYpPlusAlpha(gamma, ypReserve);
+        uint yaPlusBeta = calcYaPlusBeta(
+            gamma,
+            ltv,
+            daysToMaturity,
+            apy,
+            ypReserve
+        );
+        uint b = ypPlusAlpha + (yaPlusBeta - amount).mulDiv(ltv, DECIMAL_BASE);
+        uint negAc = (amount * yaPlusBeta).mulDiv(ltv * ltv, DECIMAL_BASE_SQRT);
+        uint deltaYa = (((b.sqrt() + 4 * negAc).sqrt() - b) * DECIMAL_BASE) /
+            ltv /
+            2;
+        uint deltaYp = (amount - deltaYa).mulDiv(ltv, DECIMAL_BASE);
+        newApy = calcApy(
+            ltv,
+            daysToMaturity,
+            ypPlusAlpha - deltaYp,
+            yaPlusBeta + deltaYa
+        );
+        newYpReserve = (ypReserve - deltaYp).toUint128();
+        newYaReserve = (yaReserve + deltaYa).toUint128();
+    }
+
     function _sellNegYaApy(
         uint256 negAmount,
         uint256 ypReserve,
@@ -106,10 +180,7 @@ library YAMarketCurve {
         uint negB = ypPlusAlpha +
             (yaPlusBeta + negAmount).mulDiv(ltv, DECIMAL_BASE);
 
-        uint ac = (negAmount * yaPlusBeta).mulDiv(
-            uint(ltv).sqrt(),
-            DECIMAL_BASE_SQRT
-        );
+        uint ac = (negAmount * yaPlusBeta).mulDiv(ltv * ltv, DECIMAL_BASE_SQRT);
 
         uint deltaYa = ((negB - (negB.sqrt() - 4 * ac).sqrt()) * DECIMAL_BASE) /
             ltv /
@@ -176,17 +247,17 @@ library YAMarketCurve {
             apy,
             ypReserve
         );
-        uint deltaYaReserve = amount;
-        uint deltaYpReserve = ypPlusAlpha -
-            ypPlusAlpha.mulDiv(yaPlusBeta, (yaPlusBeta + deltaYaReserve));
+        uint deltaYa = amount;
+        uint deltaYp = ypPlusAlpha -
+            ypPlusAlpha.mulDiv(yaPlusBeta, (yaPlusBeta + deltaYa));
         newApy = calcApy(
             ltv,
             daysToMaturity,
-            (ypPlusAlpha - deltaYpReserve),
-            (yaPlusBeta + deltaYaReserve)
+            ypPlusAlpha - deltaYp,
+            yaPlusBeta + deltaYa
         );
-        newYpReserve = (ypReserve - deltaYpReserve).toUint128();
-        newYaReserve = (yaReserve + deltaYaReserve).toUint128();
+        newYpReserve = (ypReserve - deltaYp).toUint128();
+        newYaReserve = (yaReserve + deltaYa).toUint128();
     }
 
     function buyNegYp(
@@ -210,30 +281,34 @@ library YAMarketCurve {
             apy,
             ypReserve
         );
-        uint negDeltaYaReserve = negAmount;
-        uint negDeltaYpReserve = ypPlusAlpha.mulDiv(
+        uint negDeltaYa = negAmount;
+        uint negDeltaYp = ypPlusAlpha.mulDiv(
             yaPlusBeta,
-            (yaPlusBeta - negDeltaYaReserve)
+            (yaPlusBeta - negDeltaYa)
         ) - ypPlusAlpha;
         newApy = calcApy(
             ltv,
             daysToMaturity,
-            uint128(ypPlusAlpha + negDeltaYpReserve),
-            uint128(yaPlusBeta - negDeltaYaReserve)
+            ypPlusAlpha + negDeltaYp,
+            yaPlusBeta - negDeltaYa
         );
-        newYpReserve = (ypReserve + negDeltaYpReserve).toUint128();
-        newYaReserve = (yaReserve - negDeltaYaReserve).toUint128();
+        newYpReserve = (ypReserve + negDeltaYp).toUint128();
+        newYaReserve = (yaReserve - negDeltaYa).toUint128();
     }
 
     function buy_ya(
         uint256 amount,
         uint256 ypReserve,
-        uint256 yareserve,
+        uint256 yaReserve,
         uint256 daysToMaturity,
         uint32 gamma,
         uint32 ltv,
         int64 apy
-    ) public pure returns (uint128, uint128, int64) {
+    )
+        public
+        pure
+        returns (uint128 newYpReserve, uint128 newYaReserve, int64 newApy)
+    {
         uint ypPlusAlpha = calcYpPlusAlpha(gamma, ypReserve);
         uint yaPlusBeta = calcYaPlusBeta(
             gamma,
@@ -242,55 +317,53 @@ library YAMarketCurve {
             apy,
             ypReserve
         );
-        uint256 delta_x = (amount * uint256(ltv)) / DECIMAL_BASE;
-        uint256 delta_y = uint256(yaPlusBeta) -
-            (uint256(yaPlusBeta) * uint256(ypPlusAlpha)) /
-            (uint256(ypPlusAlpha) + delta_x);
-        int64 new_apy_numerator = calcApy(
+        uint deltaYp = amount.mulDiv(ltv, DECIMAL_BASE);
+        uint deltaYa = yaPlusBeta -
+            yaPlusBeta.mulDiv(ypPlusAlpha, ypPlusAlpha + deltaYp);
+        newApy = calcApy(
             ltv,
             daysToMaturity,
-            uint128(ypPlusAlpha + delta_x),
-            uint128(yaPlusBeta - delta_y)
+            ypPlusAlpha + deltaYp,
+            yaPlusBeta - deltaYa
         );
-        return (
-            uint128(ypReserve + delta_x),
-            uint128(yareserve - delta_y),
-            new_apy_numerator
-        );
+        newYpReserve = (ypReserve + deltaYp).toUint128();
+        newYaReserve = (yaReserve - deltaYa).toUint128();
     }
 
     function buy_neg_ya(
-        uint32 gamma_numerator_,
-        uint32 ltv_numerator_,
-        uint256 days_to_maturity,
-        uint128 neg_amount,
-        uint128 x,
-        uint128 y,
-        int64 apy_numerator_
-    ) public pure returns (uint128, uint128, int64) {
-        uint x_plus_alpha = calcYpPlusAlpha(gamma_numerator_, x);
-        uint y_plus_beta = calcYaPlusBeta(
-            gamma_numerator_,
-            ltv_numerator_,
-            days_to_maturity,
-            apy_numerator_,
-            x
+        uint256 negAmount,
+        uint256 ypReserve,
+        uint256 yaReserve,
+        uint256 daysToMaturity,
+        uint32 gamma,
+        uint32 ltv,
+        int64 apy
+    )
+        public
+        pure
+        returns (uint128 newYpReserve, uint128 newYaReserve, int64 newApy)
+    {
+        uint ypPlusAlpha = calcYpPlusAlpha(gamma, ypReserve);
+        uint yaPlusBeta = calcYaPlusBeta(
+            gamma,
+            ltv,
+            daysToMaturity,
+            apy,
+            ypReserve
         );
-        uint256 neg_delta_x = (neg_amount * uint256(ltv_numerator_)) /
-            DECIMAL_BASE;
-        uint256 neg_delta_y = (uint256(y_plus_beta) * uint256(x_plus_alpha)) /
-            (uint256(x_plus_alpha) - neg_delta_x) -
-            uint256(y_plus_beta);
-        int64 new_apy_numerator = calcApy(
-            ltv_numerator_,
-            days_to_maturity,
-            uint128(x_plus_alpha - neg_delta_x),
-            uint128(y_plus_beta + neg_delta_y)
+        uint negDeltaYp = negAmount.mulDiv(ltv, DECIMAL_BASE);
+        uint negDeltaYa = yaPlusBeta.mulDiv(
+            ypPlusAlpha,
+            ypPlusAlpha - negDeltaYp
+        ) - yaPlusBeta;
+        newApy = calcApy(
+            ltv,
+            daysToMaturity,
+            ypPlusAlpha - negDeltaYp,
+            yaPlusBeta + negDeltaYa
         );
-        return (
-            uint128(x - neg_delta_x),
-            uint128(y + neg_delta_y),
-            new_apy_numerator
-        );
+
+        newYpReserve = (ypReserve - negDeltaYp).toUint128();
+        newYaReserve = (yaReserve + negDeltaYa).toUint128();
     }
 }
