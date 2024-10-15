@@ -1,36 +1,46 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
+import {IMintableERC20} from "../interfaces/IMintableERC20.sol";
+
 interface IYAMarket {
-    error MarketIsExpired();
+    error MarketIsNotOPen();
+    error MarketWasClosed();
+    error UnSupportedToken();
+    error UnexpectedAmount(
+        address sender,
+        IMintableERC20 token,
+        uint128 expectedAmt,
+        uint128 actualAmt
+    );
 
     event ProvideLiquidity(
-        address indexed receiver,
-        uint256 cashAmount,
-        uint128 lpYpAmount,
-        uint128 lpYaAmount
+        address indexed sender,
+        uint256 cashAmt,
+        uint128 lpYpAmt,
+        uint128 lpYaAmt
     );
 
     event AddLiquidity(
         address indexed sender,
-        uint256 cashAmount,
-        uint128 ypMintedAmount,
-        uint128 yaMintedAmount
+        uint256 cashAmt,
+        uint128 ypMintedAmt,
+        uint128 yaMintedAmt
     );
 
-    event WithdrawYP(
+    event WithdrawLP(
         address indexed from,
-        uint128 lpYpAmount,
-        uint128 ypAmount,
-        int64 apy,
+        IMintableERC20 indexed lpToken,
+        uint128 lpYpAmt,
+        uint128 ypAmt,
         int64 newApy
     );
 
-    event WithdrawYA(
-        address indexed from,
-        uint128 lpYaAmount,
-        uint128 yaAmount,
-        int64 apy,
+    event BuyToken(
+        address indexed sender,
+        IMintableERC20 indexed token,
+        uint128 expectedAmt,
+        uint128 actualAmt,
         int64 newApy
     );
 
@@ -50,35 +60,20 @@ interface IYAMarket {
 
     // provide liquidity get lp tokens
     function provideLiquidity(
-        uint256 cashAmt,
-        address lpReceiver
+        uint256 cashAmt
     ) external returns (uint128 lpYaOutAmt, uint128 lpYpOutAmt);
 
-    function swap(
-        address tokenIn,
-        uint128 amtIn,
-        uint128 minAmtOut
-    ) external returns (uint256 netAmtOut);
+    function withdrawYp(uint256 lpAmtIn) external returns (uint tokenOut);
 
-    function withdrawYa(uint256 lpAmtIn, address receiver) external;
+    function withdrawYa(uint256 lpAmtIn) external returns (uint tokenOut);
 
-    // function withdrawYaWithPermit(
-    //     uint256 lpAmtIn,
-    //     address receiver,
-    //     uint256 deadline,
-    //     uint8 v,
-    //     bytes32 r,
-    //     bytes32 s
-    // ) external;
+    function buyYp(
+        uint128 cashAmtIn,
+        uint128 minTokenOut
+    ) external returns (uint256 netOut);
 
-    function withdrawYp(uint256 lpAmtIn, address receiver) external;
-
-    // function withdrawYpWithPermit(
-    //     uint256 lpAmtIn,
-    //     address receiver,
-    //     uint256 deadline,
-    //     uint8 v,
-    //     bytes32 r,
-    //     bytes32 s
-    // ) external;
+    function buyYa(
+        uint128 cashAmtIn,
+        uint128 minTokenOut
+    ) external returns (uint256 netOut);
 }

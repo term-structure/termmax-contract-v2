@@ -21,13 +21,19 @@ contract YAMarket is IYAMarket {
     IERC20 collateral;
     IERC20 cash;
     uint64 maturity;
+    uint64 openTime;
     int64 public apy;
     uint32 gamma;
+    uint32 lendFeeRatio;
+    uint32 borrowFeeRatio;
     uint32 immutable ltv; // 9e7
 
-    modifier notExpired() {
+    modifier isOpen() {
+        if (block.timestamp < openTime) {
+            revert MarketIsNotOPen();
+        }
         if (block.timestamp >= maturity) {
-            revert MarketIsExpired();
+            revert MarketWasClosed();
         }
         _;
     }
@@ -47,41 +53,43 @@ contract YAMarket is IYAMarket {
     // input cash
     // output lp tokens
     function provideLiquidity(
-        uint256 cashAmt,
-        address receiver
-    ) external notExpired returns (uint128 lpYaOutAmt, uint128 lpYpOutAmt) {
+        uint256 cashAmt
+    ) external isOpen returns (uint128 lpYaOutAmt, uint128 lpYpOutAmt) {
+        (lpYaOutAmt, lpYpOutAmt) = _provideLiquidity(msg.sender, cashAmt);
+    }
+
+    function _provideLiquidity(
+        address sender,
+        uint256 cashAmt
+    ) internal returns (uint128 lpYaOutAmt, uint128 lpYpOutAmt) {
         uint ypReserve = yp.balanceOf(address(this));
         uint lpYpTotalSupply = lpYp.totalSupply();
 
         uint yaReserve = ya.balanceOf(address(this));
         uint lpYaTotalSupply = lpYa.totalSupply();
-        (uint128 ypMintedAmt, uint128 yaMintedAmt) = _addLiquidity(cashAmt);
-
-        lpYpOutAmt = YAMarketCurve._calculateLpOut(
-            ypReserve,
-            ypMintedAmt,
-            lpYpTotalSupply
+        (uint128 ypMintedAmt, uint128 yaMintedAmt) = _addLiquidity(
+            sender,
+            cashAmt
         );
 
-        lpYaOutAmt = YAMarketCurve._calculateLpOut(
-            yaReserve,
-            yaMintedAmt,
-            lpYaTotalSupply
-        );
-        // mint LP tokens
-        if (receiver == address(0)) {
-            receiver = msg.sender;
-        }
-        lpYa.mint(receiver, lpYaOutAmt);
-        lpYp.mint(receiver, lpYpOutAmt);
+        lpYpOutAmt = YAMarketCurve
+            ._calculateLpOut(ypMintedAmt, ypReserve, lpYpTotalSupply)
+            .toUint128();
 
-        emit ProvideLiquidity(receiver, cashAmt, lpYpOutAmt, lpYaOutAmt);
+        lpYaOutAmt = YAMarketCurve
+            ._calculateLpOut(yaMintedAmt, yaReserve, lpYaTotalSupply)
+            .toUint128();
+        lpYa.mint(sender, lpYaOutAmt);
+        lpYp.mint(sender, lpYpOutAmt);
+
+        emit ProvideLiquidity(sender, cashAmt, lpYpOutAmt, lpYaOutAmt);
     }
 
     function _addLiquidity(
+        address sender,
         uint256 cashAmt
     ) internal returns (uint128 ypMintedAmt, uint128 yaMintedAmt) {
-        cash.transferFrom(msg.sender, address(this), cashAmt);
+        cash.transferFrom(sender, address(this), cashAmt);
 
         ypMintedAmt = cashAmt
             .mulDiv(ltv, YAMarketCurve.DECIMAL_BASE)
@@ -91,7 +99,7 @@ contract YAMarket is IYAMarket {
         yp.mint(address(this), ypMintedAmt);
         ya.mint(address(this), yaMintedAmt);
 
-        emit AddLiquidity(msg.sender, cashAmt, ypMintedAmt, yaMintedAmt);
+        emit AddLiquidity(sender, cashAmt, ypMintedAmt, yaMintedAmt);
     }
 
     function _daysTomaturity() internal view returns (uint256 daysToMaturity) {
@@ -100,96 +108,195 @@ contract YAMarket is IYAMarket {
             YAMarketCurve.SECONDS_IN_DAY;
     }
 
-    function swap(
-        address tokenIn,
-        uint128 amtIn,
-        uint128 minAmtOut
-    ) external override returns (uint256 netAmtOut) {}
-
-    function withdrawYa(uint256 lpAmtIn, address receiver) external override {
-        _withdrawYa(lpAmtIn, receiver);
+    function withdrawYp(
+        uint256 lpAmtIn
+    ) external override isOpen returns (uint tokenOut) {
+        tokenOut = _withdrawLp(msg.sender, lpYp, lpAmtIn);
     }
 
-    // function withdrawYaWithPermit(
-    //     uint256 lpAmtIn,
-    //     address sender,
-    //     uint256 deadline,
-    //     uint8 v,
-    //     bytes32 r,
-    //     bytes32 s
-    // ) external override {
-    //     lpYa.permit(sender, address(this), lpAmtIn, deadline, v, r, s);
-    //     _withdrawYa(lpAmtIn, sender);
-    // }
+    function withdrawYa(
+        uint256 lpAmtIn
+    ) external override isOpen returns (uint tokenOut) {
+        tokenOut = _withdrawLp(msg.sender, lpYa, lpAmtIn);
+    }
 
-    function _withdrawYa(uint256 lpAmtIn, address receiver) internal {
-        lpYa.transferFrom(msg.sender, address(this), lpAmtIn);
+    function _withdrawLp(
+        address sender,
+        LpToken lpToken,
+        uint256 lpAmtIn
+    ) internal returns (uint tokenOut) {
+        lpToken.transferFrom(sender, address(this), lpAmtIn);
+        uint ypReserve = yp.balanceOf(address(this));
         uint yaReserve = ya.balanceOf(address(this));
-        uint lpYaTotalSupply = lpYa.totalSupply();
-        uint removedYa = lpAmtIn.mulDiv(yaReserve, lpYaTotalSupply);
-
-        uint ypReserve = yp.balanceOf(address(this));
-        int64 oldApy = apy;
-        apy = YAMarketCurve._sellNegYaApy(
-            removedYa,
-            ypReserve,
-            _daysTomaturity(),
-            gamma,
-            ltv,
-            apy
+        uint lpTokenTotalSupply = lpToken.totalSupply();
+        // calculate rewards
+        uint rewards = YAMarketCurve.calculateLpReward(
+            block.timestamp,
+            openTime,
+            maturity,
+            lpTokenTotalSupply,
+            lpAmtIn,
+            lpToken.balanceOf(address(this))
         );
-        lpYa.burn(lpAmtIn);
-        ya.transfer(receiver, removedYa);
+        lpAmtIn += rewards;
+        lpToken.burn(lpAmtIn);
+        tokenOut = lpAmtIn.mulDiv(ypReserve, lpTokenTotalSupply);
+        if (lpToken == lpYp) {
+            (, , apy) = YAMarketCurve._sellNegYp(
+                tokenOut,
+                ypReserve,
+                yaReserve,
+                _daysTomaturity(),
+                gamma,
+                ltv,
+                apy
+            );
+            yp.transfer(sender, tokenOut);
+        } else {
+            (, , apy) = YAMarketCurve._sellNegYa(
+                tokenOut,
+                ypReserve,
+                yaReserve,
+                _daysTomaturity(),
+                gamma,
+                ltv,
+                apy
+            );
+            ya.transfer(sender, tokenOut);
+        }
 
-        emit WithdrawYA(
-            msg.sender,
+        emit WithdrawLP(
+            sender,
+            lpToken,
             lpAmtIn.toUint128(),
-            removedYa.toUint128(),
-            oldApy,
+            tokenOut.toUint128(),
             apy
         );
     }
 
-    function withdrawYp(uint256 lpAmtIn, address receiver) external override {
-        _withdrawYp(lpAmtIn, receiver);
+    function buyYp(
+        uint128 cashAmtIn,
+        uint128 minTokenOut
+    ) external override returns (uint256 netOut) {
+        netOut = _buyToken(msg.sender, yp, cashAmtIn, minTokenOut);
     }
 
-    // function withdrawYpWithPermit(
-    //     uint256 lpAmtIn,
-    //     address receiver,
-    //     uint256 deadline,
-    //     uint8 v,
-    //     bytes32 r,
-    //     bytes32 s
-    // ) external override {
-    //     lpYp.permit(msg.sender, address(this), lpAmtIn, deadline, v, r, s);
-    //     _withdrawYp(lpAmtIn, receiver);
-    // }
+    function buyYa(
+        uint128 cashAmtIn,
+        uint128 minTokenOut
+    ) external override returns (uint256 netOut) {
+        netOut = _buyToken(msg.sender, ya, cashAmtIn, minTokenOut);
+    }
 
-    function _withdrawYp(uint256 lpAmtIn, address receiver) internal {
-        lpYp.transferFrom(msg.sender, address(this), lpAmtIn);
-
+    function _buyToken(
+        address sender,
+        IMintableERC20 token,
+        uint128 cashAmtIn,
+        uint128 minTokenOut
+    ) internal returns (uint256 netOut) {
+        // Get old reserves
         uint ypReserve = yp.balanceOf(address(this));
-        uint lpYpTotalSupply = lpYp.totalSupply();
-        uint removedYp = lpAmtIn.mulDiv(ypReserve, lpYpTotalSupply);
-        int64 oldApy = apy;
-        apy = YAMarketCurve._sellNegYpApy(
-            removedYp,
-            ypReserve,
-            _daysTomaturity(),
-            gamma,
-            ltv,
-            apy
-        );
-        lpYp.burn(lpAmtIn);
-        yp.transfer(receiver, removedYp);
+        uint yaReserve = ya.balanceOf(address(this));
+        uint feeAmt;
+        // add new lituidity
+        _addLiquidity(sender, cashAmtIn);
+        if (token == yp) {
+            (uint newYpReserve, uint newYaReserve, int64 newApy) = YAMarketCurve
+                .buyYp(
+                    cashAmtIn,
+                    ypReserve,
+                    yaReserve,
+                    _daysTomaturity(),
+                    gamma,
+                    ltv,
+                    apy
+                );
+            // calculate fee
+            feeAmt = YAMarketCurve.calculateFee(
+                ypReserve,
+                yaReserve,
+                newYpReserve,
+                newYaReserve,
+                lendFeeRatio,
+                ltv
+            );
+            uint finalYpReserve;
+            (finalYpReserve, , apy) = YAMarketCurve.buyNegYp(
+                feeAmt,
+                ypReserve,
+                yaReserve,
+                _daysTomaturity(),
+                gamma,
+                ltv,
+                newApy
+            );
 
-        emit WithdrawYP(
-            msg.sender,
-            lpAmtIn.toUint128(),
-            removedYp.toUint128(),
-            oldApy,
-            apy
+            uint ypCurrentReserve = yp.balanceOf(address(this));
+            netOut = ypCurrentReserve - finalYpReserve;
+        } else {
+            (uint newYpReserve, uint newYaReserve, int64 newApy) = YAMarketCurve
+                .buyYa(
+                    cashAmtIn,
+                    ypReserve,
+                    yaReserve,
+                    _daysTomaturity(),
+                    gamma,
+                    ltv,
+                    apy
+                );
+            // calculate fee
+            feeAmt = YAMarketCurve.calculateFee(
+                ypReserve,
+                yaReserve,
+                newYpReserve,
+                newYaReserve,
+                borrowFeeRatio,
+                ltv
+            );
+            uint finalYaReserve;
+            (finalYaReserve, , apy) = YAMarketCurve.buyNegYa(
+                feeAmt,
+                ypReserve,
+                yaReserve,
+                _daysTomaturity(),
+                gamma,
+                ltv,
+                newApy
+            );
+            uint yaCurrentReserve = ya.balanceOf(address(this));
+            netOut = yaCurrentReserve - finalYaReserve;
+        }
+
+        if (netOut < minTokenOut) {
+            revert UnexpectedAmount(
+                sender,
+                token,
+                minTokenOut,
+                netOut.toUint128()
+            );
+        }
+        token.transfer(sender, netOut);
+        // _lock_fee
+        _lockFee(feeAmt);
+        emit BuyToken(sender, token, minTokenOut, netOut.toUint128(), apy);
+    }
+
+    function _lockFee(uint256 feeAmount) internal {
+        uint feeToLock = (feeAmount + 1) / 2;
+        uint ypAmount = feeToLock.mulDiv(ltv, YAMarketCurve.DECIMAL_BASE);
+
+        uint lpYpAmt = YAMarketCurve._calculateLpOut(
+            ypAmount,
+            yp.balanceOf(address(this)) - ypAmount,
+            lpYp.totalSupply()
         );
+        lpYp.mint(address(this), lpYpAmt);
+
+        uint lpYaAmt = YAMarketCurve._calculateLpOut(
+            feeToLock,
+            ya.balanceOf(address(this)) - feeToLock,
+            lpYa.totalSupply()
+        );
+        lpYa.mint(address(this), lpYaAmt);
     }
 }

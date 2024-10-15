@@ -14,6 +14,32 @@ library YAMarketCurve {
     uint16 public constant DAYS_IN_YEAR = 365;
     uint32 public constant SECONDS_IN_DAY = 86400;
 
+    /**
+     * function provide_liquidity(
+            uint128 amount,
+            uint256 token_supply,
+            uint256 total_supply
+        ) public pure returns (uint256) {
+            if (token_supply == 0) {
+                return amount;
+            } else {
+                return (uint256(amount) * total_supply) / token_supply;
+            }
+        }
+    */
+    function _calculateLpOut(
+        uint256 tokenIn,
+        uint256 tokenReserve,
+        uint256 lpTotalSupply
+    ) internal pure returns (uint256 lpOutAmt) {
+        if (lpTotalSupply == 0) {
+            lpOutAmt = tokenIn;
+        } else {
+            // lpOutAmt = tokenIn/(tokenReserve/lpTotalSupply) = tokenIn*lpTotalSupply/tokenReserve
+            lpOutAmt = tokenIn.mulDiv(lpTotalSupply, tokenReserve);
+        }
+    }
+
     /*
     function calc_x_plus_alpha(
         uint32 gamma_numerator_,
@@ -207,19 +233,6 @@ library YAMarketCurve {
         }
     }
 
-    function _calculateLpOut(
-        uint256 tokenReserve,
-        uint256 tokenIn,
-        uint256 lpTotalSupply
-    ) internal pure returns (uint256 lpOutAmt) {
-        if (lpTotalSupply == 0) {
-            lpOutAmt = tokenIn;
-        } else {
-            // lpOutAmt = tokenIn/(tokenReserve/lpTotalSupply) = tokenIn*lpTotalSupply/tokenReserve
-            lpOutAmt = tokenIn.mulDiv(lpTotalSupply, tokenReserve);
-        }
-    }
-
     /*function calculate_lp_reward(
         uint256 current_time,
         uint256 open_market_time,
@@ -240,12 +253,12 @@ library YAMarketCurve {
         uint256 openMarketTime,
         uint256 maturity,
         uint256 lpSupply,
-        uint256 amount,
+        uint256 lpAmt,
         uint256 totalReward
     ) public pure returns (uint256 rewards) {
         uint t = (lpSupply - totalReward) *
             (2 * maturity - openMarketTime - currentTime);
-        rewards = (totalReward * amount).mulDiv(
+        rewards = (totalReward * lpAmt).mulDiv(
             (currentTime - openMarketTime),
             t
         );
@@ -373,11 +386,16 @@ library YAMarketCurve {
     function _sellNegYp(
         uint256 negAmount,
         uint256 ypReserve,
+        uint256 yaReserve,
         uint256 daysToMaturity,
         uint32 gamma,
         uint32 ltv,
         int64 apy
-    ) internal pure returns (int64) {
+    )
+        internal
+        pure
+        returns (uint256 newYpReserve, uint256 newYaReserve, int64 newApy)
+    {
         uint ypPlusAlpha = calcYpPlusAlpha(gamma, ypReserve);
         uint yaPlusBeta = calcYaPlusBeta(
             gamma,
@@ -393,14 +411,14 @@ library YAMarketCurve {
             2;
         uint deltaYp = ypPlusAlpha -
             ypPlusAlpha.mulDiv(yaPlusBeta, yaPlusBeta + deltaYa);
-
-        return
-            calcApy(
-                ltv,
-                daysToMaturity,
-                ypPlusAlpha - deltaYp,
-                yaPlusBeta + deltaYa
-            );
+        newApy = calcApy(
+            ltv,
+            daysToMaturity,
+            ypPlusAlpha - deltaYp,
+            yaPlusBeta + deltaYa
+        );
+        newYpReserve = ypReserve - deltaYp;
+        newYaReserve = yaReserve + deltaYa;
     }
 
     /**
@@ -525,11 +543,16 @@ library YAMarketCurve {
     function _sellNegYa(
         uint256 negAmount,
         uint256 ypReserve,
+        uint256 yaReserve,
         uint256 daysToMaturity,
         uint32 gamma,
         uint32 ltv,
         int64 apy
-    ) internal pure returns (int64) {
+    )
+        internal
+        pure
+        returns (uint256 newYpReserve, uint256 newYaReserve, int64 newApy)
+    {
         uint ypPlusAlpha = calcYpPlusAlpha(gamma, ypReserve);
         uint yaPlusBeta = calcYaPlusBeta(
             gamma,
@@ -548,13 +571,14 @@ library YAMarketCurve {
             2;
         uint deltaYp = ypPlusAlpha.mulDiv(yaPlusBeta, (yaPlusBeta - deltaYa)) -
             ypPlusAlpha;
-        return
-            calcApy(
-                ltv,
-                daysToMaturity,
-                ypPlusAlpha + deltaYp,
-                yaPlusBeta - deltaYa
-            );
+        newApy = calcApy(
+            ltv,
+            daysToMaturity,
+            ypPlusAlpha + deltaYp,
+            yaPlusBeta - deltaYa
+        );
+        newYpReserve = ypReserve + deltaYp;
+        newYaReserve = yaReserve - deltaYa;
     }
 
     /**
@@ -597,7 +621,7 @@ library YAMarketCurve {
         uint32 ltv,
         int64 apy
     )
-        public
+        internal
         pure
         returns (uint256 newYpReserve, uint256 newYaReserve, int64 newApy)
     {
@@ -795,7 +819,7 @@ library YAMarketCurve {
         );
     }
      */
-    function buynegYa(
+    function buyNegYa(
         uint256 negAmount,
         uint256 ypReserve,
         uint256 yaReserve,
