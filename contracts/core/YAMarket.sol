@@ -3,10 +3,10 @@ pragma solidity ^0.8.27;
 
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-
+import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {IYAMarket} from "../interfaces/IYAMarket.sol";
 import {IERC20, IMintableERC20} from "../interfaces/IMintableERC20.sol";
-import {LpToken} from "./tokens/LpToken.sol";
+import {IFlashLoanReceiver} from "../interfaces/IFlashLoanReceiver.sol";
 import {YAMarketCurve} from "../lib/YAMarketCurve.sol";
 
 contract YAMarket is IYAMarket {
@@ -14,12 +14,19 @@ contract YAMarket is IYAMarket {
     using SafeCast for uint256;
     using SafeCast for int256;
 
+    string constant PREFIX_YP = "YP:";
+    string constant PREFIX_YA = "YA:";
+    string constant PREFIX_LP_YP = "LpYP:";
+    string constant PREFIX_LP_YA = "LpYA:";
+
     IMintableERC20 ya;
     IMintableERC20 yp;
-    LpToken lpYa;
-    LpToken lpYp;
+    IMintableERC20 lpYa;
+    IMintableERC20 lpYp;
     IERC20 collateral;
     IERC20 cash;
+    //10**ya.decimals()
+    uint256 mintLeveragedYa;
     uint64 maturity;
     uint64 openTime;
     int64 public apy;
@@ -27,6 +34,7 @@ contract YAMarket is IYAMarket {
     uint32 lendFeeRatio;
     uint32 borrowFeeRatio;
     uint32 immutable ltv; // 9e7
+    uint32 immutable liquidateThreshhold; // 85e6
 
     modifier isOpen() {
         if (block.timestamp < openTime) {
@@ -37,6 +45,8 @@ contract YAMarket is IYAMarket {
         }
         _;
     }
+
+    constructor(IERC20 collateralToken, IERC20 cashToken, address) {}
 
     function reserves()
         external
@@ -220,6 +230,7 @@ contract YAMarket is IYAMarket {
                 lendFeeRatio,
                 ltv
             );
+            //TODO protocol rewards
             uint finalYpReserve;
             (finalYpReserve, , apy) = YAMarketCurve.buyNegYp(
                 feeAmt,
@@ -253,6 +264,7 @@ contract YAMarket is IYAMarket {
                 borrowFeeRatio,
                 ltv
             );
+            //TODO protocol rewards
             uint finalYaReserve;
             (finalYaReserve, , apy) = YAMarketCurve.buyNegYa(
                 feeAmt,
@@ -281,6 +293,79 @@ contract YAMarket is IYAMarket {
         emit BuyToken(sender, token, minTokenOut, netOut.toUint128(), apy);
     }
 
+    function _sellToken(
+        address sender,
+        IMintableERC20 token,
+        uint128 tokenAmtIn,
+        uint128 minCashOut
+    ) internal returns (uint256 netOut) {
+        token.transferFrom(sender, address(this), tokenAmtIn);
+        // Get old reserves
+        uint ypReserve = yp.balanceOf(address(this));
+        uint yaReserve = ya.balanceOf(address(this));
+        uint feeAmt;
+        if (token == yp) {
+            (uint newYpReserve, uint newYaReserve, int64 newApy) = YAMarketCurve
+                .sellYp(
+                    tokenAmtIn,
+                    ypReserve,
+                    yaReserve,
+                    _daysTomaturity(),
+                    gamma,
+                    ltv,
+                    apy
+                );
+            netOut = yaReserve - newYpReserve;
+            // calculate fee
+            feeAmt = YAMarketCurve.calculateFee(
+                ypReserve,
+                yaReserve,
+                newYpReserve,
+                newYaReserve,
+                borrowFeeRatio,
+                ltv
+            );
+            apy = newApy;
+        } else {
+            (uint newYpReserve, uint newYaReserve, int64 newApy) = YAMarketCurve
+                .sellYa(
+                    tokenAmtIn,
+                    ypReserve,
+                    yaReserve,
+                    _daysTomaturity(),
+                    gamma,
+                    ltv,
+                    apy
+                );
+            netOut = tokenAmtIn + yaReserve - newYpReserve;
+            // calculate fee
+            feeAmt = YAMarketCurve.calculateFee(
+                ypReserve,
+                yaReserve,
+                newYpReserve,
+                newYaReserve,
+                lendFeeRatio,
+                ltv
+            );
+            apy = newApy;
+        }
+        netOut -= feeAmt;
+        if (netOut < minCashOut) {
+            revert UnexpectedAmount(
+                sender,
+                token,
+                minCashOut,
+                netOut.toUint128()
+            );
+        }
+        //TODO protcol rewards
+        _lockFee(feeAmt);
+        token.burn(tokenAmtIn);
+        cash.transfer(sender, netOut);
+
+        emit SellToken(sender, token, minCashOut, netOut.toUint128(), apy);
+    }
+
     function _lockFee(uint256 feeAmount) internal {
         uint feeToLock = (feeAmount + 1) / 2;
         uint ypAmount = feeToLock.mulDiv(ltv, YAMarketCurve.DECIMAL_BASE);
@@ -298,5 +383,28 @@ contract YAMarket is IYAMarket {
             lpYa.totalSupply()
         );
         lpYa.mint(address(this), lpYaAmt);
+    }
+
+    function mintLeveragedNft(
+        uint128 collateralAmt,
+        uint128 yaAmt,
+        bytes memory data
+    ) external override returns (uint256) {}
+
+    function _mintLeveragedNft(
+        address sender,
+        uint256 collateralAmt,
+        uint256 yaAmt,
+        bytes memory data
+    ) internal returns (uint256) {
+        if (yaAmt < mintLeveragedYa) {
+            revert();
+        }
+        uint debt = yaAmt.mulDiv(ltv, YAMarketCurve.DECIMAL_BASE);
+        uint collateral = collateralAmt + debt
+
+        ya.transferFrom(sender, address(this), yaAmt);
+        cash.transfer(sender, debt);
+        IFlashLoanReceiver(sender).executeOperation(sender, cash, debt, )
     }
 }

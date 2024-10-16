@@ -305,7 +305,7 @@ library YAMarketCurve {
         return (uint128(x + delta_x), uint128(y - delta_y), apy_numerator_);
     }
      */
-    function sell_yp(
+    function sellYp(
         uint256 amount,
         uint256 ypReserve,
         uint256 yaReserve,
@@ -462,7 +462,7 @@ library YAMarketCurve {
         return (uint128(x - delta_x), uint128(y + delta_y), apy_numerator_);
     }
      */
-    function sell_ya(
+    function sellYa(
         uint256 amount,
         uint256 ypReserve,
         uint256 yaReserve,

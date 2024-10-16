@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import {IMintableERC20} from "../interfaces/IMintableERC20.sol";
+import {IMintableERC20, IERC20} from "../interfaces/IMintableERC20.sol";
 
 interface IYAMarket {
     error MarketIsNotOPen();
@@ -44,6 +44,14 @@ interface IYAMarket {
         int64 newApy
     );
 
+    event SellToken(
+        address indexed sender,
+        IMintableERC20 indexed token,
+        uint128 expectedAmt,
+        uint128 actualAmt,
+        int64 newApy
+    );
+
     // bond YpToken, debt YaToken
     function reserves()
         external
@@ -76,4 +84,9 @@ interface IYAMarket {
         uint128 cashAmtIn,
         uint128 minTokenOut
     ) external returns (uint256 netOut);
+
+    function mintLeveragedNft(
+        uint128 collateralAmt,
+        uint128 yaAmt
+    ) external returns (uint256);
 }

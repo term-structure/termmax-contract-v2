@@ -11,4 +11,6 @@ interface IMintableERC20 is IERC20 {
     function marketAddr() external view returns (address);
 
     function burn(uint256 amount) external;
+
+    function decimals() external view returns (uint8);
 }
