@@ -6,6 +6,13 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {TermMaxStorage} from "../storage/TermMaxStorage.sol";
 
 library YAMarketCurve {
+    struct TradeParams {
+        uint256 amount;
+        uint256 ypReserve;
+        uint256 yaReserve;
+        uint256 daysToMaturity;
+    }
+
     using Math for uint256;
     using SafeCast for uint256;
     using SafeCast for int256;
@@ -307,40 +314,37 @@ library YAMarketCurve {
     }
      */
     function sellYp(
-        uint256 amount,
-        uint256 ypReserve,
-        uint256 yaReserve,
-        uint256 daysToMaturity,
-        uint32 gamma,
-        uint32 ltv,
-        int64 apy
+        TradeParams memory params,
+        TermMaxStorage.MarketConfig memory config
     )
         public
         pure
         returns (uint256 newYpReserve, uint256 newYaReserve, int64 newApy)
     {
-        uint ypPlusAlpha = calcYpPlusAlpha(gamma, ypReserve);
+        uint ypPlusAlpha = calcYpPlusAlpha(config.gamma, params.ypReserve);
         uint yaPlusBeta = calcYaPlusBeta(
-            gamma,
-            ltv,
-            daysToMaturity,
-            apy,
-            ypReserve
+            config.gamma,
+            config.ltv,
+            params.daysToMaturity,
+            config.apy,
+            params.ypReserve
         );
-        uint negB = ypPlusAlpha + yaPlusBeta.mulDiv(ltv, DECIMAL_BASE) + amount;
-        uint ac = (yaPlusBeta * amount).mulDiv(ltv, DECIMAL_BASE);
+        uint negB = ypPlusAlpha +
+            yaPlusBeta.mulDiv(config.ltv, DECIMAL_BASE) +
+            params.amount;
+        uint ac = (yaPlusBeta * params.amount).mulDiv(config.ltv, DECIMAL_BASE);
         uint deltaYa = ((negB - (negB.sqrt() - 4 * ac).sqrt()) * DECIMAL_BASE) /
-            ltv /
+            config.ltv /
             2;
-        uint deltaYp = amount - deltaYa.mulDiv(ltv, DECIMAL_BASE);
+        uint deltaYp = params.amount - deltaYa.mulDiv(config.ltv, DECIMAL_BASE);
         newApy = calcApy(
-            ltv,
-            daysToMaturity,
+            config.ltv,
+            params.daysToMaturity,
             ypPlusAlpha + deltaYp,
             yaPlusBeta - deltaYa
         );
-        newYpReserve = ypReserve + deltaYp;
-        newYaReserve = yaReserve - deltaYa;
+        newYpReserve = params.ypReserve + deltaYp;
+        newYaReserve = params.yaReserve - deltaYa;
     }
 
     /**
@@ -385,41 +389,41 @@ library YAMarketCurve {
     }
      */
     function _sellNegYp(
-        uint256 negAmount,
-        uint256 ypReserve,
-        uint256 yaReserve,
-        uint256 daysToMaturity,
-        uint32 gamma,
-        uint32 ltv,
-        int64 apy
+        TradeParams memory params,
+        TermMaxStorage.MarketConfig memory config
     )
         internal
         pure
         returns (uint256 newYpReserve, uint256 newYaReserve, int64 newApy)
     {
-        uint ypPlusAlpha = calcYpPlusAlpha(gamma, ypReserve);
+        uint ypPlusAlpha = calcYpPlusAlpha(config.gamma, params.ypReserve);
         uint yaPlusBeta = calcYaPlusBeta(
-            gamma,
-            ltv,
-            daysToMaturity,
-            apy,
-            ypReserve
+            config.gamma,
+            config.ltv,
+            params.daysToMaturity,
+            config.apy,
+            params.ypReserve
         );
-        uint b = ypPlusAlpha + yaPlusBeta.mulDiv(ltv, DECIMAL_BASE) - negAmount;
-        uint negAc = yaPlusBeta.mulDiv(negAmount * ltv, DECIMAL_BASE);
+        uint b = ypPlusAlpha +
+            yaPlusBeta.mulDiv(config.ltv, DECIMAL_BASE) -
+            params.amount;
+        uint negAc = yaPlusBeta.mulDiv(
+            params.amount * config.ltv,
+            DECIMAL_BASE
+        );
         uint deltaYa = (((b.sqrt() + 4 * negAc).sqrt() - b) * DECIMAL_BASE) /
-            ltv /
+            config.ltv /
             2;
         uint deltaYp = ypPlusAlpha -
             ypPlusAlpha.mulDiv(yaPlusBeta, yaPlusBeta + deltaYa);
         newApy = calcApy(
-            ltv,
-            daysToMaturity,
+            config.ltv,
+            params.daysToMaturity,
             ypPlusAlpha - deltaYp,
             yaPlusBeta + deltaYa
         );
-        newYpReserve = ypReserve - deltaYp;
-        newYaReserve = yaReserve + deltaYa;
+        newYpReserve = params.ypReserve - deltaYp;
+        newYaReserve = params.yaReserve + deltaYa;
     }
 
     /**
@@ -463,41 +467,52 @@ library YAMarketCurve {
         return (uint128(x - delta_x), uint128(y + delta_y), apy_numerator_);
     }
      */
+
     function sellYa(
-        uint256 amount,
-        uint256 ypReserve,
-        uint256 yaReserve,
-        uint256 daysToMaturity,
-        uint32 gamma,
-        uint32 ltv,
-        int64 apy
+        TradeParams memory params,
+        TermMaxStorage.MarketConfig memory config
     )
         public
         pure
         returns (uint256 newYpReserve, uint256 newYaReserve, int64 newApy)
     {
-        uint ypPlusAlpha = calcYpPlusAlpha(gamma, ypReserve);
+        uint ypPlusAlpha = calcYpPlusAlpha(config.gamma, params.ypReserve);
         uint yaPlusBeta = calcYaPlusBeta(
-            gamma,
-            ltv,
-            daysToMaturity,
-            apy,
-            ypReserve
+            config.gamma,
+            config.ltv,
+            params.daysToMaturity,
+            config.apy,
+            params.ypReserve
         );
-        uint b = ypPlusAlpha + (yaPlusBeta - amount).mulDiv(ltv, DECIMAL_BASE);
-        uint negAc = (amount * yaPlusBeta).mulDiv(ltv * ltv, DECIMAL_BASE_SQRT);
-        uint deltaYa = (((b.sqrt() + 4 * negAc).sqrt() - b) * DECIMAL_BASE) /
-            ltv /
-            2;
-        uint deltaYp = (amount - deltaYa).mulDiv(ltv, DECIMAL_BASE);
+        uint deltaYa;
+        uint deltaYp;
+        {
+            // borrow stack space newYpReserve as b
+            uint b = ypPlusAlpha +
+                (yaPlusBeta - params.amount).mulDiv(config.ltv, DECIMAL_BASE);
+            // borrow stack space newYaReserve as ac
+            uint ac = (params.amount * yaPlusBeta).mulDiv(
+                config.ltv * config.ltv,
+                DECIMAL_BASE_SQRT
+            );
+            deltaYa =
+                (((b.sqrt() + 4 * ac).sqrt() - b) * DECIMAL_BASE) /
+                config.ltv /
+                2;
+            deltaYp = (params.amount - deltaYa).mulDiv(
+                config.ltv,
+                DECIMAL_BASE
+            );
+        }
+
         newApy = calcApy(
-            ltv,
-            daysToMaturity,
+            config.ltv,
+            params.daysToMaturity,
             ypPlusAlpha - deltaYp,
             yaPlusBeta + deltaYa
         );
-        newYpReserve = ypReserve - deltaYp;
-        newYaReserve = yaReserve + deltaYa;
+        newYpReserve = params.ypReserve - deltaYp;
+        newYaReserve = params.yaReserve + deltaYa;
     }
 
     /**
@@ -542,44 +557,42 @@ library YAMarketCurve {
     }
  */
     function _sellNegYa(
-        uint256 negAmount,
-        uint256 ypReserve,
-        uint256 yaReserve,
-        uint256 daysToMaturity,
-        uint32 gamma,
-        uint32 ltv,
-        int64 apy
+        TradeParams memory params,
+        TermMaxStorage.MarketConfig memory config
     )
         internal
         pure
         returns (uint256 newYpReserve, uint256 newYaReserve, int64 newApy)
     {
-        uint ypPlusAlpha = calcYpPlusAlpha(gamma, ypReserve);
+        uint ypPlusAlpha = calcYpPlusAlpha(config.gamma, params.ypReserve);
         uint yaPlusBeta = calcYaPlusBeta(
-            gamma,
-            ltv,
-            daysToMaturity,
-            apy,
-            ypReserve
+            config.gamma,
+            config.ltv,
+            params.daysToMaturity,
+            config.apy,
+            params.ypReserve
         );
         uint negB = ypPlusAlpha +
-            (yaPlusBeta + negAmount).mulDiv(ltv, DECIMAL_BASE);
+            (yaPlusBeta + params.amount).mulDiv(config.ltv, DECIMAL_BASE);
 
-        uint ac = (negAmount * yaPlusBeta).mulDiv(ltv * ltv, DECIMAL_BASE_SQRT);
+        uint ac = (params.amount * yaPlusBeta).mulDiv(
+            config.ltv * config.ltv,
+            DECIMAL_BASE_SQRT
+        );
 
         uint deltaYa = ((negB - (negB.sqrt() - 4 * ac).sqrt()) * DECIMAL_BASE) /
-            ltv /
+            config.ltv /
             2;
         uint deltaYp = ypPlusAlpha.mulDiv(yaPlusBeta, (yaPlusBeta - deltaYa)) -
             ypPlusAlpha;
         newApy = calcApy(
-            ltv,
-            daysToMaturity,
+            config.ltv,
+            params.daysToMaturity,
             ypPlusAlpha + deltaYp,
             yaPlusBeta - deltaYa
         );
-        newYpReserve = ypReserve + deltaYp;
-        newYaReserve = yaReserve - deltaYa;
+        newYpReserve = params.ypReserve + deltaYp;
+        newYaReserve = params.yaReserve - deltaYa;
     }
 
     /**
@@ -614,37 +627,32 @@ library YAMarketCurve {
     }
      */
     function buyYp(
-        uint256 amount,
-        uint256 ypReserve,
-        uint256 yaReserve,
-        uint256 daysToMaturity,
-        uint32 gamma,
-        uint32 ltv,
-        int64 apy
+        TradeParams memory params,
+        TermMaxStorage.MarketConfig memory config
     )
         internal
         pure
         returns (uint256 newYpReserve, uint256 newYaReserve, int64 newApy)
     {
-        uint ypPlusAlpha = calcYpPlusAlpha(gamma, ypReserve);
+        uint ypPlusAlpha = calcYpPlusAlpha(config.gamma, params.ypReserve);
         uint yaPlusBeta = calcYaPlusBeta(
-            gamma,
-            ltv,
-            daysToMaturity,
-            apy,
-            ypReserve
+            config.gamma,
+            config.ltv,
+            params.daysToMaturity,
+            config.apy,
+            params.ypReserve
         );
-        uint deltaYa = amount;
+        uint deltaYa = params.amount;
         uint deltaYp = ypPlusAlpha -
             ypPlusAlpha.mulDiv(yaPlusBeta, (yaPlusBeta + deltaYa));
         newApy = calcApy(
-            ltv,
-            daysToMaturity,
+            config.ltv,
+            params.daysToMaturity,
             ypPlusAlpha - deltaYp,
             yaPlusBeta + deltaYa
         );
-        newYpReserve = ypReserve - deltaYp;
-        newYaReserve = yaReserve + deltaYa;
+        newYpReserve = params.ypReserve - deltaYp;
+        newYaReserve = params.yaReserve + deltaYa;
     }
 
     /**
@@ -683,39 +691,34 @@ library YAMarketCurve {
     }
      */
     function buyNegYp(
-        uint256 negAmount,
-        uint256 ypReserve,
-        uint256 yaReserve,
-        uint256 daysToMaturity,
-        uint32 gamma,
-        uint32 ltv,
-        int64 apy
+        TradeParams memory params,
+        TermMaxStorage.MarketConfig memory config
     )
         public
         pure
         returns (uint256 newYpReserve, uint256 newYaReserve, int64 newApy)
     {
-        uint ypPlusAlpha = calcYpPlusAlpha(gamma, ypReserve);
+        uint ypPlusAlpha = calcYpPlusAlpha(config.gamma, params.ypReserve);
         uint yaPlusBeta = calcYaPlusBeta(
-            gamma,
-            ltv,
-            daysToMaturity,
-            apy,
-            ypReserve
+            config.gamma,
+            config.ltv,
+            params.daysToMaturity,
+            config.apy,
+            params.ypReserve
         );
-        uint negDeltaYa = negAmount;
+        uint negDeltaYa = params.amount;
         uint negDeltaYp = ypPlusAlpha.mulDiv(
             yaPlusBeta,
             (yaPlusBeta - negDeltaYa)
         ) - ypPlusAlpha;
         newApy = calcApy(
-            ltv,
-            daysToMaturity,
+            config.ltv,
+            params.daysToMaturity,
             ypPlusAlpha + negDeltaYp,
             yaPlusBeta - negDeltaYa
         );
-        newYpReserve = ypReserve + negDeltaYp;
-        newYaReserve = yaReserve - negDeltaYa;
+        newYpReserve = params.ypReserve + negDeltaYp;
+        newYaReserve = params.yaReserve - negDeltaYa;
     }
 
     /**
@@ -751,37 +754,32 @@ library YAMarketCurve {
     }
      */
     function buyYa(
-        uint256 amount,
-        uint256 ypReserve,
-        uint256 yaReserve,
-        uint256 daysToMaturity,
-        uint32 gamma,
-        uint32 ltv,
-        int64 apy
+        TradeParams memory params,
+        TermMaxStorage.MarketConfig memory config
     )
         public
         pure
         returns (uint256 newYpReserve, uint256 newYaReserve, int64 newApy)
     {
-        uint ypPlusAlpha = calcYpPlusAlpha(gamma, ypReserve);
+        uint ypPlusAlpha = calcYpPlusAlpha(config.gamma, params.ypReserve);
         uint yaPlusBeta = calcYaPlusBeta(
-            gamma,
-            ltv,
-            daysToMaturity,
-            apy,
-            ypReserve
+            config.gamma,
+            config.ltv,
+            params.daysToMaturity,
+            config.apy,
+            params.ypReserve
         );
-        uint deltaYp = amount.mulDiv(ltv, DECIMAL_BASE);
+        uint deltaYp = params.amount.mulDiv(config.ltv, DECIMAL_BASE);
         uint deltaYa = yaPlusBeta -
             yaPlusBeta.mulDiv(ypPlusAlpha, ypPlusAlpha + deltaYp);
         newApy = calcApy(
-            ltv,
-            daysToMaturity,
+            config.ltv,
+            params.daysToMaturity,
             ypPlusAlpha + deltaYp,
             yaPlusBeta - deltaYa
         );
-        newYpReserve = ypReserve + deltaYp;
-        newYaReserve = yaReserve - deltaYa;
+        newYpReserve = params.ypReserve + deltaYp;
+        newYaReserve = params.yaReserve - deltaYa;
     }
 
     /**
@@ -821,39 +819,34 @@ library YAMarketCurve {
     }
      */
     function buyNegYa(
-        uint256 negAmount,
-        uint256 ypReserve,
-        uint256 yaReserve,
-        uint256 daysToMaturity,
-        uint32 gamma,
-        uint32 ltv,
-        int64 apy
+        TradeParams memory params,
+        TermMaxStorage.MarketConfig memory config
     )
         public
         pure
         returns (uint256 newYpReserve, uint256 newYaReserve, int64 newApy)
     {
-        uint ypPlusAlpha = calcYpPlusAlpha(gamma, ypReserve);
+        uint ypPlusAlpha = calcYpPlusAlpha(config.gamma, params.ypReserve);
         uint yaPlusBeta = calcYaPlusBeta(
-            gamma,
-            ltv,
-            daysToMaturity,
-            apy,
-            ypReserve
+            config.gamma,
+            config.ltv,
+            params.daysToMaturity,
+            config.apy,
+            params.ypReserve
         );
-        uint negDeltaYp = negAmount.mulDiv(ltv, DECIMAL_BASE);
+        uint negDeltaYp = params.amount.mulDiv(config.ltv, DECIMAL_BASE);
         uint negDeltaYa = yaPlusBeta.mulDiv(
             ypPlusAlpha,
             ypPlusAlpha - negDeltaYp
         ) - yaPlusBeta;
         newApy = calcApy(
-            ltv,
-            daysToMaturity,
+            config.ltv,
+            params.daysToMaturity,
             ypPlusAlpha - negDeltaYp,
             yaPlusBeta + negDeltaYa
         );
 
-        newYpReserve = ypReserve - negDeltaYp;
-        newYaReserve = yaReserve + negDeltaYa;
+        newYpReserve = params.ypReserve - negDeltaYp;
+        newYaReserve = params.yaReserve + negDeltaYa;
     }
 }

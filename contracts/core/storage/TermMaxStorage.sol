@@ -17,6 +17,7 @@ library TermMaxStorage {
         uint32 borrowFeeRatio;
         uint32 ltv; // 9e7
         uint32 liquidationThreshhold; // 85e6
+        bool canLiquidate;
     }
 
     struct MarketTokens {
@@ -34,14 +35,14 @@ library TermMaxStorage {
     bytes32 internal constant STORAGE_SLOT_MARKET_TOKENS =
         bytes32(uint256(keccak256("TermMax.storage.MarketTokens")) - 1);
 
-    function _getMarketConfig() internal pure returns (MarketConfig storage s) {
+    function _getConfig() internal pure returns (MarketConfig storage s) {
         bytes32 slot = STORAGE_SLOT_MARKET_CONFIG;
         assembly {
             s.slot := slot
         }
     }
 
-    function _getMarketTokens() internal pure returns (MarketTokens storage s) {
+    function _getTokens() internal pure returns (MarketTokens storage s) {
         bytes32 slot = STORAGE_SLOT_MARKET_TOKENS;
         assembly {
             s.slot := slot

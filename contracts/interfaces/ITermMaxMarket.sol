@@ -4,7 +4,7 @@ pragma solidity ^0.8.27;
 import {IMintableERC20, IERC20} from "../interfaces/IMintableERC20.sol";
 
 interface ITermMaxMarket {
-    error MarketIsNotOPen();
+    error MarketIsNotOpen();
     error MarketWasClosed();
     error UnSupportedToken();
     error UnexpectedAmount(
