@@ -32,9 +32,10 @@ interface ITermMaxMarket {
 
     event WithdrawLP(
         address indexed from,
-        IMintableERC20 indexed lpToken,
         uint128 lpYpAmt,
-        uint128 ypAmt,
+        uint128 lpYaAmt,
+        uint128 ypOutAmt,
+        uint128 yaOutAmt,
         int64 newApy
     );
 
@@ -59,9 +60,10 @@ interface ITermMaxMarket {
         uint256 cashAmt
     ) external returns (uint128 lpYaOutAmt, uint128 lpYpOutAmt);
 
-    function withdrawYp(uint256 lpAmtIn) external returns (uint tokenOut);
-
-    function withdrawYa(uint256 lpAmtIn) external returns (uint tokenOut);
+    function withdrawLp(
+        uint128 lpYpAmt,
+        uint128 lpYaAmt
+    ) external returns (uint128 ypOutAmt, uint128 yaOutAmt);
 
     function buyYp(
         uint128 cashAmtIn,
@@ -75,13 +77,13 @@ interface ITermMaxMarket {
 
     // use collateral to mint yp and nft
     function lever(
-        uint128 collateralAmt,
-        uint128 debtAmt
+        uint128 debtAmt,
+        bytes calldata collateralData
     ) external returns (uint256 nftId);
 
     function mintLeveragedNft(
-        uint128 collateralAmt,
-        uint128 yaAmt
+        uint128 yaAmt,
+        bytes calldata collateralData
     ) external returns (uint256 nftId);
 
     // use cash to repayDebt

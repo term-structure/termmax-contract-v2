@@ -12,7 +12,7 @@ import {IFlashLoanReceiver} from "../interfaces/IFlashLoanReceiver.sol";
 import {YAMarketCurve} from "./lib/YAMarketCurve.sol";
 import {TermMaxStorage} from "./storage/TermMaxStorage.sol";
 
-contract TermMaxMarket is ITermMaxMarket {
+abstract contract AbstractTermMaxMarket is ITermMaxMarket {
     using Math for uint256;
     using SafeCast for uint256;
     using SafeCast for int256;
@@ -101,67 +101,99 @@ contract TermMaxMarket is ITermMaxMarket {
             YAMarketCurve.SECONDS_IN_DAY;
     }
 
-    function withdrawYp(
-        uint256 lpAmtIn
-    ) external override isOpen returns (uint tokenOut) {
-        TermMaxStorage.MarketTokens memory tokens = TermMaxStorage._getTokens();
-        tokenOut = _withdrawLp(msg.sender, tokens.lpYp, lpAmtIn, tokens);
-    }
-
-    function withdrawYa(
-        uint256 lpAmtIn
-    ) external override isOpen returns (uint tokenOut) {
-        TermMaxStorage.MarketTokens memory tokens = TermMaxStorage._getTokens();
-        tokenOut = _withdrawLp(msg.sender, tokens.lpYa, lpAmtIn, tokens);
+    function withdrawLp(
+        uint128 lpYpAmt,
+        uint128 lpYaAmt
+    ) external override isOpen returns (uint128 ypOutAmt, uint128 yaOutAmt) {
+        (ypOutAmt, yaOutAmt) = _withdrawLp(msg.sender, lpYpAmt, lpYaAmt);
     }
 
     function _withdrawLp(
         address sender,
-        IMintableERC20 lpToken,
-        uint256 lpAmtIn,
-        TermMaxStorage.MarketTokens memory tokens
-    ) internal returns (uint tokenOut) {
-        lpToken.transferFrom(sender, address(this), lpAmtIn);
-
+        uint256 lpYpAmt,
+        uint256 lpYaAmt
+    ) internal returns (uint128 ypOutAmt, uint128 yaOutAmt) {
+        TermMaxStorage.MarketTokens memory tokens = TermMaxStorage._getTokens();
         TermMaxStorage.MarketConfig memory config = TermMaxStorage._getConfig();
-
+        // get token reserves
         uint ypReserve = tokens.yp.balanceOf(address(this));
         uint yaReserve = tokens.ya.balanceOf(address(this));
-        uint lpTokenTotalSupply = lpToken.totalSupply();
+        uint lpYpTotalSupply;
+        uint lpYaTotalSupply;
         // calculate rewards
-        uint rewards = YAMarketCurve.calculateLpReward(
-            block.timestamp,
-            config.openTime,
-            config.maturity,
-            lpTokenTotalSupply,
-            lpAmtIn,
-            lpToken.balanceOf(address(this))
-        );
-        lpAmtIn += rewards;
-        lpToken.burn(lpAmtIn);
-        tokenOut = lpAmtIn.mulDiv(ypReserve, lpTokenTotalSupply);
+        if (lpYpAmt > 0) {
+            tokens.lpYp.transferFrom(sender, address(this), lpYpAmt);
 
-        YAMarketCurve.TradeParams memory tradeParams = YAMarketCurve
-            .TradeParams(
-                tokenOut,
-                ypReserve,
-                yaReserve,
-                _daysTomaturity(config.maturity)
+            lpYpTotalSupply = tokens.lpYp.totalSupply();
+            uint rewards = YAMarketCurve.calculateLpReward(
+                block.timestamp,
+                config.openTime,
+                config.maturity,
+                lpYpTotalSupply,
+                lpYpAmt,
+                tokens.lpYp.balanceOf(address(this))
             );
+            lpYpAmt += rewards;
+            tokens.lpYp.burn(lpYpAmt);
+            ypOutAmt = lpYpAmt.mulDiv(ypReserve, lpYpTotalSupply).toUint128();
+        }
+        if (lpYaAmt > 0) {
+            tokens.lpYa.transferFrom(sender, address(this), lpYaAmt);
 
-        if (lpToken == tokens.lpYp) {
-            (, , config.apy) = YAMarketCurve._sellNegYp(tradeParams, config);
-            tokens.yp.transfer(sender, tokenOut);
-        } else {
+            lpYaTotalSupply = tokens.lpYa.totalSupply();
+            uint rewards = YAMarketCurve.calculateLpReward(
+                block.timestamp,
+                config.openTime,
+                config.maturity,
+                lpYaTotalSupply,
+                lpYaAmt,
+                tokens.lpYa.balanceOf(address(this))
+            );
+            lpYaAmt += rewards;
+            tokens.lpYa.burn(lpYaAmt);
+            yaOutAmt = lpYaAmt.mulDiv(yaReserve, lpYaTotalSupply).toUint128();
+        }
+        uint sameProportionYp = uint(yaOutAmt).mulDiv(
+            config.ltv,
+            YAMarketCurve.DECIMAL_BASE
+        );
+        if (sameProportionYp > ypOutAmt) {
+            uint yaExcess = (sameProportionYp - ypOutAmt).mulDiv(
+                YAMarketCurve.DECIMAL_BASE,
+                config.ltv
+            );
+            YAMarketCurve.TradeParams memory tradeParams = YAMarketCurve
+                .TradeParams(
+                    yaExcess,
+                    ypReserve,
+                    yaReserve,
+                    _daysTomaturity(config.maturity)
+                );
             (, , config.apy) = YAMarketCurve._sellNegYa(tradeParams, config);
-            tokens.ya.transfer(sender, tokenOut);
+        } else if (sameProportionYp < ypOutAmt) {
+            uint ypExcess = ypOutAmt - sameProportionYp;
+            YAMarketCurve.TradeParams memory tradeParams = YAMarketCurve
+                .TradeParams(
+                    ypExcess,
+                    ypReserve,
+                    yaReserve,
+                    _daysTomaturity(config.maturity)
+                );
+            (, , config.apy) = YAMarketCurve._sellNegYp(tradeParams, config);
         }
         TermMaxStorage._getConfig().apy = config.apy;
+        if (ypOutAmt > 0) {
+            tokens.ya.transfer(sender, ypOutAmt);
+        }
+        if (yaOutAmt > 0) {
+            tokens.yp.transfer(sender, yaOutAmt);
+        }
         emit WithdrawLP(
             sender,
-            lpToken,
-            lpAmtIn.toUint128(),
-            tokenOut.toUint128(),
+            lpYpAmt.toUint128(),
+            lpYaAmt.toUint128(),
+            ypOutAmt,
+            yaOutAmt,
             config.apy
         );
     }
@@ -404,9 +436,9 @@ contract TermMaxMarket is ITermMaxMarket {
     }
 
     function mintLeveragedNft(
-        uint128 collateralAmt,
-        uint128 yaAmt
-    ) external returns (uint256 nftId) {}
+        uint128 yaAmt,
+        bytes calldata collateralData
+    ) external override returns (uint256 nftId) {}
 
     function _mintLeveragedNft(
         address sender,
@@ -457,8 +489,8 @@ contract TermMaxMarket is ITermMaxMarket {
     }
 
     function lever(
-        uint128 collateralAmt,
-        uint128 debtAmt
+        uint128 debtAmt,
+        bytes calldata collateralData
     ) external override returns (uint256 nftId) {}
 
     function repayDebt(uint256 nftId, uint256 repayAmt) external override {}
