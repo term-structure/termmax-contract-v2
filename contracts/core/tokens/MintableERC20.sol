@@ -14,17 +14,17 @@ contract MintableERC20 is
         uint8 _decimals;
     }
 
-    // keccak256(abi.encode(uint256(keccak256("yieldamplifier.storage.MintableERC20")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant MintableERC20StorageLocation =
-        0x4fe4e5766ebfcd0909fd33ed2d91cf7d9d6924ea3af04b22f7ec3ba512c03100;
+    bytes32 internal constant STORAGE_SLOT_MINTABLE_ERC20 =
+        bytes32(uint256(keccak256("TermMax.storage.MintableERC20")) - 1);
 
     function _getMintableERC20Storage()
         private
         pure
-        returns (MintableERC20Storage storage mintableStorage)
+        returns (MintableERC20Storage storage s)
     {
+        bytes32 slot = STORAGE_SLOT_MINTABLE_ERC20;
         assembly {
-            mintableStorage.slot := MintableERC20StorageLocation
+            s.slot := slot
         }
     }
 
@@ -71,7 +71,12 @@ contract MintableERC20 is
         super.permit(owner, spender, value, deadline, v, r, s);
     }
 
-    function decimals() public view override returns (uint8) {
+    function decimals()
+        public
+        view
+        override(ERC20Upgradeable, IMintableERC20)
+        returns (uint8)
+    {
         MintableERC20Storage
             storage mintableStorage = _getMintableERC20Storage();
         return mintableStorage._decimals;

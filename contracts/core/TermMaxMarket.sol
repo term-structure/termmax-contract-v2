@@ -4,12 +4,15 @@ pragma solidity ^0.8.27;
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
-import {IYAMarket} from "../interfaces/IYAMarket.sol";
-import {IERC20, IMintableERC20} from "../interfaces/IMintableERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {ITermMaxMarket} from "../interfaces/ITermMaxMarket.sol";
+import {IMintableERC20} from "../interfaces/IMintableERC20.sol";
 import {IFlashLoanReceiver} from "../interfaces/IFlashLoanReceiver.sol";
-import {YAMarketCurve} from "../lib/YAMarketCurve.sol";
+import {YAMarketCurve} from "./lib/YAMarketCurve.sol";
+import {TermMaxStorage} from "./storage/TermMaxStorage.sol";
 
-contract YAMarket is IYAMarket {
+contract TermMaxMarket is ITermMaxMarket {
     using Math for uint256;
     using SafeCast for uint256;
     using SafeCast for int256;
@@ -23,18 +26,19 @@ contract YAMarket is IYAMarket {
     IMintableERC20 yp;
     IMintableERC20 lpYa;
     IMintableERC20 lpYp;
-    IERC20 collateral;
+    IERC20 collateralToken;
     IERC20 cash;
+    AggregatorV3Interface public collateralOracle;
     //10**ya.decimals()
-    uint256 mintLeveragedYa;
+    uint256 minLeveragedYa;
     uint64 maturity;
     uint64 openTime;
-    int64 public apy;
+    int64 apy;
     uint32 gamma;
     uint32 lendFeeRatio;
     uint32 borrowFeeRatio;
-    uint32 immutable ltv; // 9e7
-    uint32 immutable liquidateThreshhold; // 85e6
+    uint32 ltv; // 9e7
+    uint32 liquidationThreshhold; // 85e6
 
     modifier isOpen() {
         if (block.timestamp < openTime) {
@@ -47,18 +51,6 @@ contract YAMarket is IYAMarket {
     }
 
     constructor(IERC20 collateralToken, IERC20 cashToken, address) {}
-
-    function reserves()
-        external
-        view
-        override
-        returns (
-            uint128 ypAmt,
-            uint128 yaAmt,
-            uint128 cashAmt,
-            uint128 colateralAmt
-        )
-    {}
 
     // input cash
     // output lp tokens
@@ -132,7 +124,7 @@ contract YAMarket is IYAMarket {
 
     function _withdrawLp(
         address sender,
-        LpToken lpToken,
+        IMintableERC20 lpToken,
         uint256 lpAmtIn
     ) internal returns (uint tokenOut) {
         lpToken.transferFrom(sender, address(this), lpAmtIn);
@@ -305,16 +297,17 @@ contract YAMarket is IYAMarket {
         uint yaReserve = ya.balanceOf(address(this));
         uint feeAmt;
         if (token == yp) {
-            (uint newYpReserve, uint newYaReserve, int64 newApy) = YAMarketCurve
-                .sellYp(
-                    tokenAmtIn,
-                    ypReserve,
-                    yaReserve,
-                    _daysTomaturity(),
-                    gamma,
-                    ltv,
-                    apy
-                );
+            uint newYpReserve;
+            uint newYaReserve;
+            (newYpReserve, newYaReserve, apy) = YAMarketCurve.sellYp(
+                tokenAmtIn,
+                ypReserve,
+                yaReserve,
+                _daysTomaturity(),
+                gamma,
+                ltv,
+                apy
+            );
             netOut = yaReserve - newYpReserve;
             // calculate fee
             feeAmt = YAMarketCurve.calculateFee(
@@ -325,18 +318,18 @@ contract YAMarket is IYAMarket {
                 borrowFeeRatio,
                 ltv
             );
-            apy = newApy;
         } else {
-            (uint newYpReserve, uint newYaReserve, int64 newApy) = YAMarketCurve
-                .sellYa(
-                    tokenAmtIn,
-                    ypReserve,
-                    yaReserve,
-                    _daysTomaturity(),
-                    gamma,
-                    ltv,
-                    apy
-                );
+            uint newYpReserve;
+            uint newYaReserve;
+            (newYpReserve, newYaReserve, apy) = YAMarketCurve.sellYa(
+                tokenAmtIn,
+                ypReserve,
+                yaReserve,
+                _daysTomaturity(),
+                gamma,
+                ltv,
+                apy
+            );
             netOut = tokenAmtIn + yaReserve - newYpReserve;
             // calculate fee
             feeAmt = YAMarketCurve.calculateFee(
@@ -347,7 +340,6 @@ contract YAMarket is IYAMarket {
                 lendFeeRatio,
                 ltv
             );
-            apy = newApy;
         }
         netOut -= feeAmt;
         if (netOut < minCashOut) {
@@ -387,24 +379,69 @@ contract YAMarket is IYAMarket {
 
     function mintLeveragedNft(
         uint128 collateralAmt,
-        uint128 yaAmt,
-        bytes memory data
-    ) external override returns (uint256) {}
+        uint128 yaAmt
+    ) external returns (uint256 nftId) {}
 
     function _mintLeveragedNft(
         address sender,
         uint256 collateralAmt,
         uint256 yaAmt,
         bytes memory data
-    ) internal returns (uint256) {
-        if (yaAmt < mintLeveragedYa) {
+    ) internal returns (uint256 nftId) {
+        if (yaAmt < minLeveragedYa) {
             revert();
         }
         uint debt = yaAmt.mulDiv(ltv, YAMarketCurve.DECIMAL_BASE);
-        uint collateral = collateralAmt + debt
+
+        if (!_checkHealth(debt, collateralAmt)) {
+            revert();
+        }
 
         ya.transferFrom(sender, address(this), yaAmt);
+        // TODO fee
         cash.transfer(sender, debt);
-        IFlashLoanReceiver(sender).executeOperation(sender, cash, debt, )
+        try
+            IFlashLoanReceiver(sender).executeOperation(
+                sender,
+                cash,
+                debt,
+                data
+            )
+        {} catch Error(string memory err) {
+            revert FlashloanFailedLogString(err);
+        } catch (bytes memory err) {
+            revert FlashloanFailedLogBytes(err);
+        }
     }
+
+    function _checkHealth(
+        uint256 debtAmt,
+        uint256 collateralAmt
+    ) internal returns (bool) {
+        // Get the price collateralToken/cash
+        (, int collateralPrice, , , ) = collateralOracle.latestRoundData();
+        uint decimals = IERC20Metadata(address(cash)).decimals();
+        uint collateralValue = collateralAmt.mulDiv(
+            collateralPrice.toUint256(),
+            10 ** decimals
+        );
+        uint health = debtAmt.mulDiv(
+            YAMarketCurve.DECIMAL_BASE,
+            collateralValue
+        );
+        return health <= liquidationThreshhold;
+    }
+
+    function lever(
+        uint128 collateralAmt,
+        uint128 debtAmt
+    ) external override returns (uint256 nftId) {}
+
+    function repayDebt(uint256 nftId, uint256 repayAmt) external override {}
+
+    function liquidate(uint256 nftId) external override {}
+
+    function deregister(uint256 nftId) external override {}
+
+    function redeem() external override returns (uint256) {}
 }

@@ -3,7 +3,7 @@ pragma solidity ^0.8.27;
 
 import {IMintableERC20, IERC20} from "../interfaces/IMintableERC20.sol";
 
-interface IYAMarket {
+interface ITermMaxMarket {
     error MarketIsNotOPen();
     error MarketWasClosed();
     error UnSupportedToken();
@@ -13,6 +13,8 @@ interface IYAMarket {
         uint128 expectedAmt,
         uint128 actualAmt
     );
+    error FlashloanFailedLogString(string);
+    error FlashloanFailedLogBytes(bytes);
 
     event ProvideLiquidity(
         address indexed sender,
@@ -52,20 +54,6 @@ interface IYAMarket {
         int64 newApy
     );
 
-    // bond YpToken, debt YaToken
-    function reserves()
-        external
-        view
-        returns (
-            uint128 ypAmt,
-            uint128 yaAmt,
-            uint128 cashAmt,
-            uint128 colateralAmt
-        );
-
-    // current apy
-    function apy() external view returns (int64);
-
     // provide liquidity get lp tokens
     function provideLiquidity(
         uint256 cashAmt
@@ -85,8 +73,25 @@ interface IYAMarket {
         uint128 minTokenOut
     ) external returns (uint256 netOut);
 
+    // use collateral to mint yp and nft
+    function lever(
+        uint128 collateralAmt,
+        uint128 debtAmt
+    ) external returns (uint256 nftId);
+
     function mintLeveragedNft(
         uint128 collateralAmt,
         uint128 yaAmt
-    ) external returns (uint256);
+    ) external returns (uint256 nftId);
+
+    // use cash to repayDebt
+    function repayDebt(uint256 nftId, uint256 repayAmt) external;
+
+    // can use yp token?
+    function liquidate(uint256 nftId) external;
+
+    // use yp to deregister debt
+    function deregister(uint256 nftId) external;
+
+    function redeem() external returns (uint256);
 }

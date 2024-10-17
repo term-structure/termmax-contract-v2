@@ -3,6 +3,7 @@ pragma solidity ^0.8.27;
 
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {TermMaxStorage} from "../storage/TermMaxStorage.sol";
 
 library YAMarketCurve {
     using Math for uint256;

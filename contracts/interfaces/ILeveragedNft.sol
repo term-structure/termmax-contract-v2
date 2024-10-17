@@ -10,5 +10,12 @@ interface ILeveragedNft is IERC721 {
 
     function debtToken() external view returns (address);
 
+    function loanInfo(
+        uint256 id
+    )
+        external
+        view
+        returns (address owner, uint128 debtAmt, uint128 collateralAmt);
+
     function burn(uint256 id) external;
 }
