@@ -3,6 +3,7 @@ pragma solidity ^0.8.27;
 
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {IMintableERC20, IERC20} from "../../interfaces/IMintableERC20.sol";
+import {IGearingNft} from "../../interfaces/IGearingNft.sol";
 
 library TermMaxStorage {
     struct MarketConfig {
@@ -15,9 +16,14 @@ library TermMaxStorage {
         uint32 gamma;
         uint32 lendFeeRatio;
         uint32 borrowFeeRatio;
-        uint32 ltv; // 9e7
-        uint32 liquidationThreshhold; // 85e6
-        bool canLiquidate;
+        // The loan to collateral while generating ft/xt tokens
+        uint32 initialLtv;
+        // The loan to collateral of g-nft liquidation threshhold
+        uint32 liquidationLtv;
+        // The loan to collateral while minting g-nft
+        uint32 maxLtv;
+        // Whether liquidating g-nft when it's ltv bigger than liquidationLtv
+        bool liquidatable;
     }
 
     struct MarketTokens {
@@ -25,7 +31,8 @@ library TermMaxStorage {
         IMintableERC20 yp;
         IMintableERC20 lpYa;
         IMintableERC20 lpYp;
-        IERC20 collateralToken;
+        IGearingNft gNft;
+        address collateralToken;
         IERC20 cash;
     }
 

@@ -57,7 +57,7 @@ abstract contract AbstractTermMaxMarket is ITermMaxMarket {
         (uint128 ypMintedAmt, uint128 yaMintedAmt) = _addLiquidity(
             sender,
             cashAmt,
-            config.ltv,
+            config.initialLtv,
             tokens
         );
 
@@ -154,13 +154,13 @@ abstract contract AbstractTermMaxMarket is ITermMaxMarket {
             yaOutAmt = lpYaAmt.mulDiv(yaReserve, lpYaTotalSupply).toUint128();
         }
         uint sameProportionYp = uint(yaOutAmt).mulDiv(
-            config.ltv,
+            config.initialLtv,
             YAMarketCurve.DECIMAL_BASE
         );
         if (sameProportionYp > ypOutAmt) {
             uint yaExcess = (sameProportionYp - ypOutAmt).mulDiv(
                 YAMarketCurve.DECIMAL_BASE,
-                config.ltv
+                config.initialLtv
             );
             YAMarketCurve.TradeParams memory tradeParams = YAMarketCurve
                 .TradeParams(
@@ -248,7 +248,7 @@ abstract contract AbstractTermMaxMarket is ITermMaxMarket {
 
         uint feeAmt;
         // add new lituidity
-        _addLiquidity(sender, cashAmtIn, config.ltv, tokens);
+        _addLiquidity(sender, cashAmtIn, config.initialLtv, tokens);
         if (token == tokens.yp) {
             uint newYpReserve;
             uint newYaReserve;
@@ -263,7 +263,7 @@ abstract contract AbstractTermMaxMarket is ITermMaxMarket {
                 newYpReserve,
                 newYaReserve,
                 config.lendFeeRatio,
-                config.ltv
+                config.initialLtv
             );
             //TODO protocol rewards
             uint finalYpReserve;
@@ -293,7 +293,7 @@ abstract contract AbstractTermMaxMarket is ITermMaxMarket {
                 newYpReserve,
                 newYaReserve,
                 config.borrowFeeRatio,
-                config.ltv
+                config.initialLtv
             );
             //TODO protocol rewards
             uint finalYaReserve;
@@ -366,7 +366,7 @@ abstract contract AbstractTermMaxMarket is ITermMaxMarket {
                 newYpReserve,
                 newYaReserve,
                 config.borrowFeeRatio,
-                config.ltv
+                config.initialLtv
             );
         } else {
             uint newYpReserve;
@@ -383,7 +383,7 @@ abstract contract AbstractTermMaxMarket is ITermMaxMarket {
                 newYpReserve,
                 newYaReserve,
                 config.lendFeeRatio,
-                config.ltv
+                config.initialLtv
             );
         }
         netOut -= feeAmt;
@@ -416,7 +416,7 @@ abstract contract AbstractTermMaxMarket is ITermMaxMarket {
     ) internal {
         uint feeToLock = (feeAmount + 1) / 2;
         uint ypAmount = feeToLock.mulDiv(
-            config.ltv,
+            config.initialLtv,
             YAMarketCurve.DECIMAL_BASE
         );
 
@@ -435,69 +435,97 @@ abstract contract AbstractTermMaxMarket is ITermMaxMarket {
         tokens.lpYa.mint(address(this), lpYaAmt);
     }
 
-    function mintLeveragedNft(
+    function mintGNft(
         uint128 yaAmt,
-        bytes calldata collateralData
-    ) external override returns (uint256 nftId) {}
-
-    function _mintLeveragedNft(
-        address sender,
-        uint256 collateralAmt,
-        uint256 yaAmt,
-        bytes memory data
-    ) internal returns (uint256 nftId) {
-        // if (yaAmt < minLeveragedYa) {
-        //     revert();
-        // }
-        // uint debt = yaAmt.mulDiv(ltv, YAMarketCurve.DECIMAL_BASE);
-        // if (!_checkHealth(debt, collateralAmt)) {
-        //     revert();
-        // }
-        // ya.transferFrom(sender, address(this), yaAmt);
-        // // TODO fee
-        // cash.transfer(sender, debt);
-        // try
-        //     IFlashLoanReceiver(sender).executeOperation(
-        //         sender,
-        //         cash,
-        //         debt,
-        //         data
-        //     )
-        // {} catch Error(string memory err) {
-        //     revert FlashloanFailedLogString(err);
-        // } catch (bytes memory err) {
-        //     revert FlashloanFailedLogBytes(err);
-        // }
+        bytes calldata collateralData,
+        bytes calldata callbackData
+    ) external override isOpen returns (uint256 nftId) {
+        return _mintGNft(msg.sender, collateralData, yaAmt, callbackData);
     }
+
+    function _mintGNft(
+        address sender,
+        bytes calldata collateralData,
+        uint128 yaAmt,
+        bytes calldata callbackData
+    ) internal returns (uint256 nftId) {
+        TermMaxStorage.MarketTokens memory tokens = TermMaxStorage._getTokens();
+        tokens.ya.transferFrom(sender, address(this), yaAmt);
+
+        TermMaxStorage.MarketConfig memory config = TermMaxStorage._getConfig();
+        if (yaAmt < config.minLeveragedYa) {
+            revert XTAmountTooLittle(sender, yaAmt, collateralData);
+        }
+        uint debt = (yaAmt * config.initialLtv) / YAMarketCurve.DECIMAL_BASE;
+        uint128 health = _calcHealth(debt, tokens.cash, collateralData)
+            .toUint128();
+        if (health >= config.maxLtv) {
+            revert GNftIsNotHealthy(sender, yaAmt, health, collateralData);
+        }
+        // Send debt to borrower
+        tokens.cash.transfer(sender, debt);
+        // Callback function
+        if (
+            !IFlashLoanReceiver(sender).executeOperation(
+                sender,
+                tokens.cash,
+                debt,
+                callbackData
+            )
+        ) {
+            revert MintGNFTFailedCallback(
+                sender,
+                yaAmt,
+                debt.toUint128(),
+                callbackData
+            );
+        }
+        // Transfer collateral from sender to here
+        _transferCollateral(tokens.collateralToken, collateralData);
+        // Mint G-NFT
+        nftId = tokens.gNft.mint(sender, debt, collateralData);
+        emit MintGNft(sender, nftId, yaAmt, debt.toUint128(), collateralData);
+    }
+
+    function _transferCollateral(
+        address collateral,
+        bytes calldata collateralData
+    ) internal virtual;
 
     function _calcHealth(
         uint256 debtAmt,
-        uint256 collateralAmt,
-        TermMaxStorage.MarketConfig memory config,
-        TermMaxStorage.MarketTokens memory tokens
+        IERC20 cash,
+        bytes calldata collateralData
     ) internal view returns (uint256 health) {
-        // Get the price collateralToken/cash
-        (, int collateralPrice, , , ) = config
-            .collateralOracle
-            .latestRoundData();
-        uint decimals = IERC20Metadata(address(tokens.cash)).decimals();
-        uint collateralValue = collateralAmt.mulDiv(
-            collateralPrice.toUint256(),
-            10 ** decimals
-        );
+        uint collateralValue = _sizeCollateralValue(collateralData, cash);
         health = debtAmt.mulDiv(YAMarketCurve.DECIMAL_BASE, collateralValue);
     }
+
+    function _sizeCollateralValue(
+        bytes calldata collateralData,
+        IERC20 cash
+    ) internal view virtual returns (uint256);
+
+    // function _calcHealth2(
+    //     uint256 debtAmt,
+    //     bytes calldata collateralData,
+    //     TermMaxStorage.MarketConfig memory config,
+    //     TermMaxStorage.MarketTokens memory tokens
+    // ) internal view returns (uint256 health) {
+    //     // Get the price collateralToken/cash
+    //     (, int collateralPrice, , , ) = config
+    //         .collateralOracle
+    //         .latestRoundData();
+    //     uint decimals = IERC20Metadata(address(tokens.cash)).decimals();
+    //     uint collateralValue = collateralAmt.mulDiv(
+    //         collateralPrice.toUint256(),
+    //         10 ** decimals
+    //     );
+    //     health = debtAmt.mulDiv(YAMarketCurve.DECIMAL_BASE, collateralValue);
+    // }
 
     function lever(
         uint128 debtAmt,
         bytes calldata collateralData
     ) external override returns (uint256 nftId) {}
-
-    function repayDebt(uint256 nftId, uint256 repayAmt) external override {}
-
-    function liquidate(uint256 nftId) external override {}
-
-    function deregister(uint256 nftId) external override {}
-
-    function redeem() external override returns (uint256) {}
 }

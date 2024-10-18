@@ -324,21 +324,21 @@ library YAMarketCurve {
         uint ypPlusAlpha = calcYpPlusAlpha(config.gamma, params.ypReserve);
         uint yaPlusBeta = calcYaPlusBeta(
             config.gamma,
-            config.ltv,
+            config.initialLtv,
             params.daysToMaturity,
             config.apy,
             params.ypReserve
         );
         uint negB = ypPlusAlpha +
-            yaPlusBeta.mulDiv(config.ltv, DECIMAL_BASE) +
+            yaPlusBeta.mulDiv(config.initialLtv, DECIMAL_BASE) +
             params.amount;
-        uint ac = (yaPlusBeta * params.amount).mulDiv(config.ltv, DECIMAL_BASE);
+        uint ac = (yaPlusBeta * params.amount).mulDiv(config.initialLtv, DECIMAL_BASE);
         uint deltaYa = ((negB - (negB.sqrt() - 4 * ac).sqrt()) * DECIMAL_BASE) /
-            config.ltv /
+            config.initialLtv /
             2;
-        uint deltaYp = params.amount - deltaYa.mulDiv(config.ltv, DECIMAL_BASE);
+        uint deltaYp = params.amount - deltaYa.mulDiv(config.initialLtv, DECIMAL_BASE);
         newApy = calcApy(
-            config.ltv,
+            config.initialLtv,
             params.daysToMaturity,
             ypPlusAlpha + deltaYp,
             yaPlusBeta - deltaYa
@@ -399,25 +399,25 @@ library YAMarketCurve {
         uint ypPlusAlpha = calcYpPlusAlpha(config.gamma, params.ypReserve);
         uint yaPlusBeta = calcYaPlusBeta(
             config.gamma,
-            config.ltv,
+            config.initialLtv,
             params.daysToMaturity,
             config.apy,
             params.ypReserve
         );
         uint b = ypPlusAlpha +
-            yaPlusBeta.mulDiv(config.ltv, DECIMAL_BASE) -
+            yaPlusBeta.mulDiv(config.initialLtv, DECIMAL_BASE) -
             params.amount;
         uint negAc = yaPlusBeta.mulDiv(
-            params.amount * config.ltv,
+            params.amount * config.initialLtv,
             DECIMAL_BASE
         );
         uint deltaYa = (((b.sqrt() + 4 * negAc).sqrt() - b) * DECIMAL_BASE) /
-            config.ltv /
+            config.initialLtv /
             2;
         uint deltaYp = ypPlusAlpha -
             ypPlusAlpha.mulDiv(yaPlusBeta, yaPlusBeta + deltaYa);
         newApy = calcApy(
-            config.ltv,
+            config.initialLtv,
             params.daysToMaturity,
             ypPlusAlpha - deltaYp,
             yaPlusBeta + deltaYa
@@ -479,7 +479,7 @@ library YAMarketCurve {
         uint ypPlusAlpha = calcYpPlusAlpha(config.gamma, params.ypReserve);
         uint yaPlusBeta = calcYaPlusBeta(
             config.gamma,
-            config.ltv,
+            config.initialLtv,
             params.daysToMaturity,
             config.apy,
             params.ypReserve
@@ -489,24 +489,24 @@ library YAMarketCurve {
         {
             // borrow stack space newYpReserve as b
             uint b = ypPlusAlpha +
-                (yaPlusBeta - params.amount).mulDiv(config.ltv, DECIMAL_BASE);
+                (yaPlusBeta - params.amount).mulDiv(config.initialLtv, DECIMAL_BASE);
             // borrow stack space newYaReserve as ac
             uint ac = (params.amount * yaPlusBeta).mulDiv(
-                config.ltv * config.ltv,
+                config.initialLtv * config.initialLtv,
                 DECIMAL_BASE_SQRT
             );
             deltaYa =
                 (((b.sqrt() + 4 * ac).sqrt() - b) * DECIMAL_BASE) /
-                config.ltv /
+                config.initialLtv /
                 2;
             deltaYp = (params.amount - deltaYa).mulDiv(
-                config.ltv,
+                config.initialLtv,
                 DECIMAL_BASE
             );
         }
 
         newApy = calcApy(
-            config.ltv,
+            config.initialLtv,
             params.daysToMaturity,
             ypPlusAlpha - deltaYp,
             yaPlusBeta + deltaYa
@@ -567,26 +567,26 @@ library YAMarketCurve {
         uint ypPlusAlpha = calcYpPlusAlpha(config.gamma, params.ypReserve);
         uint yaPlusBeta = calcYaPlusBeta(
             config.gamma,
-            config.ltv,
+            config.initialLtv,
             params.daysToMaturity,
             config.apy,
             params.ypReserve
         );
         uint negB = ypPlusAlpha +
-            (yaPlusBeta + params.amount).mulDiv(config.ltv, DECIMAL_BASE);
+            (yaPlusBeta + params.amount).mulDiv(config.initialLtv, DECIMAL_BASE);
 
         uint ac = (params.amount * yaPlusBeta).mulDiv(
-            config.ltv * config.ltv,
+            config.initialLtv * config.initialLtv,
             DECIMAL_BASE_SQRT
         );
 
         uint deltaYa = ((negB - (negB.sqrt() - 4 * ac).sqrt()) * DECIMAL_BASE) /
-            config.ltv /
+            config.initialLtv /
             2;
         uint deltaYp = ypPlusAlpha.mulDiv(yaPlusBeta, (yaPlusBeta - deltaYa)) -
             ypPlusAlpha;
         newApy = calcApy(
-            config.ltv,
+            config.initialLtv,
             params.daysToMaturity,
             ypPlusAlpha + deltaYp,
             yaPlusBeta - deltaYa
@@ -637,7 +637,7 @@ library YAMarketCurve {
         uint ypPlusAlpha = calcYpPlusAlpha(config.gamma, params.ypReserve);
         uint yaPlusBeta = calcYaPlusBeta(
             config.gamma,
-            config.ltv,
+            config.initialLtv,
             params.daysToMaturity,
             config.apy,
             params.ypReserve
@@ -646,7 +646,7 @@ library YAMarketCurve {
         uint deltaYp = ypPlusAlpha -
             ypPlusAlpha.mulDiv(yaPlusBeta, (yaPlusBeta + deltaYa));
         newApy = calcApy(
-            config.ltv,
+            config.initialLtv,
             params.daysToMaturity,
             ypPlusAlpha - deltaYp,
             yaPlusBeta + deltaYa
@@ -701,7 +701,7 @@ library YAMarketCurve {
         uint ypPlusAlpha = calcYpPlusAlpha(config.gamma, params.ypReserve);
         uint yaPlusBeta = calcYaPlusBeta(
             config.gamma,
-            config.ltv,
+            config.initialLtv,
             params.daysToMaturity,
             config.apy,
             params.ypReserve
@@ -712,7 +712,7 @@ library YAMarketCurve {
             (yaPlusBeta - negDeltaYa)
         ) - ypPlusAlpha;
         newApy = calcApy(
-            config.ltv,
+            config.initialLtv,
             params.daysToMaturity,
             ypPlusAlpha + negDeltaYp,
             yaPlusBeta - negDeltaYa
@@ -764,16 +764,16 @@ library YAMarketCurve {
         uint ypPlusAlpha = calcYpPlusAlpha(config.gamma, params.ypReserve);
         uint yaPlusBeta = calcYaPlusBeta(
             config.gamma,
-            config.ltv,
+            config.initialLtv,
             params.daysToMaturity,
             config.apy,
             params.ypReserve
         );
-        uint deltaYp = params.amount.mulDiv(config.ltv, DECIMAL_BASE);
+        uint deltaYp = params.amount.mulDiv(config.initialLtv, DECIMAL_BASE);
         uint deltaYa = yaPlusBeta -
             yaPlusBeta.mulDiv(ypPlusAlpha, ypPlusAlpha + deltaYp);
         newApy = calcApy(
-            config.ltv,
+            config.initialLtv,
             params.daysToMaturity,
             ypPlusAlpha + deltaYp,
             yaPlusBeta - deltaYa
@@ -829,18 +829,18 @@ library YAMarketCurve {
         uint ypPlusAlpha = calcYpPlusAlpha(config.gamma, params.ypReserve);
         uint yaPlusBeta = calcYaPlusBeta(
             config.gamma,
-            config.ltv,
+            config.initialLtv,
             params.daysToMaturity,
             config.apy,
             params.ypReserve
         );
-        uint negDeltaYp = params.amount.mulDiv(config.ltv, DECIMAL_BASE);
+        uint negDeltaYp = params.amount.mulDiv(config.initialLtv, DECIMAL_BASE);
         uint negDeltaYa = yaPlusBeta.mulDiv(
             ypPlusAlpha,
             ypPlusAlpha - negDeltaYp
         ) - yaPlusBeta;
         newApy = calcApy(
-            config.ltv,
+            config.initialLtv,
             params.daysToMaturity,
             ypPlusAlpha - negDeltaYp,
             yaPlusBeta + negDeltaYa

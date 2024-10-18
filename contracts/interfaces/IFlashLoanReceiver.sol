@@ -15,5 +15,5 @@ interface IFlashLoanReceiver {
         IERC20 asset,
         uint256 amount,
         bytes calldata data
-    ) external;
+    ) external returns (bool success);
 }

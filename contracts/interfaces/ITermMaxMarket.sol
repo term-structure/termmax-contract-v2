@@ -13,8 +13,23 @@ interface ITermMaxMarket {
         uint128 expectedAmt,
         uint128 actualAmt
     );
-    error FlashloanFailedLogString(string);
-    error FlashloanFailedLogBytes(bytes);
+    error XTAmountTooLittle(
+        address sender,
+        uint128 yaAmt,
+        bytes collateralData
+    );
+    error GNftIsNotHealthy(
+        address sender,
+        uint128 yaAmt,
+        uint128 health,
+        bytes collateralData
+    );
+    error MintGNFTFailedCallback(
+        address sender,
+        uint128 yaAmt,
+        uint128 debtAmt,
+        bytes callbackData
+    );
 
     event ProvideLiquidity(
         address indexed sender,
@@ -55,6 +70,14 @@ interface ITermMaxMarket {
         int64 newApy
     );
 
+    event MintGNft(
+        address indexed sender,
+        uint256 indexed nftId,
+        uint128 xtAmt,
+        uint128 debtAmt,
+        bytes collateralData
+    );
+
     // provide liquidity get lp tokens
     function provideLiquidity(
         uint256 cashAmt
@@ -81,19 +104,27 @@ interface ITermMaxMarket {
         bytes calldata collateralData
     ) external returns (uint256 nftId);
 
-    function mintLeveragedNft(
+    function mintGNft(
         uint128 yaAmt,
-        bytes calldata collateralData
+        bytes calldata collateralData,
+        bytes calldata callbackData
     ) external returns (uint256 nftId);
 
+    function getGNftInfo(
+        uint256 nftId
+    )
+        external
+        view
+        returns (address owner, uint128 debtAmt, bytes memory collateralData);
+
     // use cash to repayDebt
-    function repayDebt(uint256 nftId, uint256 repayAmt) external;
+    function repayGNft(uint256 nftId, uint256 repayAmt) external;
 
     // can use yp token?
-    function liquidate(uint256 nftId) external;
+    function liquidateGNft(uint256 nftId) external;
 
     // use yp to deregister debt
-    function deregister(uint256 nftId) external;
+    function deregisterGNft(uint256 nftId) external;
 
     function redeem() external returns (uint256);
 }
