@@ -10,6 +10,7 @@ library TermMaxStorage {
         AggregatorV3Interface collateralOracle;
         //10**ya.decimals()
         uint256 minLeveragedYa;
+        uint256 minLeveredYp;
         uint64 maturity;
         uint64 openTime;
         int64 apy;

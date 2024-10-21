@@ -15,12 +15,17 @@ interface ITermMaxMarket {
     );
     error XTAmountTooLittle(
         address sender,
-        uint128 yaAmt,
+        uint128 xtAmt,
+        bytes collateralData
+    );
+    error FTAmountTooLittle(
+        address sender,
+        uint128 ftAmt,
         bytes collateralData
     );
     error GNftIsNotHealthy(
         address sender,
-        uint128 yaAmt,
+        uint128 debtAmt,
         uint128 health,
         bytes collateralData
     );
@@ -73,7 +78,6 @@ interface ITermMaxMarket {
     event MintGNft(
         address indexed sender,
         uint256 indexed nftId,
-        uint128 xtAmt,
         uint128 debtAmt,
         bytes collateralData
     );

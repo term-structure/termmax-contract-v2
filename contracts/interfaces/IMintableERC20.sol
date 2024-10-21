@@ -5,6 +5,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 interface IMintableERC20 is IERC20 {
     error SpenderIsNotMarket(address spender);
+    error UnallowedUpgrade();
 
     function mint(address to, uint256 amount) external;
 

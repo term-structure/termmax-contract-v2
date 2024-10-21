@@ -1,18 +1,27 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+
 import {ITermMaxMarket} from "../interfaces/ITermMaxMarket.sol";
 import {IMintableERC20} from "../interfaces/IMintableERC20.sol";
 import {IFlashLoanReceiver} from "../interfaces/IFlashLoanReceiver.sol";
 import {YAMarketCurve} from "./lib/YAMarketCurve.sol";
 import {TermMaxStorage} from "./storage/TermMaxStorage.sol";
 
-abstract contract AbstractTermMaxMarket is ITermMaxMarket {
+abstract contract AbstractTermMaxMarket is
+    UUPSUpgradeable,
+    OwnableUpgradeable,
+    ITermMaxMarket,
+    ReentrancyGuardUpgradeable
+{
     using Math for uint256;
     using SafeCast for uint256;
     using SafeCast for int256;
@@ -35,11 +44,20 @@ abstract contract AbstractTermMaxMarket is ITermMaxMarket {
 
     constructor(IERC20 collateralToken, IERC20 cashToken, address) {}
 
+    function initialize(address owner) public initializer {
+        __Ownable_init(owner);
+    }
+
     // input cash
     // output lp tokens
     function provideLiquidity(
         uint256 cashAmt
-    ) external isOpen returns (uint128 lpYaOutAmt, uint128 lpYpOutAmt) {
+    )
+        external
+        isOpen
+        nonReentrant
+        returns (uint128 lpYaOutAmt, uint128 lpYpOutAmt)
+    {
         (lpYaOutAmt, lpYpOutAmt) = _provideLiquidity(msg.sender, cashAmt);
     }
 
@@ -104,7 +122,13 @@ abstract contract AbstractTermMaxMarket is ITermMaxMarket {
     function withdrawLp(
         uint128 lpYpAmt,
         uint128 lpYaAmt
-    ) external override isOpen returns (uint128 ypOutAmt, uint128 yaOutAmt) {
+    )
+        external
+        override
+        isOpen
+        nonReentrant
+        returns (uint128 ypOutAmt, uint128 yaOutAmt)
+    {
         (ypOutAmt, yaOutAmt) = _withdrawLp(msg.sender, lpYpAmt, lpYaAmt);
     }
 
@@ -201,7 +225,7 @@ abstract contract AbstractTermMaxMarket is ITermMaxMarket {
     function buyYp(
         uint128 cashAmtIn,
         uint128 minTokenOut
-    ) external override returns (uint256 netOut) {
+    ) external override nonReentrant returns (uint256 netOut) {
         TermMaxStorage.MarketTokens memory tokens = TermMaxStorage._getTokens();
         netOut = _buyToken(
             msg.sender,
@@ -215,7 +239,7 @@ abstract contract AbstractTermMaxMarket is ITermMaxMarket {
     function buyYa(
         uint128 cashAmtIn,
         uint128 minTokenOut
-    ) external override returns (uint256 netOut) {
+    ) external override nonReentrant returns (uint256 netOut) {
         TermMaxStorage.MarketTokens memory tokens = TermMaxStorage._getTokens();
         netOut = _buyToken(
             msg.sender,
@@ -439,7 +463,7 @@ abstract contract AbstractTermMaxMarket is ITermMaxMarket {
         uint128 yaAmt,
         bytes calldata collateralData,
         bytes calldata callbackData
-    ) external override isOpen returns (uint256 nftId) {
+    ) external override isOpen nonReentrant returns (uint256 nftId) {
         return _mintGNft(msg.sender, collateralData, yaAmt, callbackData);
     }
 
@@ -460,7 +484,12 @@ abstract contract AbstractTermMaxMarket is ITermMaxMarket {
         uint128 health = _calcHealth(debt, tokens.cash, collateralData)
             .toUint128();
         if (health >= config.maxLtv) {
-            revert GNftIsNotHealthy(sender, yaAmt, health, collateralData);
+            revert GNftIsNotHealthy(
+                sender,
+                debt.toUint128(),
+                health,
+                collateralData
+            );
         }
         // Send debt to borrower
         tokens.cash.transfer(sender, debt);
@@ -484,7 +513,7 @@ abstract contract AbstractTermMaxMarket is ITermMaxMarket {
         _transferCollateral(tokens.collateralToken, collateralData);
         // Mint G-NFT
         nftId = tokens.gNft.mint(sender, debt, collateralData);
-        emit MintGNft(sender, nftId, yaAmt, debt.toUint128(), collateralData);
+        emit MintGNft(sender, nftId, debt.toUint128(), collateralData);
     }
 
     function _transferCollateral(
@@ -496,7 +525,7 @@ abstract contract AbstractTermMaxMarket is ITermMaxMarket {
         uint256 debtAmt,
         IERC20 cash,
         bytes calldata collateralData
-    ) internal view returns (uint256 health) {
+    ) internal view virtual returns (uint256 health) {
         uint collateralValue = _sizeCollateralValue(collateralData, cash);
         health = debtAmt.mulDiv(YAMarketCurve.DECIMAL_BASE, collateralValue);
     }
@@ -527,5 +556,30 @@ abstract contract AbstractTermMaxMarket is ITermMaxMarket {
     function lever(
         uint128 debtAmt,
         bytes calldata collateralData
-    ) external override returns (uint256 nftId) {}
+    ) external override isOpen nonReentrant returns (uint256 nftId) {
+        return _lever(msg.sender, debtAmt, collateralData);
+    }
+
+    function _lever(
+        address sender,
+        uint128 debtAmt,
+        bytes calldata collateralData
+    ) internal returns (uint256 nftId) {
+        TermMaxStorage.MarketTokens memory tokens = TermMaxStorage._getTokens();
+        TermMaxStorage.MarketConfig memory config = TermMaxStorage._getConfig();
+        if (debtAmt < config.minLeveredYp) {
+            revert XTAmountTooLittle(sender, debtAmt, collateralData);
+        }
+        uint128 health = _calcHealth(debtAmt, tokens.cash, collateralData)
+            .toUint128();
+        if (health >= config.maxLtv) {
+            revert GNftIsNotHealthy(sender, debtAmt, health, collateralData);
+        }
+        _transferCollateral(tokens.collateralToken, collateralData);
+        // Mint yp
+        tokens.yp.mint(sender, debtAmt);
+        // Mint G-NFT
+        nftId = tokens.gNft.mint(sender, debtAmt, collateralData);
+        emit MintGNft(sender, nftId, debtAmt, collateralData);
+    }
 }
