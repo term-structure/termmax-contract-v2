@@ -24,4 +24,6 @@ interface IGearingNft is IERC721 {
         returns (address owner, uint128 debtAmt, bytes memory collateralData);
 
     function burn(uint256 id) external;
+
+    function updateDebt(uint256 id, uint128 newDebtAmt) external;
 }

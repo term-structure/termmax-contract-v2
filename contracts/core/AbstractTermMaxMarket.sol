@@ -461,7 +461,7 @@ abstract contract AbstractTermMaxMarket is
 
     function mintGNft(
         uint128 yaAmt,
-        bytes calldata collateralData,
+        bytes memory collateralData,
         bytes calldata callbackData
     ) external override isOpen nonReentrant returns (uint256 nftId) {
         return _mintGNft(msg.sender, collateralData, yaAmt, callbackData);
@@ -469,7 +469,7 @@ abstract contract AbstractTermMaxMarket is
 
     function _mintGNft(
         address sender,
-        bytes calldata collateralData,
+        bytes memory collateralData,
         uint128 yaAmt,
         bytes calldata callbackData
     ) internal returns (uint256 nftId) {
@@ -510,28 +510,41 @@ abstract contract AbstractTermMaxMarket is
             );
         }
         // Transfer collateral from sender to here
-        _transferCollateral(tokens.collateralToken, collateralData);
+        _transferCollateralFrom(
+            sender,
+            address(this),
+            tokens.collateralToken,
+            collateralData
+        );
         // Mint G-NFT
         nftId = tokens.gNft.mint(sender, debt, collateralData);
         emit MintGNft(sender, nftId, debt.toUint128(), collateralData);
     }
 
-    function _transferCollateral(
+    function _transferCollateralFrom(
+        address from,
+        address to,
         address collateral,
-        bytes calldata collateralData
+        bytes memory collateralData
+    ) internal virtual;
+
+    function _transferCollateral(
+        address to,
+        address collateral,
+        bytes memory collateralData
     ) internal virtual;
 
     function _calcHealth(
         uint256 debtAmt,
         IERC20 cash,
-        bytes calldata collateralData
+        bytes memory collateralData
     ) internal view virtual returns (uint256 health) {
         uint collateralValue = _sizeCollateralValue(collateralData, cash);
         health = debtAmt.mulDiv(YAMarketCurve.DECIMAL_BASE, collateralValue);
     }
 
     function _sizeCollateralValue(
-        bytes calldata collateralData,
+        bytes memory collateralData,
         IERC20 cash
     ) internal view virtual returns (uint256);
 
@@ -575,11 +588,98 @@ abstract contract AbstractTermMaxMarket is
         if (health >= config.maxLtv) {
             revert GNftIsNotHealthy(sender, debtAmt, health, collateralData);
         }
-        _transferCollateral(tokens.collateralToken, collateralData);
-        // Mint yp
+        _transferCollateralFrom(
+            sender,
+            address(this),
+            tokens.collateralToken,
+            collateralData
+        );
+
         tokens.yp.mint(sender, debtAmt);
         // Mint G-NFT
         nftId = tokens.gNft.mint(sender, debtAmt, collateralData);
         emit MintGNft(sender, nftId, debtAmt, collateralData);
     }
+
+    // use cash to repayDebt
+    function repayGNft(
+        uint256 nftId,
+        uint128 repayAmt
+    ) external override isOpen nonReentrant {
+        _repayGNft(msg.sender, nftId, repayAmt);
+    }
+
+    function _repayGNft(
+        address sender,
+        uint256 nftId,
+        uint128 repayAmt
+    ) internal {
+        TermMaxStorage.MarketTokens memory tokens = TermMaxStorage._getTokens();
+        (address owner, uint128 debtAmt, bytes memory collateralData) = tokens
+            .gNft
+            .loanInfo(nftId);
+        if (sender != owner) {
+            revert SenderIsNotTheGNftOwner(sender, nftId);
+        }
+        tokens.cash.transferFrom(sender, address(this), repayAmt);
+        if (repayAmt == debtAmt) {
+            // Burn this nft
+            tokens.gNft.burn(nftId);
+        } else {
+            tokens.gNft.updateDebt(nftId, debtAmt - repayAmt);
+        }
+        _transferCollateral(sender, tokens.collateralToken, collateralData);
+        emit RepayGNft(sender, nftId, repayAmt, false);
+    }
+
+    // use yp to deregister debt
+    function deregisterGNft(
+        uint256 nftId
+    ) external override isOpen nonReentrant {
+        _deregisterGNft(msg.sender, nftId);
+    }
+
+    function _deregisterGNft(address sender, uint256 nftId) internal {
+        TermMaxStorage.MarketTokens memory tokens = TermMaxStorage._getTokens();
+        (address owner, uint128 debtAmt, bytes memory collateralData) = tokens
+            .gNft
+            .loanInfo(nftId);
+        if (sender != owner) {
+            revert SenderIsNotTheGNftOwner(sender, nftId);
+        }
+        tokens.yp.transferFrom(sender, address(this), debtAmt);
+        // Burn this nft
+        tokens.gNft.burn(nftId);
+        _transferCollateral(sender, tokens.collateralToken, collateralData);
+        emit DeregisterGNft(sender, nftId, debtAmt);
+    }
+
+    // can use yp token?
+    function liquidateGNft(uint256 nftId) external override nonReentrant {
+        _liquidateGNft(msg.sender, nftId);
+    }
+
+    function _liquidateGNft(address sender, uint256 nftId) internal {
+        TermMaxStorage.MarketConfig memory config = TermMaxStorage._getConfig();
+        if (!config.liquidatable) {
+            revert MarketDoNotSupportLiquidation();
+        }
+
+        TermMaxStorage.MarketTokens memory tokens = TermMaxStorage._getTokens();
+        (, uint128 debtAmt, bytes memory collateralData) = tokens.gNft.loanInfo(
+            nftId
+        );
+        uint128 health = _calcHealth(debtAmt, tokens.cash, collateralData)
+            .toUint128();
+        if (health < config.liquidationLtv) {
+            revert GNftIsHealthy(sender, nftId, health);
+        }
+        tokens.cash.transferFrom(sender, address(this), debtAmt);
+        // Burn this nft
+        tokens.gNft.burn(nftId);
+        _transferCollateral(sender, tokens.collateralToken, collateralData);
+        emit LiquidateGNft(sender, nftId, debtAmt);
+    }
+
+    function redeem() external override nonReentrant returns (uint256) {}
 }

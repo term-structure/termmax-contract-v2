@@ -29,12 +29,15 @@ interface ITermMaxMarket {
         uint128 health,
         bytes collateralData
     );
+    error GNftIsHealthy(address sender, uint256 nftId, uint128 health);
     error MintGNFTFailedCallback(
         address sender,
         uint128 yaAmt,
         uint128 debtAmt,
         bytes callbackData
     );
+    error MarketDoNotSupportLiquidation();
+    error SenderIsNotTheGNftOwner(address sender, uint256 nftId);
 
     event ProvideLiquidity(
         address indexed sender,
@@ -82,6 +85,25 @@ interface ITermMaxMarket {
         bytes collateralData
     );
 
+    event RepayGNft(
+        address indexed sender,
+        uint256 indexed nftId,
+        uint128 repayAmt,
+        bool isPaidOff
+    );
+
+    event DeregisterGNft(
+        address indexed sender,
+        uint256 indexed nftId,
+        uint128 debtAmt
+    );
+
+    event LiquidateGNft(
+        address indexed sender,
+        uint256 indexed nftId,
+        uint128 debtAmt
+    );
+
     // provide liquidity get lp tokens
     function provideLiquidity(
         uint256 cashAmt
@@ -122,9 +144,8 @@ interface ITermMaxMarket {
         returns (address owner, uint128 debtAmt, bytes memory collateralData);
 
     // use cash to repayDebt
-    function repayGNft(uint256 nftId, uint256 repayAmt) external;
+    function repayGNft(uint256 nftId, uint128 repayAmt) external;
 
-    // can use yp token?
     function liquidateGNft(uint256 nftId) external;
 
     // use yp to deregister debt
