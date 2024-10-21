@@ -37,6 +37,7 @@ interface ITermMaxMarket {
         bytes callbackData
     );
     error MarketDoNotSupportLiquidation();
+    error CanNotLiquidateAfterMaturity();
     error SenderIsNotTheGNftOwner(address sender, uint256 nftId);
 
     event ProvideLiquidity(

@@ -664,6 +664,9 @@ abstract contract AbstractTermMaxMarket is
         if (!config.liquidatable) {
             revert MarketDoNotSupportLiquidation();
         }
+        if (config.deliverable && block.timestamp >= config.maturity) {
+            revert CanNotLiquidateAfterMaturity();
+        }
 
         TermMaxStorage.MarketTokens memory tokens = TermMaxStorage._getTokens();
         (, uint128 debtAmt, bytes memory collateralData) = tokens.gNft.loanInfo(
