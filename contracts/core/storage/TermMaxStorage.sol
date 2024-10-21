@@ -26,6 +26,7 @@ library TermMaxStorage {
         // Whether liquidating g-nft when it's ltv bigger than liquidationLtv
         bool liquidatable;
         bool deliverable;
+        bool rewardIsDistributed;
     }
 
     struct MarketTokens {

@@ -39,6 +39,7 @@ interface ITermMaxMarket {
     error MarketDoNotSupportLiquidation();
     error CanNotLiquidateAfterMaturity();
     error SenderIsNotTheGNftOwner(address sender, uint256 nftId);
+    error CanNotRedeemBeforeMaturity();
 
     event ProvideLiquidity(
         address indexed sender,
@@ -105,6 +106,13 @@ interface ITermMaxMarket {
         uint128 debtAmt
     );
 
+    event Redeem(
+        address indexed sender,
+        uint128 ratio,
+        uint128 cashAmt,
+        bytes deliveryData
+    );
+
     // provide liquidity get lp tokens
     function provideLiquidity(
         uint256 cashAmt
@@ -152,5 +160,5 @@ interface ITermMaxMarket {
     // use yp to deregister debt
     function deregisterGNft(uint256 nftId) external;
 
-    function redeem() external returns (uint256);
+    function redeem() external;
 }
