@@ -9,8 +9,8 @@ library TermMaxStorage {
     struct MarketConfig {
         AggregatorV3Interface collateralOracle;
         //10**ya.decimals()
-        uint256 minLeveragedYa;
-        uint256 minLeveredYp;
+        uint256 minLeveragedXt;
+        uint256 minLeveredFt;
         uint64 maturity;
         uint64 openTime;
         int64 apy;
@@ -30,10 +30,10 @@ library TermMaxStorage {
     }
 
     struct MarketTokens {
-        IMintableERC20 ya;
-        IMintableERC20 yp;
-        IMintableERC20 lpYa;
-        IMintableERC20 lpYp;
+        IMintableERC20 ft;
+        IMintableERC20 xt;
+        IMintableERC20 lpFt;
+        IMintableERC20 lpXt;
         IGearingNft gNft;
         address collateralToken;
         IERC20 cash;

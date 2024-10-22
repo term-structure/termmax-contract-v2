@@ -13,7 +13,7 @@ import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IER
 import {ITermMaxMarket} from "../interfaces/ITermMaxMarket.sol";
 import {IMintableERC20} from "../interfaces/IMintableERC20.sol";
 import {IFlashLoanReceiver} from "../interfaces/IFlashLoanReceiver.sol";
-import {YAMarketCurve} from "./lib/YAMarketCurve.sol";
+import {TermMaxCurve} from "./lib/TermMaxCurve.sol";
 import {TermMaxStorage} from "./storage/TermMaxStorage.sol";
 
 abstract contract AbstractTermMaxMarket is
@@ -26,10 +26,10 @@ abstract contract AbstractTermMaxMarket is
     using SafeCast for uint256;
     using SafeCast for int256;
 
-    string constant PREFIX_YP = "YP:";
-    string constant PREFIX_YA = "YA:";
-    string constant PREFIX_LP_YP = "LpYP:";
-    string constant PREFIX_LP_YA = "LpYA:";
+    string constant PREFIX_FT = "FT:";
+    string constant PREFIX_XT = "XT:";
+    string constant PREFIX_LP_FT = "LpFT:";
+    string constant PREFIX_LP_XT = "LpXT:";
 
     modifier isOpen() {
         TermMaxStorage.MarketConfig memory config = TermMaxStorage._getConfig();
@@ -41,8 +41,6 @@ abstract contract AbstractTermMaxMarket is
         }
         _;
     }
-
-    constructor(IERC20 collateralToken, IERC20 cashToken, address) {}
 
     function initialize(address owner) public initializer {
         __Ownable_init(owner);
@@ -56,40 +54,40 @@ abstract contract AbstractTermMaxMarket is
         external
         isOpen
         nonReentrant
-        returns (uint128 lpYaOutAmt, uint128 lpYpOutAmt)
+        returns (uint128 lpXtOutAmt, uint128 lpFtOutAmt)
     {
-        (lpYaOutAmt, lpYpOutAmt) = _provideLiquidity(msg.sender, cashAmt);
+        (lpXtOutAmt, lpFtOutAmt) = _provideLiquidity(msg.sender, cashAmt);
     }
 
     function _provideLiquidity(
         address sender,
         uint256 cashAmt
-    ) internal returns (uint128 lpYaOutAmt, uint128 lpYpOutAmt) {
+    ) internal returns (uint128 lpXtOutAmt, uint128 lpFtOutAmt) {
         TermMaxStorage.MarketTokens memory tokens = TermMaxStorage._getTokens();
         TermMaxStorage.MarketConfig memory config = TermMaxStorage._getConfig();
-        uint ypReserve = tokens.yp.balanceOf(address(this));
-        uint lpYpTotalSupply = tokens.lpYp.totalSupply();
+        uint ftReserve = tokens.ft.balanceOf(address(this));
+        uint lpFtTotalSupply = tokens.lpFt.totalSupply();
 
-        uint yaReserve = tokens.ya.balanceOf(address(this));
-        uint lpYaTotalSupply = tokens.lpYa.totalSupply();
-        (uint128 ypMintedAmt, uint128 yaMintedAmt) = _addLiquidity(
+        uint xtReserve = tokens.xt.balanceOf(address(this));
+        uint lpXtTotalSupply = tokens.lpXt.totalSupply();
+        (uint128 ftMintedAmt, uint128 xtMintedAmt) = _addLiquidity(
             sender,
             cashAmt,
             config.initialLtv,
             tokens
         );
 
-        lpYpOutAmt = YAMarketCurve
-            ._calculateLpOut(ypMintedAmt, ypReserve, lpYpTotalSupply)
+        lpFtOutAmt = TermMaxCurve
+            ._calculateLpOut(ftMintedAmt, ftReserve, lpFtTotalSupply)
             .toUint128();
 
-        lpYaOutAmt = YAMarketCurve
-            ._calculateLpOut(yaMintedAmt, yaReserve, lpYaTotalSupply)
+        lpXtOutAmt = TermMaxCurve
+            ._calculateLpOut(xtMintedAmt, xtReserve, lpXtTotalSupply)
             .toUint128();
-        tokens.lpYa.mint(sender, lpYaOutAmt);
-        tokens.lpYp.mint(sender, lpYpOutAmt);
+        tokens.lpXt.mint(sender, lpXtOutAmt);
+        tokens.lpFt.mint(sender, lpFtOutAmt);
 
-        emit ProvideLiquidity(sender, cashAmt, lpYpOutAmt, lpYaOutAmt);
+        emit ProvideLiquidity(sender, cashAmt, lpFtOutAmt, lpXtOutAmt);
     }
 
     function _addLiquidity(
@@ -97,18 +95,16 @@ abstract contract AbstractTermMaxMarket is
         uint256 cashAmt,
         uint256 ltv,
         TermMaxStorage.MarketTokens memory tokens
-    ) internal returns (uint128 ypMintedAmt, uint128 yaMintedAmt) {
+    ) internal returns (uint128 ftMintedAmt, uint128 xtMintedAmt) {
         tokens.cash.transferFrom(sender, address(this), cashAmt);
 
-        ypMintedAmt = cashAmt
-            .mulDiv(ltv, YAMarketCurve.DECIMAL_BASE)
-            .toUint128();
-        yaMintedAmt = cashAmt.toUint128();
+        ftMintedAmt = cashAmt.mulDiv(ltv, TermMaxCurve.DECIMAL_BASE).toUint128();
+        xtMintedAmt = cashAmt.toUint128();
         // Mint tokens to this
-        tokens.yp.mint(address(this), ypMintedAmt);
-        tokens.ya.mint(address(this), yaMintedAmt);
+        tokens.ft.mint(address(this), ftMintedAmt);
+        tokens.xt.mint(address(this), xtMintedAmt);
 
-        emit AddLiquidity(sender, cashAmt, ypMintedAmt, yaMintedAmt);
+        emit AddLiquidity(sender, cashAmt, ftMintedAmt, xtMintedAmt);
     }
 
     function _daysTomaturity(
@@ -116,134 +112,134 @@ abstract contract AbstractTermMaxMarket is
     ) internal view returns (uint256 daysToMaturity) {
         daysToMaturity =
             (maturity - block.timestamp) /
-            YAMarketCurve.SECONDS_IN_DAY;
+            TermMaxCurve.SECONDS_IN_DAY;
     }
 
     function withdrawLp(
-        uint128 lpYpAmt,
-        uint128 lpYaAmt
+        uint128 lpFtAmt,
+        uint128 lpXtAmt
     )
         external
         override
         isOpen
         nonReentrant
-        returns (uint128 ypOutAmt, uint128 yaOutAmt)
+        returns (uint128 ftOutAmt, uint128 xtOutAmt)
     {
-        (ypOutAmt, yaOutAmt) = _withdrawLp(msg.sender, lpYpAmt, lpYaAmt);
+        (ftOutAmt, xtOutAmt) = _withdrawLp(msg.sender, lpFtAmt, lpXtAmt);
     }
 
     function _withdrawLp(
         address sender,
-        uint256 lpYpAmt,
-        uint256 lpYaAmt
-    ) internal returns (uint128 ypOutAmt, uint128 yaOutAmt) {
+        uint256 lpFtAmt,
+        uint256 lpXtAmt
+    ) internal returns (uint128 ftOutAmt, uint128 xtOutAmt) {
         TermMaxStorage.MarketTokens memory tokens = TermMaxStorage._getTokens();
         TermMaxStorage.MarketConfig memory config = TermMaxStorage._getConfig();
         // get token reserves
-        uint ypReserve = tokens.yp.balanceOf(address(this));
-        uint yaReserve = tokens.ya.balanceOf(address(this));
-        uint lpYpTotalSupply;
-        uint lpYaTotalSupply;
+        uint ftReserve = tokens.ft.balanceOf(address(this));
+        uint xtReserve = tokens.xt.balanceOf(address(this));
+        uint lpFtTotalSupply;
+        uint lpXtTotalSupply;
         // calculate reward
-        if (lpYpAmt > 0) {
-            tokens.lpYp.transferFrom(sender, address(this), lpYpAmt);
+        if (lpFtAmt > 0) {
+            tokens.lpFt.transferFrom(sender, address(this), lpFtAmt);
 
-            lpYpTotalSupply = tokens.lpYp.totalSupply();
-            uint reward = YAMarketCurve.calculateLpReward(
+            lpFtTotalSupply = tokens.lpFt.totalSupply();
+            uint reward = TermMaxCurve.calculateLpReward(
                 block.timestamp,
                 config.openTime,
                 config.maturity,
-                lpYpTotalSupply,
-                lpYpAmt,
-                tokens.lpYp.balanceOf(address(this))
+                lpFtTotalSupply,
+                lpFtAmt,
+                tokens.lpFt.balanceOf(address(this))
             );
-            lpYpAmt += reward;
-            tokens.lpYp.burn(lpYpAmt);
-            ypOutAmt = lpYpAmt.mulDiv(ypReserve, lpYpTotalSupply).toUint128();
+            lpFtAmt += reward;
+            tokens.lpFt.burn(lpFtAmt);
+            ftOutAmt = lpFtAmt.mulDiv(ftReserve, lpFtTotalSupply).toUint128();
         }
-        if (lpYaAmt > 0) {
-            tokens.lpYa.transferFrom(sender, address(this), lpYaAmt);
+        if (lpXtAmt > 0) {
+            tokens.lpXt.transferFrom(sender, address(this), lpXtAmt);
 
-            lpYaTotalSupply = tokens.lpYa.totalSupply();
-            uint reward = YAMarketCurve.calculateLpReward(
+            lpXtTotalSupply = tokens.lpXt.totalSupply();
+            uint reward = TermMaxCurve.calculateLpReward(
                 block.timestamp,
                 config.openTime,
                 config.maturity,
-                lpYaTotalSupply,
-                lpYaAmt,
-                tokens.lpYa.balanceOf(address(this))
+                lpXtTotalSupply,
+                lpXtAmt,
+                tokens.lpXt.balanceOf(address(this))
             );
-            lpYaAmt += reward;
-            tokens.lpYa.burn(lpYaAmt);
-            yaOutAmt = lpYaAmt.mulDiv(yaReserve, lpYaTotalSupply).toUint128();
+            lpXtAmt += reward;
+            tokens.lpXt.burn(lpXtAmt);
+            xtOutAmt = lpXtAmt.mulDiv(xtReserve, lpXtTotalSupply).toUint128();
         }
-        uint sameProportionYp = uint(yaOutAmt).mulDiv(
+        uint sameProportionFt = uint(xtOutAmt).mulDiv(
             config.initialLtv,
-            YAMarketCurve.DECIMAL_BASE
+            TermMaxCurve.DECIMAL_BASE
         );
-        if (sameProportionYp > ypOutAmt) {
-            uint yaExcess = (sameProportionYp - ypOutAmt).mulDiv(
-                YAMarketCurve.DECIMAL_BASE,
+        if (sameProportionFt > ftOutAmt) {
+            uint xtExcess = (sameProportionFt - ftOutAmt).mulDiv(
+                TermMaxCurve.DECIMAL_BASE,
                 config.initialLtv
             );
-            YAMarketCurve.TradeParams memory tradeParams = YAMarketCurve
+            TermMaxCurve.TradeParams memory tradeParams = TermMaxCurve
                 .TradeParams(
-                    yaExcess,
-                    ypReserve,
-                    yaReserve,
+                    xtExcess,
+                    ftReserve,
+                    xtReserve,
                     _daysTomaturity(config.maturity)
                 );
-            (, , config.apy) = YAMarketCurve._sellNegYa(tradeParams, config);
-        } else if (sameProportionYp < ypOutAmt) {
-            uint ypExcess = ypOutAmt - sameProportionYp;
-            YAMarketCurve.TradeParams memory tradeParams = YAMarketCurve
+            (, , config.apy) = TermMaxCurve._sellNegXt(tradeParams, config);
+        } else if (sameProportionFt < ftOutAmt) {
+            uint ypExcess = ftOutAmt - sameProportionFt;
+            TermMaxCurve.TradeParams memory tradeParams = TermMaxCurve
                 .TradeParams(
                     ypExcess,
-                    ypReserve,
-                    yaReserve,
+                    ftReserve,
+                    xtReserve,
                     _daysTomaturity(config.maturity)
                 );
-            (, , config.apy) = YAMarketCurve._sellNegYp(tradeParams, config);
+            (, , config.apy) = TermMaxCurve._sellNegFt(tradeParams, config);
         }
         TermMaxStorage._getConfig().apy = config.apy;
-        if (ypOutAmt > 0) {
-            tokens.ya.transfer(sender, ypOutAmt);
+        if (ftOutAmt > 0) {
+            tokens.xt.transfer(sender, ftOutAmt);
         }
-        if (yaOutAmt > 0) {
-            tokens.yp.transfer(sender, yaOutAmt);
+        if (xtOutAmt > 0) {
+            tokens.ft.transfer(sender, xtOutAmt);
         }
         emit WithdrawLP(
             sender,
-            lpYpAmt.toUint128(),
-            lpYaAmt.toUint128(),
-            ypOutAmt,
-            yaOutAmt,
+            lpFtAmt.toUint128(),
+            lpXtAmt.toUint128(),
+            ftOutAmt,
+            xtOutAmt,
             config.apy
         );
     }
 
-    function buyYp(
+    function buyFt(
         uint128 cashAmtIn,
         uint128 minTokenOut
     ) external override nonReentrant returns (uint256 netOut) {
         TermMaxStorage.MarketTokens memory tokens = TermMaxStorage._getTokens();
         netOut = _buyToken(
             msg.sender,
-            tokens.yp,
+            tokens.ft,
             cashAmtIn,
             minTokenOut,
             tokens
         );
     }
 
-    function buyYa(
+    function buyXt(
         uint128 cashAmtIn,
         uint128 minTokenOut
     ) external override nonReentrant returns (uint256 netOut) {
         TermMaxStorage.MarketTokens memory tokens = TermMaxStorage._getTokens();
         netOut = _buyToken(
             msg.sender,
-            tokens.ya,
+            tokens.xt,
             cashAmtIn,
             minTokenOut,
             tokens
@@ -258,80 +254,79 @@ abstract contract AbstractTermMaxMarket is
         TermMaxStorage.MarketTokens memory tokens
     ) internal returns (uint256 netOut) {
         // Get old reserves
-        uint ypReserve = tokens.yp.balanceOf(address(this));
-        uint yaReserve = tokens.ya.balanceOf(address(this));
+        uint ftReserve = tokens.ft.balanceOf(address(this));
+        uint xtReserve = tokens.xt.balanceOf(address(this));
 
         TermMaxStorage.MarketConfig memory config = TermMaxStorage._getConfig();
-        YAMarketCurve.TradeParams memory tradeParams = YAMarketCurve
-            .TradeParams(
-                cashAmtIn,
-                ypReserve,
-                yaReserve,
-                _daysTomaturity(config.maturity)
-            );
+        TermMaxCurve.TradeParams memory tradeParams = TermMaxCurve.TradeParams(
+            cashAmtIn,
+            ftReserve,
+            xtReserve,
+            _daysTomaturity(config.maturity)
+        );
 
         uint feeAmt;
         // add new lituidity
         _addLiquidity(sender, cashAmtIn, config.initialLtv, tokens);
-        if (token == tokens.yp) {
-            uint newYpReserve;
-            uint newYaReserve;
-            (newYpReserve, newYaReserve, config.apy) = YAMarketCurve.buyYp(
+        if (token == tokens.ft) {
+            uint newFtReserve;
+            uint newXtReserve;
+            (newFtReserve, newXtReserve, config.apy) = TermMaxCurve.buyFt(
                 tradeParams,
                 config
             );
             // calculate fee
-            feeAmt = YAMarketCurve.calculateFee(
-                ypReserve,
-                yaReserve,
-                newYpReserve,
-                newYaReserve,
+            feeAmt = TermMaxCurve.calculateFee(
+                ftReserve,
+                xtReserve,
+                newFtReserve,
+                newXtReserve,
                 config.lendFeeRatio,
                 config.initialLtv
             );
             //TODO protocol reward
-            uint finalYpReserve;
-            (finalYpReserve, , config.apy) = YAMarketCurve.buyNegYp(
-                YAMarketCurve.TradeParams(
+            uint finalFtReserve;
+            (finalFtReserve, , config.apy) = TermMaxCurve.buyNegFt(
+                TermMaxCurve.TradeParams(
                     feeAmt,
-                    ypReserve,
-                    yaReserve,
+                    ftReserve,
+                    xtReserve,
                     tradeParams.daysToMaturity
                 ),
                 config
             );
 
-            uint ypCurrentReserve = tokens.yp.balanceOf(address(this));
-            netOut = ypCurrentReserve - finalYpReserve;
+            uint ypCurrentReserve = tokens.ft.balanceOf(address(this));
+            netOut = ypCurrentReserve - finalFtReserve;
         } else {
-            uint newYpReserve;
-            uint newYaReserve;
-            (newYpReserve, newYaReserve, config.apy) = YAMarketCurve.buyYa(
+            uint newFtReserve;
+            uint newXtReserve;
+            (newFtReserve, newXtReserve, config.apy) = TermMaxCurve.buyXt(
                 tradeParams,
                 config
             );
             // calculate fee
-            feeAmt = YAMarketCurve.calculateFee(
-                ypReserve,
-                yaReserve,
-                newYpReserve,
-                newYaReserve,
+            feeAmt = TermMaxCurve.calculateFee(
+                ftReserve,
+                xtReserve,
+                newFtReserve,
+                newXtReserve,
                 config.borrowFeeRatio,
                 config.initialLtv
             );
             //TODO protocol reward
-            uint finalYaReserve;
-            (finalYaReserve, , config.apy) = YAMarketCurve.buyNegYa(
-                YAMarketCurve.TradeParams(
+            uint finalXtReserve;
+            (finalXtReserve, , config.apy) = TermMaxCurve.buyNegXt(
+                TermMaxCurve.TradeParams(
                     feeAmt,
-                    ypReserve,
-                    yaReserve,
+                    ftReserve,
+                    xtReserve,
                     tradeParams.daysToMaturity
                 ),
                 config
             );
-            uint yaCurrentReserve = tokens.ya.balanceOf(address(this));
-            netOut = yaCurrentReserve - finalYaReserve;
+            uint yaCurrentReserve = tokens.xt.balanceOf(address(this));
+            netOut = yaCurrentReserve - finalXtReserve;
         }
 
         if (netOut < minTokenOut) {
@@ -364,48 +359,47 @@ abstract contract AbstractTermMaxMarket is
         TermMaxStorage.MarketTokens memory tokens = TermMaxStorage._getTokens();
         token.transferFrom(sender, address(this), tokenAmtIn);
         // Get old reserves
-        uint ypReserve = tokens.yp.balanceOf(address(this));
-        uint yaReserve = tokens.ya.balanceOf(address(this));
+        uint ftReserve = tokens.ft.balanceOf(address(this));
+        uint xtReserve = tokens.xt.balanceOf(address(this));
         TermMaxStorage.MarketConfig memory config = TermMaxStorage._getConfig();
-        YAMarketCurve.TradeParams memory tradeParams = YAMarketCurve
-            .TradeParams(
-                tokenAmtIn,
-                ypReserve,
-                yaReserve,
-                _daysTomaturity(config.maturity)
-            );
+        TermMaxCurve.TradeParams memory tradeParams = TermMaxCurve.TradeParams(
+            tokenAmtIn,
+            ftReserve,
+            xtReserve,
+            _daysTomaturity(config.maturity)
+        );
         uint feeAmt;
-        if (token == tokens.yp) {
-            uint newYpReserve;
-            uint newYaReserve;
-            (newYpReserve, newYaReserve, config.apy) = YAMarketCurve.sellYp(
+        if (token == tokens.ft) {
+            uint newFtReserve;
+            uint newXtReserve;
+            (newFtReserve, newXtReserve, config.apy) = TermMaxCurve.sellFt(
                 tradeParams,
                 config
             );
-            netOut = yaReserve - newYpReserve;
+            netOut = xtReserve - newFtReserve;
             // calculate fee
-            feeAmt = YAMarketCurve.calculateFee(
-                ypReserve,
-                yaReserve,
-                newYpReserve,
-                newYaReserve,
+            feeAmt = TermMaxCurve.calculateFee(
+                ftReserve,
+                xtReserve,
+                newFtReserve,
+                newXtReserve,
                 config.borrowFeeRatio,
                 config.initialLtv
             );
         } else {
-            uint newYpReserve;
-            uint newYaReserve;
-            (newYpReserve, newYaReserve, config.apy) = YAMarketCurve.sellYa(
+            uint newFtReserve;
+            uint newXtReserve;
+            (newFtReserve, newXtReserve, config.apy) = TermMaxCurve.sellXt(
                 tradeParams,
                 config
             );
-            netOut = tokenAmtIn + yaReserve - newYpReserve;
+            netOut = tokenAmtIn + xtReserve - newFtReserve;
             // calculate fee
-            feeAmt = YAMarketCurve.calculateFee(
-                ypReserve,
-                yaReserve,
-                newYpReserve,
-                newYaReserve,
+            feeAmt = TermMaxCurve.calculateFee(
+                ftReserve,
+                xtReserve,
+                newFtReserve,
+                newXtReserve,
                 config.lendFeeRatio,
                 config.initialLtv
             );
@@ -441,22 +435,22 @@ abstract contract AbstractTermMaxMarket is
         uint feeToLock = (feeAmount + 1) / 2;
         uint ypAmount = feeToLock.mulDiv(
             config.initialLtv,
-            YAMarketCurve.DECIMAL_BASE
+            TermMaxCurve.DECIMAL_BASE
         );
 
-        uint lpYpAmt = YAMarketCurve._calculateLpOut(
+        uint lpFtAmt = TermMaxCurve._calculateLpOut(
             ypAmount,
-            tokens.yp.balanceOf(address(this)) - ypAmount,
-            tokens.lpYp.totalSupply()
+            tokens.ft.balanceOf(address(this)) - ypAmount,
+            tokens.lpFt.totalSupply()
         );
-        tokens.lpYp.mint(address(this), lpYpAmt);
+        tokens.lpFt.mint(address(this), lpFtAmt);
 
-        uint lpYaAmt = YAMarketCurve._calculateLpOut(
+        uint lpXtAmt = TermMaxCurve._calculateLpOut(
             feeToLock,
-            tokens.ya.balanceOf(address(this)) - feeToLock,
-            tokens.lpYa.totalSupply()
+            tokens.xt.balanceOf(address(this)) - feeToLock,
+            tokens.lpXt.totalSupply()
         );
-        tokens.lpYa.mint(address(this), lpYaAmt);
+        tokens.lpXt.mint(address(this), lpXtAmt);
     }
 
     function mintGNft(
@@ -474,13 +468,13 @@ abstract contract AbstractTermMaxMarket is
         bytes calldata callbackData
     ) internal returns (uint256 nftId) {
         TermMaxStorage.MarketTokens memory tokens = TermMaxStorage._getTokens();
-        tokens.ya.transferFrom(sender, address(this), yaAmt);
+        tokens.xt.transferFrom(sender, address(this), yaAmt);
 
         TermMaxStorage.MarketConfig memory config = TermMaxStorage._getConfig();
-        if (yaAmt < config.minLeveragedYa) {
+        if (yaAmt < config.minLeveragedXt) {
             revert XTAmountTooLittle(sender, yaAmt, collateralData);
         }
-        uint debt = (yaAmt * config.initialLtv) / YAMarketCurve.DECIMAL_BASE;
+        uint debt = (yaAmt * config.initialLtv) / TermMaxCurve.DECIMAL_BASE;
         uint128 health = _calcHealth(debt, tokens.cash, collateralData)
             .toUint128();
         if (health >= config.maxLtv) {
@@ -540,7 +534,7 @@ abstract contract AbstractTermMaxMarket is
         bytes memory collateralData
     ) internal view virtual returns (uint256 health) {
         uint collateralValue = _sizeCollateralValue(collateralData, cash);
-        health = debtAmt.mulDiv(YAMarketCurve.DECIMAL_BASE, collateralValue);
+        health = debtAmt.mulDiv(TermMaxCurve.DECIMAL_BASE, collateralValue);
     }
 
     function _sizeCollateralValue(
@@ -563,7 +557,7 @@ abstract contract AbstractTermMaxMarket is
     //         collateralPrice.toUint256(),
     //         10 ** decimals
     //     );
-    //     health = debtAmt.mulDiv(YAMarketCurve.DECIMAL_BASE, collateralValue);
+    //     health = debtAmt.mulDiv(TermMaxCurve.DECIMAL_BASE, collateralValue);
     // }
 
     function lever(
@@ -580,7 +574,7 @@ abstract contract AbstractTermMaxMarket is
     ) internal returns (uint256 nftId) {
         TermMaxStorage.MarketTokens memory tokens = TermMaxStorage._getTokens();
         TermMaxStorage.MarketConfig memory config = TermMaxStorage._getConfig();
-        if (debtAmt < config.minLeveredYp) {
+        if (debtAmt < config.minLeveredFt) {
             revert XTAmountTooLittle(sender, debtAmt, collateralData);
         }
         uint128 health = _calcHealth(debtAmt, tokens.cash, collateralData)
@@ -595,7 +589,7 @@ abstract contract AbstractTermMaxMarket is
             collateralData
         );
 
-        tokens.yp.mint(sender, debtAmt);
+        tokens.ft.mint(sender, debtAmt);
         // Mint G-NFT
         nftId = tokens.gNft.mint(sender, debtAmt, collateralData);
         emit MintGNft(sender, nftId, debtAmt, collateralData);
@@ -647,7 +641,7 @@ abstract contract AbstractTermMaxMarket is
         if (sender != owner) {
             revert SenderIsNotTheGNftOwner(sender, nftId);
         }
-        tokens.yp.transferFrom(sender, address(this), debtAmt);
+        tokens.ft.transferFrom(sender, address(this), debtAmt);
         // Burn this nft
         tokens.gNft.burn(nftId);
         _transferCollateral(sender, tokens.collateralToken, collateralData);
@@ -696,51 +690,51 @@ abstract contract AbstractTermMaxMarket is
         TermMaxStorage.MarketTokens memory tokens = TermMaxStorage._getTokens();
         // Burn all lp tokens owned by this contract after maturity to release all reward
         if (!config.rewardIsDistributed) {
-            _distributeAllReward(tokens.lpYp, tokens.lpYa);
+            _distributeAllReward(tokens.lpFt, tokens.lpXt);
         }
         // k = (1 - initalLtv) * DECIMAL_BASE
-        uint k = YAMarketCurve.DECIMAL_BASE - config.initialLtv;
+        uint k = TermMaxCurve.DECIMAL_BASE - config.initialLtv;
         uint userPoint;
         {
             // Calculate lp tokens output
-            uint lpYpAmt = tokens.lpYp.balanceOf(sender);
-            if (lpYpAmt > 0) {
-                tokens.lpYp.transferFrom(sender, address(this), lpYpAmt);
-                uint lpYpTotalSupply = tokens.lpYp.totalSupply();
-                uint ypReserve = tokens.yp.balanceOf(address(this));
-                userPoint += lpYpAmt.mulDiv(ypReserve, lpYpTotalSupply);
-                tokens.lpYp.burn(lpYpAmt);
+            uint lpFtAmt = tokens.lpFt.balanceOf(sender);
+            if (lpFtAmt > 0) {
+                tokens.lpFt.transferFrom(sender, address(this), lpFtAmt);
+                uint lpFtTotalSupply = tokens.lpFt.totalSupply();
+                uint ftReserve = tokens.ft.balanceOf(address(this));
+                userPoint += lpFtAmt.mulDiv(ftReserve, lpFtTotalSupply);
+                tokens.lpFt.burn(lpFtAmt);
             }
-            uint lpYaAmt = tokens.lpYa.balanceOf(sender);
-            if (lpYaAmt > 0) {
-                tokens.lpYa.transferFrom(sender, address(this), lpYaAmt);
-                uint lpYaTotalSupply = tokens.lpYa.totalSupply();
-                uint yaReserve = tokens.ya.balanceOf(address(this));
-                uint yaAmt = lpYaAmt.mulDiv(yaReserve, lpYaTotalSupply);
-                userPoint += yaAmt.mulDiv(k, YAMarketCurve.DECIMAL_BASE);
-                tokens.lpYp.burn(lpYaAmt);
+            uint lpXtAmt = tokens.lpXt.balanceOf(sender);
+            if (lpXtAmt > 0) {
+                tokens.lpXt.transferFrom(sender, address(this), lpXtAmt);
+                uint lpXtTotalSupply = tokens.lpXt.totalSupply();
+                uint xtReserve = tokens.xt.balanceOf(address(this));
+                uint yaAmt = lpXtAmt.mulDiv(xtReserve, lpXtTotalSupply);
+                userPoint += yaAmt.mulDiv(k, TermMaxCurve.DECIMAL_BASE);
+                tokens.lpFt.burn(lpXtAmt);
             }
         }
         // All points = ypSupply + yaSupply * (1 - initalLtv) = ypSupply * k / DECIMAL_BASE
-        uint allPoints = tokens.yp.totalSupply() +
-            tokens.ya.totalSupply().mulDiv(k, YAMarketCurve.DECIMAL_BASE);
+        uint allPoints = tokens.ft.totalSupply() +
+            tokens.xt.totalSupply().mulDiv(k, TermMaxCurve.DECIMAL_BASE);
         {
-            uint ypAmt = tokens.yp.balanceOf(sender);
+            uint ypAmt = tokens.ft.balanceOf(sender);
             if (ypAmt > 0) {
-                tokens.yp.transferFrom(sender, address(this), ypAmt);
+                tokens.ft.transferFrom(sender, address(this), ypAmt);
                 userPoint += ypAmt;
-                tokens.yp.burn(ypAmt);
+                tokens.ft.burn(ypAmt);
             }
-            uint yaAmt = tokens.ya.balanceOf(sender);
+            uint yaAmt = tokens.xt.balanceOf(sender);
             if (yaAmt > 0) {
-                tokens.ya.transferFrom(sender, address(this), yaAmt);
-                userPoint += yaAmt.mulDiv(k, YAMarketCurve.DECIMAL_BASE);
-                tokens.ya.burn(yaAmt);
+                tokens.xt.transferFrom(sender, address(this), yaAmt);
+                userPoint += yaAmt.mulDiv(k, TermMaxCurve.DECIMAL_BASE);
+                tokens.xt.burn(yaAmt);
             }
         }
 
         // The ratio that user will get how many cash and collateral when do redeem
-        uint ratio = userPoint.mulDiv(YAMarketCurve.DECIMAL_BASE, allPoints);
+        uint ratio = userPoint.mulDiv(TermMaxCurve.DECIMAL_BASE, allPoints);
         bytes memory deliveryData = _deliveryCollateral(
             tokens.collateralToken,
             ratio,
@@ -749,7 +743,7 @@ abstract contract AbstractTermMaxMarket is
         // Transfer cash output
         uint cashAmt = tokens.cash.balanceOf(address(this)).mulDiv(
             ratio,
-            YAMarketCurve.DECIMAL_BASE
+            TermMaxCurve.DECIMAL_BASE
         );
         tokens.cash.transfer(sender, cashAmt);
         emit Redeem(
@@ -772,16 +766,16 @@ abstract contract AbstractTermMaxMarket is
     }
 
     function _distributeAllReward(
-        IMintableERC20 lpYp,
-        IMintableERC20 lpYa
+        IMintableERC20 lpFt,
+        IMintableERC20 lpXt
     ) internal {
-        uint lpYpBalance = lpYp.balanceOf(address(this));
-        uint lpYaBalance = lpYa.balanceOf(address(this));
-        if (lpYpBalance > 0) {
-            lpYp.burn(lpYpBalance);
+        uint lpFtBalance = lpFt.balanceOf(address(this));
+        uint lpXtBalance = lpXt.balanceOf(address(this));
+        if (lpFtBalance > 0) {
+            lpFt.burn(lpFtBalance);
         }
-        if (lpYaBalance > 0) {
-            lpYa.burn(lpYaBalance);
+        if (lpXtBalance > 0) {
+            lpXt.burn(lpXtBalance);
         }
     }
 

@@ -32,7 +32,7 @@ interface ITermMaxMarket {
     error GNftIsHealthy(address sender, uint256 nftId, uint128 health);
     error MintGNFTFailedCallback(
         address sender,
-        uint128 yaAmt,
+        uint128 xtAmt,
         uint128 debtAmt,
         bytes callbackData
     );
@@ -44,23 +44,23 @@ interface ITermMaxMarket {
     event ProvideLiquidity(
         address indexed sender,
         uint256 cashAmt,
-        uint128 lpYpAmt,
-        uint128 lpYaAmt
+        uint128 lpFtAmt,
+        uint128 lpXtAmt
     );
 
     event AddLiquidity(
         address indexed sender,
         uint256 cashAmt,
-        uint128 ypMintedAmt,
-        uint128 yaMintedAmt
+        uint128 ftMintedAmt,
+        uint128 xtMintedAmt
     );
 
     event WithdrawLP(
         address indexed from,
-        uint128 lpYpAmt,
-        uint128 lpYaAmt,
-        uint128 ypOutAmt,
-        uint128 yaOutAmt,
+        uint128 lpFtAmt,
+        uint128 lpXtAmt,
+        uint128 ftOutAmt,
+        uint128 xtOutAmt,
         int64 newApy
     );
 
@@ -116,31 +116,31 @@ interface ITermMaxMarket {
     // provide liquidity get lp tokens
     function provideLiquidity(
         uint256 cashAmt
-    ) external returns (uint128 lpYaOutAmt, uint128 lpYpOutAmt);
+    ) external returns (uint128 lpXtOutAmt, uint128 lpFtOutAmt);
 
     function withdrawLp(
-        uint128 lpYpAmt,
-        uint128 lpYaAmt
-    ) external returns (uint128 ypOutAmt, uint128 yaOutAmt);
+        uint128 lpFtAmt,
+        uint128 lpXtAmt
+    ) external returns (uint128 ftOutAmt, uint128 xtOutAmt);
 
-    function buyYp(
+    function buyFt(
         uint128 cashAmtIn,
         uint128 minTokenOut
     ) external returns (uint256 netOut);
 
-    function buyYa(
+    function buyXt(
         uint128 cashAmtIn,
         uint128 minTokenOut
     ) external returns (uint256 netOut);
 
-    // use collateral to mint yp and nft
+    // use collateral to mint ft and nft
     function lever(
         uint128 debtAmt,
         bytes calldata collateralData
     ) external returns (uint256 nftId);
 
     function mintGNft(
-        uint128 yaAmt,
+        uint128 xtAmt,
         bytes calldata collateralData,
         bytes calldata callbackData
     ) external returns (uint256 nftId);
@@ -157,7 +157,7 @@ interface ITermMaxMarket {
 
     function liquidateGNft(uint256 nftId) external;
 
-    // use yp to deregister debt
+    // use ft to deregister debt
     function deregisterGNft(uint256 nftId) external;
 
     function redeem() external;
