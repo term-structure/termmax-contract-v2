@@ -7,6 +7,12 @@ interface IMintableERC20 is IERC20 {
     error SpenderIsNotMarket(address spender);
     error UnallowedUpgrade();
 
+    function initialize(
+        string memory name,
+        string memory symbol,
+        uint8 _decimals
+    ) external;
+
     function mint(address to, uint256 amount) external;
 
     function marketAddr() external view returns (address);

@@ -3,8 +3,6 @@ pragma solidity ^0.8.27;
 
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
-import {MintableERC20} from "./tokens/MintableERC20.sol";
-import {GearingNft} from "./tokens/GearingNft.sol";
 import "./AbstractTermMaxMarket.sol";
 
 contract ERC20TermMaxMarket is AbstractTermMaxMarket {
@@ -84,7 +82,7 @@ contract ERC20TermMaxMarket is AbstractTermMaxMarket {
                     new ERC1967Proxy(
                         address(gearingNftImplement),
                         abi.encodeCall(
-                            GearingNft.initialize,
+                            IGearingNft.initialize,
                             (nftName, nftSymbol)
                         )
                     )
@@ -123,7 +121,7 @@ contract ERC20TermMaxMarket is AbstractTermMaxMarket {
                     new ERC1967Proxy(
                         address(implement),
                         abi.encodeCall(
-                            MintableERC20.initialize,
+                            IMintableERC20.initialize,
                             (name, symbol, decimals)
                         )
                     )

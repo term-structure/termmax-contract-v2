@@ -6,6 +6,8 @@ import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 interface IGearingNft is IERC721 {
     error UnallowedUpgrade();
 
+    function initialize(string memory name, string memory symbol) external;
+
     function marketAddr() external view returns (address);
 
     function mint(
