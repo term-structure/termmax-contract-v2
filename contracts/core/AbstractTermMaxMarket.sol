@@ -31,6 +31,8 @@ abstract contract AbstractTermMaxMarket is
     string constant PREFIX_XT = "XT:";
     string constant PREFIX_LP_FT = "LpFT:";
     string constant PREFIX_LP_XT = "LpXT:";
+    string constant PREFIX_GNFT = "GNFT:";
+    string constant STRING_UNDER_LINE = "_";
 
     modifier isOpen() {
         TermMaxStorage.MarketConfig memory config = TermMaxStorage._getConfig();
@@ -136,9 +138,7 @@ abstract contract AbstractTermMaxMarket is
     ) internal returns (uint128 ftOutAmt, uint128 xtOutAmt) {
         TermMaxStorage.MarketTokens memory tokens = TermMaxStorage._getTokens();
         TermMaxStorage.MarketConfig memory config = TermMaxStorage._getConfig();
-        // get token reserves
-        uint ftReserve = tokens.ft.balanceOf(address(this));
-        uint xtReserve = tokens.xt.balanceOf(address(this));
+
         uint lpFtTotalSupply;
         uint lpXtTotalSupply;
         // calculate reward
@@ -156,7 +156,6 @@ abstract contract AbstractTermMaxMarket is
             );
             lpFtAmt += reward;
             tokens.lpFt.burn(lpFtAmt);
-            ftOutAmt = lpFtAmt.mulDiv(ftReserve, lpFtTotalSupply).toUint128();
         }
         if (lpXtAmt > 0) {
             tokens.lpXt.transferFrom(sender, address(this), lpXtAmt);
@@ -172,8 +171,13 @@ abstract contract AbstractTermMaxMarket is
             );
             lpXtAmt += reward;
             tokens.lpXt.burn(lpXtAmt);
-            xtOutAmt = lpXtAmt.mulDiv(xtReserve, lpXtTotalSupply).toUint128();
         }
+        // get token reserves
+        uint ftReserve = tokens.ft.balanceOf(address(this));
+        ftOutAmt = lpFtAmt.mulDiv(ftReserve, lpFtTotalSupply).toUint128();
+        uint xtReserve = tokens.xt.balanceOf(address(this));
+        xtOutAmt = lpXtAmt.mulDiv(xtReserve, lpXtTotalSupply).toUint128();
+
         uint sameProportionFt = uint(xtOutAmt).mulDiv(
             config.initialLtv,
             TermMaxCurve.DECIMAL_BASE

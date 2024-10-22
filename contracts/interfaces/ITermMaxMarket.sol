@@ -2,6 +2,7 @@
 pragma solidity ^0.8.27;
 
 import {IMintableERC20, IERC20} from "../interfaces/IMintableERC20.sol";
+import {IGearingNft} from "../interfaces/IGearingNft.sol";
 
 interface ITermMaxMarket {
     error MarketIsNotOpen();
@@ -41,6 +42,18 @@ interface ITermMaxMarket {
     error SenderIsNotTheGNftOwner(address sender, uint256 nftId);
     error CanNotRedeemBeforeMaturity();
     error CanNotMergeLoanWithDiffOwner();
+    error InvalidTime(uint64 openTime, uint64 maturity);
+    error CollateralCanNotEqualCash();
+
+    event MarketDeployed(
+        address indexed deployer,
+        address indexed collateral,
+        IERC20 indexed cash,
+        uint64 openTime,
+        uint64 maturity,
+        IMintableERC20[4] tokens,
+        IGearingNft gnft
+    );
 
     event ProvideLiquidity(
         address indexed sender,

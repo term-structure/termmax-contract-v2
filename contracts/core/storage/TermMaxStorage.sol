@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {IMintableERC20, IERC20} from "../../interfaces/IMintableERC20.sol";
 import {IGearingNft} from "../../interfaces/IGearingNft.sol";
 
 library TermMaxStorage {
     struct MarketConfig {
-        AggregatorV3Interface collateralOracle;
         //10**ya.decimals()
         uint256 minLeveragedXt;
         uint256 minLeveredFt;
