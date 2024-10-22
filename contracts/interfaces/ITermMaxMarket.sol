@@ -40,6 +40,7 @@ interface ITermMaxMarket {
     error CanNotLiquidateAfterMaturity();
     error SenderIsNotTheGNftOwner(address sender, uint256 nftId);
     error CanNotRedeemBeforeMaturity();
+    error CanNotMergeLoanWithDiffOwner();
 
     event ProvideLiquidity(
         address indexed sender,
@@ -106,6 +107,12 @@ interface ITermMaxMarket {
         uint128 debtAmt
     );
 
+    event MergeGNfts(
+        address indexed sender,
+        uint256 indexed newNftId,
+        uint256[] nftIds
+    );
+
     event Redeem(
         address indexed sender,
         uint128 ratio,
@@ -159,6 +166,10 @@ interface ITermMaxMarket {
 
     // use ft to deregister debt
     function deregisterGNft(uint256 nftId) external;
+
+    function mergeLoan(
+        uint256[] memory nftIds
+    ) external returns (uint256 nftId);
 
     function redeem() external;
 }
