@@ -480,8 +480,7 @@ abstract contract AbstractTermMaxMarket is
             revert XTAmountTooLittle(sender, xtAmt, collateralData);
         }
         uint128 debt = (xtAmt * config.initialLtv) / TermMaxCurve.DECIMAL_BASE;
-        uint128 health = _calcHealth(debt, tokens.cash, collateralData)
-            .toUint128();
+        uint128 health = _calcHealth(debt, collateralData).toUint128();
         if (health >= config.maxLtv) {
             revert GNftIsNotHealthy(sender, debt, health, collateralData);
         }
@@ -525,16 +524,14 @@ abstract contract AbstractTermMaxMarket is
 
     function _calcHealth(
         uint256 debtAmt,
-        IERC20 cash,
         bytes memory collateralData
     ) internal view virtual returns (uint256 health) {
-        uint collateralValue = _sizeCollateralValue(collateralData, cash);
+        uint collateralValue = _sizeCollateralValue(collateralData);
         health = debtAmt.mulDiv(TermMaxCurve.DECIMAL_BASE, collateralValue);
     }
 
     function _sizeCollateralValue(
-        bytes memory collateralData,
-        IERC20 cash
+        bytes memory collateralData
     ) internal view virtual returns (uint256);
 
     // function _calcHealth2(
@@ -572,8 +569,7 @@ abstract contract AbstractTermMaxMarket is
         if (debtAmt < config.minLeveredFt) {
             revert XTAmountTooLittle(sender, debtAmt, collateralData);
         }
-        uint128 health = _calcHealth(debtAmt, tokens.cash, collateralData)
-            .toUint128();
+        uint128 health = _calcHealth(debtAmt, collateralData).toUint128();
         if (health >= config.maxLtv) {
             revert GNftIsNotHealthy(sender, debtAmt, health, collateralData);
         }
@@ -661,8 +657,7 @@ abstract contract AbstractTermMaxMarket is
         (, uint128 debtAmt, bytes memory collateralData) = tokens.gNft.loanInfo(
             nftId
         );
-        uint128 health = _calcHealth(debtAmt, tokens.cash, collateralData)
-            .toUint128();
+        uint128 health = _calcHealth(debtAmt, collateralData).toUint128();
         if (health < config.liquidationLtv) {
             revert GNftIsHealthy(sender, nftId, health);
         }
@@ -704,11 +699,8 @@ abstract contract AbstractTermMaxMarket is
             );
             tokens.gNft.burn(id);
         }
-        uint128 health = _calcHealth(
-            totalDebtAmt,
-            tokens.cash,
-            mergedCollateralData
-        ).toUint128();
+        uint128 health = _calcHealth(totalDebtAmt, mergedCollateralData)
+            .toUint128();
         if (health >= config.maxLtv) {
             revert GNftIsNotHealthy(
                 sender,
@@ -828,7 +820,7 @@ abstract contract AbstractTermMaxMarket is
     }
 
     function _deliveryCollateral(
-        address collateral,
+        address collateralToken,
         uint256 ratio,
         address to
     ) internal virtual returns (bytes memory deliveryData);

@@ -170,7 +170,12 @@ interface ITermMaxMarket {
     )
         external
         view
-        returns (address owner, uint128 debtAmt, bytes memory collateralData);
+        returns (
+            address owner,
+            uint128 debtAmt,
+            uint128 health,
+            bytes memory collateralData
+        );
 
     // use cash to repayDebt
     function repayGNft(uint256 nftId, uint128 repayAmt) external;
