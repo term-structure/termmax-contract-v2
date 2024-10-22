@@ -12,6 +12,7 @@ import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IER
 
 import {ITermMaxMarket} from "../interfaces/ITermMaxMarket.sol";
 import {IMintableERC20} from "../interfaces/IMintableERC20.sol";
+import {IGearingNft} from "../interfaces/IGearingNft.sol";
 import {IFlashLoanReceiver} from "../interfaces/IFlashLoanReceiver.sol";
 import {TermMaxCurve} from "./lib/TermMaxCurve.sol";
 import {TermMaxStorage} from "./storage/TermMaxStorage.sol";
@@ -454,36 +455,31 @@ abstract contract AbstractTermMaxMarket is
     }
 
     function mintGNft(
-        uint128 yaAmt,
+        uint128 xtAmt,
         bytes memory collateralData,
         bytes calldata callbackData
     ) external override isOpen nonReentrant returns (uint256 nftId) {
-        return _mintGNft(msg.sender, collateralData, yaAmt, callbackData);
+        return _mintGNft(msg.sender, collateralData, xtAmt, callbackData);
     }
 
     function _mintGNft(
         address sender,
         bytes memory collateralData,
-        uint128 yaAmt,
+        uint128 xtAmt,
         bytes calldata callbackData
     ) internal returns (uint256 nftId) {
         TermMaxStorage.MarketTokens memory tokens = TermMaxStorage._getTokens();
-        tokens.xt.transferFrom(sender, address(this), yaAmt);
+        tokens.xt.transferFrom(sender, address(this), xtAmt);
 
         TermMaxStorage.MarketConfig memory config = TermMaxStorage._getConfig();
-        if (yaAmt < config.minLeveragedXt) {
-            revert XTAmountTooLittle(sender, yaAmt, collateralData);
+        if (xtAmt < config.minLeveragedXt) {
+            revert XTAmountTooLittle(sender, xtAmt, collateralData);
         }
-        uint debt = (yaAmt * config.initialLtv) / TermMaxCurve.DECIMAL_BASE;
+        uint128 debt = (xtAmt * config.initialLtv) / TermMaxCurve.DECIMAL_BASE;
         uint128 health = _calcHealth(debt, tokens.cash, collateralData)
             .toUint128();
         if (health >= config.maxLtv) {
-            revert GNftIsNotHealthy(
-                sender,
-                debt.toUint128(),
-                health,
-                collateralData
-            );
+            revert GNftIsNotHealthy(sender, debt, health, collateralData);
         }
         // Send debt to borrower
         tokens.cash.transfer(sender, debt);
@@ -496,12 +492,7 @@ abstract contract AbstractTermMaxMarket is
                 callbackData
             )
         ) {
-            revert MintGNFTFailedCallback(
-                sender,
-                yaAmt,
-                debt.toUint128(),
-                callbackData
-            );
+            revert MintGNFTFailedCallback(sender, xtAmt, debt, callbackData);
         }
         // Transfer collateral from sender to here
         _transferCollateralFrom(
@@ -512,7 +503,7 @@ abstract contract AbstractTermMaxMarket is
         );
         // Mint G-NFT
         nftId = tokens.gNft.mint(sender, debt, collateralData);
-        emit MintGNft(sender, nftId, debt.toUint128(), collateralData);
+        emit MintGNft(sender, nftId, debt, collateralData);
     }
 
     function _transferCollateralFrom(
@@ -678,6 +669,59 @@ abstract contract AbstractTermMaxMarket is
         emit LiquidateGNft(sender, nftId, debtAmt);
     }
 
+    function mergeLoan(
+        uint256[] memory nftIds
+    ) external override nonReentrant returns (uint256 nftId) {
+        nftId = _mergeLoan(msg.sender, nftIds);
+    }
+
+    function _mergeLoan(
+        address sender,
+        uint256[] memory nftIds
+    ) internal returns (uint256 nftId) {
+        TermMaxStorage.MarketConfig memory config = TermMaxStorage._getConfig();
+        TermMaxStorage.MarketTokens memory tokens = TermMaxStorage._getTokens();
+        uint128 totalDebtAmt;
+        bytes memory mergedCollateralData;
+        for (uint i = 0; i < nftIds.length; ++i) {
+            uint id = nftIds[i];
+            (
+                address owner,
+                uint128 debtAmt,
+                bytes memory collateralData
+            ) = tokens.gNft.loanInfo(nftId);
+            if (sender != owner) {
+                revert CanNotMergeLoanWithDiffOwner();
+            }
+            debtAmt += debtAmt;
+            mergedCollateralData = _mergeLoanCollateral(
+                mergedCollateralData,
+                collateralData
+            );
+            tokens.gNft.burn(id);
+        }
+        uint128 health = _calcHealth(
+            totalDebtAmt,
+            tokens.cash,
+            mergedCollateralData
+        ).toUint128();
+        if (health >= config.maxLtv) {
+            revert GNftIsNotHealthy(
+                sender,
+                totalDebtAmt,
+                health,
+                mergedCollateralData
+            );
+        }
+        nftId = tokens.gNft.mint(sender, totalDebtAmt, mergedCollateralData);
+        emit MergeGNfts(sender, nftId, nftIds);
+    }
+
+    function _mergeLoanCollateral(
+        bytes memory collateralDataA,
+        bytes memory collateralDataB
+    ) internal virtual returns (bytes memory collateralData);
+
     function redeem() external virtual override nonReentrant {
         _redeem(msg.sender);
     }
@@ -710,8 +754,8 @@ abstract contract AbstractTermMaxMarket is
                 tokens.lpXt.transferFrom(sender, address(this), lpXtAmt);
                 uint lpXtTotalSupply = tokens.lpXt.totalSupply();
                 uint xtReserve = tokens.xt.balanceOf(address(this));
-                uint yaAmt = lpXtAmt.mulDiv(xtReserve, lpXtTotalSupply);
-                userPoint += yaAmt.mulDiv(k, TermMaxCurve.DECIMAL_BASE);
+                uint xtAmt = lpXtAmt.mulDiv(xtReserve, lpXtTotalSupply);
+                userPoint += xtAmt.mulDiv(k, TermMaxCurve.DECIMAL_BASE);
                 tokens.lpFt.burn(lpXtAmt);
             }
         }
@@ -719,17 +763,17 @@ abstract contract AbstractTermMaxMarket is
         uint allPoints = tokens.ft.totalSupply() +
             tokens.xt.totalSupply().mulDiv(k, TermMaxCurve.DECIMAL_BASE);
         {
-            uint ypAmt = tokens.ft.balanceOf(sender);
-            if (ypAmt > 0) {
-                tokens.ft.transferFrom(sender, address(this), ypAmt);
-                userPoint += ypAmt;
-                tokens.ft.burn(ypAmt);
+            uint ftAmt = tokens.ft.balanceOf(sender);
+            if (ftAmt > 0) {
+                tokens.ft.transferFrom(sender, address(this), ftAmt);
+                userPoint += ftAmt;
+                tokens.ft.burn(ftAmt);
             }
-            uint yaAmt = tokens.xt.balanceOf(sender);
-            if (yaAmt > 0) {
-                tokens.xt.transferFrom(sender, address(this), yaAmt);
-                userPoint += yaAmt.mulDiv(k, TermMaxCurve.DECIMAL_BASE);
-                tokens.xt.burn(yaAmt);
+            uint xtAmt = tokens.xt.balanceOf(sender);
+            if (xtAmt > 0) {
+                tokens.xt.transferFrom(sender, address(this), xtAmt);
+                userPoint += xtAmt.mulDiv(k, TermMaxCurve.DECIMAL_BASE);
+                tokens.xt.burn(xtAmt);
             }
         }
 
