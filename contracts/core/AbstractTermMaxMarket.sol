@@ -15,6 +15,7 @@ import {IMintableERC20} from "../interfaces/IMintableERC20.sol";
 import {IGearingNft} from "../interfaces/IGearingNft.sol";
 import {IFlashLoanReceiver} from "../interfaces/IFlashLoanReceiver.sol";
 import {TermMaxCurve} from "./lib/TermMaxCurve.sol";
+import {Constants} from "./lib/Constants.sol";
 import {TermMaxStorage} from "./storage/TermMaxStorage.sol";
 
 abstract contract AbstractTermMaxMarket is
@@ -26,13 +27,6 @@ abstract contract AbstractTermMaxMarket is
     using Math for uint256;
     using SafeCast for uint256;
     using SafeCast for int256;
-
-    string constant PREFIX_FT = "FT:";
-    string constant PREFIX_XT = "XT:";
-    string constant PREFIX_LP_FT = "LpFT:";
-    string constant PREFIX_LP_XT = "LpXT:";
-    string constant PREFIX_GNFT = "GNFT:";
-    string constant STRING_UNDER_LINE = "_";
 
     modifier isOpen() {
         TermMaxStorage.MarketConfig memory config = TermMaxStorage._getConfig();
@@ -101,7 +95,7 @@ abstract contract AbstractTermMaxMarket is
     ) internal returns (uint128 ftMintedAmt, uint128 xtMintedAmt) {
         tokens.cash.transferFrom(sender, address(this), cashAmt);
 
-        ftMintedAmt = cashAmt.mulDiv(ltv, TermMaxCurve.DECIMAL_BASE).toUint128();
+        ftMintedAmt = cashAmt.mulDiv(ltv, Constants.DECIMAL_BASE).toUint128();
         xtMintedAmt = cashAmt.toUint128();
         // Mint tokens to this
         tokens.ft.mint(address(this), ftMintedAmt);
@@ -115,7 +109,7 @@ abstract contract AbstractTermMaxMarket is
     ) internal view returns (uint256 daysToMaturity) {
         daysToMaturity =
             (maturity - block.timestamp) /
-            TermMaxCurve.SECONDS_IN_DAY;
+            Constants.SECONDS_IN_DAY;
     }
 
     function withdrawLp(
@@ -146,7 +140,7 @@ abstract contract AbstractTermMaxMarket is
             tokens.lpFt.transferFrom(sender, address(this), lpFtAmt);
 
             lpFtTotalSupply = tokens.lpFt.totalSupply();
-            uint reward = TermMaxCurve.calculateLpReward(
+            uint reward = TermMaxCurve._calculateLpReward(
                 block.timestamp,
                 config.openTime,
                 config.maturity,
@@ -161,7 +155,7 @@ abstract contract AbstractTermMaxMarket is
             tokens.lpXt.transferFrom(sender, address(this), lpXtAmt);
 
             lpXtTotalSupply = tokens.lpXt.totalSupply();
-            uint reward = TermMaxCurve.calculateLpReward(
+            uint reward = TermMaxCurve._calculateLpReward(
                 block.timestamp,
                 config.openTime,
                 config.maturity,
@@ -180,11 +174,11 @@ abstract contract AbstractTermMaxMarket is
 
         uint sameProportionFt = uint(xtOutAmt).mulDiv(
             config.initialLtv,
-            TermMaxCurve.DECIMAL_BASE
+            Constants.DECIMAL_BASE
         );
         if (sameProportionFt > ftOutAmt) {
             uint xtExcess = (sameProportionFt - ftOutAmt).mulDiv(
-                TermMaxCurve.DECIMAL_BASE,
+                Constants.DECIMAL_BASE,
                 config.initialLtv
             );
             TermMaxCurve.TradeParams memory tradeParams = TermMaxCurve
@@ -276,12 +270,12 @@ abstract contract AbstractTermMaxMarket is
         if (token == tokens.ft) {
             uint newFtReserve;
             uint newXtReserve;
-            (newFtReserve, newXtReserve, config.apy) = TermMaxCurve.buyFt(
+            (newFtReserve, newXtReserve, config.apy) = TermMaxCurve._buyFt(
                 tradeParams,
                 config
             );
             // calculate fee
-            feeAmt = TermMaxCurve.calculateFee(
+            feeAmt = TermMaxCurve._calculateFee(
                 ftReserve,
                 xtReserve,
                 newFtReserve,
@@ -291,7 +285,7 @@ abstract contract AbstractTermMaxMarket is
             );
             //TODO protocol reward
             uint finalFtReserve;
-            (finalFtReserve, , config.apy) = TermMaxCurve.buyNegFt(
+            (finalFtReserve, , config.apy) = TermMaxCurve._buyNegFt(
                 TermMaxCurve.TradeParams(
                     feeAmt,
                     ftReserve,
@@ -306,12 +300,12 @@ abstract contract AbstractTermMaxMarket is
         } else {
             uint newFtReserve;
             uint newXtReserve;
-            (newFtReserve, newXtReserve, config.apy) = TermMaxCurve.buyXt(
+            (newFtReserve, newXtReserve, config.apy) = TermMaxCurve._buyXt(
                 tradeParams,
                 config
             );
             // calculate fee
-            feeAmt = TermMaxCurve.calculateFee(
+            feeAmt = TermMaxCurve._calculateFee(
                 ftReserve,
                 xtReserve,
                 newFtReserve,
@@ -321,7 +315,7 @@ abstract contract AbstractTermMaxMarket is
             );
             //TODO protocol reward
             uint finalXtReserve;
-            (finalXtReserve, , config.apy) = TermMaxCurve.buyNegXt(
+            (finalXtReserve, , config.apy) = TermMaxCurve._buyNegXt(
                 TermMaxCurve.TradeParams(
                     feeAmt,
                     ftReserve,
@@ -377,13 +371,13 @@ abstract contract AbstractTermMaxMarket is
         if (token == tokens.ft) {
             uint newFtReserve;
             uint newXtReserve;
-            (newFtReserve, newXtReserve, config.apy) = TermMaxCurve.sellFt(
+            (newFtReserve, newXtReserve, config.apy) = TermMaxCurve._sellFt(
                 tradeParams,
                 config
             );
             netOut = xtReserve - newFtReserve;
             // calculate fee
-            feeAmt = TermMaxCurve.calculateFee(
+            feeAmt = TermMaxCurve._calculateFee(
                 ftReserve,
                 xtReserve,
                 newFtReserve,
@@ -394,13 +388,13 @@ abstract contract AbstractTermMaxMarket is
         } else {
             uint newFtReserve;
             uint newXtReserve;
-            (newFtReserve, newXtReserve, config.apy) = TermMaxCurve.sellXt(
+            (newFtReserve, newXtReserve, config.apy) = TermMaxCurve._sellXt(
                 tradeParams,
                 config
             );
             netOut = tokenAmtIn + xtReserve - newFtReserve;
             // calculate fee
-            feeAmt = TermMaxCurve.calculateFee(
+            feeAmt = TermMaxCurve._calculateFee(
                 ftReserve,
                 xtReserve,
                 newFtReserve,
@@ -440,7 +434,7 @@ abstract contract AbstractTermMaxMarket is
         uint feeToLock = (feeAmount + 1) / 2;
         uint ypAmount = feeToLock.mulDiv(
             config.initialLtv,
-            TermMaxCurve.DECIMAL_BASE
+            Constants.DECIMAL_BASE
         );
 
         uint lpFtAmt = TermMaxCurve._calculateLpOut(
@@ -479,7 +473,7 @@ abstract contract AbstractTermMaxMarket is
         if (xtAmt < config.minLeveragedXt) {
             revert XTAmountTooLittle(sender, xtAmt, collateralData);
         }
-        uint128 debt = (xtAmt * config.initialLtv) / TermMaxCurve.DECIMAL_BASE;
+        uint128 debt = (xtAmt * config.initialLtv) / Constants.DECIMAL_BASE;
         uint128 health = _calcHealth(debt, collateralData).toUint128();
         if (health >= config.maxLtv) {
             revert GNftIsNotHealthy(sender, debt, health, collateralData);
@@ -527,7 +521,7 @@ abstract contract AbstractTermMaxMarket is
         bytes memory collateralData
     ) internal view virtual returns (uint256 health) {
         uint collateralValue = _sizeCollateralValue(collateralData);
-        health = debtAmt.mulDiv(TermMaxCurve.DECIMAL_BASE, collateralValue);
+        health = debtAmt.mulDiv(Constants.DECIMAL_BASE, collateralValue);
     }
 
     function _sizeCollateralValue(
@@ -549,7 +543,7 @@ abstract contract AbstractTermMaxMarket is
     //         collateralPrice.toUint256(),
     //         10 ** decimals
     //     );
-    //     health = debtAmt.mulDiv(TermMaxCurve.DECIMAL_BASE, collateralValue);
+    //     health = debtAmt.mulDiv(Constants.DECIMAL_BASE, collateralValue);
     // }
 
     function lever(
@@ -733,7 +727,7 @@ abstract contract AbstractTermMaxMarket is
             _distributeAllReward(tokens.lpFt, tokens.lpXt);
         }
         // k = (1 - initalLtv) * DECIMAL_BASE
-        uint k = TermMaxCurve.DECIMAL_BASE - config.initialLtv;
+        uint k = Constants.DECIMAL_BASE - config.initialLtv;
         uint userPoint;
         {
             // Calculate lp tokens output
@@ -751,13 +745,13 @@ abstract contract AbstractTermMaxMarket is
                 uint lpXtTotalSupply = tokens.lpXt.totalSupply();
                 uint xtReserve = tokens.xt.balanceOf(address(this));
                 uint xtAmt = lpXtAmt.mulDiv(xtReserve, lpXtTotalSupply);
-                userPoint += xtAmt.mulDiv(k, TermMaxCurve.DECIMAL_BASE);
+                userPoint += xtAmt.mulDiv(k, Constants.DECIMAL_BASE);
                 tokens.lpFt.burn(lpXtAmt);
             }
         }
         // All points = ypSupply + yaSupply * (1 - initalLtv) = ypSupply * k / DECIMAL_BASE
         uint allPoints = tokens.ft.totalSupply() +
-            tokens.xt.totalSupply().mulDiv(k, TermMaxCurve.DECIMAL_BASE);
+            tokens.xt.totalSupply().mulDiv(k, Constants.DECIMAL_BASE);
         {
             uint ftAmt = tokens.ft.balanceOf(sender);
             if (ftAmt > 0) {
@@ -768,13 +762,13 @@ abstract contract AbstractTermMaxMarket is
             uint xtAmt = tokens.xt.balanceOf(sender);
             if (xtAmt > 0) {
                 tokens.xt.transferFrom(sender, address(this), xtAmt);
-                userPoint += xtAmt.mulDiv(k, TermMaxCurve.DECIMAL_BASE);
+                userPoint += xtAmt.mulDiv(k, Constants.DECIMAL_BASE);
                 tokens.xt.burn(xtAmt);
             }
         }
 
         // The ratio that user will get how many cash and collateral when do redeem
-        uint ratio = userPoint.mulDiv(TermMaxCurve.DECIMAL_BASE, allPoints);
+        uint ratio = userPoint.mulDiv(Constants.DECIMAL_BASE, allPoints);
         bytes memory deliveryData = _deliveryCollateral(
             tokens.collateralToken,
             ratio,
@@ -783,7 +777,7 @@ abstract contract AbstractTermMaxMarket is
         // Transfer cash output
         uint cashAmt = tokens.cash.balanceOf(address(this)).mulDiv(
             ratio,
-            TermMaxCurve.DECIMAL_BASE
+            Constants.DECIMAL_BASE
         );
         tokens.cash.transfer(sender, cashAmt);
         emit Redeem(

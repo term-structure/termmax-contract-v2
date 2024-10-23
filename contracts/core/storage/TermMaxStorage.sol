@@ -6,7 +6,6 @@ import {IGearingNft} from "../../interfaces/IGearingNft.sol";
 
 library TermMaxStorage {
     struct MarketConfig {
-        //10**ya.decimals()
         uint256 minLeveragedXt;
         uint256 minLeveredFt;
         uint64 maturity;
