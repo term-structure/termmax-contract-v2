@@ -25,13 +25,7 @@ interface ITermMaxMarket {
         uint128 ftAmt,
         bytes collateralData
     );
-    error GNftIsNotHealthy(
-        address sender,
-        uint128 debtAmt,
-        uint128 health,
-        bytes collateralData
-    );
-    error GNftIsHealthy(address sender, uint256 nftId, uint128 health);
+
     error MintGNFTFailedCallback(
         address sender,
         uint128 xtAmt,
@@ -40,7 +34,6 @@ interface ITermMaxMarket {
     );
     error MarketDoNotSupportLiquidation();
     error CanNotLiquidateAfterMaturity();
-    error SenderIsNotTheGNftOwner(address sender, uint256 nftId);
     error CanNotRedeemBeforeMaturity();
 
     error InvalidTime(uint64 openTime, uint64 maturity);
