@@ -6,8 +6,6 @@ import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 interface IGearingNft is IERC721 {
     error UnallowedUpgrade();
 
-    function initialize(string memory name, string memory symbol) external;
-
     function marketAddr() external view returns (address);
 
     function mint(
@@ -21,9 +19,34 @@ interface IGearingNft is IERC721 {
     )
         external
         view
-        returns (address owner, uint128 debtAmt, bytes memory collateralData);
+        returns (
+            address owner,
+            uint128 debtAmt,
+            uint128 health,
+            bytes memory collateralData
+        );
 
-    function burn(uint256 id) external;
+    function calculateHealth(
+        uint256 debtAmt,
+        bytes memory collateralData
+    ) external view returns (uint128 health);
 
-    function updateDebt(uint256 id, uint128 newDebtAmt) external;
+    function merge(uint256[] memory ids) external returns (uint256 newId);
+
+    function repay(address sender, uint256 id, uint128 repayAmt) external;
+
+    function deregister(
+        address sender,
+        uint256 id
+    ) external returns (uint128 debtAmt);
+
+    function liquidate(
+        uint256 id,
+        address liquidator
+    ) external returns (uint128 debtAmt);
+
+    function delivery(
+        uint256 ratio,
+        address to
+    ) external returns (bytes memory deliveryData);
 }
