@@ -7,7 +7,7 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {Constants} from "../lib/Constants.sol";
-import {IGearingNft} from "../../interfaces/IGearingNft.sol";
+import {IGearingNft} from "./IGearingNft.sol";
 
 abstract contract AbstractGearingNft is
     UUPSUpgradeable,
@@ -65,13 +65,13 @@ abstract contract AbstractGearingNft is
 
     function __AbstractGearingNft_init(
         address collateral,
-        uint32 liquidationLtv,
-        uint32 maxLtv
+        uint32 maxLtv,
+        uint32 liquidationLtv
     ) internal onlyInitializing {
         GearingNftStorage storage s = _getGearingNftStorage();
         s.collateral = collateral;
-        s.liquidationLtv = liquidationLtv;
         s.maxLtv = maxLtv;
+        s.liquidationLtv = liquidationLtv;
     }
 
     function marketAddr() public view override returns (address) {

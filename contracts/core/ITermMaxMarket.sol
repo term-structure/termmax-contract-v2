@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import {IMintableERC20, IERC20} from "./IMintableERC20.sol";
-import {IGearingNft} from "./IGearingNft.sol";
+import {IMintableERC20, IERC20} from "./tokens/IMintableERC20.sol";
+import {IGearingNft} from "./tokens/IGearingNft.sol";
 import {TermMaxStorage} from "../core/storage/TermMaxStorage.sol";
 
 interface ITermMaxMarket {
@@ -125,6 +125,11 @@ interface ITermMaxMarket {
         external
         view
         returns (TermMaxStorage.MarketConfig memory);
+
+    function setSubTokens(
+        IMintableERC20[4] memory tokens_,
+        IGearingNft gNft_
+    ) external;
 
     function tokens()
         external

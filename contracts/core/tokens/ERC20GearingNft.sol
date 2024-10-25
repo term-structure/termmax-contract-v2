@@ -29,21 +29,20 @@ contract ERC20GearingNft is AbstractGearingNft {
         }
     }
 
-    function _authorizeUpgrade(address) internal virtual override {
-        revert UnallowedUpgrade();
-    }
+    function _authorizeUpgrade(address) internal virtual override onlyOwner {}
 
     function initialize(
+        address market,
         string memory name,
         string memory symbol,
         IERC20 collateral,
         AggregatorV3Interface priceFeed,
-        uint32 liquidationLtv,
-        uint32 maxLtv
+        uint32 maxLtv,
+        uint32 liquidationLtv
     ) public initializer {
         __ERC721_init(name, symbol);
-        __Ownable_init(msg.sender);
-        __AbstractGearingNft_init(address(collateral), liquidationLtv, maxLtv);
+        __Ownable_init(market);
+        __AbstractGearingNft_init(address(collateral), maxLtv, liquidationLtv);
         _getERC20GearingNftStorage().priceFeed = priceFeed;
     }
 

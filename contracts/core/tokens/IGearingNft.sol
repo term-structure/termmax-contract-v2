@@ -4,8 +4,6 @@ pragma solidity ^0.8.27;
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
 interface IGearingNft is IERC721 {
-    error UnallowedUpgrade();
-
     function marketAddr() external view returns (address);
 
     function mint(

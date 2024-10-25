@@ -4,7 +4,7 @@ pragma solidity ^0.8.27;
 import {ERC20PermitUpgradeable, ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import "../../interfaces/IMintableERC20.sol";
+import {IMintableERC20} from "./IMintableERC20.sol";
 
 contract MintableERC20 is
     UUPSUpgradeable,
@@ -31,13 +31,14 @@ contract MintableERC20 is
     }
 
     function initialize(
+        address market,
         string memory name,
         string memory symbol,
         uint8 _decimals
     ) public initializer {
         __ERC20_init(name, symbol);
         __ERC20Permit_init(name);
-        __Ownable_init(msg.sender);
+        __Ownable_init(market);
         MintableERC20Storage
             storage mintableStorage = _getMintableERC20Storage();
         mintableStorage._decimals = _decimals;
@@ -84,10 +85,5 @@ contract MintableERC20 is
         return mintableStorage._decimals;
     }
 
-    /**
-     * @notice Token contract can not upgrade
-     */
-    function _authorizeUpgrade(address) internal virtual override {
-        revert UnallowedUpgrade();
-    }
+    function _authorizeUpgrade(address) internal virtual override onlyOwner {}
 }

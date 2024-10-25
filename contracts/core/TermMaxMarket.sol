@@ -2,31 +2,50 @@
 pragma solidity ^0.8.27;
 
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {IERC20Metadata, IERC20} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
-import {ITermMaxMarket} from "../interfaces/ITermMaxMarket.sol";
-import {IMintableERC20} from "../interfaces/IMintableERC20.sol";
-import {IGearingNft} from "../interfaces/IGearingNft.sol";
-import {IFlashLoanReceiver} from "../interfaces/IFlashLoanReceiver.sol";
+import {ITermMaxMarket} from "./ITermMaxMarket.sol";
+import {IMintableERC20} from "./tokens/IMintableERC20.sol";
+import {IGearingNft} from "./tokens/IGearingNft.sol";
+import {IFlashLoanReceiver} from "./IFlashLoanReceiver.sol";
 import {TermMaxCurve} from "./lib/TermMaxCurve.sol";
 import {Constants} from "./lib/Constants.sol";
 import {TermMaxStorage} from "./storage/TermMaxStorage.sol";
 
-contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard {
+contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
     using SafeCast for uint256;
     using SafeCast for int256;
 
     TermMaxStorage.MarketConfig _config;
-    address public collateralToken;
+    address public collateral;
     IERC20 public cash;
     IMintableERC20 public ft;
     IMintableERC20 public xt;
     IMintableERC20 public lpFt;
     IMintableERC20 public lpXt;
     IGearingNft public gNft;
+
+    constructor(
+        address collateral_,
+        IERC20 cash_,
+        uint64 openTime_,
+        uint64 maturity_
+    ) Ownable(msg.sender) {
+        if (
+            openTime_ < block.timestamp ||
+            maturity_ < block.timestamp + Constants.SECONDS_IN_MOUNTH
+        ) {
+            revert InvalidTime(openTime_, maturity_);
+        }
+        if (address(collateral_) == address(cash_)) {
+            revert CollateralCanNotEqualCash();
+        }
+        cash = cash_;
+        collateral = collateral_;
+    }
 
     modifier isOpen() {
         if (block.timestamp < _config.openTime) {
@@ -61,7 +80,18 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard {
             IERC20 _cash
         )
     {
-        return (ft, xt, lpFt, lpXt, gNft, collateralToken, cash);
+        return (ft, xt, lpFt, lpXt, gNft, collateral, cash);
+    }
+
+    function setSubTokens(
+        IMintableERC20[4] memory tokens_,
+        IGearingNft gNft_
+    ) external override onlyOwner {
+        ft = tokens_[0];
+        xt = tokens_[1];
+        lpFt = tokens_[2];
+        lpXt = tokens_[3];
+        gNft = gNft_;
     }
 
     // input cash
