@@ -13,6 +13,7 @@ library TermMaxStorage {
         uint32 borrowFeeRatio;
         // The loan to collateral while generating ft/xt tokens
         uint32 initialLtv;
+        uint32 protocolFeeRatio;
         // Whether liquidating g-nft when it's ltv bigger than liquidationLtv
         bool liquidatable;
         bool deliverable;

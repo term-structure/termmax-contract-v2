@@ -83,15 +83,35 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         return (ft, xt, lpFt, lpXt, gNft, collateral, cash);
     }
 
-    function setSubTokens(
+    function initialize(
         IMintableERC20[4] memory tokens_,
-        IGearingNft gNft_
+        IGearingNft gNft_,
+        TermMaxStorage.MarketConfig memory config_
     ) external override onlyOwner {
+        if (_config.initialLtv != 0) {
+            revert MarketHasBeenInitialized();
+        }
+        if (!config_.liquidatable && !config_.deliverable) {
+            revert MarketMustHasLiquidationStrategy();
+        }
+        if (
+            config_.gamma > Constants.DECIMAL_BASE ||
+            config_.initialLtv > Constants.DECIMAL_BASE ||
+            config_.lendFeeRatio > Constants.DECIMAL_BASE ||
+            config_.borrowFeeRatio > Constants.DECIMAL_BASE ||
+            int(config_.apy).toUint256() > Constants.DECIMAL_BASE ||
+            config_.protocolFeeRatio > Constants.DECIMAL_BASE
+        ) {
+            revert NumeratorMustLessThanBasicDecimals();
+        }
+
         ft = tokens_[0];
         xt = tokens_[1];
         lpFt = tokens_[2];
         lpXt = tokens_[3];
         gNft = gNft_;
+
+        _config = config_;
     }
 
     // input cash
@@ -155,7 +175,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         uint maturity
     ) internal view returns (uint256 daysToMaturity) {
         daysToMaturity =
-            (maturity - block.timestamp) /
+            (maturity - block.timestamp + Constants.SECONDS_IN_DAY - 1) /
             Constants.SECONDS_IN_DAY;
     }
 

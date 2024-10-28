@@ -13,7 +13,7 @@ contract FactoryTest is Test {
 
     TermMaxFactory factory;
 
-    address deployer = 0x8B35C9BBf939De381a47bc5a30e084a21c0C8406;
+    address deployer = vm.envAddress("FORK_DEPLOYER_ADDR");
 
     function setUp() public {
         vm.startPrank(deployer);
@@ -38,6 +38,8 @@ contract FactoryTest is Test {
             marketConfig.openTime +
             Constants.SECONDS_IN_MOUNTH;
         marketConfig.initialLtv = 9e7;
+        marketConfig.deliverable = true;
+
         ITermMaxFactory.DeployParams memory params = ITermMaxFactory
             .DeployParams(
                 collateral,

@@ -34,7 +34,7 @@ contract TermMaxFactory is ITermMaxFactory, Ownable {
     }
 
     function createERC20Market(
-        ITermMaxFactory.DeployParams calldata deployParams
+        DeployParams calldata deployParams
     ) external override onlyOwner returns (address market) {
         if (marketBytes.length == 0) {
             revert();
@@ -55,7 +55,11 @@ contract TermMaxFactory is ITermMaxFactory, Ownable {
             market,
             deployParams
         );
-        ITermMaxMarket(market).setSubTokens(tokens, gNft);
+        ITermMaxMarket(market).initialize(
+            tokens,
+            gNft,
+            deployParams.marketConfig
+        );
     }
 
     function _deployTokens(

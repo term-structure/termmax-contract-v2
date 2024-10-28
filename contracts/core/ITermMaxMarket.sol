@@ -6,6 +6,9 @@ import {IGearingNft} from "./tokens/IGearingNft.sol";
 import {TermMaxStorage} from "../core/storage/TermMaxStorage.sol";
 
 interface ITermMaxMarket {
+    error MarketMustHasLiquidationStrategy();
+    error MarketHasBeenInitialized();
+    error NumeratorMustLessThanBasicDecimals();
     error MarketIsNotOpen();
     error MarketWasClosed();
     error UnSupportedToken();
@@ -126,9 +129,10 @@ interface ITermMaxMarket {
         view
         returns (TermMaxStorage.MarketConfig memory);
 
-    function setSubTokens(
+    function initialize(
         IMintableERC20[4] memory tokens_,
-        IGearingNft gNft_
+        IGearingNft gNft_,
+        TermMaxStorage.MarketConfig memory config_
     ) external;
 
     function tokens()

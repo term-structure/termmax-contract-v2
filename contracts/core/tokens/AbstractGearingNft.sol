@@ -28,6 +28,7 @@ abstract contract AbstractGearingNft is
         bytes collateralData
     );
     error SenderIsNotTheOwner(address sender, uint256 id);
+    error NumeratorMustLessThanBasicDecimals();
 
     event MergeGNfts(
         address indexed sender,
@@ -68,6 +69,12 @@ abstract contract AbstractGearingNft is
         uint32 maxLtv,
         uint32 liquidationLtv
     ) internal onlyInitializing {
+        if (
+            maxLtv > Constants.DECIMAL_BASE ||
+            liquidationLtv > Constants.DECIMAL_BASE
+        ) {
+            revert NumeratorMustLessThanBasicDecimals();
+        }
         GearingNftStorage storage s = _getGearingNftStorage();
         s.collateral = collateral;
         s.maxLtv = maxLtv;
