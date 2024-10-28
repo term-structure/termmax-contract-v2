@@ -58,7 +58,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
     }
 
     function config()
-        external
+        public
         view
         override
         returns (TermMaxStorage.MarketConfig memory)
@@ -171,7 +171,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         emit AddLiquidity(sender, cashAmt, ftMintedAmt, xtMintedAmt);
     }
 
-    function _daysTomaturity(
+    function _daysToMaturity(
         uint maturity
     ) internal view returns (uint256 daysToMaturity) {
         daysToMaturity =
@@ -199,6 +199,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
     ) internal returns (uint128 ftOutAmt, uint128 xtOutAmt) {
         uint lpFtTotalSupply;
         uint lpXtTotalSupply;
+        TermMaxStorage.MarketConfig memory mConfig = _config;
         // calculate reward
         if (lpFtAmt > 0) {
             lpFt.transferFrom(sender, address(this), lpFtAmt);
@@ -206,8 +207,8 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
             lpFtTotalSupply = lpFt.totalSupply();
             uint reward = TermMaxCurve._calculateLpReward(
                 block.timestamp,
-                _config.openTime,
-                _config.maturity,
+                mConfig.openTime,
+                mConfig.maturity,
                 lpFtTotalSupply,
                 lpFtAmt,
                 lpFt.balanceOf(address(this))
@@ -221,8 +222,8 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
             lpXtTotalSupply = lpXt.totalSupply();
             uint reward = TermMaxCurve._calculateLpReward(
                 block.timestamp,
-                _config.openTime,
-                _config.maturity,
+                mConfig.openTime,
+                mConfig.maturity,
                 lpXtTotalSupply,
                 lpXtAmt,
                 lpXt.balanceOf(address(this))
@@ -236,29 +237,29 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         uint xtReserve = xt.balanceOf(address(this));
         xtOutAmt = ((lpXtAmt * xtReserve) / lpXtTotalSupply).toUint128();
 
-        uint sameProportionFt = (xtOutAmt * _config.initialLtv) /
+        uint sameProportionFt = (xtOutAmt * mConfig.initialLtv) /
             Constants.DECIMAL_BASE;
         if (sameProportionFt > ftOutAmt) {
             uint xtExcess = ((sameProportionFt - ftOutAmt) *
-                Constants.DECIMAL_BASE) / _config.initialLtv;
+                Constants.DECIMAL_BASE) / mConfig.initialLtv;
             TermMaxCurve.TradeParams memory tradeParams = TermMaxCurve
                 .TradeParams(
                     xtExcess,
                     ftReserve,
                     xtReserve,
-                    _daysTomaturity(_config.maturity)
+                    _daysToMaturity(mConfig.maturity)
                 );
-            (, , _config.apy) = TermMaxCurve._sellNegXt(tradeParams, _config);
+            (, , mConfig.apy) = TermMaxCurve._sellNegXt(tradeParams, mConfig);
         } else if (sameProportionFt < ftOutAmt) {
-            uint ypExcess = ftOutAmt - sameProportionFt;
+            uint ftExcess = ftOutAmt - sameProportionFt;
             TermMaxCurve.TradeParams memory tradeParams = TermMaxCurve
                 .TradeParams(
-                    ypExcess,
+                    ftExcess,
                     ftReserve,
                     xtReserve,
-                    _daysTomaturity(_config.maturity)
+                    _daysToMaturity(mConfig.maturity)
                 );
-            (, , _config.apy) = TermMaxCurve._sellNegFt(tradeParams, _config);
+            (, , mConfig.apy) = TermMaxCurve._sellNegFt(tradeParams, mConfig);
         }
         if (ftOutAmt > 0) {
             xt.transfer(sender, ftOutAmt);
@@ -266,13 +267,14 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         if (xtOutAmt > 0) {
             ft.transfer(sender, xtOutAmt);
         }
+        _config.apy = mConfig.apy;
         emit WithdrawLP(
             sender,
             lpFtAmt.toUint128(),
             lpXtAmt.toUint128(),
             ftOutAmt,
             xtOutAmt,
-            _config.apy
+            mConfig.apy
         );
     }
 
@@ -299,22 +301,23 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         // Get old reserves
         uint ftReserve = ft.balanceOf(address(this));
         uint xtReserve = xt.balanceOf(address(this));
+        TermMaxStorage.MarketConfig memory mConfig = _config;
         TermMaxCurve.TradeParams memory tradeParams = TermMaxCurve.TradeParams(
             cashAmtIn,
             ftReserve,
             xtReserve,
-            _daysTomaturity(_config.maturity)
+            _daysToMaturity(mConfig.maturity)
         );
 
         uint feeAmt;
         // add new lituidity
-        _addLiquidity(sender, cashAmtIn, _config.initialLtv);
+        _addLiquidity(sender, cashAmtIn, mConfig.initialLtv);
         if (token == ft) {
             uint newFtReserve;
             uint newXtReserve;
-            (newFtReserve, newXtReserve, _config.apy) = TermMaxCurve._buyFt(
+            (newFtReserve, newXtReserve, mConfig.apy) = TermMaxCurve._buyFt(
                 tradeParams,
-                _config
+                mConfig
             );
             // calculate fee
             feeAmt = TermMaxCurve._calculateFee(
@@ -322,19 +325,24 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
                 xtReserve,
                 newFtReserve,
                 newXtReserve,
-                _config.lendFeeRatio,
-                _config.initialLtv
+                mConfig.lendFeeRatio,
+                mConfig.initialLtv
             );
-            //TODO protocol reward
+            // Fee to prootocol
+            feeAmt = _tranferFeeToTreasure(
+                mConfig.treasurer,
+                feeAmt,
+                mConfig.protocolFeeRatio
+            );
             uint finalFtReserve;
-            (finalFtReserve, , _config.apy) = TermMaxCurve._buyNegFt(
+            (finalFtReserve, , mConfig.apy) = TermMaxCurve._buyNegFt(
                 TermMaxCurve.TradeParams(
                     feeAmt,
                     ftReserve,
                     xtReserve,
                     tradeParams.daysToMaturity
                 ),
-                _config
+                mConfig
             );
 
             uint ypCurrentReserve = ft.balanceOf(address(this));
@@ -342,9 +350,9 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         } else {
             uint newFtReserve;
             uint newXtReserve;
-            (newFtReserve, newXtReserve, _config.apy) = TermMaxCurve._buyXt(
+            (newFtReserve, newXtReserve, mConfig.apy) = TermMaxCurve._buyXt(
                 tradeParams,
-                _config
+                mConfig
             );
             // calculate fee
             feeAmt = TermMaxCurve._calculateFee(
@@ -352,19 +360,24 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
                 xtReserve,
                 newFtReserve,
                 newXtReserve,
-                _config.borrowFeeRatio,
-                _config.initialLtv
+                mConfig.borrowFeeRatio,
+                mConfig.initialLtv
             );
-            //TODO protocol reward
+            // Fee to prootocol
+            feeAmt = _tranferFeeToTreasure(
+                mConfig.treasurer,
+                feeAmt,
+                mConfig.protocolFeeRatio
+            );
             uint finalXtReserve;
-            (finalXtReserve, , _config.apy) = TermMaxCurve._buyNegXt(
+            (finalXtReserve, , mConfig.apy) = TermMaxCurve._buyNegXt(
                 TermMaxCurve.TradeParams(
                     feeAmt,
                     ftReserve,
                     xtReserve,
                     tradeParams.daysToMaturity
                 ),
-                _config
+                mConfig
             );
             uint yaCurrentReserve = xt.balanceOf(address(this));
             netOut = yaCurrentReserve - finalXtReserve;
@@ -380,13 +393,14 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         }
         token.transfer(sender, netOut);
         // _lock_fee
-        _lockFee(feeAmt);
+        _lockFee(feeAmt, mConfig.lockingFeeRatio, mConfig.initialLtv);
+        _config.apy = mConfig.apy;
         emit BuyToken(
             sender,
             token,
             minTokenOut,
             netOut.toUint128(),
-            _config.apy
+            mConfig.apy
         );
     }
 
@@ -400,19 +414,20 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         // Get old reserves
         uint ftReserve = ft.balanceOf(address(this));
         uint xtReserve = xt.balanceOf(address(this));
+        TermMaxStorage.MarketConfig memory mConfig = _config;
         TermMaxCurve.TradeParams memory tradeParams = TermMaxCurve.TradeParams(
             tokenAmtIn,
             ftReserve,
             xtReserve,
-            _daysTomaturity(_config.maturity)
+            _daysToMaturity(mConfig.maturity)
         );
         uint feeAmt;
         if (token == ft) {
             uint newFtReserve;
             uint newXtReserve;
-            (newFtReserve, newXtReserve, _config.apy) = TermMaxCurve._sellFt(
+            (newFtReserve, newXtReserve, mConfig.apy) = TermMaxCurve._sellFt(
                 tradeParams,
-                _config
+                mConfig
             );
             netOut = xtReserve - newFtReserve;
             // calculate fee
@@ -421,15 +436,15 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
                 xtReserve,
                 newFtReserve,
                 newXtReserve,
-                _config.borrowFeeRatio,
-                _config.initialLtv
+                mConfig.borrowFeeRatio,
+                mConfig.initialLtv
             );
         } else {
             uint newFtReserve;
             uint newXtReserve;
-            (newFtReserve, newXtReserve, _config.apy) = TermMaxCurve._sellXt(
+            (newFtReserve, newXtReserve, mConfig.apy) = TermMaxCurve._sellXt(
                 tradeParams,
-                _config
+                mConfig
             );
             netOut = tokenAmtIn + xtReserve - newFtReserve;
             // calculate fee
@@ -438,8 +453,8 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
                 xtReserve,
                 newFtReserve,
                 newXtReserve,
-                _config.lendFeeRatio,
-                _config.initialLtv
+                mConfig.lendFeeRatio,
+                mConfig.initialLtv
             );
         }
         netOut -= feeAmt;
@@ -451,23 +466,35 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
                 netOut.toUint128()
             );
         }
-        //TODO protcol reward
-        _lockFee(feeAmt);
+        // Fee to prootocol
+        feeAmt = _tranferFeeToTreasure(
+            mConfig.treasurer,
+            feeAmt,
+            mConfig.protocolFeeRatio
+        );
+        _lockFee(feeAmt, mConfig.lockingFeeRatio, mConfig.initialLtv);
         token.burn(tokenAmtIn);
         cash.transfer(sender, netOut);
+        _config.apy = mConfig.apy;
         emit SellToken(
             sender,
             token,
             minCashOut,
             netOut.toUint128(),
-            _config.apy
+            mConfig.apy
         );
     }
 
-    function _lockFee(uint256 feeAmount) internal {
-        uint feeToLock = (feeAmount + 1) / 2;
-        uint ypAmount = (feeToLock * _config.initialLtv) /
-            Constants.DECIMAL_BASE;
+    function _lockFee(
+        uint256 feeAmount,
+        uint256 lockingFeeRatio,
+        uint256 initialLtv
+    ) internal {
+        uint feeToLock = (feeAmount *
+            lockingFeeRatio +
+            Constants.DECIMAL_BASE -
+            1) / Constants.DECIMAL_BASE;
+        uint ypAmount = (feeToLock * initialLtv) / Constants.DECIMAL_BASE;
 
         uint lpFtAmt = TermMaxCurve._calculateLpOut(
             ypAmount,
@@ -584,10 +611,11 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
     }
 
     function _liquidateGNft(address liquidator, uint256 nftId) internal {
-        if (!_config.liquidatable) {
+        TermMaxStorage.MarketConfig memory mConfig = _config;
+        if (!mConfig.liquidatable) {
             revert MarketDoNotSupportLiquidation();
         }
-        if (_config.deliverable && block.timestamp >= _config.maturity) {
+        if (mConfig.deliverable && block.timestamp >= mConfig.maturity) {
             revert CanNotLiquidateAfterMaturity();
         }
         uint128 debtAmt = gNft.liquidate(nftId, liquidator);
@@ -602,15 +630,16 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
     }
 
     function _redeem(address sender) internal {
-        if (block.timestamp < _config.maturity) {
+        TermMaxStorage.MarketConfig memory mConfig = _config;
+        if (block.timestamp < mConfig.maturity) {
             revert CanNotRedeemBeforeMaturity();
         }
         // Burn all lp tokens owned by this contract after maturity to release all reward
-        if (!_config.rewardIsDistributed) {
+        if (!mConfig.rewardIsDistributed) {
             _distributeAllReward();
         }
         // k = (1 - initalLtv) * DECIMAL_BASE
-        uint k = Constants.DECIMAL_BASE - _config.initialLtv;
+        uint k = Constants.DECIMAL_BASE - mConfig.initialLtv;
         uint userPoint;
         {
             // Calculate lp tokens output
@@ -686,6 +715,17 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         if (lpXtBalance > 0) {
             lpXt.burn(lpXtBalance);
         }
+    }
+
+    function _tranferFeeToTreasure(
+        address treasurer,
+        uint256 totalFee,
+        uint32 protocolFeeRatio
+    ) internal returns (uint256 feeToMarket) {
+        uint feeToProtocol = (totalFee * protocolFeeRatio) /
+            Constants.DECIMAL_BASE;
+        cash.transfer(treasurer, feeToProtocol);
+        feeToMarket = totalFee - feeToProtocol;
     }
 
     function _transferToken(IERC20 token, address to, uint256 value) internal {

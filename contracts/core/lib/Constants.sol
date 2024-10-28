@@ -13,4 +13,8 @@ library Constants {
     uint16 constant DAYS_IN_YEAR = 365;
     uint32 constant SECONDS_IN_DAY = 86400;
     uint32 constant SECONDS_IN_MOUNTH = 2592000;
+    // The percentage of reward to liquidator while do liquidate
+    uint32 constant REWARD_TO_LIQUIDATOR = 5e7;
+    // The percentage of reward to protocol while do liquidate
+    uint32 constant REWARD_TO_PROTOCOL = 5e7;
 }
