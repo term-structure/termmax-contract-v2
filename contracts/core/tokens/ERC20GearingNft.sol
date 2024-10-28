@@ -97,12 +97,11 @@ contract ERC20GearingNft is AbstractGearingNft {
     function _sizeCollateralValue(
         bytes memory collateralData
     ) internal view virtual override returns (uint256 amount) {
-        uint decimals = 10 **
-            IERC20Metadata(_getGearingNftStorage().collateral).decimals();
+        AggregatorV3Interface priceFeed = _getERC20GearingNftStorage()
+            .priceFeed;
+        uint decimals = 10 ** priceFeed.decimals();
         amount = _decodeAmount(collateralData);
-        (, int256 answer, , , ) = _getERC20GearingNftStorage()
-            .priceFeed
-            .latestRoundData();
+        (, int256 answer, , , ) = priceFeed.latestRoundData();
         amount = (answer.toUint256() * amount) / decimals;
     }
 
