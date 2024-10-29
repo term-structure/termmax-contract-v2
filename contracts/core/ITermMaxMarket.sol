@@ -18,16 +18,7 @@ interface ITermMaxMarket {
         uint128 expectedAmt,
         uint128 actualAmt
     );
-    error XTAmountTooLittle(
-        address sender,
-        uint128 xtAmt,
-        bytes collateralData
-    );
-    error FTAmountTooLittle(
-        address sender,
-        uint128 ftAmt,
-        bytes collateralData
-    );
+    error DebtTooSmall(address sender, uint128 debt, bytes collateralData);
 
     error MintGNFTFailedCallback(
         address sender,
@@ -151,7 +142,7 @@ interface ITermMaxMarket {
     // provide liquidity get lp tokens
     function provideLiquidity(
         uint256 cashAmt
-    ) external returns (uint128 lpXtOutAmt, uint128 lpFtOutAmt);
+    ) external returns (uint128 lpFtOutAmt, uint128 lpXtOutAmt);
 
     function withdrawLp(
         uint128 lpFtAmt,
@@ -168,14 +159,24 @@ interface ITermMaxMarket {
         uint128 minTokenOut
     ) external returns (uint256 netOut);
 
+    function sellFt(
+        uint128 ftAmtIn,
+        uint128 minCashOut
+    ) external returns (uint256 netOut);
+
+    function sellXt(
+        uint128 xtAmtIn,
+        uint128 minTokenOut
+    ) external returns (uint256 netOut);
+
     // use collateral to mint ft and nft
     function lever(
-        uint128 debtAmt,
+        uint128 debt,
         bytes calldata collateralData
     ) external returns (uint256 nftId);
 
     function mintGNft(
-        uint128 xtAmt,
+        uint128 debt,
         bytes calldata collateralData,
         bytes calldata callbackData
     ) external returns (uint256 nftId);

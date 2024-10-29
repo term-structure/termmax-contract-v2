@@ -122,15 +122,15 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         external
         isOpen
         nonReentrant
-        returns (uint128 lpXtOutAmt, uint128 lpFtOutAmt)
+        returns (uint128 lpFtOutAmt, uint128 lpXtOutAmt)
     {
-        (lpXtOutAmt, lpFtOutAmt) = _provideLiquidity(msg.sender, cashAmt);
+        (lpFtOutAmt, lpXtOutAmt) = _provideLiquidity(msg.sender, cashAmt);
     }
 
     function _provideLiquidity(
         address sender,
         uint256 cashAmt
-    ) internal returns (uint128 lpXtOutAmt, uint128 lpFtOutAmt) {
+    ) internal returns (uint128 lpFtOutAmt, uint128 lpXtOutAmt) {
         uint ftReserve = ft.balanceOf(address(this));
         uint lpFtTotalSupply = lpFt.totalSupply();
 
@@ -404,6 +404,20 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         );
     }
 
+    function sellFt(
+        uint128 ftAmtIn,
+        uint128 minCashOut
+    ) external override returns (uint256 netOut) {
+        netOut = _sellToken(msg.sender, ft, ftAmtIn, minCashOut);
+    }
+
+    function sellXt(
+        uint128 xtAmtIn,
+        uint128 minCashOut
+    ) external override returns (uint256 netOut) {
+        netOut = _sellToken(msg.sender, xt, xtAmtIn, minCashOut);
+    }
+
     function _sellToken(
         address sender,
         IMintableERC20 token,
@@ -512,25 +526,24 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
     }
 
     function mintGNft(
-        uint128 xtAmt,
+        uint128 debt,
         bytes memory collateralData,
         bytes calldata callbackData
     ) external override isOpen nonReentrant returns (uint256 nftId) {
-        return _mintGNft(msg.sender, collateralData, xtAmt, callbackData);
+        return _mintGNft(msg.sender, collateralData, debt, callbackData);
     }
 
     function _mintGNft(
         address sender,
         bytes memory collateralData,
-        uint128 xtAmt,
+        uint128 debt,
         bytes calldata callbackData
     ) internal returns (uint256 nftId) {
-        xt.transferFrom(sender, address(this), xtAmt);
+        xt.transferFrom(sender, address(this), debt);
 
-        if (xtAmt < _config.minLeveragedXt) {
-            revert XTAmountTooLittle(sender, xtAmt, collateralData);
+        if (debt < _config.minLeveragedXt) {
+            revert DebtTooSmall(sender, debt, collateralData);
         }
-        uint128 debt = (xtAmt * _config.initialLtv) / Constants.DECIMAL_BASE;
 
         // Send debt to borrower
         cash.transfer(sender, debt);
@@ -543,7 +556,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
                 callbackData
             )
         ) {
-            revert MintGNFTFailedCallback(sender, xtAmt, debt, callbackData);
+            revert MintGNFTFailedCallback(sender, debt, debt, callbackData);
         }
 
         // Mint G-NFT
@@ -553,26 +566,26 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
     }
 
     function lever(
-        uint128 debtAmt,
+        uint128 debt,
         bytes calldata collateralData
     ) external override isOpen nonReentrant returns (uint256 nftId) {
-        return _lever(msg.sender, debtAmt, collateralData);
+        return _lever(msg.sender, debt, collateralData);
     }
 
     function _lever(
         address sender,
-        uint128 debtAmt,
+        uint128 debt,
         bytes calldata collateralData
     ) internal returns (uint256 nftId) {
-        if (debtAmt < _config.minLeveredFt) {
-            revert XTAmountTooLittle(sender, debtAmt, collateralData);
+        if (debt < _config.minLeveredFt) {
+            revert DebtTooSmall(sender, debt, collateralData);
         }
         // Mint G-NFT
-        nftId = gNft.mint(sender, debtAmt, collateralData);
+        nftId = gNft.mint(sender, debt, collateralData);
 
-        ft.mint(sender, debtAmt);
+        ft.mint(sender, debt);
 
-        emit MintGNft(sender, nftId, debtAmt, collateralData);
+        emit MintGNft(sender, nftId, debt, collateralData);
     }
 
     // use cash to repayDebt
@@ -603,6 +616,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
     function _deregisterGNft(address sender, uint256 nftId) internal {
         uint128 debtAmt = gNft.deregister(sender, nftId);
         ft.transferFrom(sender, address(this), debtAmt);
+        ft.burn(debtAmt);
         emit DeregisterGNft(sender, nftId, debtAmt);
     }
 
@@ -618,7 +632,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         if (mConfig.deliverable && block.timestamp >= mConfig.maturity) {
             revert CanNotLiquidateAfterMaturity();
         }
-        uint128 debtAmt = gNft.liquidate(nftId, liquidator);
+        uint128 debtAmt = gNft.liquidate(nftId, liquidator, mConfig.treasurer);
 
         cash.transferFrom(liquidator, address(this), debtAmt);
 
