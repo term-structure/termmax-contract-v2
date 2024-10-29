@@ -18,7 +18,7 @@ interface ITermMaxMarket {
         uint128 expectedAmt,
         uint128 actualAmt
     );
-    error DebtTooSmall(address sender, uint128 debt, bytes collateralData);
+    error DebtTooSmall(address sender, uint128 debt);
 
     error MintGNFTFailedCallback(
         address sender,
@@ -31,12 +31,12 @@ interface ITermMaxMarket {
     error CanNotRedeemBeforeMaturity();
 
     error InvalidTime(uint64 openTime, uint64 maturity);
-    error CollateralCanNotEqualCash();
+    error CollateralCanNotEqualUnserlyinng();
 
     event MarketDeployed(
         address indexed deployer,
         address indexed collateral,
-        IERC20 indexed cash,
+        IERC20 indexed underlying,
         uint64 openTime,
         uint64 maturity,
         IMintableERC20[4] tokens,
@@ -45,14 +45,14 @@ interface ITermMaxMarket {
 
     event ProvideLiquidity(
         address indexed sender,
-        uint256 cashAmt,
+        uint256 underlyingAmt,
         uint128 lpFtAmt,
         uint128 lpXtAmt
     );
 
     event AddLiquidity(
         address indexed sender,
-        uint256 cashAmt,
+        uint256 underlyingAmt,
         uint128 ftMintedAmt,
         uint128 xtMintedAmt
     );
@@ -63,7 +63,7 @@ interface ITermMaxMarket {
         uint128 lpXtAmt,
         uint128 ftOutAmt,
         uint128 xtOutAmt,
-        int64 newApy
+        int64 newApr
     );
 
     event BuyToken(
@@ -71,7 +71,7 @@ interface ITermMaxMarket {
         IMintableERC20 indexed token,
         uint128 expectedAmt,
         uint128 actualAmt,
-        int64 newApy
+        int64 newApr
     );
 
     event SellToken(
@@ -79,7 +79,7 @@ interface ITermMaxMarket {
         IMintableERC20 indexed token,
         uint128 expectedAmt,
         uint128 actualAmt,
-        int64 newApy
+        int64 newApr
     );
 
     event MintGNft(
@@ -111,7 +111,7 @@ interface ITermMaxMarket {
     event Redeem(
         address indexed sender,
         uint128 ratio,
-        uint128 cashAmt,
+        uint128 underlyingAmt,
         bytes deliveryData
     );
 
@@ -130,18 +130,18 @@ interface ITermMaxMarket {
         external
         view
         returns (
-            IMintableERC20 _ft,
-            IMintableERC20 _xt,
-            IMintableERC20 _lpFt,
-            IMintableERC20 _lpXt,
-            IGearingNft _gNft,
-            address _collateral,
-            IERC20 _cash
+            IMintableERC20 ft,
+            IMintableERC20 xt,
+            IMintableERC20 lpFt,
+            IMintableERC20 lpXt,
+            IGearingNft gNft,
+            address collateral,
+            IERC20 underlying
         );
 
     // provide liquidity get lp tokens
     function provideLiquidity(
-        uint256 cashAmt
+        uint256 underlyingAmt
     ) external returns (uint128 lpFtOutAmt, uint128 lpXtOutAmt);
 
     function withdrawLp(
@@ -150,18 +150,18 @@ interface ITermMaxMarket {
     ) external returns (uint128 ftOutAmt, uint128 xtOutAmt);
 
     function buyFt(
-        uint128 cashAmtIn,
+        uint128 underlyingAmtIn,
         uint128 minTokenOut
     ) external returns (uint256 netOut);
 
     function buyXt(
-        uint128 cashAmtIn,
+        uint128 underlyingAmtIn,
         uint128 minTokenOut
     ) external returns (uint256 netOut);
 
     function sellFt(
         uint128 ftAmtIn,
-        uint128 minCashOut
+        uint128 minUnderlyingOut
     ) external returns (uint256 netOut);
 
     function sellXt(
@@ -177,11 +177,10 @@ interface ITermMaxMarket {
 
     function mintGNft(
         uint128 debt,
-        bytes calldata collateralData,
         bytes calldata callbackData
     ) external returns (uint256 nftId);
 
-    // use cash to repayDebt
+    // use underlying to repayDebt
     function repayGNft(uint256 nftId, uint128 repayAmt) external;
 
     function liquidateGNft(uint256 nftId) external;

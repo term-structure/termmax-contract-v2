@@ -102,7 +102,7 @@ abstract contract AbstractGearingNft is
         GearingNftStorage storage s
     ) internal returns (uint256 id) {
         id = s.total++;
-        uint128 health = calculateHealth(debtAmt, collateralData);
+        (uint128 health, ) = calculateHealth(debtAmt, collateralData);
         if (health >= s.maxLtv) {
             revert GNftIsNotHealthy(to, debtAmt, health, collateralData);
         }
@@ -128,7 +128,7 @@ abstract contract AbstractGearingNft is
         LoanInfo memory loan = s.loanMapping[id];
         debtAmt = loan.debtAmt;
         collateralData = loan.collateralData;
-        health = calculateHealth(debtAmt, collateralData);
+        (health, ) = calculateHealth(debtAmt, collateralData);
     }
 
     function _burnInternal(uint256 id, GearingNftStorage storage s) internal {
@@ -198,24 +198,36 @@ abstract contract AbstractGearingNft is
 
     function liquidate(
         uint256 id,
-        address liquidator
+        address liquidator,
+        address treasurer,
+        uint64 maturity
     ) external override nonReentrant returns (uint128 debtAmt) {
         GearingNftStorage storage s = _getGearingNftStorage();
         LoanInfo memory loan = s.loanMapping[id];
-        uint128 health = calculateHealth(loan.debtAmt, loan.collateralData);
-        if (health < s.liquidationLtv) {
+        (uint128 health, uint256 collateralValue) = calculateHealth(
+            loan.debtAmt,
+            loan.collateralData
+        );
+        if (maturity <= block.timestamp || health < s.liquidationLtv) {
             revert GNftIsHealthy(liquidator, id, health);
         }
         debtAmt = loan.debtAmt;
         _burnInternal(id, s);
-        _transferCollateral(liquidator, loan.collateralData);
+        _allocCollateral(liquidator, treasurer, collateralValue, loan);
     }
+
+    function _allocCollateral(
+        address liquidator,
+        address treasurer,
+        uint256 collateralValue,
+        LoanInfo memory loan
+    ) internal virtual;
 
     function calculateHealth(
         uint256 debtAmt,
         bytes memory collateralData
-    ) public view returns (uint128 health) {
-        uint collateralValue = _sizeCollateralValue(collateralData);
+    ) public view returns (uint128 health, uint256 collateralValue) {
+        collateralValue = _sizeCollateralValue(collateralData);
         health = ((debtAmt * Constants.DECIMAL_BASE) / collateralValue)
             .toUint128();
     }

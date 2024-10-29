@@ -21,7 +21,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
 
     TermMaxStorage.MarketConfig _config;
     address public collateral;
-    IERC20 public cash;
+    IERC20 public underlying;
     IMintableERC20 public ft;
     IMintableERC20 public xt;
     IMintableERC20 public lpFt;
@@ -30,7 +30,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
 
     constructor(
         address collateral_,
-        IERC20 cash_,
+        IERC20 underlying_,
         uint64 openTime_,
         uint64 maturity_
     ) Ownable(msg.sender) {
@@ -40,10 +40,10 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         ) {
             revert InvalidTime(openTime_, maturity_);
         }
-        if (address(collateral_) == address(cash_)) {
-            revert CollateralCanNotEqualCash();
+        if (address(collateral_) == address(underlying_)) {
+            revert CollateralCanNotEqualUnserlyinng();
         }
-        cash = cash_;
+        underlying = underlying_;
         collateral = collateral_;
     }
 
@@ -71,16 +71,16 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         view
         override
         returns (
-            IMintableERC20 _ft,
-            IMintableERC20 _xt,
-            IMintableERC20 _lpFt,
-            IMintableERC20 _lpXt,
-            IGearingNft _gNft,
-            address _collateral,
-            IERC20 _cash
+            IMintableERC20,
+            IMintableERC20,
+            IMintableERC20,
+            IMintableERC20,
+            IGearingNft,
+            address,
+            IERC20
         )
     {
-        return (ft, xt, lpFt, lpXt, gNft, collateral, cash);
+        return (ft, xt, lpFt, lpXt, gNft, collateral, underlying);
     }
 
     function initialize(
@@ -99,7 +99,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
             config_.initialLtv > Constants.DECIMAL_BASE ||
             config_.lendFeeRatio > Constants.DECIMAL_BASE ||
             config_.borrowFeeRatio > Constants.DECIMAL_BASE ||
-            int(config_.apy).toUint256() > Constants.DECIMAL_BASE ||
+            int(config_.apr).toUint256() > Constants.DECIMAL_BASE ||
             config_.protocolFeeRatio > Constants.DECIMAL_BASE
         ) {
             revert NumeratorMustLessThanBasicDecimals();
@@ -114,22 +114,22 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         _config = config_;
     }
 
-    // input cash
+    // input underlying
     // output lp tokens
     function provideLiquidity(
-        uint256 cashAmt
+        uint256 underlyingAmt
     )
         external
         isOpen
         nonReentrant
         returns (uint128 lpFtOutAmt, uint128 lpXtOutAmt)
     {
-        (lpFtOutAmt, lpXtOutAmt) = _provideLiquidity(msg.sender, cashAmt);
+        (lpFtOutAmt, lpXtOutAmt) = _provideLiquidity(msg.sender, underlyingAmt);
     }
 
     function _provideLiquidity(
         address sender,
-        uint256 cashAmt
+        uint256 underlyingAmt
     ) internal returns (uint128 lpFtOutAmt, uint128 lpXtOutAmt) {
         uint ftReserve = ft.balanceOf(address(this));
         uint lpFtTotalSupply = lpFt.totalSupply();
@@ -138,7 +138,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         uint lpXtTotalSupply = lpXt.totalSupply();
         (uint128 ftMintedAmt, uint128 xtMintedAmt) = _addLiquidity(
             sender,
-            cashAmt,
+            underlyingAmt,
             _config.initialLtv
         );
 
@@ -152,23 +152,24 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         lpXt.mint(sender, lpXtOutAmt);
         lpFt.mint(sender, lpFtOutAmt);
 
-        emit ProvideLiquidity(sender, cashAmt, lpFtOutAmt, lpXtOutAmt);
+        emit ProvideLiquidity(sender, underlyingAmt, lpFtOutAmt, lpXtOutAmt);
     }
 
     function _addLiquidity(
         address sender,
-        uint256 cashAmt,
+        uint256 underlyingAmt,
         uint256 ltv
     ) internal returns (uint128 ftMintedAmt, uint128 xtMintedAmt) {
-        cash.transferFrom(sender, address(this), cashAmt);
+        underlying.transferFrom(sender, address(this), underlyingAmt);
 
-        ftMintedAmt = ((cashAmt * ltv) / Constants.DECIMAL_BASE).toUint128();
-        xtMintedAmt = cashAmt.toUint128();
+        ftMintedAmt = ((underlyingAmt * ltv) / Constants.DECIMAL_BASE)
+            .toUint128();
+        xtMintedAmt = underlyingAmt.toUint128();
         // Mint tokens to this
         ft.mint(address(this), ftMintedAmt);
         xt.mint(address(this), xtMintedAmt);
 
-        emit AddLiquidity(sender, cashAmt, ftMintedAmt, xtMintedAmt);
+        emit AddLiquidity(sender, underlyingAmt, ftMintedAmt, xtMintedAmt);
     }
 
     function _daysToMaturity(
@@ -249,7 +250,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
                     xtReserve,
                     _daysToMaturity(mConfig.maturity)
                 );
-            (, , mConfig.apy) = TermMaxCurve._sellNegXt(tradeParams, mConfig);
+            (, , mConfig.apr) = TermMaxCurve._sellNegXt(tradeParams, mConfig);
         } else if (sameProportionFt < ftOutAmt) {
             uint ftExcess = ftOutAmt - sameProportionFt;
             TermMaxCurve.TradeParams memory tradeParams = TermMaxCurve
@@ -259,7 +260,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
                     xtReserve,
                     _daysToMaturity(mConfig.maturity)
                 );
-            (, , mConfig.apy) = TermMaxCurve._sellNegFt(tradeParams, mConfig);
+            (, , mConfig.apr) = TermMaxCurve._sellNegFt(tradeParams, mConfig);
         }
         if (ftOutAmt > 0) {
             xt.transfer(sender, ftOutAmt);
@@ -267,35 +268,35 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         if (xtOutAmt > 0) {
             ft.transfer(sender, xtOutAmt);
         }
-        _config.apy = mConfig.apy;
+        _config.apr = mConfig.apr;
         emit WithdrawLP(
             sender,
             lpFtAmt.toUint128(),
             lpXtAmt.toUint128(),
             ftOutAmt,
             xtOutAmt,
-            mConfig.apy
+            mConfig.apr
         );
     }
 
     function buyFt(
-        uint128 cashAmtIn,
+        uint128 underlyingAmtIn,
         uint128 minTokenOut
     ) external override nonReentrant returns (uint256 netOut) {
-        netOut = _buyToken(msg.sender, ft, cashAmtIn, minTokenOut);
+        netOut = _buyToken(msg.sender, ft, underlyingAmtIn, minTokenOut);
     }
 
     function buyXt(
-        uint128 cashAmtIn,
+        uint128 underlyingAmtIn,
         uint128 minTokenOut
     ) external override nonReentrant returns (uint256 netOut) {
-        netOut = _buyToken(msg.sender, xt, cashAmtIn, minTokenOut);
+        netOut = _buyToken(msg.sender, xt, underlyingAmtIn, minTokenOut);
     }
 
     function _buyToken(
         address sender,
         IMintableERC20 token,
-        uint128 cashAmtIn,
+        uint128 underlyingAmtIn,
         uint128 minTokenOut
     ) internal returns (uint256 netOut) {
         // Get old reserves
@@ -303,7 +304,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         uint xtReserve = xt.balanceOf(address(this));
         TermMaxStorage.MarketConfig memory mConfig = _config;
         TermMaxCurve.TradeParams memory tradeParams = TermMaxCurve.TradeParams(
-            cashAmtIn,
+            underlyingAmtIn,
             ftReserve,
             xtReserve,
             _daysToMaturity(mConfig.maturity)
@@ -311,11 +312,11 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
 
         uint feeAmt;
         // add new lituidity
-        _addLiquidity(sender, cashAmtIn, mConfig.initialLtv);
+        _addLiquidity(sender, underlyingAmtIn, mConfig.initialLtv);
         if (token == ft) {
             uint newFtReserve;
             uint newXtReserve;
-            (newFtReserve, newXtReserve, mConfig.apy) = TermMaxCurve._buyFt(
+            (newFtReserve, newXtReserve, mConfig.apr) = TermMaxCurve._buyFt(
                 tradeParams,
                 mConfig
             );
@@ -335,7 +336,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
                 mConfig.protocolFeeRatio
             );
             uint finalFtReserve;
-            (finalFtReserve, , mConfig.apy) = TermMaxCurve._buyNegFt(
+            (finalFtReserve, , mConfig.apr) = TermMaxCurve._buyNegFt(
                 TermMaxCurve.TradeParams(
                     feeAmt,
                     ftReserve,
@@ -350,7 +351,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         } else {
             uint newFtReserve;
             uint newXtReserve;
-            (newFtReserve, newXtReserve, mConfig.apy) = TermMaxCurve._buyXt(
+            (newFtReserve, newXtReserve, mConfig.apr) = TermMaxCurve._buyXt(
                 tradeParams,
                 mConfig
             );
@@ -370,7 +371,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
                 mConfig.protocolFeeRatio
             );
             uint finalXtReserve;
-            (finalXtReserve, , mConfig.apy) = TermMaxCurve._buyNegXt(
+            (finalXtReserve, , mConfig.apr) = TermMaxCurve._buyNegXt(
                 TermMaxCurve.TradeParams(
                     feeAmt,
                     ftReserve,
@@ -394,35 +395,35 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         token.transfer(sender, netOut);
         // _lock_fee
         _lockFee(feeAmt, mConfig.lockingFeeRatio, mConfig.initialLtv);
-        _config.apy = mConfig.apy;
+        _config.apr = mConfig.apr;
         emit BuyToken(
             sender,
             token,
             minTokenOut,
             netOut.toUint128(),
-            mConfig.apy
+            mConfig.apr
         );
     }
 
     function sellFt(
         uint128 ftAmtIn,
-        uint128 minCashOut
+        uint128 minUnderlyingOut
     ) external override returns (uint256 netOut) {
-        netOut = _sellToken(msg.sender, ft, ftAmtIn, minCashOut);
+        netOut = _sellToken(msg.sender, ft, ftAmtIn, minUnderlyingOut);
     }
 
     function sellXt(
         uint128 xtAmtIn,
-        uint128 minCashOut
+        uint128 minUnderlyingOut
     ) external override returns (uint256 netOut) {
-        netOut = _sellToken(msg.sender, xt, xtAmtIn, minCashOut);
+        netOut = _sellToken(msg.sender, xt, xtAmtIn, minUnderlyingOut);
     }
 
     function _sellToken(
         address sender,
         IMintableERC20 token,
         uint128 tokenAmtIn,
-        uint128 minCashOut
+        uint128 minUnderlyingOut
     ) internal returns (uint256 netOut) {
         token.transferFrom(sender, address(this), tokenAmtIn);
         // Get old reserves
@@ -439,7 +440,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         if (token == ft) {
             uint newFtReserve;
             uint newXtReserve;
-            (newFtReserve, newXtReserve, mConfig.apy) = TermMaxCurve._sellFt(
+            (newFtReserve, newXtReserve, mConfig.apr) = TermMaxCurve._sellFt(
                 tradeParams,
                 mConfig
             );
@@ -456,7 +457,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         } else {
             uint newFtReserve;
             uint newXtReserve;
-            (newFtReserve, newXtReserve, mConfig.apy) = TermMaxCurve._sellXt(
+            (newFtReserve, newXtReserve, mConfig.apr) = TermMaxCurve._sellXt(
                 tradeParams,
                 mConfig
             );
@@ -472,11 +473,11 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
             );
         }
         netOut -= feeAmt;
-        if (netOut < minCashOut) {
+        if (netOut < minUnderlyingOut) {
             revert UnexpectedAmount(
                 sender,
                 token,
-                minCashOut,
+                minUnderlyingOut,
                 netOut.toUint128()
             );
         }
@@ -488,14 +489,14 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         );
         _lockFee(feeAmt, mConfig.lockingFeeRatio, mConfig.initialLtv);
         token.burn(tokenAmtIn);
-        cash.transfer(sender, netOut);
-        _config.apy = mConfig.apy;
+        underlying.transfer(sender, netOut);
+        _config.apr = mConfig.apr;
         emit SellToken(
             sender,
             token,
-            minCashOut,
+            minUnderlyingOut,
             netOut.toUint128(),
-            mConfig.apy
+            mConfig.apr
         );
     }
 
@@ -527,37 +528,27 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
 
     function mintGNft(
         uint128 debt,
-        bytes memory collateralData,
         bytes calldata callbackData
     ) external override isOpen nonReentrant returns (uint256 nftId) {
-        return _mintGNft(msg.sender, collateralData, debt, callbackData);
+        return _mintGNft(msg.sender, debt, callbackData);
     }
 
     function _mintGNft(
         address sender,
-        bytes memory collateralData,
         uint128 debt,
         bytes calldata callbackData
     ) internal returns (uint256 nftId) {
         xt.transferFrom(sender, address(this), debt);
 
         if (debt < _config.minLeveragedXt) {
-            revert DebtTooSmall(sender, debt, collateralData);
+            revert DebtTooSmall(sender, debt);
         }
 
         // Send debt to borrower
-        cash.transfer(sender, debt);
+        underlying.transfer(sender, debt);
         // Callback function
-        if (
-            !IFlashLoanReceiver(sender).executeOperation(
-                sender,
-                cash,
-                debt,
-                callbackData
-            )
-        ) {
-            revert MintGNFTFailedCallback(sender, debt, debt, callbackData);
-        }
+        bytes memory collateralData = IFlashLoanReceiver(sender)
+            .executeOperation(sender, underlying, debt, callbackData);
 
         // Mint G-NFT
         nftId = gNft.mint(sender, debt, collateralData);
@@ -578,7 +569,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         bytes calldata collateralData
     ) internal returns (uint256 nftId) {
         if (debt < _config.minLeveredFt) {
-            revert DebtTooSmall(sender, debt, collateralData);
+            revert DebtTooSmall(sender, debt);
         }
         // Mint G-NFT
         nftId = gNft.mint(sender, debt, collateralData);
@@ -588,7 +579,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         emit MintGNft(sender, nftId, debt, collateralData);
     }
 
-    // use cash to repayDebt
+    // use underlying to repayDebt
     function repayGNft(
         uint256 nftId,
         uint128 repayAmt
@@ -602,7 +593,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         uint128 repayAmt
     ) internal {
         gNft.repay(sender, nftId, repayAmt);
-        cash.transferFrom(sender, address(this), repayAmt);
+        underlying.transferFrom(sender, address(this), repayAmt);
         emit RepayGNft(sender, nftId, repayAmt, false);
     }
 
@@ -632,9 +623,14 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         if (mConfig.deliverable && block.timestamp >= mConfig.maturity) {
             revert CanNotLiquidateAfterMaturity();
         }
-        uint128 debtAmt = gNft.liquidate(nftId, liquidator, mConfig.treasurer);
+        uint128 debtAmt = gNft.liquidate(
+            nftId,
+            liquidator,
+            mConfig.treasurer,
+            mConfig.maturity
+        );
 
-        cash.transferFrom(liquidator, address(this), debtAmt);
+        underlying.transferFrom(liquidator, address(this), debtAmt);
 
         emit LiquidateGNft(liquidator, nftId, debtAmt);
     }
@@ -694,17 +690,17 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
             }
         }
 
-        // The ratio that user will get how many cash and collateral when do redeem
+        // The ratio that user will get how many underlying and collateral when do redeem
         uint ratio = (userPoint * Constants.DECIMAL_BASE) / allPoints;
         bytes memory deliveryData = gNft.delivery(ratio, sender);
-        // Transfer cash output
-        uint cashAmt = (cash.balanceOf(address(this)) * ratio) /
+        // Transfer underlying output
+        uint underlyingAmt = (underlying.balanceOf(address(this)) * ratio) /
             Constants.DECIMAL_BASE;
-        cash.transfer(sender, cashAmt);
+        underlying.transfer(sender, underlyingAmt);
         emit Redeem(
             sender,
             ratio.toUint128(),
-            cashAmt.toUint128(),
+            underlyingAmt.toUint128(),
             deliveryData
         );
     }
@@ -738,7 +734,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
     ) internal returns (uint256 feeToMarket) {
         uint feeToProtocol = (totalFee * protocolFeeRatio) /
             Constants.DECIMAL_BASE;
-        cash.transfer(treasurer, feeToProtocol);
+        underlying.transfer(treasurer, feeToProtocol);
         feeToMarket = totalFee - feeToProtocol;
     }
 

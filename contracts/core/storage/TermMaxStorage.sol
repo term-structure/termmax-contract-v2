@@ -8,7 +8,7 @@ library TermMaxStorage {
         address treasurer;
         uint64 maturity;
         uint64 openTime;
-        int64 apy;
+        int64 apr;
         uint32 gamma;
         uint32 lendFeeRatio;
         uint32 borrowFeeRatio;

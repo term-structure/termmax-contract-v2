@@ -8,7 +8,7 @@ import {TermMaxStorage} from "../TermMaxMarket.sol";
 interface ITermMaxFactory {
     struct DeployParams {
         IERC20Metadata collateral;
-        IERC20Metadata cash;
+        IERC20Metadata underlying;
         AggregatorV3Interface priceFeed;
         uint32 liquidationLtv;
         uint32 maxLtv;

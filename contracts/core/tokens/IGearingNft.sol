@@ -27,7 +27,7 @@ interface IGearingNft is IERC721 {
     function calculateHealth(
         uint256 debtAmt,
         bytes memory collateralData
-    ) external view returns (uint128 health);
+    ) external view returns (uint128 health, uint256 collateralValue);
 
     function merge(uint256[] memory ids) external returns (uint256 newId);
 
@@ -40,7 +40,9 @@ interface IGearingNft is IERC721 {
 
     function liquidate(
         uint256 id,
-        address liquidator
+        address liquidator,
+        address treasurer,
+        uint64 maturity
     ) external returns (uint128 debtAmt);
 
     function delivery(

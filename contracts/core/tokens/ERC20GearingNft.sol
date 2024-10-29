@@ -110,4 +110,26 @@ contract ERC20GearingNft is AbstractGearingNft {
     ) internal pure returns (uint256) {
         return abi.decode(collateralData, (uint));
     }
+
+    function _allocCollateral(
+        address liquidator,
+        address treasurer,
+        uint256 collateralValue,
+        LoanInfo memory loan
+    ) internal virtual override {
+        uint reward = (loan.debtAmt * Constants.REWARD_TO_LIQUIDATOR) /
+            Constants.DECIMAL_BASE;
+        uint rewardToProtocol = (loan.debtAmt * Constants.REWARD_TO_PROTOCOL) /
+            Constants.DECIMAL_BASE;
+        uint rewardToLiquidatorPlusDebt = reward + loan.debtAmt;
+
+        if (rewardToLiquidatorPlusDebt >= collateralValue) {
+            // Case 1: debt + reward >= collateralValue, send all colleteral to liquidator
+            _transferCollateral(liquidator, loan.collateralData);
+        } else if (
+            rewardToLiquidatorPlusDebt + rewardToProtocol >= collateralValue
+        ) {
+            _transferCollateral(liquidator, loan.collateralData);
+        } else {}
+    }
 }

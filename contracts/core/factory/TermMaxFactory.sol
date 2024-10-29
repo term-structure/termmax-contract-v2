@@ -43,7 +43,7 @@ contract TermMaxFactory is ITermMaxFactory, Ownable {
             marketBytes,
             abi.encode(
                 address(deployParams.collateral),
-                deployParams.cash,
+                deployParams.underlying,
                 deployParams.marketConfig.openTime,
                 deployParams.marketConfig.maturity
             )
@@ -69,7 +69,7 @@ contract TermMaxFactory is ITermMaxFactory, Ownable {
         string memory collateralName = deployParams.collateral.name();
         string memory collateralSymbol = deployParams.collateral.symbol();
         {
-            uint8 decimals = deployParams.cash.decimals();
+            uint8 decimals = deployParams.underlying.decimals();
             // Deploy tokens
 
             tokens[0] = _deployMintableERC20(
@@ -105,7 +105,7 @@ contract TermMaxFactory is ITermMaxFactory, Ownable {
         string memory nftName = string(
             abi.encodePacked(
                 PREFIX_GNFT,
-                deployParams.cash.name(),
+                deployParams.underlying.name(),
                 STRING_CONNECTION,
                 collateralName
             )
@@ -113,7 +113,7 @@ contract TermMaxFactory is ITermMaxFactory, Ownable {
         string memory nftSymbol = string(
             abi.encodePacked(
                 PREFIX_GNFT,
-                deployParams.cash.symbol(),
+                deployParams.underlying.symbol(),
                 STRING_CONNECTION,
                 collateralSymbol
             )

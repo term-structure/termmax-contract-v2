@@ -42,17 +42,17 @@ library TermMaxCurve {
         uint32 gamma,
         uint32 ltv,
         uint256 daysToMaturity,
-        int64 apy,
+        int64 apr,
         uint256 ftReserve
     ) internal pure returns (uint256 xtPlusBeta) {
-        // xtReserve + beta = (ftReserve + alpha)/(1 + apy*dayToMaturity/365 - lvt)
+        // xtReserve + beta = (ftReserve + alpha)/(1 + apr*dayToMaturity/365 - lvt)
         uint ftPlusAlpha = _calcFtPlusAlpha(gamma, ftReserve);
         // Use Constants.DECIMAL_BASE to solve the problem of precision loss
-        if (apy >= 0) {
+        if (apr >= 0) {
             xtPlusBeta =
                 (ftPlusAlpha * Constants.DECIMAL_BASE_SQRT) /
                 (Constants.DECIMAL_BASE +
-                    uint(int(apy)).mulDiv(
+                    uint(int(apr)).mulDiv(
                         daysToMaturity,
                         Constants.DAYS_IN_YEAR
                     ) -
@@ -62,7 +62,7 @@ library TermMaxCurve {
             xtPlusBeta =
                 (ftPlusAlpha * Constants.DECIMAL_BASE_SQRT) /
                 (Constants.DECIMAL_BASE -
-                    uint(int(-apy)).mulDiv(
+                    uint(int(-apr)).mulDiv(
                         daysToMaturity,
                         Constants.DAYS_IN_YEAR
                     ) -
@@ -71,7 +71,7 @@ library TermMaxCurve {
         }
     }
 
-    function _calcApy(
+    function _calcApr(
         uint32 ltv,
         uint256 daysToMaturity,
         uint256 ftPlusAlpha,
@@ -144,14 +144,14 @@ library TermMaxCurve {
     )
         internal
         pure
-        returns (uint256 newFtReserve, uint256 newXtReserve, int64 newApy)
+        returns (uint256 newFtReserve, uint256 newXtReserve, int64 newApr)
     {
         uint ftPlusAlpha = _calcFtPlusAlpha(config.gamma, params.ftReserve);
         uint xtPlusBeta = _calcXtPlusBeta(
             config.gamma,
             config.initialLtv,
             params.daysToMaturity,
-            config.apy,
+            config.apr,
             params.ftReserve
         );
         uint negB = ftPlusAlpha +
@@ -167,7 +167,7 @@ library TermMaxCurve {
             2;
         uint deltaFt = params.amount -
             deltaXt.mulDiv(config.initialLtv, Constants.DECIMAL_BASE);
-        newApy = _calcApy(
+        newApr = _calcApr(
             config.initialLtv,
             params.daysToMaturity,
             ftPlusAlpha + deltaFt,
@@ -183,14 +183,14 @@ library TermMaxCurve {
     )
         internal
         pure
-        returns (uint256 newFtReserve, uint256 newXtReserve, int64 newApy)
+        returns (uint256 newFtReserve, uint256 newXtReserve, int64 newApr)
     {
         uint ftPlusAlpha = _calcFtPlusAlpha(config.gamma, params.ftReserve);
         uint xtPlusBeta = _calcXtPlusBeta(
             config.gamma,
             config.initialLtv,
             params.daysToMaturity,
-            config.apy,
+            config.apr,
             params.ftReserve
         );
         uint b = ftPlusAlpha +
@@ -206,7 +206,7 @@ library TermMaxCurve {
             2;
         uint deltaFt = ftPlusAlpha -
             ftPlusAlpha.mulDiv(xtPlusBeta, xtPlusBeta + deltaXt);
-        newApy = _calcApy(
+        newApr = _calcApr(
             config.initialLtv,
             params.daysToMaturity,
             ftPlusAlpha - deltaFt,
@@ -222,14 +222,14 @@ library TermMaxCurve {
     )
         internal
         pure
-        returns (uint256 newFtReserve, uint256 newXtReserve, int64 newApy)
+        returns (uint256 newFtReserve, uint256 newXtReserve, int64 newApr)
     {
         uint ftPlusAlpha = _calcFtPlusAlpha(config.gamma, params.ftReserve);
         uint xtPlusBeta = _calcXtPlusBeta(
             config.gamma,
             config.initialLtv,
             params.daysToMaturity,
-            config.apy,
+            config.apr,
             params.ftReserve
         );
         uint deltaXt;
@@ -256,7 +256,7 @@ library TermMaxCurve {
             );
         }
 
-        newApy = _calcApy(
+        newApr = _calcApr(
             config.initialLtv,
             params.daysToMaturity,
             ftPlusAlpha - deltaFt,
@@ -274,14 +274,14 @@ library TermMaxCurve {
         uint128 neg_amount,
         uint128 x,
         uint128 y,
-        int64 apy_numerator_
+        int64 apr_numerator_
     ) private pure returns (uint128, uint128, int64) {
         uint128 x_plus_alpha = calc_x_plus_alpha(gamma_numerator_, x);
         uint128 y_plus_beta = calc_y_plus_beta(
             gamma_numerator_,
             ltv_numerator_,
             days_to_maturity,
-            apy_numerator_,
+            apr_numerator_,
             x
         );
         uint256 neg_b = uint256(x_plus_alpha) +
@@ -298,13 +298,13 @@ library TermMaxCurve {
             2;
         uint256 delta_x = ((uint256(x_plus_alpha) * uint256(y_plus_beta)) /
             (uint256(y_plus_beta) - delta_y)) - uint256(x_plus_alpha);
-        apy_numerator_ = calc_apy_numerator(
+        apr_numerator_ = calc_apr_numerator(
             ltv_numerator_,
             days_to_maturity,
             uint128(x_plus_alpha + delta_x),
             uint128(y_plus_beta - delta_y)
         );
-        return (uint128(x + delta_x), uint128(y - delta_y), apy_numerator_);
+        return (uint128(x + delta_x), uint128(y - delta_y), apr_numerator_);
     }
  */
     function _sellNegXt(
@@ -313,14 +313,14 @@ library TermMaxCurve {
     )
         internal
         pure
-        returns (uint256 newFtReserve, uint256 newXtReserve, int64 newApy)
+        returns (uint256 newFtReserve, uint256 newXtReserve, int64 newApr)
     {
         uint ftPlusAlpha = _calcFtPlusAlpha(config.gamma, params.ftReserve);
         uint xtPlusBeta = _calcXtPlusBeta(
             config.gamma,
             config.initialLtv,
             params.daysToMaturity,
-            config.apy,
+            config.apr,
             params.ftReserve
         );
         uint negB = ftPlusAlpha +
@@ -340,7 +340,7 @@ library TermMaxCurve {
             2;
         uint deltaFt = ftPlusAlpha.mulDiv(xtPlusBeta, (xtPlusBeta - deltaXt)) -
             ftPlusAlpha;
-        newApy = _calcApy(
+        newApr = _calcApr(
             config.initialLtv,
             params.daysToMaturity,
             ftPlusAlpha + deltaFt,
@@ -358,27 +358,27 @@ library TermMaxCurve {
         uint128 amount,
         uint128 x,
         uint128 y,
-        int64 apy_numerator_
+        int64 apr_numerator_
     ) public pure returns (uint128, uint128, int64) {
         uint128 x_plus_alpha = calc_x_plus_alpha(gamma_numerator_, x);
         uint128 y_plus_beta = calc_y_plus_beta(
             gamma_numerator_,
             ltv_numerator_,
             days_to_maturity,
-            apy_numerator_,
+            apr_numerator_,
             x
         );
         uint256 delta_y = amount;
         uint256 delta_x = uint256(x_plus_alpha) -
             (uint256(x_plus_alpha) * uint256(y_plus_beta)) /
             (uint256(y_plus_beta) + delta_y);
-        int64 new_apy_numerator = calc_apy_numerator(
+        int64 new_apr_numerator = calc_apr_numerator(
             ltv_numerator_,
             days_to_maturity,
             uint128(x_plus_alpha - delta_x),
             uint128(y_plus_beta + delta_y)
         );
-        return (uint128(x - delta_x), uint128(y + delta_y), new_apy_numerator);
+        return (uint128(x - delta_x), uint128(y + delta_y), new_apr_numerator);
     }
      */
     function _buyFt(
@@ -387,20 +387,20 @@ library TermMaxCurve {
     )
         internal
         pure
-        returns (uint256 newFtReserve, uint256 newXtReserve, int64 newApy)
+        returns (uint256 newFtReserve, uint256 newXtReserve, int64 newApr)
     {
         uint ftPlusAlpha = _calcFtPlusAlpha(config.gamma, params.ftReserve);
         uint xtPlusBeta = _calcXtPlusBeta(
             config.gamma,
             config.initialLtv,
             params.daysToMaturity,
-            config.apy,
+            config.apr,
             params.ftReserve
         );
         uint deltaXt = params.amount;
         uint deltaFt = ftPlusAlpha -
             ftPlusAlpha.mulDiv(xtPlusBeta, (xtPlusBeta + deltaXt));
-        newApy = _calcApy(
+        newApr = _calcApr(
             config.initialLtv,
             params.daysToMaturity,
             ftPlusAlpha - deltaFt,
@@ -418,21 +418,21 @@ library TermMaxCurve {
         uint128 neg_amount,
         uint128 x,
         uint128 y,
-        int64 apy_numerator_
+        int64 apr_numerator_
     ) public pure returns (uint128, uint128, int64) {
         uint128 x_plus_alpha = calc_x_plus_alpha(gamma_numerator_, x);
         uint128 y_plus_beta = calc_y_plus_beta(
             gamma_numerator_,
             ltv_numerator_,
             days_to_maturity,
-            apy_numerator_,
+            apr_numerator_,
             x
         );
         uint256 neg_delta_y = neg_amount;
         uint256 neg_delta_x = (uint256(x_plus_alpha) * uint256(y_plus_beta)) /
             (uint256(y_plus_beta) - neg_delta_y) -
             uint256(x_plus_alpha);
-        int64 new_apy_numerator = calc_apy_numerator(
+        int64 new_apr_numerator = calc_apr_numerator(
             ltv_numerator_,
             days_to_maturity,
             uint128(x_plus_alpha + neg_delta_x),
@@ -441,7 +441,7 @@ library TermMaxCurve {
         return (
             uint128(x + neg_delta_x),
             uint128(y - neg_delta_y),
-            new_apy_numerator
+            new_apr_numerator
         );
     }
      */
@@ -451,14 +451,14 @@ library TermMaxCurve {
     )
         internal
         pure
-        returns (uint256 newFtReserve, uint256 newXtReserve, int64 newApy)
+        returns (uint256 newFtReserve, uint256 newXtReserve, int64 newApr)
     {
         uint ftPlusAlpha = _calcFtPlusAlpha(config.gamma, params.ftReserve);
         uint xtPlusBeta = _calcXtPlusBeta(
             config.gamma,
             config.initialLtv,
             params.daysToMaturity,
-            config.apy,
+            config.apr,
             params.ftReserve
         );
         uint negDeltaXt = params.amount;
@@ -466,7 +466,7 @@ library TermMaxCurve {
             xtPlusBeta,
             (xtPlusBeta - negDeltaXt)
         ) - ftPlusAlpha;
-        newApy = _calcApy(
+        newApr = _calcApr(
             config.initialLtv,
             params.daysToMaturity,
             ftPlusAlpha + negDeltaFt,
@@ -484,14 +484,14 @@ library TermMaxCurve {
         uint128 amount,
         uint128 x,
         uint128 y,
-        int64 apy_numerator_
+        int64 apr_numerator_
     ) public pure returns (uint128, uint128, int64) {
         uint128 x_plus_alpha = calc_x_plus_alpha(gamma_numerator_, x);
         uint128 y_plus_beta = calc_y_plus_beta(
             gamma_numerator_,
             ltv_numerator_,
             days_to_maturity,
-            apy_numerator_,
+            apr_numerator_,
             x
         );
         uint256 delta_x = (amount * uint256(ltv_numerator_)) /
@@ -499,13 +499,13 @@ library TermMaxCurve {
         uint256 delta_y = uint256(y_plus_beta) -
             (uint256(y_plus_beta) * uint256(x_plus_alpha)) /
             (uint256(x_plus_alpha) + delta_x);
-        int64 new_apy_numerator = calc_apy_numerator(
+        int64 new_apr_numerator = calc_apr_numerator(
             ltv_numerator_,
             days_to_maturity,
             uint128(x_plus_alpha + delta_x),
             uint128(y_plus_beta - delta_y)
         );
-        return (uint128(x + delta_x), uint128(y - delta_y), new_apy_numerator);
+        return (uint128(x + delta_x), uint128(y - delta_y), new_apr_numerator);
     }
      */
     function _buyXt(
@@ -514,14 +514,14 @@ library TermMaxCurve {
     )
         internal
         pure
-        returns (uint256 newFtReserve, uint256 newXtReserve, int64 newApy)
+        returns (uint256 newFtReserve, uint256 newXtReserve, int64 newApr)
     {
         uint ftPlusAlpha = _calcFtPlusAlpha(config.gamma, params.ftReserve);
         uint xtPlusBeta = _calcXtPlusBeta(
             config.gamma,
             config.initialLtv,
             params.daysToMaturity,
-            config.apy,
+            config.apr,
             params.ftReserve
         );
         uint deltaFt = params.amount.mulDiv(
@@ -530,7 +530,7 @@ library TermMaxCurve {
         );
         uint deltaXt = xtPlusBeta -
             xtPlusBeta.mulDiv(ftPlusAlpha, ftPlusAlpha + deltaFt);
-        newApy = _calcApy(
+        newApr = _calcApr(
             config.initialLtv,
             params.daysToMaturity,
             ftPlusAlpha + deltaFt,
@@ -548,14 +548,14 @@ library TermMaxCurve {
         uint128 neg_amount,
         uint128 x,
         uint128 y,
-        int64 apy_numerator_
+        int64 apr_numerator_
     ) public pure returns (uint128, uint128, int64) {
         uint128 x_plus_alpha = calc_x_plus_alpha(gamma_numerator_, x);
         uint128 y_plus_beta = calc_y_plus_beta(
             gamma_numerator_,
             ltv_numerator_,
             days_to_maturity,
-            apy_numerator_,
+            apr_numerator_,
             x
         );
         uint256 neg_delta_x = (neg_amount * uint256(ltv_numerator_)) /
@@ -563,7 +563,7 @@ library TermMaxCurve {
         uint256 neg_delta_y = (uint256(y_plus_beta) * uint256(x_plus_alpha)) /
             (uint256(x_plus_alpha) - neg_delta_x) -
             uint256(y_plus_beta);
-        int64 new_apy_numerator = calc_apy_numerator(
+        int64 new_apr_numerator = calc_apr_numerator(
             ltv_numerator_,
             days_to_maturity,
             uint128(x_plus_alpha - neg_delta_x),
@@ -572,7 +572,7 @@ library TermMaxCurve {
         return (
             uint128(x - neg_delta_x),
             uint128(y + neg_delta_y),
-            new_apy_numerator
+            new_apr_numerator
         );
     }
      */
@@ -582,14 +582,14 @@ library TermMaxCurve {
     )
         internal
         pure
-        returns (uint256 newFtReserve, uint256 newXtReserve, int64 newApy)
+        returns (uint256 newFtReserve, uint256 newXtReserve, int64 newApr)
     {
         uint ftPlusAlpha = _calcFtPlusAlpha(config.gamma, params.ftReserve);
         uint xtPlusBeta = _calcXtPlusBeta(
             config.gamma,
             config.initialLtv,
             params.daysToMaturity,
-            config.apy,
+            config.apr,
             params.ftReserve
         );
         uint negDeltaFt = params.amount.mulDiv(
@@ -600,7 +600,7 @@ library TermMaxCurve {
             ftPlusAlpha,
             ftPlusAlpha - negDeltaFt
         ) - xtPlusBeta;
-        newApy = _calcApy(
+        newApr = _calcApr(
             config.initialLtv,
             params.daysToMaturity,
             ftPlusAlpha - negDeltaFt,

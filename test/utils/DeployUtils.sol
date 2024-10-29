@@ -18,7 +18,7 @@ library DeployUtils {
         IGearingNft gNft;
         AggregatorV3Interface priceFeed;
         MockERC20 collateral;
-        MockERC20 cash;
+        MockERC20 underlying;
     }
 
     function deployMarket(
@@ -32,13 +32,13 @@ library DeployUtils {
         res.factory.initMarketBytes(type(TermMaxMarket).creationCode);
 
         res.collateral = new MockERC20("ETH", "ETH", 18);
-        res.cash = new MockERC20("DAI", "DAI", 8);
+        res.underlying = new MockERC20("DAI", "DAI", 8);
 
         res.priceFeed = new MockPriceFeed(deployer);
         ITermMaxFactory.DeployParams memory params = ITermMaxFactory
             .DeployParams(
                 res.collateral,
-                res.cash,
+                res.underlying,
                 res.priceFeed,
                 maxLtv,
                 liquidationLtv,
