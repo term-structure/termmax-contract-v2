@@ -31,10 +31,10 @@ library DeployUtils {
         console.log("Factory deploy at:", address(res.factory));
         res.factory.initMarketBytes(type(TermMaxMarket).creationCode);
 
-        res.collateral = new MockERC20("ETH", "ETH");
-        res.cash = new MockERC20("DAI", "DAI");
+        res.collateral = new MockERC20("ETH", "ETH", 18);
+        res.cash = new MockERC20("DAI", "DAI", 8);
 
-        res.priceFeed = new MockPriceFeed();
+        res.priceFeed = new MockPriceFeed(deployer);
         ITermMaxFactory.DeployParams memory params = ITermMaxFactory
             .DeployParams(
                 res.collateral,
