@@ -580,10 +580,20 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
     }
 
     // use underlying to repayDebt
-    function repayGNft(
+    function repayGNftByUnderlying(
         uint256 nftId,
         uint128 repayAmt
     ) external override isOpen nonReentrant {
+        underlying.transferFrom(msg.sender, address(this), repayAmt);
+        _repayGNft(msg.sender, nftId, repayAmt);
+    }
+
+    function repayGNftByFt(
+        uint256 nftId,
+        uint128 repayAmt
+    ) external override isOpen nonReentrant {
+        ft.transferFrom(msg.sender, address(this), repayAmt);
+        ft.burn(repayAmt);
         _repayGNft(msg.sender, nftId, repayAmt);
     }
 
@@ -593,22 +603,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         uint128 repayAmt
     ) internal {
         gNft.repay(sender, nftId, repayAmt);
-        underlying.transferFrom(sender, address(this), repayAmt);
         emit RepayGNft(sender, nftId, repayAmt, false);
-    }
-
-    // use yp to deregister debt
-    function deregisterGNft(
-        uint256 nftId
-    ) external override isOpen nonReentrant {
-        _deregisterGNft(msg.sender, nftId);
-    }
-
-    function _deregisterGNft(address sender, uint256 nftId) internal {
-        uint128 debtAmt = gNft.deregister(sender, nftId);
-        ft.transferFrom(sender, address(this), debtAmt);
-        ft.burn(debtAmt);
-        emit DeregisterGNft(sender, nftId, debtAmt);
     }
 
     function liquidateGNft(uint256 nftId) external override nonReentrant {

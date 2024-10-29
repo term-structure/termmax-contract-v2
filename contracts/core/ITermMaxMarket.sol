@@ -180,13 +180,11 @@ interface ITermMaxMarket {
         bytes calldata callbackData
     ) external returns (uint256 nftId);
 
-    // use underlying to repayDebt
-    function repayGNft(uint256 nftId, uint128 repayAmt) external;
+    function repayGNftByUnderlying(uint256 nftId, uint128 repayAmt) external;
+
+    function repayGNftByFt(uint256 nftId, uint128 repayAmt) external;
 
     function liquidateGNft(uint256 nftId) external;
-
-    // use ft to deregister debt
-    function deregisterGNft(uint256 nftId) external;
 
     function redeem() external;
 }

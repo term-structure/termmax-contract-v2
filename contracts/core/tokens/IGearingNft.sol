@@ -33,10 +33,7 @@ interface IGearingNft is IERC721 {
 
     function repay(address sender, uint256 id, uint128 repayAmt) external;
 
-    function deregister(
-        address sender,
-        uint256 id
-    ) external returns (uint128 debtAmt);
+    function removeCollateral(uint256 id, bytes memory collateralData) external;
 
     function liquidate(
         uint256 id,
