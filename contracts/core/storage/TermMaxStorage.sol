@@ -9,7 +9,8 @@ library TermMaxStorage {
         uint64 maturity;
         uint64 openTime;
         int64 apr;
-        uint32 gamma;
+        // The liquidity scaling factor
+        uint32 lsf;
         uint32 lendFeeRatio;
         uint32 borrowFeeRatio;
         // The locking percentage of transaction fees

@@ -9,7 +9,7 @@ library Constants {
     string constant PREFIX_GNFT = "GNFT:";
     string constant STRING_UNDER_LINE = "_";
     uint32 constant DECIMAL_BASE = 1e8;
-    uint64 constant DECIMAL_BASE_SQRT = 1e16;
+    uint64 constant DECIMAL_BASE_SQ = 1e16;
     uint16 constant DAYS_IN_YEAR = 365;
     uint32 constant SECONDS_IN_DAY = 86400;
     uint32 constant SECONDS_IN_MOUNTH = 2592000;

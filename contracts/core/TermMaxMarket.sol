@@ -95,7 +95,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
             revert MarketMustHasLiquidationStrategy();
         }
         if (
-            config_.gamma > Constants.DECIMAL_BASE ||
+            config_.lsf > Constants.DECIMAL_BASE ||
             config_.initialLtv > Constants.DECIMAL_BASE ||
             config_.lendFeeRatio > Constants.DECIMAL_BASE ||
             config_.borrowFeeRatio > Constants.DECIMAL_BASE ||
