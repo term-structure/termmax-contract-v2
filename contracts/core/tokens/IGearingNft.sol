@@ -35,6 +35,8 @@ interface IGearingNft is IERC721 {
 
     function removeCollateral(uint256 id, bytes memory collateralData) external;
 
+    function addCollateral(uint256 id, bytes memory collateralData) external;
+
     /// @notice Return the liquidation info of the loan
     /// @param id The id of the G-Nft
     /// @return isLiquidable Whether the loan is liquidable
