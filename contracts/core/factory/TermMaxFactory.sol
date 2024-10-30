@@ -130,6 +130,8 @@ contract TermMaxFactory is ITermMaxFactory, Ownable {
                             nftSymbol,
                             deployParams.collateral,
                             deployParams.priceFeed,
+                            deployParams.halfLiquidationThreshold,
+                            deployParams.marketConfig.maturity,
                             deployParams.maxLtv,
                             deployParams.liquidationLtv
                         )

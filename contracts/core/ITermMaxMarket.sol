@@ -105,7 +105,7 @@ interface ITermMaxMarket {
     event LiquidateGNft(
         address indexed liquidator,
         uint256 indexed nftId,
-        uint128 debtAmt
+        uint128 liquidatedAmt
     );
 
     event Redeem(
@@ -184,7 +184,7 @@ interface ITermMaxMarket {
 
     function repayGNftByFt(uint256 nftId, uint128 repayAmt) external;
 
-    function liquidateGNft(uint256 nftId) external;
+    function liquidateGNft(uint256 nftId, uint128 repayAmt) external;
 
     function redeem() external;
 }

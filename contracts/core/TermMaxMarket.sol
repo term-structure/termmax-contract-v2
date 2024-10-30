@@ -606,11 +606,18 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         emit RepayGNft(sender, nftId, repayAmt, false);
     }
 
-    function liquidateGNft(uint256 nftId) external override nonReentrant {
-        _liquidateGNft(msg.sender, nftId);
+    function liquidateGNft(
+        uint256 nftId,
+        uint128 repayAmt
+    ) external override nonReentrant {
+        _liquidateGNft(msg.sender, nftId, repayAmt);
     }
 
-    function _liquidateGNft(address liquidator, uint256 nftId) internal {
+    function _liquidateGNft(
+        address liquidator,
+        uint256 nftId,
+        uint128 repayAmt
+    ) internal {
         TermMaxStorage.MarketConfig memory mConfig = _config;
         if (!mConfig.liquidatable) {
             revert MarketDoNotSupportLiquidation();
@@ -618,16 +625,11 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         if (mConfig.deliverable && block.timestamp >= mConfig.maturity) {
             revert CanNotLiquidateAfterMaturity();
         }
-        uint128 debtAmt = gNft.liquidate(
-            nftId,
-            liquidator,
-            mConfig.treasurer,
-            mConfig.maturity
-        );
+        gNft.liquidate(nftId, liquidator, mConfig.treasurer, mConfig.maturity);
 
-        underlying.transferFrom(liquidator, address(this), debtAmt);
+        underlying.transferFrom(liquidator, address(this), repayAmt);
 
-        emit LiquidateGNft(liquidator, nftId, debtAmt);
+        emit LiquidateGNft(liquidator, nftId, repayAmt);
     }
 
     function redeem() external virtual override nonReentrant {

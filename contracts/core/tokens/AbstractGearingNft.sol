@@ -20,15 +20,23 @@ abstract contract AbstractGearingNft is
     using SafeCast for int256;
 
     error CanNotMergeLoanWithDiffOwner();
-    error GNftIsHealthy(address liquidator, uint256 id, uint128 health);
+    error GNftIsHealthy(address liquidator, uint256 id, uint128 healthFactor);
     error GNftIsNotHealthy(
         address owner,
         uint128 debtAmt,
-        uint128 health,
+        uint128 healthFactor,
+        bytes collateralData
+    );
+    error GNftIsNotHealthyAfterLiquidation(
+        address liquidator,
+        uint128 debtAmt,
+        uint128 healthFactor,
         bytes collateralData
     );
     error SenderIsNotTheOwner(address sender, uint256 id);
     error NumeratorMustLessThanBasicDecimals();
+    /// @notice Error for liquidate the loan with invalid repay amount
+    error RepayAmtExceedsMaxRepayAmt(uint128 repayAmt, uint128 maxRepayAmt);
 
     event MergeGNfts(
         address indexed sender,
@@ -39,7 +47,7 @@ abstract contract AbstractGearingNft is
     event RemoveCollateral(
         address owner,
         uint128 debtAmt,
-        uint128 health,
+        uint128 healthFactor,
         bytes newCollateralData
     );
 
@@ -50,6 +58,8 @@ abstract contract AbstractGearingNft is
     struct GearingNftStorage {
         address collateral;
         uint256 total;
+        uint64 maturity;
+        uint128 halfLiquidationThreshold;
         // The loan to collateral of g-nft liquidation threshhold
         uint32 liquidationLtv;
         // The loan to collateral while minting g-nft
@@ -73,6 +83,8 @@ abstract contract AbstractGearingNft is
 
     function __AbstractGearingNft_init(
         address collateral,
+        uint128 halfLiquidationThreshold,
+        uint64 maturity,
         uint32 maxLtv,
         uint32 liquidationLtv
     ) internal onlyInitializing {
@@ -84,6 +96,8 @@ abstract contract AbstractGearingNft is
         }
         GearingNftStorage storage s = _getGearingNftStorage();
         s.collateral = collateral;
+        s.halfLiquidationThreshold = halfLiquidationThreshold;
+        s.maturity = maturity;
         s.maxLtv = maxLtv;
         s.liquidationLtv = liquidationLtv;
     }
@@ -109,9 +123,12 @@ abstract contract AbstractGearingNft is
         GearingNftStorage storage s
     ) internal returns (uint256 id) {
         id = s.total++;
-        (uint128 health, ) = calculateHealth(debtAmt, collateralData);
-        if (health >= s.maxLtv) {
-            revert GNftIsNotHealthy(to, debtAmt, health, collateralData);
+        (uint128 healthFactor, ) = calculateHealthFactor(
+            debtAmt,
+            collateralData
+        );
+        if (healthFactor >= s.maxLtv) {
+            revert GNftIsNotHealthy(to, debtAmt, healthFactor, collateralData);
         }
         s.loanMapping[id] = LoanInfo(debtAmt, collateralData);
         _mint(to, id);
@@ -126,7 +143,7 @@ abstract contract AbstractGearingNft is
         returns (
             address owner,
             uint128 debtAmt,
-            uint128 health,
+            uint128 healthFactor,
             bytes memory collateralData
         )
     {
@@ -135,7 +152,7 @@ abstract contract AbstractGearingNft is
         LoanInfo memory loan = s.loanMapping[id];
         debtAmt = loan.debtAmt;
         collateralData = loan.collateralData;
-        (health, ) = calculateHealth(debtAmt, collateralData);
+        (healthFactor, ) = calculateHealthFactor(debtAmt, collateralData);
     }
 
     function _burnInternal(uint256 id, GearingNftStorage storage s) internal {
@@ -201,12 +218,15 @@ abstract contract AbstractGearingNft is
         LoanInfo memory loan = s.loanMapping[id];
         loan.collateralData = _removeCollateral(loan, collateralData);
 
-        (uint128 health, ) = calculateHealth(loan.debtAmt, loan.collateralData);
-        if (health >= s.maxLtv) {
+        (uint128 healthFactor, ) = calculateHealthFactor(
+            loan.debtAmt,
+            loan.collateralData
+        );
+        if (healthFactor >= s.maxLtv) {
             revert GNftIsNotHealthy(
                 msg.sender,
                 loan.debtAmt,
-                health,
+                healthFactor,
                 collateralData
             );
         }
@@ -215,7 +235,7 @@ abstract contract AbstractGearingNft is
         emit RemoveCollateral(
             msg.sender,
             loan.debtAmt,
-            health,
+            healthFactor,
             loan.collateralData
         );
     }
@@ -225,39 +245,118 @@ abstract contract AbstractGearingNft is
         bytes memory collateralData
     ) internal virtual returns (bytes memory);
 
+    function getLiquidationInfo(
+        uint256 id
+    ) external view returns (bool isLiquidable, uint128 maxRepayAmt) {
+        (isLiquidable, maxRepayAmt) = _getLiquidationInfo(
+            id,
+            _getGearingNftStorage()
+        );
+    }
+
+    function _getLiquidationInfo(
+        uint256 id,
+        GearingNftStorage storage s
+    ) internal view returns (bool isLiquidable, uint128 maxRepayAmt) {
+        LoanInfo memory loan = s.loanMapping[id];
+        (uint128 healthFactor, uint collateralValue) = calculateHealthFactor(
+            loan.debtAmt,
+            loan.collateralData
+        );
+        bool isExpired = s.maturity <= block.timestamp;
+        isLiquidable = isExpired || healthFactor >= s.liquidationLtv;
+
+        maxRepayAmt = _calculateMaxRepayAmt(
+            loan,
+            isExpired,
+            collateralValue,
+            s.halfLiquidationThreshold
+        );
+    }
+
+    function _calculateMaxRepayAmt(
+        LoanInfo memory loan,
+        bool isExpired,
+        uint256 collateralValue,
+        uint128 halfLiquidationThreshold
+    ) internal pure returns (uint128 maxRepayAmt) {
+        maxRepayAmt = collateralValue < halfLiquidationThreshold || isExpired
+            ? loan.debtAmt
+            : loan.debtAmt / 2;
+    }
+
     function liquidate(
         uint256 id,
         address liquidator,
         address treasurer,
-        uint64 maturity
-    ) external override nonReentrant returns (uint128 debtAmt) {
+        uint128 repayAmt
+    ) external override nonReentrant {
         GearingNftStorage storage s = _getGearingNftStorage();
         LoanInfo memory loan = s.loanMapping[id];
-        (uint128 health, uint256 collateralValue) = calculateHealth(
+        (uint128 healthFactor, uint256 collateralValue) = calculateHealthFactor(
             loan.debtAmt,
             loan.collateralData
         );
-        if (maturity <= block.timestamp || health < s.liquidationLtv) {
-            revert GNftIsHealthy(liquidator, id, health);
+        bool isExpired = s.maturity <= block.timestamp;
+        uint128 maxRepayAmt = _calculateMaxRepayAmt(
+            loan,
+            isExpired,
+            collateralValue,
+            s.halfLiquidationThreshold
+        );
+        if (repayAmt > maxRepayAmt) {
+            revert RepayAmtExceedsMaxRepayAmt(repayAmt, maxRepayAmt);
         }
-        debtAmt = loan.debtAmt;
-        _burnInternal(id, s);
-        _allocCollateral(liquidator, treasurer, collateralValue, loan);
+        if (isExpired || healthFactor >= s.liquidationLtv) {
+            bytes memory remainningCollateralData = _liquidate(
+                loan,
+                liquidator,
+                treasurer,
+                repayAmt,
+                collateralValue
+            );
+            // Do liquidate
+            if (repayAmt == loan.debtAmt) {
+                if (remainningCollateralData.length > 0) {
+                    _transferCollateral(ownerOf(id), remainningCollateralData);
+                }
+                _burnInternal(id, s);
+            } else {
+                loan.debtAmt -= repayAmt;
+                loan.collateralData = remainningCollateralData;
+                // Check health after partial liquidation
+                (healthFactor, ) = calculateHealthFactor(
+                    loan.debtAmt,
+                    loan.collateralData
+                );
+                if (healthFactor >= s.liquidationLtv) {
+                    revert GNftIsNotHealthyAfterLiquidation(
+                        liquidator,
+                        loan.debtAmt,
+                        healthFactor,
+                        loan.collateralData
+                    );
+                }
+            }
+        } else {
+            revert GNftIsHealthy(liquidator, id, healthFactor);
+        }
     }
 
-    function _allocCollateral(
+    function _liquidate(
+        LoanInfo memory loan,
         address liquidator,
         address treasurer,
-        uint256 collateralValue,
-        LoanInfo memory loan
-    ) internal virtual;
+        uint128 repayAmt,
+        uint256 collateralValue
+    ) internal virtual returns (bytes memory collateralData);
 
-    function calculateHealth(
+    function calculateHealthFactor(
         uint256 debtAmt,
         bytes memory collateralData
-    ) public view returns (uint128 health, uint256 collateralValue) {
-        collateralValue = _sizeCollateralValue(collateralData);
-        health = ((debtAmt * Constants.DECIMAL_BASE) / collateralValue)
+    ) public view returns (uint128 healthFactor, uint256 collateralValue) {
+        collateralValue = _getCollateralValue(collateralData);
+        healthFactor = ((debtAmt * Constants.DECIMAL_BASE) / collateralValue)
             .toUint128();
     }
 
@@ -277,7 +376,11 @@ abstract contract AbstractGearingNft is
         bytes memory collateralData
     ) internal virtual;
 
-    function _sizeCollateralValue(
+    /**
+     * @notice This function will return the value of collateral in underlying token unit
+     * @param collateralData encoded collateral data
+     */
+    function _getCollateralValue(
         bytes memory collateralData
     ) internal view virtual returns (uint256);
 }

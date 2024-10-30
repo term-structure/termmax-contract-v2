@@ -37,12 +37,20 @@ contract ERC20GearingNft is AbstractGearingNft {
         string memory symbol,
         IERC20 collateral,
         AggregatorV3Interface priceFeed,
+        uint128 halfLiquidationThreshold,
+        uint64 maturity,
         uint32 maxLtv,
         uint32 liquidationLtv
     ) public initializer {
         __ERC721_init(name, symbol);
         __Ownable_init(market);
-        __AbstractGearingNft_init(address(collateral), maxLtv, liquidationLtv);
+        __AbstractGearingNft_init(
+            address(collateral),
+            halfLiquidationThreshold,
+            maturity,
+            maxLtv,
+            liquidationLtv
+        );
         _getERC20GearingNftStorage().priceFeed = priceFeed;
     }
 
@@ -94,7 +102,7 @@ contract ERC20GearingNft is AbstractGearingNft {
         );
     }
 
-    function _sizeCollateralValue(
+    function _getCollateralValue(
         bytes memory collateralData
     ) internal view virtual override returns (uint256 amount) {
         AggregatorV3Interface priceFeed = _getERC20GearingNftStorage()
@@ -111,25 +119,43 @@ contract ERC20GearingNft is AbstractGearingNft {
         return abi.decode(collateralData, (uint));
     }
 
-    function _allocCollateral(
+    function _removeCollateral(
+        LoanInfo memory loan,
+        bytes memory collateralData
+    ) internal virtual override returns (bytes memory) {
+        uint amount = _decodeAmount(loan.collateralData) -
+            _decodeAmount(collateralData);
+        return abi.encode(amount);
+    }
+
+    function _liquidate(
+        LoanInfo memory loan,
         address liquidator,
         address treasurer,
-        uint256 collateralValue,
-        LoanInfo memory loan
-    ) internal virtual override {
-        uint reward = (loan.debtAmt * Constants.REWARD_TO_LIQUIDATOR) /
+        uint128 repayAmt,
+        uint256 collateralValue
+    ) internal virtual override returns (bytes memory collateralData) {
+        uint rewardToLiquidator = (repayAmt * Constants.REWARD_TO_LIQUIDATOR) /
             Constants.DECIMAL_BASE;
-        uint rewardToProtocol = (loan.debtAmt * Constants.REWARD_TO_PROTOCOL) /
+        uint rewardToProtocol = (repayAmt * Constants.REWARD_TO_PROTOCOL) /
             Constants.DECIMAL_BASE;
-        uint rewardToLiquidatorPlusDebt = reward + loan.debtAmt;
+        uint rewardToLiquidatorPlusRepayAmt = rewardToLiquidator + repayAmt;
+        uint amount = _decodeAmount(loan.collateralData);
+        uint price = (collateralValue * Constants.DECIMAL_BASE) / amount;
+        IERC20 collateral = IERC20(_getGearingNftStorage().collateral);
+        if (rewardToLiquidatorPlusRepayAmt >= collateralValue) {
+            // Case 1: repayAmt + rewardToLiquidator >= collateralValue, send all colleteral to liquidator
 
-        if (rewardToLiquidatorPlusDebt >= collateralValue) {
-            // Case 1: debt + reward >= collateralValue, send all colleteral to liquidator
-            _transferCollateral(liquidator, loan.collateralData);
+            collateral.transfer(liquidator, amount);
         } else if (
-            rewardToLiquidatorPlusDebt + rewardToProtocol >= collateralValue
+            rewardToLiquidatorPlusRepayAmt + rewardToProtocol >= collateralValue
         ) {
+            // Case 2: repayAmt + rewardToLiquidator + rewardToProtocol >= collateralValue
+            // uint collateralToLiquidator = rewardToLiquidatorPlusRepayAmt * Constants.DECIMAL_BASE_SQRT/ price/Constants.DECIMAL_BASE;
+            // collateral.transfer(liquidator,collateralToLiquidator );
+            // uint collateralToLiquidator
+        } else {
             _transferCollateral(liquidator, loan.collateralData);
-        } else {}
+        }
     }
 }

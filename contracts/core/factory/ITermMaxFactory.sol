@@ -10,6 +10,7 @@ interface ITermMaxFactory {
         IERC20Metadata collateral;
         IERC20Metadata underlying;
         AggregatorV3Interface priceFeed;
+        uint128 halfLiquidationThreshold;
         uint32 liquidationLtv;
         uint32 maxLtv;
         TermMaxStorage.MarketConfig marketConfig;

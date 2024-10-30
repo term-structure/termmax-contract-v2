@@ -20,14 +20,14 @@ interface IGearingNft is IERC721 {
         returns (
             address owner,
             uint128 debtAmt,
-            uint128 health,
+            uint128 healthFactor,
             bytes memory collateralData
         );
 
-    function calculateHealth(
+    function calculateHealthFactor(
         uint256 debtAmt,
         bytes memory collateralData
-    ) external view returns (uint128 health, uint256 collateralValue);
+    ) external view returns (uint128 healthFactor, uint256 collateralValue);
 
     function merge(uint256[] memory ids) external returns (uint256 newId);
 
@@ -35,12 +35,20 @@ interface IGearingNft is IERC721 {
 
     function removeCollateral(uint256 id, bytes memory collateralData) external;
 
+    /// @notice Return the liquidation info of the loan
+    /// @param id The id of the G-Nft
+    /// @return isLiquidable Whether the loan is liquidable
+    /// @return maxRepayAmt The maximum amount of the debt to be repaid
+    function getLiquidationInfo(
+        uint256 id
+    ) external view returns (bool isLiquidable, uint128 maxRepayAmt);
+
     function liquidate(
         uint256 id,
         address liquidator,
         address treasurer,
-        uint64 maturity
-    ) external returns (uint128 debtAmt);
+        uint128 repayAmt
+    ) external;
 
     function delivery(
         uint256 ratio,
