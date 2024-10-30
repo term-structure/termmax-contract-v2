@@ -44,12 +44,9 @@ abstract contract AbstractGearingNft is
         uint256[] ids
     );
 
-    event RemoveCollateral(
-        address owner,
-        uint128 debtAmt,
-        uint128 healthFactor,
-        bytes newCollateralData
-    );
+    event RemoveCollateral(uint256 id, bytes newCollateralData);
+
+    event AddCollateral(uint256 id, bytes newCollateralData);
 
     struct LoanInfo {
         uint128 debtAmt;
@@ -218,6 +215,8 @@ abstract contract AbstractGearingNft is
         LoanInfo memory loan = s.loanMapping[id];
         loan.collateralData = _removeCollateral(loan, collateralData);
 
+        _transferCollateral(msg.sender, collateralData);
+
         (uint128 healthFactor, ) = calculateHealthFactor(
             loan.debtAmt,
             loan.collateralData
@@ -232,15 +231,28 @@ abstract contract AbstractGearingNft is
         }
         s.loanMapping[id] = loan;
 
-        emit RemoveCollateral(
-            msg.sender,
-            loan.debtAmt,
-            healthFactor,
-            loan.collateralData
-        );
+        emit RemoveCollateral(id, loan.collateralData);
     }
 
     function _removeCollateral(
+        LoanInfo memory loan,
+        bytes memory collateralData
+    ) internal virtual returns (bytes memory);
+
+    function addCollateral(
+        uint256 id,
+        bytes memory collateralData
+    ) external override nonReentrant {
+        GearingNftStorage storage s = _getGearingNftStorage();
+        LoanInfo memory loan = s.loanMapping[id];
+
+        _transferCollateralFrom(msg.sender, address(this), collateralData);
+        loan.collateralData = _addCollateral(loan, collateralData);
+
+        emit AddCollateral(id, loan.collateralData);
+    }
+
+    function _addCollateral(
         LoanInfo memory loan,
         bytes memory collateralData
     ) internal virtual returns (bytes memory);

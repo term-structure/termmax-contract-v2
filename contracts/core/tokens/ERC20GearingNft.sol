@@ -128,6 +128,15 @@ contract ERC20GearingNft is AbstractGearingNft {
         return abi.encode(amount);
     }
 
+    function _addCollateral(
+        LoanInfo memory loan,
+        bytes memory collateralData
+    ) internal virtual override returns (bytes memory) {
+        uint amount = _decodeAmount(loan.collateralData) +
+            _decodeAmount(collateralData);
+        return abi.encode(amount);
+    }
+
     function _liquidate(
         LoanInfo memory loan,
         address liquidator,
