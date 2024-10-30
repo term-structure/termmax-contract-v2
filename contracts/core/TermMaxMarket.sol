@@ -702,17 +702,6 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         );
     }
 
-    function _transferAllBalance(
-        IERC20 token,
-        address from,
-        address to
-    ) internal returns (uint256 amount) {
-        amount = token.balanceOf(from);
-        if (amount > 0) {
-            token.transferFrom(from, to, amount);
-        }
-    }
-
     function _distributeAllReward() internal {
         uint lpFtBalance = lpFt.balanceOf(address(this));
         uint lpXtBalance = lpXt.balanceOf(address(this));
@@ -749,5 +738,26 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
             return;
         }
         token.transferFrom(from, to, value);
+    }
+
+    function redeemFxAndXtToUnderlying(
+        uint256 underlyingAmt
+    ) external override nonReentrant isOpen {
+        _redeemFxAndXtToUnderlying(msg.sender, underlyingAmt);
+    }
+
+    function _redeemFxAndXtToUnderlying(
+        address sender,
+        uint256 underlyingAmt
+    ) internal {
+        uint ftAmt = (underlyingAmt * _config.initialLtv) /
+            Constants.DECIMAL_BASE;
+        ft.transferFrom(sender, address(this), ftAmt);
+        xt.transferFrom(sender, address(this), underlyingAmt);
+        ft.burn(ftAmt);
+        xt.burn(underlyingAmt);
+        underlying.transfer(sender, underlyingAmt);
+
+        emit RedeemFxAndXtToUnderlying(sender, underlyingAmt);
     }
 }

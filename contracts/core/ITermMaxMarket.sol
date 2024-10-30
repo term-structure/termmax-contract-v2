@@ -115,6 +115,8 @@ interface ITermMaxMarket {
         bytes deliveryData
     );
 
+    event RedeemFxAndXtToUnderlying(address sender, uint256 underlyingAmt);
+
     function config()
         external
         view
@@ -148,6 +150,8 @@ interface ITermMaxMarket {
         uint128 lpFtAmt,
         uint128 lpXtAmt
     ) external returns (uint128 ftOutAmt, uint128 xtOutAmt);
+
+    function redeemFxAndXtToUnderlying(uint256 underlyingAmt) external;
 
     function buyFt(
         uint128 underlyingAmtIn,
