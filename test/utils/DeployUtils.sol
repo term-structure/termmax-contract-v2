@@ -33,6 +33,7 @@ library DeployUtils {
 
         res.collateral = new MockERC20("ETH", "ETH", 18);
         res.underlying = new MockERC20("DAI", "DAI", 8);
+        uint128 halfLiquidationThreshold = 10000e8;
 
         res.priceFeed = new MockPriceFeed(deployer);
         ITermMaxFactory.DeployParams memory params = ITermMaxFactory
@@ -40,6 +41,7 @@ library DeployUtils {
                 res.collateral,
                 res.underlying,
                 res.priceFeed,
+                halfLiquidationThreshold,
                 maxLtv,
                 liquidationLtv,
                 marketConfig
