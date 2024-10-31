@@ -134,7 +134,7 @@ contract SwapTest is Test {
 
         StateChecker.MarketState memory expectedState = getMarketStateFromJson(
             testdata,
-            ".expected.testBuyFT.contractState"
+            ".expected.testBuyFt.contractState"
         );
 
         /* FOR_DEBUG_START */
