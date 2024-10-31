@@ -1,9 +1,27 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 
 interface IGearingNft is IERC721 {
+    struct GtConfig {
+        address market;
+        address collateral;
+        IERC20 underlying;
+        IERC20 ft;
+        address treasurer;
+        AggregatorV3Interface underlyingOracle;
+        uint64 maturity;
+        // The loan to collateral of g-nft liquidation threshhold
+        uint32 liquidationLtv;
+        // The loan to collateral while minting g-nft
+        uint32 maxLtv;
+        // Whether liquidating gt when expired or it's ltv bigger than liquidationLtv
+        bool liquidatable;
+    }
+
     function marketAddr() external view returns (address);
 
     function mint(
@@ -24,14 +42,9 @@ interface IGearingNft is IERC721 {
             bytes memory collateralData
         );
 
-    function calculateLtv(
-        uint256 debtAmt,
-        bytes memory collateralData
-    ) external view returns (uint128 ltv, uint256 collateralValue);
-
     function merge(uint256[] memory ids) external returns (uint256 newId);
 
-    function repay(address sender, uint256 id, uint128 repayAmt) external;
+    function repay(uint256 id, uint128 repayAmt, bool byUnderlying) external;
 
     function removeCollateral(uint256 id, bytes memory collateralData) external;
 
@@ -45,12 +58,7 @@ interface IGearingNft is IERC721 {
         uint256 id
     ) external view returns (bool isLiquidable, uint128 maxRepayAmt);
 
-    function liquidate(
-        uint256 id,
-        address liquidator,
-        address treasurer,
-        uint128 repayAmt
-    ) external;
+    function liquidate(uint256 id, uint128 repayAmt) external;
 
     function delivery(
         uint256 ratio,

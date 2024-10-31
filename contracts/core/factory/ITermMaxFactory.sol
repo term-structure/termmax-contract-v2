@@ -7,12 +7,14 @@ import {TermMaxStorage} from "../TermMaxMarket.sol";
 
 interface ITermMaxFactory {
     struct DeployParams {
+        address admin;
         IERC20Metadata collateral;
         IERC20Metadata underlying;
-        AggregatorV3Interface priceFeed;
-        uint128 halfLiquidationThreshold;
+        AggregatorV3Interface collateralOracle;
+        AggregatorV3Interface underlyingOracle;
         uint32 liquidationLtv;
         uint32 maxLtv;
+        bool liquidatable;
         TermMaxStorage.MarketConfig marketConfig;
     }
 

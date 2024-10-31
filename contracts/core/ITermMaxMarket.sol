@@ -6,7 +6,6 @@ import {IGearingNft} from "./tokens/IGearingNft.sol";
 import {TermMaxStorage} from "../core/storage/TermMaxStorage.sol";
 
 interface ITermMaxMarket {
-    error MarketMustHasLiquidationStrategy();
     error MarketHasBeenInitialized();
     error NumeratorMustLessThanBasicDecimals();
     error MarketIsNotOpen();
@@ -26,9 +25,8 @@ interface ITermMaxMarket {
         uint128 debtAmt,
         bytes callbackData
     );
-    error MarketDoNotSupportLiquidation();
-    error CanNotLiquidateAfterMaturity();
-    error CanNotRedeemBeforeMaturity();
+
+    error CanNotRedeemBeforeFinalLiquidationDeadline(uint256 deadline);
 
     error InvalidTime(uint64 openTime, uint64 maturity);
     error CollateralCanNotEqualUnserlyinng();
@@ -89,25 +87,6 @@ interface ITermMaxMarket {
         bytes collateralData
     );
 
-    event RepayGNft(
-        address indexed sender,
-        uint256 indexed nftId,
-        uint128 repayAmt,
-        bool isPaidOff
-    );
-
-    event DeregisterGNft(
-        address indexed sender,
-        uint256 indexed nftId,
-        uint128 debtAmt
-    );
-
-    event LiquidateGNft(
-        address indexed liquidator,
-        uint256 indexed nftId,
-        uint128 liquidatedAmt
-    );
-
     event Redeem(
         address indexed sender,
         uint128 ratio,
@@ -115,7 +94,10 @@ interface ITermMaxMarket {
         bytes deliveryData
     );
 
-    event RedeemFxAndXtToUnderlying(address sender, uint256 underlyingAmt);
+    event RedeemFxAndXtToUnderlying(
+        address indexed sender,
+        uint256 underlyingAmt
+    );
 
     function config()
         external
@@ -183,12 +165,6 @@ interface ITermMaxMarket {
         uint128 debt,
         bytes calldata callbackData
     ) external returns (uint256 nftId);
-
-    function repayGNftByUnderlying(uint256 nftId, uint128 repayAmt) external;
-
-    function repayGNftByFt(uint256 nftId, uint128 repayAmt) external;
-
-    function liquidateGNft(uint256 nftId, uint128 repayAmt) external;
 
     function redeem() external;
 }

@@ -13,7 +13,7 @@ contract TermMaxFactory is ITermMaxFactory, Ownable {
     string constant PREFIX_XT = "XT:";
     string constant PREFIX_LP_FT = "LpFT:";
     string constant PREFIX_LP_XT = "LpXT:";
-    string constant PREFIX_GNFT = "G-NFT:";
+    string constant PREFIX_GNFT = "GT:";
     string constant STRING_CONNECTION = "-";
 
     ERC20GearingNft immutable gNftImplement;
@@ -60,6 +60,7 @@ contract TermMaxFactory is ITermMaxFactory, Ownable {
             gNft,
             deployParams.marketConfig
         );
+        Ownable(market).transferOwnership(deployParams.admin);
     }
 
     function _deployTokens(
@@ -125,15 +126,22 @@ contract TermMaxFactory is ITermMaxFactory, Ownable {
                     abi.encodeCall(
                         ERC20GearingNft.initialize,
                         (
-                            address(market),
                             nftName,
                             nftSymbol,
-                            deployParams.collateral,
-                            deployParams.priceFeed,
-                            deployParams.halfLiquidationThreshold,
-                            deployParams.marketConfig.maturity,
-                            deployParams.maxLtv,
-                            deployParams.liquidationLtv
+                            deployParams.admin,
+                            IGearingNft.GtConfig({
+                                market: address(market),
+                                collateral: address(deployParams.collateral),
+                                underlying: deployParams.underlying,
+                                ft: tokens[0],
+                                treasurer: deployParams.marketConfig.treasurer,
+                                underlyingOracle: deployParams.underlyingOracle,
+                                maturity: deployParams.marketConfig.maturity,
+                                liquidationLtv: deployParams.liquidationLtv,
+                                maxLtv: deployParams.maxLtv,
+                                liquidatable: deployParams.liquidatable
+                            }),
+                            deployParams.collateralOracle
                         )
                     )
                 )

@@ -88,11 +88,8 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         IGearingNft gNft_,
         TermMaxStorage.MarketConfig memory config_
     ) external override onlyOwner {
-        if (_config.initialLtv != 0) {
+        if (address(ft) != address(0)) {
             revert MarketHasBeenInitialized();
-        }
-        if (!config_.liquidatable && !config_.deliverable) {
-            revert MarketMustHasLiquidationStrategy();
         }
         if (
             config_.lsf > Constants.DECIMAL_BASE ||
@@ -584,68 +581,22 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         emit MintGNft(sender, nftId, debt, collateralData);
     }
 
-    // use underlying to repayDebt
-    function repayGNftByUnderlying(
-        uint256 nftId,
-        uint128 repayAmt
-    ) external override isOpen nonReentrant {
-        underlying.transferFrom(msg.sender, address(this), repayAmt);
-        _repayGNft(msg.sender, nftId, repayAmt);
-    }
-
-    function repayGNftByFt(
-        uint256 nftId,
-        uint128 repayAmt
-    ) external override isOpen nonReentrant {
-        ft.transferFrom(msg.sender, address(this), repayAmt);
-        ft.burn(repayAmt);
-        _repayGNft(msg.sender, nftId, repayAmt);
-    }
-
-    function _repayGNft(
-        address sender,
-        uint256 nftId,
-        uint128 repayAmt
-    ) internal {
-        gNft.repay(sender, nftId, repayAmt);
-        emit RepayGNft(sender, nftId, repayAmt, false);
-    }
-
-    function liquidateGNft(
-        uint256 nftId,
-        uint128 repayAmt
-    ) external override nonReentrant {
-        _liquidateGNft(msg.sender, nftId, repayAmt);
-    }
-
-    function _liquidateGNft(
-        address liquidator,
-        uint256 nftId,
-        uint128 repayAmt
-    ) internal {
-        TermMaxStorage.MarketConfig memory mConfig = _config;
-        if (!mConfig.liquidatable) {
-            revert MarketDoNotSupportLiquidation();
-        }
-        if (mConfig.deliverable && block.timestamp >= mConfig.maturity + Constants.LIQUIDATION_WINDOW) {
-            revert CanNotLiquidateAfterMaturity();
-        }
-        gNft.liquidate(nftId, liquidator, mConfig.treasurer, mConfig.maturity);
-
-        underlying.transferFrom(liquidator, address(this), repayAmt);
-
-        emit LiquidateGNft(liquidator, nftId, repayAmt);
-    }
-
     function redeem() external virtual override nonReentrant {
         _redeem(msg.sender);
     }
 
     function _redeem(address sender) internal {
         TermMaxStorage.MarketConfig memory mConfig = _config;
-        if (block.timestamp < mConfig.maturity + Constants.LIQUIDATION_WINDOW) {
-            revert CanNotRedeemBeforeMaturity();
+        {
+            uint liquidationDeadline = mConfig.maturity +
+                Constants.LIQUIDATION_WINDOW;
+            if (block.timestamp < liquidationDeadline) {
+                revert CanNotRedeemBeforeFinalLiquidationDeadline(
+                    liquidationDeadline
+                );
+            }
         }
+
         // Burn all lp tokens owned by this contract after maturity to release all reward
         if (!mConfig.rewardIsDistributed) {
             _distributeAllReward();
@@ -717,6 +668,10 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         if (lpXtBalance > 0) {
             lpXt.burn(lpXtBalance);
         }
+        // Burn all ft tokens in gt
+        uint amount = ft.balanceOf(address(gNft));
+        ft.transferFrom(address(gNft), address(this), amount);
+        ft.burn(amount);
     }
 
     function _tranferFeeToTreasure(

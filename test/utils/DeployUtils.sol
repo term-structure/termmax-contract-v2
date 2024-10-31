@@ -16,7 +16,8 @@ library DeployUtils {
         IMintableERC20 lpFt;
         IMintableERC20 lpXt;
         IGearingNft gNft;
-        AggregatorV3Interface priceFeed;
+        AggregatorV3Interface underlyingOracle;
+        AggregatorV3Interface collateralOracle;
         MockERC20 collateral;
         MockERC20 underlying;
     }
@@ -33,19 +34,22 @@ library DeployUtils {
 
         res.collateral = new MockERC20("ETH", "ETH", 18);
         res.underlying = new MockERC20("DAI", "DAI", 8);
-        uint128 halfLiquidationThreshold = 10000e8;
 
-        res.priceFeed = new MockPriceFeed(deployer);
+        res.underlyingOracle = new MockPriceFeed(deployer);
+        res.collateralOracle = new MockPriceFeed(deployer);
+
         ITermMaxFactory.DeployParams memory params = ITermMaxFactory
-            .DeployParams(
-                res.collateral,
-                res.underlying,
-                res.priceFeed,
-                halfLiquidationThreshold,
-                maxLtv,
-                liquidationLtv,
-                marketConfig
-            );
+            .DeployParams({
+                admin: deployer,
+                collateral: res.collateral,
+                underlying: res.underlying,
+                collateralOracle: res.collateralOracle,
+                underlyingOracle: res.underlyingOracle,
+                liquidationLtv: liquidationLtv,
+                maxLtv: maxLtv,
+                liquidatable: true,
+                marketConfig: marketConfig
+            });
 
         res.market = ITermMaxMarket(res.factory.createERC20Market(params));
         console.log("Market deploy at:", address(res.market));

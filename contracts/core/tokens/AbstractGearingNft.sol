@@ -7,7 +7,7 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {Constants} from "../lib/Constants.sol";
-import {IGearingNft} from "./IGearingNft.sol";
+import {IGearingNft, AggregatorV3Interface, IERC20} from "./IGearingNft.sol";
 
 abstract contract AbstractGearingNft is
     UUPSUpgradeable,
@@ -19,18 +19,20 @@ abstract contract AbstractGearingNft is
     using SafeCast for uint256;
     using SafeCast for int256;
 
+    error OnlyMarketCanMintGt();
     error CanNotMergeLoanWithDiffOwner();
-    error GNftIsHealthy(address liquidator, uint256 id, uint128 ltv);
+    error GtDoNotSupportLiquidation();
+    error GNftIsSafe(address liquidator, uint256 id);
     error GNftIsNotHealthy(
         address owner,
         uint128 debtAmt,
         uint128 ltv,
         bytes collateralData
     );
-    error GNftIsNotHealthyAfterLiquidation(
+    error LtvIncreasedAfterLiquidation(
         address liquidator,
         uint128 debtAmt,
-        uint128 ltv,
+        uint128 repayAmt,
         bytes collateralData
     );
     error SenderIsNotTheOwner(address sender, uint256 id);
@@ -44,25 +46,35 @@ abstract contract AbstractGearingNft is
         uint256[] ids
     );
 
-    event RemoveCollateral(uint256 id, bytes newCollateralData);
+    event RemoveCollateral(uint256 indexed id, bytes newCollateralData);
 
-    event AddCollateral(uint256 id, bytes newCollateralData);
+    event AddCollateral(uint256 indexed id, bytes newCollateralData);
+
+    event Repay(uint256 indexed id, uint256 repayAmt, bool byUnderlying);
+
+    event LiquidateGt(
+        uint256 indexed id,
+        address indexed liquidator,
+        uint128 repayAmt
+    );
 
     struct LoanInfo {
         uint128 debtAmt;
         bytes collateralData;
     }
+
     struct GearingNftStorage {
-        address collateral;
+        GtConfig config;
         uint256 total;
-        uint64 maturity;
-        uint128 halfLiquidationThreshold;
-        // The loan to collateral of g-nft liquidation threshhold
-        uint32 liquidationLtv;
-        // The loan to collateral while minting g-nft
-        uint32 maxLtv;
         mapping(uint256 => LoanInfo) loanMapping;
     }
+
+    // The percentage of repay amount to liquidator while do liquidate
+    uint256 constant REWARD_TO_LIQUIDATOR = 5e6;
+    // The percentage of repay amount to protocol while do liquidate
+    uint256 constant REWARD_TO_PROTOCOL = 5e6;
+    uint256 constant HALF_LIQUIDATION_THRESHOLD = 10000e8;
+    uint256 constant UINT_MAX = 2 ** 256 - 1;
 
     bytes32 internal constant STORAGE_SLOT_GEARING_NFT =
         bytes32(uint256(keccak256("TermMax.storage.GearingNft")) - 1);
@@ -79,24 +91,23 @@ abstract contract AbstractGearingNft is
     }
 
     function __AbstractGearingNft_init(
-        address collateral,
-        uint128 halfLiquidationThreshold,
-        uint64 maturity,
-        uint32 maxLtv,
-        uint32 liquidationLtv
+        string memory name,
+        string memory symbol,
+        address admin,
+        GtConfig memory config
     ) internal onlyInitializing {
+        __ERC721_init(name, symbol);
+        __Ownable_init(admin);
         if (
-            maxLtv > Constants.DECIMAL_BASE ||
-            liquidationLtv > Constants.DECIMAL_BASE
+            config.maxLtv > Constants.DECIMAL_BASE ||
+            config.liquidationLtv > Constants.DECIMAL_BASE
         ) {
             revert NumeratorMustLessThanBasicDecimals();
         }
         GearingNftStorage storage s = _getGearingNftStorage();
-        s.collateral = collateral;
-        s.halfLiquidationThreshold = halfLiquidationThreshold;
-        s.maturity = maturity;
-        s.maxLtv = maxLtv;
-        s.liquidationLtv = liquidationLtv;
+        s.config = config;
+        // Market will burn those tokens after maturity
+        config.ft.approve(config.market, UINT_MAX);
     }
 
     function marketAddr() public view override returns (address) {
@@ -107,8 +118,11 @@ abstract contract AbstractGearingNft is
         address to,
         uint128 debtAmt,
         bytes memory collateralData
-    ) external override onlyOwner returns (uint256 id) {
+    ) external override returns (uint256 id) {
         GearingNftStorage storage s = _getGearingNftStorage();
+        if (msg.sender != s.config.market) {
+            revert OnlyMarketCanMintGt();
+        }
         _transferCollateralFrom(to, address(this), collateralData);
         id = _mintInternal(to, debtAmt, collateralData, s);
     }
@@ -119,11 +133,12 @@ abstract contract AbstractGearingNft is
         bytes memory collateralData,
         GearingNftStorage storage s
     ) internal returns (uint256 id) {
-        id = s.total++;
-        (uint128 ltv, ) = calculateLtv(debtAmt, collateralData);
-        if (ltv >= s.maxLtv) {
+        LoanInfo memory loan = LoanInfo(debtAmt, collateralData);
+        (uint128 ltv, , ) = _calculateLtv(s.config.underlyingOracle, loan);
+        if (ltv >= s.config.maxLtv) {
             revert GNftIsNotHealthy(to, debtAmt, ltv, collateralData);
         }
+        id = s.total++;
         s.loanMapping[id] = LoanInfo(debtAmt, collateralData);
         _mint(to, id);
     }
@@ -146,7 +161,7 @@ abstract contract AbstractGearingNft is
         LoanInfo memory loan = s.loanMapping[id];
         debtAmt = loan.debtAmt;
         collateralData = loan.collateralData;
-        (ltv, ) = calculateLtv(debtAmt, collateralData);
+        (ltv, , ) = _calculateLtv(s.config.underlyingOracle, loan);
     }
 
     function _burnInternal(uint256 id, GearingNftStorage storage s) internal {
@@ -182,14 +197,31 @@ abstract contract AbstractGearingNft is
     }
 
     function repay(
+        uint256 id,
+        uint128 repayAmt,
+        bool byUnderlying
+    ) external override nonReentrant {
+        GearingNftStorage storage s = _getGearingNftStorage();
+        GtConfig memory config = s.config;
+        if (byUnderlying) {
+            config.underlying.transferFrom(msg.sender, config.market, repayAmt);
+        } else {
+            // Those ft tokens have been approved to market and will be burn after maturity
+            config.ft.transferFrom(msg.sender, address(this), repayAmt);
+        }
+        _repay(s, msg.sender, id, repayAmt);
+        emit Repay(id, repayAmt, byUnderlying);
+    }
+
+    function _repay(
+        GearingNftStorage storage s,
         address sender,
         uint256 id,
         uint128 repayAmt
-    ) external override nonReentrant onlyOwner {
+    ) internal {
         if (sender != ownerOf(id)) {
             revert SenderIsNotTheOwner(sender, id);
         }
-        GearingNftStorage storage s = _getGearingNftStorage();
         LoanInfo memory loan = s.loanMapping[id];
         if (repayAmt == loan.debtAmt) {
             // Burn this nft
@@ -214,8 +246,8 @@ abstract contract AbstractGearingNft is
 
         _transferCollateral(msg.sender, collateralData);
 
-        (uint128 ltv, ) = calculateLtv(loan.debtAmt, loan.collateralData);
-        if (ltv >= s.maxLtv) {
+        (uint128 ltv, , ) = _calculateLtv(s.config.underlyingOracle, loan);
+        if (ltv >= s.config.maxLtv) {
             revert GNftIsNotHealthy(
                 msg.sender,
                 loan.debtAmt,
@@ -254,29 +286,39 @@ abstract contract AbstractGearingNft is
     function getLiquidationInfo(
         uint256 id
     ) external view returns (bool isLiquidable, uint128 maxRepayAmt) {
-        (isLiquidable, maxRepayAmt) = _getLiquidationInfo(
-            id,
-            _getGearingNftStorage()
-        );
+        GearingNftStorage storage s = _getGearingNftStorage();
+        LoanInfo memory loan = s.loanMapping[id];
+        GtConfig memory config = s.config;
+        (isLiquidable, maxRepayAmt, , ) = _getLiquidationInfo(loan, config);
     }
 
     function _getLiquidationInfo(
-        uint256 id,
-        GearingNftStorage storage s
-    ) internal view returns (bool isLiquidable, uint128 maxRepayAmt) {
-        LoanInfo memory loan = s.loanMapping[id];
-        (uint128 ltv, uint collateralValue) = calculateLtv(
-            loan.debtAmt,
-            loan.collateralData
+        LoanInfo memory loan,
+        GtConfig memory config
+    )
+        internal
+        view
+        returns (
+            bool isLiquidable,
+            uint128 maxRepayAmt,
+            uint256 collateralValue,
+            uint256 debtValue
+        )
+    {
+        uint128 ltv;
+        (ltv, collateralValue, debtValue) = _calculateLtv(
+            config.underlyingOracle,
+            loan
         );
-        bool isExpired = s.maturity <= block.timestamp;
-        isLiquidable = isExpired || ltv >= s.liquidationLtv;
+        bool isExpired = block.timestamp >= config.maturity &&
+            block.timestamp < config.maturity + Constants.LIQUIDATION_WINDOW;
+        isLiquidable = isExpired || ltv >= config.liquidationLtv;
 
         maxRepayAmt = _calculateMaxRepayAmt(
             loan,
             isExpired,
             collateralValue,
-            s.halfLiquidationThreshold
+            HALF_LIQUIDATION_THRESHOLD
         );
     }
 
@@ -284,7 +326,7 @@ abstract contract AbstractGearingNft is
         LoanInfo memory loan,
         bool isExpired,
         uint256 collateralValue,
-        uint128 halfLiquidationThreshold
+        uint256 halfLiquidationThreshold
     ) internal pure returns (uint128 maxRepayAmt) {
         maxRepayAmt = collateralValue < halfLiquidationThreshold || isExpired
             ? loan.debtAmt
@@ -293,73 +335,99 @@ abstract contract AbstractGearingNft is
 
     function liquidate(
         uint256 id,
-        address liquidator,
-        address treasurer,
         uint128 repayAmt
     ) external override nonReentrant {
         GearingNftStorage storage s = _getGearingNftStorage();
         LoanInfo memory loan = s.loanMapping[id];
-        (uint128 ltv, uint256 collateralValue) = calculateLtv(
-            loan.debtAmt,
-            loan.collateralData
-        );
-        bool isExpired = s.maturity <= block.timestamp;
-        uint128 maxRepayAmt = _calculateMaxRepayAmt(
-            loan,
-            isExpired,
-            collateralValue,
-            s.halfLiquidationThreshold
-        );
+        GtConfig memory config = s.config;
+        if (!config.liquidatable) {
+            revert GtDoNotSupportLiquidation();
+        }
+        (
+            bool isLiquidable,
+            uint128 maxRepayAmt,
+            uint256 collateralValue,
+            uint256 debtValue
+        ) = _getLiquidationInfo(loan, config);
+
+        if (!isLiquidable) {
+            revert GNftIsSafe(msg.sender, id);
+        }
         if (repayAmt > maxRepayAmt) {
             revert RepayAmtExceedsMaxRepayAmt(repayAmt, maxRepayAmt);
         }
-        if (isExpired || ltv >= s.liquidationLtv) {
-            bytes memory remainningCollateralData = _liquidate(
-                loan,
-                liquidator,
-                treasurer,
-                repayAmt,
-                collateralValue
-            );
-            // Do liquidate
-            if (repayAmt == loan.debtAmt) {
-                if (remainningCollateralData.length > 0) {
-                    _transferCollateral(ownerOf(id), remainningCollateralData);
-                }
-                _burnInternal(id, s);
-            } else {
-                loan.debtAmt -= repayAmt;
-                loan.collateralData = remainningCollateralData;
-                // Check health after partial liquidation
-                (ltv, ) = calculateLtv(loan.debtAmt, loan.collateralData);
-                if (ltv >= s.liquidationLtv) {
-                    revert GNftIsNotHealthyAfterLiquidation(
-                        liquidator,
-                        loan.debtAmt,
-                        ltv,
-                        loan.collateralData
-                    );
-                }
+        // Transfer token
+        config.underlying.transferFrom(msg.sender, config.market, repayAmt);
+        // Do liquidate
+        bytes memory remainningCollateralData = _liquidate(
+            config,
+            loan,
+            msg.sender,
+            config.treasurer,
+            repayAmt,
+            collateralValue,
+            debtValue
+        );
+
+        if (repayAmt == loan.debtAmt) {
+            if (remainningCollateralData.length > 0) {
+                _transferCollateral(ownerOf(id), remainningCollateralData);
             }
+            _burnInternal(id, s);
         } else {
-            revert GNftIsHealthy(liquidator, id, ltv);
+            uint ltvBefore = (loan.debtAmt * Constants.DECIMAL_BASE) /
+                collateralValue;
+            loan.debtAmt -= repayAmt;
+            loan.collateralData = remainningCollateralData;
+            // Check ltv after partial liquidation
+            collateralValue = _getCollateralValue(remainningCollateralData);
+            if (
+                ltvBefore <
+                ((loan.debtAmt * Constants.DECIMAL_BASE) / collateralValue)
+            ) {
+                revert LtvIncreasedAfterLiquidation(
+                    msg.sender,
+                    loan.debtAmt,
+                    repayAmt,
+                    loan.collateralData
+                );
+            }
         }
+
+        emit LiquidateGt(id, msg.sender, repayAmt);
     }
 
     function _liquidate(
+        GtConfig memory config,
         LoanInfo memory loan,
         address liquidator,
         address treasurer,
         uint128 repayAmt,
-        uint256 collateralValue
+        uint256 collateralValue,
+        uint256 debtValue
     ) internal virtual returns (bytes memory collateralData);
 
-    function calculateLtv(
-        uint256 debtAmt,
-        bytes memory collateralData
-    ) public view returns (uint128 ltv, uint256 collateralValue) {
-        collateralValue = _getCollateralValue(collateralData);
-        ltv = ((debtAmt * Constants.DECIMAL_BASE) / collateralValue).toUint128();
+    function _calculateLtv(
+        AggregatorV3Interface priceFeed,
+        LoanInfo memory loan
+    )
+        internal
+        view
+        returns (uint128 ltv, uint256 collateralValue, uint256 debtValue)
+    {
+        collateralValue = _getCollateralValue(loan.collateralData);
+        debtValue = _calculateDebtValue(priceFeed, loan.debtAmt);
+        ltv = ((debtValue * Constants.DECIMAL_BASE) / collateralValue)
+            .toUint128();
+    }
+
+    function _calculateDebtValue(
+        AggregatorV3Interface priceFeed,
+        uint256 debtAmt
+    ) internal view returns (uint256) {
+        uint decimals = 10 ** priceFeed.decimals();
+        (, int256 answer, , , ) = priceFeed.latestRoundData();
+        return (answer.toUint256() * debtAmt) / decimals;
     }
 
     function _mergeCollateral(

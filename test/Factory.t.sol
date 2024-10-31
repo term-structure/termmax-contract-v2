@@ -28,7 +28,6 @@ contract FactoryTest is Test {
             marketConfig.openTime + Constants.SECONDS_IN_MOUNTH
         );
         marketConfig.initialLtv = 9e7;
-        marketConfig.deliverable = true;
         // DeployUtils deployUtil = new DeployUtils();
         DeployUtils.Res memory res = DeployUtils.deployMarket(
             deployer,

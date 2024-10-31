@@ -19,10 +19,6 @@ library TermMaxStorage {
         uint32 initialLtv;
         // THe percentage of transaction fees to protocol
         uint32 protocolFeeRatio;
-        // Whether liquidating g-nft when it's ltv bigger than liquidationLtv
-        bool liquidatable;
-        // Whether deliverying collateral after maturity
-        bool deliverable;
         // Whether the lp rewards is distributed after maturity
         bool rewardIsDistributed;
     }

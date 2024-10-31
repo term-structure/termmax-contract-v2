@@ -32,7 +32,6 @@ contract FactoryTest is Test {
         marketConfig.initialLtv = 0.9e8;
         marketConfig.apr = 0.1e8;
         marketConfig.lsf = 0.5e8;
-        marketConfig.deliverable = true;
         // DeployUtils deployUtil = new DeployUtils();
         res = DeployUtils.deployMarket(
             deployer,
