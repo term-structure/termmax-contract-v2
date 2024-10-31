@@ -20,14 +20,14 @@ interface IGearingNft is IERC721 {
         returns (
             address owner,
             uint128 debtAmt,
-            uint128 healthFactor,
+            uint128 ltv,
             bytes memory collateralData
         );
 
-    function calculateHealthFactor(
+    function calculateLtv(
         uint256 debtAmt,
         bytes memory collateralData
-    ) external view returns (uint128 healthFactor, uint256 collateralValue);
+    ) external view returns (uint128 ltv, uint256 collateralValue);
 
     function merge(uint256[] memory ids) external returns (uint256 newId);
 

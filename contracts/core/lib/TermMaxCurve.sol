@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
-
+import {console} from "forge-std/console.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {TermMaxStorage} from "../storage/TermMaxStorage.sol";
@@ -170,6 +170,12 @@ library TermMaxCurve {
     ) internal pure returns (uint256 reward) {
         uint t = (lpSupply - totalReward) *
             (2 * maturity - openMarketTime - currentTime);
+        // console.log("openMarketTime:", openMarketTime);
+        // console.log("currentTime:", currentTime);
+        // console.log("totalReward:", totalReward);
+        // console.log("lpSupply:", lpSupply);
+        // console.log("maturity:", maturity);
+        // console.log("t:", t);
         reward = (totalReward * lpAmt).mulDiv(
             (currentTime - openMarketTime),
             t

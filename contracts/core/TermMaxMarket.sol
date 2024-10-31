@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
-
+import {console} from "forge-std/console.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
@@ -203,9 +203,8 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         TermMaxStorage.MarketConfig memory mConfig = _config;
         // calculate reward
         if (lpFtAmt > 0) {
-            lpFt.transferFrom(sender, address(this), lpFtAmt);
-
             lpFtTotalSupply = lpFt.totalSupply();
+
             uint reward = TermMaxCurve._calculateLpReward(
                 block.timestamp,
                 mConfig.openTime,
@@ -214,13 +213,15 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
                 lpFtAmt,
                 lpFt.balanceOf(address(this))
             );
-            lpFtAmt += reward;
+
+            lpFt.transferFrom(sender, address(this), lpFtAmt);
             lpFt.burn(lpFtAmt);
+
+            lpFtAmt += reward;
         }
         if (lpXtAmt > 0) {
-            lpXt.transferFrom(sender, address(this), lpXtAmt);
-
             lpXtTotalSupply = lpXt.totalSupply();
+
             uint reward = TermMaxCurve._calculateLpReward(
                 block.timestamp,
                 mConfig.openTime,
@@ -230,6 +231,8 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
                 lpXt.balanceOf(address(this))
             );
             lpXtAmt += reward;
+
+            lpXt.transferFrom(sender, address(this), lpXtAmt);
             lpXt.burn(lpXtAmt);
         }
         // get token reserves
@@ -263,10 +266,10 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
             (, , mConfig.apr) = TermMaxCurve._sellNegFt(tradeParams, mConfig);
         }
         if (ftOutAmt > 0) {
-            xt.transfer(sender, ftOutAmt);
+            ft.transfer(sender, ftOutAmt);
         }
         if (xtOutAmt > 0) {
-            ft.transfer(sender, xtOutAmt);
+            xt.transfer(sender, xtOutAmt);
         }
         _config.apr = mConfig.apr;
         emit WithdrawLP(

@@ -20,17 +20,17 @@ abstract contract AbstractGearingNft is
     using SafeCast for int256;
 
     error CanNotMergeLoanWithDiffOwner();
-    error GNftIsHealthy(address liquidator, uint256 id, uint128 healthFactor);
+    error GNftIsHealthy(address liquidator, uint256 id, uint128 ltv);
     error GNftIsNotHealthy(
         address owner,
         uint128 debtAmt,
-        uint128 healthFactor,
+        uint128 ltv,
         bytes collateralData
     );
     error GNftIsNotHealthyAfterLiquidation(
         address liquidator,
         uint128 debtAmt,
-        uint128 healthFactor,
+        uint128 ltv,
         bytes collateralData
     );
     error SenderIsNotTheOwner(address sender, uint256 id);
@@ -120,12 +120,9 @@ abstract contract AbstractGearingNft is
         GearingNftStorage storage s
     ) internal returns (uint256 id) {
         id = s.total++;
-        (uint128 healthFactor, ) = calculateHealthFactor(
-            debtAmt,
-            collateralData
-        );
-        if (healthFactor >= s.maxLtv) {
-            revert GNftIsNotHealthy(to, debtAmt, healthFactor, collateralData);
+        (uint128 ltv, ) = calculateLtv(debtAmt, collateralData);
+        if (ltv >= s.maxLtv) {
+            revert GNftIsNotHealthy(to, debtAmt, ltv, collateralData);
         }
         s.loanMapping[id] = LoanInfo(debtAmt, collateralData);
         _mint(to, id);
@@ -140,7 +137,7 @@ abstract contract AbstractGearingNft is
         returns (
             address owner,
             uint128 debtAmt,
-            uint128 healthFactor,
+            uint128 ltv,
             bytes memory collateralData
         )
     {
@@ -149,7 +146,7 @@ abstract contract AbstractGearingNft is
         LoanInfo memory loan = s.loanMapping[id];
         debtAmt = loan.debtAmt;
         collateralData = loan.collateralData;
-        (healthFactor, ) = calculateHealthFactor(debtAmt, collateralData);
+        (ltv, ) = calculateLtv(debtAmt, collateralData);
     }
 
     function _burnInternal(uint256 id, GearingNftStorage storage s) internal {
@@ -188,7 +185,7 @@ abstract contract AbstractGearingNft is
         address sender,
         uint256 id,
         uint128 repayAmt
-    ) external override nonReentrant {
+    ) external override nonReentrant onlyOwner {
         if (sender != ownerOf(id)) {
             revert SenderIsNotTheOwner(sender, id);
         }
@@ -217,15 +214,12 @@ abstract contract AbstractGearingNft is
 
         _transferCollateral(msg.sender, collateralData);
 
-        (uint128 healthFactor, ) = calculateHealthFactor(
-            loan.debtAmt,
-            loan.collateralData
-        );
-        if (healthFactor >= s.maxLtv) {
+        (uint128 ltv, ) = calculateLtv(loan.debtAmt, loan.collateralData);
+        if (ltv >= s.maxLtv) {
             revert GNftIsNotHealthy(
                 msg.sender,
                 loan.debtAmt,
-                healthFactor,
+                ltv,
                 collateralData
             );
         }
@@ -271,12 +265,12 @@ abstract contract AbstractGearingNft is
         GearingNftStorage storage s
     ) internal view returns (bool isLiquidable, uint128 maxRepayAmt) {
         LoanInfo memory loan = s.loanMapping[id];
-        (uint128 healthFactor, uint collateralValue) = calculateHealthFactor(
+        (uint128 ltv, uint collateralValue) = calculateLtv(
             loan.debtAmt,
             loan.collateralData
         );
         bool isExpired = s.maturity <= block.timestamp;
-        isLiquidable = isExpired || healthFactor >= s.liquidationLtv;
+        isLiquidable = isExpired || ltv >= s.liquidationLtv;
 
         maxRepayAmt = _calculateMaxRepayAmt(
             loan,
@@ -305,7 +299,7 @@ abstract contract AbstractGearingNft is
     ) external override nonReentrant {
         GearingNftStorage storage s = _getGearingNftStorage();
         LoanInfo memory loan = s.loanMapping[id];
-        (uint128 healthFactor, uint256 collateralValue) = calculateHealthFactor(
+        (uint128 ltv, uint256 collateralValue) = calculateLtv(
             loan.debtAmt,
             loan.collateralData
         );
@@ -319,7 +313,7 @@ abstract contract AbstractGearingNft is
         if (repayAmt > maxRepayAmt) {
             revert RepayAmtExceedsMaxRepayAmt(repayAmt, maxRepayAmt);
         }
-        if (isExpired || healthFactor >= s.liquidationLtv) {
+        if (isExpired || ltv >= s.liquidationLtv) {
             bytes memory remainningCollateralData = _liquidate(
                 loan,
                 liquidator,
@@ -337,21 +331,18 @@ abstract contract AbstractGearingNft is
                 loan.debtAmt -= repayAmt;
                 loan.collateralData = remainningCollateralData;
                 // Check health after partial liquidation
-                (healthFactor, ) = calculateHealthFactor(
-                    loan.debtAmt,
-                    loan.collateralData
-                );
-                if (healthFactor >= s.liquidationLtv) {
+                (ltv, ) = calculateLtv(loan.debtAmt, loan.collateralData);
+                if (ltv >= s.liquidationLtv) {
                     revert GNftIsNotHealthyAfterLiquidation(
                         liquidator,
                         loan.debtAmt,
-                        healthFactor,
+                        ltv,
                         loan.collateralData
                     );
                 }
             }
         } else {
-            revert GNftIsHealthy(liquidator, id, healthFactor);
+            revert GNftIsHealthy(liquidator, id, ltv);
         }
     }
 
@@ -363,13 +354,12 @@ abstract contract AbstractGearingNft is
         uint256 collateralValue
     ) internal virtual returns (bytes memory collateralData);
 
-    function calculateHealthFactor(
+    function calculateLtv(
         uint256 debtAmt,
         bytes memory collateralData
-    ) public view returns (uint128 healthFactor, uint256 collateralValue) {
+    ) public view returns (uint128 ltv, uint256 collateralValue) {
         collateralValue = _getCollateralValue(collateralData);
-        healthFactor = ((debtAmt * Constants.DECIMAL_BASE) / collateralValue)
-            .toUint128();
+        ltv = ((debtAmt * Constants.DECIMAL_BASE) / collateralValue).toUint128();
     }
 
     function _mergeCollateral(
