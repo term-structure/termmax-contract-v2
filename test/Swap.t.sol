@@ -136,44 +136,68 @@ contract SwapTest is Test {
             testdata,
             ".expected.testBuyFt.contractState"
         );
-
-        /* FOR_DEBUG_START */
-        StateChecker.MarketState memory state = StateChecker.getMarketState(
-            res
-        );
-        console.log("----");
-        console.log(res.market.config().borrowFeeRatio);
-        console.log("----");
-        console.log(state.apr);
-        console.log(state.ftReserve);
-        console.log(state.xtReserve);
-        console.log(state.lpFtReserve);
-        console.log(state.lpXtReserve);
-        console.log(state.underlyingReserve);
-        console.log(state.collateralReserve);
-        console.log("----");
-        console.log(expectedState.apr);
-        console.log(expectedState.ftReserve);
-        console.log(expectedState.xtReserve);
-        console.log(expectedState.lpFtReserve);
-        console.log(expectedState.lpXtReserve);
-        console.log(expectedState.underlyingReserve);
-        console.log(expectedState.collateralReserve);
-        /* FOR_DEBUG_END */
-
         StateChecker.checkMarketState(res, expectedState);
 
         vm.stopPrank();
     }
 
-    // function testBuyFT() public {
-    //     vm.startPrank(sender);
-    //     // uint amount = 10000e8;
-    //     (uint256 pFt, uint256 pXt) = SwapUtils.getPrice(res);
-    //     console.log(pFt);
-    //     console.log(pXt);
-    //     console.log((pXt * 9) / 10 + pFt);
+    function testBuyXt() public {
+        vm.startPrank(sender);
 
-    //     vm.stopPrank();
-    // }
+        uint128 underlyingAmtIn = 100e8;
+        uint128 minTokenOut = 0e8;
+        res.underlying.mint(sender, underlyingAmtIn);
+        res.underlying.approve(address(res.market), underlyingAmtIn);
+        uint256 netOut = res.market.buyXt(underlyingAmtIn, minTokenOut);
+
+        StateChecker.MarketState memory expectedState = getMarketStateFromJson(
+            testdata,
+            ".expected.testBuyXt.contractState"
+        );
+        StateChecker.checkMarketState(res, expectedState);
+
+        vm.stopPrank();
+    }
+
+    function testSellFt() public {
+        vm.startPrank(sender);
+
+        uint128 underlyingAmtIn = 100e8;
+        uint128 minTokenOut_ = 0e8;
+        res.underlying.mint(sender, underlyingAmtIn);
+        res.underlying.approve(address(res.market), underlyingAmtIn);
+        uint128 ftAmtIn = uint128(res.market.buyFt(underlyingAmtIn, minTokenOut_) / 2);
+        uint128 minTokenOut = 0e8;
+        res.ft.approve(address(res.market), ftAmtIn);
+        uint256 netOut = res.market.sellFt(ftAmtIn, minTokenOut);
+
+        StateChecker.MarketState memory expectedState = getMarketStateFromJson(
+            testdata,
+            ".expected.testSellFt.contractState"
+        );
+        StateChecker.checkMarketState(res, expectedState);
+
+        vm.stopPrank();
+    }
+
+    function testSellXt() public {
+        vm.startPrank(sender);
+
+        uint128 underlyingAmtIn = 100e8;
+        uint128 minTokenOut_ = 0e8;
+        res.underlying.mint(sender, underlyingAmtIn);
+        res.underlying.approve(address(res.market), underlyingAmtIn);
+        uint128 xtAmtIn = uint128(res.market.buyXt(underlyingAmtIn, minTokenOut_) / 2);
+        uint128 minTokenOut = 0e8;
+        res.xt.approve(address(res.market), xtAmtIn);
+        uint256 netOut = res.market.sellXt(xtAmtIn, minTokenOut);
+
+        StateChecker.MarketState memory expectedState = getMarketStateFromJson(
+            testdata,
+            ".expected.testSellXt.contractState"
+        );
+        StateChecker.checkMarketState(res, expectedState);
+
+        vm.stopPrank();
+    }
 }
