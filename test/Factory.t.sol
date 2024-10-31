@@ -24,9 +24,9 @@ contract FactoryTest is Test {
         marketConfig.openTime = uint64(
             block.timestamp + Constants.SECONDS_IN_DAY
         );
-        marketConfig.maturity =
-            marketConfig.openTime +
-            Constants.SECONDS_IN_MOUNTH;
+        marketConfig.maturity = uint64(
+            marketConfig.openTime + Constants.SECONDS_IN_MOUNTH
+        );
         marketConfig.initialLtv = 9e7;
         marketConfig.deliverable = true;
         // DeployUtils deployUtil = new DeployUtils();

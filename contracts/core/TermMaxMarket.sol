@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
-import {console} from "forge-std/console.sol";
+// import {console} from "forge-std/console.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
@@ -198,13 +198,11 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         uint256 lpFtAmt,
         uint256 lpXtAmt
     ) internal returns (uint128 ftOutAmt, uint128 xtOutAmt) {
-        uint lpFtTotalSupply;
-        uint lpXtTotalSupply;
+        uint lpFtTotalSupply = lpFt.totalSupply();
+        uint lpXtTotalSupply = lpXt.totalSupply();
         TermMaxStorage.MarketConfig memory mConfig = _config;
         // calculate reward
         if (lpFtAmt > 0) {
-            lpFtTotalSupply = lpFt.totalSupply();
-
             uint reward = TermMaxCurve._calculateLpReward(
                 block.timestamp,
                 mConfig.openTime,
@@ -220,8 +218,6 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
             lpFtAmt += reward;
         }
         if (lpXtAmt > 0) {
-            lpXtTotalSupply = lpXt.totalSupply();
-
             uint reward = TermMaxCurve._calculateLpReward(
                 block.timestamp,
                 mConfig.openTime,
@@ -238,11 +234,13 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         // get token reserves
         uint ftReserve = ft.balanceOf(address(this));
         ftOutAmt = ((lpFtAmt * ftReserve) / lpFtTotalSupply).toUint128();
+
         uint xtReserve = xt.balanceOf(address(this));
         xtOutAmt = ((lpXtAmt * xtReserve) / lpXtTotalSupply).toUint128();
 
         uint sameProportionFt = (xtOutAmt * mConfig.initialLtv) /
             Constants.DECIMAL_BASE;
+
         if (sameProportionFt > ftOutAmt) {
             uint xtExcess = ((sameProportionFt - ftOutAmt) *
                 Constants.DECIMAL_BASE) / mConfig.initialLtv;
@@ -651,6 +649,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         // k = (1 - initalLtv) * DECIMAL_BASE
         uint k = Constants.DECIMAL_BASE - mConfig.initialLtv;
         uint userPoint;
+        uint fee;
         {
             // Calculate lp tokens output
             uint lpFtAmt = lpFt.balanceOf(sender);

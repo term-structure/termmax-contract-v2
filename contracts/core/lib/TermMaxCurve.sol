@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
-import {console} from "forge-std/console.sol";
-import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+// import {console} from "forge-std/console.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {TermMaxStorage} from "../storage/TermMaxStorage.sol";
 import {Constants} from "./Constants.sol";
@@ -14,9 +13,19 @@ library TermMaxCurve {
         uint256 daysToMaturity;
     }
 
-    using Math for uint256;
     using SafeCast for uint256;
     using SafeCast for int256;
+
+    function _sqrt(uint256 x) internal pure returns (uint256) {
+        if (x == 0) return 0;
+        uint256 z = (x + 1) / 2;
+        uint256 y = x;
+        while (z < y) {
+            y = z;
+            z = (x / z + z) / 2;
+        }
+        return y;
+    }
 
     function _calculateLpOut(
         uint256 tokenIn,
@@ -27,7 +36,7 @@ library TermMaxCurve {
             lpOutAmt = tokenIn;
         } else {
             // lpOutAmt = tokenIn/(tokenReserve/lpTotalSupply) = tokenIn*lpTotalSupply/tokenReserve
-            lpOutAmt = tokenIn.mulDiv(lpTotalSupply, tokenReserve);
+            lpOutAmt = (tokenIn * lpTotalSupply) / tokenReserve;
         }
     }
 
@@ -35,7 +44,7 @@ library TermMaxCurve {
         uint32 lsf,
         uint256 ftReserve
     ) internal pure returns (uint256) {
-        return ftReserve.mulDiv(lsf, Constants.DECIMAL_BASE);
+        return (ftReserve * lsf) / Constants.DECIMAL_BASE;
     }
 
     /**
@@ -154,9 +163,9 @@ library TermMaxCurve {
         uint r = deltaXt * Constants.DECIMAL_BASE;
 
         if (l > r) {
-            feeAmt = (l - r).mulDiv(feeRatio, Constants.DECIMAL_BASE_SQ);
+            feeAmt = ((l - r) * feeRatio) / Constants.DECIMAL_BASE_SQ;
         } else {
-            feeAmt = (r - l).mulDiv(feeRatio, Constants.DECIMAL_BASE_SQ);
+            feeAmt = ((r - l) * feeRatio) / Constants.DECIMAL_BASE_SQ;
         }
     }
 
@@ -170,16 +179,7 @@ library TermMaxCurve {
     ) internal pure returns (uint256 reward) {
         uint t = (lpSupply - totalReward) *
             (2 * maturity - openMarketTime - currentTime);
-        // console.log("openMarketTime:", openMarketTime);
-        // console.log("currentTime:", currentTime);
-        // console.log("totalReward:", totalReward);
-        // console.log("lpSupply:", lpSupply);
-        // console.log("maturity:", maturity);
-        // console.log("t:", t);
-        reward = (totalReward * lpAmt).mulDiv(
-            (currentTime - openMarketTime),
-            t
-        );
+        reward = ((totalReward * lpAmt) * (currentTime - openMarketTime)) / t;
     }
 
     function _sellFt(
@@ -199,18 +199,18 @@ library TermMaxCurve {
             params.ftReserve
         );
         uint negB = ftPlusAlpha +
-            xtPlusBeta.mulDiv(config.initialLtv, Constants.DECIMAL_BASE) +
+            (xtPlusBeta * config.initialLtv) /
+            Constants.DECIMAL_BASE +
             params.amount;
-        uint ac = (xtPlusBeta * params.amount).mulDiv(
-            config.initialLtv,
-            Constants.DECIMAL_BASE
-        );
-        uint deltaXt = ((negB - (negB.sqrt() - 4 * ac).sqrt()) *
+        uint ac = ((xtPlusBeta * params.amount) * config.initialLtv) /
+            Constants.DECIMAL_BASE;
+        uint deltaXt = ((negB - _sqrt(negB * negB - 4 * ac)) *
             Constants.DECIMAL_BASE) /
             config.initialLtv /
             2;
         uint deltaFt = params.amount -
-            deltaXt.mulDiv(config.initialLtv, Constants.DECIMAL_BASE);
+            (deltaXt * config.initialLtv) /
+            Constants.DECIMAL_BASE;
         newApr = _calcApr(
             config.initialLtv,
             params.daysToMaturity,
@@ -230,6 +230,7 @@ library TermMaxCurve {
         returns (uint256 newFtReserve, uint256 newXtReserve, int64 newApr)
     {
         uint ftPlusAlpha = _calcFtPlusAlpha(config.lsf, params.ftReserve);
+
         uint xtPlusBeta = _calcXtPlusBeta(
             config.lsf,
             config.initialLtv,
@@ -238,18 +239,19 @@ library TermMaxCurve {
             params.ftReserve
         );
         uint b = ftPlusAlpha +
-            xtPlusBeta.mulDiv(config.initialLtv, Constants.DECIMAL_BASE) -
+            (xtPlusBeta * config.initialLtv) /
+            Constants.DECIMAL_BASE -
             params.amount;
-        uint negAc = xtPlusBeta.mulDiv(
-            params.amount * config.initialLtv,
-            Constants.DECIMAL_BASE
-        );
-        uint deltaXt = (((b.sqrt() + 4 * negAc).sqrt() - b) *
+        uint negAc = (xtPlusBeta * params.amount * config.initialLtv) /
+            Constants.DECIMAL_BASE;
+
+        uint deltaXt = ((_sqrt((b * b + 4 * negAc)) - b) *
             Constants.DECIMAL_BASE) /
             config.initialLtv /
             2;
         uint deltaFt = ftPlusAlpha -
-            ftPlusAlpha.mulDiv(xtPlusBeta, xtPlusBeta + deltaXt);
+            (ftPlusAlpha * xtPlusBeta) /
+            (xtPlusBeta + deltaXt);
         newApr = _calcApr(
             config.initialLtv,
             params.daysToMaturity,
@@ -281,23 +283,19 @@ library TermMaxCurve {
         {
             // borrow stack space newFtReserve as b
             uint b = ftPlusAlpha +
-                (xtPlusBeta - params.amount).mulDiv(
-                    config.initialLtv,
-                    Constants.DECIMAL_BASE
-                );
+                ((xtPlusBeta - params.amount) * config.initialLtv) /
+                Constants.DECIMAL_BASE;
             // borrow stack space newXtReserve as ac
-            uint ac = (params.amount * xtPlusBeta).mulDiv(
-                config.initialLtv * config.initialLtv,
-                Constants.DECIMAL_BASE_SQ
-            );
+            uint ac = ((((params.amount * xtPlusBeta) * config.initialLtv) /
+                Constants.DECIMAL_BASE) * config.initialLtv) /
+                Constants.DECIMAL_BASE;
             deltaXt =
-                (((b.sqrt() + 4 * ac).sqrt() - b) * Constants.DECIMAL_BASE) /
+                ((_sqrt(b * b + 4 * ac) - b) * Constants.DECIMAL_BASE) /
                 config.initialLtv /
                 2;
-            deltaFt = (params.amount - deltaXt).mulDiv(
-                config.initialLtv,
-                Constants.DECIMAL_BASE
-            );
+            deltaFt =
+                ((params.amount - deltaXt) * config.initialLtv) /
+                Constants.DECIMAL_BASE;
         }
 
         newApr = _calcApr(
@@ -359,6 +357,7 @@ library TermMaxCurve {
         pure
         returns (uint256 newFtReserve, uint256 newXtReserve, int64 newApr)
     {
+        // console.log("sell neg xt");
         uint ftPlusAlpha = _calcFtPlusAlpha(config.lsf, params.ftReserve);
         uint xtPlusBeta = _calcXtPlusBeta(
             config.lsf,
@@ -368,21 +367,19 @@ library TermMaxCurve {
             params.ftReserve
         );
         uint negB = ftPlusAlpha +
-            (xtPlusBeta + params.amount).mulDiv(
-                config.initialLtv,
-                Constants.DECIMAL_BASE
-            );
+            ((xtPlusBeta + params.amount) * config.initialLtv) /
+            Constants.DECIMAL_BASE;
 
-        uint ac = (params.amount * xtPlusBeta).mulDiv(
-            config.initialLtv * config.initialLtv,
-            Constants.DECIMAL_BASE_SQ
-        );
+        uint ac = ((((params.amount * xtPlusBeta) * config.initialLtv) /
+            Constants.DECIMAL_BASE) * config.initialLtv) /
+            Constants.DECIMAL_BASE;
 
-        uint deltaXt = ((negB - (negB.sqrt() - 4 * ac).sqrt()) *
+        uint deltaXt = ((negB - _sqrt(negB * negB - 4 * ac)) *
             Constants.DECIMAL_BASE) /
             config.initialLtv /
             2;
-        uint deltaFt = ftPlusAlpha.mulDiv(xtPlusBeta, (xtPlusBeta - deltaXt)) -
+        uint deltaFt = (ftPlusAlpha * xtPlusBeta) /
+            (xtPlusBeta - deltaXt) -
             ftPlusAlpha;
         newApr = _calcApr(
             config.initialLtv,
@@ -443,7 +440,8 @@ library TermMaxCurve {
         );
         uint deltaXt = params.amount;
         uint deltaFt = ftPlusAlpha -
-            ftPlusAlpha.mulDiv(xtPlusBeta, (xtPlusBeta + deltaXt));
+            (ftPlusAlpha * xtPlusBeta) /
+            (xtPlusBeta + deltaXt);
         newApr = _calcApr(
             config.initialLtv,
             params.daysToMaturity,
@@ -506,10 +504,9 @@ library TermMaxCurve {
             params.ftReserve
         );
         uint negDeltaXt = params.amount;
-        uint negDeltaFt = ftPlusAlpha.mulDiv(
-            xtPlusBeta,
-            (xtPlusBeta - negDeltaXt)
-        ) - ftPlusAlpha;
+        uint negDeltaFt = (ftPlusAlpha * xtPlusBeta) /
+            (xtPlusBeta - negDeltaXt) -
+            ftPlusAlpha;
         newApr = _calcApr(
             config.initialLtv,
             params.daysToMaturity,
@@ -568,12 +565,11 @@ library TermMaxCurve {
             config.apr,
             params.ftReserve
         );
-        uint deltaFt = params.amount.mulDiv(
-            config.initialLtv,
-            Constants.DECIMAL_BASE
-        );
+        uint deltaFt = (params.amount * config.initialLtv) /
+            Constants.DECIMAL_BASE;
         uint deltaXt = xtPlusBeta -
-            xtPlusBeta.mulDiv(ftPlusAlpha, ftPlusAlpha + deltaFt);
+            (xtPlusBeta * ftPlusAlpha) /
+            (ftPlusAlpha + deltaFt);
         newApr = _calcApr(
             config.initialLtv,
             params.daysToMaturity,
@@ -636,14 +632,11 @@ library TermMaxCurve {
             config.apr,
             params.ftReserve
         );
-        uint negDeltaFt = params.amount.mulDiv(
-            config.initialLtv,
-            Constants.DECIMAL_BASE
-        );
-        uint negDeltaXt = xtPlusBeta.mulDiv(
-            ftPlusAlpha,
-            ftPlusAlpha - negDeltaFt
-        ) - xtPlusBeta;
+        uint negDeltaFt = (params.amount * config.initialLtv) /
+            Constants.DECIMAL_BASE;
+        uint negDeltaXt = (xtPlusBeta * ftPlusAlpha) /
+            (ftPlusAlpha - negDeltaFt) -
+            xtPlusBeta;
         newApr = _calcApr(
             config.initialLtv,
             params.daysToMaturity,

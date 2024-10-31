@@ -26,11 +26,12 @@ contract FactoryTest is Test {
         uint32 liquidationLtv = 0.9e8;
 
         marketConfig.openTime = uint64(block.timestamp);
-        marketConfig.maturity =
-            marketConfig.openTime +
-            Constants.SECONDS_IN_MOUNTH;
+        marketConfig.maturity = uint64(
+            marketConfig.openTime + Constants.SECONDS_IN_MOUNTH
+        );
         marketConfig.initialLtv = 0.9e8;
         marketConfig.apr = 0.1e8;
+        marketConfig.lsf = 0.5e8;
         marketConfig.deliverable = true;
         // DeployUtils deployUtil = new DeployUtils();
         res = DeployUtils.deployMarket(
@@ -109,8 +110,6 @@ contract FactoryTest is Test {
         res.lpFt.approve(address(res.market), lpFtOutAmt);
         res.lpXt.approve(address(res.market), lpXtOutAmt);
 
-        console.log("XtReserve", res.xt.balanceOf(address(res.market)));
-
         res.market.withdrawLp(lpFtOutAmt, lpXtOutAmt);
 
         state.underlyingReserve = amount;
@@ -132,9 +131,9 @@ contract FactoryTest is Test {
         res.underlying.mint(sender, amount * 2);
         res.underlying.approve(address(res.market), amount * 2);
 
-        StateChecker.MarketState memory state = StateChecker.getMarketState(
-            res
-        );
+        // StateChecker.MarketState memory state = StateChecker.getMarketState(
+        //     res
+        // );
         (uint128 lpFtOutAmt, uint128 lpXtOutAmt) = res.market.provideLiquidity(
             amount
         );
@@ -143,9 +142,7 @@ contract FactoryTest is Test {
 
         res.lpFt.approve(address(res.market), lpFtOutAmt);
 
-        console.log("XtReserve", res.xt.balanceOf(address(res.market)));
-
-        res.market.withdrawLp(lpFtOutAmt, 0);
+        res.market.withdrawLp(lpFtOutAmt / 10, 0);
 
         // state.underlyingReserve = amount;
         // StateChecker.checkMarketState(res, state);
