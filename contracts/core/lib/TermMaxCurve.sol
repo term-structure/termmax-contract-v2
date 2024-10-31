@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
-// import {console} from "forge-std/console.sol";
+import {console} from "forge-std/console.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {TermMaxStorage} from "../storage/TermMaxStorage.sol";
 import {Constants} from "./Constants.sol";
@@ -357,8 +357,9 @@ library TermMaxCurve {
         pure
         returns (uint256 newFtReserve, uint256 newXtReserve, int64 newApr)
     {
-        // console.log("sell neg xt");
+        console.log("sell neg xt");
         uint ftPlusAlpha = _calcFtPlusAlpha(config.lsf, params.ftReserve);
+        console.log("ftPlusAlpha");
         uint xtPlusBeta = _calcXtPlusBeta(
             config.lsf,
             config.initialLtv,
@@ -366,6 +367,7 @@ library TermMaxCurve {
             config.apr,
             params.ftReserve
         );
+        console.log("xtPlusBeta", xtPlusBeta);
         uint negB = ftPlusAlpha +
             ((xtPlusBeta + params.amount) * config.initialLtv) /
             Constants.DECIMAL_BASE;
@@ -378,9 +380,11 @@ library TermMaxCurve {
             Constants.DECIMAL_BASE) /
             config.initialLtv /
             2;
+        console.log("deltaXt", deltaXt);
         uint deltaFt = (ftPlusAlpha * xtPlusBeta) /
             (xtPlusBeta - deltaXt) -
             ftPlusAlpha;
+        console.log("deltaFt");
         newApr = _calcApr(
             config.initialLtv,
             params.daysToMaturity,

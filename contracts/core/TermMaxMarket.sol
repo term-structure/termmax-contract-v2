@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
-// import {console} from "forge-std/console.sol";
+import {console} from "forge-std/console.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
@@ -202,7 +202,9 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         uint lpXtTotalSupply = lpXt.totalSupply();
         TermMaxStorage.MarketConfig memory mConfig = _config;
         // calculate reward
+        uint ftReserve = ft.balanceOf(address(this));
         if (lpFtAmt > 0) {
+            console.log("_calculateLpReward0");
             uint reward = TermMaxCurve._calculateLpReward(
                 block.timestamp,
                 mConfig.openTime,
@@ -211,13 +213,17 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
                 lpFtAmt,
                 lpFt.balanceOf(address(this))
             );
-
+            console.log("ss");
             lpFt.transferFrom(sender, address(this), lpFtAmt);
             lpFt.burn(lpFtAmt);
 
             lpFtAmt += reward;
+
+            ftOutAmt = ((lpFtAmt * ftReserve) / lpFtTotalSupply).toUint128();
         }
+        uint xtReserve = xt.balanceOf(address(this));
         if (lpXtAmt > 0) {
+            console.log("_calculateLpReward1");
             uint reward = TermMaxCurve._calculateLpReward(
                 block.timestamp,
                 mConfig.openTime,
@@ -226,22 +232,20 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
                 lpXtAmt,
                 lpXt.balanceOf(address(this))
             );
+            console.log("ss");
             lpXtAmt += reward;
 
             lpXt.transferFrom(sender, address(this), lpXtAmt);
             lpXt.burn(lpXtAmt);
-        }
-        // get token reserves
-        uint ftReserve = ft.balanceOf(address(this));
-        ftOutAmt = ((lpFtAmt * ftReserve) / lpFtTotalSupply).toUint128();
 
-        uint xtReserve = xt.balanceOf(address(this));
-        xtOutAmt = ((lpXtAmt * xtReserve) / lpXtTotalSupply).toUint128();
+            xtOutAmt = ((lpXtAmt * xtReserve) / lpXtTotalSupply).toUint128();
+        }
 
         uint sameProportionFt = (xtOutAmt * mConfig.initialLtv) /
             Constants.DECIMAL_BASE;
 
         if (sameProportionFt > ftOutAmt) {
+            console.log("1");
             uint xtExcess = ((sameProportionFt - ftOutAmt) *
                 Constants.DECIMAL_BASE) / mConfig.initialLtv;
             TermMaxCurve.TradeParams memory tradeParams = TermMaxCurve
@@ -623,7 +627,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         if (!mConfig.liquidatable) {
             revert MarketDoNotSupportLiquidation();
         }
-        if (mConfig.deliverable && block.timestamp >= mConfig.maturity) {
+        if (mConfig.deliverable && block.timestamp >= mConfig.maturity + Constants.LIQUIDATION_WINDOW) {
             revert CanNotLiquidateAfterMaturity();
         }
         gNft.liquidate(nftId, liquidator, mConfig.treasurer, mConfig.maturity);
@@ -639,7 +643,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
 
     function _redeem(address sender) internal {
         TermMaxStorage.MarketConfig memory mConfig = _config;
-        if (block.timestamp < mConfig.maturity) {
+        if (block.timestamp < mConfig.maturity + Constants.LIQUIDATION_WINDOW) {
             revert CanNotRedeemBeforeMaturity();
         }
         // Burn all lp tokens owned by this contract after maturity to release all reward
@@ -649,7 +653,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         // k = (1 - initalLtv) * DECIMAL_BASE
         uint k = Constants.DECIMAL_BASE - mConfig.initialLtv;
         uint userPoint;
-        uint fee;
+        // uint fee;
         {
             // Calculate lp tokens output
             uint lpFtAmt = lpFt.balanceOf(sender);

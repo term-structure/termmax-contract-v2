@@ -142,10 +142,20 @@ contract FactoryTest is Test {
 
         res.lpFt.approve(address(res.market), lpFtOutAmt);
 
-        res.market.withdrawLp(lpFtOutAmt / 10, 0);
+        res.market.withdrawLp(lpFtOutAmt, 0);
 
-        // state.underlyingReserve = amount;
-        // StateChecker.checkMarketState(res, state);
+        // StateChecker.MarketState memory state = StateChecker.getMarketState(
+        //     res
+        // );
+
+        // console.log(state.ftReserve);
+        // console.log(state.apr);
+        // console.log(res.ft.balanceOf(sender));
+
+        // res.lpXt.approve(address(res.market), lpXtOutAmt);
+        // res.market.withdrawLp(0, 100);
+
+        // console.log(res.xt.balanceOf(sender));
 
         vm.stopPrank();
     }
