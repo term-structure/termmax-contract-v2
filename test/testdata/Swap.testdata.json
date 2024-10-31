@@ -30,7 +30,7 @@
     "currentTime": "1730391942"
   },
   "expected": {
-    "testBuyFT": {
+    "testBuyFt": {
       "contractState": {
         "decimalBase": "100000000",
         "daysInYear": "365",
