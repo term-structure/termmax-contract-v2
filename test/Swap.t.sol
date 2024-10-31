@@ -54,10 +54,10 @@ contract SwapTest is Test {
     function testBuyFT() public {
         vm.startPrank(sender);
         // uint amount = 10000e8;
-        (uint256 pFt, uint256 pYt) = SwapUtils.getPrice(res);
+        (uint256 pFt, uint256 pXt) = SwapUtils.getPrice(res);
         console.log(pFt);
-        console.log(pYt);
-        console.log((pYt * 9) / 10 + pFt);
+        console.log(pXt);
+        console.log((pXt * 9) / 10 + pFt);
 
         vm.stopPrank();
     }

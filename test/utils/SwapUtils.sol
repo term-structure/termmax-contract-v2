@@ -11,7 +11,7 @@ library SwapUtils {
 
     function getPrice(
         DeployUtils.Res memory res
-    ) internal view returns (uint256 pFt, uint256 pYt) {
+    ) internal view returns (uint256 pFt, uint256 pXt) {
         int apr = res.market.config().apr;
         uint dtm = daysToMaturity(res.market.config().maturity);
         if (apr > 0) {
@@ -27,7 +27,7 @@ library SwapUtils {
                     (uint(-apr) * dtm) /
                     Constants.DAYS_IN_YEAR);
         }
-        pYt =
+        pXt =
             Constants.DECIMAL_BASE -
             (pFt * res.market.config().initialLtv) /
             Constants.DECIMAL_BASE;
