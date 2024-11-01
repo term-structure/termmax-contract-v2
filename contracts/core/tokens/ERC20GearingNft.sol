@@ -90,14 +90,27 @@ contract ERC20GearingNft is AbstractGearingNft {
     }
 
     function _getCollateralValue(
-        bytes memory collateralData
-    ) internal view virtual override returns (uint256 amount) {
+        bytes memory collateralData,
+        bytes memory priceData
+    ) internal pure virtual override returns (uint256) {
+        uint collateralAmt = _decodeAmount(collateralData);
+        (uint price, uint decimals) = abi.decode(priceData, (uint, uint));
+        return (collateralAmt * price) / decimals;
+    }
+
+    function _getCollateralPriceData()
+        internal
+        view
+        virtual
+        override
+        returns (bytes memory priceData)
+    {
         AggregatorV3Interface collateralOracle = _getERC20GearingNftStorage()
             .collateralOracle;
         uint decimals = 10 ** collateralOracle.decimals();
-        amount = _decodeAmount(collateralData);
         (, int256 answer, , , ) = collateralOracle.latestRoundData();
-        amount = (answer.toUint256() * amount) / decimals;
+        uint price = answer.toUint256();
+        priceData = abi.encode(price, decimals);
     }
 
     function _decodeAmount(
@@ -106,13 +119,19 @@ contract ERC20GearingNft is AbstractGearingNft {
         return abi.decode(collateralData, (uint));
     }
 
+    function _encodeAmount(
+        uint256 amount
+    ) internal pure returns (bytes memory) {
+        return abi.encode(amount);
+    }
+
     function _removeCollateral(
         LoanInfo memory loan,
         bytes memory collateralData
     ) internal virtual override returns (bytes memory) {
         uint amount = _decodeAmount(loan.collateralData) -
             _decodeAmount(collateralData);
-        return abi.encode(amount);
+        return _encodeAmount(amount);
     }
 
     function _addCollateral(
@@ -121,7 +140,7 @@ contract ERC20GearingNft is AbstractGearingNft {
     ) internal virtual override returns (bytes memory) {
         uint amount = _decodeAmount(loan.collateralData) +
             _decodeAmount(collateralData);
-        return abi.encode(amount);
+        return _encodeAmount(amount);
     }
 
     // function _liquidate(
@@ -155,13 +174,76 @@ contract ERC20GearingNft is AbstractGearingNft {
     //     }
     // }
 
-    function _liquidate(
-        GtConfig memory config,
+    function _calcLiquidationResult(
         LoanInfo memory loan,
-        address liquidator,
-        address treasurer,
         uint128 repayAmt,
-        uint256 collateralValue,
-        uint256 debtValue
-    ) internal virtual override returns (bytes memory collateralData) {}
+        ValueAndPrice memory valueAndPrice
+    )
+        internal
+        virtual
+        override
+        returns (
+            bytes memory cToLiquidator,
+            bytes memory cToTreasurer,
+            bytes memory remainningCollateralData
+        )
+    {
+        uint collateralAmt = _decodeAmount(loan.collateralData);
+
+        (uint256 collateralPrice, uint256 collateralPriceDecimals) = abi.decode(
+            valueAndPrice.collateralPriceData,
+            (uint, uint)
+        );
+
+        // MaxRomvedCollateral = min((repayAmt * (1 + REWARD_TO_LIQUIDATOR + REWARD_TO_PROTOCOL)) * underlyingPrice / collateralPrice, collateralAmt *(repayAmt / debtAmt))
+        uint uPriceToCPrice = (valueAndPrice.underlyingPrice *
+            Constants.DECIMAL_BASE *
+            collateralPriceDecimals) /
+            (valueAndPrice.priceDecimals * collateralPrice);
+
+        uint cEqualRepayAmt = (repayAmt * Constants.DECIMAL_BASE) /
+            uPriceToCPrice;
+        uint rewardToLiquidator = (repayAmt * REWARD_TO_LIQUIDATOR) /
+            uPriceToCPrice;
+        uint rewardToProtocol = (repayAmt * REWARD_TO_PROTOCOL) /
+            uPriceToCPrice;
+
+        uint removedCollateralAmt = cEqualRepayAmt +
+            rewardToLiquidator +
+            rewardToProtocol;
+
+        removedCollateralAmt = _min(
+            removedCollateralAmt,
+            (collateralAmt * repayAmt) / loan.debtAmt
+        );
+        // Case 1: removed collateral can not cover repayAmt + rewardToLiquidator
+        if (removedCollateralAmt <= cEqualRepayAmt + rewardToLiquidator) {
+            cToLiquidator = _encodeAmount(removedCollateralAmt);
+        }
+        // Case 2: removed collateral can cover repayAmt + rewardToLiquidator but not rewardToProtocol
+        else if (
+            removedCollateralAmt <
+            cEqualRepayAmt + rewardToLiquidator + rewardToProtocol
+        ) {
+            cToLiquidator = _encodeAmount(cEqualRepayAmt + rewardToLiquidator);
+            cToTreasurer = _encodeAmount(
+                removedCollateralAmt - cEqualRepayAmt - rewardToLiquidator
+            );
+        }
+        // Case 3: removed collateral equal repayAmt + rewardToLiquidator + rewardToProtocol
+        else {
+            cToLiquidator = _encodeAmount(cEqualRepayAmt + rewardToLiquidator);
+            cToTreasurer = _encodeAmount(rewardToProtocol);
+        }
+        // Calculate remainning collateral
+        if (collateralAmt > removedCollateralAmt) {
+            remainningCollateralData = _encodeAmount(
+                collateralAmt - removedCollateralAmt
+            );
+        }
+    }
+
+    function _min(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a < b ? a : b;
+    }
 }

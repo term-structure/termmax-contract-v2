@@ -24,34 +24,34 @@ contract SwapTest is Test {
     string testdata;
 
     function getMarketStateFromJson(
-        string memory _testdata,
+        string memory testdata,
         string memory key
     ) internal view returns (StateChecker.MarketState memory state) {
         address market = address(res.market);
         state.apr = vm.parseInt(
-            vm.parseJsonString(_testdata, string.concat(key, ".apr"))
+            vm.parseJsonString(testdata, string.concat(key, ".apr"))
         );
         state.ftReserve = vm.parseUint(
-            vm.parseJsonString(_testdata, string.concat(key, ".ftReserve"))
+            vm.parseJsonString(testdata, string.concat(key, ".ftReserve"))
         );
         state.xtReserve = vm.parseUint(
-            vm.parseJsonString(_testdata, string.concat(key, ".xtReserve"))
+            vm.parseJsonString(testdata, string.concat(key, ".xtReserve"))
         );
         state.lpFtReserve = vm.parseUint(
-            vm.parseJsonString(_testdata, string.concat(key, ".lpFtReserve"))
+            vm.parseJsonString(testdata, string.concat(key, ".lpFtReserve"))
         );
         state.lpXtReserve = vm.parseUint(
-            vm.parseJsonString(_testdata, string.concat(key, ".lpXtReserve"))
+            vm.parseJsonString(testdata, string.concat(key, ".lpXtReserve"))
         );
         state.underlyingReserve = vm.parseUint(
             vm.parseJsonString(
-                _testdata,
+                testdata,
                 string.concat(key, ".UnderlyingReserve")
             )
         );
         state.collateralReserve = vm.parseUint(
             vm.parseJsonString(
-                _testdata,
+                testdata,
                 string.concat(key, ".CollateralReserve")
             )
         );
@@ -69,10 +69,6 @@ contract SwapTest is Test {
         marketConfig.openTime = uint64(
             vm.parseUint(vm.parseJsonString(testdata, ".marketConfig.openTime"))
         );
-        marketConfig.initialLtv = 0.9e8;
-        marketConfig.apr = 0.1e8;
-        marketConfig.lsf = 0.5e8;
-        // DeployUtils deployUtil = new DeployUtils();
         marketConfig.maturity = uint64(
             vm.parseUint(vm.parseJsonString(testdata, ".marketConfig.maturity"))
         );
@@ -103,7 +99,7 @@ contract SwapTest is Test {
             )
         );
         marketConfig.treasurer = treasurer;
-        // marketConfig.deliverable = true;
+        marketConfig.rewardIsDistributed = true;
         res = DeployUtils.deployMarket(
             deployer,
             marketConfig,
