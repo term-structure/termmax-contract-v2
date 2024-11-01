@@ -100,7 +100,7 @@ contract SwapTest is Test {
             )
         );
         marketConfig.treasurer = treasurer;
-        marketConfig.deliverable = true;
+        marketConfig.rewardIsDistributed = true;
         res = DeployUtils.deployMarket(
             deployer,
             marketConfig,
