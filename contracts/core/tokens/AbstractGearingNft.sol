@@ -55,7 +55,10 @@ abstract contract AbstractGearingNft is
     event LiquidateGt(
         uint256 indexed id,
         address indexed liquidator,
-        uint128 repayAmt
+        uint128 repayAmt,
+        bytes cToLiquidator,
+        bytes cToTreasurer,
+        bytes remainningCollateralData
     );
 
     struct LoanInfo {
@@ -362,14 +365,6 @@ abstract contract AbstractGearingNft is
         // Transfer token
         config.underlying.transferFrom(msg.sender, config.market, repayAmt);
         // Do liquidate
-        // bytes memory remainningCollateralData = _liquidate(
-        //     config,
-        //     loan,
-        //     msg.sender,
-        //     config.treasurer,
-        //     repayAmt,
-        //     valueAndPrice
-        // );
 
         (
             bytes memory cToLiquidator,
@@ -381,16 +376,16 @@ abstract contract AbstractGearingNft is
             if (remainningCollateralData.length > 0) {
                 _transferCollateral(ownerOf(id), remainningCollateralData);
             }
+            // update storage
             _burnInternal(id, s);
         } else {
+            loan.debtAmt -= repayAmt;
+            loan.collateralData = remainningCollateralData;
+            // Check ltv after partial liquidation
             {
                 uint ltvBefore = (valueAndPrice.debtValue *
                     Constants.DECIMAL_BASE) / valueAndPrice.collateralValue;
 
-                loan.debtAmt -= repayAmt;
-                loan.collateralData = remainningCollateralData;
-
-                // Check ltv after partial liquidation
                 uint remainningCollateralValue = _getCollateralValue(
                     remainningCollateralData,
                     valueAndPrice.collateralPriceData
@@ -411,13 +406,16 @@ abstract contract AbstractGearingNft is
                     );
                 }
             }
-            if (cToTreasurer.length > 0) {
-                _transferCollateral(config.treasurer, cToTreasurer);
-            }
-            _transferCollateral(msg.sender, cToLiquidator);
+            // update storage
+            s.loanMapping[id] = loan;
         }
+        // Transfer collateral
+        if (cToTreasurer.length > 0) {
+            _transferCollateral(config.treasurer, cToTreasurer);
+        }
+        _transferCollateral(msg.sender, cToLiquidator);
 
-        emit LiquidateGt(id, msg.sender, repayAmt);
+        emit LiquidateGt(id, msg.sender, repayAmt, cToLiquidator, cToTreasurer, remainningCollateralData);
     }
 
     function _calcLiquidationResult(
