@@ -69,6 +69,14 @@ abstract contract AbstractGearingNft is
         mapping(uint256 => LoanInfo) loanMapping;
     }
 
+    struct ValueAndPrice {
+        uint256 collateralValue;
+        uint256 debtValue;
+        uint256 underlyingPrice;
+        uint256 priceDecimals;
+        bytes collateralPriceData;
+    }
+
     // The percentage of repay amount to liquidator while do liquidate
     uint256 constant REWARD_TO_LIQUIDATOR = 5e6;
     // The percentage of repay amount to protocol while do liquidate
@@ -134,7 +142,7 @@ abstract contract AbstractGearingNft is
         GearingNftStorage storage s
     ) internal returns (uint256 id) {
         LoanInfo memory loan = LoanInfo(debtAmt, collateralData);
-        (uint128 ltv, , ) = _calculateLtv(s.config.underlyingOracle, loan);
+        (uint128 ltv, ) = _calculateLtv(s.config.underlyingOracle, loan);
         if (ltv >= s.config.maxLtv) {
             revert GNftIsNotHealthy(to, debtAmt, ltv, collateralData);
         }
@@ -161,7 +169,7 @@ abstract contract AbstractGearingNft is
         LoanInfo memory loan = s.loanMapping[id];
         debtAmt = loan.debtAmt;
         collateralData = loan.collateralData;
-        (ltv, , ) = _calculateLtv(s.config.underlyingOracle, loan);
+        (ltv, ) = _calculateLtv(s.config.underlyingOracle, loan);
     }
 
     function _burnInternal(uint256 id, GearingNftStorage storage s) internal {
@@ -246,7 +254,7 @@ abstract contract AbstractGearingNft is
 
         _transferCollateral(msg.sender, collateralData);
 
-        (uint128 ltv, , ) = _calculateLtv(s.config.underlyingOracle, loan);
+        (uint128 ltv, ) = _calculateLtv(s.config.underlyingOracle, loan);
         if (ltv >= s.config.maxLtv) {
             revert GNftIsNotHealthy(
                 msg.sender,
@@ -289,7 +297,7 @@ abstract contract AbstractGearingNft is
         GearingNftStorage storage s = _getGearingNftStorage();
         LoanInfo memory loan = s.loanMapping[id];
         GtConfig memory config = s.config;
-        (isLiquidable, maxRepayAmt, , ) = _getLiquidationInfo(loan, config);
+        (isLiquidable, maxRepayAmt, ) = _getLiquidationInfo(loan, config);
     }
 
     function _getLiquidationInfo(
@@ -301,15 +309,11 @@ abstract contract AbstractGearingNft is
         returns (
             bool isLiquidable,
             uint128 maxRepayAmt,
-            uint256 collateralValue,
-            uint256 debtValue
+            ValueAndPrice memory valueAndPrice
         )
     {
         uint128 ltv;
-        (ltv, collateralValue, debtValue) = _calculateLtv(
-            config.underlyingOracle,
-            loan
-        );
+        (ltv, valueAndPrice) = _calculateLtv(config.underlyingOracle, loan);
         bool isExpired = block.timestamp >= config.maturity &&
             block.timestamp < config.maturity + Constants.LIQUIDATION_WINDOW;
         isLiquidable = isExpired || ltv >= config.liquidationLtv;
@@ -317,7 +321,7 @@ abstract contract AbstractGearingNft is
         maxRepayAmt = _calculateMaxRepayAmt(
             loan,
             isExpired,
-            collateralValue,
+            valueAndPrice.collateralValue,
             HALF_LIQUIDATION_THRESHOLD
         );
     }
@@ -346,8 +350,7 @@ abstract contract AbstractGearingNft is
         (
             bool isLiquidable,
             uint128 maxRepayAmt,
-            uint256 collateralValue,
-            uint256 debtValue
+            ValueAndPrice memory valueAndPrice
         ) = _getLiquidationInfo(loan, config);
 
         if (!isLiquidable) {
@@ -359,15 +362,20 @@ abstract contract AbstractGearingNft is
         // Transfer token
         config.underlying.transferFrom(msg.sender, config.market, repayAmt);
         // Do liquidate
-        bytes memory remainningCollateralData = _liquidate(
-            config,
-            loan,
-            msg.sender,
-            config.treasurer,
-            repayAmt,
-            collateralValue,
-            debtValue
-        );
+        // bytes memory remainningCollateralData = _liquidate(
+        //     config,
+        //     loan,
+        //     msg.sender,
+        //     config.treasurer,
+        //     repayAmt,
+        //     valueAndPrice
+        // );
+
+        (
+            bytes memory cToLiquidator,
+            bytes memory cToTreasurer,
+            bytes memory remainningCollateralData
+        ) = _calcLiquidationResult(loan, repayAmt, valueAndPrice);
 
         if (repayAmt == loan.debtAmt) {
             if (remainningCollateralData.length > 0) {
@@ -375,59 +383,82 @@ abstract contract AbstractGearingNft is
             }
             _burnInternal(id, s);
         } else {
-            uint ltvBefore = (loan.debtAmt * Constants.DECIMAL_BASE) /
-                collateralValue;
-            loan.debtAmt -= repayAmt;
-            loan.collateralData = remainningCollateralData;
-            // Check ltv after partial liquidation
-            collateralValue = _getCollateralValue(remainningCollateralData);
-            if (
-                ltvBefore <
-                ((loan.debtAmt * Constants.DECIMAL_BASE) / collateralValue)
-            ) {
-                revert LtvIncreasedAfterLiquidation(
-                    msg.sender,
-                    loan.debtAmt,
-                    repayAmt,
-                    loan.collateralData
+            {
+                uint ltvBefore = (valueAndPrice.debtValue *
+                    Constants.DECIMAL_BASE) / valueAndPrice.collateralValue;
+
+                loan.debtAmt -= repayAmt;
+                loan.collateralData = remainningCollateralData;
+
+                // Check ltv after partial liquidation
+                uint remainningCollateralValue = _getCollateralValue(
+                    remainningCollateralData,
+                    valueAndPrice.collateralPriceData
                 );
+                uint remainningDebtValue = (loan.debtAmt *
+                    valueAndPrice.underlyingPrice) /
+                    valueAndPrice.priceDecimals;
+                if (
+                    ltvBefore <
+                    ((remainningDebtValue * Constants.DECIMAL_BASE) /
+                        remainningCollateralValue)
+                ) {
+                    revert LtvIncreasedAfterLiquidation(
+                        msg.sender,
+                        loan.debtAmt,
+                        repayAmt,
+                        loan.collateralData
+                    );
+                }
             }
+            if (cToTreasurer.length > 0) {
+                _transferCollateral(config.treasurer, cToTreasurer);
+            }
+            _transferCollateral(msg.sender, cToLiquidator);
         }
 
         emit LiquidateGt(id, msg.sender, repayAmt);
     }
 
-    function _liquidate(
-        GtConfig memory config,
+    function _calcLiquidationResult(
         LoanInfo memory loan,
-        address liquidator,
-        address treasurer,
         uint128 repayAmt,
-        uint256 collateralValue,
-        uint256 debtValue
-    ) internal virtual returns (bytes memory collateralData);
+        ValueAndPrice memory valueAndPrice
+    )
+        internal
+        virtual
+        returns (
+            bytes memory cToLiquidator,
+            bytes memory cToTreasurer,
+            bytes memory remainningCollateralData
+        );
 
     function _calculateLtv(
         AggregatorV3Interface priceFeed,
         LoanInfo memory loan
-    )
-        internal
-        view
-        returns (uint128 ltv, uint256 collateralValue, uint256 debtValue)
-    {
-        collateralValue = _getCollateralValue(loan.collateralData);
-        debtValue = _calculateDebtValue(priceFeed, loan.debtAmt);
-        ltv = ((debtValue * Constants.DECIMAL_BASE) / collateralValue)
-            .toUint128();
+    ) internal view returns (uint128 ltv, ValueAndPrice memory valueAndPrice) {
+        valueAndPrice.collateralPriceData = _getCollateralPriceData();
+        valueAndPrice.collateralValue = _getCollateralValue(
+            loan.collateralData,
+            valueAndPrice.collateralPriceData
+        );
+        (
+            valueAndPrice.underlyingPrice,
+            valueAndPrice.priceDecimals
+        ) = _getPrice(priceFeed);
+        valueAndPrice.debtValue =
+            (loan.debtAmt * valueAndPrice.underlyingPrice) /
+            valueAndPrice.priceDecimals;
+        ltv = ((valueAndPrice.debtValue * Constants.DECIMAL_BASE) /
+            valueAndPrice.collateralValue).toUint128();
     }
 
-    function _calculateDebtValue(
-        AggregatorV3Interface priceFeed,
-        uint256 debtAmt
-    ) internal view returns (uint256) {
-        uint decimals = 10 ** priceFeed.decimals();
+    function _getPrice(
+        AggregatorV3Interface priceFeed
+    ) internal view returns (uint256 price, uint256 decimals) {
+        decimals = 10 ** priceFeed.decimals();
         (, int256 answer, , , ) = priceFeed.latestRoundData();
-        return (answer.toUint256() * debtAmt) / decimals;
+        price = answer.toUint256();
     }
 
     function _mergeCollateral(
@@ -451,6 +482,13 @@ abstract contract AbstractGearingNft is
      * @param collateralData encoded collateral data
      */
     function _getCollateralValue(
-        bytes memory collateralData
-    ) internal view virtual returns (uint256);
+        bytes memory collateralData,
+        bytes memory priceData
+    ) internal pure virtual returns (uint256 collateralValue);
+
+    function _getCollateralPriceData()
+        internal
+        view
+        virtual
+        returns (bytes memory priceData);
 }
