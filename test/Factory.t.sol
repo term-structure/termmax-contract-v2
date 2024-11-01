@@ -8,7 +8,8 @@ import {DeployUtils} from "./utils/DeployUtils.sol";
 import {ITermMaxMarket, TermMaxMarket, Constants} from "../contracts/core/TermMaxMarket.sol";
 import {MockERC20, ERC20} from "../contracts/test/MockERC20.sol";
 import {MockPriceFeed} from "../contracts/test/MockPriceFeed.sol";
-import "../contracts/core/factory/TermMaxFactory.sol";
+import {ITermMaxFactory, TermMaxFactory, IMintableERC20, IGearingToken, AggregatorV3Interface} from "../contracts/core/factory/TermMaxFactory.sol";
+import "../contracts/core/storage/TermMaxStorage.sol";
 
 contract FactoryTest is Test {
     address deployer = vm.envAddress("FORK_DEPLOYER_ADDR");
@@ -20,7 +21,7 @@ contract FactoryTest is Test {
         uint32 maxLtv = 8.5e7;
         uint32 liquidationLtv = 9e7;
 
-        TermMaxStorage.MarketConfig memory marketConfig;
+        MarketConfig memory marketConfig;
         marketConfig.openTime = uint64(
             block.timestamp + Constants.SECONDS_IN_DAY
         );

@@ -5,7 +5,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {ERC20GearingToken, IGearingToken, AggregatorV3Interface} from "../tokens/ERC20GearingToken.sol";
 import {MintableERC20, IMintableERC20} from "../tokens/MintableERC20.sol";
-import {ITermMaxMarket, TermMaxStorage} from "../TermMaxMarket.sol";
+import {ITermMaxMarket} from "../TermMaxMarket.sol";
 import {ITermMaxFactory} from "./ITermMaxFactory.sol";
 
 contract TermMaxFactory is ITermMaxFactory, Ownable {

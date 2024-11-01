@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
-import {console} from "forge-std/console.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
@@ -13,13 +12,13 @@ import {IGearingToken} from "./tokens/IGearingToken.sol";
 import {IFlashLoanReceiver} from "./IFlashLoanReceiver.sol";
 import {TermMaxCurve} from "./lib/TermMaxCurve.sol";
 import {Constants} from "./lib/Constants.sol";
-import {TermMaxStorage} from "./storage/TermMaxStorage.sol";
+import "./storage/TermMaxStorage.sol";
 
 contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
     using SafeCast for uint256;
     using SafeCast for int256;
 
-    TermMaxStorage.MarketConfig _config;
+    MarketConfig _config;
     address public collateral;
     IERC20 public underlying;
     IMintableERC20 public ft;
@@ -54,12 +53,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         _;
     }
 
-    function config()
-        public
-        view
-        override
-        returns (TermMaxStorage.MarketConfig memory)
-    {
+    function config() public view override returns (MarketConfig memory) {
         return _config;
     }
 
@@ -83,7 +77,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
     function initialize(
         IMintableERC20[4] memory tokens_,
         IGearingToken gt_,
-        TermMaxStorage.MarketConfig memory config_
+        MarketConfig memory config_
     ) external override onlyOwner {
         if (address(ft) != address(0)) {
             revert MarketHasBeenInitialized();
@@ -105,17 +99,17 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         uint32 minNBorrowFeeR,
         uint32 redeemFeeRatio,
         uint32 leverfeeRatio,
-        uint32 lockingFeeRatio,
+        uint32 lockingPercentage,
         uint32 protocolFeeRatio
     ) external override onlyOwner isOpen {
-        TermMaxStorage.MarketConfig memory mConfig = _config;
+        MarketConfig memory mConfig = _config;
         mConfig.lendFeeRatio = lendFeeRatio;
         mConfig.minNLendFeeR = minNLendFeeR;
         mConfig.borrowFeeRatio = borrowFeeRatio;
         mConfig.minNBorrowFeeR = minNBorrowFeeR;
         mConfig.redeemFeeRatio = redeemFeeRatio;
         mConfig.leverfeeRatio = leverfeeRatio;
-        mConfig.lockingFeeRatio = lockingFeeRatio;
+        mConfig.lockingPercentage = lockingPercentage;
         mConfig.protocolFeeRatio = protocolFeeRatio;
         emit UpdateFeeRatio(
             lendFeeRatio,
@@ -124,7 +118,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
             minNBorrowFeeR,
             redeemFeeRatio,
             leverfeeRatio,
-            lockingFeeRatio,
+            lockingPercentage,
             protocolFeeRatio
         );
     }
@@ -222,11 +216,10 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
     ) internal returns (uint128 ftOutAmt, uint128 xtOutAmt) {
         uint lpFtTotalSupply = lpFt.totalSupply();
         uint lpXtTotalSupply = lpXt.totalSupply();
-        TermMaxStorage.MarketConfig memory mConfig = _config;
+        MarketConfig memory mConfig = _config;
         // calculate reward
         uint ftReserve = ft.balanceOf(address(this));
         if (lpFtAmt > 0) {
-            console.log("_calculateLpReward0");
             uint reward = TermMaxCurve._calculateLpReward(
                 block.timestamp,
                 mConfig.openTime,
@@ -235,7 +228,6 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
                 lpFtAmt,
                 lpFt.balanceOf(address(this))
             );
-            console.log("ss");
             lpFt.transferFrom(sender, address(this), lpFtAmt);
             lpFt.burn(lpFtAmt);
 
@@ -245,7 +237,6 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         }
         uint xtReserve = xt.balanceOf(address(this));
         if (lpXtAmt > 0) {
-            console.log("_calculateLpReward1");
             uint reward = TermMaxCurve._calculateLpReward(
                 block.timestamp,
                 mConfig.openTime,
@@ -254,7 +245,6 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
                 lpXtAmt,
                 lpXt.balanceOf(address(this))
             );
-            console.log("ss");
             lpXtAmt += reward;
 
             lpXt.transferFrom(sender, address(this), lpXtAmt);
@@ -267,26 +257,23 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
             Constants.DECIMAL_BASE;
 
         if (sameProportionFt > ftOutAmt) {
-            console.log("1");
             uint xtExcess = ((sameProportionFt - ftOutAmt) *
                 Constants.DECIMAL_BASE) / mConfig.initialLtv;
-            TermMaxCurve.TradeParams memory tradeParams = TermMaxCurve
-                .TradeParams(
-                    xtExcess,
-                    ftReserve,
-                    xtReserve,
-                    _daysToMaturity(mConfig.maturity)
-                );
+            TradeParams memory tradeParams = TradeParams(
+                xtExcess,
+                ftReserve,
+                xtReserve,
+                _daysToMaturity(mConfig.maturity)
+            );
             (, , mConfig.apr) = TermMaxCurve._sellNegXt(tradeParams, mConfig);
         } else if (sameProportionFt < ftOutAmt) {
             uint ftExcess = ftOutAmt - sameProportionFt;
-            TermMaxCurve.TradeParams memory tradeParams = TermMaxCurve
-                .TradeParams(
-                    ftExcess,
-                    ftReserve,
-                    xtReserve,
-                    _daysToMaturity(mConfig.maturity)
-                );
+            TradeParams memory tradeParams = TradeParams(
+                ftExcess,
+                ftReserve,
+                xtReserve,
+                _daysToMaturity(mConfig.maturity)
+            );
             (, , mConfig.apr) = TermMaxCurve._sellNegFt(tradeParams, mConfig);
         }
         if (ftOutAmt > 0) {
@@ -329,8 +316,8 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         // Get old reserves
         uint ftReserve = ft.balanceOf(address(this));
         uint xtReserve = xt.balanceOf(address(this));
-        TermMaxStorage.MarketConfig memory mConfig = _config;
-        TermMaxCurve.TradeParams memory tradeParams = TermMaxCurve.TradeParams(
+        MarketConfig memory mConfig = _config;
+        TradeParams memory tradeParams = TradeParams(
             underlyingAmtIn,
             ftReserve,
             xtReserve,
@@ -369,7 +356,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
             );
             uint finalFtReserve;
             (finalFtReserve, , mConfig.apr) = TermMaxCurve._buyNegFt(
-                TermMaxCurve.TradeParams(
+                TradeParams(
                     feeAmt,
                     newFtReserve,
                     newXtReserve,
@@ -409,7 +396,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
             );
             uint finalXtReserve;
             (, finalXtReserve, mConfig.apr) = TermMaxCurve._buyNegXt(
-                TermMaxCurve.TradeParams(
+                TradeParams(
                     feeAmt,
                     newFtReserve,
                     newXtReserve,
@@ -431,7 +418,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         }
         token.transfer(sender, netOut);
         // _lock_fee
-        _lockFee(feeAmt, mConfig.lockingFeeRatio, mConfig.initialLtv);
+        _lockFee(feeAmt, mConfig.lockingPercentage, mConfig.initialLtv);
         _config.apr = mConfig.apr;
         emit BuyToken(
             sender,
@@ -468,8 +455,8 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
 
         token.transferFrom(sender, address(this), tokenAmtIn);
 
-        TermMaxStorage.MarketConfig memory mConfig = _config;
-        TermMaxCurve.TradeParams memory tradeParams = TermMaxCurve.TradeParams(
+        MarketConfig memory mConfig = _config;
+        TradeParams memory tradeParams = TradeParams(
             tokenAmtIn,
             ftReserve,
             xtReserve,
@@ -537,7 +524,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
 
         ft.burn((netOut * mConfig.initialLtv) / Constants.DECIMAL_BASE);
         xt.burn(netOut);
-        _lockFee(feeAmt, mConfig.lockingFeeRatio, mConfig.initialLtv);
+        _lockFee(feeAmt, mConfig.lockingPercentage, mConfig.initialLtv);
 
         underlying.transfer(sender, netOut);
         _config.apr = mConfig.apr;
@@ -552,11 +539,11 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
 
     function _lockFee(
         uint256 feeAmount,
-        uint256 lockingFeeRatio,
+        uint256 lockingPercentage,
         uint256 initialLtv
     ) internal {
         uint feeToLock = (feeAmount *
-            lockingFeeRatio +
+            lockingPercentage +
             Constants.DECIMAL_BASE -
             1) / Constants.DECIMAL_BASE;
         uint ypAmount = (feeToLock * initialLtv) / Constants.DECIMAL_BASE;
@@ -617,7 +604,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         // Mint GT
         gtId = gt.mint(sender, debt, collateralData);
 
-        TermMaxStorage.MarketConfig memory mConfig = _config;
+        MarketConfig memory mConfig = _config;
         uint leverFee = (debt * mConfig.leverfeeRatio) / Constants.DECIMAL_BASE;
         ft.transfer(mConfig.treasurer, leverFee);
         ft.mint(sender, debt - leverFee);
@@ -630,7 +617,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
     }
 
     function _redeem(address sender) internal {
-        TermMaxStorage.MarketConfig memory mConfig = _config;
+        MarketConfig memory mConfig = _config;
         {
             uint liquidationDeadline = gt.liquidatable()
                 ? mConfig.maturity + Constants.LIQUIDATION_WINDOW

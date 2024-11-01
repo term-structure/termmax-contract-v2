@@ -164,7 +164,10 @@ contract ERC20GearingToken is AbstractGearingToken {
             (uint, uint)
         );
 
-        // MaxRomvedCollateral = min((repayAmt * (1 + REWARD_TO_LIQUIDATOR + REWARD_TO_PROTOCOL)) * underlyingPrice / collateralPrice, collateralAmt *(repayAmt / debtAmt))
+        // MaxRomvedCollateral = min(
+        // (repayAmt * (1 + REWARD_TO_LIQUIDATOR + REWARD_TO_PROTOCOL)) * underlyingPrice / collateralPrice
+        // , collateralAmt *(repayAmt / debtAmt)
+        // )
         uint uPriceToCPrice = (valueAndPrice.underlyingPrice *
             Constants.DECIMAL_BASE *
             collateralPriceDecimals) /

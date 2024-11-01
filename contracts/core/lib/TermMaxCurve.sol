@@ -1,21 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
-import {console} from "forge-std/console.sol";
+
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import {TermMaxStorage} from "../storage/TermMaxStorage.sol";
 import {Constants} from "./Constants.sol";
+import "../storage/TermMaxStorage.sol";
 
+/**
+ * @title The Term Max curve library
+ * @author Term Structure Labs
+ */
 library TermMaxCurve {
-    struct TradeParams {
-        uint256 amount;
-        uint256 ftReserve;
-        uint256 xtReserve;
-        uint256 daysToMaturity;
-    }
-
     using SafeCast for uint256;
     using SafeCast for int256;
 
+    /// @notice Square root method
     function _sqrt(uint256 x) internal pure returns (uint256) {
         if (x == 0) return 0;
         uint256 z = (x + 1) / 2;
@@ -27,6 +25,15 @@ library TermMaxCurve {
         return y;
     }
 
+    /// @notice Get the maximum value
+    function _max(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a > b ? a : b;
+    }
+
+    /// @notice Calculate how many lp tokens should be minted to the liquidity provider
+    /// @param tokenIn The amount of tokens provided
+    /// @param tokenReserve The token's balance of the market
+    /// @return lpOutAmt The amount of lp tokens to be minted to the liquidity provider
     function _calculateLpOut(
         uint256 tokenIn,
         uint256 tokenReserve,
@@ -35,11 +42,15 @@ library TermMaxCurve {
         if (lpTotalSupply == 0) {
             lpOutAmt = tokenIn;
         } else {
-            // lpOutAmt = tokenIn/(tokenReserve/lpTotalSupply) = tokenIn*lpTotalSupply/tokenReserve
+            // lpOutAmt = tokenIn/(tokenReserve/lpTotalSupply)
             lpOutAmt = (tokenIn * lpTotalSupply) / tokenReserve;
         }
     }
 
+    /// @notice Calculte the FT token reserve plus alpha
+    /// @param lsf The liquidity scaling factor
+    /// @param ftReserve The FT token reserve of the market
+    /// @return ftPlusAlpha The FT token reserve plus alpha
     function _calcFtPlusAlpha(
         uint32 lsf,
         uint256 ftReserve
@@ -47,42 +58,13 @@ library TermMaxCurve {
         return (ftReserve * lsf) / Constants.DECIMAL_BASE;
     }
 
-    /**
-     *     function calc_y_plus_beta(
-        uint32 lsf _numerator_,
-        uint32 ltv_numerator_,
-        uint256 days_to_maturity,
-        int64 apy_numerator_,
-        uint128 x
-    ) public pure returns (uint128) {
-        uint256 apy_numerator_offset_64 = uint256(
-            int256(apy_numerator_) +
-                int256(YieldAmplifierMarketLib.APYNumeratorOffset)
-        );
-        uint256 x_plus_alpha = uint256(calc_x_plus_alpha(lsf _numerator_, x));
-        return
-            uint128(
-                (x_plus_alpha *
-                    YieldAmplifierMarketLib.APYDenominator *
-                    YieldAmplifierMarketLib.LTVDenominator *
-                    YieldAmplifierMarketLib.DaysInYear) /
-                    (YieldAmplifierMarketLib.APYDenominator *
-                        YieldAmplifierMarketLib.LTVDenominator *
-                        YieldAmplifierMarketLib.DaysInYear +
-                        apy_numerator_offset_64 *
-                        days_to_maturity *
-                        YieldAmplifierMarketLib.LTVDenominator -
-                        YieldAmplifierMarketLib.APYNumeratorOffset *
-                        days_to_maturity *
-                        YieldAmplifierMarketLib.LTVDenominator -
-                        YieldAmplifierMarketLib.APYDenominator *
-                        YieldAmplifierMarketLib.DaysInYear *
-                        uint256(ltv_numerator_))
-            );
-
-        x_plus_alpha*YieldAmplifierMarketLib.DaysInYear/(apr*days_to_maturity)
-    }
-     */
+    /// @notice Calculte the XT token reserve plus beta
+    /// @param lsf The liquidity scaling factor
+    /// @param ltv The initial ltv of the market
+    /// @param daysToMaturity The days until maturity
+    /// @param apr The annual interest rate of the market
+    /// @param ftReserve The FT token reserve of the market
+    /// @return xtPlusBeta The XT token reserve plus beta
     function _calcXtPlusBeta(
         uint32 lsf,
         uint32 ltv,
@@ -118,6 +100,12 @@ library TermMaxCurve {
         }
     }
 
+    /// @notice Calculte the annual interest rate through curve parameters
+    /// @param ltv The initial ltv of the market
+    /// @param daysToMaturity The days until maturity
+    /// @param ftPlusAlpha The FT token reserve plus alpha
+    /// @param xtPlusBeta The XT token reserve plus beta
+    /// @return apr The annual interest rate of the market
     function _calcApr(
         uint32 ltv,
         uint256 daysToMaturity,
@@ -136,6 +124,15 @@ library TermMaxCurve {
         return (numerator / denominator).toInt64();
     }
 
+    /// @notice Calculate how much handling fee will be charged for this transaction
+    /// @param ftReserve The FT token reserve of the market
+    /// @param xtReserve The XT token reserve of the market
+    /// @param newFtReserve The FT token reserve of the market after transaction
+    /// @param newXtReserve The XT token reserve of the market after transaction
+    /// @param feeRatio Transaction fee ratio
+    ///                 There are different fee ratios for lending and borrowing
+    /// @param ltv The initial ltv of the market
+    /// @return feeAmt Transaction fee amount
     function _calculateFee(
         uint256 ftReserve,
         uint256 xtReserve,
@@ -153,10 +150,12 @@ library TermMaxCurve {
         feeAmt = _calculateFeeInternal(deltaFt, deltaXt, feeRatio, ltv);
     }
 
-    function _max(uint256 a, uint256 b) internal pure returns (uint256) {
-        return a > b ? a : b;
-    }
-
+    /// @notice Internal helper function for calculating fees
+    /// @param deltaFt Changes in FT token before and after the transaction
+    /// @param deltaXt Changes in XT token before and after the transaction
+    /// @param feeRatio Transaction fee ratio
+    /// @param ltv The initial ltv of the market
+    /// @return feeAmt Transaction fee amount
     function _calculateFeeInternal(
         uint256 deltaFt,
         uint256 deltaXt,
@@ -173,6 +172,14 @@ library TermMaxCurve {
         }
     }
 
+    /// @notice Calculate the reward to liquidity provider
+    /// @param currentTime Current unix time
+    /// @param openMarketTime The unix time when the market starts trading
+    /// @param maturity The unix time of maturity date
+    /// @param lpSupply The total supply of this lp token
+    /// @param lpAmt The amount of withdraw lp
+    /// @param totalReward The amount of bonus lp held in the market
+    /// @return reward Number of lp's awarded
     function _calculateLpReward(
         uint256 currentTime,
         uint256 openMarketTime,
@@ -186,9 +193,15 @@ library TermMaxCurve {
         reward = ((totalReward * lpAmt) * (currentTime - openMarketTime)) / t;
     }
 
+    /// @notice Calculate the changes in market reserves and apr after selling FT tokens
+    /// @param params Transaction data and token reserves
+    /// @param config Market configuration data
+    /// @return newFtReserve The FT token reserve of the market after transaction
+    /// @return newXtReserve The XT token reserve of the market after transaction
+    /// @return newApr The APR of the market after transaction
     function _sellFt(
         TradeParams memory params,
-        TermMaxStorage.MarketConfig memory config
+        MarketConfig memory config
     )
         internal
         pure
@@ -225,9 +238,15 @@ library TermMaxCurve {
         newXtReserve = params.xtReserve - deltaXt;
     }
 
+    /// @notice Calculate the changes in market reserves and apr after selling negative FT tokens
+    /// @param params Transaction data and token reserves
+    /// @param config Market configuration data
+    /// @return newFtReserve The FT token reserve of the market after transaction
+    /// @return newXtReserve The XT token reserve of the market after transaction
+    /// @return newApr The APR of the market after transaction
     function _sellNegFt(
         TradeParams memory params,
-        TermMaxStorage.MarketConfig memory config
+        MarketConfig memory config
     )
         internal
         pure
@@ -266,9 +285,15 @@ library TermMaxCurve {
         newXtReserve = params.xtReserve + deltaXt;
     }
 
+    /// @notice Calculate the changes in market reserves and apr after selling XT tokens
+    /// @param params Transaction data and token reserves
+    /// @param config Market configuration data
+    /// @return newFtReserve The FT token reserve of the market after transaction
+    /// @return newXtReserve The XT token reserve of the market after transaction
+    /// @return newApr The APR of the market after transaction
     function _sellXt(
         TradeParams memory params,
-        TermMaxStorage.MarketConfig memory config
+        MarketConfig memory config
     )
         internal
         pure
@@ -312,50 +337,15 @@ library TermMaxCurve {
         newXtReserve = params.xtReserve + deltaXt;
     }
 
-    /**
- * function sell_neg_ya(
-        uint32 lsf _numerator_,
-        uint32 ltv_numerator_,
-        uint256 days_to_maturity,
-        uint128 neg_amount,
-        uint128 x,
-        uint128 y,
-        int64 apr_numerator_
-    ) private pure returns (uint128, uint128, int64) {
-        uint128 x_plus_alpha = calc_x_plus_alpha(lsf _numerator_, x);
-        uint128 y_plus_beta = calc_y_plus_beta(
-            lsf _numerator_,
-            ltv_numerator_,
-            days_to_maturity,
-            apr_numerator_,
-            x
-        );
-        uint256 neg_b = uint256(x_plus_alpha) +
-            ((uint256(y_plus_beta) + uint256(neg_amount)) *
-                uint256(ltv_numerator_)) /
-            YieldAmplifierMarketLib.LTVDenominator;
-        uint256 ac = (((uint256(neg_amount) *
-            uint256(y_plus_beta) *
-            uint256(ltv_numerator_)) / YieldAmplifierMarketLib.LTVDenominator) *
-            uint256(ltv_numerator_)) / YieldAmplifierMarketLib.LTVDenominator;
-        uint256 delta_y = ((neg_b - sqrt(neg_b * neg_b - 4 * ac)) *
-            YieldAmplifierMarketLib.LTVDenominator) /
-            uint256(ltv_numerator_) /
-            2;
-        uint256 delta_x = ((uint256(x_plus_alpha) * uint256(y_plus_beta)) /
-            (uint256(y_plus_beta) - delta_y)) - uint256(x_plus_alpha);
-        apr_numerator_ = calc_apr_numerator(
-            ltv_numerator_,
-            days_to_maturity,
-            uint128(x_plus_alpha + delta_x),
-            uint128(y_plus_beta - delta_y)
-        );
-        return (uint128(x + delta_x), uint128(y - delta_y), apr_numerator_);
-    }
- */
+    /// @notice Calculate the changes in market reserves and apr after selling negative XT tokens
+    /// @param params Transaction data and token reserves
+    /// @param config Market configuration data
+    /// @return newFtReserve The FT token reserve of the market after transaction
+    /// @return newXtReserve The XT token reserve of the market after transaction
+    /// @return newApr The APR of the market after transaction
     function _sellNegXt(
         TradeParams memory params,
-        TermMaxStorage.MarketConfig memory config
+        MarketConfig memory config
     )
         internal
         pure
@@ -394,40 +384,15 @@ library TermMaxCurve {
         newXtReserve = params.xtReserve - deltaXt;
     }
 
-    /**
-     * function buy_yp(
-        uint32 lsf _numerator_,
-        uint32 ltv_numerator_,
-        uint256 days_to_maturity,
-        uint128 amount,
-        uint128 x,
-        uint128 y,
-        int64 apr_numerator_
-    ) public pure returns (uint128, uint128, int64) {
-        uint128 x_plus_alpha = calc_x_plus_alpha(lsf _numerator_, x);
-        uint128 y_plus_beta = calc_y_plus_beta(
-            lsf _numerator_,
-            ltv_numerator_,
-            days_to_maturity,
-            apr_numerator_,
-            x
-        );
-        uint256 delta_y = amount;
-        uint256 delta_x = uint256(x_plus_alpha) -
-            (uint256(x_plus_alpha) * uint256(y_plus_beta)) /
-            (uint256(y_plus_beta) + delta_y);
-        int64 new_apr_numerator = calc_apr_numerator(
-            ltv_numerator_,
-            days_to_maturity,
-            uint128(x_plus_alpha - delta_x),
-            uint128(y_plus_beta + delta_y)
-        );
-        return (uint128(x - delta_x), uint128(y + delta_y), new_apr_numerator);
-    }
-     */
+    /// @notice Calculate the changes in market reserves and apr after selling buying FT tokens
+    /// @param params Transaction data and token reserves
+    /// @param config Market configuration data
+    /// @return newFtReserve The FT token reserve of the market after transaction
+    /// @return newXtReserve The XT token reserve of the market after transaction
+    /// @return newApr The APR of the market after transaction
     function _buyFt(
         TradeParams memory params,
-        TermMaxStorage.MarketConfig memory config
+        MarketConfig memory config
     )
         internal
         pure
@@ -455,44 +420,15 @@ library TermMaxCurve {
         newXtReserve = params.xtReserve + deltaXt;
     }
 
-    /**
-     *function buy_neg_yp(
-        uint32 lsf _numerator_,
-        uint32 ltv_numerator_,
-        uint256 days_to_maturity,
-        uint128 neg_amount,
-        uint128 x,
-        uint128 y,
-        int64 apr_numerator_
-    ) public pure returns (uint128, uint128, int64) {
-        uint128 x_plus_alpha = calc_x_plus_alpha(lsf _numerator_, x);
-        uint128 y_plus_beta = calc_y_plus_beta(
-            lsf _numerator_,
-            ltv_numerator_,
-            days_to_maturity,
-            apr_numerator_,
-            x
-        );
-        uint256 neg_delta_y = neg_amount;
-        uint256 neg_delta_x = (uint256(x_plus_alpha) * uint256(y_plus_beta)) /
-            (uint256(y_plus_beta) - neg_delta_y) -
-            uint256(x_plus_alpha);
-        int64 new_apr_numerator = calc_apr_numerator(
-            ltv_numerator_,
-            days_to_maturity,
-            uint128(x_plus_alpha + neg_delta_x),
-            uint128(y_plus_beta - neg_delta_y)
-        );
-        return (
-            uint128(x + neg_delta_x),
-            uint128(y - neg_delta_y),
-            new_apr_numerator
-        );
-    }
-     */
+    /// @notice Calculate the changes in market reserves and apr after buying negative FT tokens
+    /// @param params Transaction data and token reserves
+    /// @param config Market configuration data
+    /// @return newFtReserve The FT token reserve of the market after transaction
+    /// @return newXtReserve The XT token reserve of the market after transaction
+    /// @return newApr The APR of the market after transaction
     function _buyNegFt(
         TradeParams memory params,
-        TermMaxStorage.MarketConfig memory config
+        MarketConfig memory config
     )
         internal
         pure
@@ -520,41 +456,15 @@ library TermMaxCurve {
         newXtReserve = params.xtReserve - negDeltaXt;
     }
 
-    /**
-     *function buy_ya(
-        uint32 lsf _numerator_,
-        uint32 ltv_numerator_,
-        uint256 days_to_maturity,
-        uint128 amount,
-        uint128 x,
-        uint128 y,
-        int64 apr_numerator_
-    ) public pure returns (uint128, uint128, int64) {
-        uint128 x_plus_alpha = calc_x_plus_alpha(lsf _numerator_, x);
-        uint128 y_plus_beta = calc_y_plus_beta(
-            lsf _numerator_,
-            ltv_numerator_,
-            days_to_maturity,
-            apr_numerator_,
-            x
-        );
-        uint256 delta_x = (amount * uint256(ltv_numerator_)) /
-            YieldAmplifierMarketLib.LTVDenominator;
-        uint256 delta_y = uint256(y_plus_beta) -
-            (uint256(y_plus_beta) * uint256(x_plus_alpha)) /
-            (uint256(x_plus_alpha) + delta_x);
-        int64 new_apr_numerator = calc_apr_numerator(
-            ltv_numerator_,
-            days_to_maturity,
-            uint128(x_plus_alpha + delta_x),
-            uint128(y_plus_beta - delta_y)
-        );
-        return (uint128(x + delta_x), uint128(y - delta_y), new_apr_numerator);
-    }
-     */
+    /// @notice Calculate the changes in market reserves and apr after buying XT tokens
+    /// @param params Transaction data and token reserves
+    /// @param config Market configuration data
+    /// @return newFtReserve The FT token reserve of the market after transaction
+    /// @return newXtReserve The XT token reserve of the market after transaction
+    /// @return newApr The APR of the market after transaction
     function _buyXt(
         TradeParams memory params,
-        TermMaxStorage.MarketConfig memory config
+        MarketConfig memory config
     )
         internal
         pure
@@ -583,45 +493,15 @@ library TermMaxCurve {
         newXtReserve = params.xtReserve - deltaXt;
     }
 
-    /**
-     *function buy_neg_ya(
-        uint32 lsf _numerator_,
-        uint32 ltv_numerator_,
-        uint256 days_to_maturity,
-        uint128 neg_amount,
-        uint128 x,
-        uint128 y,
-        int64 apr_numerator_
-    ) public pure returns (uint128, uint128, int64) {
-        uint128 x_plus_alpha = calc_x_plus_alpha(lsf _numerator_, x);
-        uint128 y_plus_beta = calc_y_plus_beta(
-            lsf _numerator_,
-            ltv_numerator_,
-            days_to_maturity,
-            apr_numerator_,
-            x
-        );
-        uint256 neg_delta_x = (neg_amount * uint256(ltv_numerator_)) /
-            YieldAmplifierMarketLib.LTVDenominator;
-        uint256 neg_delta_y = (uint256(y_plus_beta) * uint256(x_plus_alpha)) /
-            (uint256(x_plus_alpha) - neg_delta_x) -
-            uint256(y_plus_beta);
-        int64 new_apr_numerator = calc_apr_numerator(
-            ltv_numerator_,
-            days_to_maturity,
-            uint128(x_plus_alpha - neg_delta_x),
-            uint128(y_plus_beta + neg_delta_y)
-        );
-        return (
-            uint128(x - neg_delta_x),
-            uint128(y + neg_delta_y),
-            new_apr_numerator
-        );
-    }
-     */
+    /// @notice Calculate the changes in market reserves and apr after buying negative XT tokens
+    /// @param params Transaction data and token reserves
+    /// @param config Market configuration data
+    /// @return newFtReserve The FT token reserve of the market after transaction
+    /// @return newXtReserve The XT token reserve of the market after transaction
+    /// @return newApr The APR of the market after transaction
     function _buyNegXt(
         TradeParams memory params,
-        TermMaxStorage.MarketConfig memory config
+        MarketConfig memory config
     )
         internal
         pure

@@ -3,7 +3,7 @@ pragma solidity ^0.8.27;
 
 import {IMintableERC20, IERC20} from "./tokens/IMintableERC20.sol";
 import {IGearingToken} from "./tokens/IGearingToken.sol";
-import {TermMaxStorage} from "../core/storage/TermMaxStorage.sol";
+import "./storage/TermMaxStorage.sol";
 
 interface ITermMaxMarket {
     error MarketHasBeenInitialized();
@@ -106,7 +106,7 @@ interface ITermMaxMarket {
         uint32 minNBorrowFeeR,
         uint32 redeemFeeRatio,
         uint32 leverfeeRatio,
-        uint32 lockingFeeRatio,
+        uint32 lockingPercentage,
         uint32 protocolFeeRatio
     );
 
@@ -115,13 +115,10 @@ interface ITermMaxMarket {
     function initialize(
         IMintableERC20[4] memory tokens_,
         IGearingToken gt_,
-        TermMaxStorage.MarketConfig memory config_
+        MarketConfig memory config_
     ) external;
 
-    function config()
-        external
-        view
-        returns (TermMaxStorage.MarketConfig memory);
+    function config() external view returns (MarketConfig memory);
 
     function setFeeRatio(
         uint32 lendFeeRatio,
@@ -130,7 +127,7 @@ interface ITermMaxMarket {
         uint32 minNBorrowFeeR,
         uint32 redeemFeeRatio,
         uint32 leverfeeRatio,
-        uint32 lockingFeeRatio,
+        uint32 lockingPercentage,
         uint32 protocolFeeRatio
     ) external;
 
