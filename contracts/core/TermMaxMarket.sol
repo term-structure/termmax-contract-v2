@@ -341,8 +341,8 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
             (finalFtReserve, , mConfig.apr) = TermMaxCurve._buyNegFt(
                 TermMaxCurve.TradeParams(
                     feeAmt,
-                    ftReserve,
-                    xtReserve,
+                    newFtReserve,
+                    newXtReserve,
                     tradeParams.daysToMaturity
                 ),
                 mConfig
@@ -373,11 +373,11 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
                 mConfig.protocolFeeRatio
             );
             uint finalXtReserve;
-            (finalXtReserve, , mConfig.apr) = TermMaxCurve._buyNegXt(
+            (, finalXtReserve, mConfig.apr) = TermMaxCurve._buyNegXt(
                 TermMaxCurve.TradeParams(
                     feeAmt,
-                    ftReserve,
-                    xtReserve,
+                    newFtReserve,
+                    newXtReserve,
                     tradeParams.daysToMaturity
                 ),
                 mConfig
@@ -427,10 +427,12 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         uint128 tokenAmtIn,
         uint128 minUnderlyingOut
     ) internal returns (uint256 netOut) {
-        token.transferFrom(sender, address(this), tokenAmtIn);
         // Get old reserves
         uint ftReserve = ft.balanceOf(address(this));
         uint xtReserve = xt.balanceOf(address(this));
+
+        token.transferFrom(sender, address(this), tokenAmtIn);
+
         TermMaxStorage.MarketConfig memory mConfig = _config;
         TermMaxCurve.TradeParams memory tradeParams = TermMaxCurve.TradeParams(
             tokenAmtIn,
@@ -446,7 +448,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
                 tradeParams,
                 mConfig
             );
-            netOut = xtReserve - newFtReserve;
+            netOut = xtReserve - newXtReserve;
             // calculate fee
             feeAmt = TermMaxCurve._calculateFee(
                 ftReserve,
@@ -463,7 +465,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
                 tradeParams,
                 mConfig
             );
-            netOut = tokenAmtIn + xtReserve - newFtReserve;
+            netOut = tokenAmtIn + xtReserve - newXtReserve;
             // calculate fee
             feeAmt = TermMaxCurve._calculateFee(
                 ftReserve,
@@ -489,8 +491,11 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
             feeAmt,
             mConfig.protocolFeeRatio
         );
+
+        ft.burn((netOut * mConfig.initialLtv) / Constants.DECIMAL_BASE);
+        xt.burn(netOut);
         _lockFee(feeAmt, mConfig.lockingFeeRatio, mConfig.initialLtv);
-        token.burn(tokenAmtIn);
+
         underlying.transfer(sender, netOut);
         _config.apr = mConfig.apr;
         emit SellToken(
