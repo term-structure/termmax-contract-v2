@@ -25,7 +25,7 @@ contract FactoryTest is Test {
             block.timestamp + Constants.SECONDS_IN_DAY
         );
         marketConfig.maturity = uint64(
-            marketConfig.openTime + Constants.SECONDS_IN_MOUNTH
+            marketConfig.openTime + Constants.SECONDS_IN_DAY * 30
         );
         marketConfig.initialLtv = 9e7;
         // DeployUtils deployUtil = new DeployUtils();
@@ -35,7 +35,7 @@ contract FactoryTest is Test {
             maxLtv,
             liquidationLtv
         );
-        console.log("gNft: ", address(res.gNft));
+        console.log("gt: ", address(res.gt));
         vm.stopPrank();
     }
 }

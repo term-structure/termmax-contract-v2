@@ -15,7 +15,7 @@ library DeployUtils {
         IMintableERC20 xt;
         IMintableERC20 lpFt;
         IMintableERC20 lpXt;
-        IGearingNft gNft;
+        IGearingToken gt;
         AggregatorV3Interface underlyingOracle;
         AggregatorV3Interface collateralOracle;
         MockERC20 collateral;
@@ -53,8 +53,6 @@ library DeployUtils {
 
         res.market = ITermMaxMarket(res.factory.createERC20Market(params));
         console.log("Market deploy at:", address(res.market));
-        (res.ft, res.xt, res.lpFt, res.lpXt, res.gNft, , ) = res
-            .market
-            .tokens();
+        (res.ft, res.xt, res.lpFt, res.lpXt, res.gt, , ) = res.market.tokens();
     }
 }

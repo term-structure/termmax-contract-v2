@@ -28,7 +28,7 @@ contract SwapTest is Test {
 
         marketConfig.openTime = uint64(block.timestamp);
         marketConfig.maturity = uint64(
-            marketConfig.openTime + Constants.SECONDS_IN_MOUNTH
+            marketConfig.openTime + Constants.SECONDS_IN_DAY * 30
         );
         marketConfig.initialLtv = 0.9e8;
         marketConfig.apr = 0.1e8;
@@ -40,7 +40,6 @@ contract SwapTest is Test {
             maxLtv,
             liquidationLtv
         );
-        console.log("gNft: ", address(res.gNft));
 
         uint amount = 10000e8;
         res.underlying.mint(deployer, amount);

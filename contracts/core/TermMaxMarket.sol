@@ -9,7 +9,7 @@ import {IERC20Metadata, IERC20} from "@openzeppelin/contracts/token/ERC20/extens
 
 import {ITermMaxMarket} from "./ITermMaxMarket.sol";
 import {IMintableERC20} from "./tokens/IMintableERC20.sol";
-import {IGearingNft} from "./tokens/IGearingNft.sol";
+import {IGearingToken} from "./tokens/IGearingToken.sol";
 import {IFlashLoanReceiver} from "./IFlashLoanReceiver.sol";
 import {TermMaxCurve} from "./lib/TermMaxCurve.sol";
 import {Constants} from "./lib/Constants.sol";
@@ -26,7 +26,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
     IMintableERC20 public xt;
     IMintableERC20 public lpFt;
     IMintableERC20 public lpXt;
-    IGearingNft public gNft;
+    IGearingToken public gt;
 
     constructor(
         address collateral_,
@@ -34,10 +34,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         uint64 openTime_,
         uint64 maturity_
     ) Ownable(msg.sender) {
-        if (
-            openTime_ < block.timestamp ||
-            maturity_ < block.timestamp + Constants.SECONDS_IN_MOUNTH
-        ) {
+        if (openTime_ < block.timestamp || maturity_ < openTime_) {
             revert InvalidTime(openTime_, maturity_);
         }
         if (address(collateral_) == address(underlying_)) {
@@ -75,37 +72,28 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
             IMintableERC20,
             IMintableERC20,
             IMintableERC20,
-            IGearingNft,
+            IGearingToken,
             address,
             IERC20
         )
     {
-        return (ft, xt, lpFt, lpXt, gNft, collateral, underlying);
+        return (ft, xt, lpFt, lpXt, gt, collateral, underlying);
     }
 
     function initialize(
         IMintableERC20[4] memory tokens_,
-        IGearingNft gNft_,
+        IGearingToken gt_,
         TermMaxStorage.MarketConfig memory config_
     ) external override onlyOwner {
         if (address(ft) != address(0)) {
             revert MarketHasBeenInitialized();
         }
-        // if (
-        //     config_.lsf > Constants.DECIMAL_BASE ||
-        //     config_.initialLtv > Constants.DECIMAL_BASE ||
-        //     config_.lendFeeRatio > Constants.DECIMAL_BASE ||
-        //     config_.borrowFeeRatio > Constants.DECIMAL_BASE ||
-        //     int(config_.apr).toUint256() > Constants.DECIMAL_BASE
-        // ) {
-        //     revert NumeratorMustLessThanBasicDecimals();
-        // }
 
         ft = tokens_[0];
         xt = tokens_[1];
         lpFt = tokens_[2];
         lpXt = tokens_[3];
-        gNft = gNft_;
+        gt = gt_;
 
         _config = config_;
     }
@@ -143,7 +131,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
 
     function setTreasurer(address treasurer) external onlyOwner {
         _config.treasurer = treasurer;
-        gNft.setTreasurer(treasurer);
+        gt.setTreasurer(treasurer);
 
         emit UpdateTreasurer(treasurer);
     }
@@ -588,18 +576,18 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         lpXt.mint(address(this), lpXtAmt);
     }
 
-    function mintGNft(
+    function mintGt(
         uint128 debt,
         bytes calldata callbackData
-    ) external override isOpen nonReentrant returns (uint256 nftId) {
-        return _mintGNft(msg.sender, debt, callbackData);
+    ) external override isOpen nonReentrant returns (uint256 gtId) {
+        return _mintGt(msg.sender, debt, callbackData);
     }
 
-    function _mintGNft(
+    function _mintGt(
         address sender,
         uint128 debt,
         bytes calldata callbackData
-    ) internal returns (uint256 nftId) {
+    ) internal returns (uint256 gtId) {
         xt.transferFrom(sender, address(this), debt);
 
         // Send debt to borrower
@@ -608,16 +596,16 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         bytes memory collateralData = IFlashLoanReceiver(sender)
             .executeOperation(sender, underlying, debt, callbackData);
 
-        // Mint G-NFT
-        nftId = gNft.mint(sender, debt, collateralData);
+        // Mint GT
+        gtId = gt.mint(sender, debt, collateralData);
 
-        emit MintGNft(sender, nftId, debt, collateralData);
+        emit MintGt(sender, gtId, debt, collateralData);
     }
 
     function lever(
         uint128 debt,
         bytes calldata collateralData
-    ) external override isOpen nonReentrant returns (uint256 nftId) {
+    ) external override isOpen nonReentrant returns (uint256 gtId) {
         return _lever(msg.sender, debt, collateralData);
     }
 
@@ -625,16 +613,16 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         address sender,
         uint128 debt,
         bytes calldata collateralData
-    ) internal returns (uint256 nftId) {
-        // Mint G-NFT
-        nftId = gNft.mint(sender, debt, collateralData);
+    ) internal returns (uint256 gtId) {
+        // Mint GT
+        gtId = gt.mint(sender, debt, collateralData);
 
         TermMaxStorage.MarketConfig memory mConfig = _config;
         uint leverFee = (debt * mConfig.leverfeeRatio) / Constants.DECIMAL_BASE;
         ft.transfer(mConfig.treasurer, leverFee);
         ft.mint(sender, debt - leverFee);
 
-        emit MintGNft(sender, nftId, debt, collateralData);
+        emit MintGt(sender, gtId, debt, collateralData);
     }
 
     function redeem() external virtual override nonReentrant {
@@ -644,7 +632,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
     function _redeem(address sender) internal {
         TermMaxStorage.MarketConfig memory mConfig = _config;
         {
-            uint liquidationDeadline = gNft.liquidatable()
+            uint liquidationDeadline = gt.liquidatable()
                 ? mConfig.maturity + Constants.LIQUIDATION_WINDOW
                 : mConfig.maturity;
             if (block.timestamp < liquidationDeadline) {
@@ -703,7 +691,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
 
         // The ratio that user will get how many underlying and collateral when do redeem
         uint ratio = (userPoint * Constants.DECIMAL_BASE) / allPoints;
-        bytes memory deliveryData = gNft.delivery(ratio, sender);
+        bytes memory deliveryData = gt.delivery(ratio, sender);
         // Transfer underlying output
         uint underlyingAmt = (underlying.balanceOf(address(this)) * ratio) /
             Constants.DECIMAL_BASE;
@@ -733,8 +721,8 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
             lpXt.burn(lpXtBalance);
         }
         // Burn all ft tokens in gt
-        uint amount = ft.balanceOf(address(gNft));
-        ft.transferFrom(address(gNft), address(this), amount);
+        uint amount = ft.balanceOf(address(gt));
+        ft.transferFrom(address(gt), address(this), amount);
         ft.burn(amount);
     }
 

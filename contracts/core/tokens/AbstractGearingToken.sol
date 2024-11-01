@@ -7,14 +7,14 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {Constants} from "../lib/Constants.sol";
-import {IGearingNft, AggregatorV3Interface, IERC20} from "./IGearingNft.sol";
+import {IGearingToken, AggregatorV3Interface, IERC20} from "./IGearingToken.sol";
 
-abstract contract AbstractGearingNft is
+abstract contract AbstractGearingToken is
     UUPSUpgradeable,
     OwnableUpgradeable,
     ERC721Upgradeable,
     ReentrancyGuardUpgradeable,
-    IGearingNft
+    IGearingToken
 {
     using SafeCast for uint256;
     using SafeCast for int256;
@@ -23,8 +23,8 @@ abstract contract AbstractGearingNft is
     error CanNotMergeLoanWithDiffOwner();
     error GtDoNotSupportLiquidation();
     error GtIsExpired(uint256 id);
-    error GNftIsSafe(address liquidator, uint256 id);
-    error GNftIsNotHealthy(
+    error GtIsSafe(address liquidator, uint256 id);
+    error GtIsNotHealthy(
         address owner,
         uint128 debtAmt,
         uint128 ltv,
@@ -41,7 +41,7 @@ abstract contract AbstractGearingNft is
     /// @notice Error for liquidate the loan with invalid repay amount
     error RepayAmtExceedsMaxRepayAmt(uint128 repayAmt, uint128 maxRepayAmt);
 
-    event MergeGNfts(
+    event MergeGts(
         address indexed sender,
         uint256 indexed newId,
         uint256[] ids
@@ -67,7 +67,7 @@ abstract contract AbstractGearingNft is
         bytes collateralData;
     }
 
-    struct GearingNftStorage {
+    struct GearingTokenStorage {
         GtConfig config;
         uint256 total;
         mapping(uint256 => LoanInfo) loanMapping;
@@ -89,12 +89,12 @@ abstract contract AbstractGearingNft is
     uint256 constant UINT_MAX = 2 ** 256 - 1;
 
     bytes32 internal constant STORAGE_SLOT_GEARING_NFT =
-        bytes32(uint256(keccak256("TermMax.storage.GearingNft")) - 1);
+        bytes32(uint256(keccak256("TermMax.storage.GearingToken")) - 1);
 
-    function _getGearingNftStorage()
+    function _getGearingTokenStorage()
         internal
         pure
-        returns (GearingNftStorage storage s)
+        returns (GearingTokenStorage storage s)
     {
         bytes32 slot = STORAGE_SLOT_GEARING_NFT;
         assembly {
@@ -102,7 +102,7 @@ abstract contract AbstractGearingNft is
         }
     }
 
-    function __AbstractGearingNft_init(
+    function __AbstractGearingToken_init(
         string memory name,
         string memory symbol,
         address admin,
@@ -116,7 +116,7 @@ abstract contract AbstractGearingNft is
         ) {
             revert NumeratorMustLessThanBasicDecimals();
         }
-        GearingNftStorage storage s = _getGearingNftStorage();
+        GearingTokenStorage storage s = _getGearingTokenStorage();
         s.config = config;
         // Market will burn those tokens after maturity
         config.ft.approve(config.market, UINT_MAX);
@@ -126,19 +126,19 @@ abstract contract AbstractGearingNft is
         if (msg.sender != marketAddr()) {
             revert SenderIsNotTheMarket();
         }
-        _getGearingNftStorage().config.treasurer = treasurer;
+        _getGearingTokenStorage().config.treasurer = treasurer;
     }
 
     function getGtConfig() external view override returns (GtConfig memory) {
-        return _getGearingNftStorage().config;
+        return _getGearingTokenStorage().config;
     }
 
     function marketAddr() public view override returns (address) {
-        return _getGearingNftStorage().config.market;
+        return _getGearingTokenStorage().config.market;
     }
 
     function liquidatable() external view returns (bool) {
-        return _getGearingNftStorage().config.liquidatable;
+        return _getGearingTokenStorage().config.liquidatable;
     }
 
     function mint(
@@ -146,7 +146,7 @@ abstract contract AbstractGearingNft is
         uint128 debtAmt,
         bytes memory collateralData
     ) external override returns (uint256 id) {
-        GearingNftStorage storage s = _getGearingNftStorage();
+        GearingTokenStorage storage s = _getGearingTokenStorage();
         if (msg.sender != s.config.market) {
             revert SenderIsNotTheMarket();
         }
@@ -158,12 +158,12 @@ abstract contract AbstractGearingNft is
         address to,
         uint128 debtAmt,
         bytes memory collateralData,
-        GearingNftStorage storage s
+        GearingTokenStorage storage s
     ) internal returns (uint256 id) {
         LoanInfo memory loan = LoanInfo(debtAmt, collateralData);
         (uint128 ltv, ) = _calculateLtv(s.config.underlyingOracle, loan);
         if (ltv >= s.config.maxLtv) {
-            revert GNftIsNotHealthy(to, debtAmt, ltv, collateralData);
+            revert GtIsNotHealthy(to, debtAmt, ltv, collateralData);
         }
         id = s.total++;
         s.loanMapping[id] = LoanInfo(debtAmt, collateralData);
@@ -184,20 +184,20 @@ abstract contract AbstractGearingNft is
         )
     {
         owner = ownerOf(id);
-        GearingNftStorage storage s = _getGearingNftStorage();
+        GearingTokenStorage storage s = _getGearingTokenStorage();
         LoanInfo memory loan = s.loanMapping[id];
         debtAmt = loan.debtAmt;
         collateralData = loan.collateralData;
         (ltv, ) = _calculateLtv(s.config.underlyingOracle, loan);
     }
 
-    function _burnInternal(uint256 id, GearingNftStorage storage s) internal {
+    function _burnInternal(uint256 id, GearingTokenStorage storage s) internal {
         _burn(id);
         delete s.loanMapping[id];
     }
 
     function merge(uint256[] memory ids) external returns (uint256 newId) {
-        GearingNftStorage storage s = _getGearingNftStorage();
+        GearingTokenStorage storage s = _getGearingTokenStorage();
         uint128 totalDebtAmt;
         bytes memory mergedCollateralData;
         for (uint i = 0; i < ids.length; ++i) {
@@ -220,7 +220,7 @@ abstract contract AbstractGearingNft is
             mergedCollateralData,
             s
         );
-        emit MergeGNfts(msg.sender, newId, ids);
+        emit MergeGts(msg.sender, newId, ids);
     }
 
     function repay(
@@ -228,7 +228,7 @@ abstract contract AbstractGearingNft is
         uint128 repayAmt,
         bool byUnderlying
     ) external override nonReentrant {
-        GearingNftStorage storage s = _getGearingNftStorage();
+        GearingTokenStorage storage s = _getGearingTokenStorage();
         GtConfig memory config = s.config;
 
         if (config.maturity >= block.timestamp) {
@@ -246,7 +246,7 @@ abstract contract AbstractGearingNft is
     }
 
     function _repay(
-        GearingNftStorage storage s,
+        GearingTokenStorage storage s,
         address sender,
         uint256 id,
         uint128 repayAmt
@@ -272,7 +272,7 @@ abstract contract AbstractGearingNft is
             revert SenderIsNotTheOwner(msg.sender, id);
         }
 
-        GearingNftStorage storage s = _getGearingNftStorage();
+        GearingTokenStorage storage s = _getGearingTokenStorage();
         LoanInfo memory loan = s.loanMapping[id];
         loan.collateralData = _removeCollateral(loan, collateralData);
 
@@ -280,7 +280,7 @@ abstract contract AbstractGearingNft is
 
         (uint128 ltv, ) = _calculateLtv(s.config.underlyingOracle, loan);
         if (ltv >= s.config.maxLtv) {
-            revert GNftIsNotHealthy(
+            revert GtIsNotHealthy(
                 msg.sender,
                 loan.debtAmt,
                 ltv,
@@ -301,7 +301,7 @@ abstract contract AbstractGearingNft is
         uint256 id,
         bytes memory collateralData
     ) external override nonReentrant {
-        GearingNftStorage storage s = _getGearingNftStorage();
+        GearingTokenStorage storage s = _getGearingTokenStorage();
         LoanInfo memory loan = s.loanMapping[id];
 
         _transferCollateralFrom(msg.sender, address(this), collateralData);
@@ -318,7 +318,7 @@ abstract contract AbstractGearingNft is
     function getLiquidationInfo(
         uint256 id
     ) external view returns (bool isLiquidable, uint128 maxRepayAmt) {
-        GearingNftStorage storage s = _getGearingNftStorage();
+        GearingTokenStorage storage s = _getGearingTokenStorage();
         LoanInfo memory loan = s.loanMapping[id];
         GtConfig memory config = s.config;
         (isLiquidable, maxRepayAmt, ) = _getLiquidationInfo(loan, config);
@@ -365,7 +365,7 @@ abstract contract AbstractGearingNft is
         uint256 id,
         uint128 repayAmt
     ) external override nonReentrant {
-        GearingNftStorage storage s = _getGearingNftStorage();
+        GearingTokenStorage storage s = _getGearingTokenStorage();
         LoanInfo memory loan = s.loanMapping[id];
         GtConfig memory config = s.config;
         if (!config.liquidatable) {
@@ -378,7 +378,7 @@ abstract contract AbstractGearingNft is
         ) = _getLiquidationInfo(loan, config);
 
         if (!isLiquidable) {
-            revert GNftIsSafe(msg.sender, id);
+            revert GtIsSafe(msg.sender, id);
         }
         if (repayAmt > maxRepayAmt) {
             revert RepayAmtExceedsMaxRepayAmt(repayAmt, maxRepayAmt);

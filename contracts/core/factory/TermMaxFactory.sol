@@ -3,7 +3,7 @@ pragma solidity ^0.8.27;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {ERC20GearingNft, IGearingNft, AggregatorV3Interface} from "../tokens/ERC20GearingNft.sol";
+import {ERC20GearingToken, IGearingToken, AggregatorV3Interface} from "../tokens/ERC20GearingToken.sol";
 import {MintableERC20, IMintableERC20} from "../tokens/MintableERC20.sol";
 import {ITermMaxMarket, TermMaxStorage} from "../TermMaxMarket.sol";
 import {ITermMaxFactory} from "./ITermMaxFactory.sol";
@@ -16,13 +16,13 @@ contract TermMaxFactory is ITermMaxFactory, Ownable {
     string constant PREFIX_GNFT = "GT:";
     string constant STRING_CONNECTION = "-";
 
-    ERC20GearingNft immutable gNftImplement;
+    ERC20GearingToken immutable gtImplement;
     MintableERC20 immutable tokenImplement;
 
     bytes marketBytes;
 
     constructor(address admin) Ownable(admin) {
-        gNftImplement = new ERC20GearingNft();
+        gtImplement = new ERC20GearingToken();
         tokenImplement = new MintableERC20();
     }
 
@@ -51,13 +51,13 @@ contract TermMaxFactory is ITermMaxFactory, Ownable {
         assembly {
             market := create2(0, add(initCode, 0x20), mload(initCode), 0)
         }
-        (IMintableERC20[4] memory tokens, IGearingNft gNft) = _deployTokens(
+        (IMintableERC20[4] memory tokens, IGearingToken gt) = _deployTokens(
             market,
             deployParams
         );
         ITermMaxMarket(market).initialize(
             tokens,
-            gNft,
+            gt,
             deployParams.marketConfig
         );
         Ownable(market).transferOwnership(deployParams.admin);
@@ -66,7 +66,7 @@ contract TermMaxFactory is ITermMaxFactory, Ownable {
     function _deployTokens(
         address market,
         ITermMaxFactory.DeployParams memory deployParams
-    ) internal returns (IMintableERC20[4] memory tokens, IGearingNft gNft) {
+    ) internal returns (IMintableERC20[4] memory tokens, IGearingToken gt) {
         string memory collateralName = deployParams.collateral.name();
         string memory collateralSymbol = deployParams.collateral.symbol();
         {
@@ -103,7 +103,7 @@ contract TermMaxFactory is ITermMaxFactory, Ownable {
             );
         }
 
-        string memory nftName = string(
+        string memory gtName = string(
             abi.encodePacked(
                 PREFIX_GNFT,
                 deployParams.underlying.name(),
@@ -111,7 +111,7 @@ contract TermMaxFactory is ITermMaxFactory, Ownable {
                 collateralName
             )
         );
-        string memory nftSymbol = string(
+        string memory gtSymbol = string(
             abi.encodePacked(
                 PREFIX_GNFT,
                 deployParams.underlying.symbol(),
@@ -119,17 +119,17 @@ contract TermMaxFactory is ITermMaxFactory, Ownable {
                 collateralSymbol
             )
         );
-        gNft = IGearingNft(
+        gt = IGearingToken(
             address(
                 new ERC1967Proxy(
-                    address(gNftImplement),
+                    address(gtImplement),
                     abi.encodeCall(
-                        ERC20GearingNft.initialize,
+                        ERC20GearingToken.initialize,
                         (
-                            nftName,
-                            nftSymbol,
+                            gtName,
+                            gtSymbol,
                             deployParams.admin,
-                            IGearingNft.GtConfig({
+                            IGearingToken.GtConfig({
                                 market: address(market),
                                 collateral: address(deployParams.collateral),
                                 underlying: deployParams.underlying,
