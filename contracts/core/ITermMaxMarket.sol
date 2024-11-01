@@ -99,16 +99,42 @@ interface ITermMaxMarket {
         uint256 underlyingAmt
     );
 
-    function config()
-        external
-        view
-        returns (TermMaxStorage.MarketConfig memory);
+    event UpdateFeeRatio(
+        uint32 lendFeeRatio,
+        uint32 minNLendFeeR,
+        uint32 borrowFeeRatio,
+        uint32 minNBorrowFeeR,
+        uint32 redeemFeeRatio,
+        uint32 leverfeeRatio,
+        uint32 lockingFeeRatio,
+        uint32 protocolFeeRatio
+    );
+
+    event UpdateTreasurer(address indexed treasurer);
 
     function initialize(
         IMintableERC20[4] memory tokens_,
         IGearingNft gNft_,
         TermMaxStorage.MarketConfig memory config_
     ) external;
+
+    function config()
+        external
+        view
+        returns (TermMaxStorage.MarketConfig memory);
+
+    function setFeeRatio(
+        uint32 lendFeeRatio,
+        uint32 minNLendFeeR,
+        uint32 borrowFeeRatio,
+        uint32 minNBorrowFeeR,
+        uint32 redeemFeeRatio,
+        uint32 leverfeeRatio,
+        uint32 lockingFeeRatio,
+        uint32 protocolFeeRatio
+    ) external;
+
+    function setTreasurer(address treasurer) external;
 
     function tokens()
         external
@@ -133,7 +159,7 @@ interface ITermMaxMarket {
         uint128 lpXtAmt
     ) external returns (uint128 ftOutAmt, uint128 xtOutAmt);
 
-    function redeemFxAndXtToUnderlying(uint256 underlyingAmt) external;
+    function redeemFtAndXtToUnderlying(uint256 underlyingAmt) external;
 
     function buyFt(
         uint128 underlyingAmtIn,

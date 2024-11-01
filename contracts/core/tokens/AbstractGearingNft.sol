@@ -19,9 +19,10 @@ abstract contract AbstractGearingNft is
     using SafeCast for uint256;
     using SafeCast for int256;
 
-    error OnlyMarketCanMintGt();
+    error SenderIsNotTheMarket();
     error CanNotMergeLoanWithDiffOwner();
     error GtDoNotSupportLiquidation();
+    error GtIsExpired(uint256 id);
     error GNftIsSafe(address liquidator, uint256 id);
     error GNftIsNotHealthy(
         address owner,
@@ -121,8 +122,23 @@ abstract contract AbstractGearingNft is
         config.ft.approve(config.market, UINT_MAX);
     }
 
+    function setTreasurer(address treasurer) external {
+        if (msg.sender != marketAddr()) {
+            revert SenderIsNotTheMarket();
+        }
+        _getGearingNftStorage().config.treasurer = treasurer;
+    }
+
+    function getGtConfig() external view override returns (GtConfig memory) {
+        return _getGearingNftStorage().config;
+    }
+
     function marketAddr() public view override returns (address) {
-        return owner();
+        return _getGearingNftStorage().config.market;
+    }
+
+    function liquidatable() external view returns (bool) {
+        return _getGearingNftStorage().config.liquidatable;
     }
 
     function mint(
@@ -132,7 +148,7 @@ abstract contract AbstractGearingNft is
     ) external override returns (uint256 id) {
         GearingNftStorage storage s = _getGearingNftStorage();
         if (msg.sender != s.config.market) {
-            revert OnlyMarketCanMintGt();
+            revert SenderIsNotTheMarket();
         }
         _transferCollateralFrom(to, address(this), collateralData);
         id = _mintInternal(to, debtAmt, collateralData, s);
@@ -214,6 +230,11 @@ abstract contract AbstractGearingNft is
     ) external override nonReentrant {
         GearingNftStorage storage s = _getGearingNftStorage();
         GtConfig memory config = s.config;
+
+        if (config.maturity >= block.timestamp) {
+            revert GtIsExpired(id);
+        }
+
         if (byUnderlying) {
             config.underlying.transferFrom(msg.sender, config.market, repayAmt);
         } else {
@@ -415,7 +436,14 @@ abstract contract AbstractGearingNft is
         }
         _transferCollateral(msg.sender, cToLiquidator);
 
-        emit LiquidateGt(id, msg.sender, repayAmt, cToLiquidator, cToTreasurer, remainningCollateralData);
+        emit LiquidateGt(
+            id,
+            msg.sender,
+            repayAmt,
+            cToLiquidator,
+            cToTreasurer,
+            remainningCollateralData
+        );
     }
 
     function _calcLiquidationResult(

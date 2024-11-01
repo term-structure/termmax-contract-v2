@@ -3,8 +3,6 @@ pragma solidity ^0.8.27;
 
 library TermMaxStorage {
     struct MarketConfig {
-        uint256 minLeveragedXt;
-        uint256 minLeveredFt;
         address treasurer;
         uint64 maturity;
         uint64 openTime;
@@ -12,7 +10,13 @@ library TermMaxStorage {
         // The liquidity scaling factor
         uint32 lsf;
         uint32 lendFeeRatio;
+        // The minmally notional lending fee ratio
+        uint32 minNLendFeeR;
         uint32 borrowFeeRatio;
+        // The minmally notional borrowing fee ratio
+        uint32 minNBorrowFeeR;
+        uint32 redeemFeeRatio;
+        uint32 leverfeeRatio;
         // The locking percentage of transaction fees
         uint32 lockingFeeRatio;
         // The loan to collateral while generating ft/xt tokens

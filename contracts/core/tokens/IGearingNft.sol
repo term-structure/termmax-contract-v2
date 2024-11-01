@@ -22,6 +22,12 @@ interface IGearingNft is IERC721 {
         bool liquidatable;
     }
 
+    function setTreasurer(address treasurer) external;
+
+    function getGtConfig() external view returns (GtConfig memory);
+
+    function liquidatable() external view returns (bool);
+
     function marketAddr() external view returns (address);
 
     function mint(

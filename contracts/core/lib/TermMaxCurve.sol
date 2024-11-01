@@ -153,6 +153,10 @@ library TermMaxCurve {
         feeAmt = _calculateFeeInternal(deltaFt, deltaXt, feeRatio, ltv);
     }
 
+    function _max(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a > b ? a : b;
+    }
+
     function _calculateFeeInternal(
         uint256 deltaFt,
         uint256 deltaXt,

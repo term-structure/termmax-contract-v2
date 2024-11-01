@@ -91,16 +91,15 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         if (address(ft) != address(0)) {
             revert MarketHasBeenInitialized();
         }
-        if (
-            config_.lsf > Constants.DECIMAL_BASE ||
-            config_.initialLtv > Constants.DECIMAL_BASE ||
-            config_.lendFeeRatio > Constants.DECIMAL_BASE ||
-            config_.borrowFeeRatio > Constants.DECIMAL_BASE ||
-            int(config_.apr).toUint256() > Constants.DECIMAL_BASE ||
-            config_.protocolFeeRatio > Constants.DECIMAL_BASE
-        ) {
-            revert NumeratorMustLessThanBasicDecimals();
-        }
+        // if (
+        //     config_.lsf > Constants.DECIMAL_BASE ||
+        //     config_.initialLtv > Constants.DECIMAL_BASE ||
+        //     config_.lendFeeRatio > Constants.DECIMAL_BASE ||
+        //     config_.borrowFeeRatio > Constants.DECIMAL_BASE ||
+        //     int(config_.apr).toUint256() > Constants.DECIMAL_BASE
+        // ) {
+        //     revert NumeratorMustLessThanBasicDecimals();
+        // }
 
         ft = tokens_[0];
         xt = tokens_[1];
@@ -109,6 +108,44 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         gNft = gNft_;
 
         _config = config_;
+    }
+
+    function setFeeRatio(
+        uint32 lendFeeRatio,
+        uint32 minNLendFeeR,
+        uint32 borrowFeeRatio,
+        uint32 minNBorrowFeeR,
+        uint32 redeemFeeRatio,
+        uint32 leverfeeRatio,
+        uint32 lockingFeeRatio,
+        uint32 protocolFeeRatio
+    ) external override onlyOwner isOpen {
+        TermMaxStorage.MarketConfig memory mConfig = _config;
+        mConfig.lendFeeRatio = lendFeeRatio;
+        mConfig.minNLendFeeR = minNLendFeeR;
+        mConfig.borrowFeeRatio = borrowFeeRatio;
+        mConfig.minNBorrowFeeR = minNBorrowFeeR;
+        mConfig.redeemFeeRatio = redeemFeeRatio;
+        mConfig.leverfeeRatio = leverfeeRatio;
+        mConfig.lockingFeeRatio = lockingFeeRatio;
+        mConfig.protocolFeeRatio = protocolFeeRatio;
+        emit UpdateFeeRatio(
+            lendFeeRatio,
+            minNLendFeeR,
+            borrowFeeRatio,
+            minNBorrowFeeR,
+            redeemFeeRatio,
+            leverfeeRatio,
+            lockingFeeRatio,
+            protocolFeeRatio
+        );
+    }
+
+    function setTreasurer(address treasurer) external onlyOwner {
+        _config.treasurer = treasurer;
+        gNft.setTreasurer(treasurer);
+
+        emit UpdateTreasurer(treasurer);
     }
 
     // input underlying
@@ -331,8 +368,13 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
                 mConfig.lendFeeRatio,
                 mConfig.initialLtv
             );
+            feeAmt = TermMaxCurve._max(
+                feeAmt,
+                (underlyingAmtIn * mConfig.minNLendFeeR) /
+                    Constants.DECIMAL_BASE
+            );
             // Fee to prootocol
-            feeAmt = _tranferFeeToTreasure(
+            feeAmt = _tranferFeeToTreasurer(
                 mConfig.treasurer,
                 feeAmt,
                 mConfig.protocolFeeRatio
@@ -366,8 +408,13 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
                 mConfig.borrowFeeRatio,
                 mConfig.initialLtv
             );
+            feeAmt = TermMaxCurve._max(
+                feeAmt,
+                (underlyingAmtIn * mConfig.minNBorrowFeeR) /
+                    Constants.DECIMAL_BASE
+            );
             // Fee to prootocol
-            feeAmt = _tranferFeeToTreasure(
+            feeAmt = _tranferFeeToTreasurer(
                 mConfig.treasurer,
                 feeAmt,
                 mConfig.protocolFeeRatio
@@ -458,6 +505,10 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
                 mConfig.borrowFeeRatio,
                 mConfig.initialLtv
             );
+            feeAmt = TermMaxCurve._max(
+                feeAmt,
+                (netOut * mConfig.minNBorrowFeeR) / Constants.DECIMAL_BASE
+            );
         } else {
             uint newFtReserve;
             uint newXtReserve;
@@ -475,6 +526,10 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
                 mConfig.lendFeeRatio,
                 mConfig.initialLtv
             );
+            feeAmt = TermMaxCurve._max(
+                feeAmt,
+                (netOut * mConfig.minNLendFeeR) / Constants.DECIMAL_BASE
+            );
         }
         netOut -= feeAmt;
         if (netOut < minUnderlyingOut) {
@@ -486,7 +541,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
             );
         }
         // Fee to prootocol
-        feeAmt = _tranferFeeToTreasure(
+        feeAmt = _tranferFeeToTreasurer(
             mConfig.treasurer,
             feeAmt,
             mConfig.protocolFeeRatio
@@ -547,10 +602,6 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
     ) internal returns (uint256 nftId) {
         xt.transferFrom(sender, address(this), debt);
 
-        if (debt < _config.minLeveragedXt) {
-            revert DebtTooSmall(sender, debt);
-        }
-
         // Send debt to borrower
         underlying.transfer(sender, debt);
         // Callback function
@@ -575,13 +626,13 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         uint128 debt,
         bytes calldata collateralData
     ) internal returns (uint256 nftId) {
-        if (debt < _config.minLeveredFt) {
-            revert DebtTooSmall(sender, debt);
-        }
         // Mint G-NFT
         nftId = gNft.mint(sender, debt, collateralData);
 
-        ft.mint(sender, debt);
+        TermMaxStorage.MarketConfig memory mConfig = _config;
+        uint leverFee = (debt * mConfig.leverfeeRatio) / Constants.DECIMAL_BASE;
+        ft.transfer(mConfig.treasurer, leverFee);
+        ft.mint(sender, debt - leverFee);
 
         emit MintGNft(sender, nftId, debt, collateralData);
     }
@@ -593,8 +644,9 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
     function _redeem(address sender) internal {
         TermMaxStorage.MarketConfig memory mConfig = _config;
         {
-            uint liquidationDeadline = mConfig.maturity +
-                Constants.LIQUIDATION_WINDOW;
+            uint liquidationDeadline = gNft.liquidatable()
+                ? mConfig.maturity + Constants.LIQUIDATION_WINDOW
+                : mConfig.maturity;
             if (block.timestamp < liquidationDeadline) {
                 revert CanNotRedeemBeforeFinalLiquidationDeadline(
                     liquidationDeadline
@@ -655,6 +707,13 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         // Transfer underlying output
         uint underlyingAmt = (underlying.balanceOf(address(this)) * ratio) /
             Constants.DECIMAL_BASE;
+        if (mConfig.redeemFeeRatio > 0) {
+            underlyingAmt = _tranferFeeToTreasurer(
+                mConfig.treasurer,
+                underlyingAmt,
+                mConfig.redeemFeeRatio
+            );
+        }
         underlying.transfer(sender, underlyingAmt);
         emit Redeem(
             sender,
@@ -679,40 +738,24 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         ft.burn(amount);
     }
 
-    function _tranferFeeToTreasure(
+    function _tranferFeeToTreasurer(
         address treasurer,
         uint256 totalFee,
         uint32 protocolFeeRatio
-    ) internal returns (uint256 feeToMarket) {
+    ) internal returns (uint256 remainningFee) {
         uint feeToProtocol = (totalFee * protocolFeeRatio) /
             Constants.DECIMAL_BASE;
         underlying.transfer(treasurer, feeToProtocol);
-        feeToMarket = totalFee - feeToProtocol;
+        remainningFee = totalFee - feeToProtocol;
     }
 
-    function _transferToken(IERC20 token, address to, uint256 value) internal {
-        _transferTokenFrom(token, address(this), to, value);
-    }
-
-    function _transferTokenFrom(
-        IERC20 token,
-        address from,
-        address to,
-        uint256 value
-    ) internal {
-        if ((from == address(this) && to == address(this)) || value == 0) {
-            return;
-        }
-        token.transferFrom(from, to, value);
-    }
-
-    function redeemFxAndXtToUnderlying(
+    function redeemFtAndXtToUnderlying(
         uint256 underlyingAmt
     ) external override nonReentrant isOpen {
-        _redeemFxAndXtToUnderlying(msg.sender, underlyingAmt);
+        _redeemFtAndXtToUnderlying(msg.sender, underlyingAmt);
     }
 
-    function _redeemFxAndXtToUnderlying(
+    function _redeemFtAndXtToUnderlying(
         address sender,
         uint256 underlyingAmt
     ) internal {
