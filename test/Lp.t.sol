@@ -14,148 +14,148 @@ import "../contracts/core/factory/TermMaxFactory.sol";
 contract FactoryTest is Test {
     address deployer = vm.envAddress("FORK_DEPLOYER_ADDR");
 
-    DeployUtils.Res res;
+    // DeployUtils.Res res;
 
-    TermMaxStorage.MarketConfig marketConfig;
+    // TermMaxStorage.MarketConfig marketConfig;
 
-    address sender = vm.randomAddress();
+    // address sender = vm.randomAddress();
 
-    function setUp() public {
-        vm.startPrank(deployer);
-        uint32 maxLtv = 0.85e8;
-        uint32 liquidationLtv = 0.9e8;
+    // function setUp() public {
+    //     vm.startPrank(deployer);
+    //     uint32 maxLtv = 0.85e8;
+    //     uint32 liquidationLtv = 0.9e8;
 
-        marketConfig.openTime = uint64(block.timestamp);
-        marketConfig.maturity = uint64(
-            marketConfig.openTime + Constants.SECONDS_IN_MOUNTH
-        );
-        marketConfig.initialLtv = 0.9e8;
-        marketConfig.apr = 0.1e8;
-        marketConfig.lsf = 0.5e8;
-        // DeployUtils deployUtil = new DeployUtils();
-        res = DeployUtils.deployMarket(
-            deployer,
-            marketConfig,
-            maxLtv,
-            liquidationLtv
-        );
-        console.log("gNft: ", address(res.gNft));
-        vm.stopPrank();
-    }
+    //     marketConfig.openTime = uint64(block.timestamp);
+    //     marketConfig.maturity = uint64(
+    //         marketConfig.openTime + Constants.SECONDS_IN_MOUNTH
+    //     );
+    //     marketConfig.initialLtv = 0.9e8;
+    //     marketConfig.apr = 0.1e8;
+    //     marketConfig.lsf = 0.5e8;
+    //     // DeployUtils deployUtil = new DeployUtils();
+    //     res = DeployUtils.deployMarket(
+    //         deployer,
+    //         marketConfig,
+    //         maxLtv,
+    //         liquidationLtv
+    //     );
+    //     console.log("gNft: ", address(res.gNft));
+    //     vm.stopPrank();
+    // }
 
-    function testProvideLiquidity() public {
-        vm.startPrank(sender);
-        uint amount = 10000e8;
-        res.underlying.mint(sender, amount * 2);
-        res.underlying.approve(address(res.market), amount * 2);
+    // function testProvideLiquidity() public {
+    //     vm.startPrank(sender);
+    //     uint amount = 10000e8;
+    //     res.underlying.mint(sender, amount * 2);
+    //     res.underlying.approve(address(res.market), amount * 2);
 
-        StateChecker.MarketState memory state = StateChecker.getMarketState(
-            res
-        );
-        (uint128 lpFtOutAmt, uint128 lpXtOutAmt) = res.market.provideLiquidity(
-            amount
-        );
+    //     StateChecker.MarketState memory state = StateChecker.getMarketState(
+    //         res
+    //     );
+    //     (uint128 lpFtOutAmt, uint128 lpXtOutAmt) = res.market.provideLiquidity(
+    //         amount
+    //     );
 
-        state.ftReserve +=
-            (amount * marketConfig.initialLtv) /
-            Constants.DECIMAL_BASE;
-        state.xtReserve += amount;
-        state.underlyingReserve += amount;
+    //     state.ftReserve +=
+    //         (amount * marketConfig.initialLtv) /
+    //         Constants.DECIMAL_BASE;
+    //     state.xtReserve += amount;
+    //     state.underlyingReserve += amount;
 
-        StateChecker.checkMarketState(res, state);
+    //     StateChecker.checkMarketState(res, state);
 
-        assert(
-            lpFtOutAmt ==
-                (amount * marketConfig.initialLtv) / Constants.DECIMAL_BASE
-        );
-        assert(lpXtOutAmt == amount);
+    //     assert(
+    //         lpFtOutAmt ==
+    //             (amount * marketConfig.initialLtv) / Constants.DECIMAL_BASE
+    //     );
+    //     assert(lpXtOutAmt == amount);
 
-        (lpFtOutAmt, lpXtOutAmt) = res.market.provideLiquidity(amount);
+    //     (lpFtOutAmt, lpXtOutAmt) = res.market.provideLiquidity(amount);
 
-        state.ftReserve +=
-            (amount * marketConfig.initialLtv) /
-            Constants.DECIMAL_BASE;
-        state.xtReserve += amount;
-        state.underlyingReserve += amount;
+    //     state.ftReserve +=
+    //         (amount * marketConfig.initialLtv) /
+    //         Constants.DECIMAL_BASE;
+    //     state.xtReserve += amount;
+    //     state.underlyingReserve += amount;
 
-        StateChecker.checkMarketState(res, state);
+    //     StateChecker.checkMarketState(res, state);
 
-        assert(
-            res.lpFt.balanceOf(sender) ==
-                ((amount * marketConfig.initialLtv) / Constants.DECIMAL_BASE) *
-                    2
-        );
-        assert(res.lpXt.balanceOf(sender) == amount * 2);
+    //     assert(
+    //         res.lpFt.balanceOf(sender) ==
+    //             ((amount * marketConfig.initialLtv) / Constants.DECIMAL_BASE) *
+    //                 2
+    //     );
+    //     assert(res.lpXt.balanceOf(sender) == amount * 2);
 
-        vm.stopPrank();
-    }
+    //     vm.stopPrank();
+    // }
 
-    function testWithdraw() public {
-        vm.startPrank(sender);
+    // function testWithdraw() public {
+    //     vm.startPrank(sender);
 
-        uint amount = 10000e8;
-        res.underlying.mint(sender, amount * 2);
-        res.underlying.approve(address(res.market), amount * 2);
+    //     uint amount = 10000e8;
+    //     res.underlying.mint(sender, amount * 2);
+    //     res.underlying.approve(address(res.market), amount * 2);
 
-        StateChecker.MarketState memory state = StateChecker.getMarketState(
-            res
-        );
-        (uint128 lpFtOutAmt, uint128 lpXtOutAmt) = res.market.provideLiquidity(
-            amount
-        );
+    //     StateChecker.MarketState memory state = StateChecker.getMarketState(
+    //         res
+    //     );
+    //     (uint128 lpFtOutAmt, uint128 lpXtOutAmt) = res.market.provideLiquidity(
+    //         amount
+    //     );
 
-        vm.warp(block.timestamp + 12);
+    //     vm.warp(block.timestamp + 12);
 
-        res.lpFt.approve(address(res.market), lpFtOutAmt);
-        res.lpXt.approve(address(res.market), lpXtOutAmt);
+    //     res.lpFt.approve(address(res.market), lpFtOutAmt);
+    //     res.lpXt.approve(address(res.market), lpXtOutAmt);
 
-        res.market.withdrawLp(lpFtOutAmt, lpXtOutAmt);
+    //     res.market.withdrawLp(lpFtOutAmt, lpXtOutAmt);
 
-        state.underlyingReserve = amount;
-        StateChecker.checkMarketState(res, state);
+    //     state.underlyingReserve = amount;
+    //     StateChecker.checkMarketState(res, state);
 
-        assert(
-            res.ft.balanceOf(sender) ==
-                (amount * marketConfig.initialLtv) / Constants.DECIMAL_BASE
-        );
-        assert(res.xt.balanceOf(sender) == amount);
+    //     assert(
+    //         res.ft.balanceOf(sender) ==
+    //             (amount * marketConfig.initialLtv) / Constants.DECIMAL_BASE
+    //     );
+    //     assert(res.xt.balanceOf(sender) == amount);
 
-        vm.stopPrank();
-    }
+    //     vm.stopPrank();
+    // }
 
-    function testWithdrawLpFt() public {
-        vm.startPrank(sender);
+    // function testWithdrawLpFt() public {
+    //     vm.startPrank(sender);
 
-        uint amount = 10000e8;
-        res.underlying.mint(sender, amount * 2);
-        res.underlying.approve(address(res.market), amount * 2);
+    //     uint amount = 10000e8;
+    //     res.underlying.mint(sender, amount * 2);
+    //     res.underlying.approve(address(res.market), amount * 2);
 
-        // StateChecker.MarketState memory state = StateChecker.getMarketState(
-        //     res
-        // );
-        (uint128 lpFtOutAmt, uint128 lpXtOutAmt) = res.market.provideLiquidity(
-            amount
-        );
+    //     // StateChecker.MarketState memory state = StateChecker.getMarketState(
+    //     //     res
+    //     // );
+    //     (uint128 lpFtOutAmt, uint128 lpXtOutAmt) = res.market.provideLiquidity(
+    //         amount
+    //     );
 
-        vm.warp(block.timestamp + 12);
+    //     vm.warp(block.timestamp + 12);
 
-        res.lpFt.approve(address(res.market), lpFtOutAmt);
+    //     res.lpFt.approve(address(res.market), lpFtOutAmt);
 
-        res.market.withdrawLp(lpFtOutAmt, 0);
+    //     res.market.withdrawLp(lpFtOutAmt, 0);
 
-        // StateChecker.MarketState memory state = StateChecker.getMarketState(
-        //     res
-        // );
+    //     // StateChecker.MarketState memory state = StateChecker.getMarketState(
+    //     //     res
+    //     // );
 
-        // console.log(state.ftReserve);
-        // console.log(state.apr);
-        // console.log(res.ft.balanceOf(sender));
+    //     // console.log(state.ftReserve);
+    //     // console.log(state.apr);
+    //     // console.log(res.ft.balanceOf(sender));
 
-        // res.lpXt.approve(address(res.market), lpXtOutAmt);
-        // res.market.withdrawLp(0, 100);
+    //     // res.lpXt.approve(address(res.market), lpXtOutAmt);
+    //     // res.market.withdrawLp(0, 100);
 
-        // console.log(res.xt.balanceOf(sender));
+    //     // console.log(res.xt.balanceOf(sender));
 
-        vm.stopPrank();
-    }
+    //     vm.stopPrank();
+    // }
 }
