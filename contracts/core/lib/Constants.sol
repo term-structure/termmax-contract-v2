@@ -1,11 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
+/**
+ * @title The general constants of Term Max
+ * @author Term Structure Labs
+ */
 library Constants {
+    /// @notice The base decimals of ratio
     uint256 constant DECIMAL_BASE = 1e8;
+    /// @notice The square of the base decimals
     uint256 constant DECIMAL_BASE_SQ = 1e16;
+    /// @notice The days of one year
     uint256 constant DAYS_IN_YEAR = 365;
-    uint256 constant SECONDS_IN_DAY = 86400;
-    uint256 constant LIQUIDATION_WINDOW = 86400;
-    uint256 constant SECONDS_IN_MOUNTH = 2592000;
+    /// @notice The seconds of one day
+    uint256 constant SECONDS_IN_DAY = 1 days;
+    /// @notice The window time left for the liquidation bot after the market expires
+    uint256 constant LIQUIDATION_WINDOW = 1 days;
 }

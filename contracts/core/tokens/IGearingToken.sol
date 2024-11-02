@@ -5,7 +5,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 
-interface IGearingNft is IERC721 {
+interface IGearingToken is IERC721 {
     struct GtConfig {
         address market;
         address collateral;
@@ -14,13 +14,19 @@ interface IGearingNft is IERC721 {
         address treasurer;
         AggregatorV3Interface underlyingOracle;
         uint64 maturity;
-        // The loan to collateral of g-nft liquidation threshhold
+        // The loan to collateral of g-token liquidation threshhold
         uint32 liquidationLtv;
-        // The loan to collateral while minting g-nft
+        // The loan to collateral while minting g-token
         uint32 maxLtv;
         // Whether liquidating gt when expired or it's ltv bigger than liquidationLtv
         bool liquidatable;
     }
+
+    function setTreasurer(address treasurer) external;
+
+    function getGtConfig() external view returns (GtConfig memory);
+
+    function liquidatable() external view returns (bool);
 
     function marketAddr() external view returns (address);
 
@@ -51,7 +57,7 @@ interface IGearingNft is IERC721 {
     function addCollateral(uint256 id, bytes memory collateralData) external;
 
     /// @notice Return the liquidation info of the loan
-    /// @param id The id of the G-Nft
+    /// @param id The id of the G-token
     /// @return isLiquidable Whether the loan is liquidable
     /// @return maxRepayAmt The maximum amount of the debt to be repaid
     function getLiquidationInfo(

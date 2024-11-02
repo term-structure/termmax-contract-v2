@@ -9,14 +9,15 @@ import {StateChecker} from "./utils/StateChecker.sol";
 import {ITermMaxMarket, TermMaxMarket, Constants} from "../contracts/core/TermMaxMarket.sol";
 import {MockERC20, ERC20} from "../contracts/test/MockERC20.sol";
 import {MockPriceFeed} from "../contracts/test/MockPriceFeed.sol";
-import "../contracts/core/factory/TermMaxFactory.sol";
+import {ITermMaxFactory, TermMaxFactory, IMintableERC20, IGearingToken, AggregatorV3Interface} from "../contracts/core/factory/TermMaxFactory.sol";
+import "../contracts/core/storage/TermMaxStorage.sol";
 
 contract FactoryTest is Test {
     address deployer = vm.envAddress("FORK_DEPLOYER_ADDR");
 
     DeployUtils.Res res;
 
-    TermMaxStorage.MarketConfig marketConfig;
+    MarketConfig marketConfig;
 
     address sender = vm.randomAddress();
 
@@ -27,7 +28,7 @@ contract FactoryTest is Test {
 
         marketConfig.openTime = uint64(block.timestamp);
         marketConfig.maturity = uint64(
-            marketConfig.openTime + Constants.SECONDS_IN_MOUNTH
+            marketConfig.openTime + Constants.SECONDS_IN_DAY * 30
         );
         marketConfig.initialLtv = 0.9e8;
         marketConfig.apr = 0.1e8;
@@ -39,7 +40,6 @@ contract FactoryTest is Test {
             maxLtv,
             liquidationLtv
         );
-        console.log("gNft: ", address(res.gNft));
         vm.stopPrank();
     }
 

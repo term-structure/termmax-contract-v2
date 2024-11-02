@@ -1,11 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import {ERC20PermitUpgradeable, ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
+import {ERC20PermitUpgradeable, ERC20Upgradeable, IERC20Permit} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {IMintableERC20} from "./IMintableERC20.sol";
 
+/**
+ * @title Term Max ERC20 token
+ * @author Term Structure Labs
+ */
 contract MintableERC20 is
     UUPSUpgradeable,
     ERC20PermitUpgradeable,
@@ -13,12 +17,15 @@ contract MintableERC20 is
     IMintableERC20
 {
     struct MintableERC20Storage {
-        uint8 _decimals;
+        /// @notice The token's decimals
+        uint8 decimals;
     }
 
     bytes32 internal constant STORAGE_SLOT_MINTABLE_ERC20 =
         bytes32(uint256(keccak256("TermMax.storage.MintableERC20")) - 1);
 
+    /// @notice Return the storage of this contract
+    /// @return s The storage from 'STORAGE_SLOT_MINTABLE_ERC20' slot
     function _getMintableERC20Storage()
         private
         pure
@@ -30,6 +37,11 @@ contract MintableERC20 is
         }
     }
 
+    /// @notice Initial function
+    /// @param market The market's address
+    /// @param name The token's name
+    /// @param symbol The token's symbol
+    /// @param _decimals The token's decimals
     function initialize(
         address market,
         string memory name,
@@ -41,17 +53,26 @@ contract MintableERC20 is
         __Ownable_init(market);
         MintableERC20Storage
             storage mintableStorage = _getMintableERC20Storage();
-        mintableStorage._decimals = _decimals;
+        mintableStorage.decimals = _decimals;
     }
 
+    /**
+     * @inheritdoc IMintableERC20
+     */
     function mint(address to, uint256 amount) external override onlyOwner {
         _mint(to, amount);
     }
 
+    /**
+     * @inheritdoc IMintableERC20
+     */
     function marketAddr() public view override returns (address) {
         return owner();
     }
 
+    /**
+     * @inheritdoc IMintableERC20
+     */
     function burn(uint256 amount) external override onlyOwner {
         _burn(msg.sender, amount);
     }
@@ -74,6 +95,9 @@ contract MintableERC20 is
         super.permit(owner, spender, value, deadline, v, r, s);
     }
 
+    /**
+     * @inheritdoc IMintableERC20
+     */
     function decimals()
         public
         view
@@ -82,8 +106,11 @@ contract MintableERC20 is
     {
         MintableERC20Storage
             storage mintableStorage = _getMintableERC20Storage();
-        return mintableStorage._decimals;
+        return mintableStorage.decimals;
     }
 
+    /**
+     * @inheritdoc UUPSUpgradeable
+     */
     function _authorizeUpgrade(address) internal virtual override onlyOwner {}
 }

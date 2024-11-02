@@ -10,14 +10,15 @@ import {SwapUtils} from "./utils/SwapUtils.sol";
 import {ITermMaxMarket, TermMaxMarket, Constants} from "../contracts/core/TermMaxMarket.sol";
 import {MockERC20, ERC20} from "../contracts/test/MockERC20.sol";
 import {MockPriceFeed} from "../contracts/test/MockPriceFeed.sol";
-import "../contracts/core/factory/TermMaxFactory.sol";
+import {ITermMaxFactory, TermMaxFactory, IMintableERC20, IGearingToken, AggregatorV3Interface} from "../contracts/core/factory/TermMaxFactory.sol";
+import "../contracts/core/storage/TermMaxStorage.sol";
 
 contract SwapTest is Test {
     address deployer = vm.envAddress("FORK_DEPLOYER_ADDR");
 
     DeployUtils.Res res;
 
-    TermMaxStorage.MarketConfig marketConfig;
+    MarketConfig marketConfig;
 
     address sender = vm.randomAddress();
     address treasurer = vm.randomAddress();
@@ -93,7 +94,7 @@ contract SwapTest is Test {
                 vm.parseJsonString(testdata, ".marketConfig.borrowFeeRatio")
             )
         );
-        marketConfig.lockingFeeRatio = uint32(
+        marketConfig.lockingPercentage = uint32(
             vm.parseUint(
                 vm.parseJsonString(testdata, ".marketConfig.lockingFeeRatio")
             )

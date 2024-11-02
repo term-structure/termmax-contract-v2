@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 import {IERC20Metadata, IERC20} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {IGearingNft, AggregatorV3Interface} from "../tokens/ERC20GearingNft.sol";
+import {IGearingToken, AggregatorV3Interface} from "../tokens/ERC20GearingToken.sol";
 import {IMintableERC20} from "../tokens/MintableERC20.sol";
-import {TermMaxStorage} from "../TermMaxMarket.sol";
+import "../storage/TermMaxStorage.sol";
 
 interface ITermMaxFactory {
     struct DeployParams {
@@ -15,7 +15,7 @@ interface ITermMaxFactory {
         uint32 liquidationLtv;
         uint32 maxLtv;
         bool liquidatable;
-        TermMaxStorage.MarketConfig marketConfig;
+        MarketConfig marketConfig;
     }
 
     function createERC20Market(
