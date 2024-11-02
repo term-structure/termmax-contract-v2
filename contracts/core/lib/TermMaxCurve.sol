@@ -222,9 +222,7 @@ library TermMaxCurve {
         uint ac = ((xtPlusBeta * params.amount) * config.initialLtv) /
             Constants.DECIMAL_BASE;
         uint deltaXt = ((negB - _sqrt(negB * negB - 4 * ac)) *
-            Constants.DECIMAL_BASE) /
-            config.initialLtv /
-            2;
+            Constants.DECIMAL_BASE) / (config.initialLtv * 2);
         uint deltaFt = params.amount -
             (deltaXt * config.initialLtv) /
             Constants.DECIMAL_BASE;
@@ -269,9 +267,7 @@ library TermMaxCurve {
             Constants.DECIMAL_BASE;
 
         uint deltaXt = ((_sqrt((b * b + 4 * negAc)) - b) *
-            Constants.DECIMAL_BASE) /
-            config.initialLtv /
-            2;
+            Constants.DECIMAL_BASE) / (config.initialLtv * 2);
         uint deltaFt = ftPlusAlpha -
             (ftPlusAlpha * xtPlusBeta) /
             (xtPlusBeta + deltaXt);
@@ -320,8 +316,7 @@ library TermMaxCurve {
                 Constants.DECIMAL_BASE;
             deltaXt =
                 ((_sqrt(b * b + 4 * ac) - b) * Constants.DECIMAL_BASE) /
-                config.initialLtv /
-                2;
+                (config.initialLtv * 2);
             deltaFt =
                 ((params.amount - deltaXt) * config.initialLtv) /
                 Constants.DECIMAL_BASE;
@@ -368,9 +363,7 @@ library TermMaxCurve {
             Constants.DECIMAL_BASE;
 
         uint deltaXt = ((negB - _sqrt(negB * negB - 4 * ac)) *
-            Constants.DECIMAL_BASE) /
-            config.initialLtv /
-            2;
+            Constants.DECIMAL_BASE) / (config.initialLtv * 2);
         uint deltaFt = (ftPlusAlpha * xtPlusBeta) /
             (xtPlusBeta - deltaXt) -
             ftPlusAlpha;
