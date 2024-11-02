@@ -189,5 +189,14 @@ interface ITermMaxMarket {
         bytes calldata callbackData
     ) external returns (uint256 gtId);
 
-    function redeem() external;
+    function redeem(uint256[4] calldata amountArray) external;
+
+    // function redeemByPermit(
+    //     address sender,
+    //     uint256[4] calldata amountArray,
+    //     uint256[4] calldata deadlineArray,
+    //     uint8[4] calldata vArray,
+    //     bytes32[4] calldata rArrray,
+    //     bytes32[4] calldata sArray
+    // ) external;
 }

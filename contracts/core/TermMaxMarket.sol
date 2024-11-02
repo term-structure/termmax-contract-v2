@@ -2,6 +2,7 @@
 pragma solidity ^0.8.27;
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {IERC20Metadata, IERC20} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
@@ -14,7 +15,7 @@ import {TermMaxCurve} from "./lib/TermMaxCurve.sol";
 import {Constants} from "./lib/Constants.sol";
 import "./storage/TermMaxStorage.sol";
 
-contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
+contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
     using SafeCast for uint256;
     using SafeCast for int256;
 
@@ -612,11 +613,38 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         emit MintGt(sender, gtId, debt, collateralData);
     }
 
-    function redeem() external virtual override nonReentrant {
-        _redeem(msg.sender);
+    function redeem(
+        uint256[4] calldata amountArray
+    ) external virtual override nonReentrant {
+        _redeem(msg.sender, amountArray);
     }
 
-    function _redeem(address sender) internal {
+    // function redeemByPermit(
+    //     address sender,
+    //     uint256[4] calldata amountArray,
+    //     uint256[4] calldata deadlineArray,
+    //     uint8[4] calldata vArray,
+    //     bytes32[4] calldata rArrray,
+    //     bytes32[4] calldata sArray
+    // ) external virtual override nonReentrant {
+    //     IMintableERC20[4] memory permitTokens = [lpFt, lpXt, ft, xt];
+    //     for (uint i = 0; i < amountArray.length; ++i) {
+    //         if (amountArray[i] > 0) {
+    //             permitTokens[i].permit(
+    //                 sender,
+    //                 address(this),
+    //                 amountArray[i],
+    //                 deadlineArray[i],
+    //                 vArray[i],
+    //                 rArrray[i],
+    //                 sArray[i]
+    //             );
+    //         }
+    //     }
+    //     _redeem(sender, amountArray);
+    // }
+
+    function _redeem(address sender, uint256[4] calldata amountArray) internal {
         MarketConfig memory mConfig = _config;
         {
             uint liquidationDeadline = gt.liquidatable()
@@ -639,7 +667,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         // uint fee;
         {
             // Calculate lp tokens output
-            uint lpFtAmt = lpFt.balanceOf(sender);
+            uint lpFtAmt = amountArray[0];
             if (lpFtAmt > 0) {
                 lpFt.transferFrom(sender, address(this), lpFtAmt);
                 uint lpFtTotalSupply = lpFt.totalSupply();
@@ -647,7 +675,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
                 userPoint += (lpFtAmt * ftReserve) / lpFtTotalSupply;
                 lpFt.burn(lpFtAmt);
             }
-            uint lpXtAmt = lpXt.balanceOf(sender);
+            uint lpXtAmt = amountArray[1];
             if (lpXtAmt > 0) {
                 lpXt.transferFrom(sender, address(this), lpXtAmt);
                 uint lpXtTotalSupply = lpXt.totalSupply();
@@ -662,13 +690,13 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
             (xt.totalSupply() * k) /
             Constants.DECIMAL_BASE;
         {
-            uint ftAmt = ft.balanceOf(sender);
+            uint ftAmt = amountArray[2];
             if (ftAmt > 0) {
                 ft.transferFrom(sender, address(this), ftAmt);
                 userPoint += ftAmt;
                 ft.burn(ftAmt);
             }
-            uint xtAmt = xt.balanceOf(sender);
+            uint xtAmt = amountArray[3];
             if (xtAmt > 0) {
                 xt.transferFrom(sender, address(this), xtAmt);
                 userPoint += (xtAmt * k) / Constants.DECIMAL_BASE;
@@ -743,5 +771,13 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable {
         underlying.transfer(sender, underlyingAmt);
 
         emit RedeemFxAndXtToUnderlying(sender, underlyingAmt);
+    }
+
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    function unpause() external onlyOwner {
+        _unpause();
     }
 }
