@@ -26,7 +26,7 @@ library StateChecker {
         assert(res.lpXt.balanceOf(market) == expect.lpXtReserve);
         assert(res.underlying.balanceOf(market) == expect.underlyingReserve);
         assert(
-            res.collateral.balanceOf(address(res.gNft)) ==
+            res.collateral.balanceOf(address(res.gt)) ==
                 expect.collateralReserve
         );
     }
@@ -41,6 +41,6 @@ library StateChecker {
         state.lpFtReserve = res.lpFt.balanceOf(market);
         state.lpXtReserve = res.lpXt.balanceOf(market);
         state.underlyingReserve = res.underlying.balanceOf(market);
-        state.collateralReserve = res.collateral.balanceOf(address(res.gNft));
+        state.collateralReserve = res.collateral.balanceOf(address(res.gt));
     }
 }

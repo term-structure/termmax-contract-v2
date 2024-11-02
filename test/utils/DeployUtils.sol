@@ -5,7 +5,8 @@ import {console} from "forge-std/Script.sol";
 import {ITermMaxMarket, TermMaxMarket, Constants} from "../../contracts/core/TermMaxMarket.sol";
 import {MockERC20, ERC20} from "../../contracts/test/MockERC20.sol";
 import {MockPriceFeed} from "../../contracts/test/MockPriceFeed.sol";
-import "../../contracts/core/factory/TermMaxFactory.sol";
+import {ITermMaxFactory, TermMaxFactory, IMintableERC20, IGearingToken, AggregatorV3Interface} from "../../contracts/core/factory/TermMaxFactory.sol";
+import "../../contracts/core/storage/TermMaxStorage.sol";
 
 library DeployUtils {
     struct Res {
@@ -15,7 +16,7 @@ library DeployUtils {
         IMintableERC20 xt;
         IMintableERC20 lpFt;
         IMintableERC20 lpXt;
-        IGearingNft gNft;
+        IGearingToken gt;
         AggregatorV3Interface underlyingOracle;
         AggregatorV3Interface collateralOracle;
         MockERC20 collateral;
@@ -24,7 +25,7 @@ library DeployUtils {
 
     function deployMarket(
         address deployer,
-        TermMaxStorage.MarketConfig memory marketConfig,
+        MarketConfig memory marketConfig,
         uint32 maxLtv,
         uint32 liquidationLtv
     ) internal returns (Res memory res) {
@@ -53,9 +54,10 @@ library DeployUtils {
 
         res.market = ITermMaxMarket(res.factory.createERC20Market(params));
         console.log("Market deploy at:", address(res.market));
-        console.log("gNft deploy at: ", address(res.gNft));
-        (res.ft, res.xt, res.lpFt, res.lpXt, res.gNft, , ) = res
-            .market
-            .tokens();
+        // console.log("gNft deploy at: ", address(res.gNft));
+        // (res.ft, res.xt, res.lpFt, res.lpXt, res.gNft, , ) = res
+        //     .market
+        //     .tokens();
+        (res.ft, res.xt, res.lpFt, res.lpXt, res.gt, , ) = res.market.tokens();
     }
 }
