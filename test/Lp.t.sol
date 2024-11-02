@@ -13,12 +13,11 @@ import {ITermMaxFactory, TermMaxFactory, IMintableERC20, IGearingToken, Aggregat
 import "../contracts/core/storage/TermMaxStorage.sol";
 
 contract FactoryTest is Test {
-    address deployer = vm.envAddress("FORK_DEPLOYER_ADDR");
-
     DeployUtils.Res res;
 
     MarketConfig marketConfig;
 
+    address deployer = vm.randomAddress();
     address sender = vm.randomAddress();
 
     function setUp() public {

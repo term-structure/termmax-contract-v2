@@ -14,12 +14,11 @@ import {ITermMaxFactory, TermMaxFactory, IMintableERC20, IGearingToken, Aggregat
 import "../contracts/core/storage/TermMaxStorage.sol";
 
 contract SwapTest is Test {
-    address deployer = vm.envAddress("FORK_DEPLOYER_ADDR");
-
     DeployUtils.Res res;
 
     MarketConfig marketConfig;
 
+    address deployer = vm.randomAddress();
     address sender = vm.randomAddress();
     address treasurer = vm.randomAddress();
     string testdata;
@@ -47,13 +46,13 @@ contract SwapTest is Test {
         state.underlyingReserve = vm.parseUint(
             vm.parseJsonString(
                 testdata,
-                string.concat(key, ".UnderlyingReserve")
+                string.concat(key, ".underlyingReserve")
             )
         );
         state.collateralReserve = vm.parseUint(
             vm.parseJsonString(
                 testdata,
-                string.concat(key, ".CollateralReserve")
+                string.concat(key, ".collateralReserve")
             )
         );
     }
