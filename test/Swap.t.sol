@@ -92,6 +92,8 @@ contract SwapTest is Test {
 
     //TODO: test case for minTokenOut
 
+    //TODO: test case for after maturity
+
     function testBuyXt() public {
         vm.startPrank(sender);
 
@@ -123,6 +125,8 @@ contract SwapTest is Test {
     }
 
     //TODO: test case for minTokenOut
+
+    //TODO: test case for after maturity
 
     function testSellFt() public {
         vm.startPrank(sender);
@@ -162,6 +166,8 @@ contract SwapTest is Test {
 
     //TODO: test case for minTokenOut
 
+    //TODO: test case for after maturity
+
     function testSellXt() public {
         vm.startPrank(sender);
 
@@ -200,6 +206,8 @@ contract SwapTest is Test {
 
     //TODO: test case for minTokenOut
 
+    //TODO: test case for after maturity
+
     function testLever() public {
         vm.startPrank(sender);
 
@@ -218,6 +226,10 @@ contract SwapTest is Test {
 
         vm.stopPrank();
     }
+
+    //TODO: test case for after maturity
+
+    //TODO: test case for levering: Debt too small
 
     function testRedeemFxAndXtToUnderlying() public {
         vm.startPrank(sender);
@@ -253,4 +265,12 @@ contract SwapTest is Test {
 
         vm.stopPrank();
     }
+
+    //TODO: test case for after maturity
+
+    //TODO: test case for minting GNFT
+
+    //TODO: test case for minting GNFT: Debt too small
+
+    //TODO: test case for redemption
 }
