@@ -28,7 +28,7 @@ contract SwapTest is Test {
     function setUp() public {
         vm.startPrank(deployer);
         testdata = vm.readFile(
-            string.concat(vm.projectRoot(), "/test/testdata/Swap.testdata.json")
+            string.concat(vm.projectRoot(), "/test/testdata/testdata.json")
         );
 
         uint32 maxLtv = 0.89e8;
