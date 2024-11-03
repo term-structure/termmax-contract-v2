@@ -105,6 +105,22 @@ library JSONLoader {
                 )
             )
         );
+        marketConfig.minLeveragedXt = uint32(
+            vm.parseUint(
+                vm.parseJsonString(
+                    testdataJSON,
+                    string.concat(key, ".minLeveragedXt")
+                )
+            )
+        );
+        marketConfig.minLeveredFt = uint32(
+            vm.parseUint(
+                vm.parseJsonString(
+                    testdataJSON,
+                    string.concat(key, ".minLeveredFt")
+                )
+            )
+        );
         marketConfig.treasurer = treasurer;
         marketConfig.rewardIsDistributed = true;
     }

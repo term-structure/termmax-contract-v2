@@ -101,7 +101,80 @@ contract SwapTest is Test {
         vm.stopPrank();
     }
 
-    //TODO: test case for Providing Liqudiity twice
+    function testProvideLiquidityTwice() public {
+        vm.startPrank(sender);
+
+        uint128 underlyingAmtInFirstTime = 100e8;
+        res.underlying.mint(sender, underlyingAmtInFirstTime);
+        res.underlying.approve(address(res.market), underlyingAmtInFirstTime);
+        (uint128 lpFtOutAmtFirstTime, uint128 lpXtOutAmtFirstTime) = res
+            .market
+            .provideLiquidity(underlyingAmtInFirstTime);
+
+        uint128 underlyingAmtIn = 100e8;
+        res.underlying.mint(sender, underlyingAmtIn);
+        res.underlying.approve(address(res.market), underlyingAmtIn);
+        (uint128 lpFtOutAmt, uint128 lpXtOutAmt) = res.market.provideLiquidity(
+            underlyingAmtIn
+        );
+
+        StateChecker.MarketState memory expectedState = JSONLoader
+            .getMarketStateFromJson(
+                testdata,
+                ".expected.provideLiquidityTwice.contractState"
+            );
+        StateChecker.checkMarketState(res, expectedState);
+
+        assert(
+            lpFtOutAmt ==
+                vm.parseUint(
+                    vm.parseJsonString(
+                        testdata,
+                        ".expected.provideLiquidityTwice.output.lpFtAmount"
+                    )
+                )
+        );
+        assert(
+            lpXtOutAmt ==
+                vm.parseUint(
+                    vm.parseJsonString(
+                        testdata,
+                        ".expected.provideLiquidityTwice.output.lpXtAmount"
+                    )
+                )
+        );
+        assert(res.lpFt.balanceOf(sender) == lpFtOutAmtFirstTime + lpFtOutAmt);
+        assert(res.lpXt.balanceOf(sender) == lpXtOutAmtFirstTime + lpXtOutAmt);
+
+        vm.stopPrank();
+    }
+
+    function testProvideLiquidityBeforeMaturity() public {
+        vm.startPrank(sender);
+
+        uint128 underlyingAmtIn = 100e8;
+        res.underlying.mint(sender, underlyingAmtIn);
+        res.underlying.approve(address(res.market), underlyingAmtIn);
+        vm.warp(res.market.config().maturity - 1);
+        res.market.provideLiquidity(underlyingAmtIn);
+
+        vm.stopPrank();
+    }
+
+    function testProvideLiquidityAfterMaturity() public {
+        vm.startPrank(sender);
+
+        uint128 underlyingAmtIn = 100e8;
+        res.underlying.mint(sender, underlyingAmtIn);
+        res.underlying.approve(address(res.market), underlyingAmtIn);
+        vm.warp(res.market.config().maturity);
+        vm.expectRevert(
+            abi.encodeWithSelector(ITermMaxMarket.MarketWasClosed.selector)
+        );
+        res.market.provideLiquidity(underlyingAmtIn);
+
+        vm.stopPrank();
+    }
 
     function testWithdrawLp() public {
         vm.startPrank(sender);
@@ -151,5 +224,144 @@ contract SwapTest is Test {
         vm.stopPrank();
     }
 
-    //TODO: test case for imbalanced liquidity exit
+    function testWithdrawLpWhenFtIsMore() public {
+        vm.startPrank(sender);
+
+        uint128 underlyingAmtIn = 100e8;
+        res.underlying.mint(sender, underlyingAmtIn);
+        res.underlying.approve(address(res.market), underlyingAmtIn);
+        (uint128 lpFtOutAmt, uint128 lpXtOutAmt) = res.market.provideLiquidity(
+            underlyingAmtIn
+        );
+
+        res.lpFt.approve(address(res.market), lpFtOutAmt);
+        res.lpXt.approve(address(res.market), lpXtOutAmt);
+        (uint128 ftOutAmt, uint128 xtOutAmt) = res.market.withdrawLp(
+            lpFtOutAmt,
+            lpXtOutAmt / 2
+        );
+
+        StateChecker.MarketState memory expectedState = JSONLoader
+            .getMarketStateFromJson(
+                testdata,
+                ".expected.withdrawLpWhenFtIsMore.contractState"
+            );
+        StateChecker.checkMarketState(res, expectedState);
+
+        assert(
+            ftOutAmt ==
+                vm.parseUint(
+                    vm.parseJsonString(
+                        testdata,
+                        ".expected.withdrawLpWhenFtIsMore.output.lpFtAmount"
+                    )
+                )
+        );
+        assert(
+            xtOutAmt ==
+                vm.parseUint(
+                    vm.parseJsonString(
+                        testdata,
+                        ".expected.withdrawLpWhenFtIsMore.output.lpXtAmount"
+                    )
+                )
+        );
+        assert(res.ft.balanceOf(sender) == ftOutAmt);
+        assert(res.xt.balanceOf(sender) == xtOutAmt);
+
+        vm.stopPrank();
+    }
+
+    function testWithdrawLpWhenXtIsMore() public {
+        vm.startPrank(sender);
+
+        uint128 underlyingAmtIn = 100e8;
+        res.underlying.mint(sender, underlyingAmtIn);
+        res.underlying.approve(address(res.market), underlyingAmtIn);
+        (uint128 lpFtOutAmt, uint128 lpXtOutAmt) = res.market.provideLiquidity(
+            underlyingAmtIn
+        );
+
+        res.lpFt.approve(address(res.market), lpFtOutAmt);
+        res.lpXt.approve(address(res.market), lpXtOutAmt);
+        (uint128 ftOutAmt, uint128 xtOutAmt) = res.market.withdrawLp(
+            lpFtOutAmt,
+            lpXtOutAmt / 2
+        );
+
+        StateChecker.MarketState memory expectedState = JSONLoader
+            .getMarketStateFromJson(
+                testdata,
+                ".expected.withdrawLpWhenXtIsMore.contractState"
+            );
+        StateChecker.checkMarketState(res, expectedState);
+
+        assert(
+            ftOutAmt ==
+                vm.parseUint(
+                    vm.parseJsonString(
+                        testdata,
+                        ".expected.withdrawLpWhenXtIsMore.output.lpFtAmount"
+                    )
+                )
+        );
+        assert(
+            xtOutAmt ==
+                vm.parseUint(
+                    vm.parseJsonString(
+                        testdata,
+                        ".expected.withdrawLpWhenXtIsMore.output.lpXtAmount"
+                    )
+                )
+        );
+        assert(res.ft.balanceOf(sender) == ftOutAmt);
+        assert(res.xt.balanceOf(sender) == xtOutAmt);
+
+        vm.stopPrank();
+    }
+
+    function testWithdrawLpBeforeMaturity() public {
+        vm.startPrank(sender);
+
+        uint128 underlyingAmtIn = 100e8;
+        res.underlying.mint(sender, underlyingAmtIn);
+        res.underlying.approve(address(res.market), underlyingAmtIn);
+        (uint128 lpFtOutAmt, uint128 lpXtOutAmt) = res.market.provideLiquidity(
+            underlyingAmtIn
+        );
+
+        res.lpFt.approve(address(res.market), lpFtOutAmt);
+        res.lpXt.approve(address(res.market), lpXtOutAmt);
+        vm.warp(res.market.config().maturity - 1);
+        res.market.withdrawLp(
+            lpFtOutAmt,
+            lpXtOutAmt
+        );
+
+        vm.stopPrank();
+    }
+
+    function testWithdrawLpAfterMaturity() public {
+        vm.startPrank(sender);
+
+        uint128 underlyingAmtIn = 100e8;
+        res.underlying.mint(sender, underlyingAmtIn);
+        res.underlying.approve(address(res.market), underlyingAmtIn);
+        (uint128 lpFtOutAmt, uint128 lpXtOutAmt) = res.market.provideLiquidity(
+            underlyingAmtIn
+        );
+
+        res.lpFt.approve(address(res.market), lpFtOutAmt);
+        res.lpXt.approve(address(res.market), lpXtOutAmt);
+        vm.warp(res.market.config().maturity);
+        vm.expectRevert(
+            abi.encodeWithSelector(ITermMaxMarket.MarketWasClosed.selector)
+        );
+        res.market.withdrawLp(
+            lpFtOutAmt,
+            lpXtOutAmt
+        );
+
+        vm.stopPrank();
+    }
 }

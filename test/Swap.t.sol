@@ -90,9 +90,66 @@ contract SwapTest is Test {
         vm.stopPrank();
     }
 
-    //TODO: test case for minTokenOut
+    function testBuyFtMinTokenOut() public {
+        vm.startPrank(sender);
 
-    //TODO: test case for after maturity
+        uint128 expectedNetOut = uint128(
+            vm.parseUint(
+                vm.parseJsonString(
+                    testdata,
+                    ".expected.testBuyFt.output.netOut"
+                )
+            )
+        );
+        uint128 underlyingAmtIn = 100e8;
+        uint128 minTokenOut = expectedNetOut + 1;
+
+        res.underlying.mint(sender, underlyingAmtIn);
+        res.underlying.approve(address(res.market), underlyingAmtIn);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ITermMaxMarket.UnexpectedAmount.selector,
+                sender,
+                res.ft,
+                minTokenOut,
+                expectedNetOut
+            )
+        );
+        res.market.buyFt(underlyingAmtIn, minTokenOut);
+
+        vm.stopPrank();
+    }
+
+    function testBuyFtBeforeMaturity() public {
+        vm.startPrank(sender);
+
+        uint128 underlyingAmtIn = 100e8;
+        uint128 minTokenOut = 0e8;
+
+        res.underlying.mint(sender, underlyingAmtIn);
+        res.underlying.approve(address(res.market), underlyingAmtIn);
+        vm.warp(res.market.config().maturity - 1);
+        res.market.buyFt(underlyingAmtIn, minTokenOut);
+
+        vm.stopPrank();
+    }
+
+    function testBuyFtAfterMaturity() public {
+        vm.startPrank(sender);
+
+        uint128 underlyingAmtIn = 100e8;
+        uint128 minTokenOut = 0e8;
+
+        res.underlying.mint(sender, underlyingAmtIn);
+        res.underlying.approve(address(res.market), underlyingAmtIn);
+        vm.warp(res.market.config().maturity);
+        vm.expectRevert(
+            abi.encodeWithSelector(ITermMaxMarket.MarketWasClosed.selector)
+        );
+        res.market.buyFt(underlyingAmtIn, minTokenOut);
+
+        vm.stopPrank();
+    }
 
     function testBuyXt() public {
         vm.startPrank(sender);
@@ -124,9 +181,66 @@ contract SwapTest is Test {
         vm.stopPrank();
     }
 
-    //TODO: test case for minTokenOut
+    function testBuyXtMinTokenOut() public {
+        vm.startPrank(sender);
 
-    //TODO: test case for after maturity
+        uint128 expectedNetOut = uint128(
+            vm.parseUint(
+                vm.parseJsonString(
+                    testdata,
+                    ".expected.testBuyXt.output.netOut"
+                )
+            )
+        );
+        uint128 underlyingAmtIn = 100e8;
+        uint128 minTokenOut = expectedNetOut + 1;
+
+        res.underlying.mint(sender, underlyingAmtIn);
+        res.underlying.approve(address(res.market), underlyingAmtIn);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ITermMaxMarket.UnexpectedAmount.selector,
+                sender,
+                res.xt,
+                minTokenOut,
+                expectedNetOut
+            )
+        );
+        res.market.buyXt(underlyingAmtIn, minTokenOut);
+
+        vm.stopPrank();
+    }
+
+    function testBuyXtBeforeMaturity() public {
+        vm.startPrank(sender);
+
+        uint128 underlyingAmtIn = 100e8;
+        uint128 minTokenOut = 0e8;
+
+        res.underlying.mint(sender, underlyingAmtIn);
+        res.underlying.approve(address(res.market), underlyingAmtIn);
+        vm.warp(res.market.config().maturity - 1);
+        res.market.buyXt(underlyingAmtIn, minTokenOut);
+
+        vm.stopPrank();
+    }
+
+    function testBuyXtAfterMaturity() public {
+        vm.startPrank(sender);
+
+        uint128 underlyingAmtIn = 100e8;
+        uint128 minTokenOut = 0e8;
+
+        res.underlying.mint(sender, underlyingAmtIn);
+        res.underlying.approve(address(res.market), underlyingAmtIn);
+        vm.warp(res.market.config().maturity);
+        vm.expectRevert(
+            abi.encodeWithSelector(ITermMaxMarket.MarketWasClosed.selector)
+        );
+        res.market.buyXt(underlyingAmtIn, minTokenOut);
+
+        vm.stopPrank();
+    }
 
     function testSellFt() public {
         vm.startPrank(sender);
@@ -164,9 +278,81 @@ contract SwapTest is Test {
         vm.stopPrank();
     }
 
-    //TODO: test case for minTokenOut
+    function testSellFtMinTokenOut() public {
+        vm.startPrank(sender);
 
-    //TODO: test case for after maturity
+        uint128 expectedNetOut = uint128(
+            vm.parseUint(
+                vm.parseJsonString(
+                    testdata,
+                    ".expected.testSellFt.output.netOut"
+                )
+            )
+        );
+        uint128 underlyingAmtInForBuyFt = 100e8;
+        uint128 minFtOut = 0e8;
+        res.underlying.mint(sender, underlyingAmtInForBuyFt);
+        res.underlying.approve(address(res.market), underlyingAmtInForBuyFt);
+        uint128 ftAmtIn = uint128(
+            res.market.buyFt(underlyingAmtInForBuyFt, minFtOut)
+        );
+        uint128 minTokenOut = expectedNetOut + 1;
+
+        res.ft.approve(address(res.market), ftAmtIn);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ITermMaxMarket.UnexpectedAmount.selector,
+                sender,
+                res.underlying,
+                minTokenOut,
+                expectedNetOut
+            )
+        );
+        res.market.sellFt(ftAmtIn, minTokenOut);
+
+        vm.stopPrank();
+    }
+
+    function testSellFtBeforeMaturity() public {
+        vm.startPrank(sender);
+
+        uint128 underlyingAmtInForBuyFt = 100e8;
+        uint128 minFtOut = 0e8;
+        res.underlying.mint(sender, underlyingAmtInForBuyFt);
+        res.underlying.approve(address(res.market), underlyingAmtInForBuyFt);
+        uint128 ftAmtIn = uint128(
+            res.market.buyFt(underlyingAmtInForBuyFt, minFtOut)
+        );
+        uint128 minTokenOut = 0e8;
+
+        res.ft.approve(address(res.market), ftAmtIn);
+        vm.warp(res.market.config().maturity - 1);
+        res.market.sellFt(ftAmtIn, minTokenOut);
+
+        vm.stopPrank();
+    }
+
+    function testSellFtAfterMaturity() public {
+        vm.startPrank(sender);
+
+        uint128 underlyingAmtInForBuyFt = 100e8;
+        uint128 minFtOut = 0e8;
+        res.underlying.mint(sender, underlyingAmtInForBuyFt);
+        res.underlying.approve(address(res.market), underlyingAmtInForBuyFt);
+        uint128 ftAmtIn = uint128(
+            res.market.buyFt(underlyingAmtInForBuyFt, minFtOut)
+        );
+        uint128 minTokenOut = 0e8;
+
+        res.ft.approve(address(res.market), ftAmtIn);
+        vm.warp(res.market.config().maturity);
+        vm.expectRevert(
+            abi.encodeWithSelector(ITermMaxMarket.MarketWasClosed.selector)
+        );
+        res.market.sellFt(ftAmtIn, minTokenOut);
+
+        vm.stopPrank();
+    }
 
     function testSellXt() public {
         vm.startPrank(sender);
@@ -204,9 +390,81 @@ contract SwapTest is Test {
         vm.stopPrank();
     }
 
-    //TODO: test case for minTokenOut
+    function testSellXtMinTokenOut() public {
+        vm.startPrank(sender);
 
-    //TODO: test case for after maturity
+        uint128 expectedNetOut = uint128(
+            vm.parseUint(
+                vm.parseJsonString(
+                    testdata,
+                    ".expected.testSellXt.output.netOut"
+                )
+            )
+        );
+        uint128 underlyingAmtInForBuyXt = 100e8;
+        uint128 minXtOut = 0e8;
+        res.underlying.mint(sender, underlyingAmtInForBuyXt);
+        res.underlying.approve(address(res.market), underlyingAmtInForBuyXt);
+        uint128 xtAmtIn = uint128(
+            res.market.buyXt(underlyingAmtInForBuyXt, minXtOut)
+        );
+        uint128 minTokenOut = expectedNetOut + 1;
+
+        res.xt.approve(address(res.market), xtAmtIn);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ITermMaxMarket.UnexpectedAmount.selector,
+                sender,
+                res.underlying,
+                minTokenOut,
+                expectedNetOut
+            )
+        );
+        res.market.sellXt(xtAmtIn, minTokenOut);
+
+        vm.stopPrank();
+    }
+
+    function testSellXtBeforeMaturity() public {
+        vm.startPrank(sender);
+
+        uint128 underlyingAmtInForBuyXt = 100e8;
+        uint128 minXtOut = 0e8;
+        res.underlying.mint(sender, underlyingAmtInForBuyXt);
+        res.underlying.approve(address(res.market), underlyingAmtInForBuyXt);
+        uint128 xtAmtIn = uint128(
+            res.market.buyXt(underlyingAmtInForBuyXt, minXtOut)
+        );
+        uint128 minTokenOut = 0e8;
+
+        res.xt.approve(address(res.market), xtAmtIn);
+        vm.warp(res.market.config().maturity - 1);
+        res.market.sellXt(xtAmtIn, minTokenOut);
+
+        vm.stopPrank();
+    }
+
+    function testSellXtAfterMaturity() public {
+        vm.startPrank(sender);
+
+        uint128 underlyingAmtInForBuyXt = 100e8;
+        uint128 minXtOut = 0e8;
+        res.underlying.mint(sender, underlyingAmtInForBuyXt);
+        res.underlying.approve(address(res.market), underlyingAmtInForBuyXt);
+        uint128 xtAmtIn = uint128(
+            res.market.buyXt(underlyingAmtInForBuyXt, minXtOut)
+        );
+        uint128 minTokenOut = 0e8;
+
+        res.xt.approve(address(res.market), xtAmtIn);
+        vm.warp(res.market.config().maturity);
+        vm.expectRevert(
+            abi.encodeWithSelector(ITermMaxMarket.MarketWasClosed.selector)
+        );
+        res.market.sellXt(xtAmtIn, minTokenOut);
+
+        vm.stopPrank();
+    }
 
     function testLever() public {
         vm.startPrank(sender);
@@ -227,9 +485,59 @@ contract SwapTest is Test {
         vm.stopPrank();
     }
 
-    //TODO: test case for after maturity
+    function testLeverBeforeMaturity() public {
+        vm.startPrank(sender);
 
-    //TODO: test case for levering: Debt too small
+        uint128 collateralAmtIn = 100e8;
+        uint128 debtAmt = 95e8;
+        uint128 minTokenOut = 0e8;
+        res.collateral.mint(sender, collateralAmtIn);
+        res.collateral.approve(address(res.gNft), collateralAmtIn);
+
+        vm.warp(res.market.config().maturity - 1);
+        res.market.lever(debtAmt, abi.encode(collateralAmtIn));
+
+        vm.stopPrank();
+    }
+
+    function testLeverAfterMaturity() public {
+        vm.startPrank(sender);
+
+        uint128 collateralAmtIn = 100e8;
+        uint128 debtAmt = 95e8;
+        uint128 minTokenOut = 0e8;
+        res.collateral.mint(sender, collateralAmtIn);
+        res.collateral.approve(address(res.gNft), collateralAmtIn);
+
+        vm.warp(res.market.config().maturity);
+        vm.expectRevert(
+            abi.encodeWithSelector(ITermMaxMarket.MarketWasClosed.selector)
+        );
+        res.market.lever(debtAmt, abi.encode(collateralAmtIn));
+
+        vm.stopPrank();
+    }
+
+    function testLeverDebtTooSmall() public {
+        vm.startPrank(sender);
+
+        uint128 collateralAmtIn = 100e8;
+        uint128 debtAmt = uint128(res.market.config().minLeveragedXt) - 1;
+        uint128 minTokenOut = 0e8;
+        res.collateral.mint(sender, collateralAmtIn);
+        res.collateral.approve(address(res.gNft), collateralAmtIn);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ITermMaxMarket.DebtTooSmall.selector,
+                sender,
+                debtAmt
+            )
+        );
+        res.market.lever(debtAmt, abi.encode(collateralAmtIn));
+
+        vm.stopPrank();
+    }
 
     function testRedeemFxAndXtToUnderlying() public {
         vm.startPrank(sender);
@@ -266,7 +574,72 @@ contract SwapTest is Test {
         vm.stopPrank();
     }
 
-    //TODO: test case for after maturity
+    function testRedeemFxAndXtToUnderlyingBeforeMaturity() public {
+        vm.startPrank(sender);
+
+        uint128 underlyingAmtInForBuyXt = 1e8;
+        uint128 minXTOut = 0e8;
+        res.underlying.mint(sender, underlyingAmtInForBuyXt);
+        res.underlying.approve(address(res.market), underlyingAmtInForBuyXt);
+        uint128 xtAmt = uint128(
+            res.market.buyXt(underlyingAmtInForBuyXt, minXTOut) / 2
+        );
+
+        uint128 underlyingAmtInForBuyFt = 9e8;
+        uint128 minFtOut = 0e8;
+        res.underlying.mint(sender, underlyingAmtInForBuyFt);
+        res.underlying.approve(address(res.market), underlyingAmtInForBuyFt);
+        uint128 ftAmt = uint128(
+            res.market.buyFt(underlyingAmtInForBuyFt, minFtOut) / 2
+        );
+
+        uint128 underlyingAmtToRedeem = xtAmt;
+        uint128 xtAmtToRedeem = underlyingAmtToRedeem;
+        uint128 ftAmtToRedeem = (underlyingAmtToRedeem *
+            res.market.config().initialLtv) / 1e8;
+        res.xt.approve(address(res.market), xtAmtToRedeem);
+        res.ft.approve(address(res.market), ftAmtToRedeem);
+
+        vm.warp(res.market.config().maturity - 1);
+        res.market.redeemFxAndXtToUnderlying(xtAmtToRedeem);
+
+        vm.stopPrank();
+    }
+
+    function testRedeemFxAndXtToUnderlyingAfterMaturity() public {
+        vm.startPrank(sender);
+
+        uint128 underlyingAmtInForBuyXt = 1e8;
+        uint128 minXTOut = 0e8;
+        res.underlying.mint(sender, underlyingAmtInForBuyXt);
+        res.underlying.approve(address(res.market), underlyingAmtInForBuyXt);
+        uint128 xtAmt = uint128(
+            res.market.buyXt(underlyingAmtInForBuyXt, minXTOut) / 2
+        );
+
+        uint128 underlyingAmtInForBuyFt = 9e8;
+        uint128 minFtOut = 0e8;
+        res.underlying.mint(sender, underlyingAmtInForBuyFt);
+        res.underlying.approve(address(res.market), underlyingAmtInForBuyFt);
+        uint128 ftAmt = uint128(
+            res.market.buyFt(underlyingAmtInForBuyFt, minFtOut) / 2
+        );
+
+        uint128 underlyingAmtToRedeem = xtAmt;
+        uint128 xtAmtToRedeem = underlyingAmtToRedeem;
+        uint128 ftAmtToRedeem = (underlyingAmtToRedeem *
+            res.market.config().initialLtv) / 1e8;
+        res.xt.approve(address(res.market), xtAmtToRedeem);
+        res.ft.approve(address(res.market), ftAmtToRedeem);
+
+        vm.warp(res.market.config().maturity);
+        vm.expectRevert(
+            abi.encodeWithSelector(ITermMaxMarket.MarketWasClosed.selector)
+        );
+        res.market.redeemFxAndXtToUnderlying(xtAmtToRedeem);
+
+        vm.stopPrank();
+    }
 
     //TODO: test case for minting GNFT
 
