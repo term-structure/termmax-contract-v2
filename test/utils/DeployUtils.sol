@@ -39,6 +39,15 @@ library DeployUtils {
         res.underlyingOracle = new MockPriceFeed(deployer);
         res.collateralOracle = new MockPriceFeed(deployer);
 
+        MockPriceFeed.RoundData memory roundData = MockPriceFeed.RoundData({
+            roundId: 1,
+            answer: int(1e1 ** res.collateralOracle.decimals()),
+            startedAt: 0,
+            updatedAt: 0,
+            answeredInRound: 0
+        });
+        MockPriceFeed(address(res.collateralOracle)).updateRoundData(roundData); 
+
         ITermMaxFactory.DeployParams memory params = ITermMaxFactory
             .DeployParams({
                 admin: deployer,
