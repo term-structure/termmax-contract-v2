@@ -109,7 +109,6 @@ contract SwapTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(
                 ITermMaxMarket.UnexpectedAmount.selector,
-                sender,
                 minTokenOut,
                 expectedNetOut
             )
@@ -199,7 +198,6 @@ contract SwapTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(
                 ITermMaxMarket.UnexpectedAmount.selector,
-                sender,
                 minTokenOut,
                 expectedNetOut
             )
@@ -300,7 +298,6 @@ contract SwapTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(
                 ITermMaxMarket.UnexpectedAmount.selector,
-                sender,
                 minTokenOut,
                 expectedNetOut
             )
@@ -411,7 +408,6 @@ contract SwapTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(
                 ITermMaxMarket.UnexpectedAmount.selector,
-                sender,
                 minTokenOut,
                 expectedNetOut
             )
