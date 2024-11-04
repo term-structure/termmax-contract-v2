@@ -185,8 +185,6 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         // Mint tokens to this
         ft.mint(address(this), ftMintedAmt);
         xt.mint(address(this), xtMintedAmt);
-
-        emit AddLiquidity(sender, underlyingAmt, ftMintedAmt, xtMintedAmt);
     }
 
     function _daysToMaturity(
@@ -559,21 +557,26 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
     }
 
     function mintGt(
-        uint128 debt,
+        uint128 xtAmt,
         bytes calldata callbackData
     ) external override isOpen nonReentrant returns (uint256 gtId) {
-        return _mintGt(msg.sender, debt, callbackData);
+        return _mintGt(msg.sender, xtAmt, callbackData);
     }
 
     function _mintGt(
         address sender,
-        uint128 debt,
+        uint128 xtAmt,
         bytes calldata callbackData
     ) internal returns (uint256 gtId) {
-        xt.transferFrom(sender, address(this), debt);
+        xt.transferFrom(sender, address(this), xtAmt);
+
+        // 1 xt -> 1 underlying raised
+        // Debt 1 * initialLtv
+        uint128 debt = ((xtAmt * _config.initialLtv) / Constants.DECIMAL_BASE)
+            .toUint128();
 
         // Send debt to borrower
-        underlying.transfer(sender, debt);
+        underlying.transfer(sender, xtAmt);
         // Callback function
         bytes memory collateralData = IFlashLoanReceiver(sender)
             .executeOperation(sender, underlying, debt, callbackData);

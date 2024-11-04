@@ -5,11 +5,19 @@ import {IGearingToken, AggregatorV3Interface} from "../tokens/ERC20GearingToken.
 import {IMintableERC20} from "../tokens/MintableERC20.sol";
 import "../storage/TermMaxStorage.sol";
 
+/**
+ * @title The Term Max factory
+ * @author Term Structure Labs
+ */
 interface ITermMaxFactory {
     struct DeployParams {
+        /// @notice Admin contract of market
         address admin;
+        /// @notice Collateral token
         IERC20Metadata collateral;
+        /// @notice Underlying token
         IERC20Metadata underlying;
+        /// @notice Underlying token
         AggregatorV3Interface collateralOracle;
         AggregatorV3Interface underlyingOracle;
         uint32 liquidationLtv;
