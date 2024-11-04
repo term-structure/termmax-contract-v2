@@ -8,6 +8,8 @@ import {JSONLoader} from "./utils/JSONLoader.sol";
 import {StateChecker} from "./utils/StateChecker.sol";
 import {SwapUtils} from "./utils/SwapUtils.sol";
 
+import {IFlashLoanReceiver} from "../contracts/core/IFlashLoanReceiver.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ITermMaxMarket, TermMaxMarket, Constants} from "../contracts/core/TermMaxMarket.sol";
 import {MockERC20, ERC20} from "../contracts/test/MockERC20.sol";
 import {MockPriceFeed} from "../contracts/test/MockPriceFeed.sol";
@@ -615,9 +617,54 @@ contract SwapTest is Test {
         vm.stopPrank();
     }
 
-    //TODO: test case for minting GT
+    error Debug(address);
+    function testLeverageByXt() public {
+        MockOuter outer = new MockOuter(res);
 
-    //TODO: test case for minting GT: Debt too small
+        vm.startPrank(sender);
+        uint128 underlyingAmtInForBuyXt = 100e8;
+        uint128 minXTOut = 0e8;
+        res.underlying.mint(sender, underlyingAmtInForBuyXt);
+        res.underlying.approve(address(res.market), underlyingAmtInForBuyXt);
+        uint128 xtAmtIn = uint128(
+            res.market.buyXt(underlyingAmtInForBuyXt, minXTOut)
+        );
+        uint128 collateralAmtIn = xtAmtIn;
+        res.collateral.mint(sender, collateralAmtIn);
+        res.collateral.approve(address(res.gt), collateralAmtIn);
+        res.xt.approve(address(outer), xtAmtIn);
+        bytes memory callbackData = abi.encode(collateralAmtIn);
+        outer.leverageByXt(sender, xtAmtIn, callbackData);
+        vm.stopPrank();
+    }
 
     //TODO: test case for redemption
+}
+
+contract MockOuter is IFlashLoanReceiver {
+    DeployUtils.Res res;
+
+    constructor(DeployUtils.Res memory _res) {
+        res = _res;
+    }
+
+    function executeOperation(
+        address sender,
+        IERC20 asset,
+        uint256 amount,
+        bytes calldata data
+    ) external returns (bytes memory collateralData) {
+        return data;
+    }
+
+    function leverageByXt(
+        address receiver,
+        uint128 xtAmt,
+        bytes calldata callbackData
+    ) external returns (uint256 gtId) {
+        uint128 collateralAmt = abi.decode(callbackData, (uint128));
+        res.xt.transferFrom(msg.sender, address(this), xtAmt);
+        res.xt.approve(address(res.market), xtAmt);
+        gtId = res.market.leverageByXt(receiver, xtAmt, callbackData);
+    }
 }
