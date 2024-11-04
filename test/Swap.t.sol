@@ -617,7 +617,6 @@ contract SwapTest is Test {
         vm.stopPrank();
     }
 
-    error Debug(address);
     function testLeverageByXt() public {
         MockOuter outer = new MockOuter(res);
 
