@@ -124,11 +124,11 @@ interface IGearingToken is IERC721 {
     function liquidate(uint256 id, uint128 repayAmt) external;
 
     /// @notice Deilivery outstanding debts after maturity
-    /// @param  ratio The proportion of collateral that should be obtained
+    /// @param  proportion The proportion of collateral that should be obtained
     /// @param  to The address receiving collateral token
     /// @dev    Only the market can delivery collateral
     function delivery(
-        uint256 ratio,
+        uint256 proportion,
         address to
     ) external returns (bytes memory deliveryData);
 }

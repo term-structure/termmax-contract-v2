@@ -474,7 +474,10 @@ contract SwapTest is Test {
         StateChecker.MarketState memory state = StateChecker.getMarketState(
             res
         );
-        uint256 netOut = res.market.lever(debtAmt, abi.encode(collateralAmtIn));
+        uint256 netOut = res.market.leverageByCollateral(
+            debtAmt,
+            abi.encode(collateralAmtIn)
+        );
         state.collateralReserve += collateralAmtIn;
         StateChecker.checkMarketState(res, state);
 
@@ -491,7 +494,7 @@ contract SwapTest is Test {
         res.collateral.approve(address(res.gt), collateralAmtIn);
 
         vm.warp(res.market.config().maturity - 1);
-        res.market.lever(debtAmt, abi.encode(collateralAmtIn));
+        res.market.leverageByCollateral(debtAmt, abi.encode(collateralAmtIn));
 
         vm.stopPrank();
     }
@@ -509,7 +512,7 @@ contract SwapTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(ITermMaxMarket.MarketWasClosed.selector)
         );
-        res.market.lever(debtAmt, abi.encode(collateralAmtIn));
+        res.market.leverageByCollateral(debtAmt, abi.encode(collateralAmtIn));
 
         vm.stopPrank();
     }
