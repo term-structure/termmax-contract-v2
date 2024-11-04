@@ -13,7 +13,6 @@ interface ITermMaxMarket {
     error UnSupportedToken();
     error UnexpectedAmount(
         address sender,
-        IMintableERC20 token,
         uint128 expectedAmt,
         uint128 actualAmt
     );

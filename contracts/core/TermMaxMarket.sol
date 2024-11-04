@@ -410,12 +410,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         }
 
         if (netOut < minTokenOut) {
-            revert UnexpectedAmount(
-                sender,
-                token,
-                minTokenOut,
-                netOut.toUint128()
-            );
+            revert UnexpectedAmount(sender, minTokenOut, netOut.toUint128());
         }
         token.transfer(sender, netOut);
         // _lock_fee
@@ -511,7 +506,6 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         if (netOut < minUnderlyingOut) {
             revert UnexpectedAmount(
                 sender,
-                token,
                 minUnderlyingOut,
                 netOut.toUint128()
             );

@@ -18,7 +18,6 @@ interface IMintableERC20 is IERC20 {
     function mint(address to, uint256 amount) external;
 
     /// @notice Return the market's address
-    /// @return address The market's address
     function marketAddr() external view returns (address);
 
     /// @notice Burn tokens from sender
