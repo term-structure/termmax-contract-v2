@@ -12,7 +12,8 @@ import {MockERC20, ERC20} from "../contracts/test/MockERC20.sol";
 import {MockPriceFeed} from "../contracts/test/MockPriceFeed.sol";
 import {ITermMaxFactory, TermMaxFactory, IMintableERC20, IGearingToken, AggregatorV3Interface} from "../contracts/core/factory/TermMaxFactory.sol";
 import "../contracts/core/storage/TermMaxStorage.sol";
-import {TermMaxRouter} from "../contracts/router/TermMaxRouter.sol";
+import {TermMaxRouter, SwapInput} from "../contracts/router/TermMaxRouter.sol";
+
 
 contract TermMaxRouterTest is Test {
     address deployer = vm.envAddress("FORK_DEPLOYER_ADDR");
@@ -115,6 +116,8 @@ contract TermMaxRouterTest is Test {
         router.setMarketWhitelist(address(res.market), true);
         router.togglePause(false);
 
+        router.setSwapperWhitelist(address(res.collateral), true);
+
         vm.warp(
             vm.parseUint(
                 vm.parseJsonString(testdata, ".marketConfig.currentTime")
@@ -157,7 +160,7 @@ contract TermMaxRouterTest is Test {
         uint128 underlyingAmtIn = 100e8;
         uint128 minTokenOut = 0e8;
         res.underlying.mint(sender, underlyingAmtIn);
-        res.underlying.approve(address(res.market), underlyingAmtIn);
+        res.underlying.approve(address(router), underlyingAmtIn);
         uint256 netOut = router.swapExactTokenForXt(receiver, res.market, underlyingAmtIn, minTokenOut);
 
         StateChecker.MarketState memory expectedState = getMarketStateFromJson(
@@ -175,10 +178,10 @@ contract TermMaxRouterTest is Test {
         uint128 underlyingAmtIn = 100e8;
         uint128 minTokenOut_ = 0e8;
         res.underlying.mint(sender, underlyingAmtIn);
-        res.underlying.approve(address(res.market), underlyingAmtIn);
+        res.underlying.approve(address(router), underlyingAmtIn);
         uint128 ftAmtIn = uint128(router.swapExactTokenForFt(receiver, res.market, underlyingAmtIn, minTokenOut_) / 2);
         uint128 minTokenOut = 0e8;
-        res.ft.approve(address(res.market), ftAmtIn);
+        res.ft.approve(address(router), ftAmtIn);
         uint256 netOut = router.swapExactFtForToken(receiver, res.market, ftAmtIn, minTokenOut);
 
         StateChecker.MarketState memory expectedState = getMarketStateFromJson(
@@ -196,10 +199,10 @@ contract TermMaxRouterTest is Test {
         uint128 underlyingAmtIn = 100e8;
         uint128 minTokenOut_ = 0e8;
         res.underlying.mint(sender, underlyingAmtIn);
-        res.underlying.approve(address(res.market), underlyingAmtIn);
+        res.underlying.approve(address(router), underlyingAmtIn);
         uint128 xtAmtIn = uint128(router.swapExactTokenForXt(receiver, res.market, underlyingAmtIn, minTokenOut_) / 2);
         uint128 minTokenOut = 0e8;
-        res.xt.approve(address(res.market), xtAmtIn);
+        res.xt.approve(address(router), xtAmtIn);
         uint256 netOut = router.swapExactXtForToken(receiver, res.market, xtAmtIn, minTokenOut);
 
         StateChecker.MarketState memory expectedState = getMarketStateFromJson(
@@ -209,5 +212,33 @@ contract TermMaxRouterTest is Test {
         StateChecker.checkMarketState(res, expectedState);
 
         vm.stopPrank();
+    }
+
+    function testLeverageFromToken() public {
+        vm.startPrank(sender);
+
+
+        uint128 underlyingAmtInForBuyXt = 100e8;
+        uint128 minXTOut = 0e8;
+        uint256 minCollAmt = 100e8 * 2;
+        res.underlying.mint(sender, underlyingAmtInForBuyXt);
+        res.underlying.approve(address(router), underlyingAmtInForBuyXt);
+
+        bytes memory swapData = abi.encodeWithSelector(
+            IMintableERC20.mint.selector,
+            address(router),
+            minCollAmt
+        );
+        SwapInput memory swapInput = SwapInput(
+            address(res.collateral), // swapper
+            swapData,
+            res.underlying,
+            res.collateral
+        );
+
+        (uint256 gtId, uint256 netXtOut) = router.leverageFromToken(receiver, res.market, underlyingAmtInForBuyXt, minCollAmt, minXTOut, swapInput);
+
+        vm.stopPrank();
+
     }
 }

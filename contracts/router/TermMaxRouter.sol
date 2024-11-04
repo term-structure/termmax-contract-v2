@@ -97,6 +97,9 @@ contract TermMaxRouter is
   function setMarketWhitelist(address market, bool isWhitelist) external onlyRole(OPERATOR_ROLE) {
     marketWhitelist[market] = isWhitelist;
   }
+  function setSwapperWhitelist(address swapper, bool isWhitelist) external onlyRole(OPERATOR_ROLE) {
+    swapperWhitelist[swapper] = isWhitelist;
+  }
 
   /** Leverage Market */
   function swapExactTokenForFt(
@@ -297,17 +300,18 @@ contract TermMaxRouter is
     uint256 minCollAmt,
     uint256 minXtAmt,
     SwapInput calldata swapInput
-  ) ensureMarketWhitelist(address(market)) whenNotPaused external returns (uint256 gtId) {
+  ) ensureMarketWhitelist(address(market)) whenNotPaused external returns (uint256 gtId, uint256 netXtOut) {
     (,IMintableERC20 xt,,, IGearingToken gt, address collateral, IERC20 underlying) = market.tokens();
     _transferToSelfAndApproveSpender(underlying, msg.sender, address(market), tokenInAmt);
 
-    (uint256 netXtOut) = market.buyXt(tokenInAmt.toUint128(), minXtAmt.toUint128());
+    (uint256 _netXtOut) = market.buyXt(tokenInAmt.toUint128(), minXtAmt.toUint128());
+    netXtOut = _netXtOut;
     if(netXtOut < minXtAmt) {
       revert("Slippage: INSUFFICIENT_XT_OUT");
     }
 
-    // bytes memory callbackData = _encodeLeverageFromTokenData(receiver, address(market), collateral, address(underlying), minCollAmt, netXtOut, swapInput.swapper, swapInput.swapData);
     bytes memory callbackData = _encodeLeverageFromTokenData(market, address(gt), tokenInAmt, minCollAmt, netXtOut, swapInput);
+    xt.safeIncreaseAllowance(address(market), netXtOut);
     gtId = market.leverageByXt(receiver, netXtOut.toUint128(), callbackData);
   }
 
