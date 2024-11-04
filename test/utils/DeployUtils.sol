@@ -42,6 +42,15 @@ library DeployUtils {
         res.underlyingOracle = new MockPriceFeed(deployer);
         res.collateralOracle = new MockPriceFeed(deployer);
 
+        MockPriceFeed.RoundData memory roundData = MockPriceFeed.RoundData({
+            roundId: 1,
+            answer: int(1e1 ** res.collateralOracle.decimals()),
+            startedAt: 0,
+            updatedAt: 0,
+            answeredInRound: 0
+        });
+        MockPriceFeed(address(res.collateralOracle)).updateRoundData(roundData); 
+
         ITermMaxFactory.DeployParams memory params = ITermMaxFactory
             .DeployParams({
                 admin: deployer,
@@ -57,11 +66,10 @@ library DeployUtils {
 
         res.market = ITermMaxMarket(res.factory.createERC20Market(params));
         console.log("Market deploy at:", address(res.market));
-        // console.log("gNft deploy at: ", address(res.gNft));
-        // (res.ft, res.xt, res.lpFt, res.lpXt, res.gNft, , ) = res
-        //     .market
-        //     .tokens();
-        (res.ft, res.xt, res.lpFt, res.lpXt, res.gt, , ) = res.market.tokens();
+        console.log("gt deploy at: ", address(res.gt));
+        (res.ft, res.xt, res.lpFt, res.lpXt, res.gt, , ) = res
+            .market
+            .tokens();
     }
 
     function deployRouter(address deployer) internal returns (TermMaxRouter router) {

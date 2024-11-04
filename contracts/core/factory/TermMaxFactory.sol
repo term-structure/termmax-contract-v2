@@ -3,7 +3,7 @@ pragma solidity ^0.8.27;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {ERC20GearingToken, IGearingToken, AggregatorV3Interface} from "../tokens/ERC20GearingToken.sol";
+import {GearingTokenWithERC20, IGearingToken, AggregatorV3Interface} from "../tokens/GearingTokenWithERC20.sol";
 import {MintableERC20, IMintableERC20} from "../tokens/MintableERC20.sol";
 import {ITermMaxMarket} from "../TermMaxMarket.sol";
 import {ITermMaxFactory} from "./ITermMaxFactory.sol";
@@ -16,13 +16,14 @@ contract TermMaxFactory is ITermMaxFactory, Ownable {
     string constant PREFIX_GNFT = "GT:";
     string constant STRING_CONNECTION = "-";
 
-    ERC20GearingToken immutable gtImplement;
+    GearingTokenWithERC20 immutable gtImplement;
     MintableERC20 immutable tokenImplement;
 
+    // TODO get bytes from an address
     bytes marketBytes;
 
     constructor(address admin) Ownable(admin) {
-        gtImplement = new ERC20GearingToken();
+        gtImplement = new GearingTokenWithERC20();
         tokenImplement = new MintableERC20();
     }
 
@@ -44,8 +45,7 @@ contract TermMaxFactory is ITermMaxFactory, Ownable {
             abi.encode(
                 address(deployParams.collateral),
                 deployParams.underlying,
-                deployParams.marketConfig.openTime,
-                deployParams.marketConfig.maturity
+                deployParams.marketConfig
             )
         );
         assembly {
@@ -55,11 +55,7 @@ contract TermMaxFactory is ITermMaxFactory, Ownable {
             market,
             deployParams
         );
-        ITermMaxMarket(market).initialize(
-            tokens,
-            gt,
-            deployParams.marketConfig
-        );
+        ITermMaxMarket(market).initialize(tokens, gt);
         Ownable(market).transferOwnership(deployParams.admin);
     }
 
@@ -124,7 +120,7 @@ contract TermMaxFactory is ITermMaxFactory, Ownable {
                 new ERC1967Proxy(
                     address(gtImplement),
                     abi.encodeCall(
-                        ERC20GearingToken.initialize,
+                        GearingTokenWithERC20.initialize,
                         (
                             gtName,
                             gtSymbol,

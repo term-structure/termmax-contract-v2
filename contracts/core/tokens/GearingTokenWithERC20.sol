@@ -8,26 +8,27 @@ import "./AbstractGearingToken.sol";
  * @title Term Max Gearing Token, using ERC20 token as collateral
  * @author Term Structure Labs
  */
-contract ERC20GearingToken is AbstractGearingToken {
+contract GearingTokenWithERC20 is AbstractGearingToken {
     using SafeCast for uint256;
     using SafeCast for int256;
 
-    struct ERC20GearingTokenStorage {
+    struct GearingTokenWithERC20Storage {
         /// @notice The oracle of collateral in USD
         AggregatorV3Interface collateralOracle;
     }
 
-    bytes32 internal constant STORAGE_SLOT_ERC20_GEARING_TOKEN_STORAGE =
+    bytes32 internal constant STORAGE_SLOT_GEARING_TOKEN_ERC20_STORAGE =
         bytes32(
-            uint256(keccak256("TermMax.storage.ERC20GearingTokenStorage")) - 1
+            uint256(keccak256("TermMax.storage.GearingTokenWithERC20Storage")) -
+                1
         );
 
-    function _getERC20GearingTokenStorage()
+    function _getGearingTokenWithERC20Storage()
         private
         pure
-        returns (ERC20GearingTokenStorage storage s)
+        returns (GearingTokenWithERC20Storage storage s)
     {
-        bytes32 slot = STORAGE_SLOT_ERC20_GEARING_TOKEN_STORAGE;
+        bytes32 slot = STORAGE_SLOT_GEARING_TOKEN_ERC20_STORAGE;
         assembly {
             s.slot := slot
         }
@@ -43,14 +44,14 @@ contract ERC20GearingToken is AbstractGearingToken {
         AggregatorV3Interface collateralOracle
     ) public initializer {
         __AbstractGearingToken_init(name, symbol, admin, config);
-        _getERC20GearingTokenStorage().collateralOracle = collateralOracle;
+        _getGearingTokenWithERC20Storage().collateralOracle = collateralOracle;
     }
 
     /**
      * @inheritdoc IGearingToken
      */
     function delivery(
-        uint256 ratio,
+        uint256 proportion,
         address to
     )
         external
@@ -61,7 +62,7 @@ contract ERC20GearingToken is AbstractGearingToken {
     {
         IERC20 collateral = IERC20(_getGearingTokenStorage().config.collateral);
         uint collateralReserve = collateral.balanceOf(address(this));
-        uint amount = (collateralReserve * ratio) / Constants.DECIMAL_BASE;
+        uint amount = (collateralReserve * proportion) / Constants.DECIMAL_BASE;
         collateral.transfer(to, amount);
         deliveryData = abi.encode(amount);
     }
@@ -128,8 +129,8 @@ contract ERC20GearingToken is AbstractGearingToken {
         override
         returns (bytes memory priceData)
     {
-        AggregatorV3Interface collateralOracle = _getERC20GearingTokenStorage()
-            .collateralOracle;
+        AggregatorV3Interface collateralOracle = _getGearingTokenWithERC20Storage()
+                .collateralOracle;
         uint decimals = 10 ** collateralOracle.decimals();
         (, int256 answer, , , ) = collateralOracle.latestRoundData();
         uint price = answer.toUint256();

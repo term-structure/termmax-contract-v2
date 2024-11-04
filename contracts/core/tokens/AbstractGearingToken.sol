@@ -24,7 +24,7 @@ abstract contract AbstractGearingToken is
     using SafeCast for int256;
 
     /// @notice Error for msg.sender is not the market
-    error SenderIsNotTheMarket();
+    error CallerIsNotTheMarket();
     /// @notice Error for merge loans have different owner
     error CanNotMergeLoanWithDiffOwner();
     /// @notice Error for liquidate loan when Gearing Token don't support liquidation
@@ -45,11 +45,11 @@ abstract contract AbstractGearingToken is
     error LtvIncreasedAfterLiquidation(uint256 ltvBefore, uint256 ltvAfter);
     /// @notice Error for unauthorized operation
     /// @param id The id of Gearing Token
-    error SenderIsNotTheOwner(uint256 id);
+    error CallerIsNotTheOwner(uint256 id);
     /// @notice Error for liquidate the loan with invalid repay amount
     error RepayAmtExceedsMaxRepayAmt(uint128 repayAmt, uint128 maxRepayAmt);
 
-    /// @notice Emitted when merge multiple Gearing Tokens into one
+    /// @notice Emitted when merging multiple Gearing Tokens into one
     /// @param sender The owner of those tokens
     /// @param newId The id of new Gearing Token
     /// @param ids The array of Gearing Tokens id were merged
@@ -58,23 +58,23 @@ abstract contract AbstractGearingToken is
         uint256 indexed newId,
         uint256[] ids
     );
-    /// @notice Emitted when remove collateral from the loan
+    /// @notice Emitted when removing collateral from the loan
     /// @param id The id of Gearing Token
     /// @param newCollateralData Collateral data after removal
     event RemoveCollateral(uint256 indexed id, bytes newCollateralData);
 
-    /// @notice Emitted when add collateral to the loan
+    /// @notice Emitted when adding collateral to the loan
     /// @param id The id of Gearing Token
     /// @param newCollateralData Collateral data after additional
     event AddCollateral(uint256 indexed id, bytes newCollateralData);
 
-    /// @notice Emitted when repay the debt of Gearing Token
+    /// @notice Emitted when repaying the debt of Gearing Token
     /// @param id The id of Gearing Token
     /// @param repayAmt The amount of debt repaid
     /// @param byUnderlying Repay using underlying token or bonds token
     event Repay(uint256 indexed id, uint256 repayAmt, bool byUnderlying);
 
-    /// @notice Emitted when liquidate Gearing Token
+    /// @notice Emitted when liquidating Gearing Token
     /// @param id The id of Gearing Token
     /// @param liquidator The liquidator
     /// @param repayAmt The amount of debt liquidated
@@ -119,10 +119,12 @@ abstract contract AbstractGearingToken is
         bytes collateralPriceData;
     }
 
-    // The percentage of repay amount to liquidator while do liquidate
+    /// @notice The percentage of repay amount to liquidator while do liquidate
     uint256 constant REWARD_TO_LIQUIDATOR = 5e6;
-    // The percentage of repay amount to protocol while do liquidate
+    /// @notice The percentage of repay amount to protocol while do liquidate
     uint256 constant REWARD_TO_PROTOCOL = 5e6;
+    /// @notice Semi-liquidation threshold: if the value of the collateral reaches this value,
+    ///         only partial liquidation can be performed.
     uint256 constant HALF_LIQUIDATION_THRESHOLD = 10000e8;
     uint256 constant UINT_MAX = 2 ** 256 - 1;
 
@@ -159,7 +161,7 @@ abstract contract AbstractGearingToken is
      */
     function setTreasurer(address treasurer) external {
         if (msg.sender != marketAddr()) {
-            revert SenderIsNotTheMarket();
+            revert CallerIsNotTheMarket();
         }
         _getGearingTokenStorage().config.treasurer = treasurer;
     }
@@ -195,7 +197,7 @@ abstract contract AbstractGearingToken is
     ) external override returns (uint256 id) {
         GearingTokenStorage storage s = _getGearingTokenStorage();
         if (msg.sender != s.config.market) {
-            revert SenderIsNotTheMarket();
+            revert CallerIsNotTheMarket();
         }
         _transferCollateralFrom(to, address(this), collateralData);
         id = _mintInternal(to, debtAmt, collateralData, s);
@@ -325,7 +327,7 @@ abstract contract AbstractGearingToken is
         bytes memory collateralData
     ) external override nonReentrant {
         if (msg.sender != ownerOf(id)) {
-            revert SenderIsNotTheOwner(id);
+            revert CallerIsNotTheOwner(id);
         }
 
         GearingTokenStorage storage s = _getGearingTokenStorage();
