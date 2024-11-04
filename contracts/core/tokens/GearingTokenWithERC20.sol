@@ -4,25 +4,31 @@ pragma solidity ^0.8.27;
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "./AbstractGearingToken.sol";
 
-contract ERC20GearingToken is AbstractGearingToken {
+/**
+ * @title Term Max Gearing Token, using ERC20 token as collateral
+ * @author Term Structure Labs
+ */
+contract GearingTokenWithERC20 is AbstractGearingToken {
     using SafeCast for uint256;
     using SafeCast for int256;
 
-    struct ERC20GearingTokenStorage {
+    struct GearingTokenWithERC20Storage {
+        /// @notice The oracle of collateral in USD
         AggregatorV3Interface collateralOracle;
     }
 
-    bytes32 internal constant STORAGE_SLOT_ERC20_GEARING_TOKEN_STORAGE =
+    bytes32 internal constant STORAGE_SLOT_GEARING_TOKEN_ERC20_STORAGE =
         bytes32(
-            uint256(keccak256("TermMax.storage.ERC20GearingTokenStorage")) - 1
+            uint256(keccak256("TermMax.storage.GearingTokenWithERC20Storage")) -
+                1
         );
 
-    function _getERC20GearingTokenStorage()
+    function _getGearingTokenWithERC20Storage()
         private
         pure
-        returns (ERC20GearingTokenStorage storage s)
+        returns (GearingTokenWithERC20Storage storage s)
     {
-        bytes32 slot = STORAGE_SLOT_ERC20_GEARING_TOKEN_STORAGE;
+        bytes32 slot = STORAGE_SLOT_GEARING_TOKEN_ERC20_STORAGE;
         assembly {
             s.slot := slot
         }
@@ -38,11 +44,14 @@ contract ERC20GearingToken is AbstractGearingToken {
         AggregatorV3Interface collateralOracle
     ) public initializer {
         __AbstractGearingToken_init(name, symbol, admin, config);
-        _getERC20GearingTokenStorage().collateralOracle = collateralOracle;
+        _getGearingTokenWithERC20Storage().collateralOracle = collateralOracle;
     }
 
+    /**
+     * @inheritdoc IGearingToken
+     */
     function delivery(
-        uint256 ratio,
+        uint256 proportion,
         address to
     )
         external
@@ -53,11 +62,14 @@ contract ERC20GearingToken is AbstractGearingToken {
     {
         IERC20 collateral = IERC20(_getGearingTokenStorage().config.collateral);
         uint collateralReserve = collateral.balanceOf(address(this));
-        uint amount = (collateralReserve * ratio) / Constants.DECIMAL_BASE;
+        uint amount = (collateralReserve * proportion) / Constants.DECIMAL_BASE;
         collateral.transfer(to, amount);
         deliveryData = abi.encode(amount);
     }
 
+    /**
+     * @inheritdoc AbstractGearingToken
+     */
     function _mergeCollateral(
         bytes memory collateralDataA,
         bytes memory collateralDataB
@@ -67,6 +79,9 @@ contract ERC20GearingToken is AbstractGearingToken {
         collateralData = abi.encode(total);
     }
 
+    /**
+     * @inheritdoc AbstractGearingToken
+     */
     function _transferCollateralFrom(
         address from,
         address to,
@@ -79,6 +94,9 @@ contract ERC20GearingToken is AbstractGearingToken {
         );
     }
 
+    /**
+     * @inheritdoc AbstractGearingToken
+     */
     function _transferCollateral(
         address to,
         bytes memory collateralData
@@ -89,6 +107,9 @@ contract ERC20GearingToken is AbstractGearingToken {
         );
     }
 
+    /**
+     * @inheritdoc AbstractGearingToken
+     */
     function _getCollateralValue(
         bytes memory collateralData,
         bytes memory priceData
@@ -98,6 +119,9 @@ contract ERC20GearingToken is AbstractGearingToken {
         return (collateralAmt * price) / decimals;
     }
 
+    /**
+     * @inheritdoc AbstractGearingToken
+     */
     function _getCollateralPriceData()
         internal
         view
@@ -105,26 +129,31 @@ contract ERC20GearingToken is AbstractGearingToken {
         override
         returns (bytes memory priceData)
     {
-        AggregatorV3Interface collateralOracle = _getERC20GearingTokenStorage()
-            .collateralOracle;
+        AggregatorV3Interface collateralOracle = _getGearingTokenWithERC20Storage()
+                .collateralOracle;
         uint decimals = 10 ** collateralOracle.decimals();
         (, int256 answer, , , ) = collateralOracle.latestRoundData();
         uint price = answer.toUint256();
         priceData = abi.encode(price, decimals);
     }
 
+    /// @notice Encode amount to collateral data
     function _decodeAmount(
         bytes memory collateralData
     ) internal pure returns (uint256) {
         return abi.decode(collateralData, (uint));
     }
 
+    /// @notice Decode amount from collateral data
     function _encodeAmount(
         uint256 amount
     ) internal pure returns (bytes memory) {
         return abi.encode(amount);
     }
 
+    /**
+     * @inheritdoc AbstractGearingToken
+     */
     function _removeCollateral(
         LoanInfo memory loan,
         bytes memory collateralData
@@ -134,6 +163,9 @@ contract ERC20GearingToken is AbstractGearingToken {
         return _encodeAmount(amount);
     }
 
+    /**
+     * @inheritdoc AbstractGearingToken
+     */
     function _addCollateral(
         LoanInfo memory loan,
         bytes memory collateralData
@@ -143,6 +175,9 @@ contract ERC20GearingToken is AbstractGearingToken {
         return _encodeAmount(amount);
     }
 
+    /**
+     * @inheritdoc AbstractGearingToken
+     */
     function _calcLiquidationResult(
         LoanInfo memory loan,
         uint128 repayAmt,
@@ -154,7 +189,7 @@ contract ERC20GearingToken is AbstractGearingToken {
         returns (
             bytes memory cToLiquidator,
             bytes memory cToTreasurer,
-            bytes memory remainningCollateralData
+            bytes memory remainningC
         )
     {
         uint collateralAmt = _decodeAmount(loan.collateralData);
@@ -209,12 +244,11 @@ contract ERC20GearingToken is AbstractGearingToken {
         }
         // Calculate remainning collateral
         if (collateralAmt > removedCollateralAmt) {
-            remainningCollateralData = _encodeAmount(
-                collateralAmt - removedCollateralAmt
-            );
+            remainningC = _encodeAmount(collateralAmt - removedCollateralAmt);
         }
     }
 
+    /// @notice Returns the smaller of two values
     function _min(uint256 a, uint256 b) internal pure returns (uint256) {
         return a < b ? a : b;
     }
