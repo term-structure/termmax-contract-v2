@@ -12,8 +12,9 @@ import {MockERC20, ERC20} from "../contracts/test/MockERC20.sol";
 import {MockPriceFeed} from "../contracts/test/MockPriceFeed.sol";
 import {ITermMaxFactory, TermMaxFactory, IMintableERC20, IGearingToken, AggregatorV3Interface} from "../contracts/core/factory/TermMaxFactory.sol";
 import "../contracts/core/storage/TermMaxStorage.sol";
+import {TermMaxRouter} from "../contracts/router/TermMaxRouter.sol";
 
-contract SwapTest is Test {
+contract TermMaxRouterTest is Test {
     address deployer = vm.envAddress("FORK_DEPLOYER_ADDR");
 
     DeployUtils.Res res;
@@ -21,8 +22,11 @@ contract SwapTest is Test {
     MarketConfig marketConfig;
 
     address sender = vm.randomAddress();
+    address receiver = sender;
+
     address treasurer = vm.randomAddress();
     string testdata;
+    TermMaxRouter router;
 
     function getMarketStateFromJson(
         string memory _testdata,
@@ -107,6 +111,9 @@ contract SwapTest is Test {
             maxLtv,
             liquidationLtv
         );
+        router = DeployUtils.deployRouter(deployer);
+        router.setMarketWhitelist(address(res.market), true);
+        router.togglePause(false);
 
         vm.warp(
             vm.parseUint(
@@ -124,14 +131,16 @@ contract SwapTest is Test {
 
     //test init value?
 
-    function testBuyFt() public {
+    function testSwapExactTokenForFt() public {
         vm.startPrank(sender);
 
         uint128 underlyingAmtIn = 100e8;
         uint128 minTokenOut = 0e8;
         res.underlying.mint(sender, underlyingAmtIn);
-        res.underlying.approve(address(res.market), underlyingAmtIn);
-        uint256 netOut = res.market.buyFt(underlyingAmtIn, minTokenOut);
+
+
+        res.underlying.approve(address(router), underlyingAmtIn);
+        uint256 netOut = router.swapExactTokenForFt(receiver, res.market, underlyingAmtIn, minTokenOut);
 
         StateChecker.MarketState memory expectedState = getMarketStateFromJson(
             testdata,
@@ -142,14 +151,14 @@ contract SwapTest is Test {
         vm.stopPrank();
     }
 
-    function testBuyXt() public {
+    function testSwapExactTokenForXt() public {
         vm.startPrank(sender);
 
         uint128 underlyingAmtIn = 100e8;
         uint128 minTokenOut = 0e8;
         res.underlying.mint(sender, underlyingAmtIn);
         res.underlying.approve(address(res.market), underlyingAmtIn);
-        uint256 netOut = res.market.buyXt(underlyingAmtIn, minTokenOut);
+        uint256 netOut = router.swapExactTokenForXt(receiver, res.market, underlyingAmtIn, minTokenOut);
 
         StateChecker.MarketState memory expectedState = getMarketStateFromJson(
             testdata,
@@ -160,17 +169,17 @@ contract SwapTest is Test {
         vm.stopPrank();
     }
 
-    function testSellFt() public {
+    function testSwapExactFtForToken() public {
         vm.startPrank(sender);
 
         uint128 underlyingAmtIn = 100e8;
         uint128 minTokenOut_ = 0e8;
         res.underlying.mint(sender, underlyingAmtIn);
         res.underlying.approve(address(res.market), underlyingAmtIn);
-        uint128 ftAmtIn = uint128(res.market.buyFt(underlyingAmtIn, minTokenOut_) / 2);
+        uint128 ftAmtIn = uint128(router.swapExactTokenForFt(receiver, res.market, underlyingAmtIn, minTokenOut_) / 2);
         uint128 minTokenOut = 0e8;
         res.ft.approve(address(res.market), ftAmtIn);
-        uint256 netOut = res.market.sellFt(ftAmtIn, minTokenOut);
+        uint256 netOut = router.swapExactFtForToken(receiver, res.market, ftAmtIn, minTokenOut);
 
         StateChecker.MarketState memory expectedState = getMarketStateFromJson(
             testdata,
@@ -181,17 +190,17 @@ contract SwapTest is Test {
         vm.stopPrank();
     }
 
-    function testSellXt() public {
+    function testSwapExactXtForToken() public {
         vm.startPrank(sender);
 
         uint128 underlyingAmtIn = 100e8;
         uint128 minTokenOut_ = 0e8;
         res.underlying.mint(sender, underlyingAmtIn);
         res.underlying.approve(address(res.market), underlyingAmtIn);
-        uint128 xtAmtIn = uint128(res.market.buyXt(underlyingAmtIn, minTokenOut_) / 2);
+        uint128 xtAmtIn = uint128(router.swapExactTokenForXt(receiver, res.market, underlyingAmtIn, minTokenOut_) / 2);
         uint128 minTokenOut = 0e8;
         res.xt.approve(address(res.market), xtAmtIn);
-        uint256 netOut = res.market.sellXt(xtAmtIn, minTokenOut);
+        uint256 netOut = router.swapExactXtForToken(receiver, res.market, xtAmtIn, minTokenOut);
 
         StateChecker.MarketState memory expectedState = getMarketStateFromJson(
             testdata,
