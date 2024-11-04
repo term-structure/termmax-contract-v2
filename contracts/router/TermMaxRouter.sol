@@ -31,7 +31,27 @@ enum ContextCallbackType {
   BORROW_TOKEN_FROM_COLL 
 }
 
-contract TermMaxRouter is UUPSUpgradeable, AccessControlUpgradeable, PausableUpgradeable, IFlashLoanReceiver, ITermMaxRouter {
+struct SwapInput {
+  address swapper;
+  bytes swapData;
+  IERC20 tokenIn;
+  IERC20 tokenOut;
+}
+
+struct LeverageFromTokenData {
+  ITermMaxMarket market;
+  address gtAddress;
+  uint256 tokenInAmt;
+  uint256 minCollAmt;
+  uint256 xtInAmt;
+  SwapInput swapInput;
+}
+
+
+contract TermMaxRouter is
+  UUPSUpgradeable, AccessControlUpgradeable,
+  PausableUpgradeable, IFlashLoanReceiver, ITermMaxRouter
+{
   using Address for address;
   using SafeCast for uint256;
   using SafeCast for int256;
@@ -79,7 +99,10 @@ contract TermMaxRouter is UUPSUpgradeable, AccessControlUpgradeable, PausableUpg
   }
 
   /** Leverage Market */
-  function swapExactTokenForFt(address receiver, ITermMaxMarket market, uint128 tokenInAmt, uint128 minFtOut) ensureMarketWhitelist(address(market)) whenNotPaused external returns (uint256 netFtOut) {
+  function swapExactTokenForFt(
+    address receiver, ITermMaxMarket market,
+    uint128 tokenInAmt, uint128 minFtOut
+  ) ensureMarketWhitelist(address(market)) whenNotPaused external returns (uint256 netFtOut) {
     (IMintableERC20 ft,,,,,, IERC20 underlying) = market.tokens();
     underlying.safeTransferFrom(msg.sender, address(this), tokenInAmt);
     
@@ -267,6 +290,47 @@ contract TermMaxRouter is UUPSUpgradeable, AccessControlUpgradeable, PausableUpg
     underlying.safeTransfer(receiver, netOut);
   }
 
+  function leverageFromToken(
+    address receiver,
+    ITermMaxMarket market,
+    uint256 tokenInAmt, // underlying
+    uint256 minCollAmt,
+    uint256 minXtAmt,
+    SwapInput calldata swapInput
+  ) ensureMarketWhitelist(address(market)) whenNotPaused external returns (uint256 gtId) {
+    (,IMintableERC20 xt,,, IGearingToken gt, address collateral, IERC20 underlying) = market.tokens();
+    _transferToSelfAndApproveSpender(underlying, msg.sender, address(market), tokenInAmt);
+
+    (uint256 netXtOut) = market.buyXt(tokenInAmt.toUint128(), minXtAmt.toUint128());
+    if(netXtOut < minXtAmt) {
+      revert("Slippage: INSUFFICIENT_XT_OUT");
+    }
+
+    // bytes memory callbackData = _encodeLeverageFromTokenData(receiver, address(market), collateral, address(underlying), minCollAmt, netXtOut, swapInput.swapper, swapInput.swapData);
+    bytes memory callbackData = _encodeLeverageFromTokenData(market, address(gt), tokenInAmt, minCollAmt, netXtOut, swapInput);
+    gtId = market.leverageByXt(receiver, netXtOut.toUint128(), callbackData);
+  }
+
+  function _encodeLeverageFromTokenData(
+    ITermMaxMarket market,
+    address gtAddress,
+    uint256 tokenInAmt,
+    uint256 minCollAmt,
+    uint256 xtInAmt,
+    SwapInput memory swapInput
+  ) internal pure returns (bytes memory) {
+    return abi.encode(
+      ContextCallbackType.LEVERAGE_FROM_TOKEN,
+      LeverageFromTokenData(
+        market,
+        gtAddress,
+        tokenInAmt,
+        minCollAmt,
+        xtInAmt,
+        swapInput
+      )
+    );
+  }
   
   /** Lending Market */
   function borrowTokenFromCash(
@@ -307,42 +371,47 @@ contract TermMaxRouter is UUPSUpgradeable, AccessControlUpgradeable, PausableUpg
     // uint256 gtId = market.mintGt(address(this), netXtOut.toUint128(), data);
   }
 
-  // TODO:
   function borrowTokenFromCollateral(
     address receiver,
     ITermMaxMarket market,
     uint256 collInAmt,
-    uint256 minXtAmt,
-    uint256 maxDebtAmt,
-    address swapper,
-    bytes calldata swapData
-  ) ensureMarketWhitelist(address(market)) whenNotPaused external returns (uint256 netTokenOut) {
-    (,,,,
+    uint256 debtAmt,
+    uint256 minBorrowAmt
+  ) ensureMarketWhitelist(address(market)) whenNotPaused external returns (uint256, uint256) {
+    ( 
+      IMintableERC20 ft,
+      ,,,
       IGearingToken gt,
-      address collateral,
-      IERC20 underlying) = market.tokens();
+      address collateralAddr,
+      IERC20 underlying
+    ) = market.tokens();
 
+    _transferToSelfAndApproveSpender(IERC20(collateralAddr), msg.sender, address(market), collInAmt);
+    
+    return _mintGt(market, ft, gt, underlying, receiver, debtAmt, collInAmt, minBorrowAmt);
+  }
+
+  function _mintGt(
+    ITermMaxMarket market,
+    IMintableERC20 ft,
+    IGearingToken gt,
+    IERC20 underlying,
+    address receiver,
+    uint256 debtAmt,
+    uint256 collInAmt,
+    uint256 minBorrowAmt
+  ) internal returns (uint256, uint256) {
     /**
-     * 1. buy XT with tokenInAmt
-     * 2, spend XT to mint GT
-     * 3. callback executeOperation from Market
-     * 4. receive borrow token to buy Collateral
-     * 4. ensure GT Collateral is enough to cover debt
+     * 1. MintGT with Collateral, and get GT, FT
+     * 2. Sell FT to get UnderlyingToken
+     * 3. Transfer UnderlyingToken and GT to Receiver
      */
-    // underlying.safeTransferFrom(msg.sender, address(this), tokenInAmt);
-    // underlying.safeIncreaseAllowance(address(market), tokenInAmt);
-    // (uint256 netXtOut) = market.buyXt(address(this), tokenInAmt.toUint128(), minXtAmt.toUint128());
-    // if(netXtOut < minXtAmt) {
-    //   revert("Slippage: INSUFFICIENT_XT_OUT");
-    // }
-    // if(maxDebtAmt > netXtOut) {
-    //   revert("Debt exceed max Debt amount");
-    // }
+    (uint256 gtId, uint256 netFtOut) = market.leverageByCollateral(debtAmt.toUint128(), _encodeAmount(collInAmt));
 
-    // // mint GT
-    // bytes memory data = abi.encode(ContextCallbackType.BORROW_TOKEN_FROM_CASH, receiver, address(market), collateral, underlying, minCollAmt, netXtOut, swapper, swapData);
+    ft.safeIncreaseAllowance(address(market), netFtOut);
+    uint256 netTokenOut = market.sellFt(netFtOut.toUint128(), minBorrowAmt.toUint128());
 
-    // uint256 gtId = market.mintGt(address(this), netXtOut.toUint128(), data);
+    return (gtId, netTokenOut);
   }
 
   function repayFromFt(
@@ -394,26 +463,26 @@ contract TermMaxRouter is UUPSUpgradeable, AccessControlUpgradeable, PausableUpg
     IERC20 asset,
     uint256 amount,
     bytes calldata data
-  ) ensureSwapperWhitelist(msg.sender) external returns (bytes memory collateralData) {
-    (ContextCallbackType callbackType, address receiver, ITermMaxMarket market, IERC20 collateral, IERC20 underlying, uint256 minCollAmt, uint256 borrowAmt, address swapper, bytes memory swapData) = abi.decode(data, (ContextCallbackType, address, ITermMaxMarket, IERC20, IERC20, uint256, uint256, address, bytes));
+  ) ensureMarketWhitelist(msg.sender) external returns (bytes memory collateralData) {
+    (ContextCallbackType callbackType) = abi.decode(data, (ContextCallbackType));
+    // TODO: prevent reentrancy
 
-    if(callbackType == ContextCallbackType.BORROW_TOKEN_FROM_CASH) {
-      if(!swapperWhitelist[swapper]) {
+    if(callbackType == ContextCallbackType.LEVERAGE_FROM_TOKEN) {
+      (, LeverageFromTokenData memory leverData) = abi.decode(data, (ContextCallbackType, LeverageFromTokenData));
+      if(!swapperWhitelist[leverData.swapInput.swapper]) {
         revert("Invalid swapper");
       }
-      // IGearingToken gt = IGearingToken(gtAddress);
-      // TODO: prevent reentrancy
-      underlying.safeIncreaseAllowance(swapper, borrowAmt);
-      swapper.functionCall(swapData);
-      uint256 collBalance = collateral.balanceOf(address(this));
-      if(collBalance < minCollAmt) {
+      // get debt amount
+      require(address(leverData.swapInput.tokenIn) == address(asset), "Invalid tokenIn");
+      asset.safeIncreaseAllowance(leverData.swapInput.swapper, amount);
+      leverData.swapInput.swapper.functionCall(leverData.swapInput.swapData);
+
+      uint256 collBalance = leverData.swapInput.tokenOut.balanceOf(address(this));
+      if(collBalance < leverData.minCollAmt) {
         revert("Slippage: INSUFFICIENT_COLLATERAL");
       }
-
-      // collateral.safeIncreaseAllowance(address(gt), collBalance);
-      // gt.addCollateral(gtId, _encodeAmount(collBalance));
-
-      // gt.safeTransferFrom(address(this), receiver, gtId);
+      leverData.swapInput.tokenOut.safeIncreaseAllowance(leverData.gtAddress, collBalance);
+      return _encodeAmount(collBalance);
     } else {
       revert("Invalid callback type");
     }

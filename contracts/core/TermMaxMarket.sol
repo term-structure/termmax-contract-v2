@@ -659,7 +659,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         // Mint GT
         gtId = gt.mint(receiver, debt, collateralData);
 
-        emit MintGt(caller, receiver, gtId, debt, collateralData);
+        emit MintGt(caller, receiver, gtId, debt, 0, collateralData);
     }
 
     /**
@@ -668,7 +668,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
     function leverageByCollateral(
         uint128 debt,
         bytes calldata collateralData
-    ) external override isOpen nonReentrant returns (uint256 gtId) {
+    ) external override isOpen nonReentrant returns (uint256 gtId, uint256 netFtOut) {
         return _leverageByCollateral(msg.sender, debt, collateralData);
     }
 
@@ -676,16 +676,17 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         address caller,
         uint128 debt,
         bytes calldata collateralData
-    ) internal returns (uint256 gtId) {
+    ) internal returns (uint256 gtId, uint256 netFtOut) {
         // Mint GT
         gtId = gt.mint(caller, debt, collateralData);
 
         MarketConfig memory mConfig = _config;
         uint leverFee = (debt * mConfig.leverfeeRatio) / Constants.DECIMAL_BASE;
         ft.transfer(mConfig.treasurer, leverFee);
-        ft.mint(caller, debt - leverFee);
+        netFtOut = debt - leverFee;
+        ft.mint(caller, netFtOut);
 
-        emit MintGt(caller, caller, gtId, debt, collateralData);
+        emit MintGt(caller, caller, gtId, debt, leverFee.toUint128(), collateralData);
     }
 
     /**

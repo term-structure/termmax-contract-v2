@@ -474,7 +474,7 @@ contract SwapTest is Test {
         StateChecker.MarketState memory state = StateChecker.getMarketState(
             res
         );
-        uint256 netOut = res.market.leverageByCollateral(
+        (,uint256 netOut) = res.market.leverageByCollateral(
             debtAmt,
             abi.encode(collateralAmtIn)
         );

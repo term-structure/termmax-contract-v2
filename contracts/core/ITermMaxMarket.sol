@@ -135,6 +135,7 @@ interface ITermMaxMarket {
         address indexed receiver,
         uint256 indexed gtId,
         uint128 debtAmt,
+        uint128 feeAmt,
         bytes collateralData
     );
 
@@ -265,7 +266,7 @@ interface ITermMaxMarket {
     function leverageByCollateral(
         uint128 debt,
         bytes calldata collateralData
-    ) external returns (uint256 gtId);
+    ) external returns (uint256 gtId, uint256 netFtOut);
 
     /// @notice Flash loan underlying token for leverage
     /// @param receiver Who will receive Gearing Token
