@@ -60,95 +60,6 @@ contract SwapTest is Test {
         vm.stopPrank();
     }
 
-    function testProvideLiquidity() public {
-        vm.startPrank(sender);
-
-        uint128 underlyingAmtIn = 100e8;
-        res.underlying.mint(sender, underlyingAmtIn);
-        res.underlying.approve(address(res.market), underlyingAmtIn);
-        (uint128 lpFtOutAmt, uint128 lpXtOutAmt) = res.market.provideLiquidity(
-            underlyingAmtIn
-        );
-
-        StateChecker.MarketState memory expectedState = JSONLoader
-            .getMarketStateFromJson(
-                testdata,
-                ".expected.provideLiquidity.contractState"
-            );
-        StateChecker.checkMarketState(res, expectedState);
-
-        assert(
-            lpFtOutAmt ==
-                vm.parseUint(
-                    vm.parseJsonString(
-                        testdata,
-                        ".expected.provideLiquidity.output.lpFtAmount"
-                    )
-                )
-        );
-        assert(
-            lpXtOutAmt ==
-                vm.parseUint(
-                    vm.parseJsonString(
-                        testdata,
-                        ".expected.provideLiquidity.output.lpXtAmount"
-                    )
-                )
-        );
-        assert(res.lpFt.balanceOf(sender) == lpFtOutAmt);
-        assert(res.lpXt.balanceOf(sender) == lpXtOutAmt);
-
-        vm.stopPrank();
-    }
-
-    function testWithdrawLp() public {
-        vm.startPrank(sender);
-
-        uint128 underlyingAmtIn = 100e8;
-        res.underlying.mint(sender, underlyingAmtIn);
-        res.underlying.approve(address(res.market), underlyingAmtIn);
-        (uint128 lpFtOutAmt, uint128 lpXtOutAmt) = res.market.provideLiquidity(
-            underlyingAmtIn
-        );
-
-        res.lpFt.approve(address(res.market), lpFtOutAmt);
-        res.lpXt.approve(address(res.market), lpXtOutAmt);
-        (uint128 ftOutAmt, uint128 xtOutAmt) = res.market.withdrawLp(
-            lpFtOutAmt,
-            lpXtOutAmt
-        );
-
-        StateChecker.MarketState memory expectedState = JSONLoader
-            .getMarketStateFromJson(
-                testdata,
-                ".expected.withdrawLp.contractState"
-            );
-        StateChecker.checkMarketState(res, expectedState);
-
-        assert(
-            ftOutAmt ==
-                vm.parseUint(
-                    vm.parseJsonString(
-                        testdata,
-                        ".expected.withdrawLp.output.lpFtAmount"
-                    )
-                )
-        );
-        assert(
-            xtOutAmt ==
-                vm.parseUint(
-                    vm.parseJsonString(
-                        testdata,
-                        ".expected.withdrawLp.output.lpXtAmount"
-                    )
-                )
-        );
-        assert(res.ft.balanceOf(sender) == ftOutAmt);
-        assert(res.xt.balanceOf(sender) == xtOutAmt);
-
-        vm.stopPrank();
-    }
-
     function testBuyFt() public {
         vm.startPrank(sender);
 
@@ -179,6 +90,8 @@ contract SwapTest is Test {
         vm.stopPrank();
     }
 
+    //TODO: test case for minTokenOut
+
     function testBuyXt() public {
         vm.startPrank(sender);
 
@@ -208,6 +121,8 @@ contract SwapTest is Test {
 
         vm.stopPrank();
     }
+
+    //TODO: test case for minTokenOut
 
     function testSellFt() public {
         vm.startPrank(sender);
@@ -245,6 +160,8 @@ contract SwapTest is Test {
         vm.stopPrank();
     }
 
+    //TODO: test case for minTokenOut
+
     function testSellXt() public {
         vm.startPrank(sender);
 
@@ -280,6 +197,8 @@ contract SwapTest is Test {
 
         vm.stopPrank();
     }
+
+    //TODO: test case for minTokenOut
 
     function testLever() public {
         vm.startPrank(sender);

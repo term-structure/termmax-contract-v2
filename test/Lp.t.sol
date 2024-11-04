@@ -4,7 +4,9 @@ pragma solidity ^0.8.27;
 import "forge-std/Test.sol";
 import {console} from "forge-std/console.sol";
 import {DeployUtils} from "./utils/DeployUtils.sol";
+import {JSONLoader} from "./utils/JSONLoader.sol";
 import {StateChecker} from "./utils/StateChecker.sol";
+import {SwapUtils} from "./utils/SwapUtils.sol";
 
 import {ITermMaxMarket, TermMaxMarket, Constants} from "../contracts/core/TermMaxMarket.sol";
 import {MockERC20, ERC20} from "../contracts/test/MockERC20.sol";
@@ -12,149 +14,142 @@ import {MockPriceFeed} from "../contracts/test/MockPriceFeed.sol";
 import {ITermMaxFactory, TermMaxFactory, IMintableERC20, IGearingToken, AggregatorV3Interface} from "../contracts/core/factory/TermMaxFactory.sol";
 import "../contracts/core/storage/TermMaxStorage.sol";
 
-contract FactoryTest is Test {
+contract SwapTest is Test {
+    using JSONLoader for *;
     DeployUtils.Res res;
 
     MarketConfig marketConfig;
 
     address deployer = vm.randomAddress();
     address sender = vm.randomAddress();
+    address treasurer = vm.randomAddress();
+    string testdata;
 
     function setUp() public {
         vm.startPrank(deployer);
-        uint32 maxLtv = 0.85e8;
+        testdata = vm.readFile(
+            string.concat(vm.projectRoot(), "/test/testdata/Swap.testdata.json")
+        );
+
+        uint32 maxLtv = 0.89e8;
         uint32 liquidationLtv = 0.9e8;
 
-        marketConfig.openTime = uint64(block.timestamp);
-        marketConfig.maturity = uint64(
-            marketConfig.openTime + Constants.SECONDS_IN_DAY * 30
+        marketConfig = JSONLoader.getMarketConfigFromJson(
+            treasurer,
+            testdata,
+            ".marketConfig"
         );
-        marketConfig.initialLtv = 0.9e8;
-        marketConfig.apr = 0.1e8;
-        marketConfig.lsf = 0.5e8;
-        // DeployUtils deployUtil = new DeployUtils();
         res = DeployUtils.deployMarket(
             deployer,
             marketConfig,
             maxLtv,
             liquidationLtv
         );
+
+        vm.warp(
+            vm.parseUint(
+                vm.parseJsonString(testdata, ".marketConfig.currentTime")
+            )
+        );
+
+        uint amount = 10000e8;
+        res.underlying.mint(deployer, amount);
+        res.underlying.approve(address(res.market), amount);
+        res.market.provideLiquidity(amount);
+
         vm.stopPrank();
     }
 
     function testProvideLiquidity() public {
         vm.startPrank(sender);
-        uint amount = 10000e8;
-        res.underlying.mint(sender, amount * 2);
-        res.underlying.approve(address(res.market), amount * 2);
 
-        StateChecker.MarketState memory state = StateChecker.getMarketState(
-            res
-        );
+        uint128 underlyingAmtIn = 100e8;
+        res.underlying.mint(sender, underlyingAmtIn);
+        res.underlying.approve(address(res.market), underlyingAmtIn);
         (uint128 lpFtOutAmt, uint128 lpXtOutAmt) = res.market.provideLiquidity(
-            amount
+            underlyingAmtIn
         );
 
-        state.ftReserve +=
-            (amount * marketConfig.initialLtv) /
-            Constants.DECIMAL_BASE;
-        state.xtReserve += amount;
-        state.underlyingReserve += amount;
-
-        StateChecker.checkMarketState(res, state);
+        StateChecker.MarketState memory expectedState = JSONLoader
+            .getMarketStateFromJson(
+                testdata,
+                ".expected.provideLiquidity.contractState"
+            );
+        StateChecker.checkMarketState(res, expectedState);
 
         assert(
             lpFtOutAmt ==
-                (amount * marketConfig.initialLtv) / Constants.DECIMAL_BASE
+                vm.parseUint(
+                    vm.parseJsonString(
+                        testdata,
+                        ".expected.provideLiquidity.output.lpFtAmount"
+                    )
+                )
         );
-        assert(lpXtOutAmt == amount);
-
-        (lpFtOutAmt, lpXtOutAmt) = res.market.provideLiquidity(amount);
-
-        state.ftReserve +=
-            (amount * marketConfig.initialLtv) /
-            Constants.DECIMAL_BASE;
-        state.xtReserve += amount;
-        state.underlyingReserve += amount;
-
-        StateChecker.checkMarketState(res, state);
-
         assert(
-            res.lpFt.balanceOf(sender) ==
-                ((amount * marketConfig.initialLtv) / Constants.DECIMAL_BASE) *
-                    2
+            lpXtOutAmt ==
+                vm.parseUint(
+                    vm.parseJsonString(
+                        testdata,
+                        ".expected.provideLiquidity.output.lpXtAmount"
+                    )
+                )
         );
-        assert(res.lpXt.balanceOf(sender) == amount * 2);
+        assert(res.lpFt.balanceOf(sender) == lpFtOutAmt);
+        assert(res.lpXt.balanceOf(sender) == lpXtOutAmt);
 
         vm.stopPrank();
     }
 
-    function testWithdraw() public {
+    //TODO: test case for Providing Liqudiity twice
+
+    function testWithdrawLp() public {
         vm.startPrank(sender);
 
-        uint amount = 10000e8;
-        res.underlying.mint(sender, amount * 2);
-        res.underlying.approve(address(res.market), amount * 2);
-
-        StateChecker.MarketState memory state = StateChecker.getMarketState(
-            res
-        );
+        uint128 underlyingAmtIn = 100e8;
+        res.underlying.mint(sender, underlyingAmtIn);
+        res.underlying.approve(address(res.market), underlyingAmtIn);
         (uint128 lpFtOutAmt, uint128 lpXtOutAmt) = res.market.provideLiquidity(
-            amount
+            underlyingAmtIn
         );
-
-        vm.warp(block.timestamp + 12);
 
         res.lpFt.approve(address(res.market), lpFtOutAmt);
         res.lpXt.approve(address(res.market), lpXtOutAmt);
+        (uint128 ftOutAmt, uint128 xtOutAmt) = res.market.withdrawLp(
+            lpFtOutAmt,
+            lpXtOutAmt
+        );
 
-        res.market.withdrawLp(lpFtOutAmt, lpXtOutAmt);
-
-        state.underlyingReserve = amount;
-        StateChecker.checkMarketState(res, state);
+        StateChecker.MarketState memory expectedState = JSONLoader
+            .getMarketStateFromJson(
+                testdata,
+                ".expected.withdrawLp.contractState"
+            );
+        StateChecker.checkMarketState(res, expectedState);
 
         assert(
-            res.ft.balanceOf(sender) ==
-                (amount * marketConfig.initialLtv) / Constants.DECIMAL_BASE
+            ftOutAmt ==
+                vm.parseUint(
+                    vm.parseJsonString(
+                        testdata,
+                        ".expected.withdrawLp.output.lpFtAmount"
+                    )
+                )
         );
-        assert(res.xt.balanceOf(sender) == amount);
+        assert(
+            xtOutAmt ==
+                vm.parseUint(
+                    vm.parseJsonString(
+                        testdata,
+                        ".expected.withdrawLp.output.lpXtAmount"
+                    )
+                )
+        );
+        assert(res.ft.balanceOf(sender) == ftOutAmt);
+        assert(res.xt.balanceOf(sender) == xtOutAmt);
 
         vm.stopPrank();
     }
 
-    function testWithdrawLpFt() public {
-        vm.startPrank(sender);
-
-        uint amount = 10000e8;
-        res.underlying.mint(sender, amount * 2);
-        res.underlying.approve(address(res.market), amount * 2);
-
-        // StateChecker.MarketState memory state = StateChecker.getMarketState(
-        //     res
-        // );
-        (uint128 lpFtOutAmt, uint128 lpXtOutAmt) = res.market.provideLiquidity(
-            amount
-        );
-
-        vm.warp(block.timestamp + 12);
-
-        res.lpFt.approve(address(res.market), lpFtOutAmt);
-
-        res.market.withdrawLp(lpFtOutAmt, 0);
-
-        // StateChecker.MarketState memory state = StateChecker.getMarketState(
-        //     res
-        // );
-
-        // console.log(state.ftReserve);
-        // console.log(state.apr);
-        // console.log(res.ft.balanceOf(sender));
-
-        // res.lpXt.approve(address(res.market), lpXtOutAmt);
-        // res.market.withdrawLp(0, 100);
-
-        // console.log(res.xt.balanceOf(sender));
-
-        vm.stopPrank();
-    }
+    //TODO: test case for imbalanced liquidity exit
 }
