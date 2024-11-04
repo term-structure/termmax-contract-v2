@@ -54,6 +54,9 @@ library DeployUtils {
 
         res.market = ITermMaxMarket(res.factory.createERC20Market(params));
         console.log("Market deploy at:", address(res.market));
-        (res.ft, res.xt, res.lpFt, res.lpXt, res.gt, , ) = res.market.tokens();
+        console.log("gNft deploy at: ", address(res.gNft));
+        (res.ft, res.xt, res.lpFt, res.lpXt, res.gNft, , ) = res
+            .market
+            .tokens();
     }
 }
