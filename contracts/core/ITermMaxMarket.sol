@@ -5,6 +5,10 @@ import {IMintableERC20, IERC20} from "./tokens/IMintableERC20.sol";
 import {IGearingToken} from "./tokens/IGearingToken.sol";
 import "./storage/TermMaxStorage.sol";
 
+/**
+ * @title Term Max Market interface
+ * @author Term Structure Labs
+ */
 interface ITermMaxMarket {
     error MarketHasBeenInitialized();
     error NumeratorMustLessThanBasicDecimals();
@@ -13,7 +17,6 @@ interface ITermMaxMarket {
     error UnSupportedToken();
     error UnexpectedAmount(
         address sender,
-        IMintableERC20 token,
         uint128 expectedAmt,
         uint128 actualAmt
     );
@@ -185,7 +188,7 @@ interface ITermMaxMarket {
     ) external returns (uint256 gtId);
 
     function mintGt(
-        uint128 debt,
+        uint128 xtAmt,
         bytes calldata callbackData
     ) external returns (uint256 gtId);
 
