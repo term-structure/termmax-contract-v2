@@ -110,7 +110,6 @@ contract SwapTest is Test {
             abi.encodeWithSelector(
                 ITermMaxMarket.UnexpectedAmount.selector,
                 sender,
-                res.ft,
                 minTokenOut,
                 expectedNetOut
             )
@@ -201,7 +200,6 @@ contract SwapTest is Test {
             abi.encodeWithSelector(
                 ITermMaxMarket.UnexpectedAmount.selector,
                 sender,
-                res.xt,
                 minTokenOut,
                 expectedNetOut
             )
@@ -303,7 +301,6 @@ contract SwapTest is Test {
             abi.encodeWithSelector(
                 ITermMaxMarket.UnexpectedAmount.selector,
                 sender,
-                res.underlying,
                 minTokenOut,
                 expectedNetOut
             )
@@ -415,7 +412,6 @@ contract SwapTest is Test {
             abi.encodeWithSelector(
                 ITermMaxMarket.UnexpectedAmount.selector,
                 sender,
-                res.underlying,
                 minTokenOut,
                 expectedNetOut
             )
@@ -473,7 +469,7 @@ contract SwapTest is Test {
         uint128 debtAmt = 95e8;
         uint128 minTokenOut = 0e8;
         res.collateral.mint(sender, collateralAmtIn);
-        res.collateral.approve(address(res.gNft), collateralAmtIn);
+        res.collateral.approve(address(res.gt), collateralAmtIn);
 
         StateChecker.MarketState memory state = StateChecker.getMarketState(
             res
@@ -492,7 +488,7 @@ contract SwapTest is Test {
         uint128 debtAmt = 95e8;
         uint128 minTokenOut = 0e8;
         res.collateral.mint(sender, collateralAmtIn);
-        res.collateral.approve(address(res.gNft), collateralAmtIn);
+        res.collateral.approve(address(res.gt), collateralAmtIn);
 
         vm.warp(res.market.config().maturity - 1);
         res.market.lever(debtAmt, abi.encode(collateralAmtIn));
@@ -507,7 +503,7 @@ contract SwapTest is Test {
         uint128 debtAmt = 95e8;
         uint128 minTokenOut = 0e8;
         res.collateral.mint(sender, collateralAmtIn);
-        res.collateral.approve(address(res.gNft), collateralAmtIn);
+        res.collateral.approve(address(res.gt), collateralAmtIn);
 
         vm.warp(res.market.config().maturity);
         vm.expectRevert(
@@ -518,28 +514,7 @@ contract SwapTest is Test {
         vm.stopPrank();
     }
 
-    function testLeverDebtTooSmall() public {
-        vm.startPrank(sender);
-
-        uint128 collateralAmtIn = 100e8;
-        uint128 debtAmt = uint128(res.market.config().minLeveragedXt) - 1;
-        uint128 minTokenOut = 0e8;
-        res.collateral.mint(sender, collateralAmtIn);
-        res.collateral.approve(address(res.gNft), collateralAmtIn);
-
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                ITermMaxMarket.DebtTooSmall.selector,
-                sender,
-                debtAmt
-            )
-        );
-        res.market.lever(debtAmt, abi.encode(collateralAmtIn));
-
-        vm.stopPrank();
-    }
-
-    function testRedeemFxAndXtToUnderlying() public {
+    function testRedeemFtAndXtToUnderlying() public {
         vm.startPrank(sender);
 
         uint128 underlyingAmtInForBuyXt = 1e8;
@@ -567,14 +542,14 @@ contract SwapTest is Test {
         StateChecker.MarketState memory state = StateChecker.getMarketState(
             res
         );
-        res.market.redeemFxAndXtToUnderlying(xtAmtToRedeem);
+        res.market.redeemFtAndXtToUnderlying(xtAmtToRedeem);
         state.underlyingReserve -= underlyingAmtToRedeem;
         StateChecker.checkMarketState(res, state);
 
         vm.stopPrank();
     }
 
-    function testRedeemFxAndXtToUnderlyingBeforeMaturity() public {
+    function testRedeemFtAndXtToUnderlyingBeforeMaturity() public {
         vm.startPrank(sender);
 
         uint128 underlyingAmtInForBuyXt = 1e8;
@@ -601,12 +576,12 @@ contract SwapTest is Test {
         res.ft.approve(address(res.market), ftAmtToRedeem);
 
         vm.warp(res.market.config().maturity - 1);
-        res.market.redeemFxAndXtToUnderlying(xtAmtToRedeem);
+        res.market.redeemFtAndXtToUnderlying(xtAmtToRedeem);
 
         vm.stopPrank();
     }
 
-    function testRedeemFxAndXtToUnderlyingAfterMaturity() public {
+    function testRedeemFtAndXtToUnderlyingAfterMaturity() public {
         vm.startPrank(sender);
 
         uint128 underlyingAmtInForBuyXt = 1e8;
@@ -636,14 +611,14 @@ contract SwapTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(ITermMaxMarket.MarketWasClosed.selector)
         );
-        res.market.redeemFxAndXtToUnderlying(xtAmtToRedeem);
+        res.market.redeemFtAndXtToUnderlying(xtAmtToRedeem);
 
         vm.stopPrank();
     }
 
-    //TODO: test case for minting GNFT
+    //TODO: test case for minting GT
 
-    //TODO: test case for minting GNFT: Debt too small
+    //TODO: test case for minting GT: Debt too small
 
     //TODO: test case for redemption
 }

@@ -8,7 +8,7 @@
     "lsf": "80000000",
     "lendFeeRatio": "3000000",
     "borrowFeeRatio": "3000000",
-    "lockingFeeRatio": "50000000",
+    "lockingPercentage": "50000000",
     "minLeveragedXt": "5000000000",
     "minLeveredFt": "4000000000",
     "deliverable": true

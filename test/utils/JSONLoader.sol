@@ -3,7 +3,7 @@ pragma solidity ^0.8.27;
 
 import "forge-std/Test.sol";
 import {StateChecker} from "./StateChecker.sol";
-import {TermMaxStorage} from "../../contracts/core/storage/TermMaxStorage.sol";
+import "../../contracts/core/storage/TermMaxStorage.sol";
 
 library JSONLoader {
     Vm constant vm =
@@ -46,7 +46,7 @@ library JSONLoader {
         address treasurer,
         string memory testdataJSON,
         string memory key
-    ) internal view returns (TermMaxStorage.MarketConfig memory marketConfig) {
+    ) internal view returns (MarketConfig memory marketConfig) {
         marketConfig.openTime = uint64(
             vm.parseUint(
                 vm.parseJsonString(
@@ -97,27 +97,11 @@ library JSONLoader {
                 )
             )
         );
-        marketConfig.lockingFeeRatio = uint32(
+        marketConfig.lockingPercentage = uint32(
             vm.parseUint(
                 vm.parseJsonString(
                     testdataJSON,
-                    string.concat(key, ".lockingFeeRatio")
-                )
-            )
-        );
-        marketConfig.minLeveragedXt = uint32(
-            vm.parseUint(
-                vm.parseJsonString(
-                    testdataJSON,
-                    string.concat(key, ".minLeveragedXt")
-                )
-            )
-        );
-        marketConfig.minLeveredFt = uint32(
-            vm.parseUint(
-                vm.parseJsonString(
-                    testdataJSON,
-                    string.concat(key, ".minLeveredFt")
+                    string.concat(key, ".lockingPercentage")
                 )
             )
         );
