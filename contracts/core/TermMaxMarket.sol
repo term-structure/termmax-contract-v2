@@ -263,10 +263,11 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
                 lpFtAmt,
                 lpFt.balanceOf(address(this))
             );
-            lpFt.transferFrom(caller, address(this), lpFtAmt);
-            lpFt.burn(lpFtAmt);
 
             lpFtAmt += reward;
+
+            lpFt.transferFrom(caller, address(this), lpFtAmt);
+            lpFt.burn(lpFtAmt);
 
             ftOutAmt = ((lpFtAmt * ftReserve) / lpFtTotalSupply).toUint128();
         }

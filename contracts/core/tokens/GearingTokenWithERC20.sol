@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "./AbstractGearingToken.sol";
 
 /**
@@ -113,10 +112,13 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
     function _getCollateralValue(
         bytes memory collateralData,
         bytes memory priceData
-    ) internal pure virtual override returns (uint256) {
+    ) internal view virtual override returns (uint256) {
         uint collateralAmt = _decodeAmount(collateralData);
-        (uint price, uint decimals) = abi.decode(priceData, (uint, uint));
-        return (collateralAmt * price) / decimals;
+        (uint price, uint decimals, uint cTokenDecimals) = abi.decode(
+            priceData,
+            (uint, uint, uint)
+        );
+        return (collateralAmt * price) / (decimals * cTokenDecimals);
     }
 
     /**
@@ -134,7 +136,10 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
         uint decimals = 10 ** collateralOracle.decimals();
         (, int256 answer, , , ) = collateralOracle.latestRoundData();
         uint price = answer.toUint256();
-        priceData = abi.encode(price, decimals);
+        uint cTokenDecimals = 10 **
+            IERC20Metadata(_getGearingTokenStorage().config.collateral)
+                .decimals();
+        priceData = abi.encode(price, decimals, cTokenDecimals);
     }
 
     /// @notice Encode amount to collateral data

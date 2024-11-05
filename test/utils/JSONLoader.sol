@@ -13,7 +13,7 @@ library JSONLoader {
     function getMarketStateFromJson(
         string memory testdataJSON,
         string memory key
-    ) internal view returns (StateChecker.MarketState memory state) {
+    ) internal pure returns (StateChecker.MarketState memory state) {
         state.apr = vm.parseInt(
             vm.parseJsonString(testdataJSON, string.concat(key, ".apr"))
         );
@@ -47,7 +47,7 @@ library JSONLoader {
         address treasurer,
         string memory testdataJSON,
         string memory key
-    ) internal view returns (MarketConfig memory marketConfig) {
+    ) internal pure returns (MarketConfig memory marketConfig) {
         marketConfig.openTime = uint64(
             vm.parseUint(
                 vm.parseJsonString(
@@ -121,7 +121,7 @@ library JSONLoader {
     function getRoundDataFromJson(
         string memory testdataJSON,
         string memory key
-    ) internal view returns (MockPriceFeed.RoundData memory priceData) {
+    ) internal pure returns (MockPriceFeed.RoundData memory priceData) {
         priceData.roundId = uint80(
             vm.parseUint(
                 vm.parseJsonString(testdataJSON, string.concat(key, ".roundId"))

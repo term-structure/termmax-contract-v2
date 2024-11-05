@@ -55,7 +55,7 @@ library TermMaxCurve {
         uint32 lsf,
         uint256 ftReserve
     ) internal pure returns (uint256) {
-        return (ftReserve * lsf) / Constants.DECIMAL_BASE;
+        return (ftReserve * Constants.DECIMAL_BASE) / lsf;
     }
 
     /// @notice Calculte the XT token reserve plus beta

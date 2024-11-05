@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20Metadata, IERC20} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 
@@ -17,7 +17,7 @@ interface IGearingToken is IERC721 {
         /// @notice The address of collateral token
         address collateral;
         /// @notice The underlying(debt) token
-        IERC20 underlying;
+        IERC20Metadata underlying;
         /// @notice The bond token
         IERC20 ft;
         /// @notice The treasurer's address, which will receive protocol reward while liquidation

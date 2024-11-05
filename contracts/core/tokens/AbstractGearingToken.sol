@@ -7,7 +7,7 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {Constants} from "../lib/Constants.sol";
-import {IGearingToken, AggregatorV3Interface, IERC20} from "./IGearingToken.sol";
+import {IGearingToken, AggregatorV3Interface, IERC20Metadata, IERC20} from "./IGearingToken.sol";
 
 /**
  * @title Term Max Gearing Token
@@ -210,7 +210,11 @@ abstract contract AbstractGearingToken is
         GearingTokenStorage storage s
     ) internal returns (uint256 id) {
         LoanInfo memory loan = LoanInfo(debtAmt, collateralData);
-        (uint128 ltv, ) = _calculateLtv(s.config.underlyingOracle, loan);
+        (uint128 ltv, ) = _calculateLtv(
+            s.config.underlyingOracle,
+            loan,
+            s.config.underlying.decimals()
+        );
         if (ltv >= s.config.maxLtv) {
             revert GtIsNotHealthy(to, ltv);
         }
@@ -240,7 +244,11 @@ abstract contract AbstractGearingToken is
         LoanInfo memory loan = s.loanMapping[id];
         debtAmt = loan.debtAmt;
         collateralData = loan.collateralData;
-        (ltv, ) = _calculateLtv(s.config.underlyingOracle, loan);
+        (ltv, ) = _calculateLtv(
+            s.config.underlyingOracle,
+            loan,
+            s.config.underlying.decimals()
+        );
     }
 
     function _burnInternal(uint256 id, GearingTokenStorage storage s) internal {
@@ -336,7 +344,11 @@ abstract contract AbstractGearingToken is
 
         _transferCollateral(msg.sender, collateralData);
 
-        (uint128 ltv, ) = _calculateLtv(s.config.underlyingOracle, loan);
+        (uint128 ltv, ) = _calculateLtv(
+            s.config.underlyingOracle,
+            loan,
+            s.config.underlying.decimals()
+        );
         if (ltv >= s.config.maxLtv) {
             revert GtIsNotHealthy(msg.sender, ltv);
         }
@@ -396,7 +408,11 @@ abstract contract AbstractGearingToken is
         )
     {
         uint128 ltv;
-        (ltv, valueAndPrice) = _calculateLtv(config.underlyingOracle, loan);
+        (ltv, valueAndPrice) = _calculateLtv(
+            config.underlyingOracle,
+            loan,
+            config.underlying.decimals()
+        );
         bool isExpired = block.timestamp >= config.maturity &&
             block.timestamp < config.maturity + Constants.LIQUIDATION_WINDOW;
         isLiquidable = isExpired || ltv >= config.liquidationLtv;
@@ -534,7 +550,8 @@ abstract contract AbstractGearingToken is
     /// @return valueAndPrice Debt and collateral prices, values
     function _calculateLtv(
         AggregatorV3Interface underlyingOracle,
-        LoanInfo memory loan
+        LoanInfo memory loan,
+        uint8 underlyingDecimals
     ) internal view returns (uint128 ltv, ValueAndPrice memory valueAndPrice) {
         valueAndPrice.collateralPriceData = _getCollateralPriceData();
         valueAndPrice.collateralValue = _getCollateralValue(
@@ -547,7 +564,7 @@ abstract contract AbstractGearingToken is
         ) = _getPrice(underlyingOracle);
         valueAndPrice.debtValue =
             (loan.debtAmt * valueAndPrice.underlyingPrice) /
-            valueAndPrice.priceDecimals;
+            (valueAndPrice.priceDecimals * (10 ** underlyingDecimals));
         ltv = ((valueAndPrice.debtValue * Constants.DECIMAL_BASE) /
             valueAndPrice.collateralValue).toUint128();
     }
@@ -587,7 +604,7 @@ abstract contract AbstractGearingToken is
     function _getCollateralValue(
         bytes memory collateralData,
         bytes memory priceData
-    ) internal pure virtual returns (uint256 collateralValue);
+    ) internal view virtual returns (uint256 collateralValue);
 
     /// @notice Return the encoded price of collateral in USD
     function _getCollateralPriceData()
