@@ -1,0 +1,219 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.27;
+
+import {IMintableERC20, IERC20} from "./tokens/IMintableERC20.sol";
+import {IGearingToken} from "./tokens/IGearingToken.sol";
+import "./storage/TermMaxStorage.sol";
+
+interface ITermMaxMarket {
+    error MarketHasBeenInitialized();
+    error NumeratorMustLessThanBasicDecimals();
+    error MarketIsNotOpen();
+    error MarketWasClosed();
+    error UnSupportedToken();
+    error UnexpectedAmount(
+        address caller,
+        IMintableERC20 token,
+        uint128 expectedAmt,
+        uint128 actualAmt
+    );
+    error DebtTooSmall(address caller, uint128 debt);
+
+    error MintGtFailedCallback(
+        address caller,
+        uint128 xtAmt,
+        uint128 debtAmt,
+        bytes callbackData
+    );
+
+    error CanNotRedeemBeforeFinalLiquidationDeadline(uint256 deadline);
+
+    error InvalidTime(uint64 openTime, uint64 maturity);
+    error CollateralCanNotEqualUnserlyinng();
+
+    event MarketDeployed(
+        address indexed deployer,
+        address indexed collateral,
+        IERC20 indexed underlying,
+        uint64 openTime,
+        uint64 maturity,
+        IMintableERC20[4] tokens,
+        IGearingToken gt
+    );
+
+    event ProvideLiquidity(
+        address indexed caller,
+        address indexed receiver,
+        uint256 underlyingAmt,
+        uint128 lpFtAmt,
+        uint128 lpXtAmt
+    );
+
+    event AddLiquidity(
+        address indexed caller,
+        uint256 underlyingAmt,
+        uint128 ftMintedAmt,
+        uint128 xtMintedAmt
+    );
+
+    event WithdrawLP(
+        address indexed caller,
+        address indexed receiver,
+        uint128 lpFtAmt,
+        uint128 lpXtAmt,
+        uint128 ftOutAmt,
+        uint128 xtOutAmt,
+        int64 newApr
+    );
+
+    event BuyToken(
+        address indexed caller,
+        address indexed receiver,
+        IMintableERC20 indexed token,
+        uint128 expectedAmt,
+        uint128 actualAmt,
+        int64 newApr
+    );
+
+    event SellToken(
+        address indexed caller,
+        address indexed receiver,
+        IMintableERC20 indexed token,
+        uint128 expectedAmt,
+        uint128 actualAmt,
+        int64 newApr
+    );
+
+    event MintGt(
+        address indexed caller,
+        address indexed receiver,
+        uint256 indexed gtId,
+        uint128 debtAmt,
+        bytes collateralData
+    );
+
+    event Redeem(
+        address indexed caller,
+        address indexed receiver,
+        uint128 ratio,
+        uint128 underlyingAmt,
+        bytes deliveryData
+    );
+
+    event RedeemFxAndXtToUnderlying(
+        address indexed caller,
+        address indexed receiver,
+        uint256 underlyingAmt
+    );
+
+    event UpdateFeeRatio(
+        uint32 lendFeeRatio,
+        uint32 minNLendFeeR,
+        uint32 borrowFeeRatio,
+        uint32 minNBorrowFeeR,
+        uint32 redeemFeeRatio,
+        uint32 leverfeeRatio,
+        uint32 lockingPercentage,
+        uint32 protocolFeeRatio
+    );
+
+    event UpdateTreasurer(address indexed treasurer);
+
+    function initialize(
+        IMintableERC20[4] memory tokens_,
+        IGearingToken gt_,
+        MarketConfig memory config_
+    ) external;
+
+    function config() external view returns (MarketConfig memory);
+
+    function setFeeRatio(
+        uint32 lendFeeRatio,
+        uint32 minNLendFeeR,
+        uint32 borrowFeeRatio,
+        uint32 minNBorrowFeeR,
+        uint32 redeemFeeRatio,
+        uint32 leverfeeRatio,
+        uint32 lockingPercentage,
+        uint32 protocolFeeRatio
+    ) external;
+
+    function setTreasurer(address treasurer) external;
+
+    function tokens()
+        external
+        view
+        returns (
+            IMintableERC20 ft,
+            IMintableERC20 xt,
+            IMintableERC20 lpFt,
+            IMintableERC20 lpXt,
+            IGearingToken gt,
+            address collateral,
+            IERC20 underlying
+        );
+
+    // provide liquidity get lp tokens
+    function provideLiquidity(
+        address receiver,
+        uint256 underlyingAmt
+    ) external returns (uint128 lpFtOutAmt, uint128 lpXtOutAmt);
+
+    function withdrawLp(
+        address receiver,
+        uint128 lpFtAmt,
+        uint128 lpXtAmt
+    ) external returns (uint128 ftOutAmt, uint128 xtOutAmt);
+
+    function redeemFtAndXtToUnderlying(
+        address receiver,
+        uint256 underlyingAmt) external returns (uint256 underlyingAmtOut);
+
+    function buyFt(
+        address receiver,
+        uint128 underlyingAmtIn,
+        uint128 minTokenOut
+    ) external returns (uint256 netOut);
+
+    function buyXt(
+        address receiver,
+        uint128 underlyingAmtIn,
+        uint128 minTokenOut
+    ) external returns (uint256 netOut);
+
+    function sellFt(
+        address receiver,
+        uint128 ftAmtIn,
+        uint128 minUnderlyingOut
+    ) external returns (uint256 netOut);
+
+    function sellXt(
+        address receiver,
+        uint128 xtAmtIn,
+        uint128 minTokenOut
+    ) external returns (uint256 netOut);
+
+    // use collateral to mint ft and gt
+    function lever(
+        address receiver,
+        uint128 debt,
+        bytes calldata collateralData
+    ) external returns (uint256 gtId);
+
+    function mintGt(
+        address receiver,
+        uint128 debt,
+        bytes calldata callbackData
+    ) external returns (uint256 gtId);
+
+    function redeem(address receiver, uint256[4] calldata amountArray) external returns (uint256 underlyingAmtOut);
+
+    // function redeemByPermit(
+    //     address caller,
+    //     uint256[4] calldata amountArray,
+    //     uint256[4] calldata deadlineArray,
+    //     uint8[4] calldata vArray,
+    //     bytes32[4] calldata rArrray,
+    //     bytes32[4] calldata sArray
+    // ) external;
+}
