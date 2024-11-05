@@ -1,25 +1,25 @@
 import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
-import { config as dotenvConfig } from "dotenv"
-import { resolve } from "path"
+import { config as dotenvConfig } from "dotenv";
+import { resolve } from "path";
 import { NetworksUserConfig } from "hardhat/types";
 
-dotenvConfig({ path: resolve(__dirname, ".env") })
+dotenvConfig({ path: resolve(__dirname, ".env") });
 function getNetworks(): NetworksUserConfig {
   if (!process.env.INFURA_API_KEY || !process.env.ETHEREUM_PRIVATE_KEY) {
-      return {}
+    return {};
   }
 
-  const accounts = [`0x${process.env.ETHEREUM_PRIVATE_KEY}`]
-  const infuraApiKey = process.env.INFURA_API_KEY
+  const accounts = [`0x${process.env.ETHEREUM_PRIVATE_KEY}`];
+  const infuraApiKey = process.env.INFURA_API_KEY;
 
   return {
-      sepolia: {
-          url: `https://sepolia.infura.io/v3/${infuraApiKey}`,
-          chainId: 11155111,
-          accounts
-      },
-  }
+    sepolia: {
+      url: `https://sepolia.infura.io/v3/${infuraApiKey}`,
+      chainId: 11155111,
+      accounts,
+    },
+  };
 }
 
 const config: HardhatUserConfig = {
@@ -28,18 +28,16 @@ const config: HardhatUserConfig = {
     settings: {
       optimizer: {
         enabled: true,
-        runs: 200
-      }
-    }
+        runs: 200,
+      },
+    },
   },
   networks: {
     hardhat: {
-        chainId: 1337
+      chainId: 1337,
     },
-    ...getNetworks()
+    ...getNetworks(),
   },
-  
 };
-
 
 export default config;
