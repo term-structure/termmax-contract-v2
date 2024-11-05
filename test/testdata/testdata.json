@@ -10,8 +10,7 @@
     "borrowFeeRatio": "3000000",
     "lockingPercentage": "50000000",
     "minLeveragedXt": "5000000000",
-    "minLeveredFt": "4000000000",
-    "deliverable": true
+    "minLeveredFt": "4000000000"
   },
   "expected": {
     "provideLiquidity": {

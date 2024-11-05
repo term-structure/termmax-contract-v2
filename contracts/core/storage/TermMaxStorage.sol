@@ -34,12 +34,12 @@ struct MarketConfig {
     /// @notice The minmally notional borrowing fee ratio
     ///         i.e. 0.01e8 means 1%
     uint32 minNBorrowFeeR;
-    /// @notice The fee ratio when redeem all assets after maturity
+    /// @notice The fee ratio when redeemming all assets after maturity
     ///         i.e. 0.01e8 means 1%
     uint32 redeemFeeRatio;
-    /// @notice The fee ratio when leverage collateral tokens
+    /// @notice The fee ratio when issuing FT tokens by collateral
     ///         i.e. 0.01e8 means 1%
-    uint32 leverfeeRatio;
+    uint32 issueFtfeeRatio;
     /// @notice The proportion of transaction fees locked in the market waiting to be released
     ///         i.e. 0.5e8 means 50%
     uint32 lockingPercentage;
