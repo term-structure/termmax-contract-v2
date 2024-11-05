@@ -135,7 +135,6 @@ interface ITermMaxMarket {
         address indexed receiver,
         uint256 indexed gtId,
         uint128 debtAmt,
-        uint128 feeAmt,
         bytes collateralData
     );
 

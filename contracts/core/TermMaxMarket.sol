@@ -661,7 +661,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         // Mint GT
         gtId = gt.mint(receiver, debt, collateralData);
 
-        emit MintGt(caller, receiver, gtId, debt, 0, collateralData);
+        emit MintGt(caller, receiver, gtId, debt, collateralData);
     }
 
     /**
