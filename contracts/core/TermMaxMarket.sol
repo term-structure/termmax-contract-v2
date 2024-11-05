@@ -127,7 +127,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         uint32 borrowFeeRatio,
         uint32 minNBorrowFeeR,
         uint32 redeemFeeRatio,
-        uint32 leverfeeRatio,
+        uint32 issueFtfeeRatio,
         uint32 lockingPercentage,
         uint32 protocolFeeRatio
     ) external override onlyOwner isOpen {
@@ -137,7 +137,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         mConfig.borrowFeeRatio = borrowFeeRatio;
         mConfig.minNBorrowFeeR = minNBorrowFeeR;
         mConfig.redeemFeeRatio = redeemFeeRatio;
-        mConfig.leverfeeRatio = leverfeeRatio;
+        mConfig.issueFtfeeRatio = issueFtfeeRatio;
         mConfig.lockingPercentage = lockingPercentage;
         mConfig.protocolFeeRatio = protocolFeeRatio;
         emit UpdateFeeRate(
@@ -146,7 +146,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
             borrowFeeRatio,
             minNBorrowFeeR,
             redeemFeeRatio,
-            leverfeeRatio,
+            issueFtfeeRatio,
             lockingPercentage,
             protocolFeeRatio
         );
@@ -646,9 +646,11 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         xt.transferFrom(caller, address(this), xtAmt);
 
         // 1 xt -> 1 underlying raised
-        // Debt 1 * initialLtv
-        uint128 debt = ((xtAmt * _config.initialLtv) / Constants.DECIMAL_BASE)
-            .toUint128();
+        // Debt 1 * initialLtv round up
+        uint128 debt = ((xtAmt *
+            _config.initialLtv +
+            Constants.DECIMAL_BASE -
+            1) / Constants.DECIMAL_BASE).toUint128();
 
         // Send debt to borrower
         underlying.transfer(caller, xtAmt);
@@ -665,27 +667,35 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
     /**
      * @inheritdoc ITermMaxMarket
      */
-    function leverageByCollateral(
+    function issueFt(
         uint128 debt,
         bytes calldata collateralData
-    ) external override isOpen nonReentrant returns (uint256 gtId) {
-        return _leverageByCollateral(msg.sender, debt, collateralData);
+    )
+        external
+        override
+        isOpen
+        nonReentrant
+        returns (uint256 gtId, uint128 ftOutAmt)
+    {
+        return _issueFt(msg.sender, debt, collateralData);
     }
 
-    function _leverageByCollateral(
+    function _issueFt(
         address caller,
         uint128 debt,
         bytes calldata collateralData
-    ) internal returns (uint256 gtId) {
+    ) internal returns (uint256 gtId, uint128 ftOutAmt) {
         // Mint GT
         gtId = gt.mint(caller, debt, collateralData);
 
         MarketConfig memory mConfig = _config;
-        uint leverFee = (debt * mConfig.leverfeeRatio) / Constants.DECIMAL_BASE;
-        ft.transfer(mConfig.treasurer, leverFee);
-        ft.mint(caller, debt - leverFee);
+        uint128 issueFee = ((debt * mConfig.issueFtfeeRatio) /
+            Constants.DECIMAL_BASE).toUint128();
+        ft.transfer(mConfig.treasurer, issueFee);
+        ftOutAmt = debt - issueFee;
+        ft.mint(caller, ftOutAmt);
 
-        emit MintGt(caller, caller, gtId, debt, collateralData);
+        emit IssueFt(caller, gtId, debt, ftOutAmt, issueFee, collateralData);
     }
 
     /**
@@ -786,8 +796,8 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         uint proportion = (userPoint * Constants.DECIMAL_BASE) / allPoints;
         bytes memory deliveryData = gt.delivery(proportion, caller);
         // Transfer underlying output
-        uint underlyingAmt = (underlying.balanceOf(address(this)) * proportion) /
-            Constants.DECIMAL_BASE;
+        uint underlyingAmt = (underlying.balanceOf(address(this)) *
+            proportion) / Constants.DECIMAL_BASE;
         if (mConfig.redeemFeeRatio > 0) {
             underlyingAmt = _tranferFeeToTreasurer(
                 mConfig.treasurer,
