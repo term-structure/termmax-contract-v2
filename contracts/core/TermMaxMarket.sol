@@ -654,13 +654,15 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
             1) / Constants.DECIMAL_BASE).toUint128();
 
         // Send debt to borrower
-        underlying.transfer(caller, xtAmt);
+        underlying.transfer(caller, debt);
         // Callback function
         bytes memory collateralData = IFlashLoanReceiver(caller)
-            .executeOperation(caller, underlying, debt, callbackData);
+            .executeOperation(receiver, underlying, debt, callbackData);
 
         // Mint GT
-        gtId = gt.mint(receiver, debt, collateralData);
+        gtId = gt.mint(caller, receiver, debt, collateralData);
+
+        xt.burn(xtAmt);
 
         emit MintGt(caller, receiver, gtId, debt, collateralData);
     }
@@ -687,12 +689,13 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         bytes calldata collateralData
     ) internal returns (uint256 gtId, uint128 ftOutAmt) {
         // Mint GT
-        gtId = gt.mint(caller, debt, collateralData);
+        gtId = gt.mint(caller, caller, debt, collateralData);
 
         MarketConfig memory mConfig = _config;
         uint128 issueFee = ((debt * mConfig.issueFtfeeRatio) /
             Constants.DECIMAL_BASE).toUint128();
-        ft.transfer(mConfig.treasurer, issueFee);
+        // Mint ft amount = debt amount, send issueFee to treasurer and other to caller
+        ft.mint(mConfig.treasurer, issueFee);
         ftOutAmt = debt - issueFee;
         ft.mint(caller, ftOutAmt);
 

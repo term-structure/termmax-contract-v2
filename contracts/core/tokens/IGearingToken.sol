@@ -54,12 +54,14 @@ interface IGearingToken is IERC721 {
     function marketAddr() external view returns (address);
 
     /// @notice Mint this token to an address
+    /// @param  collateralProvider Who provide collateral token
     /// @param  to The address receiving token
     /// @param  debtAmt The amount of debt, unit by underlying token
     /// @param  collateralData The encoded data of collateral
     /// @return id The id of Gearing Token
     /// @dev Only the market can mint Gearing Token
     function mint(
+        address collateralProvider,
         address to,
         uint128 debtAmt,
         bytes memory collateralData

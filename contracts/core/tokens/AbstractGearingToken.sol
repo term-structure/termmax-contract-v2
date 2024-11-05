@@ -191,6 +191,7 @@ abstract contract AbstractGearingToken is
      * @inheritdoc IGearingToken
      */
     function mint(
+        address collateralProvider,
         address to,
         uint128 debtAmt,
         bytes memory collateralData
@@ -199,7 +200,11 @@ abstract contract AbstractGearingToken is
         if (msg.sender != s.config.market) {
             revert CallerIsNotTheMarket();
         }
-        _transferCollateralFrom(to, address(this), collateralData);
+        _transferCollateralFrom(
+            collateralProvider,
+            address(this),
+            collateralData
+        );
         id = _mintInternal(to, debtAmt, collateralData, s);
     }
 

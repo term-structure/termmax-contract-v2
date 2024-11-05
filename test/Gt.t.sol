@@ -7,15 +7,19 @@ import {DeployUtils} from "./utils/DeployUtils.sol";
 import {JSONLoader} from "./utils/JSONLoader.sol";
 import {StateChecker} from "./utils/StateChecker.sol";
 import {SwapUtils} from "./utils/SwapUtils.sol";
+import {LoanUtils} from "./utils/LoanUtils.sol";
 
-import {ITermMaxMarket, TermMaxMarket, Constants} from "../contracts/core/TermMaxMarket.sol";
-import {MockERC20, ERC20} from "../contracts/test/MockERC20.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {ITermMaxMarket, TermMaxMarket, Constants, IERC20} from "../contracts/core/TermMaxMarket.sol";
+import {MockFlashLoanReceiver} from "../contracts/test/MockFlashLoanReceiver.sol";
 import {MockPriceFeed} from "../contracts/test/MockPriceFeed.sol";
 import {ITermMaxFactory, TermMaxFactory, IMintableERC20, IGearingToken, AggregatorV3Interface} from "../contracts/core/factory/TermMaxFactory.sol";
 import "../contracts/core/storage/TermMaxStorage.sol";
 
 contract GtTest is Test {
     using JSONLoader for *;
+    using SafeCast for uint256;
+    using SafeCast for int256;
     DeployUtils.Res res;
 
     MarketConfig marketConfig;
@@ -24,6 +28,8 @@ contract GtTest is Test {
     address sender = vm.randomAddress();
     address treasurer = vm.randomAddress();
     string testdata;
+
+    MockFlashLoanReceiver flashLoanReceiver;
 
     function setUp() public {
         vm.startPrank(deployer);
@@ -46,6 +52,8 @@ contract GtTest is Test {
             liquidationLtv
         );
 
+        flashLoanReceiver = new MockFlashLoanReceiver(res.market);
+
         vm.warp(
             vm.parseUint(
                 vm.parseJsonString(testdata, ".marketConfig.currentTime")
@@ -57,307 +65,127 @@ contract GtTest is Test {
         res.underlying.approve(address(res.market), amount);
         res.market.provideLiquidity(amount);
 
-        res.underlying.mint(sender, amount);
-        res.collateral.mint(sender, amount);
-
         vm.stopPrank();
     }
 
-    function testProvideLiquidity() public {
-        vm.startPrank(sender);
-
-        uint128 underlyingAmtIn = 100e8;
-        res.underlying.mint(sender, underlyingAmtIn);
-        res.underlying.approve(address(res.market), underlyingAmtIn);
-        (uint128 lpFtOutAmt, uint128 lpXtOutAmt) = res.market.provideLiquidity(
-            underlyingAmtIn
-        );
-
-        StateChecker.MarketState memory expectedState = JSONLoader
-            .getMarketStateFromJson(
+    function testMintGtByIssueFt() public {
+        vm.startPrank(deployer);
+        // update oracle
+        res.collateralOracle.updateRoundData(
+            JSONLoader.getRoundDataFromJson(
                 testdata,
-                ".expected.provideLiquidity.contractState"
-            );
-        StateChecker.checkMarketState(res, expectedState);
-
-        assert(
-            lpFtOutAmt ==
-                vm.parseUint(
-                    vm.parseJsonString(
-                        testdata,
-                        ".expected.provideLiquidity.output.lpFtAmount"
-                    )
-                )
+                ".priceData.ETH_2000_DAI_1.eth"
+            )
         );
-        assert(
-            lpXtOutAmt ==
-                vm.parseUint(
-                    vm.parseJsonString(
-                        testdata,
-                        ".expected.provideLiquidity.output.lpXtAmount"
-                    )
-                )
-        );
-        assert(res.lpFt.balanceOf(sender) == lpFtOutAmt);
-        assert(res.lpXt.balanceOf(sender) == lpXtOutAmt);
-
-        vm.stopPrank();
-    }
-
-    function testProvideLiquidityTwice() public {
-        vm.startPrank(sender);
-
-        uint128 underlyingAmtInFirstTime = 100e8;
-        res.underlying.mint(sender, underlyingAmtInFirstTime);
-        res.underlying.approve(address(res.market), underlyingAmtInFirstTime);
-        (uint128 lpFtOutAmtFirstTime, uint128 lpXtOutAmtFirstTime) = res
-            .market
-            .provideLiquidity(underlyingAmtInFirstTime);
-
-        uint128 underlyingAmtIn = 100e8;
-        res.underlying.mint(sender, underlyingAmtIn);
-        res.underlying.approve(address(res.market), underlyingAmtIn);
-        (uint128 lpFtOutAmt, uint128 lpXtOutAmt) = res.market.provideLiquidity(
-            underlyingAmtIn
-        );
-
-        StateChecker.MarketState memory expectedState = JSONLoader
-            .getMarketStateFromJson(
+        res.underlyingOracle.updateRoundData(
+            JSONLoader.getRoundDataFromJson(
                 testdata,
-                ".expected.provideLiquidityTwice.contractState"
-            );
-        StateChecker.checkMarketState(res, expectedState);
-
-        assert(
-            lpFtOutAmt ==
-                vm.parseUint(
-                    vm.parseJsonString(
-                        testdata,
-                        ".expected.provideLiquidityTwice.output.lpFtAmount"
-                    )
-                )
+                ".priceData.ETH_2000_DAI_1.dai"
+            )
         );
-        assert(
-            lpXtOutAmt ==
-                vm.parseUint(
-                    vm.parseJsonString(
-                        testdata,
-                        ".expected.provideLiquidityTwice.output.lpXtAmount"
-                    )
-                )
-        );
-        assert(res.lpFt.balanceOf(sender) == lpFtOutAmtFirstTime + lpFtOutAmt);
-        assert(res.lpXt.balanceOf(sender) == lpXtOutAmtFirstTime + lpXtOutAmt);
-
         vm.stopPrank();
-    }
 
-    function testProvideLiquidityBeforeMaturity() public {
+        uint128 debtAmt = 100e8;
+        uint256 collateralAmt = 1e18;
+        res.collateral.mint(sender, collateralAmt);
+
         vm.startPrank(sender);
 
-        uint128 underlyingAmtIn = 100e8;
-        res.underlying.mint(sender, underlyingAmtIn);
-        res.underlying.approve(address(res.market), underlyingAmtIn);
-        vm.warp(res.market.config().maturity - 1);
-        res.market.provideLiquidity(underlyingAmtIn);
+        res.collateral.approve(address(res.gt), collateralAmt);
+        bytes memory collateralData = abi.encode(collateralAmt);
 
-        vm.stopPrank();
-    }
-
-    function testProvideLiquidityAfterMaturity() public {
-        vm.startPrank(sender);
-
-        uint128 underlyingAmtIn = 100e8;
-        res.underlying.mint(sender, underlyingAmtIn);
-        res.underlying.approve(address(res.market), underlyingAmtIn);
-        vm.warp(res.market.config().maturity);
-        vm.expectRevert(
-            abi.encodeWithSelector(ITermMaxMarket.MarketWasClosed.selector)
-        );
-        res.market.provideLiquidity(underlyingAmtIn);
-
-        vm.stopPrank();
-    }
-
-    function testWithdrawLp() public {
-        vm.startPrank(sender);
-
-        uint128 underlyingAmtIn = 100e8;
-        res.underlying.mint(sender, underlyingAmtIn);
-        res.underlying.approve(address(res.market), underlyingAmtIn);
-        (uint128 lpFtOutAmt, uint128 lpXtOutAmt) = res.market.provideLiquidity(
-            underlyingAmtIn
+        StateChecker.MarketState memory state = StateChecker.getMarketState(
+            res
         );
 
-        res.lpFt.approve(address(res.market), lpFtOutAmt);
-        res.lpXt.approve(address(res.market), lpXtOutAmt);
-        (uint128 ftOutAmt, uint128 xtOutAmt) = res.market.withdrawLp(
-            lpFtOutAmt,
-            lpXtOutAmt
+        (uint256 gtId, uint128 ftOutAmt) = res.market.issueFt(
+            debtAmt,
+            collateralData
         );
+        uint issueFee = (debtAmt * marketConfig.issueFtfeeRatio) /
+            Constants.DECIMAL_BASE;
+        assert(ftOutAmt == (debtAmt - issueFee));
+        assert(gtId == 1);
 
-        StateChecker.MarketState memory expectedState = JSONLoader
-            .getMarketStateFromJson(
-                testdata,
-                ".expected.withdrawLp.contractState"
-            );
-        StateChecker.checkMarketState(res, expectedState);
+        state.collateralReserve += collateralAmt;
+        StateChecker.checkMarketState(res, state);
 
-        assert(
-            ftOutAmt ==
-                vm.parseUint(
-                    vm.parseJsonString(
-                        testdata,
-                        ".expected.withdrawLp.output.lpFtAmount"
-                    )
-                )
-        );
-        assert(
-            xtOutAmt ==
-                vm.parseUint(
-                    vm.parseJsonString(
-                        testdata,
-                        ".expected.withdrawLp.output.lpXtAmount"
-                    )
-                )
-        );
+        assert(res.ft.balanceOf(marketConfig.treasurer) == issueFee);
         assert(res.ft.balanceOf(sender) == ftOutAmt);
-        assert(res.xt.balanceOf(sender) == xtOutAmt);
+
+        (address owner, uint128 d, uint128 ltv, bytes memory cd) = res
+            .gt
+            .loanInfo(gtId);
+        assert(owner == sender);
+        assert(d == debtAmt);
+        assert(collateralAmt == abi.decode(cd, (uint256)));
+
+        assert(LoanUtils.calcLtv(res, debtAmt, collateralAmt) == ltv);
 
         vm.stopPrank();
     }
 
-    function testWithdrawLpWhenFtIsMore() public {
-        vm.startPrank(sender);
-
-        uint128 underlyingAmtIn = 100e8;
-        res.underlying.mint(sender, underlyingAmtIn);
-        res.underlying.approve(address(res.market), underlyingAmtIn);
-        (uint128 lpFtOutAmt, uint128 lpXtOutAmt) = res.market.provideLiquidity(
-            underlyingAmtIn
-        );
-
-        res.lpFt.approve(address(res.market), lpFtOutAmt);
-        res.lpXt.approve(address(res.market), lpXtOutAmt);
-        (uint128 ftOutAmt, uint128 xtOutAmt) = res.market.withdrawLp(
-            lpFtOutAmt,
-            lpXtOutAmt / 2
-        );
-
-        StateChecker.MarketState memory expectedState = JSONLoader
-            .getMarketStateFromJson(
+    function testMintGtByLeverage() public {
+        vm.startPrank(deployer);
+        // update oracle
+        res.collateralOracle.updateRoundData(
+            JSONLoader.getRoundDataFromJson(
                 testdata,
-                ".expected.withdrawLpWhenFtIsMore.contractState"
-            );
-        StateChecker.checkMarketState(res, expectedState);
-
-        assert(
-            ftOutAmt ==
-                vm.parseUint(
-                    vm.parseJsonString(
-                        testdata,
-                        ".expected.withdrawLpWhenFtIsMore.output.lpFtAmount"
-                    )
-                )
+                ".priceData.ETH_2000_DAI_1.eth"
+            )
         );
-        assert(
-            xtOutAmt ==
-                vm.parseUint(
-                    vm.parseJsonString(
-                        testdata,
-                        ".expected.withdrawLpWhenFtIsMore.output.lpXtAmount"
-                    )
-                )
-        );
-        assert(res.ft.balanceOf(sender) == ftOutAmt);
-        assert(res.xt.balanceOf(sender) == xtOutAmt);
-
-        vm.stopPrank();
-    }
-
-    function testWithdrawLpWhenXtIsMore() public {
-        vm.startPrank(sender);
-
-        uint128 underlyingAmtIn = 100e8;
-        res.underlying.mint(sender, underlyingAmtIn);
-        res.underlying.approve(address(res.market), underlyingAmtIn);
-        (uint128 lpFtOutAmt, uint128 lpXtOutAmt) = res.market.provideLiquidity(
-            underlyingAmtIn
-        );
-
-        res.lpFt.approve(address(res.market), lpFtOutAmt);
-        res.lpXt.approve(address(res.market), lpXtOutAmt);
-        (uint128 ftOutAmt, uint128 xtOutAmt) = res.market.withdrawLp(
-            lpFtOutAmt,
-            lpXtOutAmt / 2
-        );
-
-        StateChecker.MarketState memory expectedState = JSONLoader
-            .getMarketStateFromJson(
+        res.underlyingOracle.updateRoundData(
+            JSONLoader.getRoundDataFromJson(
                 testdata,
-                ".expected.withdrawLpWhenXtIsMore.contractState"
-            );
-        StateChecker.checkMarketState(res, expectedState);
-
-        assert(
-            ftOutAmt ==
-                vm.parseUint(
-                    vm.parseJsonString(
-                        testdata,
-                        ".expected.withdrawLpWhenXtIsMore.output.lpFtAmount"
-                    )
-                )
+                ".priceData.ETH_2000_DAI_1.dai"
+            )
         );
-        assert(
-            xtOutAmt ==
-                vm.parseUint(
-                    vm.parseJsonString(
-                        testdata,
-                        ".expected.withdrawLpWhenXtIsMore.output.lpXtAmount"
-                    )
-                )
-        );
-        assert(res.ft.balanceOf(sender) == ftOutAmt);
-        assert(res.xt.balanceOf(sender) == xtOutAmt);
-
         vm.stopPrank();
-    }
 
-    function testWithdrawLpBeforeMaturity() public {
+        uint collateralAmt = 1e18;
+        bytes memory callbackData = abi.encode(sender, collateralAmt);
+        res.collateral.mint(address(flashLoanReceiver), collateralAmt);
+
+        uint128 xtAmt = 90e8;
+        uint debtAmt = (xtAmt *
+            marketConfig.initialLtv +
+            Constants.DECIMAL_BASE -
+            1) / Constants.DECIMAL_BASE;
+        res.underlying.mint(address(sender), xtAmt);
         vm.startPrank(sender);
+        res.underlying.approve(address(res.market), xtAmt);
 
-        uint128 underlyingAmtIn = 100e8;
-        res.underlying.mint(sender, underlyingAmtIn);
-        res.underlying.approve(address(res.market), underlyingAmtIn);
+        // get XT token
         (uint128 lpFtOutAmt, uint128 lpXtOutAmt) = res.market.provideLiquidity(
-            underlyingAmtIn
+            xtAmt
         );
-
         res.lpFt.approve(address(res.market), lpFtOutAmt);
         res.lpXt.approve(address(res.market), lpXtOutAmt);
-        vm.warp(res.market.config().maturity - 1);
         res.market.withdrawLp(lpFtOutAmt, lpXtOutAmt);
 
-        vm.stopPrank();
-    }
-
-    function testWithdrawLpAfterMaturity() public {
-        vm.startPrank(sender);
-
-        uint128 underlyingAmtIn = 100e8;
-        res.underlying.mint(sender, underlyingAmtIn);
-        res.underlying.approve(address(res.market), underlyingAmtIn);
-        (uint128 lpFtOutAmt, uint128 lpXtOutAmt) = res.market.provideLiquidity(
-            underlyingAmtIn
+        StateChecker.MarketState memory state = StateChecker.getMarketState(
+            res
         );
+        uint xtBefore = res.xt.balanceOf(address(sender));
 
-        res.lpFt.approve(address(res.market), lpFtOutAmt);
-        res.lpXt.approve(address(res.market), lpXtOutAmt);
-        vm.warp(res.market.config().maturity);
-        vm.expectRevert(
-            abi.encodeWithSelector(ITermMaxMarket.MarketWasClosed.selector)
-        );
-        res.market.withdrawLp(lpFtOutAmt, lpXtOutAmt);
+        res.xt.approve(address(flashLoanReceiver), xtAmt);
+        uint256 gtId = flashLoanReceiver.leverageByXt(xtAmt, callbackData);
+
+        assert(gtId == 1);
+        state.collateralReserve += collateralAmt;
+        state.underlyingReserve -= debtAmt;
+        StateChecker.checkMarketState(res, state);
+
+        uint xtAfter = res.xt.balanceOf(address(sender));
+        assert(xtBefore - xtAfter == xtAmt);
+
+        (address owner, uint128 d, uint128 ltv, bytes memory cd) = res
+            .gt
+            .loanInfo(gtId);
+        assert(owner == sender);
+        assert(d == debtAmt);
+        assert(collateralAmt == abi.decode(cd, (uint256)));
+        assert(LoanUtils.calcLtv(res, debtAmt, collateralAmt) == ltv);
 
         vm.stopPrank();
     }
