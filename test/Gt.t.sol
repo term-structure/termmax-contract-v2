@@ -13,6 +13,7 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {ITermMaxMarket, TermMaxMarket, Constants, IERC20} from "../contracts/core/TermMaxMarket.sol";
 import {MockFlashLoanReceiver} from "../contracts/test/MockFlashLoanReceiver.sol";
 import {MockPriceFeed} from "../contracts/test/MockPriceFeed.sol";
+import {AbstractGearingToken} from "../contracts/core/tokens/AbstractGearingToken.sol";
 import {ITermMaxFactory, TermMaxFactory, IMintableERC20, IGearingToken, AggregatorV3Interface} from "../contracts/core/factory/TermMaxFactory.sol";
 import "../contracts/core/storage/TermMaxStorage.sol";
 
@@ -31,14 +32,14 @@ contract GtTest is Test {
 
     MockFlashLoanReceiver flashLoanReceiver;
 
+    uint32 maxLtv = 0.89e8;
+    uint32 liquidationLtv = 0.9e8;
+
     function setUp() public {
         vm.startPrank(deployer);
         testdata = vm.readFile(
             string.concat(vm.projectRoot(), "/test/testdata/testdata.json")
         );
-
-        uint32 maxLtv = 0.89e8;
-        uint32 liquidationLtv = 0.9e8;
 
         marketConfig = JSONLoader.getMarketConfigFromJson(
             treasurer,
@@ -60,16 +61,6 @@ contract GtTest is Test {
             )
         );
 
-        uint amount = 10000e8;
-        res.underlying.mint(deployer, amount);
-        res.underlying.approve(address(res.market), amount);
-        res.market.provideLiquidity(amount);
-
-        vm.stopPrank();
-    }
-
-    function testMintGtByIssueFt() public {
-        vm.startPrank(deployer);
         // update oracle
         res.collateralOracle.updateRoundData(
             JSONLoader.getRoundDataFromJson(
@@ -83,8 +74,16 @@ contract GtTest is Test {
                 ".priceData.ETH_2000_DAI_1.dai"
             )
         );
-        vm.stopPrank();
 
+        uint amount = 10000e8;
+        res.underlying.mint(deployer, amount);
+        res.underlying.approve(address(res.market), amount);
+        res.market.provideLiquidity(amount);
+
+        vm.stopPrank();
+    }
+
+    function testMintGtByIssueFt() public {
         uint128 debtAmt = 100e8;
         uint256 collateralAmt = 1e18;
         res.collateral.mint(sender, collateralAmt);
@@ -126,22 +125,6 @@ contract GtTest is Test {
     }
 
     function testMintGtByLeverage() public {
-        vm.startPrank(deployer);
-        // update oracle
-        res.collateralOracle.updateRoundData(
-            JSONLoader.getRoundDataFromJson(
-                testdata,
-                ".priceData.ETH_2000_DAI_1.eth"
-            )
-        );
-        res.underlyingOracle.updateRoundData(
-            JSONLoader.getRoundDataFromJson(
-                testdata,
-                ".priceData.ETH_2000_DAI_1.dai"
-            )
-        );
-        vm.stopPrank();
-
         uint collateralAmt = 1e18;
         bytes memory callbackData = abi.encode(sender, collateralAmt);
         res.collateral.mint(address(flashLoanReceiver), collateralAmt);
@@ -186,6 +169,72 @@ contract GtTest is Test {
         assert(d == debtAmt);
         assert(collateralAmt == abi.decode(cd, (uint256)));
         assert(LoanUtils.calcLtv(res, debtAmt, collateralAmt) == ltv);
+
+        vm.stopPrank();
+    }
+
+    function testRevertByCallerIsNotTheMarket() public {
+        vm.expectRevert(
+            abi.encodeWithSelector(IGearingToken.CallerIsNotTheMarket.selector)
+        );
+        res.gt.mint(sender, sender, 100e8, abi.encode(1e18));
+    }
+
+    function testRevertByGtIsNotHealthyWhenIssueFt() public {
+        // debt 1780 USD collaretal 2000USD ltv 0.89
+        uint128 debtAmt = 1780e8;
+        uint256 collateralAmt = 1e18;
+        res.collateral.mint(sender, collateralAmt);
+
+        vm.startPrank(sender);
+
+        res.collateral.approve(address(res.gt), collateralAmt);
+        bytes memory collateralData = abi.encode(collateralAmt);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IGearingToken.GtIsNotHealthy.selector,
+                sender,
+                LoanUtils.calcLtv(res, debtAmt, collateralAmt)
+            )
+        );
+        res.market.issueFt(debtAmt, collateralData);
+
+        vm.stopPrank();
+    }
+
+    function testRevertByGtIsNotHealthyWhenLeverage() public {
+        uint collateralAmt = 1e18;
+        bytes memory callbackData = abi.encode(sender, collateralAmt);
+        res.collateral.mint(address(flashLoanReceiver), collateralAmt);
+        // debt 1848 USD collaretal 2000USD ltv 0.924
+        uint128 xtAmt = 2100e8;
+        uint debtAmt = (xtAmt *
+            marketConfig.initialLtv +
+            Constants.DECIMAL_BASE -
+            1) / Constants.DECIMAL_BASE;
+        res.underlying.mint(address(sender), xtAmt);
+        vm.startPrank(sender);
+        res.underlying.approve(address(res.market), xtAmt);
+
+        // get XT token
+        (uint128 lpFtOutAmt, uint128 lpXtOutAmt) = res.market.provideLiquidity(
+            xtAmt
+        );
+        res.lpFt.approve(address(res.market), lpFtOutAmt);
+        res.lpXt.approve(address(res.market), lpXtOutAmt);
+        res.market.withdrawLp(lpFtOutAmt, lpXtOutAmt);
+
+        res.xt.approve(address(flashLoanReceiver), xtAmt);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IGearingToken.GtIsNotHealthy.selector,
+                sender,
+                LoanUtils.calcLtv(res, debtAmt, collateralAmt)
+            )
+        );
+        flashLoanReceiver.leverageByXt(xtAmt, callbackData);
 
         vm.stopPrank();
     }
