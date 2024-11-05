@@ -4,6 +4,7 @@ pragma solidity ^0.8.27;
 import "forge-std/Test.sol";
 import {StateChecker} from "./StateChecker.sol";
 import "../../contracts/core/storage/TermMaxStorage.sol";
+import {MockPriceFeed} from "../../contracts/test/MockPriceFeed.sol";
 
 library JSONLoader {
     Vm constant vm =
@@ -105,7 +106,43 @@ library JSONLoader {
                 )
             )
         );
+        marketConfig.issueFtfeeRatio = uint32(
+            vm.parseUint(
+                vm.parseJsonString(
+                    testdataJSON,
+                    string.concat(key, ".issueFtfeeRatio")
+                )
+            )
+        );
         marketConfig.treasurer = treasurer;
         marketConfig.rewardIsDistributed = true;
+    }
+
+    function getRoundDataFromJson(
+        string memory testdataJSON,
+        string memory key
+    ) internal view returns (MockPriceFeed.RoundData memory priceData) {
+        priceData.roundId = uint80(
+            vm.parseUint(
+                vm.parseJsonString(testdataJSON, string.concat(key, ".roundId"))
+            )
+        );
+        priceData.answer = vm.parseInt(
+            vm.parseJsonString(testdataJSON, string.concat(key, ".answer"))
+        );
+        priceData.startedAt = vm.parseUint(
+            vm.parseJsonString(testdataJSON, string.concat(key, ".startedAt"))
+        );
+        priceData.updatedAt = vm.parseUint(
+            vm.parseJsonString(testdataJSON, string.concat(key, ".updatedAt"))
+        );
+        priceData.answeredInRound = uint80(
+            vm.parseUint(
+                vm.parseJsonString(
+                    testdataJSON,
+                    string.concat(key, ".answeredInRound")
+                )
+            )
+        );
     }
 }

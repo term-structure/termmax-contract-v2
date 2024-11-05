@@ -20,10 +20,27 @@ library DeployUtils {
         IMintableERC20 lpFt;
         IMintableERC20 lpXt;
         IGearingToken gt;
-        AggregatorV3Interface underlyingOracle;
-        AggregatorV3Interface collateralOracle;
+        MockPriceFeed underlyingOracle;
+        MockPriceFeed collateralOracle;
         MockERC20 collateral;
         MockERC20 underlying;
+    }
+
+    function _getCode(address addr) public view returns (bytes memory code) {
+        assembly {
+            // retrieve the size of the code, this needs assembly
+            let size := extcodesize(addr)
+            // size := sub(0x14, size)
+            // allocate output byte array - this could also be done without assembly
+            // by using code = new bytes(size)
+            code := mload(0x40)
+            // new "memory end" including padding
+            mstore(0x40, add(code, and(add(add(size, 0x20), 0x1f), not(0x1f))))
+            // store length in memory
+            mstore(code, size)
+            // actually retrieve the code, this needs assembly
+            extcodecopy(addr, add(code, 0x20), 0, size)
+        }
     }
 
     function deployMarket(
@@ -33,7 +50,6 @@ library DeployUtils {
         uint32 liquidationLtv
     ) internal returns (Res memory res) {
         res.factory = new TermMaxFactory(deployer);
-        console.log("Factory deploy at:", address(res.factory));
         res.factory.initMarketBytes(type(TermMaxMarket).creationCode);
 
         res.collateral = new MockERC20("ETH", "ETH", 18);
@@ -49,7 +65,7 @@ library DeployUtils {
             updatedAt: 0,
             answeredInRound: 0
         });
-        MockPriceFeed(address(res.collateralOracle)).updateRoundData(roundData); 
+        MockPriceFeed(address(res.collateralOracle)).updateRoundData(roundData);
 
         ITermMaxFactory.DeployParams memory params = ITermMaxFactory
             .DeployParams({
@@ -65,11 +81,7 @@ library DeployUtils {
             });
 
         res.market = ITermMaxMarket(res.factory.createERC20Market(params));
-        console.log("Market deploy at:", address(res.market));
-        console.log("gt deploy at: ", address(res.gt));
-        (res.ft, res.xt, res.lpFt, res.lpXt, res.gt, , ) = res
-            .market
-            .tokens();
+        (res.ft, res.xt, res.lpFt, res.lpXt, res.gt, , ) = res.market.tokens();
     }
 
     function deployRouter(address deployer) internal returns (TermMaxRouter router) {

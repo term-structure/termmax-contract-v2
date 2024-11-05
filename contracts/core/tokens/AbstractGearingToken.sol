@@ -214,7 +214,7 @@ abstract contract AbstractGearingToken is
         if (ltv >= s.config.maxLtv) {
             revert GtIsNotHealthy(to, ltv);
         }
-        id = s.total++;
+        id = ++s.total;
         s.loanMapping[id] = LoanInfo(debtAmt, collateralData);
         _mint(to, id);
     }

@@ -48,7 +48,7 @@ interface ITermMaxMarket {
         uint32 borrowFeeRatio,
         uint32 minNBorrowFeeR,
         uint32 redeemFeeRatio,
-        uint32 leverfeeRatio,
+        uint32 issueFtfeeRatio,
         uint32 lockingPercentage,
         uint32 protocolFeeRatio
     );
@@ -139,6 +139,22 @@ interface ITermMaxMarket {
         bytes collateralData
     );
 
+    /// @notice Emitted when issuing FT by collateral
+    /// @param caller Who call the function
+    /// @param gtId The id of Gearing Token
+    /// @param debtAmt The amount of debt, unit by underlying token
+    /// @param ftAmt The amount of FT issued
+    /// @param issueFee The amount of issuing fee, unit by FT token
+    /// @param collateralData The encoded data of collateral
+    event IssueFt(
+        address indexed caller,
+        uint256 indexed gtId,
+        uint128 debtAmt,
+        uint128 ftAmt,
+        uint128 issueFee,
+        bytes collateralData
+    );
+
     /// @notice Emitted when redeeming tokens
     /// @param caller Who call the function
     /// @param proportion The proportion of underlying token and collateral should be obtained
@@ -170,7 +186,7 @@ interface ITermMaxMarket {
         uint32 borrowFeeRatio,
         uint32 minNBorrowFeeR,
         uint32 redeemFeeRatio,
-        uint32 leverfeeRatio,
+        uint32 issueFtfeeRatio,
         uint32 lockingPercentage,
         uint32 protocolFeeRatio
     ) external;
@@ -258,15 +274,16 @@ interface ITermMaxMarket {
     /// @param underlyingAmt Amount of underlying token want to obtain
     function redeemFtAndXtToUnderlying(uint256 underlyingAmt) external;
 
-    /// @notice Using collateral for leverage.
-    ///         Caller will get FT(bond) tokens equal to the debt amount
+    /// @notice Using collateral to issue FT tokens.
+    ///         Caller will get FT(bond) tokens equal to the debt amount subtract issue fee
     /// @param debt The amount of debt, unit by underlying token
     /// @param collateralData The encoded data of collateral
     /// @return gtId The id of Gearing Token
-    function leverageByCollateral(
+    ///
+    function issueFt(
         uint128 debt,
         bytes calldata collateralData
-    ) external returns (uint256 gtId, uint256 netFtOut);
+    ) external returns (uint256 gtId, uint128 ftOutAmt);
 
     /// @notice Flash loan underlying token for leverage
     /// @param receiver Who will receive Gearing Token

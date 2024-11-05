@@ -14,7 +14,7 @@ import {MockPriceFeed} from "../contracts/test/MockPriceFeed.sol";
 import {ITermMaxFactory, TermMaxFactory, IMintableERC20, IGearingToken, AggregatorV3Interface} from "../contracts/core/factory/TermMaxFactory.sol";
 import "../contracts/core/storage/TermMaxStorage.sol";
 
-contract LpTest is Test {
+contract GtTest is Test {
     using JSONLoader for *;
     DeployUtils.Res res;
 
@@ -56,6 +56,9 @@ contract LpTest is Test {
         res.underlying.mint(deployer, amount);
         res.underlying.approve(address(res.market), amount);
         res.market.provideLiquidity(amount);
+
+        res.underlying.mint(sender, amount);
+        res.collateral.mint(sender, amount);
 
         vm.stopPrank();
     }
