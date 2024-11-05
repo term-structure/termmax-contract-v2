@@ -17,8 +17,8 @@ library DeployUtils {
         IMintableERC20 lpFt;
         IMintableERC20 lpXt;
         IGearingToken gt;
-        AggregatorV3Interface underlyingOracle;
-        AggregatorV3Interface collateralOracle;
+        MockPriceFeed underlyingOracle;
+        MockPriceFeed collateralOracle;
         MockERC20 collateral;
         MockERC20 underlying;
     }
@@ -47,7 +47,6 @@ library DeployUtils {
         uint32 liquidationLtv
     ) internal returns (Res memory res) {
         res.factory = new TermMaxFactory(deployer);
-        console.log("Factory deploy at:", address(res.factory));
         res.factory.initMarketBytes(type(TermMaxMarket).creationCode);
 
         res.collateral = new MockERC20("ETH", "ETH", 18);
@@ -79,8 +78,6 @@ library DeployUtils {
             });
 
         res.market = ITermMaxMarket(res.factory.createERC20Market(params));
-        console.log("Market deploy at:", address(res.market));
-        console.log("gt deploy at: ", address(res.gt));
         (res.ft, res.xt, res.lpFt, res.lpXt, res.gt, , ) = res.market.tokens();
     }
 }

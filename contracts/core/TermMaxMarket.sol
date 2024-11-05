@@ -646,9 +646,11 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         xt.transferFrom(caller, address(this), xtAmt);
 
         // 1 xt -> 1 underlying raised
-        // Debt 1 * initialLtv
-        uint128 debt = ((xtAmt * _config.initialLtv) / Constants.DECIMAL_BASE)
-            .toUint128();
+        // Debt 1 * initialLtv round up
+        uint128 debt = ((xtAmt *
+            _config.initialLtv +
+            Constants.DECIMAL_BASE -
+            1) / Constants.DECIMAL_BASE).toUint128();
 
         // Send debt to borrower
         underlying.transfer(caller, xtAmt);
