@@ -786,8 +786,8 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         uint proportion = (userPoint * Constants.DECIMAL_BASE) / allPoints;
         bytes memory deliveryData = gt.delivery(proportion, caller);
         // Transfer underlying output
-        uint underlyingAmt = (underlying.balanceOf(address(this)) * proportion) /
-            Constants.DECIMAL_BASE;
+        uint underlyingAmt = (underlying.balanceOf(address(this)) *
+            proportion) / Constants.DECIMAL_BASE;
         if (mConfig.redeemFeeRatio > 0) {
             underlyingAmt = _tranferFeeToTreasurer(
                 mConfig.treasurer,
