@@ -173,13 +173,6 @@ contract GtTest is Test {
         vm.stopPrank();
     }
 
-    function testRevertByCallerIsNotTheMarket() public {
-        vm.expectRevert(
-            abi.encodeWithSelector(IGearingToken.CallerIsNotTheMarket.selector)
-        );
-        res.gt.mint(sender, sender, 100e8, abi.encode(1e18));
-    }
-
     function testRevertByGtIsNotHealthyWhenIssueFt() public {
         // debt 1780 USD collaretal 2000USD ltv 0.89
         uint128 debtAmt = 1780e8;

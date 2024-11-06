@@ -33,36 +33,21 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
         }
     }
 
-    function _authorizeUpgrade(address) internal virtual override onlyOwner {}
-
-    function initialize(
-        string memory name,
-        string memory symbol,
-        address admin,
-        GtConfig memory config,
-        AggregatorV3Interface collateralOracle
-    ) public initializer {
-        __AbstractGearingToken_init(name, symbol, admin, config);
-        _getGearingTokenWithERC20Storage().collateralOracle = collateralOracle;
+    function __GearingToken_Implement_init(
+        bytes memory initalParams
+    ) internal override onlyInitializing {
+        _getGearingTokenWithERC20Storage()
+            .collateralOracle = AggregatorV3Interface(
+            abi.decode(initalParams, (address))
+        );
     }
 
-    /**
-     * @inheritdoc IGearingToken
-     */
-    function delivery(
-        uint256 proportion,
-        address to
-    )
-        external
-        override
-        onlyOwner
-        nonReentrant
-        returns (bytes memory deliveryData)
-    {
+    function _delivery(
+        uint256 proportion
+    ) internal virtual override returns (bytes memory deliveryData) {
         IERC20 collateral = IERC20(_getGearingTokenStorage().config.collateral);
         uint collateralReserve = collateral.balanceOf(address(this));
         uint amount = (collateralReserve * proportion) / Constants.DECIMAL_BASE;
-        collateral.transfer(to, amount);
         deliveryData = abi.encode(amount);
     }
 

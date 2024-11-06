@@ -3,7 +3,6 @@ pragma solidity ^0.8.27;
 
 import {ERC721Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {Constants} from "../lib/Constants.sol";
@@ -14,7 +13,6 @@ import {IGearingToken, AggregatorV3Interface, IERC20Metadata, IERC20} from "./IG
  * @author Term Structure Labs
  */
 abstract contract AbstractGearingToken is
-    UUPSUpgradeable,
     OwnableUpgradeable,
     ERC721Upgradeable,
     ReentrancyGuardUpgradeable,
@@ -75,27 +73,37 @@ abstract contract AbstractGearingToken is
         }
     }
 
+    function initialize(
+        string memory name,
+        string memory symbol,
+        GtConfig memory config,
+        bytes memory initalParams
+    ) external override initializer {
+        __AbstractGearingToken_init(name, symbol, config);
+        __GearingToken_Implement_init(initalParams);
+    }
+
     function __AbstractGearingToken_init(
         string memory name,
         string memory symbol,
-        address admin,
         GtConfig memory config
     ) internal onlyInitializing {
         __ERC721_init(name, symbol);
-        __Ownable_init(admin);
+        __Ownable_init(config.market);
         GearingTokenStorage storage s = _getGearingTokenStorage();
         s.config = config;
         // Market will burn those tokens after maturity
         config.ft.approve(config.market, UINT_MAX);
     }
 
+    function __GearingToken_Implement_init(
+        bytes memory initalParams
+    ) internal virtual;
+
     /**
      * @inheritdoc IGearingToken
      */
-    function setTreasurer(address treasurer) external {
-        if (msg.sender != marketAddr()) {
-            revert CallerIsNotTheMarket();
-        }
+    function setTreasurer(address treasurer) external onlyOwner {
         _getGearingTokenStorage().config.treasurer = treasurer;
     }
 
@@ -128,11 +136,8 @@ abstract contract AbstractGearingToken is
         address to,
         uint128 debtAmt,
         bytes memory collateralData
-    ) external override returns (uint256 id) {
+    ) external override onlyOwner returns (uint256 id) {
         GearingTokenStorage storage s = _getGearingTokenStorage();
-        if (msg.sender != s.config.market) {
-            revert CallerIsNotTheMarket();
-        }
         _transferCollateralFrom(
             collateralProvider,
             address(this),
@@ -480,6 +485,27 @@ abstract contract AbstractGearingToken is
             bytes memory cToTreasurer,
             bytes memory remainningC
         );
+
+    /**
+     * @inheritdoc IGearingToken
+     */
+    function delivery(
+        uint256 proportion,
+        address to
+    )
+        external
+        override
+        onlyOwner
+        nonReentrant
+        returns (bytes memory deliveryData)
+    {
+        deliveryData = _delivery(proportion);
+        _transferCollateral(to, deliveryData);
+    }
+
+    function _delivery(
+        uint256 proportion
+    ) internal virtual returns (bytes memory deliveryData);
 
     /// @notice Return the loan to value of this loan
     /// @param underlyingOracle The oracle of underlying token

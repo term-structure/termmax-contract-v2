@@ -39,8 +39,6 @@ interface IGearingToken is IERC721 {
         bool liquidatable;
     }
 
-    /// @notice Error for msg.sender is not the market
-    error CallerIsNotTheMarket();
     /// @notice Error for merge loans have different owner
     error CanNotMergeLoanWithDiffOwner();
     /// @notice Error for liquidate loan when Gearing Token don't support liquidation
@@ -105,6 +103,18 @@ interface IGearingToken is IERC721 {
         bytes cToTreasurer,
         bytes remainningC
     );
+
+    // @notice Initial function
+    /// @param name The token's name
+    /// @param symbol The token's symbol
+    /// @param config Configuration of GT
+    /// @param initalParams The initilization parameters of implementation
+    function initialize(
+        string memory name,
+        string memory symbol,
+        GtConfig memory config,
+        bytes memory initalParams
+    ) external;
 
     /// @notice Set the treasurer address
     /// @param treasurer New address of treasurer

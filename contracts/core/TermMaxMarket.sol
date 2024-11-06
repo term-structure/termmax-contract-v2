@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
@@ -13,6 +12,7 @@ import {IGearingToken} from "./tokens/IGearingToken.sol";
 import {IFlashLoanReceiver} from "./IFlashLoanReceiver.sol";
 import {TermMaxCurve} from "./lib/TermMaxCurve.sol";
 import {Constants} from "./lib/Constants.sol";
+import {Ownable} from "./access/Ownable.sol";
 import "./storage/TermMaxStorage.sol";
 
 /**
@@ -45,11 +45,18 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         _;
     }
 
-    constructor(
+    /**
+     * @inheritdoc ITermMaxMarket
+     */
+    function initialize(
+        address admin,
         address collateral_,
         IERC20 underlying_,
+        IMintableERC20[4] memory tokens_,
+        IGearingToken gt_,
         MarketConfig memory config_
-    ) Ownable(msg.sender) {
+    ) external override {
+        __initilizeOwner(admin);
         if (address(collateral_) == address(underlying_)) {
             revert CollateralCanNotEqualUnserlyinng();
         }
@@ -62,18 +69,6 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         underlying = underlying_;
         collateral = collateral_;
         _config = config_;
-    }
-
-    /**
-     * @inheritdoc ITermMaxMarket
-     */
-    function initialize(
-        IMintableERC20[4] memory tokens_,
-        IGearingToken gt_
-    ) external override onlyOwner {
-        if (address(ft) != address(0)) {
-            revert MarketHasBeenInitialized();
-        }
 
         ft = tokens_[0];
         xt = tokens_[1];
@@ -264,9 +259,9 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
                 lpFt.balanceOf(address(this))
             );
 
-            lpFtAmt += reward;
-
             lpFt.transferFrom(caller, address(this), lpFtAmt);
+
+            lpFtAmt += reward;
             lpFt.burn(lpFtAmt);
 
             ftOutAmt = ((lpFtAmt * ftReserve) / lpFtTotalSupply).toUint128();
@@ -281,9 +276,9 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
                 lpXtAmt,
                 lpXt.balanceOf(address(this))
             );
-            lpXtAmt += reward;
-
             lpXt.transferFrom(caller, address(this), lpXtAmt);
+
+            lpXtAmt += reward;
             lpXt.burn(lpXtAmt);
 
             xtOutAmt = ((lpXtAmt * xtReserve) / lpXtTotalSupply).toUint128();
@@ -293,8 +288,9 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
             Constants.DECIMAL_BASE;
 
         if (sameProportionFt > ftOutAmt) {
-            uint xtExcess = ((sameProportionFt - ftOutAmt) *
-                Constants.DECIMAL_BASE) / mConfig.initialLtv;
+            uint xtExcess = xtOutAmt -
+                (ftOutAmt * Constants.DECIMAL_BASE) /
+                mConfig.initialLtv;
             TradeParams memory tradeParams = TradeParams(
                 xtExcess,
                 ftReserve,

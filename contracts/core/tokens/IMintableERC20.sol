@@ -11,6 +11,18 @@ interface IMintableERC20 is IERC20 {
     /// @notice Error when using offline signature but spender is not the maerket
     error SpenderIsNotMarket(address spender);
 
+    // @notice Initial function
+    /// @param market The market's address
+    /// @param name The token's name
+    /// @param symbol The token's symbol
+    /// @param _decimals The token's decimals
+    function initialize(
+        address market,
+        string memory name,
+        string memory symbol,
+        uint8 _decimals
+    ) external;
+
     /// @notice Mint this token to an address
     /// @param to The address receiving token
     /// @param amount The amount of token minted
