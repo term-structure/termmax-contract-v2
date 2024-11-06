@@ -10,13 +10,6 @@ import {ITermMaxMarket} from "../TermMaxMarket.sol";
 import {ITermMaxFactory} from "./ITermMaxFactory.sol";
 
 contract TermMaxFactory is ITermMaxFactory, Ownable {
-    error MarketImplementInitialized();
-    error MarketImplementIsNotInitialized();
-    error CantNotFindGtImplementation();
-
-    event InitializeMarketImplement(address marketImplement);
-    event SetGtImplementd(bytes32 key, address gtImplement);
-
     string constant PREFIX_FT = "FT:";
     string constant PREFIX_XT = "XT:";
     string constant PREFIX_LP_FT = "LpFT:";
@@ -24,10 +17,11 @@ contract TermMaxFactory is ITermMaxFactory, Ownable {
     string constant PREFIX_GNFT = "GT:";
     string constant STRING_CONNECTION = "-";
 
+    bytes32 public constant GT_ERC20 = keccak256("GearingTokenWithERC20");
+
     address public immutable tokenImplement;
     address public marketImplement;
 
-    bytes32 public constant GT_ERC20 = keccak256("GearingTokenWithERC20");
     mapping(bytes32 => address) public gtImplements;
 
     constructor(address admin) Ownable(admin) {

@@ -21,10 +21,24 @@ library LoanUtils {
         uint upDecimals = 10 ** res.underlyingOracle.decimals();
         uint cDecimals = 10 ** res.collateral.decimals();
         uint uDecimals = 10 ** res.underlying.decimals();
-        uint debtValue = (debtAmt * uPrice.toUint256()) /
-            (upDecimals * uDecimals);
+        uint debtValue = (debtAmt * uPrice.toUint256()) / uDecimals;
         uint collateralValue = (collateralAmt * cPrice.toUint256()) /
             (cpDecimals * cDecimals);
-        ltv = (debtValue * Constants.DECIMAL_BASE) / collateralValue;
+        ltv =
+            (debtValue * Constants.DECIMAL_BASE) /
+            (collateralValue * upDecimals);
+    }
+
+    function fastMintGt(
+        DeployUtils.Res memory res,
+        address to,
+        uint128 debtAmt,
+        uint256 collateralAmt
+    ) internal returns (uint256 gtId, uint128 ftOutAmt) {
+        res.collateral.mint(to, collateralAmt);
+        res.collateral.approve(address(res.gt), collateralAmt);
+        bytes memory collateralData = abi.encode(collateralAmt);
+
+        (gtId, ftOutAmt) = res.market.issueFt(debtAmt, collateralData);
     }
 }

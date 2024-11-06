@@ -7,6 +7,7 @@ import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/ut
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {Constants} from "../lib/Constants.sol";
 import {IGearingToken, AggregatorV3Interface, IERC20Metadata, IERC20} from "./IGearingToken.sol";
+import {console} from "forge-std/console.sol";
 
 /**
  * @title Term Max Gearing Token
@@ -40,12 +41,14 @@ abstract contract AbstractGearingToken is
     struct ValueAndPrice {
         /// @notice USD value of collateral
         uint256 collateralValue;
-        /// @notice USD value of debt
-        uint256 debtValue;
+        /// @notice USD value of debt with price and token decimals
+        uint256 debtValueWithDecimals;
         /// @notice USD price of underlying token
         uint256 underlyingPrice;
         /// @notice Decimals of USD price
         uint256 priceDecimals;
+        /// @notice Decimals of underlying token
+        uint256 underlyingDecimals;
         /// @notice Encoded USD price of collateral token
         bytes collateralPriceData;
     }
@@ -156,10 +159,12 @@ abstract contract AbstractGearingToken is
         GearingTokenStorage storage s
     ) internal returns (uint256 id) {
         LoanInfo memory loan = LoanInfo(debtAmt, collateralData);
-        (uint128 ltv, ) = _calculateLtv(
-            s.config.underlyingOracle,
-            loan,
-            s.config.underlying.decimals()
+        uint128 ltv = _calculateLtv(
+            _getValueAndPrice(
+                s.config.underlyingOracle,
+                loan,
+                s.config.underlying.decimals()
+            )
         );
         if (ltv >= s.config.maxLtv) {
             revert GtIsNotHealthy(to, ltv);
@@ -190,10 +195,12 @@ abstract contract AbstractGearingToken is
         LoanInfo memory loan = s.loanMapping[id];
         debtAmt = loan.debtAmt;
         collateralData = loan.collateralData;
-        (ltv, ) = _calculateLtv(
-            s.config.underlyingOracle,
-            loan,
-            s.config.underlying.decimals()
+        ltv = _calculateLtv(
+            _getValueAndPrice(
+                s.config.underlyingOracle,
+                loan,
+                s.config.underlying.decimals()
+            )
         );
     }
 
@@ -216,13 +223,11 @@ abstract contract AbstractGearingToken is
                 revert CanNotMergeLoanWithDiffOwner();
             }
             totalDebtAmt += loan.debtAmt;
-            mergedCollateralData = _mergeCollateral(
-                mergedCollateralData,
-                loan.collateralData
-            );
+            mergedCollateralData = i == 0
+                ? loan.collateralData
+                : _mergeCollateral(mergedCollateralData, loan.collateralData);
             _burnInternal(id, s);
         }
-
         newId = _mintInternal(
             msg.sender,
             totalDebtAmt,
@@ -243,7 +248,7 @@ abstract contract AbstractGearingToken is
         GearingTokenStorage storage s = _getGearingTokenStorage();
         GtConfig memory config = s.config;
 
-        if (config.maturity >= block.timestamp) {
+        if (config.maturity <= block.timestamp) {
             revert GtIsExpired(id);
         }
 
@@ -285,17 +290,24 @@ abstract contract AbstractGearingToken is
         }
 
         GearingTokenStorage storage s = _getGearingTokenStorage();
+        GtConfig memory config = s.config;
+        if (config.maturity <= block.timestamp) {
+            revert GtIsExpired(id);
+        }
+
         LoanInfo memory loan = s.loanMapping[id];
         loan.collateralData = _removeCollateral(loan, collateralData);
 
         _transferCollateral(msg.sender, collateralData);
 
-        (uint128 ltv, ) = _calculateLtv(
-            s.config.underlyingOracle,
-            loan,
-            s.config.underlying.decimals()
+        uint128 ltv = _calculateLtv(
+            _getValueAndPrice(
+                config.underlyingOracle,
+                loan,
+                config.underlying.decimals()
+            )
         );
-        if (ltv >= s.config.maxLtv) {
+        if (ltv >= config.maxLtv) {
             revert GtIsNotHealthy(msg.sender, ltv);
         }
         s.loanMapping[id] = loan;
@@ -316,6 +328,9 @@ abstract contract AbstractGearingToken is
         bytes memory collateralData
     ) external override nonReentrant {
         GearingTokenStorage storage s = _getGearingTokenStorage();
+        if (s.config.maturity <= block.timestamp) {
+            revert GtIsExpired(id);
+        }
         LoanInfo memory loan = s.loanMapping[id];
 
         _transferCollateralFrom(msg.sender, address(this), collateralData);
@@ -338,7 +353,7 @@ abstract contract AbstractGearingToken is
         GearingTokenStorage storage s = _getGearingTokenStorage();
         LoanInfo memory loan = s.loanMapping[id];
         GtConfig memory config = s.config;
-        (isLiquidable, maxRepayAmt, ) = _getLiquidationInfo(loan, config);
+        (isLiquidable, maxRepayAmt, , ) = _getLiquidationInfo(loan, config);
     }
 
     function _getLiquidationInfo(
@@ -350,15 +365,16 @@ abstract contract AbstractGearingToken is
         returns (
             bool isLiquidable,
             uint128 maxRepayAmt,
+            uint256 ltv,
             ValueAndPrice memory valueAndPrice
         )
     {
-        uint128 ltv;
-        (ltv, valueAndPrice) = _calculateLtv(
+        valueAndPrice = _getValueAndPrice(
             config.underlyingOracle,
             loan,
             config.underlying.decimals()
         );
+        ltv = _calculateLtv(valueAndPrice);
         bool isExpired = block.timestamp >= config.maturity &&
             block.timestamp < config.maturity + Constants.LIQUIDATION_WINDOW;
         isLiquidable = isExpired || ltv >= config.liquidationLtv;
@@ -403,6 +419,7 @@ abstract contract AbstractGearingToken is
         (
             bool isLiquidable,
             uint128 maxRepayAmt,
+            uint256 ltvBefore,
             ValueAndPrice memory valueAndPrice
         ) = _getLiquidationInfo(loan, config);
 
@@ -433,18 +450,14 @@ abstract contract AbstractGearingToken is
             loan.collateralData = remainningC;
             // Check ltv after partial liquidation
             {
-                uint ltvBefore = (valueAndPrice.debtValue *
-                    Constants.DECIMAL_BASE) / valueAndPrice.collateralValue;
-
-                uint remainningCollateralValue = _getCollateralValue(
+                valueAndPrice.collateralValue = _getCollateralValue(
                     remainningC,
                     valueAndPrice.collateralPriceData
                 );
-                uint remainningDebtValue = (loan.debtAmt *
-                    valueAndPrice.underlyingPrice) /
-                    valueAndPrice.priceDecimals;
-                uint ltvAfter = (remainningDebtValue * Constants.DECIMAL_BASE) /
-                    remainningCollateralValue;
+                valueAndPrice.debtValueWithDecimals =
+                    (loan.debtAmt * valueAndPrice.underlyingPrice) /
+                    valueAndPrice.underlyingDecimals;
+                uint ltvAfter = _calculateLtv(valueAndPrice);
                 if (ltvBefore < ltvAfter) {
                     revert LtvIncreasedAfterLiquidation(ltvBefore, ltvAfter);
                 }
@@ -510,30 +523,38 @@ abstract contract AbstractGearingToken is
         uint256 proportion
     ) internal virtual returns (bytes memory deliveryData);
 
-    /// @notice Return the loan to value of this loan
-    /// @param underlyingOracle The oracle of underlying token
-    /// @param loan The loan data, contains debt amount and collateral data
-    /// @return ltv The loan to value of this loan
-    /// @return valueAndPrice Debt and collateral prices, values
-    function _calculateLtv(
+    function _getValueAndPrice(
         AggregatorV3Interface underlyingOracle,
         LoanInfo memory loan,
         uint8 underlyingDecimals
-    ) internal view returns (uint128 ltv, ValueAndPrice memory valueAndPrice) {
+    ) internal view returns (ValueAndPrice memory valueAndPrice) {
         valueAndPrice.collateralPriceData = _getCollateralPriceData();
         valueAndPrice.collateralValue = _getCollateralValue(
             loan.collateralData,
             valueAndPrice.collateralPriceData
         );
+
         (
             valueAndPrice.underlyingPrice,
             valueAndPrice.priceDecimals
         ) = _getPrice(underlyingOracle);
-        valueAndPrice.debtValue =
+
+        valueAndPrice.underlyingDecimals = 10 ** underlyingDecimals;
+
+        valueAndPrice.debtValueWithDecimals =
             (loan.debtAmt * valueAndPrice.underlyingPrice) /
-            (valueAndPrice.priceDecimals * (10 ** underlyingDecimals));
-        ltv = ((valueAndPrice.debtValue * Constants.DECIMAL_BASE) /
-            valueAndPrice.collateralValue).toUint128();
+            valueAndPrice.underlyingDecimals;
+    }
+
+    /// @notice Return the loan to value of this loan
+    /// @param valueAndPrice Debt and collateral prices, values
+    /// @return ltv The loan to value of this loan
+    function _calculateLtv(
+        ValueAndPrice memory valueAndPrice
+    ) internal view returns (uint128 ltv) {
+        ltv = ((valueAndPrice.debtValueWithDecimals * Constants.DECIMAL_BASE) /
+            (valueAndPrice.collateralValue * valueAndPrice.priceDecimals))
+            .toUint128();
     }
 
     /// @notice Return the price given by the oracle in USD
