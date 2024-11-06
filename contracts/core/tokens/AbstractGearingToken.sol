@@ -73,6 +73,9 @@ abstract contract AbstractGearingToken is
         }
     }
 
+    /**
+     * @inheritdoc IGearingToken
+     */
     function initialize(
         string memory name,
         string memory symbol,

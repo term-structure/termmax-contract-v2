@@ -51,9 +51,37 @@ contract TermMaxFactory is ITermMaxFactory, Ownable {
         emit SetGtImplementd(key, gtImplement);
     }
 
+    /**
+     * @inheritdoc ITermMaxFactory
+     */
+    function predictMarketAddress(
+        address collateral,
+        IERC20Metadata underlying,
+        uint64 openTime,
+        uint64 maturity,
+        uint32 initialLtv
+    ) external view override returns (address market) {
+        return
+            Clones.predictDeterministicAddress(
+                marketImplement,
+                keccak256(
+                    abi.encode(
+                        collateral,
+                        underlying,
+                        openTime,
+                        maturity,
+                        initialLtv
+                    )
+                )
+            );
+    }
+
+    /**
+     * @inheritdoc ITermMaxFactory
+     */
     function createMarket(
         DeployParams calldata deployParams
-    ) external onlyOwner returns (address market) {
+    ) external override onlyOwner returns (address market) {
         if (marketImplement == address(0)) {
             revert MarketImplementIsNotInitialized();
         }

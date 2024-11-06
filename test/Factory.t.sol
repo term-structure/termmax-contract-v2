@@ -12,16 +12,13 @@ import {ITermMaxFactory, TermMaxFactory, IMintableERC20, IGearingToken, Aggregat
 import "../contracts/core/storage/TermMaxStorage.sol";
 
 contract FactoryTest is Test {
-    address deployer = vm.envAddress("FORK_DEPLOYER_ADDR");
+    address deployer = vm.randomAddress();
 
-    function setUp() public {}
+    uint32 maxLtv = 8.5e7;
+    uint32 liquidationLtv = 9e7;
+    MarketConfig marketConfig;
 
-    function testDeploy() public {
-        vm.startPrank(deployer);
-        uint32 maxLtv = 8.5e7;
-        uint32 liquidationLtv = 9e7;
-
-        MarketConfig memory marketConfig;
+    function setUp() public {
         marketConfig.openTime = uint64(
             block.timestamp + Constants.SECONDS_IN_DAY
         );
@@ -29,6 +26,10 @@ contract FactoryTest is Test {
             marketConfig.openTime + Constants.SECONDS_IN_DAY * 30
         );
         marketConfig.initialLtv = 9e7;
+    }
+
+    function testDeploy() public {
+        vm.startPrank(deployer);
         // DeployUtils deployUtil = new DeployUtils();
         DeployUtils.Res memory res = DeployUtils.deployMarket(
             deployer,
@@ -36,7 +37,16 @@ contract FactoryTest is Test {
             maxLtv,
             liquidationLtv
         );
-        console.log("gt: ", address(res.gt));
+        assertEq(
+            res.factory.predictMarketAddress(
+                address(res.collateral),
+                res.underlying,
+                marketConfig.openTime,
+                marketConfig.maturity,
+                marketConfig.initialLtv
+            ),
+            address(res.market)
+        );
         vm.stopPrank();
     }
 }
