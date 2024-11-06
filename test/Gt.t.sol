@@ -168,8 +168,6 @@ contract GtTest is Test {
         assert(owner == sender);
         assert(d == debtAmt);
         assert(collateralAmt == abi.decode(cd, (uint256)));
-        console.log("ltv1", LoanUtils.calcLtv(res, debtAmt, collateralAmt));
-        console.log("ltv2", ltv);
         assert(LoanUtils.calcLtv(res, debtAmt, collateralAmt) == ltv);
 
         vm.stopPrank();
@@ -463,7 +461,43 @@ contract GtTest is Test {
         vm.stopPrank();
     }
 
-    function testAddCollateral() public {}
+    function testAddCollateral() public {
+        uint128 debtAmt = 1700e8;
+        uint256 collateralAmt = 1e18;
+        uint256 addedCollateral = 0.1e18;
+
+        vm.startPrank(sender);
+
+        (uint256 gtId, ) = LoanUtils.fastMintGt(
+            res,
+            sender,
+            debtAmt,
+            collateralAmt
+        );
+        vm.stopPrank();
+
+        address thirdPeople = vm.randomAddress();
+        res.collateral.mint(thirdPeople, addedCollateral);
+        vm.startPrank(thirdPeople);
+
+        res.collateral.approve(address(res.gt), addedCollateral);
+
+        StateChecker.MarketState memory state = StateChecker.getMarketState(
+            res
+        );
+        res.gt.addCollateral(gtId, abi.encode(addedCollateral));
+        state.collateralReserve += addedCollateral;
+        StateChecker.checkMarketState(res, state);
+        assert(res.underlying.balanceOf(thirdPeople) == 0);
+        assert(res.collateral.balanceOf(thirdPeople) == 0);
+
+        (address owner, uint128 d, , bytes memory cd) = res.gt.loanInfo(gtId);
+        assert(owner == sender);
+        assert(d == debtAmt);
+        assert(collateralAmt + addedCollateral == abi.decode(cd, (uint256)));
+
+        vm.stopPrank();
+    }
 
     function testRemoveCollateral() public {}
 

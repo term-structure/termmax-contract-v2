@@ -7,7 +7,6 @@ import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/ut
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {Constants} from "../lib/Constants.sol";
 import {IGearingToken, AggregatorV3Interface, IERC20Metadata, IERC20} from "./IGearingToken.sol";
-import {console} from "forge-std/console.sol";
 
 /**
  * @title Term Max Gearing Token
@@ -335,7 +334,7 @@ abstract contract AbstractGearingToken is
 
         _transferCollateralFrom(msg.sender, address(this), collateralData);
         loan.collateralData = _addCollateral(loan, collateralData);
-
+        s.loanMapping[id] = loan;
         emit AddCollateral(id, loan.collateralData);
     }
 
