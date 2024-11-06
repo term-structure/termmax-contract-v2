@@ -167,12 +167,20 @@ interface ITermMaxMarket {
     );
 
     /// @notice Initialize the token and configuration of the market
+    /// @param admin Administrator address for configuring parameters such as transaction fees
+    /// @param collateral_ Collateral token
+    /// @param underlying_ Underlying Token(debt)
     /// @param tokens_ Term Max Market tokens, sort by [FT, XT, LpFT, LpXt]
     /// @param gt_ Term Max Gearing Token
+    /// @param config_ Configuration of market
     /// @dev Only factory will call this function once when deploying new market
     function initialize(
+        address admin,
+        address collateral_,
+        IERC20 underlying_,
         IMintableERC20[4] memory tokens_,
-        IGearingToken gt_
+        IGearingToken gt_,
+        MarketConfig memory config_
     ) external;
 
     /// @notice Return the configuration

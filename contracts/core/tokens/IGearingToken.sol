@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20Metadata, IERC20} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 
@@ -17,7 +17,7 @@ interface IGearingToken is IERC721 {
         /// @notice The address of collateral token
         address collateral;
         /// @notice The underlying(debt) token
-        IERC20 underlying;
+        IERC20Metadata underlying;
         /// @notice The bond token
         IERC20 ft;
         /// @notice The treasurer's address, which will receive protocol reward while liquidation
@@ -39,6 +39,83 @@ interface IGearingToken is IERC721 {
         bool liquidatable;
     }
 
+    /// @notice Error for merge loans have different owner
+    error CanNotMergeLoanWithDiffOwner();
+    /// @notice Error for liquidate loan when Gearing Token don't support liquidation
+    error GtDoNotSupportLiquidation();
+    /// @notice Error for repay the loan after maturity day
+    /// @param id The id of Gearing Token
+    error GtIsExpired(uint256 id);
+    /// @notice Error for liquidate loan when its ltv less than liquidation threshhold
+    /// @param id The id of Gearing Token
+    error GtIsSafe(uint256 id);
+    /// @notice Error for the ltv of loan is bigger than maxium ltv
+    /// @param owner The owner of this loan
+    /// @param ltv The loan to value
+    error GtIsNotHealthy(address owner, uint128 ltv);
+    /// @notice Error for the ltv increase after liquidation
+    /// @param ltvBefore Loan to value before liquidation
+    /// @param ltvAfter Loan to value after liquidation
+    error LtvIncreasedAfterLiquidation(uint256 ltvBefore, uint256 ltvAfter);
+    /// @notice Error for unauthorized operation
+    /// @param id The id of Gearing Token
+    error CallerIsNotTheOwner(uint256 id);
+    /// @notice Error for liquidate the loan with invalid repay amount
+    error RepayAmtExceedsMaxRepayAmt(uint128 repayAmt, uint128 maxRepayAmt);
+
+    /// @notice Emitted when merging multiple Gearing Tokens into one
+    /// @param sender The owner of those tokens
+    /// @param newId The id of new Gearing Token
+    /// @param ids The array of Gearing Tokens id were merged
+    event MergeGts(
+        address indexed sender,
+        uint256 indexed newId,
+        uint256[] ids
+    );
+    /// @notice Emitted when removing collateral from the loan
+    /// @param id The id of Gearing Token
+    /// @param newCollateralData Collateral data after removal
+    event RemoveCollateral(uint256 indexed id, bytes newCollateralData);
+
+    /// @notice Emitted when adding collateral to the loan
+    /// @param id The id of Gearing Token
+    /// @param newCollateralData Collateral data after additional
+    event AddCollateral(uint256 indexed id, bytes newCollateralData);
+
+    /// @notice Emitted when repaying the debt of Gearing Token
+    /// @param id The id of Gearing Token
+    /// @param repayAmt The amount of debt repaid
+    /// @param byUnderlying Repay using underlying token or bonds token
+    event Repay(uint256 indexed id, uint256 repayAmt, bool byUnderlying);
+
+    /// @notice Emitted when liquidating Gearing Token
+    /// @param id The id of Gearing Token
+    /// @param liquidator The liquidator
+    /// @param repayAmt The amount of debt liquidated
+    /// @param cToLiquidator Collateral data assigned to liquidator
+    /// @param cToTreasurer Collateral data assigned to protocol
+    /// @param remainningC Remainning collateral data
+    event Liquidate(
+        uint256 indexed id,
+        address indexed liquidator,
+        uint128 repayAmt,
+        bytes cToLiquidator,
+        bytes cToTreasurer,
+        bytes remainningC
+    );
+
+    // @notice Initial function
+    /// @param name The token's name
+    /// @param symbol The token's symbol
+    /// @param config Configuration of GT
+    /// @param initalParams The initilization parameters of implementation
+    function initialize(
+        string memory name,
+        string memory symbol,
+        GtConfig memory config,
+        bytes memory initalParams
+    ) external;
+
     /// @notice Set the treasurer address
     /// @param treasurer New address of treasurer
     /// @dev Only the market can call this function
@@ -54,12 +131,14 @@ interface IGearingToken is IERC721 {
     function marketAddr() external view returns (address);
 
     /// @notice Mint this token to an address
+    /// @param  collateralProvider Who provide collateral token
     /// @param  to The address receiving token
     /// @param  debtAmt The amount of debt, unit by underlying token
     /// @param  collateralData The encoded data of collateral
     /// @return id The id of Gearing Token
     /// @dev Only the market can mint Gearing Token
     function mint(
+        address collateralProvider,
         address to,
         uint128 debtAmt,
         bytes memory collateralData

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
+import {console} from "forge-std/console.sol";
 import {DeployUtils} from "./DeployUtils.sol";
 
 library StateChecker {
@@ -19,15 +20,32 @@ library StateChecker {
         MarketState memory expect
     ) internal view {
         address market = address(res.market);
-        assert(res.market.config().apr == expect.apr);
-        assert(res.ft.balanceOf(market) == expect.ftReserve);
-        assert(res.xt.balanceOf(market) == expect.xtReserve);
-        assert(res.lpFt.balanceOf(market) == expect.lpFtReserve);
-        assert(res.lpXt.balanceOf(market) == expect.lpXtReserve);
-        assert(res.underlying.balanceOf(market) == expect.underlyingReserve);
-        assert(
+        require(res.market.config().apr == expect.apr, "apr unexpect");
+        require(
+            res.ft.balanceOf(market) == expect.ftReserve,
+            "ftReserve unexpect"
+        );
+        require(
+            res.xt.balanceOf(market) == expect.xtReserve,
+            "xtReserve unexpect"
+        );
+        require(
+            res.lpFt.balanceOf(market) == expect.lpFtReserve,
+            "lpFtReserve unexpect"
+        );
+        require(
+            res.lpXt.balanceOf(market) == expect.lpXtReserve,
+            "lpXtReserve unexpect"
+        );
+        require(
+            res.underlying.balanceOf(market) == expect.underlyingReserve,
+            "underlyingReserve unexpect"
+        );
+
+        require(
             res.collateral.balanceOf(address(res.gt)) ==
-                expect.collateralReserve
+                expect.collateralReserve,
+            "collateralReserve unexpect"
         );
     }
 

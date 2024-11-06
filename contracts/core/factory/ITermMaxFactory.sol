@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
-import {IERC20Metadata, IERC20} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {IGearingToken, AggregatorV3Interface} from "../tokens/GearingTokenWithERC20.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {IGearingToken, AggregatorV3Interface} from "../tokens/IGearingToken.sol";
 import {IMintableERC20} from "../tokens/MintableERC20.sol";
 import "../storage/TermMaxStorage.sol";
 
@@ -11,22 +11,39 @@ import "../storage/TermMaxStorage.sol";
  */
 interface ITermMaxFactory {
     struct DeployParams {
-        /// @notice Admin contract of market
+        /// @notice Use gt key to get the implementation of gearing Token
+        bytes32 gtKey;
+        /// @notice Admin address of market
         address admin;
         /// @notice Collateral token
-        IERC20Metadata collateral;
+        address collateral;
         /// @notice Underlying token
         IERC20Metadata underlying;
-        /// @notice Underlying token
-        AggregatorV3Interface collateralOracle;
+        /// @notice The oracle of underlying token
         AggregatorV3Interface underlyingOracle;
+        /// @notice The liquidation threshold of loan to collateral in Gearing Token
         uint32 liquidationLtv;
+        /// @notice The threshold of loan to collateral when minting Gearing Token
         uint32 maxLtv;
+        /// @notice The flag to indicate Gearing Token is liquidatable or not
         bool liquidatable;
+        /// @notice Configuturation of new market
         MarketConfig marketConfig;
+        /// @notice Encoded parameters to initialize GT implementation contract
+        bytes gtInitalParams;
     }
 
-    function createERC20Market(
+    /// @notice Deploy a new market
+    function createMarket(
         ITermMaxFactory.DeployParams calldata deployParams
     ) external returns (address market);
+
+    /// @notice Predict the address of market
+    function predictMarketAddress(
+        address collateral,
+        IERC20Metadata underlying,
+        uint64 openTime,
+        uint64 maturity,
+        uint32 initialLtv
+    ) external view returns (address market);
 }
