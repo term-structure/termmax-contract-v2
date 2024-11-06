@@ -285,8 +285,8 @@ contract LpTest is Test {
         res.lpFt.approve(address(res.market), lpFtOutAmt);
         res.lpXt.approve(address(res.market), lpXtOutAmt);
         (uint128 ftOutAmt, uint128 xtOutAmt) = res.market.withdrawLp(
-            lpFtOutAmt,
-            lpXtOutAmt / 2
+            lpFtOutAmt / 2,
+            lpXtOutAmt
         );
 
         StateChecker.MarketState memory expectedState = JSONLoader
