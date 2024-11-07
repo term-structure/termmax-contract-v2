@@ -24,6 +24,9 @@ library LoanUtils {
         uint debtValue = (debtAmt * uPrice.toUint256()) / uDecimals;
         uint collateralValue = (collateralAmt * cPrice.toUint256()) /
             (cpDecimals * cDecimals);
+        if (collateralValue == 0) {
+            return 2 ** 128 - 1;
+        }
         ltv =
             (debtValue * Constants.DECIMAL_BASE) /
             (collateralValue * upDecimals);

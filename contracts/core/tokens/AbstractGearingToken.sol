@@ -60,6 +60,7 @@ abstract contract AbstractGearingToken is
     ///         only partial liquidation can be performed.
     uint256 constant HALF_LIQUIDATION_THRESHOLD = 10000e8;
     uint256 constant UINT_MAX = 2 ** 256 - 1;
+    uint128 constant UINT128_MAX = 2 ** 128 - 1;
 
     bytes32 internal constant STORAGE_SLOT_GEARING_NFT =
         bytes32(uint256(keccak256("TermMax.storage.GearingToken")) - 1);
@@ -550,7 +551,10 @@ abstract contract AbstractGearingToken is
     /// @return ltv The loan to value of this loan
     function _calculateLtv(
         ValueAndPrice memory valueAndPrice
-    ) internal view returns (uint128 ltv) {
+    ) internal pure returns (uint128 ltv) {
+        if (valueAndPrice.collateralValue == 0) {
+            return UINT128_MAX;
+        }
         ltv = ((valueAndPrice.debtValueWithDecimals * Constants.DECIMAL_BASE) /
             (valueAndPrice.collateralValue * valueAndPrice.priceDecimals))
             .toUint128();

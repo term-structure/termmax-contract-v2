@@ -97,12 +97,23 @@ contract GtTest is Test {
             res
         );
 
+        uint issueFee = (debtAmt * marketConfig.issueFtfeeRatio) /
+            Constants.DECIMAL_BASE;
+        vm.expectEmit();
+        emit ITermMaxMarket.IssueFt(
+            sender,
+            1,
+            debtAmt,
+            uint128(debtAmt - issueFee),
+            uint128(issueFee),
+            collateralData
+        );
+
         (uint256 gtId, uint128 ftOutAmt) = res.market.issueFt(
             debtAmt,
             collateralData
         );
-        uint issueFee = (debtAmt * marketConfig.issueFtfeeRatio) /
-            Constants.DECIMAL_BASE;
+
         assert(ftOutAmt == (debtAmt - issueFee));
         assert(gtId == 1);
 
@@ -152,6 +163,15 @@ contract GtTest is Test {
         uint xtBefore = res.xt.balanceOf(address(sender));
 
         res.xt.approve(address(flashLoanReceiver), xtAmt);
+
+        vm.expectEmit();
+        emit ITermMaxMarket.MintGt(
+            address(flashLoanReceiver),
+            sender,
+            1,
+            uint128(debtAmt),
+            abi.encode(collateralAmt)
+        );
         uint256 gtId = flashLoanReceiver.leverageByXt(xtAmt, callbackData);
 
         assert(gtId == 1);
@@ -177,6 +197,29 @@ contract GtTest is Test {
         // debt 1780 USD collaretal 2000USD ltv 0.89
         uint128 debtAmt = 1780e8;
         uint256 collateralAmt = 1e18;
+        res.collateral.mint(sender, collateralAmt);
+
+        vm.startPrank(sender);
+
+        res.collateral.approve(address(res.gt), collateralAmt);
+        bytes memory collateralData = abi.encode(collateralAmt);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IGearingToken.GtIsNotHealthy.selector,
+                sender,
+                LoanUtils.calcLtv(res, debtAmt, collateralAmt)
+            )
+        );
+        res.market.issueFt(debtAmt, collateralData);
+
+        vm.stopPrank();
+    }
+
+    function testRevertByGtIsNotHealthyWhenCollateralCloseZero() public {
+        // debt 1 USD collaretal 2e-7 USD
+        uint128 debtAmt = 1e8;
+        uint256 collateralAmt = 1e8;
         res.collateral.mint(sender, collateralAmt);
 
         vm.startPrank(sender);
@@ -253,8 +296,10 @@ contract GtTest is Test {
         StateChecker.MarketState memory state = StateChecker.getMarketState(
             res
         );
-
-        res.gt.repay(gtId, debtAmt, true);
+        bool byUnderlying = true;
+        vm.expectEmit();
+        emit IGearingToken.Repay(gtId, debtAmt, byUnderlying);
+        res.gt.repay(gtId, debtAmt, byUnderlying);
 
         uint collateralBalanceAfter = res.collateral.balanceOf(sender);
         uint underlyingBalanceAfter = res.underlying.balanceOf(sender);
@@ -283,7 +328,7 @@ contract GtTest is Test {
 
         vm.startPrank(sender);
 
-        (uint256 gtId, uint128 ftOutAmt) = LoanUtils.fastMintGt(
+        (uint256 gtId, ) = LoanUtils.fastMintGt(
             res,
             sender,
             debtAmt,
@@ -308,7 +353,11 @@ contract GtTest is Test {
         );
 
         res.ft.approve(address(res.gt), debtAmt);
-        res.gt.repay(gtId, debtAmt, false);
+
+        bool byUnderlying = false;
+        vm.expectEmit();
+        emit IGearingToken.Repay(gtId, debtAmt, byUnderlying);
+        res.gt.repay(gtId, debtAmt, byUnderlying);
 
         uint collateralBalanceAfter = res.collateral.balanceOf(sender);
         uint ftBalanceAfter = res.ft.balanceOf(sender);
@@ -354,7 +403,11 @@ contract GtTest is Test {
         StateChecker.MarketState memory state = StateChecker.getMarketState(
             res
         );
-        res.gt.repay(gtId, repayAmt, true);
+
+        bool byUnderlying = true;
+        vm.expectEmit();
+        emit IGearingToken.Repay(gtId, repayAmt, byUnderlying);
+        res.gt.repay(gtId, repayAmt, byUnderlying);
         state.underlyingReserve += repayAmt;
         StateChecker.checkMarketState(res, state);
         assert(res.underlying.balanceOf(thirdPeople) == debtAmt - repayAmt);
@@ -369,7 +422,9 @@ contract GtTest is Test {
         uint underlyingBalanceBefore = res.underlying.balanceOf(sender);
         uint collateralBalanceBefore = res.collateral.balanceOf(sender);
 
-        res.gt.repay(gtId, debtAmt - repayAmt, true);
+        vm.expectEmit();
+        emit IGearingToken.Repay(gtId, debtAmt - repayAmt, byUnderlying);
+        res.gt.repay(gtId, debtAmt - repayAmt, byUnderlying);
 
         state.underlyingReserve += (debtAmt - repayAmt);
         state.collateralReserve -= collateralAmt;
@@ -438,7 +493,11 @@ contract GtTest is Test {
         StateChecker.MarketState memory state = StateChecker.getMarketState(
             res
         );
-        uint newId = res.gt.merge(ids);
+
+        vm.expectEmit();
+        uint newId = 4;
+        emit IGearingToken.MergeGts(sender, newId, ids);
+        newId = res.gt.merge(ids);
         StateChecker.checkMarketState(res, state);
 
         (address owner, uint128 d, , bytes memory cd) = res.gt.loanInfo(newId);
@@ -461,6 +520,31 @@ contract GtTest is Test {
         vm.stopPrank();
     }
 
+    function testRevertByCanNotMergeLoanWithDiffOwnerWhenMerge() public {
+        uint40[3] memory debts = [100e8, 30e8, 1e8];
+        uint64[3] memory collaterals = [1e18, 0.5e18, 0.001e18];
+
+        vm.startPrank(sender);
+
+        uint[] memory ids = new uint[](3);
+        for (uint i = 0; i < ids.length; ++i) {
+            (ids[i], ) = LoanUtils.fastMintGt(
+                res,
+                sender,
+                debts[i],
+                collaterals[i]
+            );
+        }
+        vm.stopPrank();
+        vm.prank(vm.randomAddress());
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IGearingToken.CanNotMergeLoanWithDiffOwner.selector
+            )
+        );
+        res.gt.merge(ids);
+    }
+
     function testAddCollateral() public {
         uint128 debtAmt = 1700e8;
         uint256 collateralAmt = 1e18;
@@ -475,7 +559,7 @@ contract GtTest is Test {
             collateralAmt
         );
         vm.stopPrank();
-
+        // Add collateral by third address
         address thirdPeople = vm.randomAddress();
         res.collateral.mint(thirdPeople, addedCollateral);
         vm.startPrank(thirdPeople);
@@ -485,7 +569,14 @@ contract GtTest is Test {
         StateChecker.MarketState memory state = StateChecker.getMarketState(
             res
         );
+
+        vm.expectEmit();
+        emit IGearingToken.AddCollateral(
+            gtId,
+            abi.encode(collateralAmt + addedCollateral)
+        );
         res.gt.addCollateral(gtId, abi.encode(addedCollateral));
+
         state.collateralReserve += addedCollateral;
         StateChecker.checkMarketState(res, state);
         assert(res.underlying.balanceOf(thirdPeople) == 0);
@@ -495,15 +586,171 @@ contract GtTest is Test {
         assert(owner == sender);
         assert(d == debtAmt);
         assert(collateralAmt + addedCollateral == abi.decode(cd, (uint256)));
+        vm.stopPrank();
+        // Add collateral by self
+        vm.startPrank(sender);
+
+        res.collateral.mint(sender, addedCollateral);
+        res.collateral.approve(address(res.gt), addedCollateral);
+
+        res.gt.addCollateral(gtId, abi.encode(addedCollateral));
+        vm.stopPrank();
+    }
+
+    function testRevertByGtIsExpiredWhenAddCollateral() public {
+        uint128 debtAmt = 100e8;
+        uint256 collateralAmt = 1e18;
+        uint256 addedCollateral = 0.1e18;
+
+        vm.startPrank(sender);
+
+        (uint256 gtId, ) = LoanUtils.fastMintGt(
+            res,
+            sender,
+            debtAmt,
+            collateralAmt
+        );
+
+        vm.stopPrank();
+
+        address thirdPeople = vm.randomAddress();
+        vm.warp(marketConfig.maturity);
+        res.collateral.mint(thirdPeople, addedCollateral);
+
+        vm.startPrank(thirdPeople);
+        res.collateral.approve(address(res.gt), addedCollateral);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IGearingToken.GtIsExpired.selector, gtId)
+        );
+
+        res.gt.addCollateral(gtId, abi.encode(addedCollateral));
+        vm.stopPrank();
+    }
+
+    function testRemoveCollateral() public {
+        uint128 debtAmt = 100e8;
+        uint256 collateralAmt = 1e18;
+        uint256 removedCollateral = 0.1e18;
+
+        vm.startPrank(sender);
+
+        (uint256 gtId, ) = LoanUtils.fastMintGt(
+            res,
+            sender,
+            debtAmt,
+            collateralAmt
+        );
+
+        StateChecker.MarketState memory state = StateChecker.getMarketState(
+            res
+        );
+        uint collateralBlanceBefore = res.collateral.balanceOf(sender);
+
+        vm.expectEmit();
+        emit IGearingToken.RemoveCollateral(
+            gtId,
+            abi.encode(collateralAmt - removedCollateral)
+        );
+        res.gt.removeCollateral(gtId, abi.encode(removedCollateral));
+
+        state.collateralReserve -= removedCollateral;
+        StateChecker.checkMarketState(res, state);
+
+        uint collateralBlanceAfter = res.collateral.balanceOf(sender);
+
+        assert(
+            collateralBlanceAfter - collateralBlanceBefore == removedCollateral
+        );
+
+        (address owner, uint128 d, , bytes memory cd) = res.gt.loanInfo(gtId);
+        assert(owner == sender);
+        assert(d == debtAmt);
+        assert(collateralAmt - removedCollateral == abi.decode(cd, (uint256)));
 
         vm.stopPrank();
     }
 
-    function testRemoveCollateral() public {}
+    function testRevertByGtIsNotHealthyWhenRemoveCollateral() public {
+        // debt 1780 USD collaretal 2200USD
+        uint128 debtAmt = 1780e8;
+        uint256 collateralAmt = 1.1e18;
+        uint256 removedCollateral = 0.1e18;
+        vm.startPrank(sender);
 
-    function testRevertByGtIsNotHealthyWhenRemoveCollateral() public {}
+        (uint256 gtId, ) = LoanUtils.fastMintGt(
+            res,
+            sender,
+            debtAmt,
+            collateralAmt
+        );
 
-    function testRevertByCallerIsNotTheOwner() public {}
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IGearingToken.GtIsNotHealthy.selector,
+                sender,
+                LoanUtils.calcLtv(
+                    res,
+                    debtAmt,
+                    collateralAmt - removedCollateral
+                )
+            )
+        );
+        res.gt.removeCollateral(gtId, abi.encode(removedCollateral));
+
+        vm.stopPrank();
+    }
+
+    function testRevertByCallerIsNotTheOwnerWhenRemoveCollateral() public {
+        // debt 1780 USD collaretal 2200USD
+        uint128 debtAmt = 1780e8;
+        uint256 collateralAmt = 1.1e18;
+        uint256 removedCollateral = 0.1e18;
+        vm.startPrank(sender);
+
+        (uint256 gtId, ) = LoanUtils.fastMintGt(
+            res,
+            sender,
+            debtAmt,
+            collateralAmt
+        );
+        vm.stopPrank();
+
+        address thirdPeople = vm.randomAddress();
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IGearingToken.CallerIsNotTheOwner.selector,
+                gtId
+            )
+        );
+        vm.prank(thirdPeople);
+        res.gt.removeCollateral(gtId, abi.encode(removedCollateral));
+    }
+
+    function testRevertByGtIsExpiredWhenRemoveCollateral() public {
+        // debt 200 USD collaretal 2200USD
+        uint128 debtAmt = 200e8;
+        uint256 collateralAmt = 1.1e18;
+        uint256 removedCollateral = 0.1e18;
+        vm.startPrank(sender);
+
+        (uint256 gtId, ) = LoanUtils.fastMintGt(
+            res,
+            sender,
+            debtAmt,
+            collateralAmt
+        );
+
+        vm.stopPrank();
+
+        vm.warp(marketConfig.maturity);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IGearingToken.GtIsExpired.selector, gtId)
+        );
+        vm.prank(sender);
+        res.gt.removeCollateral(gtId, abi.encode(removedCollateral));
+    }
 
     function testLiquidate() public {}
 
