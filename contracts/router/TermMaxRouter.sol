@@ -8,11 +8,9 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
-
-import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
-import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 
 import {ITermMaxMarket} from "../core/ITermMaxMarket.sol";
@@ -23,7 +21,6 @@ import {MarketConfig} from "../core/storage/TermMaxStorage.sol";
 import {Constants} from "../core/lib/Constants.sol";
 import {IFlashLoanReceiver} from "../core/IFlashLoanReceiver.sol";
 import {IGearingToken} from "../core/tokens/IGearingToken.sol";
-
 
 contract TermMaxRouter is
   UUPSUpgradeable, AccessControlUpgradeable,
@@ -80,21 +77,18 @@ contract TermMaxRouter is
 
   /** Leverage Market */
   function swapExactTokenForFt(
-    address receiver, ITermMaxMarket market,
-    uint128 tokenInAmt, uint128 minFtOut
+    address receiver,
+    ITermMaxMarket market,
+    uint128 tokenInAmt,
+    uint128 minFtOut
   ) ensureMarketWhitelist(address(market)) whenNotPaused external returns (uint256 netFtOut) {
     (IMintableERC20 ft,,,,,, IERC20 underlying) = market.tokens();
-    underlying.safeTransferFrom(msg.sender, address(this), tokenInAmt);
-    
-    underlying.safeIncreaseAllowance(address(market), tokenInAmt);
-    (netFtOut) = market.buyFt(tokenInAmt, minFtOut);
-    if(netFtOut < minFtOut) {
-      revert("Slippage: INSUFFICIENT_FT_OUT");
-    }
 
+    _transferToSelfAndApproveSpender(ft, msg.sender, address(market), tokenInAmt);
+    (netFtOut) = market.buyFt(tokenInAmt, minFtOut);
     ft.transfer(receiver, netFtOut);
 
-    // emit SwapFt(address(market), address(underlying), msg.sender, receiver, netFtOut.toInt256(), tokenInAmt.neg());
+    emit Swap(market, address(underlying), address(ft), msg.sender, receiver, tokenInAmt, netFtOut, minFtOut);
   }
 
   function swapExactFtForToken(
@@ -108,12 +102,9 @@ contract TermMaxRouter is
 
     ft.safeIncreaseAllowance(address(market), ftInAmt);
     (netTokenOut) = market.sellFt(ftInAmt, minTokenOut);
-    if(netTokenOut < minTokenOut) {
-      revert("Slippage: INSUFFICIENT_TOKEN_OUT");
-    }
     underlying.transfer(receiver, netTokenOut);
 
-    // emit SwapFt(address(market), address(underlying), msg.sender, receiver, netFtOut.toInt256(), tokenInAmt.neg());
+    emit Swap(market, address(ft), address(underlying), msg.sender, receiver, ftInAmt, netTokenOut, minTokenOut);
   }
 
   function swapExactTokenForXt(
@@ -127,12 +118,9 @@ contract TermMaxRouter is
     
     underlying.safeIncreaseAllowance(address(market), tokenInAmt);
     (netXtOut) = market.buyXt(tokenInAmt, minXtOut);
-    if(netXtOut < minXtOut) {
-      revert("Slippage: INSUFFICIENT_XT_OUT");
-    }
     xt.transfer(receiver, netXtOut);
 
-    // emit SwapXt(address(market), address(underlying), msg.sender, receiver, netXtOut.toInt256(), tokenInAmt.neg());
+    emit Swap(market, address(underlying), address(xt), msg.sender, receiver, tokenInAmt, netXtOut.toUint128(), minXtOut);
   }
 
   function swapExactXtForToken(
@@ -146,12 +134,24 @@ contract TermMaxRouter is
 
     xt.safeIncreaseAllowance(address(market), xtInAmt);
     (netTokenOut) = market.sellXt(xtInAmt, minTokenOut);
-    if(netTokenOut < minTokenOut) {
-      revert("Slippage: INSUFFICIENT_TOKEN_OUT");
-    }
     underlying.transfer(receiver, netTokenOut);
 
-    // emit SwapXt(address(market), address(underlying), msg.sender, receiver, netXtOut.toInt256(), tokenInAmt.neg());
+    emit Swap(market, address(xt), address(underlying), msg.sender, receiver, xtInAmt, netTokenOut, minTokenOut);
+  }
+
+  function provideLiquidity(
+    address receiver,
+    ITermMaxMarket market,
+    uint256 underlyingAmt
+  ) ensureMarketWhitelist(address(market)) whenNotPaused external returns (uint128 lpFtOutAmt, uint128 lpXtOutAmt) {
+    (,,IMintableERC20 lpFt,IMintableERC20 lpXt,,,IERC20 underlying) = market.tokens();
+    _transferToSelfAndApproveSpender(underlying, msg.sender, address(market), underlyingAmt);
+
+    (lpFtOutAmt, lpXtOutAmt) = market.provideLiquidity(underlyingAmt);
+    lpFt.transfer(receiver, lpFtOutAmt);
+    lpXt.transfer(receiver, lpXtOutAmt);
+
+    emit AddLiquidity(market, address(underlying), msg.sender, receiver, underlyingAmt, lpFtOutAmt, lpXtOutAmt);
   }
 
   function withdrawLiquidityToFtXt(
@@ -171,12 +171,27 @@ contract TermMaxRouter is
     lpXt.safeIncreaseAllowance(address(market), lpXtInAmt);
 
     (ftOutAmt, xtOutAmt) = market.withdrawLp(lpFtInAmt.toUint128(), lpXtInAmt.toUint128());
+    ft.transfer(receiver, ftOutAmt);
+    xt.transfer(receiver, xtOutAmt);
+
     if(ftOutAmt < minFtOut) {
       revert("Slippage: INSUFFICIENT_FT_OUT");
     }
     if(xtOutAmt < minXtOut) {
       revert("Slippage: INSUFFICIENT_XT_OUT");
     }
+
+    emit WithdrawLiquidityToXtFt(
+      market,
+      msg.sender,
+      receiver,
+      lpFtInAmt,
+      lpXtInAmt,
+      ftOutAmt,
+      xtOutAmt,
+      minFtOut,
+      minXtOut
+    );
   }
   
   function withdrawLiquidityToToken(
@@ -203,6 +218,17 @@ contract TermMaxRouter is
     if (netTokenOut < minTokenOut) {
       revert("Slippage: INSUFFICIENT_TOKEN_OUT");
     }
+
+    emit WithdrawLiquidtyToToken(
+      market,
+      address(underlying),
+      msg.sender,
+      receiver,
+      lpFtInAmt,
+      lpXtInAmt,
+      netTokenOut,
+      minTokenOut
+    );
   }
 
   function _redeemFtAndXtToUnderlying(
@@ -268,6 +294,15 @@ contract TermMaxRouter is
       revert("Slippage: INSUFFICIENT_TOKEN_OUT");
     }
     underlying.safeTransfer(receiver, netTokenOut);
+
+    emit Redeem(
+      market,
+      address(underlying),
+      msg.sender,
+      receiver,
+      amountArray,
+      netTokenOut
+    );
   }
 
   function leverageFromToken(
@@ -284,15 +319,24 @@ contract TermMaxRouter is
 
     (uint256 _netXtOut) = market.buyXt(tokenInAmt.toUint128(), minXtAmt.toUint128());
     netXtOut = _netXtOut;
-    if(netXtOut < minXtAmt) {
-      revert("Slippage: INSUFFICIENT_XT_OUT");
-    }
-    
 
     bytes memory callbackData = _encodeLeverageFromTokenData(market, address(gt), tokenInAmt, minCollAmt, netXtOut, swapInput);
     xt.safeIncreaseAllowance(address(market), netXtOut);
     gtId = market.leverageByXt(address(this), netXtOut.toUint128(), callbackData);
     gt.safeTransferFrom(address(this), receiver, gtId);
+
+    emit IssueGt(
+      market,
+      address(underlying),
+      msg.sender,
+      receiver,
+      gtId,
+      tokenInAmt,
+      netXtOut,
+      // need collateral
+      minCollAmt,
+      minXtAmt
+    );
   }
 
   function leverageFromXt(
@@ -309,6 +353,19 @@ contract TermMaxRouter is
     bytes memory callbackData = _encodeLeverageFromTokenData(market, address(gt), xtInAmt, minCollAmt, xtInAmt, swapInput);
     gtId = market.leverageByXt(address(this), xtInAmt.toUint128(), callbackData);
     gt.safeTransferFrom(address(this), receiver, gtId);
+
+    emit IssueGt(
+      market,
+      address(underlying),
+      msg.sender,
+      receiver,
+      gtId,
+      xtInAmt,
+      xtInAmt,
+      // need collateral
+      minCollAmt,
+      xtInAmt
+    );
   }
 
   function _encodeLeverageFromTokenData(
@@ -333,12 +390,13 @@ contract TermMaxRouter is
   }
   
   /** Lending Market */
+  // TODO: minBorrowAmt -> target borrow amount
   function borrowTokenFromCollateral(
     address receiver,
     ITermMaxMarket market,
     uint256 collInAmt,
     uint256 debtAmt,
-    uint256 minBorrowAmt
+    uint256 borrowAmt
   ) ensureMarketWhitelist(address(market)) whenNotPaused external returns (uint256 gtId, uint256 netTokenOut) {
     ( 
       IMintableERC20 ft,
@@ -350,7 +408,7 @@ contract TermMaxRouter is
 
     _transferToSelfAndApproveSpender(IERC20(collateralAddr), msg.sender, address(market), collInAmt);
     
-    return _borrow(market, ft, gt, underlying, receiver, debtAmt, collInAmt, minBorrowAmt);
+    return _borrow(market, ft, gt, underlying, receiver, debtAmt, collInAmt, borrowAmt);
   }
 
   function _borrow(
@@ -372,16 +430,43 @@ contract TermMaxRouter is
 
     ft.safeIncreaseAllowance(address(market), netFtOut);
     uint256 netTokenOut = market.sellFt(netFtOut, minBorrowAmt.toUint128());
-    if(netTokenOut < minBorrowAmt) {
-      revert("Slippage: INSUFFICIENT_TOKEN_OUT");
+    // NOTE: if netTokenOut > minBorrowAmt, repay
+    uint256 diffBorrow = netTokenOut - minBorrowAmt;
+    if(diffBorrow > 0) {
+      underlying.safeIncreaseAllowance(address(gt), diffBorrow);
+      gt.repay(gtId, diffBorrow.toUint120(), false);
     }
-    underlying.safeTransfer(receiver, netTokenOut);
 
-    return (gtId, netTokenOut);
+    underlying.safeTransfer(receiver, minBorrowAmt);
+
+    emit Borrow(
+      market,
+      address(underlying),
+      msg.sender,
+      receiver,
+      gtId,
+      collInAmt,
+      debtAmt,
+      minBorrowAmt
+    );
+
+    return (gtId, minBorrowAmt);
+  }
+
+  function repay(
+    ITermMaxMarket market,
+    uint256 gtId,
+    uint256 repayAmt
+  ) ensureMarketWhitelist(address(market)) whenNotPaused external {
+    (,,,,IGearingToken gt,,IERC20 underlying) = market.tokens();
+    underlying.safeTransferFrom(msg.sender, address(this), repayAmt);
+    underlying.safeIncreaseAllowance(address(gt), repayAmt);
+    gt.repay(gtId, repayAmt.toUint128(), true);
+
+    emit Repay(market, false, address(underlying), gtId, repayAmt);
   }
 
   function repayFromFt(
-    address beHalf,
     ITermMaxMarket market,
     uint256 gtId,
     uint256 ftInAmt
@@ -390,9 +475,11 @@ contract TermMaxRouter is
     ft.safeTransferFrom(msg.sender, address(this), ftInAmt);
     ft.safeIncreaseAllowance(address(gt), ftInAmt);
     gt.repay(gtId, ftInAmt.toUint128(), false);
+
+    emit Repay(market, true, address(ft), gtId, ftInAmt);
   }
 
-  function RepayByTokenThroughFt(
+  function repayByTokenThroughFt(
     address receiver,
     ITermMaxMarket market,
     uint256 gtId,
@@ -420,6 +507,14 @@ contract TermMaxRouter is
       ft.safeIncreaseAllowance(address(gt), netFtOut);
       gt.repay(gtId, netFtOut.toUint120(), false);
     }
+
+    emit Repay(
+      market,
+      false,
+      address(underlying),
+      gtId,
+      tokenInAmt
+    );
   }
 
 
@@ -451,8 +546,6 @@ contract TermMaxRouter is
     } else {
       revert("Invalid callback type");
     }
-
-
   }
 
   function _balanceOf(IERC20 token, address account) internal view returns (uint256) {

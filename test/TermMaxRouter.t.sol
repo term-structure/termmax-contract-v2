@@ -34,8 +34,7 @@ contract TermMaxRouterTest is Test {
     function getMarketStateFromJson(
         string memory _testdata,
         string memory key
-    ) internal view returns (StateChecker.MarketState memory state) {
-        address market = address(res.market);
+    ) internal pure returns (StateChecker.MarketState memory state) {
         state.apr = vm.parseInt(
             vm.parseJsonString(_testdata, string.concat(key, ".apr"))
         );
@@ -126,15 +125,13 @@ contract TermMaxRouterTest is Test {
             )
         );
 
-        uint amount = 10000e8;
+        uint256 amount = 10000e8;
         res.underlying.mint(deployer, amount);
         res.underlying.approve(address(res.market), amount);
         res.market.provideLiquidity(amount);
 
         vm.stopPrank();
     }
-
-    //test init value?
 
     function testSwapExactTokenForFt() public {
         vm.startPrank(sender);
@@ -145,7 +142,7 @@ contract TermMaxRouterTest is Test {
 
 
         res.underlying.approve(address(router), underlyingAmtIn);
-        uint256 netOut = router.swapExactTokenForFt(receiver, res.market, underlyingAmtIn, minTokenOut);
+        router.swapExactTokenForFt(receiver, res.market, underlyingAmtIn, minTokenOut);
 
         StateChecker.MarketState memory expectedState = getMarketStateFromJson(
             testdata,
@@ -163,7 +160,7 @@ contract TermMaxRouterTest is Test {
         uint128 minTokenOut = 0e8;
         res.underlying.mint(sender, underlyingAmtIn);
         res.underlying.approve(address(router), underlyingAmtIn);
-        uint256 netOut = router.swapExactTokenForXt(receiver, res.market, underlyingAmtIn, minTokenOut);
+        router.swapExactTokenForXt(receiver, res.market, underlyingAmtIn, minTokenOut);
 
         StateChecker.MarketState memory expectedState = getMarketStateFromJson(
             testdata,
@@ -184,7 +181,7 @@ contract TermMaxRouterTest is Test {
         uint128 ftAmtIn = uint128(router.swapExactTokenForFt(receiver, res.market, underlyingAmtIn, minTokenOut_) / 2);
         uint128 minTokenOut = 0e8;
         res.ft.approve(address(router), ftAmtIn);
-        uint256 netOut = router.swapExactFtForToken(receiver, res.market, ftAmtIn, minTokenOut);
+        router.swapExactFtForToken(receiver, res.market, ftAmtIn, minTokenOut);
 
         StateChecker.MarketState memory expectedState = getMarketStateFromJson(
             testdata,
@@ -205,7 +202,7 @@ contract TermMaxRouterTest is Test {
         uint128 xtAmtIn = uint128(router.swapExactTokenForXt(receiver, res.market, underlyingAmtIn, minTokenOut_) / 2);
         uint128 minTokenOut = 0e8;
         res.xt.approve(address(router), xtAmtIn);
-        uint256 netOut = router.swapExactXtForToken(receiver, res.market, xtAmtIn, minTokenOut);
+        router.swapExactXtForToken(receiver, res.market, xtAmtIn, minTokenOut);
 
         StateChecker.MarketState memory expectedState = getMarketStateFromJson(
             testdata,
@@ -238,7 +235,7 @@ contract TermMaxRouterTest is Test {
             res.collateral
         );
 
-        (uint256 gtId, uint256 netXtOut) = router.leverageFromToken(receiver, res.market, underlyingAmtInForBuyXt, minCollAmt, minXTOut, swapInput);
+        router.leverageFromToken(receiver, res.market, underlyingAmtInForBuyXt, minCollAmt, minXTOut, swapInput);
 
         vm.stopPrank();
 
@@ -267,7 +264,7 @@ contract TermMaxRouterTest is Test {
             res.collateral
         );
         res.xt.approve(address(router), xtInAmt);
-        (uint256 gtId) = router.leverageFromXt(receiver, res.market, xtInAmt, minCollAmt, swapInput);
+        router.leverageFromXt(receiver, res.market, xtInAmt, minCollAmt, swapInput);
 
         vm.stopPrank();
     }
