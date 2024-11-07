@@ -219,7 +219,7 @@ contract GtTest is Test {
     function testRevertByGtIsNotHealthyWhenCollateralCloseZero() public {
         // debt 1 USD collaretal 2e-7 USD
         uint128 debtAmt = 1e8;
-        uint256 collateralAmt = 1e8;
+        uint256 collateralAmt = 1;
         res.collateral.mint(sender, collateralAmt);
 
         vm.startPrank(sender);
@@ -752,7 +752,417 @@ contract GtTest is Test {
         res.gt.removeCollateral(gtId, abi.encode(removedCollateral));
     }
 
-    function testLiquidate() public {}
+    // Case 1: removed collateral can not cover repayAmt + rewardToLiquidator
+    function testLiquidateCase1() public {
+        uint128 debtAmt = 1000e8;
+        uint256 collateralAmt = 1e18;
+
+        vm.startPrank(sender);
+
+        (uint256 gtId, ) = LoanUtils.fastMintGt(
+            res,
+            sender,
+            debtAmt,
+            collateralAmt
+        );
+        vm.stopPrank();
+        vm.startPrank(deployer);
+        // update oracle
+        res.collateralOracle.updateRoundData(
+            JSONLoader.getRoundDataFromJson(
+                testdata,
+                ".priceData.ETH_1000_DAI_1.eth"
+            )
+        );
+        res.underlyingOracle.updateRoundData(
+            JSONLoader.getRoundDataFromJson(
+                testdata,
+                ".priceData.ETH_1000_DAI_1.dai"
+            )
+        );
+        vm.stopPrank();
+        address liquidator = vm.randomAddress();
+        vm.startPrank(liquidator);
+
+        res.underlying.mint(liquidator, debtAmt);
+        res.underlying.approve(address(res.gt), debtAmt);
+
+        uint senderCBalanceBefore = res.collateral.balanceOf(sender);
+        StateChecker.MarketState memory state = StateChecker.getMarketState(
+            res
+        );
+
+        vm.expectEmit();
+        uint cToLiquidator = collateralAmt;
+        uint cToTreasurer = 0;
+        uint remainningC = 0;
+        emit IGearingToken.Liquidate(
+            gtId,
+            liquidator,
+            debtAmt,
+            abi.encode(cToLiquidator),
+            abi.encode(cToTreasurer),
+            abi.encode(remainningC)
+        );
+
+        res.gt.liquidate(gtId, debtAmt);
+        state.collateralReserve -= collateralAmt;
+        state.underlyingReserve += debtAmt;
+        StateChecker.checkMarketState(res, state);
+
+        assert(
+            res.collateral.balanceOf(marketConfig.treasurer) == cToTreasurer
+        );
+        assert(res.collateral.balanceOf(liquidator) == cToLiquidator);
+        assert(
+            res.collateral.balanceOf(sender) ==
+                remainningC + senderCBalanceBefore
+        );
+        vm.stopPrank();
+    }
+
+    // Case 2: removed collateral can cover repayAmt + rewardToLiquidator but not rewardToProtocol
+    function testLiquidateCase2() public {
+        uint128 debtAmt = 950e8;
+        uint256 collateralAmt = 1e18;
+
+        vm.startPrank(sender);
+
+        (uint256 gtId, ) = LoanUtils.fastMintGt(
+            res,
+            sender,
+            debtAmt,
+            collateralAmt
+        );
+        vm.stopPrank();
+        vm.startPrank(deployer);
+        // update oracle
+        res.collateralOracle.updateRoundData(
+            JSONLoader.getRoundDataFromJson(
+                testdata,
+                ".priceData.ETH_1000_DAI_1.eth"
+            )
+        );
+        res.underlyingOracle.updateRoundData(
+            JSONLoader.getRoundDataFromJson(
+                testdata,
+                ".priceData.ETH_1000_DAI_1.dai"
+            )
+        );
+        vm.stopPrank();
+        address liquidator = vm.randomAddress();
+        vm.startPrank(liquidator);
+
+        res.underlying.mint(liquidator, debtAmt);
+        res.underlying.approve(address(res.gt), debtAmt);
+
+        uint senderCBalanceBefore = res.collateral.balanceOf(sender);
+        StateChecker.MarketState memory state = StateChecker.getMarketState(
+            res
+        );
+
+        vm.expectEmit();
+        // uint cToLiquidator = 0.9975e18;
+        // uint cToTreasurer = 0.0025e18;
+        // uint remainningC = 0;
+        (uint cToLiquidator, uint cToTreasurer, uint remainningC) = LoanUtils
+            .calcLiquidationResult(res, debtAmt, collateralAmt, debtAmt);
+        emit IGearingToken.Liquidate(
+            gtId,
+            liquidator,
+            debtAmt,
+            abi.encode(cToLiquidator),
+            abi.encode(cToTreasurer),
+            abi.encode(remainningC)
+        );
+
+        res.gt.liquidate(gtId, debtAmt);
+        state.collateralReserve -= collateralAmt;
+        state.underlyingReserve += debtAmt;
+        StateChecker.checkMarketState(res, state);
+
+        assert(
+            res.collateral.balanceOf(marketConfig.treasurer) == cToTreasurer
+        );
+        assert(res.collateral.balanceOf(liquidator) == cToLiquidator);
+        assert(
+            res.collateral.balanceOf(sender) ==
+                remainningC + senderCBalanceBefore
+        );
+        vm.stopPrank();
+    }
+
+    // Case 3: removed collateral equal repayAmt + rewardToLiquidator + rewardToProtocol
+    function testLiquidateCase3() public {
+        uint128 debtAmt = 900e8;
+        uint256 collateralAmt = 1e18;
+
+        vm.startPrank(sender);
+
+        (uint256 gtId, ) = LoanUtils.fastMintGt(
+            res,
+            sender,
+            debtAmt,
+            collateralAmt
+        );
+        vm.stopPrank();
+        vm.startPrank(deployer);
+        // update oracle
+        res.collateralOracle.updateRoundData(
+            JSONLoader.getRoundDataFromJson(
+                testdata,
+                ".priceData.ETH_1000_DAI_1.eth"
+            )
+        );
+        res.underlyingOracle.updateRoundData(
+            JSONLoader.getRoundDataFromJson(
+                testdata,
+                ".priceData.ETH_1000_DAI_1.dai"
+            )
+        );
+        vm.stopPrank();
+        address liquidator = vm.randomAddress();
+        vm.startPrank(liquidator);
+
+        res.underlying.mint(liquidator, debtAmt);
+        res.underlying.approve(address(res.gt), debtAmt);
+
+        uint senderCBalanceBefore = res.collateral.balanceOf(sender);
+        StateChecker.MarketState memory state = StateChecker.getMarketState(
+            res
+        );
+
+        vm.expectEmit();
+        // uint cToLiquidator = 0.945e18;
+        // uint cToTreasurer = 0.045e18;
+        // uint remainningC = 0.01e18;
+        (uint cToLiquidator, uint cToTreasurer, uint remainningC) = LoanUtils
+            .calcLiquidationResult(res, debtAmt, collateralAmt, debtAmt);
+        emit IGearingToken.Liquidate(
+            gtId,
+            liquidator,
+            debtAmt,
+            abi.encode(cToLiquidator),
+            abi.encode(cToTreasurer),
+            abi.encode(remainningC)
+        );
+
+        res.gt.liquidate(gtId, debtAmt);
+        state.collateralReserve -= collateralAmt;
+        state.underlyingReserve += debtAmt;
+        StateChecker.checkMarketState(res, state);
+
+        assert(
+            res.collateral.balanceOf(marketConfig.treasurer) == cToTreasurer
+        );
+        assert(res.collateral.balanceOf(liquidator) == cToLiquidator);
+        assert(
+            res.collateral.balanceOf(sender) ==
+                remainningC + senderCBalanceBefore
+        );
+        vm.stopPrank();
+    }
+
+    function testRemovedCollateralLessThanRepayAmt() public {
+        uint128 debtAmt = 900e8;
+        uint256 collateralAmt = 0.93e18;
+        uint128 repayAmt = 300e8;
+        vm.startPrank(sender);
+
+        (uint256 gtId, ) = LoanUtils.fastMintGt(
+            res,
+            sender,
+            debtAmt,
+            collateralAmt
+        );
+        vm.stopPrank();
+        vm.startPrank(deployer);
+        // update oracle
+        res.collateralOracle.updateRoundData(
+            JSONLoader.getRoundDataFromJson(
+                testdata,
+                ".priceData.ETH_1000_DAI_1.eth"
+            )
+        );
+        res.underlyingOracle.updateRoundData(
+            JSONLoader.getRoundDataFromJson(
+                testdata,
+                ".priceData.ETH_1000_DAI_1.dai"
+            )
+        );
+        vm.stopPrank();
+        address liquidator = vm.randomAddress();
+        vm.startPrank(liquidator);
+
+        res.underlying.mint(liquidator, repayAmt);
+        res.underlying.approve(address(res.gt), repayAmt);
+
+        uint senderCBalanceBefore = res.collateral.balanceOf(sender);
+        StateChecker.MarketState memory state = StateChecker.getMarketState(
+            res
+        );
+
+        vm.expectEmit();
+        // uint cToLiquidator = 0.31e18;
+        // uint cToTreasurer = 0;
+        // uint remainningC = 0.62e18;
+        (uint cToLiquidator, uint cToTreasurer, uint remainningC) = LoanUtils
+            .calcLiquidationResult(res, debtAmt, collateralAmt, repayAmt);
+        emit IGearingToken.Liquidate(
+            gtId,
+            liquidator,
+            repayAmt,
+            abi.encode(cToLiquidator),
+            abi.encode(cToTreasurer),
+            abi.encode(remainningC)
+        );
+
+        res.gt.liquidate(gtId, repayAmt);
+        state.collateralReserve -= (cToLiquidator + cToTreasurer);
+        state.underlyingReserve += repayAmt;
+        StateChecker.checkMarketState(res, state);
+
+        assert(
+            res.collateral.balanceOf(marketConfig.treasurer) == cToTreasurer
+        );
+        assert(res.collateral.balanceOf(liquidator) == cToLiquidator);
+        assert(res.collateral.balanceOf(sender) == senderCBalanceBefore);
+        vm.stopPrank();
+    }
+
+    function testHalfLiquidate() public {
+        uint128 debtAmt = 9000e8;
+        uint256 collateralAmt = 10e18;
+
+        vm.startPrank(sender);
+
+        (uint256 gtId, ) = LoanUtils.fastMintGt(
+            res,
+            sender,
+            debtAmt,
+            collateralAmt
+        );
+        vm.stopPrank();
+        vm.startPrank(deployer);
+        // update oracle
+        res.collateralOracle.updateRoundData(
+            JSONLoader.getRoundDataFromJson(
+                testdata,
+                ".priceData.ETH_1000_DAI_1.eth"
+            )
+        );
+        res.underlyingOracle.updateRoundData(
+            JSONLoader.getRoundDataFromJson(
+                testdata,
+                ".priceData.ETH_1000_DAI_1.dai"
+            )
+        );
+        vm.stopPrank();
+        (bool isLiquidable, uint128 maxRepayAmt) = res.gt.getLiquidationInfo(
+            gtId
+        );
+        assert(isLiquidable);
+        assert(maxRepayAmt == debtAmt / 2);
+        address liquidator = vm.randomAddress();
+        vm.startPrank(liquidator);
+
+        res.underlying.mint(liquidator, maxRepayAmt);
+        res.underlying.approve(address(res.gt), maxRepayAmt);
+
+        uint senderCBalanceBefore = res.collateral.balanceOf(sender);
+        StateChecker.MarketState memory state = StateChecker.getMarketState(
+            res
+        );
+
+        vm.expectEmit();
+        // uint cToLiquidator = 4.725e18;
+        // uint cToTreasurer = 0.225e18;
+        // uint remainningC = 5.05e18;
+        (uint cToLiquidator, uint cToTreasurer, uint remainningC) = LoanUtils
+            .calcLiquidationResult(res, debtAmt, collateralAmt, maxRepayAmt);
+        emit IGearingToken.Liquidate(
+            gtId,
+            liquidator,
+            maxRepayAmt,
+            abi.encode(cToLiquidator),
+            abi.encode(cToTreasurer),
+            abi.encode(remainningC)
+        );
+
+        res.gt.liquidate(gtId, maxRepayAmt);
+        state.collateralReserve -= (cToLiquidator + cToTreasurer);
+        state.underlyingReserve += maxRepayAmt;
+        StateChecker.checkMarketState(res, state);
+
+        assert(
+            res.collateral.balanceOf(marketConfig.treasurer) == cToTreasurer
+        );
+        assert(res.collateral.balanceOf(liquidator) == cToLiquidator);
+        assert(res.collateral.balanceOf(sender) == senderCBalanceBefore);
+        vm.stopPrank();
+
+        (
+            address owner,
+            uint128 newDebtAmt,
+            uint128 ltv,
+            bytes memory collateralData
+        ) = res.gt.loanInfo(gtId);
+        assert(owner == sender);
+        assert(newDebtAmt == debtAmt - maxRepayAmt);
+        assert(ltv < liquidationLtv);
+        assert(remainningC == abi.decode(collateralData, (uint)));
+
+        (isLiquidable, maxRepayAmt) = res.gt.getLiquidationInfo(gtId);
+        assert(!isLiquidable);
+        assert(maxRepayAmt == newDebtAmt);
+    }
 
     function testRevertByGtIsSafeWhenLiquidate() public {}
+
+    function testRevertByGtDoNotSupportLiquidation() public {}
+
+    function testRevertByGtIsExpiredWhenLiquidation() public {}
+
+    function testRevertByRepayAmtExceedsMaxRepayAmt() public {}
+
+    function testNoRevertByLtvIncreasedAfterLiquidation(
+        uint128 repayAmt
+    ) public {
+        uint128 debtAmt = 900e8;
+        vm.assume(repayAmt >= 0 && repayAmt <= debtAmt);
+        uint256 collateralAmt = 0.6e18;
+        vm.startPrank(sender);
+
+        (uint256 gtId, ) = LoanUtils.fastMintGt(
+            res,
+            sender,
+            debtAmt,
+            collateralAmt
+        );
+        vm.stopPrank();
+        vm.startPrank(deployer);
+        // update oracle
+        res.collateralOracle.updateRoundData(
+            JSONLoader.getRoundDataFromJson(
+                testdata,
+                ".priceData.ETH_1000_DAI_1.eth"
+            )
+        );
+        res.underlyingOracle.updateRoundData(
+            JSONLoader.getRoundDataFromJson(
+                testdata,
+                ".priceData.ETH_1000_DAI_1.dai"
+            )
+        );
+        vm.stopPrank();
+        address liquidator = vm.randomAddress();
+        vm.startPrank(liquidator);
+
+        res.underlying.mint(liquidator, repayAmt);
+        res.underlying.approve(address(res.gt), repayAmt);
+
+        res.gt.liquidate(gtId, repayAmt);
+
+        vm.stopPrank();
+    }
 }

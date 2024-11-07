@@ -7,6 +7,7 @@ import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/ut
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {Constants} from "../lib/Constants.sol";
 import {IGearingToken, AggregatorV3Interface, IERC20Metadata, IERC20} from "./IGearingToken.sol";
+import {console} from "forge-std/console.sol";
 
 /**
  * @title Term Max Gearing Token
@@ -365,7 +366,7 @@ abstract contract AbstractGearingToken is
         returns (
             bool isLiquidable,
             uint128 maxRepayAmt,
-            uint256 ltv,
+            uint128 ltv,
             ValueAndPrice memory valueAndPrice
         )
     {
@@ -419,7 +420,7 @@ abstract contract AbstractGearingToken is
         (
             bool isLiquidable,
             uint128 maxRepayAmt,
-            uint256 ltvBefore,
+            uint128 ltvBefore,
             ValueAndPrice memory valueAndPrice
         ) = _getLiquidationInfo(loan, config);
 
@@ -457,7 +458,11 @@ abstract contract AbstractGearingToken is
                 valueAndPrice.debtValueWithDecimals =
                     (loan.debtAmt * valueAndPrice.underlyingPrice) /
                     valueAndPrice.underlyingDecimals;
-                uint ltvAfter = _calculateLtv(valueAndPrice);
+                uint128 ltvAfter = _calculateLtv(valueAndPrice);
+                console.log(
+                    "debtValueWithDecimals",
+                    valueAndPrice.debtValueWithDecimals
+                );
                 if (ltvBefore < ltvAfter) {
                     revert LtvIncreasedAfterLiquidation(ltvBefore, ltvAfter);
                 }
@@ -555,7 +560,8 @@ abstract contract AbstractGearingToken is
         if (valueAndPrice.collateralValue == 0) {
             return UINT128_MAX;
         }
-        ltv = ((valueAndPrice.debtValueWithDecimals * Constants.DECIMAL_BASE) /
+        ltv = ((valueAndPrice.debtValueWithDecimals *
+            Constants.DECIMAL_BASE_SQ) /
             (valueAndPrice.collateralValue * valueAndPrice.priceDecimals))
             .toUint128();
     }
@@ -588,7 +594,7 @@ abstract contract AbstractGearingToken is
         bytes memory collateralData
     ) internal virtual;
 
-    /// @notice Return the value of collateral in USD
+    /// @notice Return the value of collateral in USD with base decimals
     /// @param collateralData encoded collateral data
     /// @param priceData encoded price data of the collateral
     /// @return collateralValue collateral's value in USD

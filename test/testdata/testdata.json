@@ -262,6 +262,22 @@
         "updatedAt": "1730391900",
         "answeredInRound": "0"
       }
+    },
+    "ETH_1000_DAI_1": {
+      "eth": {
+        "roundId": "1",
+        "answer": "100000000000",
+        "startedAt": "1730391800",
+        "updatedAt": "1730391900",
+        "answeredInRound": "0"
+      },
+      "dai": {
+        "roundId": "1",
+        "answer": "100000000",
+        "startedAt": "1730391800",
+        "updatedAt": "1730391900",
+        "answeredInRound": "0"
+      }
     }
   }
 }
