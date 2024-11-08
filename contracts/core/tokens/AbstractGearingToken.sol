@@ -376,32 +376,56 @@ abstract contract AbstractGearingToken is
             config.underlying.decimals()
         );
         ltv = _calculateLtv(valueAndPrice);
-        bool isExpired = block.timestamp >= config.maturity &&
-            block.timestamp < config.maturity + Constants.LIQUIDATION_WINDOW;
-        isLiquidable = isExpired || ltv >= config.liquidationLtv;
 
-        maxRepayAmt = _calculateMaxRepayAmt(
-            loan,
-            isExpired,
-            valueAndPrice.collateralValue,
-            HALF_LIQUIDATION_THRESHOLD
-        );
-    }
+        if (config.liquidatable) {
+            // Liquidation cases:
+            // F ltv < lltv t < m
+            // T ltv < lltv t >= m t < m + w
+            // F ltv < lltv t >= m + w
 
-    /// @notice Returns the maximum amount of debt liquidation
-    /// @param loan The loan data, contains debt amount and collateral data
-    /// @param isExpired Indicates whether the debt is expired
-    /// @param collateralValue USD value of collateral
-    /// @param halfLiquidationThreshold Semi-liquidated threshold in USD
-    function _calculateMaxRepayAmt(
-        LoanInfo memory loan,
-        bool isExpired,
-        uint256 collateralValue,
-        uint256 halfLiquidationThreshold
-    ) internal pure returns (uint128 maxRepayAmt) {
-        maxRepayAmt = collateralValue < halfLiquidationThreshold || isExpired
-            ? loan.debtAmt
-            : loan.debtAmt / 2;
+            // T ltv >= lltv t < m
+            // T ltv >= lltv t >= m t < m + w
+            // F ltv >= lltv t >= m + w
+            if (ltv < config.liquidationLtv) {
+                if (
+                    block.timestamp >= config.maturity &&
+                    block.timestamp <
+                    config.maturity + Constants.LIQUIDATION_WINDOW
+                ) {
+                    isLiquidable = true;
+                    maxRepayAmt = loan.debtAmt;
+                }
+            } else {
+                if (block.timestamp < config.maturity) {
+                    isLiquidable = true;
+                    /// @notice collateralValue(price decimals) and HALF_LIQUIDATION_THRESHOLD(base decimals 1e8)
+                    console.log(
+                        "collateralValue",
+                        valueAndPrice.collateralValue
+                    );
+                    console.log(
+                        "collateralValue 2",
+                        (valueAndPrice.collateralValue *
+                            Constants.DECIMAL_BASE) /
+                            valueAndPrice.priceDecimals
+                    );
+                    maxRepayAmt = (valueAndPrice.collateralValue *
+                        Constants.DECIMAL_BASE) /
+                        valueAndPrice.priceDecimals <
+                        HALF_LIQUIDATION_THRESHOLD
+                        ? loan.debtAmt
+                        : loan.debtAmt / 2;
+                } else if (
+                    block.timestamp <
+                    config.maturity + Constants.LIQUIDATION_WINDOW
+                ) {
+                    isLiquidable = true;
+                    maxRepayAmt = loan.debtAmt;
+                }
+            }
+        }
+
+        console.log("isLiquidable", isLiquidable);
     }
 
     /**
@@ -425,6 +449,12 @@ abstract contract AbstractGearingToken is
         ) = _getLiquidationInfo(loan, config);
 
         if (!isLiquidable) {
+            uint liquidationDeadline = config.maturity + Constants.LIQUIDATION_WINDOW;
+            if (
+                block.timestamp >= liquidationDeadline
+            ) {
+                revert CanNotLiquidationAfterFinalDeadline(liquidationDeadline);
+            }
             revert GtIsSafe(id);
         }
         if (repayAmt > maxRepayAmt) {
@@ -459,10 +489,6 @@ abstract contract AbstractGearingToken is
                     (loan.debtAmt * valueAndPrice.underlyingPrice) /
                     valueAndPrice.underlyingDecimals;
                 uint128 ltvAfter = _calculateLtv(valueAndPrice);
-                console.log(
-                    "debtValueWithDecimals",
-                    valueAndPrice.debtValueWithDecimals
-                );
                 if (ltvBefore < ltvAfter) {
                     revert LtvIncreasedAfterLiquidation(ltvBefore, ltvAfter);
                 }
@@ -560,6 +586,7 @@ abstract contract AbstractGearingToken is
         if (valueAndPrice.collateralValue == 0) {
             return UINT128_MAX;
         }
+        // debtValueWithDecimals(price decimals) collateralValue(base decimals)
         ltv = ((valueAndPrice.debtValueWithDecimals *
             Constants.DECIMAL_BASE_SQ) /
             (valueAndPrice.collateralValue * valueAndPrice.priceDecimals))

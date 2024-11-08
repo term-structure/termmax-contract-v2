@@ -62,6 +62,8 @@ interface IGearingToken is IERC721 {
     error CallerIsNotTheOwner(uint256 id);
     /// @notice Error for liquidate the loan with invalid repay amount
     error RepayAmtExceedsMaxRepayAmt(uint128 repayAmt, uint128 maxRepayAmt);
+    /// @notice Error for liquidate the loan after liquidation window
+    error CanNotLiquidationAfterFinalDeadline(uint256 liquidationDeadline);
 
     /// @notice Emitted when merging multiple Gearing Tokens into one
     /// @param sender The owner of those tokens
