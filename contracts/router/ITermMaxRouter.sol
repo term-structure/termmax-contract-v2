@@ -80,8 +80,7 @@ interface ITermMaxRouter {
     uint256 gtId,
     uint256 inAmt,
     uint256 xtInAmt,
-    // TODO: need collateral
-    // uint256 collAmt,
+    uint256 collAmt,
     uint256 minCollAmt,
     uint256 minXTAmt
   );
@@ -110,7 +109,6 @@ interface ITermMaxRouter {
     ITermMaxMarket indexed market,
     bool indexed isRepayFt,
     address indexed assetIn,
-    address caller,
     uint256 gtId,
     uint256 inAmt
   );

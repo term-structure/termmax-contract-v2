@@ -325,6 +325,8 @@ contract TermMaxRouter is
     gtId = market.leverageByXt(address(this), netXtOut.toUint128(), callbackData);
     gt.safeTransferFrom(address(this), receiver, gtId);
 
+    (,,,bytes memory collateralData) = gt.loanInfo(gtId);
+
     emit IssueGt(
       market,
       address(underlying),
@@ -333,7 +335,7 @@ contract TermMaxRouter is
       gtId,
       tokenInAmt,
       netXtOut,
-      // need collateral
+      _decodeAmount(collateralData),
       minCollAmt,
       minXtAmt
     );
@@ -353,6 +355,7 @@ contract TermMaxRouter is
     bytes memory callbackData = _encodeLeverageFromTokenData(market, address(gt), xtInAmt, minCollAmt, xtInAmt, swapInput);
     gtId = market.leverageByXt(address(this), xtInAmt.toUint128(), callbackData);
     gt.safeTransferFrom(address(this), receiver, gtId);
+    (,,,bytes memory collateralData) = gt.loanInfo(gtId);
 
     emit IssueGt(
       market,
@@ -362,7 +365,7 @@ contract TermMaxRouter is
       gtId,
       xtInAmt,
       xtInAmt,
-      // need collateral
+      _decodeAmount(collateralData),
       minCollAmt,
       xtInAmt
     );
@@ -518,7 +521,6 @@ contract TermMaxRouter is
   }
 
 
-
   function executeOperation(
     address sender,
     IERC20 asset,
@@ -566,5 +568,11 @@ contract TermMaxRouter is
     uint256 amount
   ) internal pure returns (bytes memory) {
     return abi.encode(amount);
+  }
+
+  function _decodeAmount(
+    bytes memory collateralData
+  ) internal pure returns (uint256) {
+    return abi.decode(collateralData, (uint256));
   }
 }
