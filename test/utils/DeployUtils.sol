@@ -70,6 +70,50 @@ library DeployUtils {
         (res.ft, res.xt, res.lpFt, res.lpXt, res.gt, , ) = res.market.tokens();
     }
 
+    function deploySpecialMarket(
+        address deployer,
+        TermMaxFactory factory,
+        bytes32 gtKey,
+        MarketConfig memory marketConfig,
+        uint32 maxLtv,
+        uint32 liquidationLtv,
+        bool liquidatable
+    ) internal returns (Res memory res) {
+        res.factory = factory;
+
+        res.collateral = new MockERC20("ETH", "ETH", 18);
+        res.underlying = new MockERC20("DAI", "DAI", 8);
+
+        res.underlyingOracle = new MockPriceFeed(deployer);
+        res.collateralOracle = new MockPriceFeed(deployer);
+
+        MockPriceFeed.RoundData memory roundData = MockPriceFeed.RoundData({
+            roundId: 1,
+            answer: int(1e1 ** res.collateralOracle.decimals()),
+            startedAt: 0,
+            updatedAt: 0,
+            answeredInRound: 0
+        });
+        MockPriceFeed(address(res.collateralOracle)).updateRoundData(roundData);
+
+        ITermMaxFactory.DeployParams memory params = ITermMaxFactory
+            .DeployParams({
+                gtKey: gtKey,
+                admin: deployer,
+                collateral: address(res.collateral),
+                underlying: res.underlying,
+                underlyingOracle: res.underlyingOracle,
+                liquidationLtv: liquidationLtv,
+                maxLtv: maxLtv,
+                liquidatable: liquidatable,
+                marketConfig: marketConfig,
+                gtInitalParams: abi.encode(res.collateralOracle)
+            });
+
+        res.market = ITermMaxMarket(res.factory.createMarket(params));
+        (res.ft, res.xt, res.lpFt, res.lpXt, res.gt, , ) = res.market.tokens();
+    }
+
     function deployRouter(
         address deployer
     ) internal returns (TermMaxRouter router) {

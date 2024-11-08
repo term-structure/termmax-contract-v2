@@ -2,6 +2,7 @@
 pragma solidity ^0.8.27;
 
 import "./AbstractGearingToken.sol";
+import {console} from "forge-std/console.sol";
 
 /**
  * @title Term Max Gearing Token, using ERC20 token as collateral
@@ -71,10 +72,14 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
         address to,
         bytes memory collateralData
     ) internal virtual override {
+        uint amount = _decodeAmount(collateralData);
+        if (amount == 0) {
+            return;
+        }
         IERC20(_getGearingTokenStorage().config.collateral).transferFrom(
             from,
             to,
-            _decodeAmount(collateralData)
+            amount
         );
     }
 
@@ -85,9 +90,13 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
         address to,
         bytes memory collateralData
     ) internal virtual override {
+        uint amount = _decodeAmount(collateralData);
+        if (amount == 0) {
+            return;
+        }
         IERC20(_getGearingTokenStorage().config.collateral).transfer(
             to,
-            _decodeAmount(collateralData)
+            amount
         );
     }
 
@@ -99,11 +108,13 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
         bytes memory priceData
     ) internal view virtual override returns (uint256) {
         uint collateralAmt = _decodeAmount(collateralData);
-        (uint price, uint decimals, uint cTokenDecimals) = abi.decode(
+        (uint price, uint decimals, uint collateralDecimals) = abi.decode(
             priceData,
             (uint, uint, uint)
         );
-        return (collateralAmt * price) / (decimals * cTokenDecimals);
+        return
+            (collateralAmt * price * Constants.DECIMAL_BASE) /
+            (decimals * collateralDecimals);
     }
 
     /**
@@ -184,26 +195,32 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
     {
         uint collateralAmt = _decodeAmount(loan.collateralData);
 
-        (uint256 collateralPrice, uint256 collateralPriceDecimals) = abi.decode(
-            valueAndPrice.collateralPriceData,
-            (uint, uint)
-        );
+        (
+            uint collateralPrice,
+            uint collateralPriceDecimals,
+            uint collateralDecimals
+        ) = abi.decode(valueAndPrice.collateralPriceData, (uint, uint, uint));
 
         // MaxRomvedCollateral = min(
-        // (repayAmt * (1 + REWARD_TO_LIQUIDATOR + REWARD_TO_PROTOCOL)) * underlyingPrice / collateralPrice
+        // (repayAmt * (1 + REWARD_TO_LIQUIDATOR + REWARD_TO_PROTOCOL)) * underlying/ collateral
         // , collateralAmt *(repayAmt / debtAmt)
         // )
-        uint uPriceToCPrice = (valueAndPrice.underlyingPrice *
-            Constants.DECIMAL_BASE *
-            collateralPriceDecimals) /
-            (valueAndPrice.priceDecimals * collateralPrice);
 
-        uint cEqualRepayAmt = (repayAmt * Constants.DECIMAL_BASE) /
-            uPriceToCPrice;
-        uint rewardToLiquidator = (repayAmt * REWARD_TO_LIQUIDATOR) /
-            uPriceToCPrice;
-        uint rewardToProtocol = (repayAmt * REWARD_TO_PROTOCOL) /
-            uPriceToCPrice;
+        //U(d)/C(d) = UP/UPD / CP/CPD = UP*CD/CP*UPD)
+        uint udPriceToCdPrice = (valueAndPrice.underlyingPrice *
+            collateralPriceDecimals *
+            Constants.DECIMAL_BASE) /
+            (collateralPrice * valueAndPrice.priceDecimals);
+
+        uint cEqualRepayAmt = (repayAmt *
+            udPriceToCdPrice *
+            collateralDecimals) /
+            (valueAndPrice.underlyingDecimals * Constants.DECIMAL_BASE);
+
+        uint rewardToLiquidator = (cEqualRepayAmt * REWARD_TO_LIQUIDATOR) /
+            Constants.DECIMAL_BASE;
+        uint rewardToProtocol = (cEqualRepayAmt * REWARD_TO_PROTOCOL) /
+            Constants.DECIMAL_BASE;
 
         uint removedCollateralAmt = cEqualRepayAmt +
             rewardToLiquidator +
@@ -213,9 +230,12 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
             removedCollateralAmt,
             (collateralAmt * repayAmt) / loan.debtAmt
         );
+
         // Case 1: removed collateral can not cover repayAmt + rewardToLiquidator
         if (removedCollateralAmt <= cEqualRepayAmt + rewardToLiquidator) {
             cToLiquidator = _encodeAmount(removedCollateralAmt);
+            cToTreasurer = _encodeAmount(0);
+            remainningC = _encodeAmount(0);
         }
         // Case 2: removed collateral can cover repayAmt + rewardToLiquidator but not rewardToProtocol
         else if (
@@ -226,6 +246,7 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
             cToTreasurer = _encodeAmount(
                 removedCollateralAmt - cEqualRepayAmt - rewardToLiquidator
             );
+            remainningC = _encodeAmount(0);
         }
         // Case 3: removed collateral equal repayAmt + rewardToLiquidator + rewardToProtocol
         else {
@@ -233,9 +254,7 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
             cToTreasurer = _encodeAmount(rewardToProtocol);
         }
         // Calculate remainning collateral
-        if (collateralAmt > removedCollateralAmt) {
-            remainningC = _encodeAmount(collateralAmt - removedCollateralAmt);
-        }
+        remainningC = _encodeAmount(collateralAmt - removedCollateralAmt);
     }
 
     /// @notice Returns the smaller of two values

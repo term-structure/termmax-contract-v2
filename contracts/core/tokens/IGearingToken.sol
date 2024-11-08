@@ -56,12 +56,14 @@ interface IGearingToken is IERC721 {
     /// @notice Error for the ltv increase after liquidation
     /// @param ltvBefore Loan to value before liquidation
     /// @param ltvAfter Loan to value after liquidation
-    error LtvIncreasedAfterLiquidation(uint256 ltvBefore, uint256 ltvAfter);
+    error LtvIncreasedAfterLiquidation(uint128 ltvBefore, uint128 ltvAfter);
     /// @notice Error for unauthorized operation
     /// @param id The id of Gearing Token
     error CallerIsNotTheOwner(uint256 id);
     /// @notice Error for liquidate the loan with invalid repay amount
     error RepayAmtExceedsMaxRepayAmt(uint128 repayAmt, uint128 maxRepayAmt);
+    /// @notice Error for liquidate the loan after liquidation window
+    error CanNotLiquidationAfterFinalDeadline(uint256 liquidationDeadline);
 
     /// @notice Emitted when merging multiple Gearing Tokens into one
     /// @param sender The owner of those tokens

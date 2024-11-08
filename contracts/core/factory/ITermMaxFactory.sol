@@ -10,6 +10,13 @@ import "../storage/TermMaxStorage.sol";
  * @author Term Structure Labs
  */
 interface ITermMaxFactory {
+    error MarketImplementInitialized();
+    error MarketImplementIsNotInitialized();
+    error CantNotFindGtImplementation();
+
+    event InitializeMarketImplement(address marketImplement);
+    event SetGtImplementd(bytes32 key, address gtImplement);
+
     struct DeployParams {
         /// @notice Use gt key to get the implementation of gearing Token
         bytes32 gtKey;

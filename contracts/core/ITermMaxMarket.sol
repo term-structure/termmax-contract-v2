@@ -23,7 +23,9 @@ interface ITermMaxMarket {
     /// @notice Error for the actual output value does not match the expected value
     error UnexpectedAmount(uint128 expectedAmt, uint128 actualAmt);
     /// @notice Error for redeeming before the liquidation window
-    error CanNotRedeemBeforeFinalLiquidationDeadline(uint256 deadline);
+    error CanNotRedeemBeforeFinalLiquidationDeadline(
+        uint256 liquidationDeadline
+    );
 
     /// @notice Emitted when market initialized
     /// @param collateral Collateral token
