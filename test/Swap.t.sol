@@ -54,6 +54,20 @@ contract SwapTest is Test {
             )
         );
 
+        // update oracle
+        res.collateralOracle.updateRoundData(
+            JSONLoader.getRoundDataFromJson(
+                testdata,
+                ".priceData.ETH_2000_DAI_1.eth"
+            )
+        );
+        res.underlyingOracle.updateRoundData(
+            JSONLoader.getRoundDataFromJson(
+                testdata,
+                ".priceData.ETH_2000_DAI_1.dai"
+            )
+        );
+
         uint amount = 10000e8;
         res.underlying.mint(deployer, amount);
         res.underlying.approve(address(res.market), amount);
