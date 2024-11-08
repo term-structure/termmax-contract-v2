@@ -2,7 +2,6 @@
 pragma solidity ^0.8.27;
 
 import "./AbstractGearingToken.sol";
-import {console} from "forge-std/console.sol";
 
 /**
  * @title Term Max Gearing Token, using ERC20 token as collateral
@@ -48,7 +47,8 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
     ) internal virtual override returns (bytes memory deliveryData) {
         IERC20 collateral = IERC20(_getGearingTokenStorage().config.collateral);
         uint collateralReserve = collateral.balanceOf(address(this));
-        uint amount = (collateralReserve * proportion) / Constants.DECIMAL_BASE;
+        uint amount = (collateralReserve * proportion) /
+            Constants.DECIMAL_BASE_SQ;
         deliveryData = abi.encode(amount);
     }
 

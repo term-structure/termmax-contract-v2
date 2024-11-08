@@ -7,7 +7,6 @@ import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/ut
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {Constants} from "../lib/Constants.sol";
 import {IGearingToken, AggregatorV3Interface, IERC20Metadata, IERC20} from "./IGearingToken.sol";
-import {console} from "forge-std/console.sol";
 
 /**
  * @title Term Max Gearing Token
@@ -399,16 +398,6 @@ abstract contract AbstractGearingToken is
                 if (block.timestamp < config.maturity) {
                     isLiquidable = true;
                     /// @notice collateralValue(price decimals) and HALF_LIQUIDATION_THRESHOLD(base decimals 1e8)
-                    console.log(
-                        "collateralValue",
-                        valueAndPrice.collateralValue
-                    );
-                    console.log(
-                        "collateralValue 2",
-                        (valueAndPrice.collateralValue *
-                            Constants.DECIMAL_BASE) /
-                            valueAndPrice.priceDecimals
-                    );
                     maxRepayAmt = (valueAndPrice.collateralValue *
                         Constants.DECIMAL_BASE) /
                         valueAndPrice.priceDecimals <
@@ -424,8 +413,6 @@ abstract contract AbstractGearingToken is
                 }
             }
         }
-
-        console.log("isLiquidable", isLiquidable);
     }
 
     /**
@@ -449,10 +436,9 @@ abstract contract AbstractGearingToken is
         ) = _getLiquidationInfo(loan, config);
 
         if (!isLiquidable) {
-            uint liquidationDeadline = config.maturity + Constants.LIQUIDATION_WINDOW;
-            if (
-                block.timestamp >= liquidationDeadline
-            ) {
+            uint liquidationDeadline = config.maturity +
+                Constants.LIQUIDATION_WINDOW;
+            if (block.timestamp >= liquidationDeadline) {
                 revert CanNotLiquidationAfterFinalDeadline(liquidationDeadline);
             }
             revert GtIsSafe(id);
