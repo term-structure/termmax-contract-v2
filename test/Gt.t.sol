@@ -1398,7 +1398,57 @@ contract GtTest is Test {
         res.gt.liquidate(gtId, debtAmt);
     }
 
-    function testRevertByRepayAmtExceedsMaxRepayAmt() public {}
+    function testRevertByRepayAmtExceedsMaxRepayAmt() public {
+        uint128 debtAmt = 9000e8;
+        uint256 collateralAmt = 10e18;
+
+        vm.startPrank(sender);
+
+        (uint256 gtId, ) = LoanUtils.fastMintGt(
+            res,
+            sender,
+            debtAmt,
+            collateralAmt
+        );
+        vm.stopPrank();
+        vm.startPrank(deployer);
+        // update oracle
+        res.collateralOracle.updateRoundData(
+            JSONLoader.getRoundDataFromJson(
+                testdata,
+                ".priceData.ETH_1000_DAI_1.eth"
+            )
+        );
+        res.underlyingOracle.updateRoundData(
+            JSONLoader.getRoundDataFromJson(
+                testdata,
+                ".priceData.ETH_1000_DAI_1.dai"
+            )
+        );
+        vm.stopPrank();
+        (bool isLiquidable, uint128 maxRepayAmt) = res.gt.getLiquidationInfo(
+            gtId
+        );
+        assert(isLiquidable);
+        assert(maxRepayAmt == debtAmt / 2);
+        address liquidator = vm.randomAddress();
+        vm.startPrank(liquidator);
+
+        uint128 repayAmt = maxRepayAmt + 1;
+        res.underlying.mint(liquidator, repayAmt);
+        res.underlying.approve(address(res.gt), repayAmt);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IGearingToken.RepayAmtExceedsMaxRepayAmt.selector,
+                repayAmt,
+                maxRepayAmt
+            )
+        );
+        res.gt.liquidate(gtId, repayAmt);
+
+        vm.stopPrank();
+    }
 
     function testNoRevertByLtvIncreasedAfterLiquidation(
         uint128 repayAmt

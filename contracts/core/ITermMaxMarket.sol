@@ -159,12 +159,15 @@ interface ITermMaxMarket {
     /// @notice Emitted when redeeming tokens
     /// @param caller Who call the function
     /// @param proportion The proportion of underlying token and collateral should be obtained
+    ///                   base 1e16 decimals
     /// @param underlyingAmt The amount of underlying received
+    /// @param feeAmt Redeemming Fees
     /// @param deliveryData The encoded data of collateral received
     event Redeem(
         address indexed caller,
         uint128 proportion,
         uint128 underlyingAmt,
+        uint128 feeAmt,
         bytes deliveryData
     );
 
