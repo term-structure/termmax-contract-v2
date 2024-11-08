@@ -630,7 +630,6 @@ contract SwapTest is Test {
         );
         uint128 collateralAmtIn = xtAmtIn;
         res.collateral.mint(sender, collateralAmtIn);
-        res.collateral.approve(address(res.gt), collateralAmtIn);
         res.xt.approve(address(outer), xtAmtIn);
         bytes memory callbackData = abi.encode(collateralAmtIn);
         outer.leverageByXt(sender, xtAmtIn, callbackData);
@@ -653,6 +652,8 @@ contract MockOuter is IFlashLoanReceiver {
         uint256 amount,
         bytes calldata data
     ) external returns (bytes memory collateralData) {
+        uint128 collateralAmt = abi.decode(data, (uint128));
+        res.collateral.mint(address(this), collateralAmt);
         return data;
     }
 
@@ -664,6 +665,7 @@ contract MockOuter is IFlashLoanReceiver {
         uint128 collateralAmt = abi.decode(callbackData, (uint128));
         res.xt.transferFrom(msg.sender, address(this), xtAmt);
         res.xt.approve(address(res.market), xtAmt);
+        res.collateral.approve(address(res.gt), collateralAmt);
         gtId = res.market.leverageByXt(receiver, xtAmt, callbackData);
     }
 }
