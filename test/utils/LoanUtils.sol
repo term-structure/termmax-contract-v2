@@ -21,10 +21,78 @@ library LoanUtils {
         uint upDecimals = 10 ** res.underlyingOracle.decimals();
         uint cDecimals = 10 ** res.collateral.decimals();
         uint uDecimals = 10 ** res.underlying.decimals();
-        uint debtValue = (debtAmt * uPrice.toUint256()) /
-            (upDecimals * uDecimals);
+        uint debtValue = (debtAmt * uPrice.toUint256()) / uDecimals;
         uint collateralValue = (collateralAmt * cPrice.toUint256()) /
             (cpDecimals * cDecimals);
-        ltv = (debtValue * Constants.DECIMAL_BASE) / collateralValue;
+        if (collateralValue == 0) {
+            return 2 ** 128 - 1;
+        }
+        ltv =
+            (debtValue * Constants.DECIMAL_BASE) /
+            (collateralValue * upDecimals);
+    }
+
+    function calcLiquidationResult(
+        DeployUtils.Res memory res,
+        uint256 debtAmt,
+        uint256 collateralAmt,
+        uint256 repayAmt
+    )
+        internal
+        view
+        returns (uint cToLiquidator, uint cToTreasurer, uint remainningC)
+    {
+        uint REWARD_TO_LIQUIDATOR = 0.05e8;
+        uint REWARD_TO_PROTOCOL = 0.05e8;
+        (, int256 cPrice, , , ) = res.collateralOracle.latestRoundData();
+        (, int256 uPrice, , , ) = res.underlyingOracle.latestRoundData();
+        uint cpDecimals = 10 ** res.collateralOracle.decimals();
+        uint upDecimals = 10 ** res.underlyingOracle.decimals();
+        uint cDecimals = 10 ** res.collateral.decimals();
+        uint uDecimals = 10 ** res.underlying.decimals();
+
+        uint udPriceToCdPrice = (uPrice.toUint256() *
+            cpDecimals *
+            Constants.DECIMAL_BASE) / (cPrice.toUint256() * upDecimals);
+
+        uint cEqualRepayAmt = (repayAmt * udPriceToCdPrice * cDecimals) /
+            (uDecimals * Constants.DECIMAL_BASE);
+
+        uint rewardToLiquidator = (cEqualRepayAmt * REWARD_TO_LIQUIDATOR) /
+            Constants.DECIMAL_BASE;
+        uint rewardToProtocol = (cEqualRepayAmt * REWARD_TO_PROTOCOL) /
+            Constants.DECIMAL_BASE;
+
+        uint removedCollateralAmt = cEqualRepayAmt +
+            rewardToLiquidator +
+            rewardToProtocol;
+        if (removedCollateralAmt > (collateralAmt * repayAmt) / debtAmt)
+            removedCollateralAmt = (collateralAmt * repayAmt) / debtAmt;
+        if (cEqualRepayAmt + rewardToLiquidator >= removedCollateralAmt) {
+            cToLiquidator = removedCollateralAmt;
+        } else if (
+            cEqualRepayAmt + rewardToLiquidator + rewardToProtocol >=
+            removedCollateralAmt
+        ) {
+            cToLiquidator = cEqualRepayAmt + rewardToLiquidator;
+            cToTreasurer = removedCollateralAmt - cToLiquidator;
+        } else {
+            cToLiquidator = cEqualRepayAmt + rewardToLiquidator;
+            cToTreasurer = rewardToProtocol;
+        }
+        remainningC = collateralAmt - removedCollateralAmt;
+    }
+
+    function fastMintGt(
+        DeployUtils.Res memory res,
+        address to,
+        uint128 debtAmt,
+        uint256 collateralAmt
+    ) internal returns (uint256 gtId, uint128 ftOutAmt) {
+        res.collateral.mint(to, collateralAmt);
+        res.collateral.approve(address(res.gt), collateralAmt);
+        bytes memory collateralData = abi.encode(collateralAmt);
+
+        (gtId, ftOutAmt) = res.market.issueFt(debtAmt, collateralData);
     }
 }
