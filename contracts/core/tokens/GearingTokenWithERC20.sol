@@ -201,19 +201,26 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
             uint collateralDecimals
         ) = abi.decode(valueAndPrice.collateralPriceData, (uint, uint, uint));
 
-        // MaxRomvedCollateral = min(
-        // (repayAmt * (1 + REWARD_TO_LIQUIDATOR + REWARD_TO_PROTOCOL)) * underlying/ collateral
-        // , collateralAmt *(repayAmt / debtAmt)
+        // maxRomvedCollateral = min(
+        // (repayAmt * (1 + REWARD_TO_LIQUIDATOR + REWARD_TO_PROTOCOL)) * debtTokenPrice / collateralTokenPrice ,
+        // collateralAmt *(repayAmt / debtAmt)
         // )
 
-        //U(d)/C(d) = UP/UPD / CP/CPD = UP*CD/CP*UPD)
-        uint udPriceToCdPrice = (valueAndPrice.underlyingPrice *
+        /* DP := debt token price
+         * DPD := debt token price decimal
+         * CP := collateral token price
+         * CPD := collateral token price decimal
+         * ddPriceToCdPrice = (DP/DPD) / (CP/CPD) = (DP*CPD) / (CP*DPD)
+         */
+        uint ddPriceToCdPrice = (valueAndPrice.underlyingPrice *
             collateralPriceDecimals *
             Constants.DECIMAL_BASE) /
             (collateralPrice * valueAndPrice.priceDecimals);
 
+        // calculate the amount of collateral that is equivalent to repayAmt
+        // with debt to collateral price
         uint cEqualRepayAmt = (repayAmt *
-            udPriceToCdPrice *
+            ddPriceToCdPrice *
             collateralDecimals) /
             (valueAndPrice.underlyingDecimals * Constants.DECIMAL_BASE);
 
