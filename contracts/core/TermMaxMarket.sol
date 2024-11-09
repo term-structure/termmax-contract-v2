@@ -426,9 +426,6 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
                 tradeParams,
                 mConfig
             );
-            if (newXtReserve == 0) {
-                revert LiquidityIsZeroAfterTransaction();
-            }
             // calculate fee
             feeAmt = TermMaxCurve._calculateFee(
                 ftReserve,
