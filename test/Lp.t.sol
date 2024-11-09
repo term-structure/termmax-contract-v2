@@ -224,6 +224,32 @@ contract LpTest is Test {
         vm.stopPrank();
     }
 
+    function testRevertByLiquidityIsZeroAfterTransaction() public {
+        vm.startPrank(deployer);
+
+        uint lpFtBlance = res.lpFt.balanceOf(deployer);
+        res.lpFt.approve(address(res.market), lpFtBlance);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ITermMaxMarket.LiquidityIsZeroAfterTransaction.selector
+            )
+        );
+        res.market.withdrawLp(uint128(lpFtBlance), 0);
+
+        uint lpXtBlance = res.lpXt.balanceOf(deployer);
+        res.lpXt.approve(address(res.market), lpXtBlance);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ITermMaxMarket.LiquidityIsZeroAfterTransaction.selector
+            )
+        );
+        res.market.withdrawLp(0, uint128(lpXtBlance));
+
+        vm.stopPrank();
+    }
+
     function testWithdrawLpWhenFtIsMore() public {
         vm.startPrank(sender);
 

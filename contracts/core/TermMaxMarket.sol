@@ -284,10 +284,11 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
 
             xtOutAmt = ((lpXtAmt * xtReserve) / lpXtTotalSupply).toUint128();
         }
-
         uint sameProportionFt = (xtOutAmt * mConfig.initialLtv) /
             Constants.DECIMAL_BASE;
-
+        if (xtOutAmt >= xtReserve || ftOutAmt >= ftReserve) {
+            revert LiquidityIsZeroAfterTransaction();
+        }
         if (sameProportionFt > ftOutAmt) {
             uint xtExcess = xtOutAmt -
                 (ftOutAmt * Constants.DECIMAL_BASE) /
@@ -367,6 +368,10 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         // add new lituidity
         _addLiquidity(caller, underlyingAmtIn, mConfig.initialLtv);
         if (token == ft) {
+            // FT final value = ft amount
+            if (underlyingAmtIn >= ftReserve) {
+                revert LiquidityIsZeroAfterTransaction();
+            }
             uint newFtReserve;
             uint newXtReserve;
             (newFtReserve, newXtReserve, mConfig.apr) = TermMaxCurve._buyFt(
@@ -407,12 +412,23 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
             uint ypCurrentReserve = ft.balanceOf(address(this));
             netOut = ypCurrentReserve - finalFtReserve;
         } else {
+            // XT final value = xt amount *(1-ltv)
+            if (
+                underlyingAmtIn >=
+                (xtReserve * Constants.DECIMAL_BASE - mConfig.initialLtv) /
+                    Constants.DECIMAL_BASE
+            ) {
+                revert LiquidityIsZeroAfterTransaction();
+            }
             uint newFtReserve;
             uint newXtReserve;
             (newFtReserve, newXtReserve, mConfig.apr) = TermMaxCurve._buyXt(
                 tradeParams,
                 mConfig
             );
+            if (newXtReserve == 0) {
+                revert LiquidityIsZeroAfterTransaction();
+            }
             // calculate fee
             feeAmt = TermMaxCurve._calculateFee(
                 ftReserve,
