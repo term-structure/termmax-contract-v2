@@ -314,7 +314,7 @@ contract LpTest is Test {
         emit ITermMaxMarket.WithdrawLP(
             sender,
             lpFtOutAmt,
-            lpXtOutAmt,
+            lpXtOutAmt / 2,
             uint128(expectFtOutAmt),
             uint128(expectXtOutAmt),
             int64(expectedState.apr)
@@ -367,7 +367,7 @@ contract LpTest is Test {
         vm.expectEmit();
         emit ITermMaxMarket.WithdrawLP(
             sender,
-            lpFtOutAmt,
+            lpFtOutAmt / 2,
             lpXtOutAmt,
             uint128(expectFtOutAmt),
             uint128(expectXtOutAmt),
