@@ -59,6 +59,20 @@ contract TermMaxRouterTest is Test {
             )
         );
 
+        // update oracle
+        res.collateralOracle.updateRoundData(
+            JSONLoader.getRoundDataFromJson(
+                testdata,
+                ".priceData.ETH_2000_DAI_1.eth"
+            )
+        );
+        res.underlyingOracle.updateRoundData(
+            JSONLoader.getRoundDataFromJson(
+                testdata,
+                ".priceData.ETH_2000_DAI_1.dai"
+            )
+        );
+
         uint amount = 10000e8;
         res.underlying.mint(deployer, amount);
         res.underlying.approve(address(res.market), amount);
@@ -69,6 +83,7 @@ contract TermMaxRouterTest is Test {
         router.setMarketWhitelist(address(res.market), true);
         router.setSwapperWhitelist(address(res.collateral), true);
         router.togglePause(false);
+        
 
         vm.stopPrank();
     }
@@ -212,7 +227,7 @@ contract TermMaxRouterTest is Test {
 
 
         uint128 underlyingAmtInForBuyXt = 100e8;
-        uint128 minXTOut = 0e8;
+        uint128 minXTOut = 1e8;
         uint256 minCollAmt = 100e8 * 2;
         res.underlying.mint(sender, underlyingAmtInForBuyXt);
         res.underlying.approve(address(router), underlyingAmtInForBuyXt);
@@ -239,7 +254,7 @@ contract TermMaxRouterTest is Test {
         vm.startPrank(sender);
 
         uint128 underlyingAmtIn = 100e8;
-        uint128 minTokenOut = 0e8;
+        uint128 minTokenOut = 1e8;
         res.underlying.mint(sender, underlyingAmtIn);
         res.underlying.approve(address(router), underlyingAmtIn);
         uint256 netXtOut = router.swapExactTokenForXt(receiver, res.market, underlyingAmtIn, minTokenOut);
@@ -269,7 +284,7 @@ contract TermMaxRouterTest is Test {
 
         uint128 collateralAmtIn = 100e8;
         uint128 debtAmt = 95e8;
-        uint128 borrowAmt = 0e8;
+        uint128 borrowAmt = 1e8;
         res.collateral.mint(sender, collateralAmtIn);
         res.collateral.approve(address(router), collateralAmtIn);
 
