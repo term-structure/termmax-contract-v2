@@ -6,16 +6,21 @@ import {IMintableERC20} from "../tokens/MintableERC20.sol";
 import "../storage/TermMaxStorage.sol";
 
 /**
- * @title The Term Max factory
+ * @title The Term Max factory interface
  * @author Term Structure Labs
  */
 interface ITermMaxFactory {
+    /// @notice Error for repeat initialization of market's implementation
     error MarketImplementInitialized();
+    /// @notice Error for market's implementation were not initialized
     error MarketImplementIsNotInitialized();
+    /// @notice Error for gt implementation can not found
     error CantNotFindGtImplementation();
 
+    /// @notice Emit when initializing implementation of Term Max Market
     event InitializeMarketImplement(address marketImplement);
-    event SetGtImplementd(bytes32 key, address gtImplement);
+    /// @notice Emit when setting implementations of Gearing Token
+    event SetGtImplement(bytes32 key, address gtImplement);
 
     struct DeployParams {
         /// @notice Use gt key to get the implementation of gearing Token
