@@ -17,7 +17,7 @@ import {AbstractGearingToken} from "../contracts/core/tokens/AbstractGearingToke
 import {ITermMaxFactory, TermMaxFactory, IMintableERC20, IGearingToken, AggregatorV3Interface} from "../contracts/core/factory/TermMaxFactory.sol";
 import "../contracts/core/storage/TermMaxStorage.sol";
 
-contract AfterMaturityTest is Test {
+contract RedeemTest is Test {
     using JSONLoader for *;
     using SafeCast for uint256;
     using SafeCast for int256;
@@ -56,6 +56,20 @@ contract AfterMaturityTest is Test {
         vm.warp(
             vm.parseUint(
                 vm.parseJsonString(testdata, ".marketConfig.currentTime")
+            )
+        );
+
+        // update oracle
+        res.collateralOracle.updateRoundData(
+            JSONLoader.getRoundDataFromJson(
+                testdata,
+                ".priceData.ETH_2000_DAI_1.eth"
+            )
+        );
+        res.underlyingOracle.updateRoundData(
+            JSONLoader.getRoundDataFromJson(
+                testdata,
+                ".priceData.ETH_2000_DAI_1.dai"
             )
         );
 

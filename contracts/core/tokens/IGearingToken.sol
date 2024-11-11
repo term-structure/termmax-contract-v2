@@ -64,6 +64,9 @@ interface IGearingToken is IERC721 {
     error RepayAmtExceedsMaxRepayAmt(uint128 repayAmt, uint128 maxRepayAmt);
     /// @notice Error for liquidate the loan after liquidation window
     error CanNotLiquidationAfterFinalDeadline(uint256 liquidationDeadline);
+    /// @notice Error for debt value less than minimal limit
+    /// @param debtValue The debtValue is USD, decimals 1e8
+    error DebtValueIsTooSmall(uint256 debtValue);
 
     /// @notice Emitted when merging multiple Gearing Tokens into one
     /// @param sender The owner of those tokens

@@ -54,6 +54,20 @@ contract SwapTest is Test {
             )
         );
 
+        // update oracle
+        res.collateralOracle.updateRoundData(
+            JSONLoader.getRoundDataFromJson(
+                testdata,
+                ".priceData.ETH_2000_DAI_1.eth"
+            )
+        );
+        res.underlyingOracle.updateRoundData(
+            JSONLoader.getRoundDataFromJson(
+                testdata,
+                ".priceData.ETH_2000_DAI_1.dai"
+            )
+        );
+
         uint amount = 10000e8;
         res.underlying.mint(deployer, amount);
         res.underlying.approve(address(res.market), amount);
@@ -89,6 +103,22 @@ contract SwapTest is Test {
         );
         assert(res.ft.balanceOf(sender) == netOut);
 
+        vm.stopPrank();
+    }
+
+    function testBuyAllFt() public {
+        vm.startPrank(sender);
+
+        uint underlyingAmtIn = (10000e8 * uint256(marketConfig.initialLtv)) /
+            Constants.DECIMAL_BASE;
+        res.underlying.mint(sender, underlyingAmtIn);
+        res.underlying.approve(address(res.market), underlyingAmtIn);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ITermMaxMarket.LiquidityIsZeroAfterTransaction.selector
+            )
+        );
+        res.market.buyFt(uint128(underlyingAmtIn), 0);
         vm.stopPrank();
     }
 
@@ -178,6 +208,23 @@ contract SwapTest is Test {
         );
         assert(res.xt.balanceOf(sender) == netOut);
 
+        vm.stopPrank();
+    }
+
+    function testBuyAllXt() public {
+        vm.startPrank(sender);
+
+        uint underlyingAmtIn = (10000e8 *
+            Constants.DECIMAL_BASE -
+            marketConfig.initialLtv) / Constants.DECIMAL_BASE;
+        res.underlying.mint(sender, underlyingAmtIn);
+        res.underlying.approve(address(res.market), underlyingAmtIn);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ITermMaxMarket.LiquidityIsZeroAfterTransaction.selector
+            )
+        );
+        res.market.buyXt(uint128(underlyingAmtIn), 0);
         vm.stopPrank();
     }
 
@@ -463,7 +510,7 @@ contract SwapTest is Test {
     function testLever() public {
         vm.startPrank(sender);
 
-        uint128 collateralAmtIn = 100e8;
+        uint128 collateralAmtIn = 1e18;
         uint128 debtAmt = 95e8;
         uint128 minTokenOut = 0e8;
         res.collateral.mint(sender, collateralAmtIn);
@@ -485,7 +532,7 @@ contract SwapTest is Test {
     function testLeverBeforeMaturity() public {
         vm.startPrank(sender);
 
-        uint128 collateralAmtIn = 100e8;
+        uint128 collateralAmtIn = 1e18;
         uint128 debtAmt = 95e8;
         uint128 minTokenOut = 0e8;
         res.collateral.mint(sender, collateralAmtIn);
@@ -500,7 +547,7 @@ contract SwapTest is Test {
     function testLeverAfterMaturity() public {
         vm.startPrank(sender);
 
-        uint128 collateralAmtIn = 100e8;
+        uint128 collateralAmtIn = 1e18;
         uint128 debtAmt = 95e8;
         uint128 minTokenOut = 0e8;
         res.collateral.mint(sender, collateralAmtIn);
@@ -628,7 +675,7 @@ contract SwapTest is Test {
         uint128 xtAmtIn = uint128(
             res.market.buyXt(underlyingAmtInForBuyXt, minXTOut)
         );
-        uint128 collateralAmtIn = xtAmtIn;
+        uint128 collateralAmtIn = 1e18;
         res.collateral.mint(sender, collateralAmtIn);
         res.xt.approve(address(outer), xtAmtIn);
         bytes memory callbackData = abi.encode(collateralAmtIn);

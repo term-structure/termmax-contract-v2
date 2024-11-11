@@ -217,8 +217,8 @@ contract GtTest is Test {
     }
 
     function testRevertByGtIsNotHealthyWhenCollateralCloseZero() public {
-        // debt 1 USD collaretal 2e-7 USD
-        uint128 debtAmt = 1e8;
+        // debt 5 USD collaretal 2e-7 USD
+        uint128 debtAmt = 5e8;
         uint256 collateralAmt = 1;
         res.collateral.mint(sender, collateralAmt);
 
@@ -232,6 +232,28 @@ contract GtTest is Test {
                 IGearingToken.GtIsNotHealthy.selector,
                 sender,
                 LoanUtils.calcLtv(res, debtAmt, collateralAmt)
+            )
+        );
+        res.market.issueFt(debtAmt, collateralData);
+
+        vm.stopPrank();
+    }
+
+    function testRevertByDebtValueIsTooSmallWhenMintGt() public {
+        // debt 4 USD collaretal 2000USD ltv 0.89
+        uint128 debtAmt = 4e8;
+        uint256 collateralAmt = 1e18;
+        res.collateral.mint(sender, collateralAmt);
+
+        vm.startPrank(sender);
+
+        res.collateral.approve(address(res.gt), collateralAmt);
+        bytes memory collateralData = abi.encode(collateralAmt);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IGearingToken.DebtValueIsTooSmall.selector,
+                debtAmt
             )
         );
         res.market.issueFt(debtAmt, collateralData);
@@ -476,8 +498,8 @@ contract GtTest is Test {
     }
 
     function testMerge() public {
-        uint40[3] memory debts = [100e8, 30e8, 1e8];
-        uint64[3] memory collaterals = [1e18, 0.5e18, 0.001e18];
+        uint40[3] memory debts = [100e8, 30e8, 5e8];
+        uint64[3] memory collaterals = [1e18, 0.5e18, 0.05e18];
 
         vm.startPrank(sender);
 
@@ -521,8 +543,8 @@ contract GtTest is Test {
     }
 
     function testRevertByCanNotMergeLoanWithDiffOwnerWhenMerge() public {
-        uint40[3] memory debts = [100e8, 30e8, 1e8];
-        uint64[3] memory collaterals = [1e18, 0.5e18, 0.001e18];
+        uint40[3] memory debts = [100e8, 30e8, 5e8];
+        uint64[3] memory collaterals = [1e18, 0.5e18, 0.005e18];
 
         vm.startPrank(sender);
 
@@ -750,6 +772,35 @@ contract GtTest is Test {
         );
         vm.prank(sender);
         res.gt.removeCollateral(gtId, abi.encode(removedCollateral));
+    }
+
+    function testRevertByDebtValueIsTooSmallWhenRemoveCollateral() public {
+        uint128 debtAmt = 200e8;
+        uint128 repayAmt = 199e8;
+        uint256 collateralAmt = 1.1e18;
+        uint256 removedCollateral = 0.1e18;
+        vm.startPrank(sender);
+
+        (uint256 gtId, ) = LoanUtils.fastMintGt(
+            res,
+            sender,
+            debtAmt,
+            collateralAmt
+        );
+
+        res.underlying.mint(sender, repayAmt);
+        res.underlying.approve(address(res.gt), repayAmt);
+        res.gt.repay(gtId, repayAmt, true);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IGearingToken.DebtValueIsTooSmall.selector,
+                debtAmt - repayAmt
+            )
+        );
+        res.gt.removeCollateral(gtId, abi.encode(removedCollateral));
+
+        vm.stopPrank();
     }
 
     // Case 1: removed collateral can not cover repayAmt + rewardToLiquidator
@@ -1512,6 +1563,54 @@ contract GtTest is Test {
             res.collateral.balanceOf(marketConfig.treasurer) == cToTreasurer
         );
         assert(res.collateral.balanceOf(liquidator) == cToLiquidator);
+
+        vm.stopPrank();
+    }
+
+    function testRevertByDebtValueIsTooSmallWhenLiquidation() public {
+        uint128 debtAmt = 1000e8;
+        uint256 collateralAmt = 1e18;
+        uint128 repayAmt = 999e8;
+
+        vm.startPrank(sender);
+
+        (uint256 gtId, ) = LoanUtils.fastMintGt(
+            res,
+            sender,
+            debtAmt,
+            collateralAmt
+        );
+        vm.stopPrank();
+
+        vm.startPrank(deployer);
+        // update oracle
+        res.collateralOracle.updateRoundData(
+            JSONLoader.getRoundDataFromJson(
+                testdata,
+                ".priceData.ETH_1000_DAI_1.eth"
+            )
+        );
+        res.underlyingOracle.updateRoundData(
+            JSONLoader.getRoundDataFromJson(
+                testdata,
+                ".priceData.ETH_1000_DAI_1.dai"
+            )
+        );
+        vm.stopPrank();
+
+        address liquidator = vm.randomAddress();
+        vm.startPrank(liquidator);
+
+        res.underlying.mint(liquidator, repayAmt);
+        res.underlying.approve(address(res.gt), repayAmt);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IGearingToken.DebtValueIsTooSmall.selector,
+                debtAmt - repayAmt
+            )
+        );
+        res.gt.liquidate(gtId, repayAmt);
 
         vm.stopPrank();
     }

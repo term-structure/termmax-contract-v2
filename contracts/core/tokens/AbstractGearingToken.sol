@@ -57,8 +57,11 @@ abstract contract AbstractGearingToken is
     /// @notice The percentage of repay amount to protocol while do liquidate
     uint256 constant REWARD_TO_PROTOCOL = 5e6;
     /// @notice Semi-liquidation threshold: if the value of the collateral reaches this value,
-    ///         only partial liquidation can be performed.
+    ///         only partial liquidation can be performed, decimals 1e8.
     uint256 constant HALF_LIQUIDATION_THRESHOLD = 10000e8;
+    /// @notice Minimum debt value, decimals 1e8.
+    uint256 constant MINIMAL_DEBT_VALUE = 5e8;
+
     uint256 constant UINT_MAX = 2 ** 256 - 1;
     uint128 constant UINT128_MAX = 2 ** 128 - 1;
 
@@ -159,13 +162,13 @@ abstract contract AbstractGearingToken is
         GearingTokenStorage storage s
     ) internal returns (uint256 id) {
         LoanInfo memory loan = LoanInfo(debtAmt, collateralData);
-        uint128 ltv = _calculateLtv(
-            _getValueAndPrice(
-                s.config.underlyingOracle,
-                loan,
-                s.config.underlying.decimals()
-            )
+        ValueAndPrice memory valueAndPrice = _getValueAndPrice(
+            s.config.underlyingOracle,
+            loan,
+            s.config.underlying.decimals()
         );
+        _checkDebtValue(valueAndPrice);
+        uint128 ltv = _calculateLtv(valueAndPrice);
         if (ltv >= s.config.maxLtv) {
             revert GtIsNotHealthy(to, ltv);
         }
@@ -274,7 +277,8 @@ abstract contract AbstractGearingToken is
             _burnInternal(id, s);
             _transferCollateral(gtOwner, loan.collateralData);
         } else {
-            s.loanMapping[id].debtAmt -= repayAmt;
+            uint128 debtAmt = loan.debtAmt - repayAmt;
+            s.loanMapping[id].debtAmt = debtAmt;
         }
     }
 
@@ -300,6 +304,12 @@ abstract contract AbstractGearingToken is
 
         _transferCollateral(msg.sender, collateralData);
 
+        ValueAndPrice memory valueAndPrice = _getValueAndPrice(
+            config.underlyingOracle,
+            loan,
+            config.underlying.decimals()
+        );
+        _checkDebtValue(valueAndPrice);
         uint128 ltv = _calculateLtv(
             _getValueAndPrice(
                 config.underlyingOracle,
@@ -465,6 +475,7 @@ abstract contract AbstractGearingToken is
         } else {
             loan.debtAmt -= repayAmt;
             loan.collateralData = remainningC;
+
             // Check ltv after partial liquidation
             {
                 valueAndPrice.collateralValue = _getCollateralValue(
@@ -474,6 +485,7 @@ abstract contract AbstractGearingToken is
                 valueAndPrice.debtValueWithDecimals =
                     (loan.debtAmt * valueAndPrice.underlyingPrice) /
                     valueAndPrice.underlyingDecimals;
+                _checkDebtValue(valueAndPrice);
                 uint128 ltvAfter = _calculateLtv(valueAndPrice);
                 if (ltvBefore < ltvAfter) {
                     revert LtvIncreasedAfterLiquidation(ltvBefore, ltvAfter);
@@ -622,4 +634,12 @@ abstract contract AbstractGearingToken is
         view
         virtual
         returns (bytes memory priceData);
+
+    function _checkDebtValue(ValueAndPrice memory valueAndPrice) internal pure {
+        uint debtValue = (valueAndPrice.debtValueWithDecimals *
+            Constants.DECIMAL_BASE) / valueAndPrice.priceDecimals;
+        if (debtValue < MINIMAL_DEBT_VALUE) {
+            revert DebtValueIsTooSmall(debtValue);
+        }
+    }
 }
