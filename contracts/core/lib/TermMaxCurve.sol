@@ -57,8 +57,11 @@ library TermMaxCurve {
     function _calcFtPlusAlpha(
         uint32 lsf,
         uint256 ftReserve
-    ) internal pure returns (uint256) {
-        return (ftReserve * Constants.DECIMAL_BASE) / lsf;
+    ) internal pure returns (uint256 ftPlusAlpha) {
+        ftPlusAlpha = (ftReserve * Constants.DECIMAL_BASE) / lsf;
+        if (ftPlusAlpha == 0) {
+            revert LiquidityIsZeroAfterTransaction();
+        }
     }
 
     /// @notice Calculte the XT token reserve plus beta
@@ -100,6 +103,9 @@ library TermMaxCurve {
                     daysToMaturity -
                     ltv *
                     Constants.DAYS_IN_YEAR);
+        }
+        if (xtPlusBeta == 0) {
+            revert LiquidityIsZeroAfterTransaction();
         }
     }
 
@@ -229,6 +235,9 @@ library TermMaxCurve {
         uint deltaFt = params.amount -
             (deltaXt * config.initialLtv) /
             Constants.DECIMAL_BASE;
+        if (xtPlusBeta <= deltaXt) {
+            revert LiquidityIsZeroAfterTransaction();
+        }
         newApr = _calcApr(
             config.initialLtv,
             params.daysToMaturity,
@@ -274,6 +283,9 @@ library TermMaxCurve {
         uint deltaFt = ftPlusAlpha -
             (ftPlusAlpha * xtPlusBeta) /
             (xtPlusBeta + deltaXt);
+        if (ftPlusAlpha <= deltaFt) {
+            revert LiquidityIsZeroAfterTransaction();
+        }
         newApr = _calcApr(
             config.initialLtv,
             params.daysToMaturity,
@@ -324,7 +336,9 @@ library TermMaxCurve {
                 ((params.amount - deltaXt) * config.initialLtv) /
                 Constants.DECIMAL_BASE;
         }
-
+        if (ftPlusAlpha <= deltaFt) {
+            revert LiquidityIsZeroAfterTransaction();
+        }
         newApr = _calcApr(
             config.initialLtv,
             params.daysToMaturity,
@@ -370,6 +384,9 @@ library TermMaxCurve {
         uint deltaFt = (ftPlusAlpha * xtPlusBeta) /
             (xtPlusBeta - deltaXt) -
             ftPlusAlpha;
+        if (xtPlusBeta <= deltaXt) {
+            revert LiquidityIsZeroAfterTransaction();
+        }
         newApr = _calcApr(
             config.initialLtv,
             params.daysToMaturity,
@@ -406,6 +423,9 @@ library TermMaxCurve {
         uint deltaFt = ftPlusAlpha -
             (ftPlusAlpha * xtPlusBeta) /
             (xtPlusBeta + deltaXt);
+        if (ftPlusAlpha <= deltaFt) {
+            revert LiquidityIsZeroAfterTransaction();
+        }
         newApr = _calcApr(
             config.initialLtv,
             params.daysToMaturity,
@@ -442,6 +462,9 @@ library TermMaxCurve {
         uint negDeltaFt = (ftPlusAlpha * xtPlusBeta) /
             (xtPlusBeta - negDeltaXt) -
             ftPlusAlpha;
+        if (xtPlusBeta <= negDeltaXt) {
+            revert LiquidityIsZeroAfterTransaction();
+        }
         newApr = _calcApr(
             config.initialLtv,
             params.daysToMaturity,
@@ -479,6 +502,9 @@ library TermMaxCurve {
         uint deltaXt = xtPlusBeta -
             (xtPlusBeta * ftPlusAlpha) /
             (ftPlusAlpha + deltaFt);
+        if (xtPlusBeta <= deltaXt) {
+            revert LiquidityIsZeroAfterTransaction();
+        }
         newApr = _calcApr(
             config.initialLtv,
             params.daysToMaturity,
@@ -516,6 +542,9 @@ library TermMaxCurve {
         uint negDeltaXt = (xtPlusBeta * ftPlusAlpha) /
             (ftPlusAlpha - negDeltaFt) -
             xtPlusBeta;
+        if (ftPlusAlpha <= negDeltaFt) {
+            revert LiquidityIsZeroAfterTransaction();
+        }
         newApr = _calcApr(
             config.initialLtv,
             params.daysToMaturity,
