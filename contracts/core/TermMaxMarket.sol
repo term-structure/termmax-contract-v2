@@ -68,6 +68,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         }
         underlying = underlying_;
         collateral = collateral_;
+        config_.rewardIsDistributed = false;
         _config = config_;
 
         ft = tokens_[0];
@@ -283,10 +284,11 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
 
             xtOutAmt = ((lpXtAmt * xtReserve) / lpXtTotalSupply).toUint128();
         }
-
+        if (xtOutAmt >= xtReserve || ftOutAmt >= ftReserve) {
+            revert TermMaxCurve.LiquidityIsZeroAfterTransaction();
+        }
         uint sameProportionFt = (xtOutAmt * mConfig.initialLtv) /
             Constants.DECIMAL_BASE;
-
         if (sameProportionFt > ftOutAmt) {
             uint xtExcess = xtOutAmt -
                 (ftOutAmt * Constants.DECIMAL_BASE) /
@@ -403,8 +405,8 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
                 mConfig
             );
 
-            uint ypCurrentReserve = ft.balanceOf(address(this));
-            netOut = ypCurrentReserve - finalFtReserve;
+            uint ftCurrentReserve = ft.balanceOf(address(this));
+            netOut = ftCurrentReserve - finalFtReserve;
         } else {
             uint newFtReserve;
             uint newXtReserve;
@@ -442,8 +444,8 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
                 ),
                 mConfig
             );
-            uint yaCurrentReserve = xt.balanceOf(address(this));
-            netOut = yaCurrentReserve - finalXtReserve;
+            uint xtCurrentReserve = xt.balanceOf(address(this));
+            netOut = xtCurrentReserve - finalXtReserve;
         }
 
         if (netOut < minTokenOut) {
@@ -606,11 +608,11 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
             lockingPercentage +
             Constants.DECIMAL_BASE -
             1) / Constants.DECIMAL_BASE;
-        uint ypAmount = (feeToLock * initialLtv) / Constants.DECIMAL_BASE;
+        uint ftAmount = (feeToLock * initialLtv) / Constants.DECIMAL_BASE;
 
         uint lpFtAmt = TermMaxCurve._calculateLpOut(
-            ypAmount,
-            ft.balanceOf(address(this)) - ypAmount,
+            ftAmount,
+            ft.balanceOf(address(this)) - ftAmount,
             lpFt.totalSupply()
         );
         lpFt.mint(address(this), lpFtAmt);
@@ -744,72 +746,81 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
                 );
             }
         }
-
         // Burn all lp tokens owned by this contract after maturity to release all reward
         if (!mConfig.rewardIsDistributed) {
             _distributeAllReward();
+            _config.rewardIsDistributed = true;
         }
+
         // k = (1 - initalLtv) * DECIMAL_BASE
         uint k = Constants.DECIMAL_BASE - mConfig.initialLtv;
+        // All points = ftSupply + xtSupply * (1 - initalLtv) = ftSupply + xtSupply * k / DECIMAL_BASE
+        uint allPoints = ft.totalSupply() *
+            Constants.DECIMAL_BASE +
+            xt.totalSupply() *
+            k;
+
         uint userPoint;
         // uint fee;
         {
             // Calculate lp tokens output
-            uint lpFtAmt = amountArray[0];
+            uint lpFtAmt = amountArray[2];
             if (lpFtAmt > 0) {
                 lpFt.transferFrom(caller, address(this), lpFtAmt);
                 uint lpFtTotalSupply = lpFt.totalSupply();
                 uint ftReserve = ft.balanceOf(address(this));
-                userPoint += (lpFtAmt * ftReserve) / lpFtTotalSupply;
+                uint ftPoint = (lpFtAmt * ftReserve * Constants.DECIMAL_BASE) /
+                    lpFtTotalSupply;
+                userPoint += ftPoint;
                 lpFt.burn(lpFtAmt);
+                ft.burn(ftPoint / Constants.DECIMAL_BASE);
             }
-            uint lpXtAmt = amountArray[1];
+            uint lpXtAmt = amountArray[3];
             if (lpXtAmt > 0) {
                 lpXt.transferFrom(caller, address(this), lpXtAmt);
                 uint lpXtTotalSupply = lpXt.totalSupply();
                 uint xtReserve = xt.balanceOf(address(this));
-                uint xtAmt = (lpXtAmt * xtReserve) / lpXtTotalSupply;
-                userPoint += (xtAmt * k) / Constants.DECIMAL_BASE;
-                lpFt.burn(lpXtAmt);
-            }
-        }
-        // All points = ypSupply + yaSupply * (1 - initalLtv) = ypSupply * k / DECIMAL_BASE
-        uint allPoints = ft.totalSupply() +
-            (xt.totalSupply() * k) /
-            Constants.DECIMAL_BASE;
-        {
-            uint ftAmt = amountArray[2];
-            if (ftAmt > 0) {
-                ft.transferFrom(caller, address(this), ftAmt);
-                userPoint += ftAmt;
-                ft.burn(ftAmt);
-            }
-            uint xtAmt = amountArray[3];
-            if (xtAmt > 0) {
-                xt.transferFrom(caller, address(this), xtAmt);
-                userPoint += (xtAmt * k) / Constants.DECIMAL_BASE;
-                xt.burn(xtAmt);
+                uint xtPoint = (lpXtAmt * xtReserve * k) / lpXtTotalSupply;
+                userPoint += xtPoint;
+                lpXt.burn(lpXtAmt);
+                xt.burn(xtPoint / k);
             }
         }
 
+        {
+            uint ftAmt = amountArray[0];
+            if (ftAmt > 0) {
+                ft.transferFrom(caller, address(this), ftAmt);
+                userPoint += ftAmt * Constants.DECIMAL_BASE;
+                ft.burn(ftAmt);
+            }
+            uint xtAmt = amountArray[1];
+            if (xtAmt > 0) {
+                xt.transferFrom(caller, address(this), xtAmt);
+                userPoint += xtAmt * k;
+                xt.burn(xtAmt);
+            }
+        }
         // The proportion that user will get how many underlying and collateral when do redeem
-        uint proportion = (userPoint * Constants.DECIMAL_BASE) / allPoints;
+        uint proportion = (userPoint * Constants.DECIMAL_BASE_SQ) / allPoints;
         bytes memory deliveryData = gt.delivery(proportion, caller);
         // Transfer underlying output
-        uint underlyingAmt = (underlying.balanceOf(address(this)) *
-            proportion) / Constants.DECIMAL_BASE;
+        uint redeemmingAmt = (underlying.balanceOf(address(this)) *
+            proportion) / Constants.DECIMAL_BASE_SQ;
+        uint feeAmt;
         if (mConfig.redeemFeeRatio > 0) {
-            underlyingAmt = _tranferFeeToTreasurer(
-                mConfig.treasurer,
-                underlyingAmt,
-                mConfig.redeemFeeRatio
-            );
+            feeAmt =
+                (redeemmingAmt * mConfig.redeemFeeRatio) /
+                Constants.DECIMAL_BASE;
+            underlying.transfer(mConfig.treasurer, feeAmt);
+            redeemmingAmt -= feeAmt;
         }
-        underlying.transfer(caller, underlyingAmt);
+        underlying.transfer(caller, redeemmingAmt);
         emit Redeem(
             caller,
             proportion.toUint128(),
-            underlyingAmt.toUint128(),
+            redeemmingAmt.toUint128(),
+            feeAmt.toUint128(),
             deliveryData
         );
     }
@@ -824,7 +835,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         if (lpXtBalance > 0) {
             lpXt.burn(lpXtBalance);
         }
-        // Burn all ft tokens in gt
+        // Burn all ft in gt
         uint amount = ft.balanceOf(address(gt));
         ft.transferFrom(address(gt), address(this), amount);
         ft.burn(amount);
