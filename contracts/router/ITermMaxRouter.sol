@@ -190,6 +190,11 @@ interface ITermMaxRouter {
     uint256 minBorrowAmt
   ) external returns (uint256 gtId);
 
+  function repay(
+    ITermMaxMarket market,
+    uint256 gtId,
+    uint256 repayAmt
+  ) external;
   function repayFromFt(
     ITermMaxMarket market,
     uint256 gtId,
@@ -203,5 +208,11 @@ interface ITermMaxRouter {
     uint256 tokenInAmt,
     uint256 minFtOutToRepay
   ) external;
+
+  function provideLiquidity(
+    address receiver,
+    ITermMaxMarket market,
+    uint256 underlyingAmt
+  ) external returns (uint128 lpFtOutAmt, uint128 lpXtOutAmt);
 
 }
