@@ -123,6 +123,5 @@ library DeployUtils {
         address proxy = address(new ERC1967Proxy(implementation, data));
 
         router = TermMaxRouter(proxy);
-        console.log("TermMaxRouter deploy at:", address(router));
     }
 }
