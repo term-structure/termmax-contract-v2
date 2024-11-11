@@ -126,7 +126,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         uint32 issueFtfeeRatio,
         uint32 lockingPercentage,
         uint32 protocolFeeRatio
-    ) external override onlyOwner isOpen {
+    ) external override onlyOwner {
         MarketConfig memory mConfig = _config;
         mConfig.lendFeeRatio = lendFeeRatio;
         mConfig.minNLendFeeR = minNLendFeeR;
@@ -136,6 +136,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         mConfig.issueFtfeeRatio = issueFtfeeRatio;
         mConfig.lockingPercentage = lockingPercentage;
         mConfig.protocolFeeRatio = protocolFeeRatio;
+        _config = mConfig;
         emit UpdateFeeRate(
             lendFeeRatio,
             minNLendFeeR,
