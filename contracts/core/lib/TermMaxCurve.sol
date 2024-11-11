@@ -13,6 +13,9 @@ library TermMaxCurve {
     using SafeCast for uint256;
     using SafeCast for int256;
 
+    /// @notice Error for transaction lead to liquidity depletion
+    error LiquidityIsZeroAfterTransaction();
+
     /// @notice Square root method
     function _sqrt(uint256 x) internal pure returns (uint256) {
         if (x == 0) return 0;

@@ -20,8 +20,6 @@ interface ITermMaxMarket {
     error MarketIsNotOpen();
     /// @notice Error for the maturity day has been reached
     error MarketWasClosed();
-    /// @notice Error for transaction lead to liquidity depletion
-    error LiquidityIsZeroAfterTransaction();
     /// @notice Error for the actual output value does not match the expected value
     error UnexpectedAmount(uint128 expectedAmt, uint128 actualAmt);
     /// @notice Error for redeeming before the liquidation window
