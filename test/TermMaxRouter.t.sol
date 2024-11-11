@@ -15,8 +15,7 @@ import {ITermMaxFactory, TermMaxFactory, IMintableERC20, IGearingToken, Aggregat
 import "../contracts/core/storage/TermMaxStorage.sol";
 import {TermMaxRouter} from "../contracts/router/TermMaxRouter.sol";
 import {ITermMaxRouter, SwapInput} from "../contracts/router/ITermMaxRouter.sol";
-
-
+import {LoanUtils} from "./utils/LoanUtils.sol";
 
 contract TermMaxRouterTest is Test {
     address deployer = vm.envAddress("FORK_DEPLOYER_ADDR");
@@ -230,9 +229,9 @@ contract TermMaxRouterTest is Test {
         vm.startPrank(sender);
 
 
-        uint128 underlyingAmtInForBuyXt = 1e18;
+        uint128 underlyingAmtInForBuyXt = 5e8;
         uint128 minXTOut = 0e8;
-        uint256 minCollAmt = 100e8 * 2;
+        uint256 minCollAmt = 100e18;
         res.underlying.mint(sender, underlyingAmtInForBuyXt);
         res.underlying.approve(address(router), underlyingAmtInForBuyXt);
 
@@ -257,14 +256,14 @@ contract TermMaxRouterTest is Test {
     function testLeverageFromXt() public {
         vm.startPrank(sender);
 
-        uint128 underlyingAmtIn = 1e18;
+        uint128 underlyingAmtIn = 10e8;
         uint128 minTokenOut = 0e8;
         res.underlying.mint(sender, underlyingAmtIn);
         res.underlying.approve(address(router), underlyingAmtIn);
         uint256 netXtOut = router.swapExactTokenForXt(receiver, res.market, underlyingAmtIn, minTokenOut);
         uint256 xtInAmt = netXtOut;
 
-        uint256 minCollAmt = 100e8 * 2;
+        uint256 minCollAmt = 100e18 * 2;
         bytes memory swapData = abi.encodeWithSelector(
             IMintableERC20.mint.selector,
             address(router),
@@ -286,9 +285,9 @@ contract TermMaxRouterTest is Test {
     function testBorrowTokenFromCollateral() public {
         vm.startPrank(sender);
 
-        uint128 collateralAmtIn = 1e18;
-        uint128 debtAmt = 95e8;
-        uint128 borrowAmt = 0e8;
+        uint128 collateralAmtIn = 100e18 * 2;
+        uint128 debtAmt = 20e8;
+        uint128 borrowAmt = 1e8;
         res.collateral.mint(sender, collateralAmtIn);
         res.collateral.approve(address(router), collateralAmtIn);
 
@@ -297,7 +296,7 @@ contract TermMaxRouterTest is Test {
         (
             address final_owner,
             uint128 final_debtAmt,
-            uint128 final_ltv,
+            ,
             bytes memory final_collateralData
         ) = res.gt.loanInfo(gtId);
         assert(final_owner == receiver);
@@ -317,18 +316,18 @@ contract TermMaxRouterTest is Test {
         res.underlying.mint(sender, underlyingAmtIn);
         res.underlying.approve(address(router), underlyingAmtIn);
 
-        uint expectLpFtOutAmt = vm.parseUint(
-            vm.parseJsonString(
-                testdata,
-                ".expected.provideLiquidity.output.lpFtAmount"
-            )
-        );
-        uint expectLpXtOutAmt = vm.parseUint(
-            vm.parseJsonString(
-                testdata,
-                ".expected.provideLiquidity.output.lpXtAmount"
-            )
-        );
+        // uint expectLpFtOutAmt = vm.parseUint(
+        //     vm.parseJsonString(
+        //         testdata,
+        //         ".expected.provideLiquidity.output.lpFtAmount"
+        //     )
+        // );
+        // uint expectLpXtOutAmt = vm.parseUint(
+        //     vm.parseJsonString(
+        //         testdata,
+        //         ".expected.provideLiquidity.output.lpXtAmount"
+        //     )
+        // );
 
         (uint128 lpFtOutAmt, uint128 lpXtOutAmt) = router.provideLiquidity(
             receiver,
@@ -424,7 +423,7 @@ contract TermMaxRouterTest is Test {
         res.underlying.mint(sender, underlyingAmtIn);
         res.underlying.approve(address(router), underlyingAmtIn);
         vm.warp(res.market.config().maturity - 1);
-        (uint128 lpFtOutAmt, uint128 lpXtOutAmt) = router.provideLiquidity(
+        router.provideLiquidity(
             receiver,
             res.market,
             underlyingAmtIn
@@ -443,7 +442,7 @@ contract TermMaxRouterTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(ITermMaxMarket.MarketWasClosed.selector)
         );
-        (uint128 lpFtOutAmt, uint128 lpXtOutAmt) = router.provideLiquidity(
+        router.provideLiquidity(
             receiver,
             res.market,
             underlyingAmtIn
@@ -695,4 +694,202 @@ contract TermMaxRouterTest is Test {
     }
     
 
+    function testRedeem() public {
+        vm.startPrank(sender);
+        // Add debt
+        {
+            uint128 debtAmt = 100e8;
+            uint256 collateralAmt = 1e18;
+            (uint256 gtId, ) = LoanUtils.fastMintGt(
+                res,
+                sender,
+                debtAmt,
+                collateralAmt
+            );
+            uint128 repayAmt = debtAmt / 10;
+            res.ft.approve(address(res.gt), repayAmt);
+
+            res.gt.repay(gtId, repayAmt, false);
+        }
+        // Do some swap
+        {
+            uint ftBalance = res.ft.balanceOf(sender);
+            res.ft.approve(address(res.market), ftBalance);
+            res.market.sellFt(uint128(ftBalance / 2), 0);
+
+            uint lpXtBalance = res.lpXt.balanceOf(sender);
+            res.lpXt.approve(address(res.market), lpXtBalance);
+
+            res.market.withdrawLp(0, uint128(lpXtBalance / 2));
+        }
+        assert(res.lpFt.balanceOf(address(res.market)) > 0);
+        assert(res.lpXt.balanceOf(address(res.market)) > 0);
+        assert(res.ft.balanceOf(address(res.gt)) > 0);
+
+        vm.warp(marketConfig.maturity + Constants.LIQUIDATION_WINDOW);
+
+        uint256[4] memory senderBalances = _getBalancesAndApproveAll(
+            res,
+            sender
+        );
+        (
+            uint128 propotion,
+            uint128 underlyingAmt,
+            uint128 feeAmt,
+            bytes memory deliveryData
+        ) = StateChecker.getRedeemPoints(res, marketConfig, senderBalances);
+        uint underlyingBefore = res.underlying.balanceOf(sender);
+        uint collateralBefore = res.collateral.balanceOf(sender);
+
+        router.redeem(
+            receiver,
+            res.market,
+            senderBalances,
+            0, 0
+        );
+        vm.stopPrank();
+        uint underlyingAfter = res.underlying.balanceOf(sender);
+        uint collateralAfter = res.collateral.balanceOf(sender);
+        assertEq(underlyingBefore + underlyingAmt, underlyingAfter);
+        assertEq(
+            collateralBefore + abi.decode(deliveryData, (uint)),
+            collateralAfter
+        );
+
+        vm.startPrank(deployer);
+        uint[4] memory deployerBalances = _getBalancesAndApproveAll(
+            res,
+            deployer
+        );
+        (propotion, underlyingAmt, feeAmt, deliveryData) = StateChecker
+            .getRedeemPoints(res, marketConfig, deployerBalances);
+        
+
+        router.redeem(
+            receiver,
+            res.market,
+            deployerBalances,
+            0, 0
+        );
+
+        vm.startPrank(treasurer);
+
+        uint[4] memory treasurerBalances = _getBalancesAndApproveAll(
+            res,
+            treasurer
+        );
+        (propotion, underlyingAmt, feeAmt, deliveryData) = StateChecker
+            .getRedeemPoints(res, marketConfig, treasurerBalances);
+
+
+        router.redeem(
+            receiver,
+            res.market,
+            treasurerBalances,
+            0, 0
+        );
+
+        vm.stopPrank();
+
+        StateChecker.MarketState memory state = StateChecker.getMarketState(
+            res
+        );
+        assert(state.ftReserve == 0);
+        assert(state.xtReserve == 0);
+        assert(state.lpFtReserve == 0);
+        assert(state.lpXtReserve == 0);
+    }
+
+    function testRevertByCanNotRedeemBeforeFinalLiquidationDeadline() public {
+        vm.startPrank(sender);
+        // Add debt
+        {
+            uint128 debtAmt = 100e8;
+            uint256 collateralAmt = 1e18;
+            (uint256 gtId, ) = LoanUtils.fastMintGt(
+                res,
+                sender,
+                debtAmt,
+                collateralAmt
+            );
+            uint128 repayAmt = debtAmt / 10;
+            res.ft.approve(address(res.gt), repayAmt);
+
+            res.gt.repay(gtId, repayAmt, false);
+        }
+        // Do some swap
+        {
+            uint ftBalance = res.ft.balanceOf(sender);
+            res.ft.approve(address(res.market), ftBalance);
+            res.market.sellFt(uint128(ftBalance / 2), 0);
+
+            uint lpXtBalance = res.lpXt.balanceOf(sender);
+            res.lpXt.approve(address(res.market), lpXtBalance);
+
+            res.market.withdrawLp(0, uint128(lpXtBalance / 2));
+        }
+
+        assert(res.lpFt.balanceOf(address(res.market)) > 0);
+        assert(res.lpXt.balanceOf(address(res.market)) > 0);
+        assert(res.ft.balanceOf(address(res.gt)) > 0);
+
+        uint[4] memory balances = _getBalancesAndApproveAll(res, sender);
+
+        vm.warp(marketConfig.maturity);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ITermMaxMarket
+                    .CanNotRedeemBeforeFinalLiquidationDeadline
+                    .selector,
+                marketConfig.maturity + Constants.LIQUIDATION_WINDOW
+            )
+        );
+        router.redeem(
+            receiver,
+            res.market,
+            balances,
+            0, 0
+        );
+        
+
+        vm.warp(marketConfig.maturity - Constants.SECONDS_IN_DAY);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ITermMaxMarket
+                    .CanNotRedeemBeforeFinalLiquidationDeadline
+                    .selector,
+                marketConfig.maturity + Constants.LIQUIDATION_WINDOW
+            )
+        );
+        router.redeem(
+            receiver,
+            res.market,
+            balances,
+            0, 0
+        );
+
+        vm.stopPrank();
+    }
+
+    function _getBalancesAndApproveAll(
+        DeployUtils.Res memory res_,
+        address user
+    ) internal returns (uint[4] memory balances) {
+        uint256[6] memory balancesArray = StateChecker.getUserBalances(
+            res_,
+            user
+        );
+        balances = [
+            balancesArray[0],
+            balancesArray[1],
+            balancesArray[2],
+            balancesArray[3]
+        ];
+        res_.ft.approve(address(router), balances[0]);
+        res_.xt.approve(address(router), balances[1]);
+        res_.lpFt.approve(address(router), balances[2]);
+        res_.lpXt.approve(address(router), balances[3]);
+    }
 }

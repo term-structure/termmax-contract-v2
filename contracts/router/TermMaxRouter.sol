@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-// import { IERC20Metadata as IERC20 } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
@@ -271,9 +270,10 @@ contract TermMaxRouter is
     address receiver,
     ITermMaxMarket market,
     uint256[4] calldata amountArray,
+    uint256 minCollOut,
     uint256 minTokenOut
-  ) ensureMarketWhitelist(address(market)) whenNotPaused external returns (uint256 netTokenOut) {
-    (IMintableERC20 ft, IMintableERC20 xt,IMintableERC20 lpFt,IMintableERC20 lpXt,,,IERC20 underlying) = market.tokens();
+  ) ensureMarketWhitelist(address(market)) whenNotPaused external returns (uint256 netCollOut, uint256 netTokenOut) {
+    (IMintableERC20 ft, IMintableERC20 xt,IMintableERC20 lpFt,IMintableERC20 lpXt,, address collateralAddr,IERC20 underlying) = market.tokens();
     if(amountArray[0] > 0) {
       _transferToSelfAndApproveSpender(IERC20(ft), msg.sender, address(market), amountArray[0]);
     }
@@ -288,6 +288,14 @@ contract TermMaxRouter is
     }
 
     market.redeem(amountArray);
+
+    IERC20 collateral = IERC20(collateralAddr);
+    netCollOut = _balanceOf(collateral, address(this));
+    if(netCollOut < minCollOut) {
+      revert("Slippage: INSUFFICIENT_COLLATERAL_OUT");
+    }
+    collateral.safeTransfer(receiver, netCollOut);
+
     netTokenOut = _balanceOf(underlying, address(this));
     if(netTokenOut < minTokenOut) {
       revert("Slippage: INSUFFICIENT_TOKEN_OUT");
@@ -300,7 +308,8 @@ contract TermMaxRouter is
       msg.sender,
       receiver,
       amountArray,
-      netTokenOut
+      netTokenOut,
+      netCollOut
     );
   }
 
@@ -347,7 +356,7 @@ contract TermMaxRouter is
     uint256 minCollAmt,
     SwapInput calldata swapInput
   ) ensureMarketWhitelist(address(market)) whenNotPaused external returns (uint256 gtId) {
-    (,IMintableERC20 xt,,, IGearingToken gt, address collateral, IERC20 underlying) = market.tokens();
+    (,IMintableERC20 xt,,, IGearingToken gt,, IERC20 underlying) = market.tokens();
     _transferToSelfAndApproveSpender(xt, msg.sender, address(market), xtInAmt);
 
 

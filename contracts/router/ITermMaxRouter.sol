@@ -91,7 +91,8 @@ interface ITermMaxRouter {
     address caller,
     address receiver,
     uint256[4] amountArray,
-    uint256 tokenOutAmt
+    uint256 tokenOutAmt,
+    uint256 collOutAmt
   );
 
   event Borrow(
@@ -162,8 +163,9 @@ interface ITermMaxRouter {
     address receiver,
     ITermMaxMarket market,
     uint256[4] calldata amountArray,
+    uint256 minCollOut,
     uint256 minTokenOut
-  ) external returns (uint256 netOut);
+  ) external returns (uint256 netCollOut, uint256 netTokenOut);
 
   function leverageFromToken(
     address receiver,
