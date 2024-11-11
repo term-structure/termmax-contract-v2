@@ -134,6 +134,26 @@ contract LpTest is Test {
         uint128 underlyingAmtIn = 100e8;
         res.underlying.mint(sender, underlyingAmtIn);
         res.underlying.approve(address(res.market), underlyingAmtIn);
+
+        uint expectLpFtOutAmt = vm.parseUint(
+            vm.parseJsonString(
+                testdata,
+                ".expected.provideLiquidityTwice.output.lpFtAmount"
+            )
+        );
+        uint expectLpXtOutAmt = vm.parseUint(
+            vm.parseJsonString(
+                testdata,
+                ".expected.provideLiquidityTwice.output.lpXtAmount"
+            )
+        );
+        vm.expectEmit();
+        emit ITermMaxMarket.ProvideLiquidity(
+            sender,
+            underlyingAmtIn,
+            uint128(expectLpFtOutAmt),
+            uint128(expectLpXtOutAmt)
+        );
         (uint128 lpFtOutAmt, uint128 lpXtOutAmt) = res.market.provideLiquidity(
             underlyingAmtIn
         );
@@ -145,24 +165,8 @@ contract LpTest is Test {
             );
         StateChecker.checkMarketState(res, expectedState);
 
-        assert(
-            lpFtOutAmt ==
-                vm.parseUint(
-                    vm.parseJsonString(
-                        testdata,
-                        ".expected.provideLiquidityTwice.output.lpFtAmount"
-                    )
-                )
-        );
-        assert(
-            lpXtOutAmt ==
-                vm.parseUint(
-                    vm.parseJsonString(
-                        testdata,
-                        ".expected.provideLiquidityTwice.output.lpXtAmount"
-                    )
-                )
-        );
+        assert(lpFtOutAmt == expectLpFtOutAmt);
+        assert(lpXtOutAmt == expectLpXtOutAmt);
         assert(res.lpFt.balanceOf(sender) == lpFtOutAmtFirstTime + lpFtOutAmt);
         assert(res.lpXt.balanceOf(sender) == lpXtOutAmtFirstTime + lpXtOutAmt);
 
@@ -208,36 +212,42 @@ contract LpTest is Test {
 
         res.lpFt.approve(address(res.market), lpFtOutAmt);
         res.lpXt.approve(address(res.market), lpXtOutAmt);
-        (uint128 ftOutAmt, uint128 xtOutAmt) = res.market.withdrawLp(
-            lpFtOutAmt,
-            lpXtOutAmt
-        );
 
         StateChecker.MarketState memory expectedState = JSONLoader
             .getMarketStateFromJson(
                 testdata,
                 ".expected.withdrawLp.contractState"
             );
+        uint expectFtOutAmt = vm.parseUint(
+            vm.parseJsonString(
+                testdata,
+                ".expected.withdrawLp.output.lpFtAmount"
+            )
+        );
+        uint expectXtOutAmt = vm.parseUint(
+            vm.parseJsonString(
+                testdata,
+                ".expected.withdrawLp.output.lpXtAmount"
+            )
+        );
+        vm.expectEmit();
+        emit ITermMaxMarket.WithdrawLP(
+            sender,
+            lpFtOutAmt,
+            lpXtOutAmt,
+            uint128(expectFtOutAmt),
+            uint128(expectXtOutAmt),
+            int64(expectedState.apr)
+        );
+        (uint128 ftOutAmt, uint128 xtOutAmt) = res.market.withdrawLp(
+            lpFtOutAmt,
+            lpXtOutAmt
+        );
+
         StateChecker.checkMarketState(res, expectedState);
 
-        assert(
-            ftOutAmt ==
-                vm.parseUint(
-                    vm.parseJsonString(
-                        testdata,
-                        ".expected.withdrawLp.output.lpFtAmount"
-                    )
-                )
-        );
-        assert(
-            xtOutAmt ==
-                vm.parseUint(
-                    vm.parseJsonString(
-                        testdata,
-                        ".expected.withdrawLp.output.lpXtAmount"
-                    )
-                )
-        );
+        assert(ftOutAmt == expectFtOutAmt);
+        assert(xtOutAmt == expectXtOutAmt);
         assert(res.ft.balanceOf(sender) == ftOutAmt);
         assert(res.xt.balanceOf(sender) == xtOutAmt);
 
@@ -282,36 +292,42 @@ contract LpTest is Test {
 
         res.lpFt.approve(address(res.market), lpFtOutAmt);
         res.lpXt.approve(address(res.market), lpXtOutAmt);
-        (uint128 ftOutAmt, uint128 xtOutAmt) = res.market.withdrawLp(
-            lpFtOutAmt,
-            lpXtOutAmt / 2
-        );
 
         StateChecker.MarketState memory expectedState = JSONLoader
             .getMarketStateFromJson(
                 testdata,
                 ".expected.withdrawLpWhenFtIsMore.contractState"
             );
+        uint expectFtOutAmt = vm.parseUint(
+            vm.parseJsonString(
+                testdata,
+                ".expected.withdrawLpWhenFtIsMore.output.lpFtAmount"
+            )
+        );
+        uint expectXtOutAmt = vm.parseUint(
+            vm.parseJsonString(
+                testdata,
+                ".expected.withdrawLpWhenFtIsMore.output.lpXtAmount"
+            )
+        );
+        vm.expectEmit();
+        emit ITermMaxMarket.WithdrawLP(
+            sender,
+            lpFtOutAmt,
+            lpXtOutAmt,
+            uint128(expectFtOutAmt),
+            uint128(expectXtOutAmt),
+            int64(expectedState.apr)
+        );
+        (uint128 ftOutAmt, uint128 xtOutAmt) = res.market.withdrawLp(
+            lpFtOutAmt,
+            lpXtOutAmt / 2
+        );
+
         StateChecker.checkMarketState(res, expectedState);
 
-        assert(
-            ftOutAmt ==
-                vm.parseUint(
-                    vm.parseJsonString(
-                        testdata,
-                        ".expected.withdrawLpWhenFtIsMore.output.lpFtAmount"
-                    )
-                )
-        );
-        assert(
-            xtOutAmt ==
-                vm.parseUint(
-                    vm.parseJsonString(
-                        testdata,
-                        ".expected.withdrawLpWhenFtIsMore.output.lpXtAmount"
-                    )
-                )
-        );
+        assert(ftOutAmt == expectFtOutAmt);
+        assert(xtOutAmt == expectXtOutAmt);
         assert(res.ft.balanceOf(sender) == ftOutAmt);
         assert(res.xt.balanceOf(sender) == xtOutAmt);
 
@@ -330,36 +346,42 @@ contract LpTest is Test {
 
         res.lpFt.approve(address(res.market), lpFtOutAmt);
         res.lpXt.approve(address(res.market), lpXtOutAmt);
-        (uint128 ftOutAmt, uint128 xtOutAmt) = res.market.withdrawLp(
-            lpFtOutAmt / 2,
-            lpXtOutAmt
-        );
 
         StateChecker.MarketState memory expectedState = JSONLoader
             .getMarketStateFromJson(
                 testdata,
                 ".expected.withdrawLpWhenXtIsMore.contractState"
             );
+        uint expectFtOutAmt = vm.parseUint(
+            vm.parseJsonString(
+                testdata,
+                ".expected.withdrawLpWhenXtIsMore.output.lpFtAmount"
+            )
+        );
+        uint expectXtOutAmt = vm.parseUint(
+            vm.parseJsonString(
+                testdata,
+                ".expected.withdrawLpWhenXtIsMore.output.lpXtAmount"
+            )
+        );
+        vm.expectEmit();
+        emit ITermMaxMarket.WithdrawLP(
+            sender,
+            lpFtOutAmt,
+            lpXtOutAmt,
+            uint128(expectFtOutAmt),
+            uint128(expectXtOutAmt),
+            int64(expectedState.apr)
+        );
+        (uint128 ftOutAmt, uint128 xtOutAmt) = res.market.withdrawLp(
+            lpFtOutAmt / 2,
+            lpXtOutAmt
+        );
+
         StateChecker.checkMarketState(res, expectedState);
 
-        assert(
-            ftOutAmt ==
-                vm.parseUint(
-                    vm.parseJsonString(
-                        testdata,
-                        ".expected.withdrawLpWhenXtIsMore.output.lpFtAmount"
-                    )
-                )
-        );
-        assert(
-            xtOutAmt ==
-                vm.parseUint(
-                    vm.parseJsonString(
-                        testdata,
-                        ".expected.withdrawLpWhenXtIsMore.output.lpXtAmount"
-                    )
-                )
-        );
+        assert(ftOutAmt == expectFtOutAmt);
+        assert(xtOutAmt == expectXtOutAmt);
         assert(res.ft.balanceOf(sender) == ftOutAmt);
         assert(res.xt.balanceOf(sender) == xtOutAmt);
 
