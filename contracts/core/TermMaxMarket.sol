@@ -409,8 +409,8 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
                 mConfig
             );
 
-            uint ypCurrentReserve = ft.balanceOf(address(this));
-            netOut = ypCurrentReserve - finalFtReserve;
+            uint ftCurrentReserve = ft.balanceOf(address(this));
+            netOut = ftCurrentReserve - finalFtReserve;
         } else {
             // XT final value = xt amount *(1-ltv)
             if (
@@ -456,8 +456,8 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
                 ),
                 mConfig
             );
-            uint yaCurrentReserve = xt.balanceOf(address(this));
-            netOut = yaCurrentReserve - finalXtReserve;
+            uint xtCurrentReserve = xt.balanceOf(address(this));
+            netOut = xtCurrentReserve - finalXtReserve;
         }
 
         if (netOut < minTokenOut) {
@@ -620,11 +620,11 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
             lockingPercentage +
             Constants.DECIMAL_BASE -
             1) / Constants.DECIMAL_BASE;
-        uint ypAmount = (feeToLock * initialLtv) / Constants.DECIMAL_BASE;
+        uint ftAmount = (feeToLock * initialLtv) / Constants.DECIMAL_BASE;
 
         uint lpFtAmt = TermMaxCurve._calculateLpOut(
-            ypAmount,
-            ft.balanceOf(address(this)) - ypAmount,
+            ftAmount,
+            ft.balanceOf(address(this)) - ftAmount,
             lpFt.totalSupply()
         );
         lpFt.mint(address(this), lpFtAmt);
@@ -766,7 +766,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
 
         // k = (1 - initalLtv) * DECIMAL_BASE
         uint k = Constants.DECIMAL_BASE - mConfig.initialLtv;
-        // All points = ypSupply + yaSupply * (1 - initalLtv) = ypSupply + yaSupply * k / DECIMAL_BASE
+        // All points = ftSupply + xtSupply * (1 - initalLtv) = ftSupply + xtSupply * k / DECIMAL_BASE
         uint allPoints = ft.totalSupply() *
             Constants.DECIMAL_BASE +
             xt.totalSupply() *
