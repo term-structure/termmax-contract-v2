@@ -36,6 +36,7 @@ library TermMaxCurve {
     /// @notice Calculate how many lp tokens should be minted to the liquidity provider
     /// @param tokenIn The amount of tokens provided
     /// @param tokenReserve The token's balance of the market
+    /// @param lpTotalSupply The total supply of this lp token
     /// @return lpOutAmt The amount of lp tokens to be minted to the liquidity provider
     function _calculateLpOut(
         uint256 tokenIn,
@@ -326,11 +327,11 @@ library TermMaxCurve {
                 ((xtPlusBeta - params.amount) * config.initialLtv) /
                 Constants.DECIMAL_BASE;
             // borrow stack space newXtReserve as ac
-            uint ac = ((((params.amount * xtPlusBeta) * config.initialLtv) /
+            uint negAc = ((((params.amount * xtPlusBeta) * config.initialLtv) /
                 Constants.DECIMAL_BASE) * config.initialLtv) /
                 Constants.DECIMAL_BASE;
             deltaXt =
-                ((_sqrt(b * b + 4 * ac) - b) * Constants.DECIMAL_BASE) /
+                ((_sqrt(b * b + 4 * negAc) - b) * Constants.DECIMAL_BASE) /
                 (config.initialLtv * 2);
             deltaFt =
                 ((params.amount - deltaXt) * config.initialLtv) /
