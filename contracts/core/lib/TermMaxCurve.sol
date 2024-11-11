@@ -36,6 +36,7 @@ library TermMaxCurve {
     /// @notice Calculate how many lp tokens should be minted to the liquidity provider
     /// @param tokenIn The amount of tokens provided
     /// @param tokenReserve The token's balance of the market
+    /// @param lpTotalSupply The total supply of this lp token
     /// @return lpOutAmt The amount of lp tokens to be minted to the liquidity provider
     function _calculateLpOut(
         uint256 tokenIn,
@@ -57,8 +58,11 @@ library TermMaxCurve {
     function _calcFtPlusAlpha(
         uint32 lsf,
         uint256 ftReserve
-    ) internal pure returns (uint256) {
-        return (ftReserve * Constants.DECIMAL_BASE) / lsf;
+    ) internal pure returns (uint256 ftPlusAlpha) {
+        ftPlusAlpha = (ftReserve * Constants.DECIMAL_BASE) / lsf;
+        if (ftPlusAlpha == 0) {
+            revert LiquidityIsZeroAfterTransaction();
+        }
     }
 
     /// @notice Calculte the XT token reserve plus beta
@@ -100,6 +104,9 @@ library TermMaxCurve {
                     daysToMaturity -
                     ltv *
                     Constants.DAYS_IN_YEAR);
+        }
+        if (xtPlusBeta == 0) {
+            revert LiquidityIsZeroAfterTransaction();
         }
     }
 
@@ -229,6 +236,9 @@ library TermMaxCurve {
         uint deltaFt = params.amount -
             (deltaXt * config.initialLtv) /
             Constants.DECIMAL_BASE;
+        if (xtPlusBeta <= deltaXt) {
+            revert LiquidityIsZeroAfterTransaction();
+        }
         newApr = _calcApr(
             config.initialLtv,
             params.daysToMaturity,
@@ -274,6 +284,9 @@ library TermMaxCurve {
         uint deltaFt = ftPlusAlpha -
             (ftPlusAlpha * xtPlusBeta) /
             (xtPlusBeta + deltaXt);
+        if (ftPlusAlpha <= deltaFt) {
+            revert LiquidityIsZeroAfterTransaction();
+        }
         newApr = _calcApr(
             config.initialLtv,
             params.daysToMaturity,
@@ -314,17 +327,19 @@ library TermMaxCurve {
                 ((xtPlusBeta - params.amount) * config.initialLtv) /
                 Constants.DECIMAL_BASE;
             // borrow stack space newXtReserve as ac
-            uint ac = ((((params.amount * xtPlusBeta) * config.initialLtv) /
+            uint negAc = ((((params.amount * xtPlusBeta) * config.initialLtv) /
                 Constants.DECIMAL_BASE) * config.initialLtv) /
                 Constants.DECIMAL_BASE;
             deltaXt =
-                ((_sqrt(b * b + 4 * ac) - b) * Constants.DECIMAL_BASE) /
+                ((_sqrt(b * b + 4 * negAc) - b) * Constants.DECIMAL_BASE) /
                 (config.initialLtv * 2);
             deltaFt =
                 ((params.amount - deltaXt) * config.initialLtv) /
                 Constants.DECIMAL_BASE;
         }
-
+        if (ftPlusAlpha <= deltaFt) {
+            revert LiquidityIsZeroAfterTransaction();
+        }
         newApr = _calcApr(
             config.initialLtv,
             params.daysToMaturity,
@@ -370,6 +385,9 @@ library TermMaxCurve {
         uint deltaFt = (ftPlusAlpha * xtPlusBeta) /
             (xtPlusBeta - deltaXt) -
             ftPlusAlpha;
+        if (xtPlusBeta <= deltaXt) {
+            revert LiquidityIsZeroAfterTransaction();
+        }
         newApr = _calcApr(
             config.initialLtv,
             params.daysToMaturity,
@@ -406,6 +424,9 @@ library TermMaxCurve {
         uint deltaFt = ftPlusAlpha -
             (ftPlusAlpha * xtPlusBeta) /
             (xtPlusBeta + deltaXt);
+        if (ftPlusAlpha <= deltaFt) {
+            revert LiquidityIsZeroAfterTransaction();
+        }
         newApr = _calcApr(
             config.initialLtv,
             params.daysToMaturity,
@@ -438,18 +459,21 @@ library TermMaxCurve {
             config.apr,
             params.ftReserve
         );
-        uint negDeltaXt = params.amount;
-        uint negDeltaFt = (ftPlusAlpha * xtPlusBeta) /
-            (xtPlusBeta - negDeltaXt) -
+        uint deltaXt = params.amount;
+        uint deltaFt = (ftPlusAlpha * xtPlusBeta) /
+            (xtPlusBeta - deltaXt) -
             ftPlusAlpha;
+        if (xtPlusBeta <= deltaXt) {
+            revert LiquidityIsZeroAfterTransaction();
+        }
         newApr = _calcApr(
             config.initialLtv,
             params.daysToMaturity,
-            ftPlusAlpha + negDeltaFt,
-            xtPlusBeta - negDeltaXt
+            ftPlusAlpha + deltaFt,
+            xtPlusBeta - deltaXt
         );
-        newFtReserve = params.ftReserve + negDeltaFt;
-        newXtReserve = params.xtReserve - negDeltaXt;
+        newFtReserve = params.ftReserve + deltaFt;
+        newXtReserve = params.xtReserve - deltaXt;
     }
 
     /// @notice Calculate the changes in market reserves and apr after buying XT tokens
@@ -479,6 +503,9 @@ library TermMaxCurve {
         uint deltaXt = xtPlusBeta -
             (xtPlusBeta * ftPlusAlpha) /
             (ftPlusAlpha + deltaFt);
+        if (xtPlusBeta <= deltaXt) {
+            revert LiquidityIsZeroAfterTransaction();
+        }
         newApr = _calcApr(
             config.initialLtv,
             params.daysToMaturity,
@@ -511,19 +538,22 @@ library TermMaxCurve {
             config.apr,
             params.ftReserve
         );
-        uint negDeltaFt = (params.amount * config.initialLtv) /
+        uint deltaFt = (params.amount * config.initialLtv) /
             Constants.DECIMAL_BASE;
-        uint negDeltaXt = (xtPlusBeta * ftPlusAlpha) /
-            (ftPlusAlpha - negDeltaFt) -
+        uint deltaXt = (xtPlusBeta * ftPlusAlpha) /
+            (ftPlusAlpha - deltaFt) -
             xtPlusBeta;
+        if (ftPlusAlpha <= deltaFt) {
+            revert LiquidityIsZeroAfterTransaction();
+        }
         newApr = _calcApr(
             config.initialLtv,
             params.daysToMaturity,
-            ftPlusAlpha - negDeltaFt,
-            xtPlusBeta + negDeltaXt
+            ftPlusAlpha - deltaFt,
+            xtPlusBeta + deltaXt
         );
 
-        newFtReserve = params.ftReserve - negDeltaFt;
-        newXtReserve = params.xtReserve + negDeltaXt;
+        newFtReserve = params.ftReserve - deltaFt;
+        newXtReserve = params.xtReserve + deltaXt;
     }
 }
