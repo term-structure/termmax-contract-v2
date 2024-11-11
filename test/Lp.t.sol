@@ -8,7 +8,7 @@ import {JSONLoader} from "./utils/JSONLoader.sol";
 import {StateChecker} from "./utils/StateChecker.sol";
 import {SwapUtils} from "./utils/SwapUtils.sol";
 
-import {ITermMaxMarket, TermMaxMarket, Constants} from "../contracts/core/TermMaxMarket.sol";
+import {ITermMaxMarket, TermMaxMarket, Constants, TermMaxCurve} from "../contracts/core/TermMaxMarket.sol";
 import {MockERC20, ERC20} from "../contracts/test/MockERC20.sol";
 import {MockPriceFeed} from "../contracts/test/MockPriceFeed.sol";
 import {ITermMaxFactory, TermMaxFactory, IMintableERC20, IGearingToken, AggregatorV3Interface} from "../contracts/core/factory/TermMaxFactory.sol";
@@ -66,6 +66,26 @@ contract LpTest is Test {
         uint128 underlyingAmtIn = 100e8;
         res.underlying.mint(sender, underlyingAmtIn);
         res.underlying.approve(address(res.market), underlyingAmtIn);
+
+        uint expectLpFtOutAmt = vm.parseUint(
+            vm.parseJsonString(
+                testdata,
+                ".expected.provideLiquidity.output.lpFtAmount"
+            )
+        );
+        uint expectLpXtOutAmt = vm.parseUint(
+            vm.parseJsonString(
+                testdata,
+                ".expected.provideLiquidity.output.lpXtAmount"
+            )
+        );
+        vm.expectEmit();
+        emit ITermMaxMarket.ProvideLiquidity(
+            sender,
+            underlyingAmtIn,
+            uint128(expectLpFtOutAmt),
+            uint128(expectLpXtOutAmt)
+        );
         (uint128 lpFtOutAmt, uint128 lpXtOutAmt) = res.market.provideLiquidity(
             underlyingAmtIn
         );
@@ -232,7 +252,7 @@ contract LpTest is Test {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                ITermMaxMarket.LiquidityIsZeroAfterTransaction.selector
+                TermMaxCurve.LiquidityIsZeroAfterTransaction.selector
             )
         );
         res.market.withdrawLp(uint128(lpFtBlance), 0);
@@ -242,7 +262,7 @@ contract LpTest is Test {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                ITermMaxMarket.LiquidityIsZeroAfterTransaction.selector
+                TermMaxCurve.LiquidityIsZeroAfterTransaction.selector
             )
         );
         res.market.withdrawLp(0, uint128(lpXtBlance));
