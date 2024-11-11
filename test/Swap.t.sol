@@ -87,21 +87,24 @@ contract SwapTest is Test {
         uint actualOut = vm.parseUint(
             vm.parseJsonString(testdata, ".expected.testBuyFt.output.netOut")
         );
+        uint fee = vm.parseUint(
+            vm.parseJsonString(testdata, ".expected.testBuyFt.output.fee")
+        );
         StateChecker.MarketState memory expectedState = JSONLoader
             .getMarketStateFromJson(
                 testdata,
                 ".expected.testBuyFt.contractState"
             );
-        // vm.expectEmit();
-        // emit ITermMaxMarket.BuyToken(
-        //     sender,
-        //     res.ft,
-        //     underlyingAmtIn,
-        //     minTokenOut,
-        //     actualOut,
-        //     ,
-        //     expectedState.apr
-        // );
+        vm.expectEmit();
+        emit ITermMaxMarket.BuyToken(
+            sender,
+            res.ft,
+            underlyingAmtIn,
+            minTokenOut,
+            uint128(actualOut),
+            uint128(fee),
+            int64(expectedState.apr)
+        );
         uint256 netOut = res.market.buyFt(underlyingAmtIn, minTokenOut);
 
         StateChecker.checkMarketState(res, expectedState);
@@ -111,6 +114,7 @@ contract SwapTest is Test {
 
         vm.stopPrank();
     }
+
     // TODO
     // function testBuyAllFt() public {
     //     vm.startPrank(sender);
@@ -194,28 +198,38 @@ contract SwapTest is Test {
         uint128 minTokenOut = 0e8;
         res.underlying.mint(sender, underlyingAmtIn);
         res.underlying.approve(address(res.market), underlyingAmtIn);
-        uint256 netOut = res.market.buyXt(underlyingAmtIn, minTokenOut);
 
+        uint actualOut = vm.parseUint(
+            vm.parseJsonString(testdata, ".expected.testBuyXt.output.netOut")
+        );
+        uint fee = vm.parseUint(
+            vm.parseJsonString(testdata, ".expected.testBuyXt.output.fee")
+        );
         StateChecker.MarketState memory expectedState = JSONLoader
             .getMarketStateFromJson(
                 testdata,
                 ".expected.testBuyXt.contractState"
             );
+        vm.expectEmit();
+        emit ITermMaxMarket.BuyToken(
+            sender,
+            res.xt,
+            underlyingAmtIn,
+            minTokenOut,
+            uint128(actualOut),
+            uint128(fee),
+            int64(expectedState.apr)
+        );
+        uint256 netOut = res.market.buyXt(underlyingAmtIn, minTokenOut);
+
         StateChecker.checkMarketState(res, expectedState);
 
-        assert(
-            netOut ==
-                vm.parseUint(
-                    vm.parseJsonString(
-                        testdata,
-                        ".expected.testBuyXt.output.netOut"
-                    )
-                )
-        );
+        assert(netOut == actualOut);
         assert(res.xt.balanceOf(sender) == netOut);
 
         vm.stopPrank();
     }
+
     // TODO
     // function testBuyAllXt() public {
     //     vm.startPrank(sender);
@@ -305,24 +319,33 @@ contract SwapTest is Test {
         );
         uint128 minTokenOut = 0e8;
         res.ft.approve(address(res.market), ftAmtIn);
-        uint256 netOut = res.market.sellFt(ftAmtIn, minTokenOut);
 
+        uint actualOut = vm.parseUint(
+            vm.parseJsonString(testdata, ".expected.testSellFt.output.netOut")
+        );
+        uint fee = vm.parseUint(
+            vm.parseJsonString(testdata, ".expected.testSellFt.output.fee")
+        );
         StateChecker.MarketState memory expectedState = JSONLoader
             .getMarketStateFromJson(
                 testdata,
                 ".expected.testSellFt.contractState"
             );
+        vm.expectEmit();
+        emit ITermMaxMarket.SellToken(
+            sender,
+            res.ft,
+            ftAmtIn,
+            minTokenOut,
+            uint128(actualOut),
+            uint128(fee),
+            int64(expectedState.apr)
+        );
+        uint256 netOut = res.market.sellFt(ftAmtIn, minTokenOut);
+
         StateChecker.checkMarketState(res, expectedState);
 
-        assert(
-            netOut ==
-                vm.parseUint(
-                    vm.parseJsonString(
-                        testdata,
-                        ".expected.testSellFt.output.netOut"
-                    )
-                )
-        );
+        assert(netOut == actualOut);
         assert(res.ft.balanceOf(sender) == 0);
         assert(res.underlying.balanceOf(sender) == netOut);
 
@@ -415,24 +438,33 @@ contract SwapTest is Test {
         );
         uint128 minTokenOut = 0e8;
         res.xt.approve(address(res.market), xtAmtIn);
-        uint256 netOut = res.market.sellXt(xtAmtIn, minTokenOut);
 
+        uint actualOut = vm.parseUint(
+            vm.parseJsonString(testdata, ".expected.testSellXt.output.netOut")
+        );
+        uint fee = vm.parseUint(
+            vm.parseJsonString(testdata, ".expected.testSellXt.output.fee")
+        );
         StateChecker.MarketState memory expectedState = JSONLoader
             .getMarketStateFromJson(
                 testdata,
                 ".expected.testSellXt.contractState"
             );
+        vm.expectEmit();
+        emit ITermMaxMarket.SellToken(
+            sender,
+            res.xt,
+            xtAmtIn,
+            minTokenOut,
+            uint128(actualOut),
+            uint128(fee),
+            int64(expectedState.apr)
+        );
+        uint256 netOut = res.market.sellXt(xtAmtIn, minTokenOut);
+
         StateChecker.checkMarketState(res, expectedState);
 
-        assert(
-            netOut ==
-                vm.parseUint(
-                    vm.parseJsonString(
-                        testdata,
-                        ".expected.testSellXt.output.netOut"
-                    )
-                )
-        );
+        assert(netOut == actualOut);
         assert(res.xt.balanceOf(sender) == 0);
         assert(res.underlying.balanceOf(sender) == netOut);
 
@@ -596,6 +628,9 @@ contract SwapTest is Test {
         StateChecker.MarketState memory state = StateChecker.getMarketState(
             res
         );
+
+        vm.expectEmit();
+        emit ITermMaxMarket.RemoveLiquidity(sender, xtAmtToRedeem);
         res.market.redeemFtAndXtToUnderlying(xtAmtToRedeem);
         state.underlyingReserve -= underlyingAmtToRedeem;
         StateChecker.checkMarketState(res, state);
@@ -688,8 +723,6 @@ contract SwapTest is Test {
         outer.leverageByXt(sender, xtAmtIn, callbackData);
         vm.stopPrank();
     }
-
-    //TODO: test case for redemption
 }
 
 contract MockOuter is IFlashLoanReceiver {

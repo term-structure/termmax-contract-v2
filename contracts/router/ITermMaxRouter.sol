@@ -28,6 +28,92 @@ struct LeverageFromTokenData {
 
 interface ITermMaxRouter {
 
+  event Swap(
+    ITermMaxMarket indexed market,
+    address indexed assetIn,
+    address indexed assetOut,
+    address caller,
+    address receiver,
+    uint256 inAmt,
+    uint256 outAmt,
+    uint256 minOutAmt
+  );
+
+  event AddLiquidity(
+    ITermMaxMarket indexed market,
+    address indexed assetIn,
+    address caller,
+    address receiver,
+    uint256 underlyingInAmt,
+    uint256 lpFtOutAmt,
+    uint256 lpXtOutAmt
+  );
+
+  event WithdrawLiquidityToXtFt(
+    ITermMaxMarket indexed market,
+    address caller,
+    address receiver,
+    uint256 lpFtInAmt,
+    uint256 lpXtInAmt,
+    uint256 ftOutAmt,
+    uint256 xtOutAmt,
+    uint256 minFtInAmt,
+    uint256 minXtInAmt
+  );
+
+  event WithdrawLiquidtyToToken(
+    ITermMaxMarket indexed market,
+    address assetOut,
+    address caller,
+    address receiver,
+    uint256 lpFtInAmt,
+    uint256 lpXtInAmt,
+    uint256 tokenOutAmt,
+    uint256 minTokenOutAmt
+  );
+
+  event IssueGt(
+    ITermMaxMarket indexed market,
+    address indexed assetIn,
+    address caller,
+    address receiver,
+    uint256 gtId,
+    uint256 inAmt,
+    uint256 xtInAmt,
+    uint256 collAmt,
+    uint256 minCollAmt,
+    uint256 minXTAmt
+  );
+
+  event Redeem(
+    ITermMaxMarket indexed market,
+    address indexed assetOut,
+    address caller,
+    address receiver,
+    uint256[4] amountArray,
+    uint256 tokenOutAmt,
+    uint256 collOutAmt
+  );
+
+  event Borrow(
+    ITermMaxMarket indexed market,
+    address indexed assetOut,
+    address caller,
+    address receiver,
+    uint256 gtId,
+    uint256 collInAmt,
+    uint256 debtAmt,
+    uint256 minDebtAmt
+  );
+
+  event Repay(
+    ITermMaxMarket indexed market,
+    bool indexed isRepayFt,
+    address indexed assetIn,
+    uint256 gtId,
+    uint256 inAmt
+  );
+
   function togglePause(bool isPause) external;
   function setMarketWhitelist(address market, bool isWhitelist) external;
   function setSwapperWhitelist(address swapper, bool isWhitelist) external;
@@ -77,8 +163,9 @@ interface ITermMaxRouter {
     address receiver,
     ITermMaxMarket market,
     uint256[4] calldata amountArray,
+    uint256 minCollOut,
     uint256 minTokenOut
-  ) external returns (uint256 netOut);
+  ) external returns (uint256 netCollOut, uint256 netTokenOut);
 
   function leverageFromToken(
     address receiver,
@@ -103,21 +190,31 @@ interface ITermMaxRouter {
     uint256 collInAmt,
     uint256 debtAmt,
     uint256 minBorrowAmt
-  ) external returns (uint256 gtId, uint256 netTokenOut);
+  ) external returns (uint256 gtId);
 
+  function repay(
+    ITermMaxMarket market,
+    uint256 gtId,
+    uint256 repayAmt
+  ) external;
   function repayFromFt(
-    address beHalf,
     ITermMaxMarket market,
     uint256 gtId,
     uint256 ftInAmt
   ) external;
 
-  function RepayByTokenThroughFt(
+  function repayByTokenThroughFt(
     address receiver,
     ITermMaxMarket market,
     uint256 gtId,
     uint256 tokenInAmt,
     uint256 minFtOutToRepay
   ) external;
+
+  function provideLiquidity(
+    address receiver,
+    ITermMaxMarket market,
+    uint256 underlyingAmt
+  ) external returns (uint128 lpFtOutAmt, uint128 lpXtOutAmt);
 
 }
