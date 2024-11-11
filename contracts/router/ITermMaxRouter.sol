@@ -188,7 +188,7 @@ interface ITermMaxRouter {
     uint256 collInAmt,
     uint256 debtAmt,
     uint256 minBorrowAmt
-  ) external returns (uint256 gtId, uint256 netTokenOut);
+  ) external returns (uint256 gtId);
 
   function repayFromFt(
     ITermMaxMarket market,

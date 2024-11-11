@@ -84,7 +84,7 @@ contract TermMaxRouter is
   ) ensureMarketWhitelist(address(market)) whenNotPaused external returns (uint256 netFtOut) {
     (IMintableERC20 ft,,,,,, IERC20 underlying) = market.tokens();
 
-    _transferToSelfAndApproveSpender(ft, msg.sender, address(market), tokenInAmt);
+    _transferToSelfAndApproveSpender(underlying, msg.sender, address(market), tokenInAmt);
     (netFtOut) = market.buyFt(tokenInAmt, minFtOut);
     ft.transfer(receiver, netFtOut);
 
@@ -242,7 +242,6 @@ contract TermMaxRouter is
     (uint128 redeemFtAmt, uint128 redeemXtAmt) = _calculateRedeemAmounts(ftOutAmt, xtOutAmt, config.initialLtv);
     market.redeemFtAndXtToUnderlying(redeemXtAmt);
     underlyingAmtOut = redeemXtAmt;
-    // TODO: Validate for Ft/Xt balance??
     uint128 remainFtAmt = ftOutAmt - redeemFtAmt;
     if(remainFtAmt > 0) {
       underlyingAmtOut += market.sellFt(remainFtAmt, 0);
@@ -393,14 +392,13 @@ contract TermMaxRouter is
   }
   
   /** Lending Market */
-  // TODO: minBorrowAmt -> target borrow amount
   function borrowTokenFromCollateral(
     address receiver,
     ITermMaxMarket market,
     uint256 collInAmt,
     uint256 debtAmt,
     uint256 borrowAmt
-  ) ensureMarketWhitelist(address(market)) whenNotPaused external returns (uint256 gtId, uint256 netTokenOut) {
+  ) ensureMarketWhitelist(address(market)) whenNotPaused external returns (uint256 gtId) {
     ( 
       IMintableERC20 ft,
       ,,,
@@ -409,7 +407,7 @@ contract TermMaxRouter is
       IERC20 underlying
     ) = market.tokens();
 
-    _transferToSelfAndApproveSpender(IERC20(collateralAddr), msg.sender, address(market), collInAmt);
+    _transferToSelfAndApproveSpender(IERC20(collateralAddr), msg.sender, address(gt), collInAmt);
     
     return _borrow(market, ft, gt, underlying, receiver, debtAmt, collInAmt, borrowAmt);
   }
@@ -422,8 +420,8 @@ contract TermMaxRouter is
     address receiver,
     uint256 debtAmt,
     uint256 collInAmt,
-    uint256 minBorrowAmt
-  ) internal returns (uint256, uint256) {
+    uint256 borrowAmt
+  ) internal returns (uint256) {
     /**
      * 1. MintGT with Collateral, and get GT, FT
      * 2. Sell FT to get UnderlyingToken
@@ -432,15 +430,16 @@ contract TermMaxRouter is
     (uint256 gtId, uint128 netFtOut) = market.issueFt(debtAmt.toUint128(), _encodeAmount(collInAmt));
 
     ft.safeIncreaseAllowance(address(market), netFtOut);
-    uint256 netTokenOut = market.sellFt(netFtOut, minBorrowAmt.toUint128());
-    // NOTE: if netTokenOut > minBorrowAmt, repay
-    uint256 diffBorrow = netTokenOut - minBorrowAmt;
+    uint256 netTokenOut = market.sellFt(netFtOut, borrowAmt.toUint128());
+    // NOTE: if netTokenOut > borrowAmt, repay
+    uint256 diffBorrow = netTokenOut - borrowAmt;
     if(diffBorrow > 0) {
       underlying.safeIncreaseAllowance(address(gt), diffBorrow);
-      gt.repay(gtId, diffBorrow.toUint120(), false);
+      gt.repay(gtId, diffBorrow.toUint120(), true);
     }
 
-    underlying.safeTransfer(receiver, minBorrowAmt);
+    underlying.safeTransfer(receiver, borrowAmt);
+    gt.transferFrom(address(this) ,receiver, gtId);
 
     emit Borrow(
       market,
@@ -450,10 +449,10 @@ contract TermMaxRouter is
       gtId,
       collInAmt,
       debtAmt,
-      minBorrowAmt
+      borrowAmt
     );
 
-    return (gtId, minBorrowAmt);
+    return gtId;
   }
 
   function repay(
