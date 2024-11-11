@@ -167,7 +167,8 @@
         "currentTime": "1730391942"
       },
       "output": {
-        "netOut": "10194670311"
+        "netOut": "10194670311",
+        "fee": "5864630"
       }
     },
     "testBuyXt": {
@@ -192,7 +193,8 @@
         "currentTime": "1730391942"
       },
       "output": {
-        "netOut": "72238366004"
+        "netOut": "72238366004",
+        "fee": "39070028"
       }
     },
     "testSellFt": {
@@ -217,7 +219,8 @@
         "currentTime": "1730391942"
       },
       "output": {
-        "netOut": "9993331636"
+        "netOut": "9993331636",
+        "fee": "5864233"
       }
     },
     "testSellXt": {
@@ -242,7 +245,8 @@
         "currentTime": "1730391942"
       },
       "output": {
-        "netOut": "9927486738"
+        "netOut": "9927486738",
+        "fee": "38934520"
       }
     }
   },
