@@ -9,6 +9,10 @@ import {MintableERC20, IMintableERC20} from "../tokens/MintableERC20.sol";
 import {ITermMaxMarket} from "../TermMaxMarket.sol";
 import {ITermMaxFactory} from "./ITermMaxFactory.sol";
 
+/**
+ * @title The Term Max factory
+ * @author Term Structure Labs
+ */
 contract TermMaxFactory is ITermMaxFactory, Ownable {
     string constant PREFIX_FT = "FT:";
     string constant PREFIX_XT = "XT:";
@@ -19,9 +23,13 @@ contract TermMaxFactory is ITermMaxFactory, Ownable {
 
     bytes32 public constant GT_ERC20 = keccak256("GearingTokenWithERC20");
 
+    /// @notice The implementation of Term Max ERC20 Token contract
     address public immutable tokenImplement;
+
+    /// @notice The implementation of Term Max Market contract
     address public marketImplement;
 
+    /// @notice The implementations of Term Max Gearing Token contract
     mapping(bytes32 => address) public gtImplements;
 
     constructor(address admin) Ownable(admin) {
@@ -29,6 +37,7 @@ contract TermMaxFactory is ITermMaxFactory, Ownable {
         tokenImplement = address(new MintableERC20());
     }
 
+    /// @notice Initialize the implementation of Term Max Market contract
     function initMarketImplement(address marketImplement_) external onlyOwner {
         if (marketImplement != address(0)) {
             revert MarketImplementInitialized();
@@ -37,12 +46,13 @@ contract TermMaxFactory is ITermMaxFactory, Ownable {
         emit InitializeMarketImplement(marketImplement_);
     }
 
+    /// @notice Set the implementations of Term Max Gearing Token contract
     function setGtImplement(
         bytes32 key,
         address gtImplement
     ) external onlyOwner {
         gtImplements[key] = gtImplement;
-        emit SetGtImplementd(key, gtImplement);
+        emit SetGtImplement(key, gtImplement);
     }
 
     /**
