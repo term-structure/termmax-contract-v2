@@ -459,21 +459,21 @@ library TermMaxCurve {
             config.apr,
             params.ftReserve
         );
-        uint negDeltaXt = params.amount;
-        uint negDeltaFt = (ftPlusAlpha * xtPlusBeta) /
-            (xtPlusBeta - negDeltaXt) -
+        uint deltaXt = params.amount;
+        uint deltaFt = (ftPlusAlpha * xtPlusBeta) /
+            (xtPlusBeta - deltaXt) -
             ftPlusAlpha;
-        if (xtPlusBeta <= negDeltaXt) {
+        if (xtPlusBeta <= deltaXt) {
             revert LiquidityIsZeroAfterTransaction();
         }
         newApr = _calcApr(
             config.initialLtv,
             params.daysToMaturity,
-            ftPlusAlpha + negDeltaFt,
-            xtPlusBeta - negDeltaXt
+            ftPlusAlpha + deltaFt,
+            xtPlusBeta - deltaXt
         );
-        newFtReserve = params.ftReserve + negDeltaFt;
-        newXtReserve = params.xtReserve - negDeltaXt;
+        newFtReserve = params.ftReserve + deltaFt;
+        newXtReserve = params.xtReserve - deltaXt;
     }
 
     /// @notice Calculate the changes in market reserves and apr after buying XT tokens
@@ -538,22 +538,22 @@ library TermMaxCurve {
             config.apr,
             params.ftReserve
         );
-        uint negDeltaFt = (params.amount * config.initialLtv) /
+        uint deltaFt = (params.amount * config.initialLtv) /
             Constants.DECIMAL_BASE;
-        uint negDeltaXt = (xtPlusBeta * ftPlusAlpha) /
-            (ftPlusAlpha - negDeltaFt) -
+        uint deltaXt = (xtPlusBeta * ftPlusAlpha) /
+            (ftPlusAlpha - deltaFt) -
             xtPlusBeta;
-        if (ftPlusAlpha <= negDeltaFt) {
+        if (ftPlusAlpha <= deltaFt) {
             revert LiquidityIsZeroAfterTransaction();
         }
         newApr = _calcApr(
             config.initialLtv,
             params.daysToMaturity,
-            ftPlusAlpha - negDeltaFt,
-            xtPlusBeta + negDeltaXt
+            ftPlusAlpha - deltaFt,
+            xtPlusBeta + deltaXt
         );
 
-        newFtReserve = params.ftReserve - negDeltaFt;
-        newXtReserve = params.xtReserve + negDeltaXt;
+        newFtReserve = params.ftReserve - deltaFt;
+        newXtReserve = params.xtReserve + deltaXt;
     }
 }
