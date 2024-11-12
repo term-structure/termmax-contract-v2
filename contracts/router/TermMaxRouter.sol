@@ -794,6 +794,42 @@ contract TermMaxRouter is
         emit Repay(market, false, address(underlying), gtId, tokenInAmt);
     }
 
+    function mergeGt(
+      ITermMaxMarket market,
+      uint256[] memory ids
+    ) external ensureMarketWhitelist(address(market)) whenNotPaused returns (uint256 newId) {
+        (
+        ,,,,IGearingToken gt,,
+        ) = market.tokens();
+        return gt.merge(ids);
+    }
+
+    function addCollateral(
+        ITermMaxMarket market,
+        uint256 gtId,
+        uint256 addCollateralAmt
+    ) external ensureMarketWhitelist(address(market)) whenNotPaused {
+        (
+            ,,,,IGearingToken gt,
+            address collateral,
+        ) = market.tokens();
+        _transferToSelfAndApproveSpender(IERC20(collateral), msg.sender, address(gt), addCollateralAmt);
+        gt.addCollateral(gtId, _encodeAmount(addCollateralAmt));
+    }
+
+    function removeCollateral(
+        ITermMaxMarket market,
+        uint256 gtId,
+        uint256 removeCollateralAmt
+    ) external ensureMarketWhitelist(address(market)) whenNotPaused {
+        (
+            ,,,,IGearingToken gt,
+            address collateral,
+        ) = market.tokens();
+        gt.removeCollateral(gtId, _encodeAmount(removeCollateralAmt));
+    }
+
+
     function executeOperation(
         address sender,
         IERC20 asset,
