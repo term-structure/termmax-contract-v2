@@ -48,11 +48,11 @@ contract TermMaxFactory is ITermMaxFactory, Ownable {
 
     /// @notice Set the implementations of Term Max Gearing Token contract
     function setGtImplement(
-        bytes32 key,
+        string gtImplementName ,
         address gtImplement
     ) external onlyOwner {
-        gtImplements[key] = gtImplement;
-        emit SetGtImplement(key, gtImplement);
+        gtImplements[keccak256(gtImplementName)] = gtImplement;
+        emit SetGtImplementd(gtImplementName, key, gtImplement);
     }
 
     /**
