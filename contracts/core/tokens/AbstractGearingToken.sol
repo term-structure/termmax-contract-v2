@@ -173,7 +173,7 @@ abstract contract AbstractGearingToken is
             revert GtIsNotHealthy(to, ltv);
         }
         id = ++s.total;
-        s.loanMapping[id] = LoanInfo(debtAmt, collateralData);
+        s.loanMapping[id] = loan;
         _mint(to, id);
     }
 
