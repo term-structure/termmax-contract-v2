@@ -310,13 +310,7 @@ abstract contract AbstractGearingToken is
             config.underlying.decimals()
         );
         _checkDebtValue(valueAndPrice);
-        uint128 ltv = _calculateLtv(
-            _getValueAndPrice(
-                config.underlyingOracle,
-                loan,
-                config.underlying.decimals()
-            )
-        );
+        uint128 ltv = _calculateLtv(valueAndPrice);
         if (ltv >= config.maxLtv) {
             revert GtIsNotHealthy(msg.sender, ltv);
         }
