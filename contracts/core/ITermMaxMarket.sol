@@ -12,6 +12,8 @@ import "./storage/TermMaxStorage.sol";
 interface ITermMaxMarket {
     /// @notice Error for invalid unix time parameters
     error InvalidTime(uint64 openTime, uint64 maturity);
+    /// @notice Error for lsf value equals 0 or bigger than 1e8
+    error InvalidLsf(uint32 lsf);
     /// @notice Error for the collateral and underlying are the same token
     error CollateralCanNotEqualUnserlyinng();
     /// @notice Error for repeat initialization of market
@@ -56,6 +58,8 @@ interface ITermMaxMarket {
     );
     /// @notice Emitted when setting treasurer address
     event UpdateTreasurer(address indexed treasurer);
+    /// @notice Emitted when change the value of lsf
+    event UpdateLsf(uint32 lsf);
 
     /// @notice Emitted when providing liquidity to market
     /// @param caller Who call the function
@@ -205,6 +209,9 @@ interface ITermMaxMarket {
 
     /// @notice Set the treasurer's address
     function setTreasurer(address treasurer) external;
+
+    /// @notice Set the value of lsf
+    function setLsf(uint32 lsf) external;
 
     /// @notice Return the tokens in Term Max Market
     /// @return ft Fixed-rate Token(bond token). Earning Fixed Income with High Certainty

@@ -92,6 +92,95 @@ contract FactoryTest is Test {
         vm.stopPrank();
     }
 
+    function testDeployMarketWithInvalidTime() public {
+        vm.startPrank(deployer);
+        TermMaxFactory factory = new TermMaxFactory(deployer);
+
+        TermMaxMarket m = new TermMaxMarket();
+        factory.initMarketImplement(address(m));
+
+        MockERC20 collateral = new MockERC20("ETH", "ETH", 18);
+        MockERC20 underlying = new MockERC20("DAI", "DAI", 8);
+
+        MockPriceFeed underlyingOracle = new MockPriceFeed(deployer);
+        MockPriceFeed collateralOracle = new MockPriceFeed(deployer);
+        marketConfig.openTime = uint64(block.timestamp - 1);
+        ITermMaxFactory.DeployParams memory params = ITermMaxFactory
+            .DeployParams({
+                gtKey: DeployUtils.GT_ERC20,
+                admin: deployer,
+                collateral: address(collateral),
+                underlying: underlying,
+                underlyingOracle: underlyingOracle,
+                liquidationLtv: liquidationLtv,
+                maxLtv: maxLtv,
+                liquidatable: true,
+                marketConfig: marketConfig,
+                gtInitalParams: abi.encode(collateralOracle)
+            });
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ITermMaxMarket.InvalidTime.selector,
+                marketConfig.openTime,
+                marketConfig.maturity
+            )
+        );
+        factory.createMarket(params);
+
+        params.marketConfig.openTime = uint64(block.timestamp + 3600);
+        params.marketConfig.maturity = uint64(block.timestamp + 1);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ITermMaxMarket.InvalidTime.selector,
+                params.marketConfig.openTime,
+                params.marketConfig.maturity
+            )
+        );
+        factory.createMarket(params);
+
+        vm.stopPrank();
+    }
+
+    function testDeployMarketWithInvalidLsf() public {
+        vm.startPrank(deployer);
+        TermMaxFactory factory = new TermMaxFactory(deployer);
+
+        TermMaxMarket m = new TermMaxMarket();
+        factory.initMarketImplement(address(m));
+
+        MockERC20 collateral = new MockERC20("ETH", "ETH", 18);
+        MockERC20 underlying = new MockERC20("DAI", "DAI", 8);
+
+        MockPriceFeed underlyingOracle = new MockPriceFeed(deployer);
+        MockPriceFeed collateralOracle = new MockPriceFeed(deployer);
+        marketConfig.lsf = 0;
+        ITermMaxFactory.DeployParams memory params = ITermMaxFactory
+            .DeployParams({
+                gtKey: DeployUtils.GT_ERC20,
+                admin: deployer,
+                collateral: address(collateral),
+                underlying: underlying,
+                underlyingOracle: underlyingOracle,
+                liquidationLtv: liquidationLtv,
+                maxLtv: maxLtv,
+                liquidatable: true,
+                marketConfig: marketConfig,
+                gtInitalParams: abi.encode(collateralOracle)
+            });
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ITermMaxMarket.InvalidLsf.selector,
+                marketConfig.lsf
+            )
+        );
+        factory.createMarket(params);
+
+        vm.stopPrank();
+    }
+
     function testRevertByMarketImplementIsNotInitialized() public {
         vm.startPrank(deployer);
         TermMaxFactory factory = new TermMaxFactory(deployer);
@@ -183,7 +272,7 @@ contract FactoryTest is Test {
         vm.stopPrank();
     }
 
-    function testInitMarket() public {
+    function testInitMarketImplement() public {
         vm.startPrank(deployer);
         TermMaxFactory factory = new TermMaxFactory(deployer);
 
@@ -196,7 +285,7 @@ contract FactoryTest is Test {
         vm.stopPrank();
     }
 
-    function testInitMarketTwice() public {
+    function testInitMarketImplementTwice() public {
         vm.startPrank(deployer);
         TermMaxFactory factory = new TermMaxFactory(deployer);
 
@@ -212,7 +301,7 @@ contract FactoryTest is Test {
         vm.stopPrank();
     }
 
-    function testInitMarketWithoutAuth(address sender) public {
+    function testInitMarketImplementWithoutAuth(address sender) public {
         vm.startPrank(sender);
         TermMaxFactory factory = new TermMaxFactory(deployer);
 
