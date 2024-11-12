@@ -18,7 +18,7 @@ function getNetworks(): NetworksUserConfig {
       url: `https://sepolia.infura.io/v3/${infuraApiKey}`,
       chainId: 11155111,
       accounts,
-    },
+    }
   };
 }
 
@@ -35,6 +35,10 @@ const config: HardhatUserConfig = {
   networks: {
     hardhat: {
       chainId: 1337,
+    },
+    fork: {
+      url: "https://mainnet-fork.dev.ts.finance",
+      accounts: [`${process.env.FORK_DEPLOYER_PRIVATE_KEY}`],
     },
     ...getNetworks(),
   },
