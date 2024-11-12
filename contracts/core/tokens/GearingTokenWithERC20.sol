@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
+import {MathLib} from "../lib/MathLib.sol";
 import "./AbstractGearingToken.sol";
 
 /**
@@ -10,6 +11,7 @@ import "./AbstractGearingToken.sol";
 contract GearingTokenWithERC20 is AbstractGearingToken {
     using SafeCast for uint256;
     using SafeCast for int256;
+    using MathLib for *;
 
     struct GearingTokenWithERC20Storage {
         /// @notice The oracle of collateral in USD
@@ -233,8 +235,7 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
             rewardToLiquidator +
             rewardToProtocol;
 
-        removedCollateralAmt = _min(
-            removedCollateralAmt,
+        removedCollateralAmt = removedCollateralAmt.min(
             (collateralAmt * repayAmt) / loan.debtAmt
         );
 
@@ -262,10 +263,5 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
         }
         // Calculate remainning collateral
         remainningC = _encodeAmount(collateralAmt - removedCollateralAmt);
-    }
-
-    /// @notice Returns the smaller of two values
-    function _min(uint256 a, uint256 b) internal pure returns (uint256) {
-        return a < b ? a : b;
     }
 }

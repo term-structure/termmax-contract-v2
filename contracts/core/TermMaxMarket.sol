@@ -10,7 +10,7 @@ import {ITermMaxMarket} from "./ITermMaxMarket.sol";
 import {IMintableERC20} from "./tokens/IMintableERC20.sol";
 import {IGearingToken} from "./tokens/IGearingToken.sol";
 import {IFlashLoanReceiver} from "./IFlashLoanReceiver.sol";
-import {TermMaxCurve} from "./lib/TermMaxCurve.sol";
+import {TermMaxCurve, MathLib} from "./lib/TermMaxCurve.sol";
 import {Constants} from "./lib/Constants.sol";
 import {Ownable} from "./access/Ownable.sol";
 import "./storage/TermMaxStorage.sol";
@@ -22,6 +22,7 @@ import "./storage/TermMaxStorage.sol";
 contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
     using SafeCast for uint256;
     using SafeCast for int256;
+    using MathLib for *;
 
     MarketConfig _config;
     address collateral;
@@ -189,11 +190,11 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         );
 
         lpFtOutAmt = TermMaxCurve
-            ._calculateLpOut(ftMintedAmt, ftReserve, lpFtTotalSupply)
+            .calculateLpOut(ftMintedAmt, ftReserve, lpFtTotalSupply)
             .toUint128();
 
         lpXtOutAmt = TermMaxCurve
-            ._calculateLpOut(xtMintedAmt, xtReserve, lpXtTotalSupply)
+            .calculateLpOut(xtMintedAmt, xtReserve, lpXtTotalSupply)
             .toUint128();
         lpXt.mint(caller, lpXtOutAmt);
         lpFt.mint(caller, lpFtOutAmt);
@@ -252,7 +253,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         // calculate reward
         uint ftReserve = ft.balanceOf(address(this));
         if (lpFtAmt > 0) {
-            uint reward = TermMaxCurve._calculateLpReward(
+            uint reward = TermMaxCurve.calculateLpReward(
                 block.timestamp,
                 mConfig.openTime,
                 mConfig.maturity,
@@ -270,7 +271,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         }
         uint xtReserve = xt.balanceOf(address(this));
         if (lpXtAmt > 0) {
-            uint reward = TermMaxCurve._calculateLpReward(
+            uint reward = TermMaxCurve.calculateLpReward(
                 block.timestamp,
                 mConfig.openTime,
                 mConfig.maturity,
@@ -300,7 +301,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
                 xtReserve,
                 _daysToMaturity(mConfig.maturity)
             );
-            (, , mConfig.apr) = TermMaxCurve._sellNegXt(tradeParams, mConfig);
+            (, , mConfig.apr) = TermMaxCurve.sellNegXt(tradeParams, mConfig);
         } else if (sameProportionFt < ftOutAmt) {
             uint ftExcess = ftOutAmt - sameProportionFt;
             TradeParams memory tradeParams = TradeParams(
@@ -309,7 +310,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
                 xtReserve,
                 _daysToMaturity(mConfig.maturity)
             );
-            (, , mConfig.apr) = TermMaxCurve._sellNegFt(tradeParams, mConfig);
+            (, , mConfig.apr) = TermMaxCurve.sellNegFt(tradeParams, mConfig);
         }
         if (ftOutAmt > 0) {
             ft.transfer(caller, ftOutAmt);
@@ -371,12 +372,12 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         if (token == ft) {
             uint newFtReserve;
             uint newXtReserve;
-            (newFtReserve, newXtReserve, mConfig.apr) = TermMaxCurve._buyFt(
+            (newFtReserve, newXtReserve, mConfig.apr) = TermMaxCurve.buyFt(
                 tradeParams,
                 mConfig
             );
             // calculate fee
-            feeAmt = TermMaxCurve._calculateFee(
+            feeAmt = TermMaxCurve.calculateFee(
                 ftReserve,
                 xtReserve,
                 newFtReserve,
@@ -384,8 +385,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
                 mConfig.lendFeeRatio,
                 mConfig.initialLtv
             );
-            feeAmt = TermMaxCurve._max(
-                feeAmt,
+            feeAmt = feeAmt.max(
                 (underlyingAmtIn * mConfig.minNLendFeeR) /
                     Constants.DECIMAL_BASE
             );
@@ -396,7 +396,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
                 mConfig.protocolFeeRatio
             );
             uint finalFtReserve;
-            (finalFtReserve, , mConfig.apr) = TermMaxCurve._buyNegFt(
+            (finalFtReserve, , mConfig.apr) = TermMaxCurve.buyNegFt(
                 TradeParams(
                     feeAmt,
                     newFtReserve,
@@ -411,12 +411,12 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         } else {
             uint newFtReserve;
             uint newXtReserve;
-            (newFtReserve, newXtReserve, mConfig.apr) = TermMaxCurve._buyXt(
+            (newFtReserve, newXtReserve, mConfig.apr) = TermMaxCurve.buyXt(
                 tradeParams,
                 mConfig
             );
             // calculate fee
-            feeAmt = TermMaxCurve._calculateFee(
+            feeAmt = TermMaxCurve.calculateFee(
                 ftReserve,
                 xtReserve,
                 newFtReserve,
@@ -424,8 +424,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
                 mConfig.borrowFeeRatio,
                 mConfig.initialLtv
             );
-            feeAmt = TermMaxCurve._max(
-                feeAmt,
+            feeAmt = feeAmt.max(
                 (underlyingAmtIn * mConfig.minNBorrowFeeR) /
                     Constants.DECIMAL_BASE
             );
@@ -436,7 +435,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
                 mConfig.protocolFeeRatio
             );
             uint finalXtReserve;
-            (, finalXtReserve, mConfig.apr) = TermMaxCurve._buyNegXt(
+            (, finalXtReserve, mConfig.apr) = TermMaxCurve.buyNegXt(
                 TradeParams(
                     feeAmt,
                     newFtReserve,
@@ -510,13 +509,13 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         if (token == ft) {
             uint newFtReserve;
             uint newXtReserve;
-            (newFtReserve, newXtReserve, mConfig.apr) = TermMaxCurve._sellFt(
+            (newFtReserve, newXtReserve, mConfig.apr) = TermMaxCurve.sellFt(
                 tradeParams,
                 mConfig
             );
             netOut = xtReserve - newXtReserve;
             // calculate fee
-            feeAmt = TermMaxCurve._calculateFee(
+            feeAmt = TermMaxCurve.calculateFee(
                 ftReserve,
                 xtReserve,
                 newFtReserve,
@@ -524,20 +523,19 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
                 mConfig.borrowFeeRatio,
                 mConfig.initialLtv
             );
-            feeAmt = TermMaxCurve._max(
-                feeAmt,
+            feeAmt = feeAmt.max(
                 (netOut * mConfig.minNBorrowFeeR) / Constants.DECIMAL_BASE
             );
         } else {
             uint newFtReserve;
             uint newXtReserve;
-            (newFtReserve, newXtReserve, mConfig.apr) = TermMaxCurve._sellXt(
+            (newFtReserve, newXtReserve, mConfig.apr) = TermMaxCurve.sellXt(
                 tradeParams,
                 mConfig
             );
             netOut = tokenAmtIn + xtReserve - newXtReserve;
             // calculate fee
-            feeAmt = TermMaxCurve._calculateFee(
+            feeAmt = TermMaxCurve.calculateFee(
                 ftReserve,
                 xtReserve,
                 newFtReserve,
@@ -545,8 +543,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
                 mConfig.lendFeeRatio,
                 mConfig.initialLtv
             );
-            feeAmt = TermMaxCurve._max(
-                feeAmt,
+            feeAmt = feeAmt.max(
                 (netOut * mConfig.minNLendFeeR) / Constants.DECIMAL_BASE
             );
         }
@@ -611,14 +608,14 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
             1) / Constants.DECIMAL_BASE;
         uint ftAmount = (feeToLock * initialLtv) / Constants.DECIMAL_BASE;
 
-        uint lpFtAmt = TermMaxCurve._calculateLpOut(
+        uint lpFtAmt = TermMaxCurve.calculateLpOut(
             ftAmount,
             ft.balanceOf(address(this)) - ftAmount,
             lpFt.totalSupply()
         );
         lpFt.mint(address(this), lpFtAmt);
 
-        uint lpXtAmt = TermMaxCurve._calculateLpOut(
+        uint lpXtAmt = TermMaxCurve.calculateLpOut(
             feeToLock,
             xt.balanceOf(address(this)) - feeToLock,
             lpXt.totalSupply()

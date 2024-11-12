@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
+/**
+ * @title This is a copy of Ownable from the Openzeppelin contract library,
+ *        using __initilizeOwner(address initialOwner) instead of the constructor to initialize the owner.
+ * @author Term Structure Labs
+ */
 abstract contract Ownable {
     address private _owner;
 

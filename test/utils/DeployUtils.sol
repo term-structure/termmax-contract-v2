@@ -12,6 +12,7 @@ import {TermMaxRouter} from "../../contracts/router/TermMaxRouter.sol";
 import "../../contracts/core/storage/TermMaxStorage.sol";
 
 library DeployUtils {
+    bytes32 constant GT_ERC20 = keccak256("GearingTokenWithERC20");
     struct Res {
         TermMaxFactory factory;
         ITermMaxMarket market;
@@ -54,7 +55,7 @@ library DeployUtils {
 
         ITermMaxFactory.DeployParams memory params = ITermMaxFactory
             .DeployParams({
-                gtKey: res.factory.GT_ERC20(),
+                gtKey: GT_ERC20,
                 admin: deployer,
                 collateral: address(res.collateral),
                 underlying: res.underlying,

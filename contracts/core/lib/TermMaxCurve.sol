@@ -3,6 +3,7 @@ pragma solidity ^0.8.27;
 
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {Constants} from "./Constants.sol";
+import {MathLib} from "./MathLib.sol";
 import "../storage/TermMaxStorage.sol";
 
 /**
@@ -12,33 +13,17 @@ import "../storage/TermMaxStorage.sol";
 library TermMaxCurve {
     using SafeCast for uint256;
     using SafeCast for int256;
+    using MathLib for *;
 
     /// @notice Error for transaction lead to liquidity depletion
     error LiquidityIsZeroAfterTransaction();
-
-    /// @notice Square root method
-    function _sqrt(uint256 x) internal pure returns (uint256) {
-        if (x == 0) return 0;
-        uint256 z = (x + 1) / 2;
-        uint256 y = x;
-        while (z < y) {
-            y = z;
-            z = (x / z + z) / 2;
-        }
-        return y;
-    }
-
-    /// @notice Get the maximum value
-    function _max(uint256 a, uint256 b) internal pure returns (uint256) {
-        return a > b ? a : b;
-    }
 
     /// @notice Calculate how many lp tokens should be minted to the liquidity provider
     /// @param tokenIn The amount of tokens provided
     /// @param tokenReserve The token's balance of the market
     /// @param lpTotalSupply The total supply of this lp token
     /// @return lpOutAmt The amount of lp tokens to be minted to the liquidity provider
-    function _calculateLpOut(
+    function calculateLpOut(
         uint256 tokenIn,
         uint256 tokenReserve,
         uint256 lpTotalSupply
@@ -55,7 +40,7 @@ library TermMaxCurve {
     /// @param lsf The liquidity scaling factor
     /// @param ftReserve The FT token reserve of the market
     /// @return ftPlusAlpha The FT token reserve plus alpha
-    function _calcFtPlusAlpha(
+    function calcFtPlusAlpha(
         uint32 lsf,
         uint256 ftReserve
     ) internal pure returns (uint256 ftPlusAlpha) {
@@ -72,7 +57,7 @@ library TermMaxCurve {
     /// @param apr The annual interest rate of the market
     /// @param ftReserve The FT token reserve of the market
     /// @return xtPlusBeta The XT token reserve plus beta
-    function _calcXtPlusBeta(
+    function calcXtPlusBeta(
         uint32 lsf,
         uint32 ltv,
         uint256 daysToMaturity,
@@ -80,7 +65,7 @@ library TermMaxCurve {
         uint256 ftReserve
     ) internal pure returns (uint256 xtPlusBeta) {
         // xtReserve + beta = (ftReserve + alpha)/(1 + apr*dayToMaturity/365 - lvt)
-        uint ftPlusAlpha = _calcFtPlusAlpha(lsf, ftReserve);
+        uint ftPlusAlpha = calcFtPlusAlpha(lsf, ftReserve);
         // Use Constants.DECIMAL_BASE to solve the problem of precision loss
         if (apr >= 0) {
             xtPlusBeta =
@@ -116,7 +101,7 @@ library TermMaxCurve {
     /// @param ftPlusAlpha The FT token reserve plus alpha
     /// @param xtPlusBeta The XT token reserve plus beta
     /// @return apr The annual interest rate of the market
-    function _calcApr(
+    function calcApr(
         uint32 ltv,
         uint256 daysToMaturity,
         uint256 ftPlusAlpha,
@@ -143,7 +128,7 @@ library TermMaxCurve {
     ///                 There are different fee ratios for lending and borrowing
     /// @param ltv The initial ltv of the market
     /// @return feeAmt Transaction fee amount
-    function _calculateFee(
+    function calculateFee(
         uint256 ftReserve,
         uint256 xtReserve,
         uint256 newFtReserve,
@@ -171,7 +156,7 @@ library TermMaxCurve {
         uint256 deltaXt,
         uint32 feeRatio,
         uint32 ltv
-    ) internal pure returns (uint256 feeAmt) {
+    ) private pure returns (uint256 feeAmt) {
         uint l = deltaFt * Constants.DECIMAL_BASE + deltaXt * ltv;
         uint r = deltaXt * Constants.DECIMAL_BASE;
 
@@ -190,7 +175,7 @@ library TermMaxCurve {
     /// @param lpAmt The amount of withdraw lp
     /// @param totalReward The amount of bonus lp held in the market
     /// @return reward Number of lp's awarded
-    function _calculateLpReward(
+    function calculateLpReward(
         uint256 currentTime,
         uint256 openMarketTime,
         uint256 maturity,
@@ -209,7 +194,7 @@ library TermMaxCurve {
     /// @return newFtReserve The FT token reserve of the market after transaction
     /// @return newXtReserve The XT token reserve of the market after transaction
     /// @return newApr The APR of the market after transaction
-    function _sellFt(
+    function sellFt(
         TradeParams memory params,
         MarketConfig memory config
     )
@@ -217,8 +202,8 @@ library TermMaxCurve {
         pure
         returns (uint256 newFtReserve, uint256 newXtReserve, int64 newApr)
     {
-        uint ftPlusAlpha = _calcFtPlusAlpha(config.lsf, params.ftReserve);
-        uint xtPlusBeta = _calcXtPlusBeta(
+        uint ftPlusAlpha = calcFtPlusAlpha(config.lsf, params.ftReserve);
+        uint xtPlusBeta = calcXtPlusBeta(
             config.lsf,
             config.initialLtv,
             params.daysToMaturity,
@@ -231,7 +216,7 @@ library TermMaxCurve {
             params.amount;
         uint ac = ((xtPlusBeta * params.amount) * config.initialLtv) /
             Constants.DECIMAL_BASE;
-        uint deltaXt = ((negB - _sqrt(negB * negB - 4 * ac)) *
+        uint deltaXt = ((negB - (negB * negB - 4 * ac).sqrt()) *
             Constants.DECIMAL_BASE) / (config.initialLtv * 2);
         uint deltaFt = params.amount -
             (deltaXt * config.initialLtv) /
@@ -239,7 +224,7 @@ library TermMaxCurve {
         if (xtPlusBeta <= deltaXt) {
             revert LiquidityIsZeroAfterTransaction();
         }
-        newApr = _calcApr(
+        newApr = calcApr(
             config.initialLtv,
             params.daysToMaturity,
             ftPlusAlpha + deltaFt,
@@ -255,7 +240,7 @@ library TermMaxCurve {
     /// @return newFtReserve The FT token reserve of the market after transaction
     /// @return newXtReserve The XT token reserve of the market after transaction
     /// @return newApr The APR of the market after transaction
-    function _sellNegFt(
+    function sellNegFt(
         TradeParams memory params,
         MarketConfig memory config
     )
@@ -263,9 +248,9 @@ library TermMaxCurve {
         pure
         returns (uint256 newFtReserve, uint256 newXtReserve, int64 newApr)
     {
-        uint ftPlusAlpha = _calcFtPlusAlpha(config.lsf, params.ftReserve);
+        uint ftPlusAlpha = calcFtPlusAlpha(config.lsf, params.ftReserve);
 
-        uint xtPlusBeta = _calcXtPlusBeta(
+        uint xtPlusBeta = calcXtPlusBeta(
             config.lsf,
             config.initialLtv,
             params.daysToMaturity,
@@ -279,7 +264,7 @@ library TermMaxCurve {
         uint negAc = (xtPlusBeta * params.amount * config.initialLtv) /
             Constants.DECIMAL_BASE;
 
-        uint deltaXt = ((_sqrt((b * b + 4 * negAc)) - b) *
+        uint deltaXt = ((((b * b + 4 * negAc)).sqrt() - b) *
             Constants.DECIMAL_BASE) / (config.initialLtv * 2);
         uint deltaFt = ftPlusAlpha -
             (ftPlusAlpha * xtPlusBeta) /
@@ -287,7 +272,7 @@ library TermMaxCurve {
         if (ftPlusAlpha <= deltaFt) {
             revert LiquidityIsZeroAfterTransaction();
         }
-        newApr = _calcApr(
+        newApr = calcApr(
             config.initialLtv,
             params.daysToMaturity,
             ftPlusAlpha - deltaFt,
@@ -303,7 +288,7 @@ library TermMaxCurve {
     /// @return newFtReserve The FT token reserve of the market after transaction
     /// @return newXtReserve The XT token reserve of the market after transaction
     /// @return newApr The APR of the market after transaction
-    function _sellXt(
+    function sellXt(
         TradeParams memory params,
         MarketConfig memory config
     )
@@ -311,8 +296,8 @@ library TermMaxCurve {
         pure
         returns (uint256 newFtReserve, uint256 newXtReserve, int64 newApr)
     {
-        uint ftPlusAlpha = _calcFtPlusAlpha(config.lsf, params.ftReserve);
-        uint xtPlusBeta = _calcXtPlusBeta(
+        uint ftPlusAlpha = calcFtPlusAlpha(config.lsf, params.ftReserve);
+        uint xtPlusBeta = calcXtPlusBeta(
             config.lsf,
             config.initialLtv,
             params.daysToMaturity,
@@ -331,7 +316,7 @@ library TermMaxCurve {
                 Constants.DECIMAL_BASE) * config.initialLtv) /
                 Constants.DECIMAL_BASE;
             deltaXt =
-                ((_sqrt(b * b + 4 * negAc) - b) * Constants.DECIMAL_BASE) /
+                (((b * b + 4 * negAc).sqrt() - b) * Constants.DECIMAL_BASE) /
                 (config.initialLtv * 2);
             deltaFt =
                 ((params.amount - deltaXt) * config.initialLtv) /
@@ -340,7 +325,7 @@ library TermMaxCurve {
         if (ftPlusAlpha <= deltaFt) {
             revert LiquidityIsZeroAfterTransaction();
         }
-        newApr = _calcApr(
+        newApr = calcApr(
             config.initialLtv,
             params.daysToMaturity,
             ftPlusAlpha - deltaFt,
@@ -356,7 +341,7 @@ library TermMaxCurve {
     /// @return newFtReserve The FT token reserve of the market after transaction
     /// @return newXtReserve The XT token reserve of the market after transaction
     /// @return newApr The APR of the market after transaction
-    function _sellNegXt(
+    function sellNegXt(
         TradeParams memory params,
         MarketConfig memory config
     )
@@ -364,8 +349,8 @@ library TermMaxCurve {
         pure
         returns (uint256 newFtReserve, uint256 newXtReserve, int64 newApr)
     {
-        uint ftPlusAlpha = _calcFtPlusAlpha(config.lsf, params.ftReserve);
-        uint xtPlusBeta = _calcXtPlusBeta(
+        uint ftPlusAlpha = calcFtPlusAlpha(config.lsf, params.ftReserve);
+        uint xtPlusBeta = calcXtPlusBeta(
             config.lsf,
             config.initialLtv,
             params.daysToMaturity,
@@ -380,7 +365,7 @@ library TermMaxCurve {
             Constants.DECIMAL_BASE) * config.initialLtv) /
             Constants.DECIMAL_BASE;
 
-        uint deltaXt = ((negB - _sqrt(negB * negB - 4 * ac)) *
+        uint deltaXt = ((negB - (negB * negB - 4 * ac).sqrt()) *
             Constants.DECIMAL_BASE) / (config.initialLtv * 2);
         uint deltaFt = (ftPlusAlpha * xtPlusBeta) /
             (xtPlusBeta - deltaXt) -
@@ -388,7 +373,7 @@ library TermMaxCurve {
         if (xtPlusBeta <= deltaXt) {
             revert LiquidityIsZeroAfterTransaction();
         }
-        newApr = _calcApr(
+        newApr = calcApr(
             config.initialLtv,
             params.daysToMaturity,
             ftPlusAlpha + deltaFt,
@@ -404,7 +389,7 @@ library TermMaxCurve {
     /// @return newFtReserve The FT token reserve of the market after transaction
     /// @return newXtReserve The XT token reserve of the market after transaction
     /// @return newApr The APR of the market after transaction
-    function _buyFt(
+    function buyFt(
         TradeParams memory params,
         MarketConfig memory config
     )
@@ -412,8 +397,8 @@ library TermMaxCurve {
         pure
         returns (uint256 newFtReserve, uint256 newXtReserve, int64 newApr)
     {
-        uint ftPlusAlpha = _calcFtPlusAlpha(config.lsf, params.ftReserve);
-        uint xtPlusBeta = _calcXtPlusBeta(
+        uint ftPlusAlpha = calcFtPlusAlpha(config.lsf, params.ftReserve);
+        uint xtPlusBeta = calcXtPlusBeta(
             config.lsf,
             config.initialLtv,
             params.daysToMaturity,
@@ -427,7 +412,7 @@ library TermMaxCurve {
         if (ftPlusAlpha <= deltaFt) {
             revert LiquidityIsZeroAfterTransaction();
         }
-        newApr = _calcApr(
+        newApr = calcApr(
             config.initialLtv,
             params.daysToMaturity,
             ftPlusAlpha - deltaFt,
@@ -443,7 +428,7 @@ library TermMaxCurve {
     /// @return newFtReserve The FT token reserve of the market after transaction
     /// @return newXtReserve The XT token reserve of the market after transaction
     /// @return newApr The APR of the market after transaction
-    function _buyNegFt(
+    function buyNegFt(
         TradeParams memory params,
         MarketConfig memory config
     )
@@ -451,8 +436,8 @@ library TermMaxCurve {
         pure
         returns (uint256 newFtReserve, uint256 newXtReserve, int64 newApr)
     {
-        uint ftPlusAlpha = _calcFtPlusAlpha(config.lsf, params.ftReserve);
-        uint xtPlusBeta = _calcXtPlusBeta(
+        uint ftPlusAlpha = calcFtPlusAlpha(config.lsf, params.ftReserve);
+        uint xtPlusBeta = calcXtPlusBeta(
             config.lsf,
             config.initialLtv,
             params.daysToMaturity,
@@ -466,7 +451,7 @@ library TermMaxCurve {
         if (xtPlusBeta <= deltaXt) {
             revert LiquidityIsZeroAfterTransaction();
         }
-        newApr = _calcApr(
+        newApr = calcApr(
             config.initialLtv,
             params.daysToMaturity,
             ftPlusAlpha + deltaFt,
@@ -482,7 +467,7 @@ library TermMaxCurve {
     /// @return newFtReserve The FT token reserve of the market after transaction
     /// @return newXtReserve The XT token reserve of the market after transaction
     /// @return newApr The APR of the market after transaction
-    function _buyXt(
+    function buyXt(
         TradeParams memory params,
         MarketConfig memory config
     )
@@ -490,8 +475,8 @@ library TermMaxCurve {
         pure
         returns (uint256 newFtReserve, uint256 newXtReserve, int64 newApr)
     {
-        uint ftPlusAlpha = _calcFtPlusAlpha(config.lsf, params.ftReserve);
-        uint xtPlusBeta = _calcXtPlusBeta(
+        uint ftPlusAlpha = calcFtPlusAlpha(config.lsf, params.ftReserve);
+        uint xtPlusBeta = calcXtPlusBeta(
             config.lsf,
             config.initialLtv,
             params.daysToMaturity,
@@ -506,7 +491,7 @@ library TermMaxCurve {
         if (xtPlusBeta <= deltaXt) {
             revert LiquidityIsZeroAfterTransaction();
         }
-        newApr = _calcApr(
+        newApr = calcApr(
             config.initialLtv,
             params.daysToMaturity,
             ftPlusAlpha + deltaFt,
@@ -522,7 +507,7 @@ library TermMaxCurve {
     /// @return newFtReserve The FT token reserve of the market after transaction
     /// @return newXtReserve The XT token reserve of the market after transaction
     /// @return newApr The APR of the market after transaction
-    function _buyNegXt(
+    function buyNegXt(
         TradeParams memory params,
         MarketConfig memory config
     )
@@ -530,8 +515,8 @@ library TermMaxCurve {
         pure
         returns (uint256 newFtReserve, uint256 newXtReserve, int64 newApr)
     {
-        uint ftPlusAlpha = _calcFtPlusAlpha(config.lsf, params.ftReserve);
-        uint xtPlusBeta = _calcXtPlusBeta(
+        uint ftPlusAlpha = calcFtPlusAlpha(config.lsf, params.ftReserve);
+        uint xtPlusBeta = calcXtPlusBeta(
             config.lsf,
             config.initialLtv,
             params.daysToMaturity,
@@ -546,7 +531,7 @@ library TermMaxCurve {
         if (ftPlusAlpha <= deltaFt) {
             revert LiquidityIsZeroAfterTransaction();
         }
-        newApr = _calcApr(
+        newApr = calcApr(
             config.initialLtv,
             params.daysToMaturity,
             ftPlusAlpha - deltaFt,

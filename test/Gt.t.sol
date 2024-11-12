@@ -207,6 +207,7 @@ contract GtTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(
                 IGearingToken.GtIsNotHealthy.selector,
+                0,
                 sender,
                 LoanUtils.calcLtv(res, debtAmt, collateralAmt)
             )
@@ -230,6 +231,7 @@ contract GtTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(
                 IGearingToken.GtIsNotHealthy.selector,
+                0,
                 sender,
                 LoanUtils.calcLtv(res, debtAmt, collateralAmt)
             )
@@ -288,6 +290,7 @@ contract GtTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(
                 IGearingToken.GtIsNotHealthy.selector,
+                0,
                 sender,
                 LoanUtils.calcLtv(res, debtAmt, collateralAmt)
             )
@@ -561,7 +564,9 @@ contract GtTest is Test {
         vm.prank(vm.randomAddress());
         vm.expectRevert(
             abi.encodeWithSelector(
-                IGearingToken.CanNotMergeLoanWithDiffOwner.selector
+                IGearingToken.CanNotMergeLoanWithDiffOwner.selector,
+                ids[0],
+                sender
             )
         );
         res.gt.merge(ids);
@@ -710,6 +715,7 @@ contract GtTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(
                 IGearingToken.GtIsNotHealthy.selector,
+                gtId,
                 sender,
                 LoanUtils.calcLtv(
                     res,
@@ -1322,7 +1328,7 @@ contract GtTest is Test {
             rt = DeployUtils.deploySpecialMarket(
                 deployer,
                 res.factory,
-                res.factory.GT_ERC20(),
+                DeployUtils.GT_ERC20,
                 marketConfig,
                 maxLtv,
                 liquidationLtv,
@@ -1443,6 +1449,7 @@ contract GtTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(
                 IGearingToken.CanNotLiquidationAfterFinalDeadline.selector,
+                gtId,
                 marketConfig.maturity + Constants.LIQUIDATION_WINDOW
             )
         );
@@ -1492,6 +1499,7 @@ contract GtTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(
                 IGearingToken.RepayAmtExceedsMaxRepayAmt.selector,
+                gtId,
                 repayAmt,
                 maxRepayAmt
             )

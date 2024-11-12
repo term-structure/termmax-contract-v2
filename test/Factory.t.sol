@@ -53,7 +53,7 @@ contract FactoryTest is Test {
 
         ITermMaxFactory.DeployParams memory params = ITermMaxFactory
             .DeployParams({
-                gtKey: factory.GT_ERC20(),
+                gtKey: DeployUtils.GT_ERC20,
                 admin: deployer,
                 collateral: address(collateral),
                 underlying: underlying,
@@ -104,7 +104,7 @@ contract FactoryTest is Test {
 
         ITermMaxFactory.DeployParams memory params = ITermMaxFactory
             .DeployParams({
-                gtKey: factory.GT_ERC20(),
+                gtKey: DeployUtils.GT_ERC20,
                 admin: deployer,
                 collateral: address(collateral),
                 underlying: underlying,
@@ -233,11 +233,11 @@ contract FactoryTest is Test {
         vm.startPrank(deployer);
         TermMaxFactory factory = new TermMaxFactory(deployer);
         GearingTokenWithERC20 gt = new GearingTokenWithERC20();
-        bytes32 key = keccak256("gt-test");
-
+        string memory gtImplemtName = "gt-test";
+        bytes32 key = keccak256(abi.encodePacked(gtImplemtName));
         vm.expectEmit();
         emit ITermMaxFactory.SetGtImplement(key, address(gt));
-        factory.setGtImplement(key, address(gt));
+        factory.setGtImplement(gtImplemtName, address(gt));
         assert(factory.gtImplements(key) == address(gt));
         vm.stopPrank();
     }
@@ -246,7 +246,7 @@ contract FactoryTest is Test {
         vm.startPrank(sender);
         TermMaxFactory factory = new TermMaxFactory(deployer);
         GearingTokenWithERC20 gt = new GearingTokenWithERC20();
-        bytes32 key = keccak256("gt-test");
+        string memory key = "gt-test";
 
         vm.expectRevert(
             abi.encodePacked(
