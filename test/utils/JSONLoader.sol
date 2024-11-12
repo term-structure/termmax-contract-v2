@@ -106,11 +106,11 @@ library JSONLoader {
                 )
             )
         );
-        marketConfig.issueFtfeeRatio = uint32(
+        marketConfig.issueFtFeeRatio = uint32(
             vm.parseUint(
                 vm.parseJsonString(
                     testdataJSON,
-                    string.concat(key, ".issueFtfeeRatio")
+                    string.concat(key, ".issueFtFeeRatio")
                 )
             )
         );

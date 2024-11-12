@@ -100,7 +100,7 @@ contract GtTest is Test {
             res
         );
 
-        uint issueFee = (debtAmt * marketConfig.issueFtfeeRatio) /
+        uint issueFee = (debtAmt * marketConfig.issueFtFeeRatio) /
             Constants.DECIMAL_BASE;
         vm.expectEmit();
         emit ITermMaxMarket.IssueFt(

@@ -124,7 +124,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         uint32 borrowFeeRatio,
         uint32 minNBorrowFeeR,
         uint32 redeemFeeRatio,
-        uint32 issueFtfeeRatio,
+        uint32 issueFtFeeRatio,
         uint32 lockingPercentage,
         uint32 protocolFeeRatio
     ) external override onlyOwner {
@@ -134,7 +134,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         mConfig.borrowFeeRatio = borrowFeeRatio;
         mConfig.minNBorrowFeeR = minNBorrowFeeR;
         mConfig.redeemFeeRatio = redeemFeeRatio;
-        mConfig.issueFtfeeRatio = issueFtfeeRatio;
+        mConfig.issueFtFeeRatio = issueFtFeeRatio;
         mConfig.lockingPercentage = lockingPercentage;
         mConfig.protocolFeeRatio = protocolFeeRatio;
         _config = mConfig;
@@ -144,7 +144,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
             borrowFeeRatio,
             minNBorrowFeeR,
             redeemFeeRatio,
-            issueFtfeeRatio,
+            issueFtFeeRatio,
             lockingPercentage,
             protocolFeeRatio
         );
@@ -688,7 +688,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         gtId = gt.mint(caller, caller, debt, collateralData);
 
         MarketConfig memory mConfig = _config;
-        uint128 issueFee = ((debt * mConfig.issueFtfeeRatio) /
+        uint128 issueFee = ((debt * mConfig.issueFtFeeRatio) /
             Constants.DECIMAL_BASE).toUint128();
         // Mint ft amount = debt amount, send issueFee to treasurer and other to caller
         ft.mint(mConfig.treasurer, issueFee);

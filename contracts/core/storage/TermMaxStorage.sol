@@ -39,7 +39,7 @@ struct MarketConfig {
     uint32 redeemFeeRatio;
     /// @notice The fee ratio when issuing FT tokens by collateral
     ///         i.e. 0.01e8 means 1%
-    uint32 issueFtfeeRatio;
+    uint32 issueFtFeeRatio;
     /// @notice The proportion of transaction fees locked in the market waiting to be released
     ///         i.e. 0.5e8 means 50%
     uint32 lockingPercentage;

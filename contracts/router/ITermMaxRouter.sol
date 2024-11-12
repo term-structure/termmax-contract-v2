@@ -217,4 +217,20 @@ interface ITermMaxRouter {
     uint256 underlyingAmt
   ) external returns (uint128 lpFtOutAmt, uint128 lpXtOutAmt);
 
+  function mergeGt(
+      ITermMaxMarket market,
+      uint256[] memory ids
+  ) external returns (uint256 newId);
+
+  function addCollateral(
+    ITermMaxMarket market,
+    uint256 gtId,
+    uint256 addCollateralAmt
+  ) external;
+
+  function removeCollateral(
+    ITermMaxMarket market,
+    uint256 gtId,
+    uint256 removeCollateralAmt
+  ) external;
 }
