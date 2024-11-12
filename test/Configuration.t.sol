@@ -87,7 +87,7 @@ contract ConfigurationTest is Test {
         uint32 borrowFeeRatio = 0.03e8;
         uint32 minNBorrowFeeR = 0.04e8;
         uint32 redeemFeeRatio = 0.05e8;
-        uint32 issueFtfeeRatio = 0.06e8;
+        uint32 issueFtFeeRatio = 0.06e8;
         uint32 lockingPercentage = 0.07e8;
         uint32 protocolFeeRatio = 0.08e8;
         vm.expectEmit();
@@ -97,7 +97,7 @@ contract ConfigurationTest is Test {
             borrowFeeRatio,
             minNBorrowFeeR,
             redeemFeeRatio,
-            issueFtfeeRatio,
+            issueFtFeeRatio,
             lockingPercentage,
             protocolFeeRatio
         );
@@ -107,7 +107,7 @@ contract ConfigurationTest is Test {
             borrowFeeRatio,
             minNBorrowFeeR,
             redeemFeeRatio,
-            issueFtfeeRatio,
+            issueFtFeeRatio,
             lockingPercentage,
             protocolFeeRatio
         );
@@ -116,7 +116,7 @@ contract ConfigurationTest is Test {
         assert(res.market.config().borrowFeeRatio == borrowFeeRatio);
         assert(res.market.config().minNBorrowFeeR == minNBorrowFeeR);
         assert(res.market.config().redeemFeeRatio == redeemFeeRatio);
-        assert(res.market.config().issueFtfeeRatio == issueFtfeeRatio);
+        assert(res.market.config().issueFtFeeRatio == issueFtFeeRatio);
         assert(res.market.config().lockingPercentage == lockingPercentage);
         assert(res.market.config().protocolFeeRatio == protocolFeeRatio);
         vm.stopPrank();
@@ -130,7 +130,7 @@ contract ConfigurationTest is Test {
         uint32 borrowFeeRatio = 0.03e8;
         uint32 minNBorrowFeeR = 0.04e8;
         uint32 redeemFeeRatio = 0.05e8;
-        uint32 issueFtfeeRatio = 0.06e8;
+        uint32 issueFtFeeRatio = 0.06e8;
         uint32 lockingPercentage = 0.07e8;
         uint32 protocolFeeRatio = 0.08e8;
 
@@ -146,7 +146,7 @@ contract ConfigurationTest is Test {
             borrowFeeRatio,
             minNBorrowFeeR,
             redeemFeeRatio,
-            issueFtfeeRatio,
+            issueFtFeeRatio,
             lockingPercentage,
             protocolFeeRatio
         );
