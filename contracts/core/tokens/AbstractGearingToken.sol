@@ -52,10 +52,10 @@ abstract contract AbstractGearingToken is
         bytes collateralPriceData;
     }
 
-    /// @notice The percentage of repay amount to liquidator while do liquidate
-    uint256 constant REWARD_TO_LIQUIDATOR = 5e6;
-    /// @notice The percentage of repay amount to protocol while do liquidate
-    uint256 constant REWARD_TO_PROTOCOL = 5e6;
+    /// @notice The percentage of repay amount to liquidator while do liquidate, decimals 1e8
+    uint256 constant REWARD_TO_LIQUIDATOR = 0.05e8;
+    /// @notice The percentage of repay amount to protocol while do liquidate, decimals 1e8
+    uint256 constant REWARD_TO_PROTOCOL = 0.05e8;
     /// @notice Semi-liquidation threshold: if the value of the collateral reaches this value,
     ///         only partial liquidation can be performed, decimals 1e8.
     uint256 constant HALF_LIQUIDATION_THRESHOLD = 10000e8;
@@ -170,7 +170,7 @@ abstract contract AbstractGearingToken is
         _checkDebtValue(valueAndPrice);
         uint128 ltv = _calculateLtv(valueAndPrice);
         if (ltv >= s.config.maxLtv) {
-            revert GtIsNotHealthy(to, ltv);
+            revert GtIsNotHealthy(0, to, ltv);
         }
         id = ++s.total;
         s.loanMapping[id] = loan;
@@ -222,8 +222,9 @@ abstract contract AbstractGearingToken is
         for (uint i = 0; i < ids.length; ++i) {
             uint id = ids[i];
             LoanInfo memory loan = s.loanMapping[id];
-            if (msg.sender != ownerOf(id)) {
-                revert CanNotMergeLoanWithDiffOwner();
+            address owner = ownerOf(id);
+            if (msg.sender != owner) {
+                revert CanNotMergeLoanWithDiffOwner(id, owner);
             }
             totalDebtAmt += loan.debtAmt;
             mergedCollateralData = i == 0
@@ -270,9 +271,12 @@ abstract contract AbstractGearingToken is
         uint256 id,
         uint128 repayAmt
     ) internal {
-        address gtOwner = ownerOf(id);
         LoanInfo memory loan = s.loanMapping[id];
+        if (repayAmt > loan.debtAmt) {
+            revert RepayAmtExceedsMaxRepayAmt(id, repayAmt, loan.debtAmt);
+        }
         if (repayAmt == loan.debtAmt) {
+            address gtOwner = ownerOf(id);
             // Burn this nft
             _burnInternal(id, s);
             _transferCollateral(gtOwner, loan.collateralData);
@@ -312,7 +316,7 @@ abstract contract AbstractGearingToken is
         _checkDebtValue(valueAndPrice);
         uint128 ltv = _calculateLtv(valueAndPrice);
         if (ltv >= config.maxLtv) {
-            revert GtIsNotHealthy(msg.sender, ltv);
+            revert GtIsNotHealthy(id, msg.sender, ltv);
         }
         s.loanMapping[id] = loan;
 
@@ -382,39 +386,27 @@ abstract contract AbstractGearingToken is
 
         if (config.liquidatable) {
             // Liquidation cases:
-            // F ltv < lltv t < m
-            // T ltv < lltv t >= m t < m + w
-            // F ltv < lltv t >= m + w
+            // t >= m + w => F, "No liquidation after maturity plus liquidation window
+            // t >= m && t < m + w => T, "Liquidation allowed during liquidation window"
+            // t < m => ltv >= lltv => T, "Liquidation only allowed before maturity if ltv >= lltv"
 
-            // T ltv >= lltv t < m
-            // T ltv >= lltv t >= m t < m + w
-            // F ltv >= lltv t >= m + w
-            if (ltv < config.liquidationLtv) {
-                if (
-                    block.timestamp >= config.maturity &&
-                    block.timestamp <
-                    config.maturity + Constants.LIQUIDATION_WINDOW
-                ) {
-                    isLiquidable = true;
-                    maxRepayAmt = loan.debtAmt;
-                }
-            } else {
-                if (block.timestamp < config.maturity) {
-                    isLiquidable = true;
-                    /// @notice collateralValue(price decimals) and HALF_LIQUIDATION_THRESHOLD(base decimals 1e8)
-                    maxRepayAmt = (valueAndPrice.collateralValue *
-                        Constants.DECIMAL_BASE) /
-                        valueAndPrice.priceDecimals <
-                        HALF_LIQUIDATION_THRESHOLD
-                        ? loan.debtAmt
-                        : loan.debtAmt / 2;
-                } else if (
-                    block.timestamp <
-                    config.maturity + Constants.LIQUIDATION_WINDOW
-                ) {
-                    isLiquidable = true;
-                    maxRepayAmt = loan.debtAmt;
-                }
+            if (
+                block.timestamp >=
+                config.maturity + Constants.LIQUIDATION_WINDOW
+            ) {
+                isLiquidable = false;
+            } else if (block.timestamp >= config.maturity) {
+                isLiquidable = true;
+                maxRepayAmt = loan.debtAmt;
+            } else if (ltv >= config.liquidationLtv) {
+                isLiquidable = true;
+                // collateralValue(price decimals) and HALF_LIQUIDATION_THRESHOLD(base decimals 1e8)
+                maxRepayAmt = (valueAndPrice.collateralValue *
+                    Constants.DECIMAL_BASE) /
+                    valueAndPrice.priceDecimals <
+                    HALF_LIQUIDATION_THRESHOLD
+                    ? loan.debtAmt
+                    : loan.debtAmt / 2;
             }
         }
     }
@@ -443,12 +435,15 @@ abstract contract AbstractGearingToken is
             uint liquidationDeadline = config.maturity +
                 Constants.LIQUIDATION_WINDOW;
             if (block.timestamp >= liquidationDeadline) {
-                revert CanNotLiquidationAfterFinalDeadline(liquidationDeadline);
+                revert CanNotLiquidationAfterFinalDeadline(
+                    id,
+                    liquidationDeadline
+                );
             }
             revert GtIsSafe(id);
         }
         if (repayAmt > maxRepayAmt) {
-            revert RepayAmtExceedsMaxRepayAmt(repayAmt, maxRepayAmt);
+            revert RepayAmtExceedsMaxRepayAmt(id, repayAmt, maxRepayAmt);
         }
         // Transfer token
         config.underlying.transferFrom(msg.sender, config.market, repayAmt);
@@ -482,7 +477,11 @@ abstract contract AbstractGearingToken is
                 _checkDebtValue(valueAndPrice);
                 uint128 ltvAfter = _calculateLtv(valueAndPrice);
                 if (ltvBefore < ltvAfter) {
-                    revert LtvIncreasedAfterLiquidation(ltvBefore, ltvAfter);
+                    revert LtvIncreasedAfterLiquidation(
+                        id,
+                        ltvBefore,
+                        ltvAfter
+                    );
                 }
             }
             // update storage
@@ -549,7 +548,7 @@ abstract contract AbstractGearingToken is
     function _getValueAndPrice(
         AggregatorV3Interface underlyingOracle,
         LoanInfo memory loan,
-        uint8 underlyingDecimals
+        uint8 erc20Decimals
     ) internal view returns (ValueAndPrice memory valueAndPrice) {
         valueAndPrice.collateralPriceData = _getCollateralPriceData();
         valueAndPrice.collateralValue = _getCollateralValue(
@@ -562,7 +561,7 @@ abstract contract AbstractGearingToken is
             valueAndPrice.priceDecimals
         ) = _getPrice(underlyingOracle);
 
-        valueAndPrice.underlyingDecimals = 10 ** underlyingDecimals;
+        valueAndPrice.underlyingDecimals = 10 ** erc20Decimals;
 
         valueAndPrice.debtValueWithDecimals =
             (loan.debtAmt * valueAndPrice.underlyingPrice) /

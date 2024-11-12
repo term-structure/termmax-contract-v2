@@ -30,6 +30,9 @@ contract TermMaxFactory is ITermMaxFactory, Ownable {
     address public marketImplement;
 
     /// @notice The implementations of Term Max Gearing Token contract
+    /// @dev Based on the abstract GearingToken contract,
+    ///      different GearingTokens can be adapted to various collaterals,
+    ///      such as ERC20 tokens and ERC721 tokens.
     mapping(bytes32 => address) public gtImplements;
 
     constructor(address admin) Ownable(admin) {
@@ -48,11 +51,12 @@ contract TermMaxFactory is ITermMaxFactory, Ownable {
 
     /// @notice Set the implementations of Term Max Gearing Token contract
     function setGtImplement(
-        string gtImplementName ,
+        string memory gtImplementName,
         address gtImplement
     ) external onlyOwner {
-        gtImplements[keccak256(gtImplementName)] = gtImplement;
-        emit SetGtImplementd(gtImplementName, key, gtImplement);
+        bytes32 key = keccak256(abi.encodePacked(gtImplementName));
+        gtImplements[key] = gtImplement;
+        emit SetGtImplement(key, gtImplement);
     }
 
     /**
