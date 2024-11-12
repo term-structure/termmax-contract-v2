@@ -194,6 +194,11 @@ interface IGearingToken is IERC721 {
     /// @param byUnderlying Repay using underlying token or bonds token
     function repay(uint256 id, uint128 repayAmt, bool byUnderlying) external;
 
+    /// @notice Repay the debt of Gearing Token,
+    ///         the collateral will send by flashloan first.
+    /// @param id The id of Gearing Token
+    function flashRepay(uint256 id, bytes calldata callbackData) external;
+
     /// @notice Remove collateral from the loan.
     ///         Require the loan to value bigger than maxLtv after this action.
     /// @param id The id of Gearing Token

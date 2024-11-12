@@ -12,6 +12,7 @@ import {LoanUtils} from "./utils/LoanUtils.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {ITermMaxMarket, TermMaxMarket, Constants, IERC20} from "../contracts/core/TermMaxMarket.sol";
 import {MockFlashLoanReceiver} from "../contracts/test/MockFlashLoanReceiver.sol";
+import {MockFlashRepayer} from "../contracts/test/MockFlashRepayer.sol";
 import {MockPriceFeed} from "../contracts/test/MockPriceFeed.sol";
 import {AbstractGearingToken} from "../contracts/core/tokens/AbstractGearingToken.sol";
 import {ITermMaxFactory, TermMaxFactory, IMintableERC20, IGearingToken, AggregatorV3Interface} from "../contracts/core/factory/TermMaxFactory.sol";
@@ -31,6 +32,8 @@ contract GtTest is Test {
     string testdata;
 
     MockFlashLoanReceiver flashLoanReceiver;
+
+    MockFlashRepayer flashRepayer;
 
     uint32 maxLtv = 0.89e8;
     uint32 liquidationLtv = 0.9e8;
@@ -54,7 +57,7 @@ contract GtTest is Test {
         );
 
         flashLoanReceiver = new MockFlashLoanReceiver(res.market);
-
+        flashRepayer = new MockFlashRepayer(res.gt);
         vm.warp(
             vm.parseUint(
                 vm.parseJsonString(testdata, ".marketConfig.currentTime")
@@ -475,6 +478,55 @@ contract GtTest is Test {
         vm.stopPrank();
     }
 
+    function testFlashRepay() public {
+        uint128 debtAmt = 100e8;
+        uint256 collateralAmt = 1e18;
+
+        vm.startPrank(sender);
+
+        (uint256 gtId, ) = LoanUtils.fastMintGt(
+            res,
+            sender,
+            debtAmt,
+            collateralAmt
+        );
+
+        res.underlying.mint(address(flashRepayer), debtAmt);
+        res.collateral.approve(address(flashRepayer), collateralAmt);
+
+        uint collateralBalanceBefore = res.collateral.balanceOf(sender);
+        uint underlyingBalanceBefore = res.underlying.balanceOf(sender);
+        StateChecker.MarketState memory state = StateChecker.getMarketState(
+            res
+        );
+        bool byUnderlying = true;
+        vm.expectEmit();
+        emit IGearingToken.Repay(gtId, debtAmt, byUnderlying);
+        flashRepayer.flashRepay(gtId);
+
+        uint collateralBalanceAfter = res.collateral.balanceOf(sender);
+        uint underlyingBalanceAfter = res.underlying.balanceOf(sender);
+        state.underlyingReserve += debtAmt;
+        state.collateralReserve -= collateralAmt;
+        StateChecker.checkMarketState(res, state);
+
+        assert(
+            res.collateral.balanceOf(address(flashRepayer)) == collateralAmt
+        );
+        assert(res.underlying.balanceOf(address(flashRepayer)) == 0);
+        assert(collateralBalanceAfter == collateralBalanceBefore);
+        assert(underlyingBalanceAfter == underlyingBalanceBefore);
+        vm.expectRevert(
+            abi.encodePacked(
+                bytes4(keccak256("ERC721NonexistentToken(uint256)")),
+                gtId
+            )
+        );
+        res.gt.loanInfo(gtId);
+
+        vm.stopPrank();
+    }
+
     function testRevertByGtIsExpiredWhenRepay() public {
         uint128 debtAmt = 100e8;
         uint256 collateralAmt = 1e18;
@@ -498,6 +550,28 @@ contract GtTest is Test {
         res.gt.repay(gtId, debtAmt, true);
 
         vm.stopPrank();
+    }
+
+    function testRevertByGtIsExpiredWhenFlashRepay() public {
+        uint128 debtAmt = 100e8;
+        uint256 collateralAmt = 1e18;
+
+        vm.startPrank(sender);
+
+        (uint256 gtId, ) = LoanUtils.fastMintGt(
+            res,
+            sender,
+            debtAmt,
+            collateralAmt
+        );
+        vm.warp(marketConfig.maturity);
+        res.underlying.mint(address(flashRepayer), debtAmt);
+        res.collateral.approve(address(flashRepayer), collateralAmt);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IGearingToken.GtIsExpired.selector, gtId)
+        );
+        flashRepayer.flashRepay(gtId);
     }
 
     function testMerge() public {

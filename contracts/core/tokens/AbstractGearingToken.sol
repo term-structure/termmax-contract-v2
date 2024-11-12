@@ -6,6 +6,7 @@ import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Own
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {Constants} from "../lib/Constants.sol";
+import {IFlashRepayer} from "./IFlashRepayer.sol";
 import {IGearingToken, AggregatorV3Interface, IERC20Metadata, IERC20} from "./IGearingToken.sol";
 
 /**
@@ -264,6 +265,32 @@ abstract contract AbstractGearingToken is
         }
         _repay(s, id, repayAmt);
         emit Repay(id, repayAmt, byUnderlying);
+    }
+
+    function flashRepay(
+        uint256 id,
+        bytes calldata callbackData
+    ) external override {
+        GearingTokenStorage storage s = _getGearingTokenStorage();
+        GtConfig memory config = s.config;
+        if (config.maturity <= block.timestamp) {
+            revert GtIsExpired(id);
+        }
+        LoanInfo memory loan = s.loanMapping[id];
+        address owner = ownerOf(id);
+        // Transfer collateral to the owner
+        _transferCollateral(owner, loan.collateralData);
+        IFlashRepayer(msg.sender).executeOperation(
+            owner,
+            config.underlying,
+            loan.debtAmt,
+            config.collateral,
+            loan.collateralData,
+            callbackData
+        );
+        config.underlying.transferFrom(msg.sender, config.market, loan.debtAmt);
+        _burnInternal(id, s);
+        emit Repay(id, loan.debtAmt, true);
     }
 
     function _repay(
