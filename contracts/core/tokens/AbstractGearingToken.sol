@@ -173,7 +173,7 @@ abstract contract AbstractGearingToken is
             revert GtIsNotHealthy(to, ltv);
         }
         id = ++s.total;
-        s.loanMapping[id] = LoanInfo(debtAmt, collateralData);
+        s.loanMapping[id] = loan;
         _mint(to, id);
     }
 
@@ -310,13 +310,7 @@ abstract contract AbstractGearingToken is
             config.underlying.decimals()
         );
         _checkDebtValue(valueAndPrice);
-        uint128 ltv = _calculateLtv(
-            _getValueAndPrice(
-                config.underlyingOracle,
-                loan,
-                config.underlying.decimals()
-            )
-        );
+        uint128 ltv = _calculateLtv(valueAndPrice);
         if (ltv >= config.maxLtv) {
             revert GtIsNotHealthy(msg.sender, ltv);
         }

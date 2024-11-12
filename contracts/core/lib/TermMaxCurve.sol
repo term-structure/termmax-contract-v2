@@ -46,7 +46,7 @@ library TermMaxCurve {
         if (lpTotalSupply == 0) {
             lpOutAmt = tokenIn;
         } else {
-            // lpOutAmt = tokenIn/(tokenReserve/lpTotalSupply)
+            // lpOutAmt/lpTotalSupply = tokenIn/tokenReserve
             lpOutAmt = (tokenIn * lpTotalSupply) / tokenReserve;
         }
     }

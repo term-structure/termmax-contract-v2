@@ -21,7 +21,7 @@ contract TermMaxFactory is ITermMaxFactory, Ownable {
     string constant PREFIX_GNFT = "GT:";
     string constant STRING_CONNECTION = "-";
 
-    bytes32 public constant GT_ERC20 = keccak256("GearingTokenWithERC20");
+    bytes32 constant GT_ERC20 = keccak256("GearingTokenWithERC20");
 
     /// @notice The implementation of Term Max ERC20 Token contract
     address public immutable tokenImplement;
@@ -48,11 +48,11 @@ contract TermMaxFactory is ITermMaxFactory, Ownable {
 
     /// @notice Set the implementations of Term Max Gearing Token contract
     function setGtImplement(
-        bytes32 key,
+        string gtImplementName ,
         address gtImplement
     ) external onlyOwner {
-        gtImplements[key] = gtImplement;
-        emit SetGtImplement(key, gtImplement);
+        gtImplements[keccak256(gtImplementName)] = gtImplement;
+        emit SetGtImplementd(gtImplementName, key, gtImplement);
     }
 
     /**
