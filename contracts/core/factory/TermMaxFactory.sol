@@ -21,7 +21,7 @@ contract TermMaxFactory is ITermMaxFactory, Ownable {
     string constant PREFIX_GNFT = "GT:";
     string constant STRING_CONNECTION = "-";
 
-    bytes32 public constant GT_ERC20 = keccak256("GearingTokenWithERC20");
+    bytes32 constant GT_ERC20 = keccak256("GearingTokenWithERC20");
 
     /// @notice The implementation of Term Max ERC20 Token contract
     address public immutable tokenImplement;
