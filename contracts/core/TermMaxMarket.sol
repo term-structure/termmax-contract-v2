@@ -16,7 +16,7 @@ import {Ownable} from "./access/Ownable.sol";
 import "./storage/TermMaxStorage.sol";
 
 /**
- * @title Term Max Market
+ * @title TermMax Market
  * @author Term Structure Labs
  */
 contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
@@ -66,6 +66,9 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
             config_.maturity < config_.openTime
         ) {
             revert InvalidTime(config_.openTime, config_.maturity);
+        }
+        if (config_.lsf == 0 || config_.lsf > Constants.DECIMAL_BASE) {
+            revert InvalidLsf(config_.lsf);
         }
         underlying = underlying_;
         collateral = collateral_;
@@ -153,11 +156,24 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
     /**
      * @inheritdoc ITermMaxMarket
      */
-    function setTreasurer(address treasurer) external onlyOwner {
+    function setTreasurer(address treasurer) external override onlyOwner {
         _config.treasurer = treasurer;
         gt.setTreasurer(treasurer);
 
         emit UpdateTreasurer(treasurer);
+    }
+
+    /**
+     * @inheritdoc ITermMaxMarket
+     */
+    function setLsf(uint32 lsf) external override onlyOwner {
+        if (lsf == 0 || lsf > Constants.DECIMAL_BASE) {
+            revert InvalidLsf(lsf);
+        }
+
+        _config.lsf = lsf;
+
+        emit UpdateLsf(lsf);
     }
 
     /**

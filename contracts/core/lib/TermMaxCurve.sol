@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {Constants} from "./Constants.sol";
-import {MathLib} from "./MathLib.sol";
+import {MathLib, SafeCast} from "./MathLib.sol";
 import "../storage/TermMaxStorage.sol";
 
 /**
- * @title The Term Max curve library
+ * @title The TermMax curve library
  * @author Term Structure Labs
  */
 library TermMaxCurve {

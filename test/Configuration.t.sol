@@ -152,4 +152,47 @@ contract ConfigurationTest is Test {
         );
         vm.stopPrank();
     }
+
+    function testSetLsf() public {
+        vm.startPrank(deployer);
+        uint32 lsf = 0.11e8;
+
+        vm.expectEmit();
+        emit ITermMaxMarket.UpdateLsf(lsf);
+        res.market.setLsf(lsf);
+        assert(res.market.config().lsf == lsf);
+
+        vm.stopPrank();
+    }
+
+    function testSetLsfWithoutAuth(address sender) public {
+        vm.startPrank(sender);
+        uint32 lsf = 0.11e8;
+        vm.expectRevert(
+            abi.encodePacked(
+                bytes4(keccak256("OwnableUnauthorizedAccount(address)")),
+                abi.encode(sender)
+            )
+        );
+        res.market.setLsf(lsf);
+
+        vm.stopPrank();
+    }
+
+    function testSetLsfWithoutInvalidLsf() public {
+        vm.startPrank(deployer);
+        uint32 lsf = 0;
+        vm.expectRevert(
+            abi.encodeWithSelector(ITermMaxMarket.InvalidLsf.selector, lsf)
+        );
+        res.market.setLsf(lsf);
+
+        lsf = 1.01e8;
+        vm.expectRevert(
+            abi.encodeWithSelector(ITermMaxMarket.InvalidLsf.selector, lsf)
+        );
+        res.market.setLsf(lsf);
+
+        vm.stopPrank();
+    }
 }

@@ -2,7 +2,7 @@
 pragma solidity ^0.8.27;
 
 /**
- * @title The general constants of Term Max
+ * @title The general constants of TermMax
  * @author Term Structure Labs
  */
 library Constants {

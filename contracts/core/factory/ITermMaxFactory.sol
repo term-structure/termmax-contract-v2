@@ -6,7 +6,7 @@ import {IMintableERC20} from "../tokens/MintableERC20.sol";
 import "../storage/TermMaxStorage.sol";
 
 /**
- * @title The Term Max factory interface
+ * @title The TermMax factory interface
  * @author Term Structure Labs
  */
 interface ITermMaxFactory {
@@ -17,7 +17,7 @@ interface ITermMaxFactory {
     /// @notice Error for gt implementation can not found
     error CantNotFindGtImplementation();
 
-    /// @notice Emit when initializing implementation of Term Max Market
+    /// @notice Emit when initializing implementation of TermMax Market
     event InitializeMarketImplement(address marketImplement);
     /// @notice Emit when setting implementations of Gearing Token
     event SetGtImplement(bytes32 key, address gtImplement);

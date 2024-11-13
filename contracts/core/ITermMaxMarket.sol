@@ -6,12 +6,14 @@ import {IGearingToken} from "./tokens/IGearingToken.sol";
 import "./storage/TermMaxStorage.sol";
 
 /**
- * @title Term Max Market interface
+ * @title TermMax Market interface
  * @author Term Structure Labs
  */
 interface ITermMaxMarket {
     /// @notice Error for invalid unix time parameters
     error InvalidTime(uint64 openTime, uint64 maturity);
+    /// @notice Error for lsf value equals 0 or bigger than 1e8
+    error InvalidLsf(uint32 lsf);
     /// @notice Error for the collateral and underlying are the same token
     error CollateralCanNotEqualUnserlyinng();
     /// @notice Error for repeat initialization of market
@@ -32,7 +34,7 @@ interface ITermMaxMarket {
     /// @param underlying Underlying token
     /// @param openTime The unix time when the market starts trading
     /// @param maturity The unix time of maturity date
-    /// @param tokens Term Max Market tokens, sort by [FT, XT, LpFT, LpXt]
+    /// @param tokens TermMax Market tokens, sort by [FT, XT, LpFT, LpXt]
     /// @param gt Gearing token
     event MarketInitialized(
         address indexed collateral,
@@ -56,6 +58,8 @@ interface ITermMaxMarket {
     );
     /// @notice Emitted when setting treasurer address
     event UpdateTreasurer(address indexed treasurer);
+    /// @notice Emitted when change the value of lsf
+    event UpdateLsf(uint32 lsf);
 
     /// @notice Emitted when providing liquidity to market
     /// @param caller Who call the function
@@ -175,8 +179,8 @@ interface ITermMaxMarket {
     /// @param admin Administrator address for configuring parameters such as transaction fees
     /// @param collateral_ Collateral token
     /// @param underlying_ Underlying Token(debt)
-    /// @param tokens_ Term Max Market tokens, sort by [FT, XT, LpFT, LpXt]
-    /// @param gt_ Term Max Gearing Token
+    /// @param tokens_ TermMax Market tokens, sort by [FT, XT, LpFT, LpXt]
+    /// @param gt_ TermMax Gearing Token
     /// @param config_ Configuration of market
     /// @dev Only factory will call this function once when deploying new market
     function initialize(
@@ -206,7 +210,10 @@ interface ITermMaxMarket {
     /// @notice Set the treasurer's address
     function setTreasurer(address treasurer) external;
 
-    /// @notice Return the tokens in Term Max Market
+    /// @notice Set the value of lsf
+    function setLsf(uint32 lsf) external;
+
+    /// @notice Return the tokens in TermMax Market
     /// @return ft Fixed-rate Token(bond token). Earning Fixed Income with High Certainty
     /// @return xt Intermediary Token for Collateralization and Leveragin
     /// @return lpFt Lp token when providing Liquidity to TermMax AMM Markets

@@ -13,12 +13,13 @@ import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/acce
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 
 import {ITermMaxMarket} from "../core/ITermMaxMarket.sol";
-import {ITermMaxRouter, ContextCallbackType, SwapInput, LeverageFromTokenData} from "./ITermMaxRouter.sol";
+import {ITermMaxRouter, ContextCallbackType, SwapInput, LeverageFromTokenData, FlashRepayFromCollData} from "./ITermMaxRouter.sol";
 import {MathLib} from "../core/lib/MathLib.sol";
 import {IMintableERC20} from "../core/tokens/IMintableERC20.sol";
 import {MarketConfig} from "../core/storage/TermMaxStorage.sol";
 import {Constants} from "../core/lib/Constants.sol";
 import {IFlashLoanReceiver} from "../core/IFlashLoanReceiver.sol";
+import {IFlashRepayer} from "../core/tokens/IFlashRepayer.sol";
 import {IGearingToken} from "../core/tokens/IGearingToken.sol";
 
 contract TermMaxRouter is
@@ -26,6 +27,7 @@ contract TermMaxRouter is
     AccessControlUpgradeable,
     PausableUpgradeable,
     IFlashLoanReceiver,
+    IFlashRepayer,
     ITermMaxRouter
 {
     using Address for address;
@@ -41,6 +43,14 @@ contract TermMaxRouter is
     mapping(address => bool) public marketWhitelist;
     modifier ensureMarketWhitelist(address market) {
         require(marketWhitelist[market], "Market not whitelisted");
+        _;
+    }
+
+    modifier ensureGtWhitelist(address gt) {
+        address market = IGearingToken(gt).marketAddr();
+        require(marketWhitelist[market], "Market of Gt not whitelisted");
+        (, , , , IGearingToken gt_, , ) = ITermMaxMarket(market).tokens();
+        require(address(gt_) == gt, "Gt not whitelisted");
         _;
     }
 
@@ -738,6 +748,23 @@ contract TermMaxRouter is
         emit Repay(market, false, address(underlying), gtId, repayAmt);
     }
 
+    function flashRepayFromColl(
+        ITermMaxMarket market,
+        uint256 gtId,
+        uint256 minUnderlyingAmt,
+        SwapInput calldata swapInput
+    ) external ensureMarketWhitelist(address(market)) whenNotPaused {
+        (, , , , IGearingToken gt, , IERC20 underlying) = market.tokens();
+
+        gt.flashRepay(
+            gtId,
+            abi.encode(
+                ContextCallbackType.FLASH_REPAY_FROM_COLL,
+                FlashRepayFromCollData(minUnderlyingAmt, swapInput)
+            )
+        );
+    }
+
     function repayFromFt(
         ITermMaxMarket market,
         uint256 gtId,
@@ -795,12 +822,15 @@ contract TermMaxRouter is
     }
 
     function mergeGt(
-      ITermMaxMarket market,
-      uint256[] memory ids
-    ) external ensureMarketWhitelist(address(market)) whenNotPaused returns (uint256 newId) {
-        (
-        ,,,,IGearingToken gt,,
-        ) = market.tokens();
+        ITermMaxMarket market,
+        uint256[] memory ids
+    )
+        external
+        ensureMarketWhitelist(address(market))
+        whenNotPaused
+        returns (uint256 newId)
+    {
+        (, , , , IGearingToken gt, , ) = market.tokens();
         return gt.merge(ids);
     }
 
@@ -809,11 +839,13 @@ contract TermMaxRouter is
         uint256 gtId,
         uint256 addCollateralAmt
     ) external ensureMarketWhitelist(address(market)) whenNotPaused {
-        (
-            ,,,,IGearingToken gt,
-            address collateral,
-        ) = market.tokens();
-        _transferToSelfAndApproveSpender(IERC20(collateral), msg.sender, address(gt), addCollateralAmt);
+        (, , , , IGearingToken gt, address collateral, ) = market.tokens();
+        _transferToSelfAndApproveSpender(
+            IERC20(collateral),
+            msg.sender,
+            address(gt),
+            addCollateralAmt
+        );
         gt.addCollateral(gtId, _encodeAmount(addCollateralAmt));
     }
 
@@ -822,14 +854,11 @@ contract TermMaxRouter is
         uint256 gtId,
         uint256 removeCollateralAmt
     ) external ensureMarketWhitelist(address(market)) whenNotPaused {
-        (
-            ,,,,IGearingToken gt,
-            address collateral,
-        ) = market.tokens();
+        (, , , , IGearingToken gt, address collateral, ) = market.tokens();
         gt.removeCollateral(gtId, _encodeAmount(removeCollateralAmt));
     }
 
-
+    /// @dev Market flash leverage falshloan callback
     function executeOperation(
         address sender,
         IERC20 asset,
@@ -906,5 +935,54 @@ contract TermMaxRouter is
         bytes memory collateralData
     ) internal pure returns (uint256) {
         return abi.decode(collateralData, (uint256));
+    }
+
+    /// @dev Gt flash repay falshloan callback
+    function executeOperation(
+        address owner,
+        IERC20 debtToken,
+        uint128 debtAmt,
+        address collateralToken,
+        bytes memory collateralData,
+        bytes calldata callbackData
+    ) external override ensureGtWhitelist(msg.sender) {
+        ContextCallbackType callbackType = abi.decode(
+            callbackData,
+            (ContextCallbackType)
+        );
+
+        if (callbackType == ContextCallbackType.FLASH_REPAY_FROM_COLL) {
+            (, FlashRepayFromCollData memory repayData) = abi.decode(
+                callbackData,
+                (ContextCallbackType, FlashRepayFromCollData)
+            );
+            if (!swapperWhitelist[repayData.swapInput.swapper]) {
+                revert("Invalid swapper");
+            }
+            uint amount = _decodeAmount(collateralData);
+            IERC20(collateralToken).safeTransferFrom(
+                owner,
+                address(this),
+                amount
+            );
+            IERC20(collateralToken).safeIncreaseAllowance(
+                repayData.swapInput.swapper,
+                amount
+            );
+            repayData.swapInput.swapper.functionCall(
+                repayData.swapInput.swapData
+            );
+
+            uint256 debtTokenBalance = debtToken.balanceOf(address(this));
+            if (debtTokenBalance < repayData.minUnderlyingAmt) {
+                revert("Slippage: INSUFFICIENT_COLLATERAL");
+            }
+            debtToken.safeIncreaseAllowance(msg.sender, debtAmt);
+            if (debtAmt < debtTokenBalance) {
+                debtToken.safeTransfer(owner, debtTokenBalance - debtAmt);
+            }
+        } else {
+            revert("Invalid callback type");
+        }
     }
 }
