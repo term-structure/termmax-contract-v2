@@ -5,7 +5,7 @@ import {MathLib} from "../lib/MathLib.sol";
 import "./AbstractGearingToken.sol";
 
 /**
- * @title Term Max Gearing Token, using ERC20 token as collateral
+ * @title TermMax Gearing Token, using ERC20 token as collateral
  * @author Term Structure Labs
  */
 contract GearingTokenWithERC20 is AbstractGearingToken {

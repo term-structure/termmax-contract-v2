@@ -6,7 +6,7 @@ import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Own
 import {IMintableERC20} from "./IMintableERC20.sol";
 
 /**
- * @title Term Max ERC20 token
+ * @title TermMax ERC20 token
  * @author Term Structure Labs
  */
 contract MintableERC20 is

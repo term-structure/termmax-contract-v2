@@ -6,7 +6,7 @@ import {IGearingToken} from "./tokens/IGearingToken.sol";
 import "./storage/TermMaxStorage.sol";
 
 /**
- * @title Term Max Market interface
+ * @title TermMax Market interface
  * @author Term Structure Labs
  */
 interface ITermMaxMarket {
@@ -34,7 +34,7 @@ interface ITermMaxMarket {
     /// @param underlying Underlying token
     /// @param openTime The unix time when the market starts trading
     /// @param maturity The unix time of maturity date
-    /// @param tokens Term Max Market tokens, sort by [FT, XT, LpFT, LpXt]
+    /// @param tokens TermMax Market tokens, sort by [FT, XT, LpFT, LpXt]
     /// @param gt Gearing token
     event MarketInitialized(
         address indexed collateral,
@@ -179,8 +179,8 @@ interface ITermMaxMarket {
     /// @param admin Administrator address for configuring parameters such as transaction fees
     /// @param collateral_ Collateral token
     /// @param underlying_ Underlying Token(debt)
-    /// @param tokens_ Term Max Market tokens, sort by [FT, XT, LpFT, LpXt]
-    /// @param gt_ Term Max Gearing Token
+    /// @param tokens_ TermMax Market tokens, sort by [FT, XT, LpFT, LpXt]
+    /// @param gt_ TermMax Gearing Token
     /// @param config_ Configuration of market
     /// @dev Only factory will call this function once when deploying new market
     function initialize(
@@ -213,7 +213,7 @@ interface ITermMaxMarket {
     /// @notice Set the value of lsf
     function setLsf(uint32 lsf) external;
 
-    /// @notice Return the tokens in Term Max Market
+    /// @notice Return the tokens in TermMax Market
     /// @return ft Fixed-rate Token(bond token). Earning Fixed Income with High Certainty
     /// @return xt Intermediary Token for Collateralization and Leveragin
     /// @return lpFt Lp token when providing Liquidity to TermMax AMM Markets

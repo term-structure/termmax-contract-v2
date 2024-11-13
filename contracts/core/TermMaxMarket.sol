@@ -16,7 +16,7 @@ import {Ownable} from "./access/Ownable.sol";
 import "./storage/TermMaxStorage.sol";
 
 /**
- * @title Term Max Market
+ * @title TermMax Market
  * @author Term Structure Labs
  */
 contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {

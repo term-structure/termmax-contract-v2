@@ -10,7 +10,7 @@ import {IFlashRepayer} from "./IFlashRepayer.sol";
 import {IGearingToken, AggregatorV3Interface, IERC20Metadata, IERC20} from "./IGearingToken.sol";
 
 /**
- * @title Term Max Gearing Token
+ * @title TermMax Gearing Token
  * @author Term Structure Labs
  */
 abstract contract AbstractGearingToken is

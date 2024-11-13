@@ -6,7 +6,7 @@ import {MathLib, SafeCast} from "./MathLib.sol";
 import "../storage/TermMaxStorage.sol";
 
 /**
- * @title The Term Max curve library
+ * @title The TermMax curve library
  * @author Term Structure Labs
  */
 library TermMaxCurve {
