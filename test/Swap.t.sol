@@ -115,22 +115,20 @@ contract SwapTest is Test {
         vm.stopPrank();
     }
 
-    // TODO
-    // function testBuyAllFt() public {
-    //     vm.startPrank(sender);
+    function testBuyAllFt() public {
+        vm.startPrank(sender);
 
-    //     uint underlyingAmtIn = (10000e8 * uint256(marketConfig.initialLtv)) /
-    //         Constants.DECIMAL_BASE;
-    //     res.underlying.mint(sender, underlyingAmtIn);
-    //     res.underlying.approve(address(res.market), underlyingAmtIn);
-    //     vm.expectRevert(
-    //         abi.encodeWithSelector(
-    //             TermMaxCurve.LiquidityIsZeroAfterTransaction.selector
-    //         )
-    //     );
-    //     res.market.buyFt(uint128(underlyingAmtIn), 0);
-    //     vm.stopPrank();
-    // }
+        uint underlyingAmtIn = 100000000000e8;
+        res.underlying.mint(sender, underlyingAmtIn);
+        res.underlying.approve(address(res.market), underlyingAmtIn);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                TermMaxCurve.LiquidityIsZeroAfterTransaction.selector
+            )
+        );
+        res.market.buyFt(uint128(underlyingAmtIn), 0);
+        vm.stopPrank();
+    }
 
     function testBuyFtMinTokenOut() public {
         vm.startPrank(sender);
@@ -230,23 +228,20 @@ contract SwapTest is Test {
         vm.stopPrank();
     }
 
-    // TODO
-    // function testBuyAllXt() public {
-    //     vm.startPrank(sender);
+    function testBuyAllXt() public {
+        vm.startPrank(sender);
 
-    //     uint underlyingAmtIn = (10000e8 *
-    //         Constants.DECIMAL_BASE -
-    //         marketConfig.initialLtv) / Constants.DECIMAL_BASE;
-    //     res.underlying.mint(sender, underlyingAmtIn);
-    //     res.underlying.approve(address(res.market), underlyingAmtIn);
-    //     vm.expectRevert(
-    //         abi.encodeWithSelector(
-    //             TermMaxCurve.LiquidityIsZeroAfterTransaction.selector
-    //         )
-    //     );
-    //     res.market.buyXt(uint128(underlyingAmtIn), 0);
-    //     vm.stopPrank();
-    // }
+        uint underlyingAmtIn = 100000000000e8;
+        res.underlying.mint(sender, underlyingAmtIn);
+        res.underlying.approve(address(res.market), underlyingAmtIn);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                TermMaxCurve.LiquidityIsZeroAfterTransaction.selector
+            )
+        );
+        res.market.buyXt(uint128(underlyingAmtIn), 0);
+        vm.stopPrank();
+    }
 
     function testBuyXtMinTokenOut() public {
         vm.startPrank(sender);

@@ -666,7 +666,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
             1) / Constants.DECIMAL_BASE).toUint128();
 
         // Send debt to borrower
-        underlying.transfer(caller, debt);
+        underlying.transfer(caller, xtAmt);
         // Callback function
         bytes memory collateralData = IFlashLoanReceiver(caller)
             .executeOperation(receiver, underlying, debt, callbackData);
