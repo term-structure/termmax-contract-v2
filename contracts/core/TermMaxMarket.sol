@@ -664,7 +664,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         underlying.transfer(caller, xtAmt);
         // Callback function
         bytes memory collateralData = IFlashLoanReceiver(caller)
-            .executeOperation(receiver, underlying, debt, callbackData);
+            .executeOperation(receiver, underlying, xtAmt, callbackData);
 
         // Mint GT
         gtId = gt.mint(caller, receiver, debt, collateralData);
