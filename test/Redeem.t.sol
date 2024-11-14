@@ -133,6 +133,7 @@ contract RedeemTest is Test {
             uint128 feeAmt,
             bytes memory deliveryData
         ) = StateChecker.getRedeemPoints(res, marketConfig, senderBalances);
+
         uint underlyingBefore = res.underlying.balanceOf(sender);
         uint collateralBefore = res.collateral.balanceOf(sender);
         vm.expectEmit();
@@ -144,6 +145,7 @@ contract RedeemTest is Test {
             deliveryData
         );
         res.market.redeem(senderBalances);
+        console.log("sender !");
         vm.stopPrank();
         uint underlyingAfter = res.underlying.balanceOf(sender);
         uint collateralAfter = res.collateral.balanceOf(sender);
