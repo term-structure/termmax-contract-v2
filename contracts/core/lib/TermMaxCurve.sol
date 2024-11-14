@@ -17,6 +17,9 @@ library TermMaxCurve {
     /// @notice Error for transaction lead to liquidity depletion
     error LiquidityIsZeroAfterTransaction();
 
+    int constant INT_64_MAX = type(int64).max;
+    int constant INT_64_MIN = type(int64).min;
+
     /// @notice Calculate how many lp tokens should be minted to the liquidity provider
     /// @param tokenIn The amount of tokens provided
     /// @param tokenReserve The token's balance of the market
@@ -33,6 +36,33 @@ library TermMaxCurve {
             // lpOutAmt/lpTotalSupply = tokenIn/tokenReserve
             lpOutAmt = (tokenIn * lpTotalSupply) / tokenReserve;
         }
+    }
+
+    /// @notice Calculate how many tokens should be transfer to the liquidity provider
+    /// @param lpAmt The amount of lp to withdraw
+    /// @param lpTotalSupply The total supply of this lp token
+    /// @param lpReserve The lp token balance of market
+    /// @param tokenReserve The token balance of market
+    /// @param config Market configuration data
+    /// @return tokenAmt The amount of tokens transfer to the liquidity provider
+    function calculateLpLpWithReward(
+        uint256 lpAmt,
+        uint256 lpTotalSupply,
+        uint256 lpReserve,
+        uint256 tokenReserve,
+        uint256 currentTime,
+        MarketConfig memory config
+    ) internal pure returns (uint256 tokenAmt) {
+        uint reward = TermMaxCurve.calculateLpReward(
+            currentTime,
+            config.openTime,
+            config.maturity,
+            lpTotalSupply,
+            lpAmt,
+            lpReserve
+        );
+        lpAmt += reward;
+        tokenAmt = (lpAmt * tokenReserve) / lpTotalSupply;
     }
 
     /// @notice Calculte the FT token reserve plus alpha
@@ -115,6 +145,10 @@ library TermMaxCurve {
         int numerator = l > r ? int(l - r) : -int(r - l);
         int denominator = (xtPlusBeta * daysToMaturity * Constants.DECIMAL_BASE)
             .toInt256();
+        int apr = numerator / denominator;
+        if (apr > INT_64_MAX || apr < INT_64_MIN) {
+            revert LiquidityIsZeroAfterTransaction();
+        }
         return (numerator / denominator).toInt64();
     }
 
@@ -220,7 +254,7 @@ library TermMaxCurve {
         uint deltaFt = params.amount -
             (deltaXt * config.initialLtv) /
             Constants.DECIMAL_BASE;
-        if (xtPlusBeta <= deltaXt) {
+        if (xtPlusBeta <= deltaXt || deltaXt >= params.xtReserve) {
             revert LiquidityIsZeroAfterTransaction();
         }
         newApr = calcApr(
@@ -268,7 +302,7 @@ library TermMaxCurve {
         uint deltaFt = ftPlusAlpha -
             (ftPlusAlpha * xtPlusBeta) /
             (xtPlusBeta + deltaXt);
-        if (ftPlusAlpha <= deltaFt) {
+        if (ftPlusAlpha <= deltaFt || deltaFt >= params.ftReserve) {
             revert LiquidityIsZeroAfterTransaction();
         }
         newApr = calcApr(
@@ -321,7 +355,7 @@ library TermMaxCurve {
                 ((params.amount - deltaXt) * config.initialLtv) /
                 Constants.DECIMAL_BASE;
         }
-        if (ftPlusAlpha <= deltaFt) {
+        if (ftPlusAlpha <= deltaFt || deltaFt >= params.ftReserve) {
             revert LiquidityIsZeroAfterTransaction();
         }
         newApr = calcApr(
@@ -369,7 +403,7 @@ library TermMaxCurve {
         uint deltaFt = (ftPlusAlpha * xtPlusBeta) /
             (xtPlusBeta - deltaXt) -
             ftPlusAlpha;
-        if (xtPlusBeta <= deltaXt) {
+        if (xtPlusBeta <= deltaXt || deltaXt >= params.xtReserve) {
             revert LiquidityIsZeroAfterTransaction();
         }
         newApr = calcApr(
@@ -408,7 +442,7 @@ library TermMaxCurve {
         uint deltaFt = ftPlusAlpha -
             (ftPlusAlpha * xtPlusBeta) /
             (xtPlusBeta + deltaXt);
-        if (ftPlusAlpha <= deltaFt) {
+        if (ftPlusAlpha <= deltaFt || deltaFt >= params.ftReserve) {
             revert LiquidityIsZeroAfterTransaction();
         }
         newApr = calcApr(
@@ -447,7 +481,7 @@ library TermMaxCurve {
         uint deltaFt = (ftPlusAlpha * xtPlusBeta) /
             (xtPlusBeta - deltaXt) -
             ftPlusAlpha;
-        if (xtPlusBeta <= deltaXt) {
+        if (xtPlusBeta <= deltaXt || deltaXt >= params.xtReserve) {
             revert LiquidityIsZeroAfterTransaction();
         }
         newApr = calcApr(
@@ -487,7 +521,7 @@ library TermMaxCurve {
         uint deltaXt = xtPlusBeta -
             (xtPlusBeta * ftPlusAlpha) /
             (ftPlusAlpha + deltaFt);
-        if (xtPlusBeta <= deltaXt) {
+        if (xtPlusBeta <= deltaXt || deltaXt >= params.xtReserve) {
             revert LiquidityIsZeroAfterTransaction();
         }
         newApr = calcApr(
@@ -527,7 +561,7 @@ library TermMaxCurve {
         uint deltaXt = (xtPlusBeta * ftPlusAlpha) /
             (ftPlusAlpha - deltaFt) -
             xtPlusBeta;
-        if (ftPlusAlpha <= deltaFt) {
+        if (ftPlusAlpha <= deltaFt || deltaFt >= params.ftReserve) {
             revert LiquidityIsZeroAfterTransaction();
         }
         newApr = calcApr(

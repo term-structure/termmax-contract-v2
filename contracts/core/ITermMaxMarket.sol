@@ -28,6 +28,10 @@ interface ITermMaxMarket {
     error CanNotRedeemBeforeFinalLiquidationDeadline(
         uint256 liquidationDeadline
     );
+    /// @notice Error for evacuation mode is not actived
+    error EvacuationIsNotActived();
+    /// @notice Error for evacuation mode is actived
+    error EvacuationIsActived();
 
     /// @notice Emitted when market initialized
     /// @param collateral Collateral token
@@ -175,6 +179,22 @@ interface ITermMaxMarket {
         bytes deliveryData
     );
 
+    /// @notice Emitted when evacuating liquidity
+    /// @param caller Who call the function
+    /// @param lpFtAmt  The number of LpFT tokens burned
+    /// @param lpXtAmt The number of LpXT tokens burned
+    /// @param ftAmt The number of XT tokens received
+    /// @param xtAmt The number of XT tokens received
+    /// @param underlyingAmt The amount of underlying received
+    event Evacuate(
+        address indexed caller,
+        uint128 lpFtAmt,
+        uint128 lpXtAmt,
+        uint128 ftAmt,
+        uint128 xtAmt,
+        uint256 underlyingAmt
+    );
+
     /// @notice Initialize the token and configuration of the market
     /// @param admin Administrator address for configuring parameters such as transaction fees
     /// @param collateral_ Collateral token
@@ -319,6 +339,17 @@ interface ITermMaxMarket {
     /// @notice Redeem underlying tokens after maturity
     /// @param amountArray The amount of tokens want to redeem, sort by [FT, XT, LpFT, LpXt]
     function redeem(uint256[4] calldata amountArray) external;
+
+    /// @notice Evacuation route in case of prolonged failure
+    /// @dev Only the LTV ratio will be used for withdrawal,
+    ///      and the remaining amount needs to be redeemed after the maturity date.
+    function evacuate(uint128 lpFtAmt, uint128 lpXtAmt) external;
+
+    /// @notice Suspension of market trading
+    function pause() external;
+
+    /// @notice Open Market Trading
+    function unpause() external;
 
     // function redeemByPermit(
     //     address caller,

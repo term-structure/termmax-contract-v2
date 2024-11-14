@@ -32,6 +32,8 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
     IMintableERC20 lpFt;
     IMintableERC20 lpXt;
     IGearingToken gt;
+    /// @notice The time when the contract is suspended
+    uint256 pauseTime;
 
     /// @notice Check if the market is tradable
     modifier isOpen() {
@@ -263,44 +265,37 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         uint256 lpFtAmt,
         uint256 lpXtAmt
     ) internal returns (uint128 ftOutAmt, uint128 xtOutAmt) {
-        uint lpFtTotalSupply = lpFt.totalSupply();
-        uint lpXtTotalSupply = lpXt.totalSupply();
         MarketConfig memory mConfig = _config;
-        // calculate reward
+        // calculate out put amount
         uint ftReserve = ft.balanceOf(address(this));
         if (lpFtAmt > 0) {
-            uint reward = TermMaxCurve.calculateLpReward(
-                block.timestamp,
-                mConfig.openTime,
-                mConfig.maturity,
-                lpFtTotalSupply,
-                lpFtAmt,
-                lpFt.balanceOf(address(this))
-            );
-
+            ftOutAmt = TermMaxCurve
+                .calculateLpLpWithReward(
+                    lpFtAmt,
+                    lpFt.totalSupply(),
+                    lpFt.balanceOf(address(this)),
+                    ftReserve,
+                    block.timestamp,
+                    mConfig
+                )
+                .toUint128();
             lpFt.transferFrom(caller, address(this), lpFtAmt);
-
-            lpFtAmt += reward;
             lpFt.burn(lpFtAmt);
-
-            ftOutAmt = ((lpFtAmt * ftReserve) / lpFtTotalSupply).toUint128();
         }
         uint xtReserve = xt.balanceOf(address(this));
         if (lpXtAmt > 0) {
-            uint reward = TermMaxCurve.calculateLpReward(
-                block.timestamp,
-                mConfig.openTime,
-                mConfig.maturity,
-                lpXtTotalSupply,
-                lpXtAmt,
-                lpXt.balanceOf(address(this))
-            );
+            xtOutAmt = TermMaxCurve
+                .calculateLpLpWithReward(
+                    lpXtAmt,
+                    lpXt.totalSupply(),
+                    lpXt.balanceOf(address(this)),
+                    xtReserve,
+                    block.timestamp,
+                    mConfig
+                )
+                .toUint128();
             lpXt.transferFrom(caller, address(this), lpXtAmt);
-
-            lpXtAmt += reward;
             lpXt.burn(lpXtAmt);
-
-            xtOutAmt = ((lpXtAmt * xtReserve) / lpXtTotalSupply).toUint128();
         }
         if (xtOutAmt >= xtReserve || ftOutAmt >= ftReserve) {
             revert TermMaxCurve.LiquidityIsZeroAfterTransaction();
@@ -666,7 +661,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
             1) / Constants.DECIMAL_BASE).toUint128();
 
         // Send debt to borrower
-        underlying.transfer(caller, debt);
+        underlying.transfer(caller, xtAmt);
         // Callback function
         bytes memory collateralData = IFlashLoanReceiver(caller)
             .executeOperation(receiver, underlying, debt, callbackData);
@@ -841,18 +836,18 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
 
     /// @notice Release all locked rewards
     function _distributeAllReward() internal {
-        uint lpFtBalance = lpFt.balanceOf(address(this));
-        uint lpXtBalance = lpXt.balanceOf(address(this));
-        if (lpFtBalance > 0) {
-            lpFt.burn(lpFtBalance);
-        }
-        if (lpXtBalance > 0) {
-            lpXt.burn(lpXtBalance);
-        }
+        _burnLpInTheMarket();
         // Burn all ft in gt
         uint amount = ft.balanceOf(address(gt));
         ft.transferFrom(address(gt), address(this), amount);
         ft.burn(amount);
+    }
+
+    function _burnLpInTheMarket() internal {
+        uint lpFtBalance = lpFt.balanceOf(address(this));
+        uint lpXtBalance = lpXt.balanceOf(address(this));
+        lpFt.burn(lpFtBalance);
+        lpXt.burn(lpXtBalance);
     }
 
     function _tranferFeeToTreasurer(
@@ -866,13 +861,102 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         remainningFee = totalFee - feeToProtocol;
     }
 
-    /// @notice Suspension of market trading
+    /**
+     * @inheritdoc ITermMaxMarket
+     */
     function pause() external onlyOwner {
         _pause();
+        pauseTime = block.timestamp;
     }
 
-    /// @notice Open Market Trading
+    /**
+     * @inheritdoc ITermMaxMarket
+     */
     function unpause() external onlyOwner {
+        if (_getEvacuateStatus()) {
+            revert EvacuationIsActived();
+        }
         _unpause();
+        pauseTime = 0;
+    }
+
+    /**
+     * @inheritdoc ITermMaxMarket
+     */
+    function evacuate(
+        uint128 lpFtAmt,
+        uint128 lpXtAmt
+    ) external override nonReentrant {
+        if (!_getEvacuateStatus()) {
+            revert EvacuationIsNotActived();
+        }
+        _evacuate(msg.sender, lpFtAmt, lpXtAmt);
+    }
+
+    function _evacuate(
+        address caller,
+        uint128 lpFtAmt,
+        uint128 lpXtAmt
+    ) internal {
+        _burnLpInTheMarket();
+        MarketConfig memory mConfig = _config;
+        // calculate out put amount
+        uint ftReserve = ft.balanceOf(address(this));
+        uint ftAmt = (lpFtAmt * ftReserve) / lpFt.totalSupply();
+        // will burn in the next time
+        lpFt.transferFrom(caller, address(this), lpFtAmt);
+        uint xtReserve = xt.balanceOf(address(this));
+        uint xtAmt = (lpXtAmt * xtReserve) / lpXt.totalSupply();
+        // will burn in the next time
+        lpXt.transferFrom(caller, address(this), lpXtAmt);
+
+        uint sameProportionXt = (ftAmt * Constants.DECIMAL_BASE) /
+            mConfig.initialLtv;
+
+        // Judge the max redeemed underlying
+        // Case 1: ftAmt > xtAmt*ltv  redeem xtAmt, transfer excess ft
+        // Case 2: ftAmt < xtAmt*ltv  redeem ftAmt/ltv, transfer excess xt
+        // Case 2: ftAmt == xtAmt*ltv  redeem xtAmt
+        uint underlyingAmt = xtAmt;
+        if (sameProportionXt > xtAmt) {
+            uint sameProportionFt = (xtAmt * mConfig.initialLtv) /
+                Constants.DECIMAL_BASE;
+            ft.transfer(caller, ftAmt - sameProportionFt);
+            ft.burn(sameProportionFt);
+            xt.burn(xtAmt);
+            emit Evacuate(
+                caller,
+                lpFtAmt,
+                lpXtAmt,
+                uint128(ftAmt - sameProportionFt),
+                0,
+                underlyingAmt
+            );
+        } else if (sameProportionXt < xtAmt) {
+            xt.transfer(caller, xtAmt - sameProportionXt);
+            underlyingAmt = sameProportionXt;
+            ft.burn(ftAmt);
+            xt.burn(sameProportionXt);
+            emit Evacuate(
+                caller,
+                lpFtAmt,
+                lpXtAmt,
+                0,
+                uint128(xtAmt - sameProportionXt),
+                underlyingAmt
+            );
+        } else {
+            ft.burn(ftAmt);
+            xt.burn(xtAmt);
+            emit Evacuate(caller, lpFtAmt, lpXtAmt, 0, 0, underlyingAmt);
+        }
+        underlying.transfer(caller, underlyingAmt);
+    }
+
+    function _getEvacuateStatus() internal view returns (bool) {
+        return
+            paused() &&
+            block.timestamp - pauseTime > Constants.WAITING_TIME_EVACUATION_ACTIVE &&
+            block.timestamp < _config.maturity;
     }
 }

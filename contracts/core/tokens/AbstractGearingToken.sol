@@ -63,8 +63,8 @@ abstract contract AbstractGearingToken is
     /// @notice Minimum debt value, decimals 1e8.
     uint256 constant MINIMAL_DEBT_VALUE = 5e8;
 
-    uint256 constant UINT_MAX = 2 ** 256 - 1;
-    uint128 constant UINT128_MAX = 2 ** 128 - 1;
+    uint256 constant UINT_MAX = type(uint256).max;
+    uint128 constant UINT128_MAX = type(uint128).max;
 
     bytes32 internal constant STORAGE_SLOT_GEARING_NFT =
         bytes32(uint256(keccak256("TermMax.storage.GearingToken")) - 1);
