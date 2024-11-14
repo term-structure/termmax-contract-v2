@@ -10,6 +10,7 @@ remappings = [
     "@openzeppelin/contracts=lib/openzeppelin-contracts/contracts",
     "@openzeppelin/contracts-upgradeable=lib/openzeppelin-contracts-upgradeable/contracts",
     "@chainlink/contracts=lib/chainlink/contracts",
+    "@pendle/core-v2/contracts=lib/pendle-core-v2-public/contracts",
     "forge-std=lib/forge-std/src",
 ]
 

@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
+
+import {console} from "forge-std/console.sol";
+
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
@@ -887,6 +890,7 @@ contract TermMaxRouter is
                 address(leverData.swapInput.tokenIn) == address(asset),
                 "Invalid tokenIn"
             );
+            console.log("LeverageFromToken: amount %s", amount);
             asset.safeIncreaseAllowance(leverData.swapInput.swapper, amount);
             leverData.swapInput.swapper.functionCall(
                 leverData.swapInput.swapData
