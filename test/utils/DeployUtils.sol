@@ -16,6 +16,7 @@ library DeployUtils {
     struct Res {
         TermMaxFactory factory;
         ITermMaxMarket market;
+        MarketConfig marketConfig;
         IMintableERC20 ft;
         IMintableERC20 xt;
         IMintableERC20 lpFt;
@@ -34,6 +35,7 @@ library DeployUtils {
         uint32 liquidationLtv
     ) internal returns (Res memory res) {
         res.factory = new TermMaxFactory(deployer);
+        res.marketConfig = marketConfig;
 
         TermMaxMarket m = new TermMaxMarket();
         res.factory.initMarketImplement(address(m));

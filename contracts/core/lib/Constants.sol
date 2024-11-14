@@ -16,4 +16,6 @@ library Constants {
     uint256 constant SECONDS_IN_DAY = 1 days;
     /// @notice The window time left for the liquidation bot after the market expires
     uint256 constant LIQUIDATION_WINDOW = 1 days;
+    /// @notice Time required to activate the evacuation mode after the market paused
+    uint256 constant WAITING_TIME_EVACUATION_ACTIVE = 7 days;
 }
