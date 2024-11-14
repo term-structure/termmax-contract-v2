@@ -179,7 +179,7 @@ contract GtTest is Test {
 
         assert(gtId == 1);
         state.collateralReserve += collateralAmt;
-        state.underlyingReserve -= debtAmt;
+        state.underlyingReserve -= xtAmt;
         StateChecker.checkMarketState(res, state);
 
         uint xtAfter = res.xt.balanceOf(address(sender));
