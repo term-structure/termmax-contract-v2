@@ -351,6 +351,12 @@ interface ITermMaxMarket {
     /// @notice Open Market Trading
     function unpause() external;
 
+    /// @notice Suspension of Gearing Token liquidation and collateral reduction
+    function pauseGt() external;
+
+    /// @notice Open Gearing Token liquidation and collateral reduction
+    function unpauseGt() external;
+
     // function redeemByPermit(
     //     address caller,
     //     uint256[4] calldata amountArray,

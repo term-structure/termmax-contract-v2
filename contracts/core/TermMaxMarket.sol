@@ -765,7 +765,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
 
         {
             uint xtAmt = amountArray[1];
-            
+
             uint lpXtAmt = amountArray[3];
             if (lpXtAmt > 0) {
                 lpXt.transferFrom(caller, address(this), lpXtAmt);
@@ -880,6 +880,20 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         }
         _unpause();
         pauseTime = 0;
+    }
+
+    /**
+     * @inheritdoc ITermMaxMarket
+     */
+    function pauseGt() external onlyOwner {
+        gt.pause();
+    }
+
+    /**
+     * @inheritdoc ITermMaxMarket
+     */
+    function unpauseGt() external onlyOwner {
+        gt.unpause();
     }
 
     /**

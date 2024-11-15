@@ -235,4 +235,10 @@ interface IGearingToken is IERC721 {
         uint256 proportion,
         address to
     ) external returns (bytes memory deliveryData);
+
+    /// @notice Suspension of Gearing Token liquidation and collateral reduction
+    function pause() external;
+
+    /// @notice Open Gearing Token liquidation and collateral reduction
+    function unpause() external;
 }

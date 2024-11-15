@@ -3,6 +3,7 @@ pragma solidity ^0.8.27;
 
 import {ERC721Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {Constants} from "../lib/Constants.sol";
@@ -17,6 +18,7 @@ abstract contract AbstractGearingToken is
     OwnableUpgradeable,
     ERC721Upgradeable,
     ReentrancyGuardUpgradeable,
+    PausableUpgradeable,
     IGearingToken
 {
     using SafeCast for uint256;
@@ -100,6 +102,7 @@ abstract contract AbstractGearingToken is
     ) internal onlyInitializing {
         __ERC721_init(name, symbol);
         __Ownable_init(config.market);
+        __Pausable_init();
         GearingTokenStorage storage s = _getGearingTokenStorage();
         s.config = config;
         // Market will burn those tokens after maturity
@@ -146,7 +149,14 @@ abstract contract AbstractGearingToken is
         address to,
         uint128 debtAmt,
         bytes memory collateralData
-    ) external override onlyOwner returns (uint256 id) {
+    )
+        external
+        override
+        onlyOwner
+        whenNotPaused
+        nonReentrant
+        returns (uint256 id)
+    {
         GearingTokenStorage storage s = _getGearingTokenStorage();
         _transferCollateralFrom(
             collateralProvider,
@@ -216,7 +226,9 @@ abstract contract AbstractGearingToken is
     /**
      * @inheritdoc IGearingToken
      */
-    function merge(uint256[] memory ids) external returns (uint256 newId) {
+    function merge(
+        uint256[] memory ids
+    ) external nonReentrant returns (uint256 newId) {
         GearingTokenStorage storage s = _getGearingTokenStorage();
         uint128 totalDebtAmt;
         bytes memory mergedCollateralData;
@@ -270,7 +282,7 @@ abstract contract AbstractGearingToken is
     function flashRepay(
         uint256 id,
         bytes calldata callbackData
-    ) external override {
+    ) external override nonReentrant {
         GearingTokenStorage storage s = _getGearingTokenStorage();
         GtConfig memory config = s.config;
         if (config.maturity <= block.timestamp) {
@@ -319,7 +331,7 @@ abstract contract AbstractGearingToken is
     function removeCollateral(
         uint256 id,
         bytes memory collateralData
-    ) external override nonReentrant {
+    ) external override nonReentrant whenNotPaused {
         if (msg.sender != ownerOf(id)) {
             revert CallerIsNotTheOwner(id);
         }
@@ -444,7 +456,7 @@ abstract contract AbstractGearingToken is
     function liquidate(
         uint256 id,
         uint128 repayAmt
-    ) external override nonReentrant {
+    ) external override nonReentrant whenNotPaused {
         GearingTokenStorage storage s = _getGearingTokenStorage();
         LoanInfo memory loan = s.loanMapping[id];
         GtConfig memory config = s.config;
@@ -661,5 +673,19 @@ abstract contract AbstractGearingToken is
         if (debtValue < MINIMAL_DEBT_VALUE) {
             revert DebtValueIsTooSmall(debtValue);
         }
+    }
+
+    /**
+     * @inheritdoc IGearingToken
+     */
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    /**
+     * @inheritdoc IGearingToken
+     */
+    function unpause() external onlyOwner {
+        _unpause();
     }
 }
