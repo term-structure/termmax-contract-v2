@@ -400,7 +400,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
                 (underlyingAmtIn * mConfig.minNLendFeeR) /
                     Constants.DECIMAL_BASE
             );
-            // Fee to prootocol
+            // Fee to protocol
             feeAmt = _tranferFeeToTreasurer(
                 mConfig.treasurer,
                 feeAmt,
