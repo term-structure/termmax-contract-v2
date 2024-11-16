@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-
 import {console} from "forge-std/console.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -24,6 +23,7 @@ import {Constants} from "../core/lib/Constants.sol";
 import {IFlashLoanReceiver} from "../core/IFlashLoanReceiver.sol";
 import {IFlashRepayer} from "../core/tokens/IFlashRepayer.sol";
 import {IGearingToken} from "../core/tokens/IGearingToken.sol";
+import {ISwapAdapter} from "./ISwapAdapter.sol";
 
 contract TermMaxRouter is
     UUPSUpgradeable,
@@ -40,6 +40,14 @@ contract TermMaxRouter is
     using MathLib for uint256;
     using SafeERC20 for IERC20;
     using SafeERC20 for IMintableERC20;
+
+    struct SwapData {
+        address swapper;
+        address tokenIn;
+        address tokenOut;
+        bytes inputData;
+        bytes data;
+    }
 
     bytes32 OPERATOR_ROLE = keccak256(abi.encode("OPERATOR_ROLE"));
 
@@ -872,44 +880,31 @@ contract TermMaxRouter is
         ensureMarketWhitelist(msg.sender)
         returns (bytes memory collateralData)
     {
-        ContextCallbackType callbackType = abi.decode(
-            data,
-            (ContextCallbackType)
-        );
-
-        if (callbackType == ContextCallbackType.LEVERAGE_FROM_TOKEN) {
-            (, LeverageFromTokenData memory leverData) = abi.decode(
-                data,
-                (ContextCallbackType, LeverageFromTokenData)
-            );
-            if (!swapperWhitelist[leverData.swapInput.swapper]) {
+        SwapData[] memory swapDatas = abi.decode(data, (SwapData[]));
+        bytes memory inputData = abi.encode(amount);
+        for (uint i = 0; i < swapDatas.length; ++i) {
+            if (!swapperWhitelist[swapDatas[i].swapper]) {
                 revert("Invalid swapper");
             }
-            // get debt amount
-            require(
-                address(leverData.swapInput.tokenIn) == address(asset),
-                "Invalid tokenIn"
-            );
-            console.log("LeverageFromToken: amount %s", amount);
-            asset.safeIncreaseAllowance(leverData.swapInput.swapper, amount);
-            leverData.swapInput.swapper.functionCall(
-                leverData.swapInput.swapData
+
+            // encode datas
+            bytes memory data = abi.encodeWithSelector(
+                ISwapAdapter.swap.selector,
+                swapDatas[i].tokenIn,
+                swapDatas[i].tokenOut,
+                inputData,
+                swapDatas[i].data
             );
 
-            uint256 collBalance = leverData.swapInput.tokenOut.balanceOf(
-                address(this)
-            );
-            if (collBalance < leverData.minCollAmt) {
-                revert("Slippage: INSUFFICIENT_COLLATERAL");
-            }
-            leverData.swapInput.tokenOut.safeIncreaseAllowance(
-                leverData.gtAddress,
-                collBalance
-            );
-            return _encodeAmount(collBalance);
-        } else {
-            revert("Invalid callback type");
+            // delegatecall
+            (bool success, bytes memory returnData) = swapDatas[i]
+                .swapper
+                .delegatecall(data);
+
+            require(success);
+            inputData = returnData;
         }
+        collateralData = inputData;
     }
 
     function _balanceOf(
