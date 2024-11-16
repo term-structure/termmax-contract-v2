@@ -932,7 +932,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         // Judge the max redeemed underlying
         // Case 1: ftAmt > xtAmt*ltv  redeem xtAmt, transfer excess ft
         // Case 2: ftAmt < xtAmt*ltv  redeem ftAmt/ltv, transfer excess xt
-        // Case 2: ftAmt == xtAmt*ltv  redeem xtAmt
+        // Case 3: ftAmt == xtAmt*ltv  redeem xtAmt
         uint underlyingAmt = xtAmt;
         if (sameProportionXt > xtAmt) {
             uint sameProportionFt = (xtAmt * mConfig.initialLtv) /
