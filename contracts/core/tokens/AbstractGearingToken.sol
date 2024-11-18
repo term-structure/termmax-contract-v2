@@ -536,6 +536,16 @@ abstract contract AbstractGearingToken is
     /**
      * @inheritdoc IGearingToken
      */
+    function getCollateralValue(
+        bytes memory collateralData
+    ) external view override returns (uint256 collateralValue) {
+        bytes memory priceData = _getCollateralPriceData();
+        return _getCollateralValue(collateralData, priceData);
+    }
+
+    /**
+     * @inheritdoc IGearingToken
+     */
     function delivery(
         uint256 proportion,
         address to
@@ -621,7 +631,6 @@ abstract contract AbstractGearingToken is
         bytes memory collateralData
     ) internal virtual;
 
-    // TODO Public
     /// @notice Return the value of collateral in USD with base decimals
     /// @param collateralData encoded collateral data
     /// @param priceData encoded price data of the collateral

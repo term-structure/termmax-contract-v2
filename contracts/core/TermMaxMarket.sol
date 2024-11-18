@@ -6,6 +6,7 @@ import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {IERC20Metadata, IERC20} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 import {ITermMaxMarket} from "./ITermMaxMarket.sol";
 import {IMintableERC20} from "./tokens/IMintableERC20.sol";
@@ -23,7 +24,8 @@ contract TermMaxMarket is
     ITermMaxMarket,
     ReentrancyGuard,
     AccessControl,
-    Pausable
+    Pausable,
+    Initializable
 {
     using SafeCast for uint256;
     using SafeCast for int256;
@@ -63,10 +65,9 @@ contract TermMaxMarket is
         IMintableERC20[4] memory tokens_,
         IGearingToken gt_,
         MarketConfig memory config_
-    ) external override {
+    ) external override initializer {
         // __initializeOwner will revert if already initialized
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
-        __initilizeOwner(admin);
         if (address(collateral_) == address(underlying_)) {
             revert CollateralCanNotEqualUnderlyinng();
         }
