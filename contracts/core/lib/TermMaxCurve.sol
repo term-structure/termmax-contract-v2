@@ -45,7 +45,7 @@ library TermMaxCurve {
     /// @param tokenReserve The token balance of market
     /// @param config Market configuration data
     /// @return tokenAmt The amount of tokens transfer to the liquidity provider
-    function calculateLpLpWithReward(
+    function calculateLpWithReward(
         uint256 lpAmt,
         uint256 lpTotalSupply,
         uint256 lpReserve,
