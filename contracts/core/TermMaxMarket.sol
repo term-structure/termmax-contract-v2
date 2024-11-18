@@ -1,12 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {IERC20Metadata, IERC20} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {Initializable} from "./utils/Initializable.sol";
 
 import {ITermMaxMarket} from "./ITermMaxMarket.sol";
 import {IMintableERC20} from "./tokens/IMintableERC20.sol";
@@ -14,19 +12,14 @@ import {IGearingToken} from "./tokens/IGearingToken.sol";
 import {IFlashLoanReceiver} from "./IFlashLoanReceiver.sol";
 import {TermMaxCurve, MathLib} from "./lib/TermMaxCurve.sol";
 import {Constants} from "./lib/Constants.sol";
+import {Ownable} from "./access/Ownable.sol";
 import "./storage/TermMaxStorage.sol";
 
 /**
  * @title TermMax Market
  * @author Term Structure Labs
  */
-contract TermMaxMarket is
-    ITermMaxMarket,
-    ReentrancyGuard,
-    AccessControl,
-    Pausable,
-    Initializable
-{
+contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
     using SafeCast for uint256;
     using SafeCast for int256;
     using MathLib for *;
@@ -65,9 +58,9 @@ contract TermMaxMarket is
         IMintableERC20[4] memory tokens_,
         IGearingToken gt_,
         MarketConfig memory config_
-    ) external override initializer {
+    ) external override {
         // __initializeOwner will revert if already initialized
-        _grantRole(DEFAULT_ADMIN_ROLE, admin);
+        __initializeOwner(admin);
         if (address(collateral_) == address(underlying_)) {
             revert CollateralCanNotEqualUnderlyinng();
         }
@@ -140,7 +133,7 @@ contract TermMaxMarket is
         uint32 issueFtFeeRatio,
         uint32 lockingPercentage,
         uint32 protocolFeeRatio
-    ) external override onlyRole(DEFAULT_ADMIN_ROLE) {
+    ) external override onlyOwner {
         MarketConfig memory mConfig = _config;
         mConfig.lendFeeRatio = lendFeeRatio;
         mConfig.minNLendFeeR = minNLendFeeR;
@@ -166,9 +159,7 @@ contract TermMaxMarket is
     /**
      * @inheritdoc ITermMaxMarket
      */
-    function setTreasurer(
-        address treasurer
-    ) external override onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setTreasurer(address treasurer) external override onlyOwner {
         _config.treasurer = treasurer;
         gt.setTreasurer(treasurer);
 
@@ -178,7 +169,7 @@ contract TermMaxMarket is
     /**
      * @inheritdoc ITermMaxMarket
      */
-    function setLsf(uint32 lsf) external override onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setLsf(uint32 lsf) external override onlyOwner {
         if (lsf == 0 || lsf > Constants.DECIMAL_BASE) {
             revert InvalidLsf(lsf);
         }
@@ -876,7 +867,7 @@ contract TermMaxMarket is
     /**
      * @inheritdoc ITermMaxMarket
      */
-    function pause() external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function pause() external onlyOwner {
         _pause();
         pauseTime = block.timestamp;
     }
@@ -884,7 +875,7 @@ contract TermMaxMarket is
     /**
      * @inheritdoc ITermMaxMarket
      */
-    function unpause() external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function unpause() external onlyOwner {
         if (_getEvacuateStatus()) {
             revert EvacuationIsActived();
         }
@@ -895,14 +886,14 @@ contract TermMaxMarket is
     /**
      * @inheritdoc ITermMaxMarket
      */
-    function pauseGt() external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function pauseGt() external onlyOwner {
         gt.pause();
     }
 
     /**
      * @inheritdoc ITermMaxMarket
      */
-    function unpauseGt() external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function unpauseGt() external onlyOwner {
         gt.unpause();
     }
 
