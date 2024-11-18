@@ -5,6 +5,8 @@ libs = ["lib"]
 evmVersion = "cancun"
 gas_reports = ["TermMaxMarket", "ERC20GearingNft"]
 viaIR = true
+optimizer = true
+optimizer_runs = 200
 
 remappings = [
     "@openzeppelin/contracts=lib/openzeppelin-contracts/contracts",
