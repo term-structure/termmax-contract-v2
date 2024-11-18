@@ -13,10 +13,8 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
     using SafeCast for int256;
     using MathLib for *;
 
-    struct GearingTokenWithERC20Storage {
-        /// @notice The oracle of collateral in USD
-        AggregatorV3Interface collateralOracle;
-    }
+    /// @notice The oracle of collateral in USD
+    AggregatorV3Interface public collateralOracle;
 
     bytes32 internal constant STORAGE_SLOT_GEARING_TOKEN_ERC20_STORAGE =
         bytes32(
@@ -24,22 +22,10 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
                 1
         );
 
-    function _getGearingTokenWithERC20Storage()
-        private
-        pure
-        returns (GearingTokenWithERC20Storage storage s)
-    {
-        bytes32 slot = STORAGE_SLOT_GEARING_TOKEN_ERC20_STORAGE;
-        assembly {
-            s.slot := slot
-        }
-    }
-
     function __GearingToken_Implement_init(
         bytes memory initalParams
     ) internal override onlyInitializing {
-        _getGearingTokenWithERC20Storage()
-            .collateralOracle = AggregatorV3Interface(
+        collateralOracle = AggregatorV3Interface(
             abi.decode(initalParams, (address))
         );
     }
@@ -47,8 +33,9 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
     function _delivery(
         uint256 proportion
     ) internal virtual override returns (bytes memory deliveryData) {
-        IERC20 collateral = IERC20(_getGearingTokenStorage().config.collateral);
-        uint collateralReserve = collateral.balanceOf(address(this));
+        uint collateralReserve = IERC20(_config.collateral).balanceOf(
+            address(this)
+        );
         uint amount = (collateralReserve * proportion) /
             Constants.DECIMAL_BASE_SQ;
         deliveryData = abi.encode(amount);
@@ -78,11 +65,7 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
         if (amount == 0) {
             return;
         }
-        IERC20(_getGearingTokenStorage().config.collateral).transferFrom(
-            from,
-            to,
-            amount
-        );
+        IERC20(_config.collateral).transferFrom(from, to, amount);
     }
 
     /**
@@ -96,10 +79,7 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
         if (amount == 0) {
             return;
         }
-        IERC20(_getGearingTokenStorage().config.collateral).transfer(
-            to,
-            amount
-        );
+        IERC20(_config.collateral).transfer(to, amount);
     }
 
     /**
@@ -129,14 +109,11 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
         override
         returns (bytes memory priceData)
     {
-        AggregatorV3Interface collateralOracle = _getGearingTokenWithERC20Storage()
-                .collateralOracle;
         uint decimals = 10 ** collateralOracle.decimals();
         (, int256 answer, , , ) = collateralOracle.latestRoundData();
         uint price = answer.toUint256();
         uint cTokenDecimals = 10 **
-            IERC20Metadata(_getGearingTokenStorage().config.collateral)
-                .decimals();
+            IERC20Metadata(_config.collateral).decimals();
         priceData = abi.encode(price, decimals, cTokenDecimals);
     }
 
