@@ -14,26 +14,8 @@ contract MintableERC20 is
     OwnableUpgradeable,
     IMintableERC20
 {
-    struct MintableERC20Storage {
-        /// @notice The token's decimals
-        uint8 decimals;
-    }
-
-    bytes32 internal constant STORAGE_SLOT_MINTABLE_ERC20 =
-        bytes32(uint256(keccak256("TermMax.storage.MintableERC20")) - 1);
-
-    /// @notice Return the storage of this contract
-    /// @return s The storage from 'STORAGE_SLOT_MINTABLE_ERC20' slot
-    function _getMintableERC20Storage()
-        private
-        pure
-        returns (MintableERC20Storage storage s)
-    {
-        bytes32 slot = STORAGE_SLOT_MINTABLE_ERC20;
-        assembly {
-            s.slot := slot
-        }
-    }
+    /// @notice The token's decimals
+    uint8 _decimals;
 
     /**
      * @inheritdoc IMintableERC20
@@ -42,14 +24,12 @@ contract MintableERC20 is
         address market,
         string memory name,
         string memory symbol,
-        uint8 _decimals
+        uint8 decimals_
     ) public override initializer {
         __ERC20_init(name, symbol);
         __ERC20Permit_init(name);
         __Ownable_init(market);
-        MintableERC20Storage
-            storage mintableStorage = _getMintableERC20Storage();
-        mintableStorage.decimals = _decimals;
+        _decimals = decimals_;
     }
 
     /**
@@ -100,8 +80,6 @@ contract MintableERC20 is
         override(ERC20Upgradeable, IMintableERC20)
         returns (uint8)
     {
-        MintableERC20Storage
-            storage mintableStorage = _getMintableERC20Storage();
-        return mintableStorage.decimals;
+        return _decimals;
     }
 }

@@ -236,6 +236,13 @@ interface IGearingToken is IERC721 {
         address to
     ) external returns (bytes memory deliveryData);
 
+    /// @notice Return the value of collateral in USD with base decimals
+    /// @param collateralData encoded collateral data
+    /// @return collateralValue collateral's value in USD
+    function getCollateralValue(
+        bytes memory collateralData
+    ) external view returns (uint256 collateralValue);
+
     /// @notice Suspension of Gearing Token liquidation and collateral reduction
     function pause() external;
 

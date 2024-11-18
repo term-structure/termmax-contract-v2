@@ -31,15 +31,6 @@ abstract contract AbstractGearingToken is
         bytes collateralData;
     }
 
-    struct GearingTokenStorage {
-        /// @notice Configuturation of Gearing Token
-        GtConfig config;
-        /// @notice Total supply of Gearing Token
-        uint256 total;
-        /// @notice Mapping relationship between Gearing Token id and loan
-        mapping(uint256 => LoanInfo) loanMapping;
-    }
-
     struct ValueAndPrice {
         /// @notice USD value of collateral
         uint256 collateralValue;
@@ -68,19 +59,12 @@ abstract contract AbstractGearingToken is
     uint256 constant UINT_MAX = type(uint256).max;
     uint128 constant UINT128_MAX = type(uint128).max;
 
-    bytes32 internal constant STORAGE_SLOT_GEARING_NFT =
-        bytes32(uint256(keccak256("TermMax.storage.GearingToken")) - 1);
-
-    function _getGearingTokenStorage()
-        internal
-        pure
-        returns (GearingTokenStorage storage s)
-    {
-        bytes32 slot = STORAGE_SLOT_GEARING_NFT;
-        assembly {
-            s.slot := slot
-        }
-    }
+    /// @notice Configuturation of Gearing Token
+    GtConfig _config;
+    /// @notice Total supply of Gearing Token
+    uint256 total;
+    /// @notice Mapping relationship between Gearing Token id and loan
+    mapping(uint256 => LoanInfo) loanMapping;
 
     /**
      * @inheritdoc IGearingToken
@@ -88,25 +72,24 @@ abstract contract AbstractGearingToken is
     function initialize(
         string memory name,
         string memory symbol,
-        GtConfig memory config,
+        GtConfig memory config_,
         bytes memory initalParams
     ) external override initializer {
-        __AbstractGearingToken_init(name, symbol, config);
+        __AbstractGearingToken_init(name, symbol, config_);
         __GearingToken_Implement_init(initalParams);
     }
 
     function __AbstractGearingToken_init(
         string memory name,
         string memory symbol,
-        GtConfig memory config
+        GtConfig memory config_
     ) internal onlyInitializing {
         __ERC721_init(name, symbol);
-        __Ownable_init(config.market);
+        __Ownable_init(config_.market);
         __Pausable_init();
-        GearingTokenStorage storage s = _getGearingTokenStorage();
-        s.config = config;
+        _config = config_;
         // Market will burn those tokens after maturity
-        config.ft.approve(config.market, UINT_MAX);
+        config_.ft.approve(config_.market, UINT_MAX);
     }
 
     function __GearingToken_Implement_init(
@@ -117,28 +100,28 @@ abstract contract AbstractGearingToken is
      * @inheritdoc IGearingToken
      */
     function setTreasurer(address treasurer) external onlyOwner {
-        _getGearingTokenStorage().config.treasurer = treasurer;
+        _config.treasurer = treasurer;
     }
 
     /**
      * @inheritdoc IGearingToken
      */
     function getGtConfig() external view override returns (GtConfig memory) {
-        return _getGearingTokenStorage().config;
+        return _config;
     }
 
     /**
      * @inheritdoc IGearingToken
      */
     function marketAddr() public view override returns (address) {
-        return _getGearingTokenStorage().config.market;
+        return _config.market;
     }
 
     /**
      * @inheritdoc IGearingToken
      */
     function liquidatable() external view returns (bool) {
-        return _getGearingTokenStorage().config.liquidatable;
+        return _config.liquidatable;
     }
 
     /**
@@ -157,34 +140,33 @@ abstract contract AbstractGearingToken is
         nonReentrant
         returns (uint256 id)
     {
-        GearingTokenStorage storage s = _getGearingTokenStorage();
         _transferCollateralFrom(
             collateralProvider,
             address(this),
             collateralData
         );
-        id = _mintInternal(to, debtAmt, collateralData, s);
+        id = _mintInternal(to, debtAmt, collateralData, _config);
     }
 
     function _mintInternal(
         address to,
         uint128 debtAmt,
         bytes memory collateralData,
-        GearingTokenStorage storage s
+        GtConfig memory config
     ) internal returns (uint256 id) {
         LoanInfo memory loan = LoanInfo(debtAmt, collateralData);
         ValueAndPrice memory valueAndPrice = _getValueAndPrice(
-            s.config.underlyingOracle,
+            config.underlyingOracle,
             loan,
-            s.config.underlying.decimals()
+            config.underlying.decimals()
         );
         _checkDebtValue(valueAndPrice);
         uint128 ltv = _calculateLtv(valueAndPrice);
-        if (ltv >= s.config.maxLtv) {
+        if (ltv >= config.maxLtv) {
             revert GtIsNotHealthy(0, to, ltv);
         }
-        id = ++s.total;
-        s.loanMapping[id] = loan;
+        id = ++total;
+        loanMapping[id] = loan;
         _mint(to, id);
     }
 
@@ -205,22 +187,21 @@ abstract contract AbstractGearingToken is
         )
     {
         owner = ownerOf(id);
-        GearingTokenStorage storage s = _getGearingTokenStorage();
-        LoanInfo memory loan = s.loanMapping[id];
+        LoanInfo memory loan = loanMapping[id];
         debtAmt = loan.debtAmt;
         collateralData = loan.collateralData;
         ltv = _calculateLtv(
             _getValueAndPrice(
-                s.config.underlyingOracle,
+                _config.underlyingOracle,
                 loan,
-                s.config.underlying.decimals()
+                _config.underlying.decimals()
             )
         );
     }
 
-    function _burnInternal(uint256 id, GearingTokenStorage storage s) internal {
+    function _burnInternal(uint256 id) internal {
         _burn(id);
-        delete s.loanMapping[id];
+        delete loanMapping[id];
     }
 
     /**
@@ -229,12 +210,11 @@ abstract contract AbstractGearingToken is
     function merge(
         uint256[] memory ids
     ) external nonReentrant returns (uint256 newId) {
-        GearingTokenStorage storage s = _getGearingTokenStorage();
         uint128 totalDebtAmt;
         bytes memory mergedCollateralData;
         for (uint i = 0; i < ids.length; ++i) {
             uint id = ids[i];
-            LoanInfo memory loan = s.loanMapping[id];
+            LoanInfo memory loan = loanMapping[id];
             address owner = ownerOf(id);
             if (msg.sender != owner) {
                 revert CanNotMergeLoanWithDiffOwner(id, owner);
@@ -243,13 +223,13 @@ abstract contract AbstractGearingToken is
             mergedCollateralData = i == 0
                 ? loan.collateralData
                 : _mergeCollateral(mergedCollateralData, loan.collateralData);
-            _burnInternal(id, s);
+            _burnInternal(id);
         }
         newId = _mintInternal(
             msg.sender,
             totalDebtAmt,
             mergedCollateralData,
-            s
+            _config
         );
         emit MergeGts(msg.sender, newId, ids);
     }
@@ -262,8 +242,7 @@ abstract contract AbstractGearingToken is
         uint128 repayAmt,
         bool byUnderlying
     ) external override nonReentrant {
-        GearingTokenStorage storage s = _getGearingTokenStorage();
-        GtConfig memory config = s.config;
+        GtConfig memory config = _config;
 
         if (config.maturity <= block.timestamp) {
             revert GtIsExpired(id);
@@ -275,7 +254,7 @@ abstract contract AbstractGearingToken is
             // Those ft tokens have been approved to market and will be burn after maturity
             config.ft.transferFrom(msg.sender, address(this), repayAmt);
         }
-        _repay(s, id, repayAmt);
+        _repay(id, repayAmt);
         emit Repay(id, repayAmt, byUnderlying);
     }
 
@@ -283,12 +262,11 @@ abstract contract AbstractGearingToken is
         uint256 id,
         bytes calldata callbackData
     ) external override nonReentrant {
-        GearingTokenStorage storage s = _getGearingTokenStorage();
-        GtConfig memory config = s.config;
+        GtConfig memory config = _config;
         if (config.maturity <= block.timestamp) {
             revert GtIsExpired(id);
         }
-        LoanInfo memory loan = s.loanMapping[id];
+        LoanInfo memory loan = loanMapping[id];
         address owner = ownerOf(id);
         // Transfer collateral to the owner
         _transferCollateral(owner, loan.collateralData);
@@ -301,27 +279,23 @@ abstract contract AbstractGearingToken is
             callbackData
         );
         config.underlying.transferFrom(msg.sender, config.market, loan.debtAmt);
-        _burnInternal(id, s);
+        _burnInternal(id);
         emit Repay(id, loan.debtAmt, true);
     }
 
-    function _repay(
-        GearingTokenStorage storage s,
-        uint256 id,
-        uint128 repayAmt
-    ) internal {
-        LoanInfo memory loan = s.loanMapping[id];
+    function _repay(uint256 id, uint128 repayAmt) internal {
+        LoanInfo memory loan = loanMapping[id];
         if (repayAmt > loan.debtAmt) {
             revert RepayAmtExceedsMaxRepayAmt(id, repayAmt, loan.debtAmt);
         }
         if (repayAmt == loan.debtAmt) {
             address gtOwner = ownerOf(id);
             // Burn this nft
-            _burnInternal(id, s);
+            _burnInternal(id);
             _transferCollateral(gtOwner, loan.collateralData);
         } else {
             uint128 debtAmt = loan.debtAmt - repayAmt;
-            s.loanMapping[id].debtAmt = debtAmt;
+            loanMapping[id].debtAmt = debtAmt;
         }
     }
 
@@ -336,13 +310,12 @@ abstract contract AbstractGearingToken is
             revert CallerIsNotTheOwner(id);
         }
 
-        GearingTokenStorage storage s = _getGearingTokenStorage();
-        GtConfig memory config = s.config;
+        GtConfig memory config = _config;
         if (config.maturity <= block.timestamp) {
             revert GtIsExpired(id);
         }
 
-        LoanInfo memory loan = s.loanMapping[id];
+        LoanInfo memory loan = loanMapping[id];
         loan.collateralData = _removeCollateral(loan, collateralData);
 
         _transferCollateral(msg.sender, collateralData);
@@ -357,7 +330,7 @@ abstract contract AbstractGearingToken is
         if (ltv >= config.maxLtv) {
             revert GtIsNotHealthy(id, msg.sender, ltv);
         }
-        s.loanMapping[id] = loan;
+        loanMapping[id] = loan;
 
         emit RemoveCollateral(id, loan.collateralData);
     }
@@ -374,15 +347,14 @@ abstract contract AbstractGearingToken is
         uint256 id,
         bytes memory collateralData
     ) external override nonReentrant {
-        GearingTokenStorage storage s = _getGearingTokenStorage();
-        if (s.config.maturity <= block.timestamp) {
+        if (_config.maturity <= block.timestamp) {
             revert GtIsExpired(id);
         }
-        LoanInfo memory loan = s.loanMapping[id];
+        LoanInfo memory loan = loanMapping[id];
 
         _transferCollateralFrom(msg.sender, address(this), collateralData);
         loan.collateralData = _addCollateral(loan, collateralData);
-        s.loanMapping[id] = loan;
+        loanMapping[id] = loan;
         emit AddCollateral(id, loan.collateralData);
     }
 
@@ -397,9 +369,8 @@ abstract contract AbstractGearingToken is
     function getLiquidationInfo(
         uint256 id
     ) external view returns (bool isLiquidable, uint128 maxRepayAmt) {
-        GearingTokenStorage storage s = _getGearingTokenStorage();
-        LoanInfo memory loan = s.loanMapping[id];
-        GtConfig memory config = s.config;
+        LoanInfo memory loan = loanMapping[id];
+        GtConfig memory config = _config;
         (isLiquidable, maxRepayAmt, , ) = _getLiquidationInfo(loan, config);
     }
 
@@ -457,9 +428,8 @@ abstract contract AbstractGearingToken is
         uint256 id,
         uint128 repayAmt
     ) external override nonReentrant whenNotPaused {
-        GearingTokenStorage storage s = _getGearingTokenStorage();
-        LoanInfo memory loan = s.loanMapping[id];
-        GtConfig memory config = s.config;
+        LoanInfo memory loan = loanMapping[id];
+        GtConfig memory config = _config;
         if (!config.liquidatable) {
             revert GtDoNotSupportLiquidation();
         }
@@ -499,7 +469,7 @@ abstract contract AbstractGearingToken is
                 _transferCollateral(ownerOf(id), remainningC);
             }
             // update storage
-            _burnInternal(id, s);
+            _burnInternal(id);
         } else {
             loan.debtAmt -= repayAmt;
             loan.collateralData = remainningC;
@@ -524,7 +494,7 @@ abstract contract AbstractGearingToken is
                 }
             }
             // update storage
-            s.loanMapping[id] = loan;
+            loanMapping[id] = loan;
         }
         // Transfer collateral
         if (cToTreasurer.length > 0) {
@@ -562,6 +532,16 @@ abstract contract AbstractGearingToken is
             bytes memory cToTreasurer,
             bytes memory remainningC
         );
+
+    /**
+     * @inheritdoc IGearingToken
+     */
+    function getCollateralValue(
+        bytes memory collateralData
+    ) external view override returns (uint256 collateralValue) {
+        bytes memory priceData = _getCollateralPriceData();
+        return _getCollateralValue(collateralData, priceData);
+    }
 
     /**
      * @inheritdoc IGearingToken
