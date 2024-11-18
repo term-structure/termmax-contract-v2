@@ -62,7 +62,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         // __initializeOwner will revert if already initialized
         __initilizeOwner(admin);
         if (address(collateral_) == address(underlying_)) {
-            revert CollateralCanNotEqualUnserlyinng();
+            revert CollateralCanNotEqualUnderlyinng();
         }
         if (
             config_.openTime < block.timestamp ||
