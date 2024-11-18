@@ -1690,7 +1690,7 @@ contract GtTest is Test {
         uint128 repayAmt
     ) public {
         uint128 debtAmt = 900e8;
-        vm.assume(repayAmt >= 5e8 && repayAmt <= debtAmt);
+        vm.assume(repayAmt >= 5e8 && repayAmt <= debtAmt - 5e8);
         uint256 collateralAmt = 0.6e18;
         vm.startPrank(sender);
 

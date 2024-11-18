@@ -271,7 +271,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         uint ftReserve = ft.balanceOf(address(this));
         if (lpFtAmt > 0) {
             ftOutAmt = TermMaxCurve
-                .calculateLpLpWithReward(
+                .calculateLpWithReward(
                     lpFtAmt,
                     lpFt.totalSupply(),
                     lpFt.balanceOf(address(this)),
@@ -286,7 +286,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         uint xtReserve = xt.balanceOf(address(this));
         if (lpXtAmt > 0) {
             xtOutAmt = TermMaxCurve
-                .calculateLpLpWithReward(
+                .calculateLpWithReward(
                     lpXtAmt,
                     lpXt.totalSupply(),
                     lpXt.balanceOf(address(this)),
