@@ -16,12 +16,6 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
     /// @notice The oracle of collateral in USD
     AggregatorV3Interface public collateralOracle;
 
-    bytes32 internal constant STORAGE_SLOT_GEARING_TOKEN_ERC20_STORAGE =
-        bytes32(
-            uint256(keccak256("TermMax.storage.GearingTokenWithERC20Storage")) -
-                1
-        );
-
     function __GearingToken_Implement_init(
         bytes memory initalParams
     ) internal override onlyInitializing {

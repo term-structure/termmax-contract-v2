@@ -621,6 +621,7 @@ abstract contract AbstractGearingToken is
         bytes memory collateralData
     ) internal virtual;
 
+    // TODO Public
     /// @notice Return the value of collateral in USD with base decimals
     /// @param collateralData encoded collateral data
     /// @param priceData encoded price data of the collateral
