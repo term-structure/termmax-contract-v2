@@ -18,7 +18,6 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 contract E2ETest is Script {
-
     // deployer config
     uint256 userPrivateKey = vm.envUint("FORK_DEPLOYER_PRIVATE_KEY");
     address userAddr = vm.addr(userPrivateKey);
@@ -27,8 +26,8 @@ contract E2ETest is Script {
 
     // market config
     bytes32 constant GT_ERC20 = keccak256("GearingTokenWithERC20");
-    MarketConfig marketConfig = MarketConfig(
-        {
+    MarketConfig marketConfig =
+        MarketConfig({
             treasurer: 0x944a0Af591E2C23a2E81fe4c10Bd9c47Cf866F4b,
             maturity: 1735575942, // current 1726732382
             openTime: 1726734383,
@@ -49,19 +48,23 @@ contract E2ETest is Script {
     uint32 liquidationLtv = 0.9e8;
 
     // address config
-    address factoryAddr = address(0xaF29EAAEDC49C7a58F4DD5a4c074C550b2Ff63bA);
-    address routerAddr = address(0x5B5b0E44A98aD498c6F5931605f0EE903E221c69);
-    address marketAddr = address(0xecAcd1681F85c26D565348e03d3e1e085059Bb04);
-    address collateralAddr = address(0x03AC4256dAC135Dcc088de5285b113d7219D22d7); // PT-sUSDe-24OCT2024
-    address collateralOracleAddr = address(0xD752C02f557580cEC3a50a2deBF3A4C48657EeDe);
-    address underlyingAddr = address(0x93CCa2C4e9e6a623046b1C6631C37DAD1299a9Ee); // USDC
-    address underlyingOracleAddr = address(0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6);
-    address ftAddr = address(0x79C67d5D3f63f2ABfD1d5813F7ac5f60a1Ac807a);
-    address xtAddr = address(0x460751EBffA71C12BB5cbA4D409fE10B2c7A2b39);
-    address lpFtAddr = address(0x871edee2836F8Cb03Ae6cf98D8A24027Dca424Be);
-    address lpXtAddr = address(0xCfC4A4fF7a1F3B4728625Fbc135DcEeC404E1cf8);
-    address gtAddr = address(0xFabbc298736C0d5fa9e58c9AAD61330ea912ad5e);
-    
+    address factoryAddr = address(0x715F4a22c4F4224BFDDB64B980a7363c505015bF);
+    address routerAddr = address(0xDbD9F1346979A7E9c4e9dB326566577349a84CcF);
+    address marketAddr = address(0xD78014C3A86017748a2e831Bc2DCA3eAF9f17764);
+    address collateralAddr =
+        address(0x3E2628096FE52b255aF0Ce6973B90C9e6A5c808e); // PT-sUSDe-24OCT2024
+    address collateralOracleAddr =
+        address(0xD752C02f557580cEC3a50a2deBF3A4C48657EeDe);
+    address underlyingAddr =
+        address(0xbcc27BB9eF1C6AC82E1D39874A96C813099aF747); // USDC
+    address underlyingOracleAddr =
+        address(0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6);
+    address ftAddr = address(0x84b006c8092699A2295Afa8e47C05B865ebE9fdD);
+    address xtAddr = address(0xfBCB0465a83F525411c681C5839B583C1FD96Ad1);
+    address lpFtAddr = address(0x4c19C73ce1cc621387D75FbE45F071aaAF1013E9);
+    address lpXtAddr = address(0xe997f16D4aC9278545F5CBeCff9CBc14923b6506);
+    address gtAddr = address(0x309155273D07Cc7a5738ca752503b830EfFde64e);
+
     function run() public {
         MockERC20 underlying = MockERC20(underlyingAddr);
         MockERC20 collateral = MockERC20(collateralAddr);
@@ -72,7 +75,12 @@ contract E2ETest is Script {
         IGearingToken gt = IGearingToken(gtAddr);
         ITermMaxRouter router = ITermMaxRouter(routerAddr);
         ITermMaxMarket market = ITermMaxMarket(marketAddr);
+
         MarketConfig memory config = market.config();
+        (, , , , , address collateralM, IERC20 underlyingM) = market.tokens();
+        console.log("user address:", userAddr);
+        console.log("market underlying:", address(underlyingM));
+        console.log("market collateral:", collateralM);
         console.log("Before broadcast");
         console.log("Current timestamp:", vm.getBlockTimestamp());
         console.log("Market open time:", config.openTime);
@@ -85,12 +93,11 @@ contract E2ETest is Script {
         console.log("LPFT balance:", lpFt.balanceOf(userAddr));
         console.log("LPXT balance:", lpXt.balanceOf(userAddr));
 
-        underlying.mint(userAddr, 1000000000);
         vm.startBroadcast(userPrivateKey);
-        // underlying.approve(marketAddr, 1000000000);
-        // market.provideLiquidity(100000000);
-        underlying.approve(routerAddr, 1000000000);
-        router.provideLiquidity(userAddr, market, 100000000);
+        uint256 amount = 1000e6;
+        underlying.mint(userAddr, amount);
+        underlying.approve(routerAddr, amount);
+        router.provideLiquidity(userAddr, market, amount);
         vm.stopBroadcast();
 
         console.log("\nAfter broadcast");
@@ -104,6 +111,5 @@ contract E2ETest is Script {
         console.log("XT balance:", xt.balanceOf(userAddr));
         console.log("LPFT balance:", lpFt.balanceOf(userAddr));
         console.log("LPXT balance:", lpXt.balanceOf(userAddr));
-        
     }
 }
