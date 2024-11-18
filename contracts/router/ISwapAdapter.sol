@@ -7,7 +7,7 @@ interface ISwapAdapter {
     function swap(
         address tokenIn,
         address tokenOut,
-        bytes memory inputData,
+        bytes memory tokenInData,
         bytes memory swapData
     ) external returns (bytes memory tokenOutData);
 }
