@@ -59,6 +59,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         IGearingToken gt_,
         MarketConfig memory config_
     ) external override {
+        // __initializeOwner will revert if already initialized
         __initilizeOwner(admin);
         if (address(collateral_) == address(underlying_)) {
             revert CollateralCanNotEqualUnserlyinng();
