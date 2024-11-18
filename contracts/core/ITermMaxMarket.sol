@@ -15,7 +15,7 @@ interface ITermMaxMarket {
     /// @notice Error for lsf value equals 0 or bigger than 1e8
     error InvalidLsf(uint32 lsf);
     /// @notice Error for the collateral and underlying are the same token
-    error CollateralCanNotEqualUnserlyinng();
+    error CollateralCanNotEqualUnderlyinng();
     /// @notice Error for repeat initialization of market
     error MarketHasBeenInitialized();
     /// @notice Error for it is not the opening trading day yet

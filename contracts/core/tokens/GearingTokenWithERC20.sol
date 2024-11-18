@@ -208,11 +208,12 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
         // collateralAmt *(repayAmt / debtAmt)
         // )
 
-        /* DP := debt token price
-         * DPD := debt token price decimal
-         * CP := collateral token price
-         * CPD := collateral token price decimal
-         * ddPriceToCdPrice = (DP/DPD) / (CP/CPD) = (DP*CPD) / (CP*DPD)
+        /* DP := debt token price (valueAndPrice.underlyingPrice)
+         * DPD := debt token price decimal (valueAndPrice.priceDecimals)
+         * CP := collateral token price (collateralPrice)
+         * CPD := collateral token price decimal (collateralPriceDecimals)
+         * The value of 1(decimal) debt token / The value of 1(decimal) collateral token
+         *     ddPriceToCdPrice = (DP/DPD) / (CP/CPD) = (DP*CPD) / (CP*DPD)
          */
         uint ddPriceToCdPrice = (valueAndPrice.underlyingPrice *
             collateralPriceDecimals *
