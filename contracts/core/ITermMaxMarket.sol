@@ -15,7 +15,7 @@ interface ITermMaxMarket {
     /// @notice Error for lsf value equals 0 or bigger than 1e8
     error InvalidLsf(uint32 lsf);
     /// @notice Error for the collateral and underlying are the same token
-    error CollateralCanNotEqualUnserlyinng();
+    error CollateralCanNotEqualUnderlyinng();
     /// @notice Error for repeat initialization of market
     error MarketHasBeenInitialized();
     /// @notice Error for it is not the opening trading day yet
@@ -166,7 +166,7 @@ interface ITermMaxMarket {
 
     /// @notice Emitted when redeeming tokens
     /// @param caller Who call the function
-    /// @param proportion The proportion of underlying token and collateral should be obtained
+    /// @param proportion The proportion of underlying token and collateral should be deliveried
     ///                   base 1e16 decimals
     /// @param underlyingAmt The amount of underlying received
     /// @param feeAmt Redeemming Fees
@@ -350,6 +350,12 @@ interface ITermMaxMarket {
 
     /// @notice Open Market Trading
     function unpause() external;
+
+    /// @notice Suspension of Gearing Token liquidation and collateral reduction
+    function pauseGt() external;
+
+    /// @notice Open Gearing Token liquidation and collateral reduction
+    function unpauseGt() external;
 
     // function redeemByPermit(
     //     address caller,

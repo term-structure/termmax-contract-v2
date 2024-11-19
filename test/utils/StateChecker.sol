@@ -91,49 +91,47 @@ library StateChecker {
         )
     {
         uint ftTotal = res.ft.totalSupply() - res.ft.balanceOf(address(res.gt));
+        uint xtTotal = res.xt.totalSupply();
+
         // k = (1 - initalLtv) * DECIMAL_BASE
         uint k = Constants.DECIMAL_BASE - config.initialLtv;
-        // All points = ypSupply + yaSupply * (1 - initalLtv) = ypSupply + yaSupply * k / DECIMAL_BASE
-        uint allPoints = ftTotal *
-            Constants.DECIMAL_BASE +
-            res.xt.totalSupply() *
-            k;
 
-        uint userPoints;
+        uint ftAmt;
+        uint xtAmt;
         //ft
         if (amounts[0] > 0) {
-            userPoints += amounts[0] * Constants.DECIMAL_BASE;
+            ftAmt += amounts[0];
         }
 
         //xt
         if (amounts[1] > 0) {
-            userPoints += amounts[1] * k;
+            xtAmt += amounts[1];
         }
 
         if (amounts[2] > 0) {
+            uint lpftTotal = res.lpFt.totalSupply() -
+                res.lpFt.balanceOf(address(res.market));
             //lpft
-            userPoints +=
-                (amounts[2] *
-                    res.ft.balanceOf(address(res.market)) *
-                    Constants.DECIMAL_BASE) /
-                (res.lpFt.totalSupply() -
-                    res.lpFt.balanceOf(address(res.market)));
+            ftAmt +=
+                (amounts[2] * res.ft.balanceOf(address(res.market))) /
+                lpftTotal;
         }
 
         if (amounts[3] > 0) {
             //lpxt
-            userPoints +=
-                (amounts[3] * res.xt.balanceOf(address(res.market)) * k) /
+            xtAmt +=
+                (amounts[3] * res.xt.balanceOf(address(res.market))) /
                 (res.lpXt.totalSupply() -
                     res.lpXt.balanceOf(address(res.market)));
         }
+        uint xtAsUnderlying = (xtAmt * k) / Constants.DECIMAL_BASE;
+        uint allXtAsUnderlying = (xtTotal * k) / Constants.DECIMAL_BASE;
+        propotion = uint128((ftAmt * Constants.DECIMAL_BASE_SQ) / ftTotal);
 
-        propotion = uint128(
-            (userPoints * Constants.DECIMAL_BASE_SQ) / allPoints
-        );
-
+        uint underlyingReserve = res.underlying.balanceOf(address(res.market));
         underlyingAmt = uint128(
-            (propotion * res.underlying.balanceOf(address(res.market))) /
+            xtAsUnderlying +
+                (propotion * (underlyingReserve - allXtAsUnderlying)) /
                 Constants.DECIMAL_BASE_SQ
         );
         feeAmt = uint128(

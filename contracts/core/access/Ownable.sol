@@ -32,7 +32,7 @@ abstract contract Ownable {
     /**
      * @dev Initializes the contract setting the address provided by the deployer as the initial owner.
      */
-    function __initilizeOwner(address initialOwner) internal {
+    function __initializeOwner(address initialOwner) internal {
         if (owner() != address(0)) {
             revert InvalidInitialization();
         }
