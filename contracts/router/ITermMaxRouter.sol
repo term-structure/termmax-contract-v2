@@ -2,34 +2,7 @@
 pragma solidity ^0.8.27;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ITermMaxMarket} from "../core/ITermMaxMarket.sol";
-
-enum ContextCallbackType {
-    LEVERAGE_FROM_TOKEN,
-    LEVERAGE_FROM_XT,
-    BORROW_TOKEN_FROM_CASH,
-    BORROW_TOKEN_FROM_COLL,
-    FLASH_REPAY_FROM_COLL
-}
-
-struct SwapInput {
-    address swapper;
-    bytes swapData;
-    IERC20 tokenIn;
-    IERC20 tokenOut;
-}
-
-struct LeverageFromTokenData {
-    ITermMaxMarket market;
-    address gtAddress;
-    uint256 tokenInAmt;
-    uint256 minCollAmt;
-    uint256 xtInAmt;
-    SwapInput swapInput;
-}
-struct FlashRepayFromCollData {
-    uint256 minUnderlyingAmt;
-    SwapInput swapInput;
-}
+import {SwapUnit} from "./ISwapAdapter.sol";
 
 interface ITermMaxRouter {
     event Swap(
@@ -180,18 +153,20 @@ interface ITermMaxRouter {
     function leverageFromToken(
         address receiver,
         ITermMaxMarket market,
-        uint256 tokenInAmt, // underlying
-        uint256 minCollAmt,
+        uint256 tokenInAmt, // underlying to buy collateral
+        uint256 tokenToBuyXtAmt, // underlying to buy Xt
+        uint256 maxLtv,
         uint256 minXtAmt,
-        SwapInput calldata swapInput
+        SwapUnit[] memory units
     ) external returns (uint256 gtId, uint256 netXtOut);
 
     function leverageFromXt(
         address receiver,
         ITermMaxMarket market,
         uint256 xtInAmt,
-        uint256 minCollAmt,
-        SwapInput calldata swapInput
+        uint256 tokenInAmt,
+        uint256 maxLtv,
+        SwapUnit[] memory units
     ) external returns (uint256 gtId);
 
     function borrowTokenFromCollateral(
@@ -209,10 +184,10 @@ interface ITermMaxRouter {
     ) external;
 
     function flashRepayFromColl(
+        address receiver,
         ITermMaxMarket market,
         uint256 gtId,
-        uint256 minUnderlyingAmt,
-        SwapInput calldata swapInput
+        SwapUnit[] memory units
     ) external;
 
     function repayFromFt(
