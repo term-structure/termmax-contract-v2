@@ -10,4 +10,23 @@ interface ISwapAdapter {
         bytes memory tokenInData,
         bytes memory swapData
     ) external returns (bytes memory tokenOutData);
+
+    function approveOutputToken(
+        address token,
+        address spender,
+        bytes memory tokenData
+    ) external;
+
+    function transferOutputToken(
+        address token,
+        address to,
+        bytes memory tokenData
+    ) external;
+
+    function transferInputTokenFrom(
+        address token,
+        address from,
+        address to,
+        bytes memory tokenData
+    ) external;
 }

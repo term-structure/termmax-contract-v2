@@ -13,7 +13,7 @@ remappings = [
     "@pendle/core-v2/contracts=lib/pendle-core-v2-public/contracts",
     "@uniswap/v3-core/contracts=lib/v3-core/contracts",
     "@uniswap/v3-periphery/contracts=lib/v3-periphery/contracts",
-    "forge-std=lib/forge-std/src
+    "forge-std=lib/forge-std/src"
 ]
 
 fs_permissions = [
