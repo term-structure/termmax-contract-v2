@@ -1,6 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
+struct SwapUnit {
+    address adapter;
+    address tokenIn;
+    address tokenOut;
+    bytes swapData;
+}
+
 interface ISwapAdapter {
     // leverage, underlying in, collateral out, return collateralAmt
     // flashRepay, collateral in, cash out

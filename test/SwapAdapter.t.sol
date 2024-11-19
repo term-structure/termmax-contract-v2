@@ -19,9 +19,8 @@ import {ITermMaxFactory, TermMaxFactory, IMintableERC20, IGearingToken, Aggregat
 import {MarketConfig} from "../contracts/core/storage/TermMaxStorage.sol";
 import {ISwapAdapter, UniswapV3Adapter} from "../contracts/router/swapAdapters/UniswapV3Adapter.sol";
 import {PendleSwapV3Adapter} from "../contracts/router/swapAdapters/PendleSwapV3Adapter.sol";
-
 struct SwapUnit {
-    address swapper;
+    address adapter;
     address tokenIn;
     address tokenOut;
     bytes swapData;
@@ -106,7 +105,7 @@ contract TestRouter {
             );
 
             (bool success, bytes memory returnData) = units[i]
-                .swapper
+                .adapter
                 .delegatecall(data);
 
             require(success);
