@@ -153,7 +153,8 @@ interface ITermMaxRouter {
     function leverageFromToken(
         address receiver,
         ITermMaxMarket market,
-        uint256 tokenInAmt, // underlying
+        uint256 tokenInAmt, // underlying to buy collateral
+        uint256 tokenToBuyXtAmt, // underlying to buy Xt
         uint256 maxLtv,
         uint256 minXtAmt,
         SwapUnit[] memory units

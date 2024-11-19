@@ -41,14 +41,6 @@ contract TermMaxRouter is
     using SafeERC20 for IERC20;
     using SafeERC20 for IMintableERC20;
 
-    struct SwapData {
-        address swapper;
-        address tokenIn;
-        address tokenOut;
-        bytes inputData;
-        bytes data;
-    }
-
     bytes32 OPERATOR_ROLE = keccak256(abi.encode("OPERATOR_ROLE"));
 
     mapping(address => bool) public marketWhitelist;
@@ -512,7 +504,8 @@ contract TermMaxRouter is
     function leverageFromToken(
         address receiver,
         ITermMaxMarket market,
-        uint256 tokenInAmt, // underlying
+        uint256 tokenInAmt, // underlying to buy collateral
+        uint256 tokenToBuyXtAmt, // underlying to buy Xt
         uint256 maxLtv,
         uint256 minXtAmt,
         SwapUnit[] memory units
@@ -531,16 +524,14 @@ contract TermMaxRouter is
             ,
             IERC20 underlying
         ) = market.tokens();
-
-        _transferToSelfAndApproveSpender(
-            underlying,
+        underlying.transferFrom(
             msg.sender,
-            address(market),
-            tokenInAmt
+            address(this),
+            tokenToBuyXtAmt + tokenInAmt
         );
-
+        underlying.approve(address(market), tokenToBuyXtAmt);
         uint256 _netXtOut = market.buyXt(
-            tokenInAmt.toUint128(),
+            tokenToBuyXtAmt.toUint128(),
             minXtAmt.toUint128()
         );
         netXtOut = _netXtOut;
@@ -860,31 +851,7 @@ contract TermMaxRouter is
             SwapUnit[] memory units
         ) = abi.decode(data, (address, uint256, uint256, SwapUnit[]));
         uint totalAmount = amount + tokenInAmt;
-        bytes memory inputData = abi.encode(totalAmount);
-
-        for (uint i = 0; i < units.length; ++i) {
-            if (!swapperWhitelist[units[i].adapter]) {
-                revert("Invalid adapter");
-            }
-
-            // encode datas
-            bytes memory dataToSwap = abi.encodeWithSelector(
-                ISwapAdapter.swap.selector,
-                units[i].tokenIn,
-                units[i].tokenOut,
-                inputData,
-                units[i].swapData
-            );
-
-            // delegatecall
-            (bool success, bytes memory returnData) = units[i]
-                .adapter
-                .delegatecall(dataToSwap);
-
-            require(success, "Swap: Failed");
-            inputData = returnData;
-        }
-        collateralData = inputData;
+        collateralData = _doSwap(abi.encode(totalAmount), units);
         SwapUnit memory lastUnit = units[units.length - 1];
         // encode collateral data and approve
         bytes memory approvalData = abi.encodeWithSelector(
@@ -893,6 +860,7 @@ contract TermMaxRouter is
             gt,
             collateralData
         );
+        console.log("collateralData", abi.decode(collateralData, (uint)));
         (bool success, ) = lastUnit.adapter.delegatecall(approvalData);
         require(success, "Swap: Approve token failed");
     }
@@ -935,10 +903,10 @@ contract TermMaxRouter is
         bytes memory collateralData,
         bytes calldata callbackData
     ) external override ensureGtWhitelist(msg.sender) {
-        (
-            address receiver,
-            SwapUnit[] memory units
-        ) = abi.decode(callbackData, (address, SwapUnit[]));
+        (address receiver, SwapUnit[] memory units) = abi.decode(
+            callbackData,
+            (address, SwapUnit[])
+        );
         bytes memory inputData = collateralData;
         // transfer collateral
         bytes memory dataToTransferFrom = abi.encodeWithSelector(
@@ -983,7 +951,7 @@ contract TermMaxRouter is
                 .delegatecall(dataToSwap);
 
             require(success, "Swap: Failed");
-            inputData = returnData;
+            inputData = abi.decode(returnData, (bytes));
         }
         outData = inputData;
     }

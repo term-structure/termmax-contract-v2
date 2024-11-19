@@ -83,9 +83,7 @@ contract SwapAdapterTest is Test {
 
         (, IPPrincipalToken PT, ) = IPMarket(ptWeethMarketAddr).readTokens();
         uint256 netPtBalance = PT.balanceOf(address(testRouter));
-
-        console.log("tokenOutData", abi.decode(tokenOutData, (uint)));
-        console.log("PtBalance", netPtBalance);
+        assert(netPtBalance >= abi.decode(tokenOutData, (uint)));
     }
 }
 
@@ -110,7 +108,7 @@ contract TestRouter {
 
             require(success);
 
-            tokenInData = returnData;
+            tokenInData = abi.decode(returnData, (bytes));
         }
         tokenOutData = tokenInData;
     }
