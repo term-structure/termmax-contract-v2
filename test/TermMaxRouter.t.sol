@@ -328,12 +328,7 @@ contract TermMaxRouterTest is Test {
             maxLtv,
             units
         );
-        (
-            address owner,
-            uint128 debtAmt,
-            uint128 ltv,
-            bytes memory collateralData
-        ) = res.gt.loanInfo(gtId);
+        (address owner, , , ) = res.gt.loanInfo(gtId);
         assert(owner == sender);
         vm.stopPrank();
     }
@@ -364,6 +359,48 @@ contract TermMaxRouterTest is Test {
         assert(final_owner == receiver);
         assert(final_debtAmt <= debtAmt);
         assert(abi.decode(final_collateralData, (uint256)) == collateralAmtIn);
+
+        vm.stopPrank();
+    }
+
+    function testFlashRepay() public {
+        vm.startPrank(sender);
+
+        uint128 debtAmt = 1000e8;
+        uint256 collateralAmt = 1e18;
+        uint256 collateralValue = 2000e8;
+
+        (uint256 gtId, ) = LoanUtils.fastMintGt(
+            res,
+            sender,
+            debtAmt,
+            collateralAmt
+        );
+
+        uint256 minUnderlyingAmt = collateralValue;
+
+        SwapUnit[] memory units = new SwapUnit[](1);
+        units[0] = SwapUnit(
+            address(adapter),
+            address(res.collateral),
+            address(res.underlying),
+            abi.encode(minUnderlyingAmt)
+        );
+        res.collateral.approve(address(router), collateralAmt);
+
+        uint collateralBalanceBefore = res.collateral.balanceOf(sender);
+        uint underlyingBalanceBefore = res.underlying.balanceOf(sender);
+
+        router.flashRepayFromColl(sender, res.market, gtId, units);
+
+        uint collateralBalanceAfter = res.collateral.balanceOf(sender);
+        uint underlyingBalanceAfter = res.underlying.balanceOf(sender);
+
+        assert(collateralBalanceBefore == collateralBalanceAfter);
+        assert(
+            underlyingBalanceAfter ==
+                underlyingBalanceBefore + collateralValue - debtAmt
+        );
 
         vm.stopPrank();
     }
