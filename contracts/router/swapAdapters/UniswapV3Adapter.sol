@@ -6,8 +6,13 @@ import {ISwapRouter} from "@uniswap/v3-periphery/contracts/interfaces/ISwapRoute
 import "./ERC20OutputAdapter.sol";
 
 contract UniswapV3Adapter is ERC20OutputAdapter {
-    ISwapRouter public constant router =
-        ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
+    ISwapRouter public immutable router;
+
+    // ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
+
+    constructor(address router_) {
+        router = ISwapRouter(router_);
+    }
 
     function swap(
         address tokenIn,

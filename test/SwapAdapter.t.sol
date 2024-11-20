@@ -43,6 +43,9 @@ contract SwapAdapterTest is Test {
     address weethAddr = 0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee;
     address ptWeethMarketAddr = 0x7d372819240D14fB477f17b964f95F33BeB4c704; // 26 Dec 2024
 
+    address pendleRouter = 0x888888888889758F76e7103c6CbF23ABbF58F946;
+    address uniswapRouter = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
+
     string MAINNET_RPC_URL = vm.envString("MAINNET_RPC_URL");
 
     UniswapV3Adapter uniswapAdapter;
@@ -55,8 +58,8 @@ contract SwapAdapterTest is Test {
         vm.selectFork(mainnetFork);
         vm.rollFork(21208075); // Nov-17-2024 05:09:23 PM +UTC, 1731388163
 
-        uniswapAdapter = new UniswapV3Adapter();
-        pendleAdapter = new PendleSwapV3Adapter();
+        uniswapAdapter = new UniswapV3Adapter(uniswapRouter);
+        pendleAdapter = new PendleSwapV3Adapter(pendleRouter);
         testRouter = new TestRouter();
     }
 
@@ -65,25 +68,34 @@ contract SwapAdapterTest is Test {
         uint24 poolFee = 3000;
         deal(weth9Addr, address(this), amount);
         IERC20(weth9Addr).transfer(address(testRouter), amount);
-        SwapUnit[] memory units = new SwapUnit[](2);
+        SwapUnit[] memory units = new SwapUnit[](3);
         units[0] = SwapUnit(
             address(uniswapAdapter),
             weth9Addr,
             weethAddr,
             abi.encode(poolFee, 0)
         );
+
+        (, IPPrincipalToken PT, ) = IPMarket(ptWeethMarketAddr).readTokens();
+
         units[1] = SwapUnit(
             address(pendleAdapter),
             weethAddr,
-            address(0),
+            address(PT),
+            abi.encode(ptWeethMarketAddr, 0)
+        );
+
+        units[2] = SwapUnit(
+            address(pendleAdapter),
+            address(PT),
+            weethAddr,
             abi.encode(ptWeethMarketAddr, 0)
         );
 
         bytes memory tokenOutData = testRouter.swap(units, abi.encode(amount));
 
-        (, IPPrincipalToken PT, ) = IPMarket(ptWeethMarketAddr).readTokens();
-        uint256 netPtBalance = PT.balanceOf(address(testRouter));
-        assert(netPtBalance >= abi.decode(tokenOutData, (uint)));
+        uint256 netBalance = IERC20(weth9Addr).balanceOf(address(testRouter));
+        assert(netBalance >= abi.decode(tokenOutData, (uint)));
     }
 }
 

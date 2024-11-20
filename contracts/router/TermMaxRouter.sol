@@ -895,7 +895,7 @@ contract TermMaxRouter is
         return abi.decode(collateralData, (uint256));
     }
 
-    /// @dev Gt flash repay falshloan callback
+    /// @dev Gt flash repay flashloan callback
     function executeOperation(
         address owner,
         IERC20 debtToken,
