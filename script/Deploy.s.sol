@@ -16,18 +16,17 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 contract DeployMainnetFork is Script {
-
     // deployer config
     uint256 deployerPrivateKey = vm.envUint("FORK_DEPLOYER_PRIVATE_KEY");
     address deployerAddr = vm.addr(deployerPrivateKey);
 
     // market config
     bytes32 constant GT_ERC20 = keccak256("GearingTokenWithERC20");
-    MarketConfig marketConfig = MarketConfig(
-        {
+    MarketConfig marketConfig =
+        MarketConfig({
             treasurer: 0x944a0Af591E2C23a2E81fe4c10Bd9c47Cf866F4b,
             maturity: 1735575942, // current 1726732382
-            openTime: uint64(vm.getBlockTimestamp()+60),
+            openTime: uint64(vm.getBlockTimestamp()),
             apr: 12000000,
             lsf: 80000000,
             lendFeeRatio: 3000000,
@@ -45,19 +44,37 @@ contract DeployMainnetFork is Script {
     uint32 liquidationLtv = 0.9e8;
 
     // oracle config
-    address underlyingAddr = address(0x103bE36C56F72a05e19CE8f9e70a70d33cCe0421); // USDC
-    address underlyingOracleAddr = address(0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6);
-    address collateralAddr = address(0xE73362b23CafAc6559aA3101d2f80fed474b09bF); // PT-sUSDe-24OCT2024
-    address collateralOracleAddr = address(0xD752C02f557580cEC3a50a2deBF3A4C48657EeDe);
-    
+    address underlyingAddr =
+        address(0x103bE36C56F72a05e19CE8f9e70a70d33cCe0421); // USDC
+    address underlyingOracleAddr =
+        address(0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6);
+    address collateralAddr =
+        address(0xE73362b23CafAc6559aA3101d2f80fed474b09bF); // PT-sUSDe-24OCT2024
+    address collateralOracleAddr =
+        address(0xD752C02f557580cEC3a50a2deBF3A4C48657EeDe);
+
     function run() public {
-        
         vm.startBroadcast(deployerPrivateKey);
         TermMaxFactory factory = deployFactory(deployerAddr);
         TermMaxRouter router = deployRouter(deployerAddr);
         (MockERC20 USDC, MockERC20 PT) = deployMockERC20();
-        TermMaxMarket market = deployMarket(address(factory), address(PT), address(USDC), collateralOracleAddr, underlyingOracleAddr);
-        (IMintableERC20 ft, IMintableERC20 xt, IMintableERC20 lpFt, IMintableERC20 lpXt, IGearingToken gt, address collateral, IERC20 underlying) = market.tokens();
+        TermMaxMarket market = deployMarket(
+            deployerAddr,
+            address(factory),
+            address(PT),
+            address(USDC),
+            collateralOracleAddr,
+            underlyingOracleAddr
+        );
+        (
+            IMintableERC20 ft,
+            IMintableERC20 xt,
+            IMintableERC20 lpFt,
+            IMintableERC20 lpXt,
+            IGearingToken gt,
+            address collateral,
+            IERC20 underlying
+        ) = market.tokens();
         whitelistMarket(address(router), address(market), address(collateral));
         vm.stopBroadcast();
 
@@ -65,10 +82,16 @@ contract DeployMainnetFork is Script {
         console.log("Factory deployed at:", address(factory));
         console.log("Router deployed at:", address(router));
         console.log("Market deployed at:", address(market));
-        console.log("Collateral deployed at:", address(collateral));
-        console.log("Collateral symbol:", IERC20Metadata(collateral).symbol());
-        console.log("Underlying deployed at:", address(underlying));
-        console.log("Underlying symbol:", IERC20Metadata(address(underlying)).symbol());
+        console.log(
+            "Collateral (%s) deployed at: %s",
+            IERC20Metadata(collateral).symbol(),
+            address(collateral)
+        );
+        console.log(
+            "Underlying (%s) deployed at: %s",
+            IERC20Metadata(address(underlying)).symbol(),
+            address(underlying)
+        );
         console.log("FT deployed at:", address(ft));
         console.log("XT deployed at:", address(xt));
         console.log("LPFT deployed at:", address(lpFt));
@@ -76,13 +99,17 @@ contract DeployMainnetFork is Script {
         console.log("GT deployed at:", address(gt));
     }
 
-    function deployFactory(address adminAddr) public returns (TermMaxFactory factory) {
+    function deployFactory(
+        address adminAddr
+    ) public returns (TermMaxFactory factory) {
         factory = new TermMaxFactory(adminAddr);
         TermMaxMarket marketImpl = new TermMaxMarket();
         factory.initMarketImplement(address(marketImpl));
     }
 
-    function deployRouter(address adminAddr) public returns (TermMaxRouter router) {
+    function deployRouter(
+        address adminAddr
+    ) public returns (TermMaxRouter router) {
         address implementation = address(new TermMaxRouter());
         bytes memory data = abi.encodeCall(TermMaxRouter.initialize, adminAddr);
         address proxy = address(new ERC1967Proxy(implementation, data));
@@ -91,15 +118,22 @@ contract DeployMainnetFork is Script {
 
     function deployMockERC20() public returns (MockERC20 USDC, MockERC20 PT) {
         USDC = new MockERC20("Mock USDC", "USDC", 6);
-        PT = new MockERC20("Mock PT", "PT", 18);
+        PT = new MockERC20("Mock PT-sUSDe", "PT-sUSDe", 18);
     }
 
-    function deployMarket(address factoryAddr, address collateralAddr, address underlyingAddr,  address collateralOracleAddr, address underlyingOracleAddr) public returns (TermMaxMarket market) {
+    function deployMarket(
+        address adminAddr,
+        address factoryAddr,
+        address collateralAddr,
+        address underlyingAddr,
+        address collateralOracleAddr,
+        address underlyingOracleAddr
+    ) public returns (TermMaxMarket market) {
         ITermMaxFactory factory = ITermMaxFactory(factoryAddr);
         ITermMaxFactory.DeployParams memory params = ITermMaxFactory
             .DeployParams({
                 gtKey: GT_ERC20,
-                admin: factoryAddr,
+                admin: adminAddr,
                 collateral: collateralAddr,
                 underlying: IERC20Metadata(underlyingAddr),
                 underlyingOracle: AggregatorV3Interface(underlyingOracleAddr),
@@ -112,7 +146,11 @@ contract DeployMainnetFork is Script {
         market = TermMaxMarket(factory.createMarket(params));
     }
 
-    function whitelistMarket(address routerAddr, address marketAddr, address collateralAddr) public {
+    function whitelistMarket(
+        address routerAddr,
+        address marketAddr,
+        address collateralAddr
+    ) public {
         TermMaxRouter router = TermMaxRouter(routerAddr);
         router.setMarketWhitelist(marketAddr, true);
         router.setSwapperWhitelist(collateralAddr, true);

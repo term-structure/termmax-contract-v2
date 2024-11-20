@@ -1,8 +1,8 @@
 {
   "marketConfig": {
-    "openTime": "1727799942",
-    "maturity": "1735575942",
-    "currentTime": "1730391942",
+    "openTime": "1731431364",
+    "maturity": "1742860800",
+    "currentTime": "1731431365",
     "initialLtv": "88000000",
     "apr": "12000000",
     "lsf": "80000000",
@@ -19,7 +19,7 @@
       "contractState": {
         "decimalBase": "100000000",
         "daysInYear": "365",
-        "openTime": "1727799942",
+        "openTime": "1731431364",
         "underlyingReserve": "1010000000000",
         "collateralReserve": "0",
         "ftReserve": "888800000000",
@@ -29,7 +29,7 @@
         "lsf": "80000000",
         "lendFeeRatio": "3000000",
         "borrowFeeRatio": "3000000",
-        "maturity": "1735575942",
+        "maturity": "1742860800",
         "lpFtReserve": "0",
         "lpXtReserve": "0",
         "lpFtTotalSupply": "888800000000",
@@ -45,7 +45,7 @@
       "contractState": {
         "decimalBase": "100000000",
         "daysInYear": "365",
-        "openTime": "1727799942",
+        "openTime": "1731431364",
         "underlyingReserve": "1020000000000",
         "collateralReserve": "0",
         "ftReserve": "897600000000",
@@ -55,7 +55,7 @@
         "lsf": "80000000",
         "lendFeeRatio": "3000000",
         "borrowFeeRatio": "3000000",
-        "maturity": "1735575942",
+        "maturity": "1742860800",
         "lpFtReserve": "0",
         "lpXtReserve": "0",
         "lpFtTotalSupply": "897600000000",
@@ -71,7 +71,7 @@
       "contractState": {
         "decimalBase": "100000000",
         "daysInYear": "365",
-        "openTime": "1727799942",
+        "openTime": "1731431364",
         "underlyingReserve": "1010000000000",
         "collateralReserve": "0",
         "ftReserve": "880000000000",
@@ -81,7 +81,7 @@
         "lsf": "80000000",
         "lendFeeRatio": "3000000",
         "borrowFeeRatio": "3000000",
-        "maturity": "1735575942",
+        "maturity": "1742860800",
         "lpFtReserve": "0",
         "lpXtReserve": "0",
         "lpFtTotalSupply": "880000000000",
@@ -97,7 +97,7 @@
       "contractState": {
         "decimalBase": "100000000",
         "daysInYear": "365",
-        "openTime": "1727799942",
+        "openTime": "1731431364",
         "underlyingReserve": "1010000000000",
         "collateralReserve": "0",
         "ftReserve": "880000000000",
@@ -107,7 +107,7 @@
         "lsf": "80000000",
         "lendFeeRatio": "3000000",
         "borrowFeeRatio": "3000000",
-        "maturity": "1735575942",
+        "maturity": "1742860800",
         "lpFtReserve": "0",
         "lpXtReserve": "0",
         "lpFtTotalSupply": "880000000000",
@@ -123,7 +123,7 @@
       "contractState": {
         "decimalBase": "100000000",
         "daysInYear": "365",
-        "openTime": "1727799942",
+        "openTime": "1731431364",
         "underlyingReserve": "1010000000000",
         "collateralReserve": "0",
         "ftReserve": "884400000000",
@@ -133,7 +133,7 @@
         "lsf": "80000000",
         "lendFeeRatio": "3000000",
         "borrowFeeRatio": "3000000",
-        "maturity": "1735575942",
+        "maturity": "1742860800",
         "lpFtReserve": "0",
         "lpXtReserve": "0",
         "lpFtTotalSupply": "884400000000",
@@ -149,7 +149,7 @@
       "contractState": {
         "decimalBase": "100000000",
         "daysInYear": "365",
-        "openTime": "1727799942",
+        "openTime": "1731431364",
         "underlyingReserve": "1010000000000",
         "collateralReserve": "0",
         "ftReserve": "878605329689",
@@ -159,7 +159,7 @@
         "lsf": "80000000",
         "lendFeeRatio": "3000000",
         "borrowFeeRatio": "3000000",
-        "maturity": "1735575942",
+        "maturity": "1742860800",
         "lpFtReserve": "2584540",
         "lpXtReserve": "2903290",
         "lpFtTotalSupply": "880002584540",
@@ -175,7 +175,7 @@
       "contractState": {
         "decimalBase": "100000000",
         "daysInYear": "365",
-        "openTime": "1727799942",
+        "openTime": "1731431364",
         "underlyingReserve": "1010000000000",
         "collateralReserve": "0",
         "ftReserve": "888800000000",
@@ -185,7 +185,7 @@
         "lsf": "80000000",
         "lendFeeRatio": "3000000",
         "borrowFeeRatio": "3000000",
-        "maturity": "1735575942",
+        "maturity": "1742860800",
         "lpFtReserve": "17020935",
         "lpXtReserve": "20831968",
         "lpFtTotalSupply": "880017020935",
@@ -201,7 +201,7 @@
       "contractState": {
         "decimalBase": "100000000",
         "daysInYear": "365",
-        "openTime": "1727799942",
+        "openTime": "1731431364",
         "underlyingReserve": "1000006668364",
         "collateralReserve": "0",
         "ftReserve": "880005868161",
@@ -211,7 +211,7 @@
         "lsf": "80000000",
         "lendFeeRatio": "3000000",
         "borrowFeeRatio": "3000000",
-        "maturity": "1735575942",
+        "maturity": "1742860800",
         "lpFtReserve": "5164799",
         "lpXtReserve": "5835404",
         "lpFtTotalSupply": "880005164799",
@@ -227,7 +227,7 @@
       "contractState": {
         "decimalBase": "100000000",
         "daysInYear": "365",
-        "openTime": "1727799942",
+        "openTime": "1731431364",
         "underlyingReserve": "1000072513262",
         "collateralReserve": "0",
         "ftReserve": "880063811671",
@@ -237,7 +237,7 @@
         "lsf": "80000000",
         "lendFeeRatio": "3000000",
         "borrowFeeRatio": "3000000",
-        "maturity": "1735575942",
+        "maturity": "1742860800",
         "lpFtReserve": "34151545",
         "lpXtReserve": "40298600",
         "lpFtTotalSupply": "880034151545",
@@ -278,22 +278,6 @@
       "dai": {
         "roundId": "1",
         "answer": "100000000",
-        "startedAt": "1730391800",
-        "updatedAt": "1730391900",
-        "answeredInRound": "0"
-      }
-    },
-    "ETH_2000_PT_WEETH_1800": {
-      "eth": {
-        "roundId": "1",
-        "answer": "200000000000",
-        "startedAt": "1730391800",
-        "updatedAt": "1730391900",
-        "answeredInRound": "0"
-      },
-      "ptWeeth": {
-        "roundId": "1",
-        "answer": "180000000000",
         "startedAt": "1730391800",
         "updatedAt": "1730391900",
         "answeredInRound": "0"

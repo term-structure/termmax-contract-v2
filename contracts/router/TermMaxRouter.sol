@@ -13,7 +13,7 @@ import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/acce
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 
 import {ITermMaxMarket} from "../core/ITermMaxMarket.sol";
-import {ITermMaxRouter, ContextCallbackType, SwapInput, LeverageFromTokenData, FlashRepayFromCollData} from "./ITermMaxRouter.sol";
+import {ITermMaxRouter} from "./ITermMaxRouter.sol";
 import {MathLib} from "../core/lib/MathLib.sol";
 import {IMintableERC20} from "../core/tokens/IMintableERC20.sol";
 import {MarketConfig} from "../core/storage/TermMaxStorage.sol";
@@ -21,6 +21,7 @@ import {Constants} from "../core/lib/Constants.sol";
 import {IFlashLoanReceiver} from "../core/IFlashLoanReceiver.sol";
 import {IFlashRepayer} from "../core/tokens/IFlashRepayer.sol";
 import {IGearingToken} from "../core/tokens/IGearingToken.sol";
+import {SwapUnit, ISwapAdapter} from "./ISwapAdapter.sol";
 
 contract TermMaxRouter is
     UUPSUpgradeable,
@@ -501,10 +502,11 @@ contract TermMaxRouter is
     function leverageFromToken(
         address receiver,
         ITermMaxMarket market,
-        uint256 tokenInAmt, // underlying
-        uint256 minCollAmt,
+        uint256 tokenInAmt, // underlying to buy collateral
+        uint256 tokenToBuyXtAmt, // underlying to buy Xt
+        uint256 maxLtv,
         uint256 minXtAmt,
-        SwapInput calldata swapInput
+        SwapUnit[] memory units
     )
         external
         ensureMarketWhitelist(address(market))
@@ -520,37 +522,28 @@ contract TermMaxRouter is
             ,
             IERC20 underlying
         ) = market.tokens();
-
-        _transferToSelfAndApproveSpender(
-            underlying,
+        underlying.transferFrom(
             msg.sender,
-            address(market),
-            tokenInAmt
+            address(this),
+            tokenToBuyXtAmt + tokenInAmt
         );
-
+        underlying.approve(address(market), tokenToBuyXtAmt);
         uint256 _netXtOut = market.buyXt(
-            tokenInAmt.toUint128(),
+            tokenToBuyXtAmt.toUint128(),
             minXtAmt.toUint128()
         );
         netXtOut = _netXtOut;
-
-        bytes memory callbackData = _encodeLeverageFromTokenData(
-            market,
-            address(gt),
-            tokenInAmt,
-            minCollAmt,
-            netXtOut,
-            swapInput
-        );
+        bytes memory callbackData = abi.encode(address(gt), netXtOut, units);
         xt.safeIncreaseAllowance(address(market), netXtOut);
         gtId = market.leverageByXt(
             address(this),
             netXtOut.toUint128(),
             callbackData
         );
-        gt.safeTransferFrom(address(this), receiver, gtId);
+        (, , uint128 ltv, bytes memory collateralData) = gt.loanInfo(gtId);
+        require(ltv <= maxLtv, "Slippage: ltv bigger than expected ltv");
 
-        (, , , bytes memory collateralData) = gt.loanInfo(gtId);
+        gt.safeTransferFrom(address(this), receiver, gtId);
 
         emit IssueGt(
             market,
@@ -561,7 +554,7 @@ contract TermMaxRouter is
             tokenInAmt,
             netXtOut,
             _decodeAmount(collateralData),
-            minCollAmt,
+            maxLtv,
             minXtAmt
         );
     }
@@ -570,8 +563,9 @@ contract TermMaxRouter is
         address receiver,
         ITermMaxMarket market,
         uint256 xtInAmt,
-        uint256 minCollAmt,
-        SwapInput calldata swapInput
+        uint256 tokenInAmt, // underlying
+        uint256 maxLtv,
+        SwapUnit[] memory units
     )
         external
         ensureMarketWhitelist(address(market))
@@ -594,21 +588,18 @@ contract TermMaxRouter is
             xtInAmt
         );
 
-        bytes memory callbackData = _encodeLeverageFromTokenData(
-            market,
-            address(gt),
-            xtInAmt,
-            minCollAmt,
-            xtInAmt,
-            swapInput
-        );
+        underlying.safeTransferFrom(msg.sender, address(this), tokenInAmt);
+
+        bytes memory callbackData = abi.encode(address(gt), tokenInAmt, units);
         gtId = market.leverageByXt(
             address(this),
             xtInAmt.toUint128(),
             callbackData
         );
         gt.safeTransferFrom(address(this), receiver, gtId);
-        (, , , bytes memory collateralData) = gt.loanInfo(gtId);
+
+        (, , uint128 ltv, bytes memory collateralData) = gt.loanInfo(gtId);
+        require(ltv <= maxLtv, "Slippage: ltv bigger than expected ltv");
 
         emit IssueGt(
             market,
@@ -619,31 +610,9 @@ contract TermMaxRouter is
             xtInAmt,
             xtInAmt,
             _decodeAmount(collateralData),
-            minCollAmt,
+            maxLtv,
             xtInAmt
         );
-    }
-
-    function _encodeLeverageFromTokenData(
-        ITermMaxMarket market,
-        address gtAddress,
-        uint256 tokenInAmt,
-        uint256 minCollAmt,
-        uint256 xtInAmt,
-        SwapInput memory swapInput
-    ) internal pure returns (bytes memory) {
-        return
-            abi.encode(
-                ContextCallbackType.LEVERAGE_FROM_TOKEN,
-                LeverageFromTokenData(
-                    market,
-                    gtAddress,
-                    tokenInAmt,
-                    minCollAmt,
-                    xtInAmt,
-                    swapInput
-                )
-            );
     }
 
     /** Lending Market */
@@ -749,20 +718,16 @@ contract TermMaxRouter is
     }
 
     function flashRepayFromColl(
+        address receiver,
         ITermMaxMarket market,
         uint256 gtId,
-        uint256 minUnderlyingAmt,
-        SwapInput calldata swapInput
+        SwapUnit[] memory units
     ) external ensureMarketWhitelist(address(market)) whenNotPaused {
         (, , , , IGearingToken gt, , IERC20 underlying) = market.tokens();
 
-        gt.flashRepay(
-            gtId,
-            abi.encode(
-                ContextCallbackType.FLASH_REPAY_FROM_COLL,
-                FlashRepayFromCollData(minUnderlyingAmt, swapInput)
-            )
-        );
+        gt.flashRepay(gtId, abi.encode(units));
+        // transfer remainning underlying token
+        underlying.transfer(receiver, underlying.balanceOf(address(this)));
     }
 
     function repayFromFt(
@@ -854,14 +819,14 @@ contract TermMaxRouter is
         uint256 gtId,
         uint256 removeCollateralAmt
     ) external ensureMarketWhitelist(address(market)) whenNotPaused {
-        (, , , , IGearingToken gt, address collateral, ) = market.tokens();
+        (, , , , IGearingToken gt, , ) = market.tokens();
         gt.removeCollateral(gtId, _encodeAmount(removeCollateralAmt));
     }
 
     /// @dev Market flash leverage falshloan callback
     function executeOperation(
-        address sender,
-        IERC20 asset,
+        address,
+        IERC20,
         uint256 amount,
         bytes calldata data
     )
@@ -869,43 +834,22 @@ contract TermMaxRouter is
         ensureMarketWhitelist(msg.sender)
         returns (bytes memory collateralData)
     {
-        ContextCallbackType callbackType = abi.decode(
+        (address gt, uint256 tokenInAmt, SwapUnit[] memory units) = abi.decode(
             data,
-            (ContextCallbackType)
+            (address, uint256, SwapUnit[])
         );
-
-        if (callbackType == ContextCallbackType.LEVERAGE_FROM_TOKEN) {
-            (, LeverageFromTokenData memory leverData) = abi.decode(
-                data,
-                (ContextCallbackType, LeverageFromTokenData)
-            );
-            if (!swapperWhitelist[leverData.swapInput.swapper]) {
-                revert("Invalid swapper");
-            }
-            // get debt amount
-            require(
-                address(leverData.swapInput.tokenIn) == address(asset),
-                "Invalid tokenIn"
-            );
-            asset.safeIncreaseAllowance(leverData.swapInput.swapper, amount);
-            leverData.swapInput.swapper.functionCall(
-                leverData.swapInput.swapData
-            );
-
-            uint256 collBalance = leverData.swapInput.tokenOut.balanceOf(
-                address(this)
-            );
-            if (collBalance < leverData.minCollAmt) {
-                revert("Slippage: INSUFFICIENT_COLLATERAL");
-            }
-            leverData.swapInput.tokenOut.safeIncreaseAllowance(
-                leverData.gtAddress,
-                collBalance
-            );
-            return _encodeAmount(collBalance);
-        } else {
-            revert("Invalid callback type");
-        }
+        uint totalAmount = amount + tokenInAmt;
+        collateralData = _doSwap(abi.encode(totalAmount), units);
+        SwapUnit memory lastUnit = units[units.length - 1];
+        // encode collateral data and approve
+        bytes memory approvalData = abi.encodeWithSelector(
+            ISwapAdapter.approveOutputToken.selector,
+            lastUnit.tokenOut,
+            gt,
+            collateralData
+        );
+        (bool success, ) = lastUnit.adapter.delegatecall(approvalData);
+        require(success, "Swap: Approve token failed");
     }
 
     function _balanceOf(
@@ -937,52 +881,58 @@ contract TermMaxRouter is
         return abi.decode(collateralData, (uint256));
     }
 
-    /// @dev Gt flash repay falshloan callback
+    /// @dev Gt flash repay flashloan callback
     function executeOperation(
         address owner,
         IERC20 debtToken,
         uint128 debtAmt,
-        address collateralToken,
+        address,
         bytes memory collateralData,
         bytes calldata callbackData
     ) external override ensureGtWhitelist(msg.sender) {
-        ContextCallbackType callbackType = abi.decode(
-            callbackData,
-            (ContextCallbackType)
+        SwapUnit[] memory units = abi.decode(callbackData, (SwapUnit[]));
+
+        // transfer collateral
+        bytes memory dataToTransferFrom = abi.encodeWithSelector(
+            ISwapAdapter.transferInputTokenFrom.selector,
+            units[0].tokenIn,
+            owner,
+            address(this),
+            collateralData
         );
+        (bool success, ) = units[0].adapter.delegatecall(dataToTransferFrom);
+        require(success, "Swap: Transfer collateral from owner failed");
 
-        if (callbackType == ContextCallbackType.FLASH_REPAY_FROM_COLL) {
-            (, FlashRepayFromCollData memory repayData) = abi.decode(
-                callbackData,
-                (ContextCallbackType, FlashRepayFromCollData)
-            );
-            if (!swapperWhitelist[repayData.swapInput.swapper]) {
-                revert("Invalid swapper");
+        // do swap
+        _doSwap(collateralData, units);
+        debtToken.approve(msg.sender, debtAmt);
+    }
+
+    function _doSwap(
+        bytes memory inputData,
+        SwapUnit[] memory units
+    ) internal returns (bytes memory outData) {
+        for (uint i = 0; i < units.length; ++i) {
+            if (!swapperWhitelist[units[i].adapter]) {
+                revert("Invalid adapter");
             }
-            uint amount = _decodeAmount(collateralData);
-            IERC20(collateralToken).safeTransferFrom(
-                owner,
-                address(this),
-                amount
-            );
-            IERC20(collateralToken).safeIncreaseAllowance(
-                repayData.swapInput.swapper,
-                amount
-            );
-            repayData.swapInput.swapper.functionCall(
-                repayData.swapInput.swapData
+            // encode datas
+            bytes memory dataToSwap = abi.encodeWithSelector(
+                ISwapAdapter.swap.selector,
+                units[i].tokenIn,
+                units[i].tokenOut,
+                inputData,
+                units[i].swapData
             );
 
-            uint256 debtTokenBalance = debtToken.balanceOf(address(this));
-            if (debtTokenBalance < repayData.minUnderlyingAmt) {
-                revert("Slippage: INSUFFICIENT_COLLATERAL");
-            }
-            debtToken.safeIncreaseAllowance(msg.sender, debtAmt);
-            if (debtAmt < debtTokenBalance) {
-                debtToken.safeTransfer(owner, debtTokenBalance - debtAmt);
-            }
-        } else {
-            revert("Invalid callback type");
+            // delegatecall
+            (bool success, bytes memory returnData) = units[i]
+                .adapter
+                .delegatecall(dataToSwap);
+
+            require(success, "Swap: Failed");
+            inputData = abi.decode(returnData, (bytes));
         }
+        outData = inputData;
     }
 }
