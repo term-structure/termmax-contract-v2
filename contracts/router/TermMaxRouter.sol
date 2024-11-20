@@ -738,6 +738,8 @@ contract TermMaxRouter is
         (, , , , IGearingToken gt, , IERC20 underlying) = market.tokens();
 
         gt.flashRepay(gtId, abi.encode(receiver, units));
+        // transfer remainning underlying token
+        underlying.transfer(receiver, underlying.balanceOf(address(this)));
     }
 
     function repayFromFt(
@@ -860,7 +862,6 @@ contract TermMaxRouter is
             gt,
             collateralData
         );
-        console.log("collateralData", abi.decode(collateralData, (uint)));
         (bool success, ) = lastUnit.adapter.delegatecall(approvalData);
         require(success, "Swap: Approve token failed");
     }
@@ -924,7 +925,8 @@ contract TermMaxRouter is
             _doSwap(collateralData, units),
             (uint256)
         );
-        debtToken.transfer(receiver, underlyingOut);
+        SwapUnit memory lastUnit = units[units.length - 1];
+        debtToken.approve(msg.sender, debtAmt);
     }
 
     function _doSwap(
