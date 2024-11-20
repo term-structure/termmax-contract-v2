@@ -3,7 +3,7 @@ pragma solidity ^0.8.27;
 
 import {IMintableERC20, IERC20} from "./tokens/IMintableERC20.sol";
 import {IGearingToken} from "./tokens/IGearingToken.sol";
-import "./storage/TermMaxStorage.sol";
+import {MarketConfig} from "./storage/TermMaxStorage.sol";
 
 /**
  * @title TermMax Market interface

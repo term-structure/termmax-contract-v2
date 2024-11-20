@@ -115,36 +115,27 @@ contract TermMaxFactory is ITermMaxFactory, Ownable {
         IGearingToken gt;
         IMintableERC20[4] memory tokens;
         {
-            string memory collateralName = IERC20Metadata(
-                deployParams.collateral
-            ).name();
-            string memory collateralSymbol = IERC20Metadata(
-                deployParams.collateral
-            ).symbol();
+            string memory name = string(
+                abi.encodePacked(
+                    IERC20Metadata(deployParams.collateral).name(),
+                    STRING_CONNECTION,
+                    deployParams.underlying.name()
+                )
+            );
+            string memory symbol = string(
+                abi.encodePacked(
+                    IERC20Metadata(deployParams.collateral).symbol(),
+                    STRING_CONNECTION,
+                    deployParams.underlying.symbol()
+                )
+            );
 
             uint8 decimals = deployParams.underlying.decimals();
-            tokens = _deployTokens(
-                market,
-                collateralName,
-                collateralSymbol,
-                decimals
-            );
+            tokens = _deployTokens(market, name, symbol, decimals);
 
-            string memory gtName = string(
-                abi.encodePacked(
-                    PREFIX_GNFT,
-                    deployParams.underlying.name(),
-                    STRING_CONNECTION,
-                    collateralName
-                )
-            );
+            string memory gtName = string(abi.encodePacked(PREFIX_GNFT, name));
             string memory gtSymbol = string(
-                abi.encodePacked(
-                    PREFIX_GNFT,
-                    deployParams.underlying.symbol(),
-                    STRING_CONNECTION,
-                    collateralSymbol
-                )
+                abi.encodePacked(PREFIX_GNFT, symbol)
             );
             gt = IGearingToken(
                 Clones.cloneDeterministic(
@@ -189,8 +180,8 @@ contract TermMaxFactory is ITermMaxFactory, Ownable {
 
     function _deployTokens(
         address market,
-        string memory collateralName,
-        string memory collateralSymbol,
+        string memory name,
+        string memory symbol,
         uint8 decimals
     ) internal returns (IMintableERC20[4] memory tokens) {
         {
@@ -198,29 +189,29 @@ contract TermMaxFactory is ITermMaxFactory, Ownable {
             tokens[0] = _deployMintableERC20(
                 address(market),
                 PREFIX_FT,
-                collateralName,
-                collateralSymbol,
+                name,
+                symbol,
                 decimals
             );
             tokens[1] = _deployMintableERC20(
                 address(market),
                 PREFIX_XT,
-                collateralName,
-                collateralSymbol,
+                name,
+                symbol,
                 decimals
             );
             tokens[2] = _deployMintableERC20(
                 address(market),
                 PREFIX_LP_FT,
-                collateralName,
-                collateralSymbol,
+                name,
+                symbol,
                 decimals
             );
             tokens[3] = _deployMintableERC20(
                 address(market),
                 PREFIX_LP_XT,
-                collateralName,
-                collateralSymbol,
+                name,
+                symbol,
                 decimals
             );
         }

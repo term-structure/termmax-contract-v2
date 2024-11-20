@@ -3,17 +3,14 @@ pragma solidity ^0.8.27;
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
-import {IERC20Metadata, IERC20} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
-import {ITermMaxMarket} from "./ITermMaxMarket.sol";
+import {ITermMaxMarket, MarketConfig, IMintableERC20, IERC20} from "./ITermMaxMarket.sol";
 import {IMintableERC20} from "./tokens/IMintableERC20.sol";
 import {IGearingToken} from "./tokens/IGearingToken.sol";
 import {IFlashLoanReceiver} from "./IFlashLoanReceiver.sol";
-import {TermMaxCurve, MathLib} from "./lib/TermMaxCurve.sol";
+import {TermMaxCurve, MathLib, TradeParams} from "./lib/TermMaxCurve.sol";
 import {Constants} from "./lib/Constants.sol";
 import {Ownable} from "./access/Ownable.sol";
-import "./storage/TermMaxStorage.sol";
 
 /**
  * @title TermMax Market

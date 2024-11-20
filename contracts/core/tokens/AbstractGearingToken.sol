@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import {ERC721Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
+import {ERC721EnumerableUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
@@ -16,7 +16,7 @@ import {IGearingToken, AggregatorV3Interface, IERC20Metadata, IERC20} from "./IG
  */
 abstract contract AbstractGearingToken is
     OwnableUpgradeable,
-    ERC721Upgradeable,
+    ERC721EnumerableUpgradeable,
     ReentrancyGuardUpgradeable,
     PausableUpgradeable,
     IGearingToken
