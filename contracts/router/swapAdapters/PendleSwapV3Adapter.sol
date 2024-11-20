@@ -28,9 +28,7 @@ contract PendleSwapV3Adapter is ERC20OutputAdapter, PendleHelper {
         IPMarket market = IPMarket(ptMarketAddr);
 
         (, IPPrincipalToken PT, ) = market.readTokens();
-
         uint amount = _decodeAmount(tokenInData);
-
         IERC20(tokenIn).approve(address(router), amount);
         if (tokenOut == address(PT)) {
             (uint256 netPtOut, , ) = router.swapExactTokenForPt(

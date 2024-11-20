@@ -65,6 +65,7 @@ contract SwapAdapterTest is Test {
 
     function testDoMutipleSwaps() public {
         uint amount = 1_00e18;
+        amount = 4.881e18;
         uint24 poolFee = 3000;
         deal(weth9Addr, address(this), amount);
         IERC20(weth9Addr).transfer(address(testRouter), amount);

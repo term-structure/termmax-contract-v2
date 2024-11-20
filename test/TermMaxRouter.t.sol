@@ -328,12 +328,7 @@ contract TermMaxRouterTest is Test {
             maxLtv,
             units
         );
-        (
-            address owner,
-            uint128 debtAmt,
-            uint128 ltv,
-            bytes memory collateralData
-        ) = res.gt.loanInfo(gtId);
+        (address owner, , , ) = res.gt.loanInfo(gtId);
         assert(owner == sender);
         vm.stopPrank();
     }
