@@ -400,7 +400,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
                 mConfig
             );
             // calculate fee
-            feeAmt = TermMaxCurve.calculateFee(
+            feeAmt = TermMaxCurve.calculateTxFee(
                 ftReserve,
                 xtReserve,
                 newFtReserve,
@@ -430,7 +430,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
                 mConfig
             );
             // calculate fee
-            feeAmt = TermMaxCurve.calculateFee(
+            feeAmt = TermMaxCurve.calculateTxFee(
                 ftReserve,
                 xtReserve,
                 newFtReserve,
@@ -549,7 +549,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
             );
             netOut = xtReserve - newXtReserve;
             // calculate fee
-            feeAmt = TermMaxCurve.calculateFee(
+            feeAmt = TermMaxCurve.calculateTxFee(
                 ftReserve,
                 xtReserve,
                 newFtReserve,
@@ -569,7 +569,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
             );
             netOut = tokenAmtIn + xtReserve - newXtReserve;
             // calculate fee
-            feeAmt = TermMaxCurve.calculateFee(
+            feeAmt = TermMaxCurve.calculateTxFee(
                 ftReserve,
                 xtReserve,
                 newFtReserve,
