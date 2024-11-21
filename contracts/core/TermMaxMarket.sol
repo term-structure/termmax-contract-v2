@@ -375,9 +375,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
             _daysToMaturity(mConfig.maturity)
         );
 
-        uint feeAmt;
-        // add new lituidity
-        _addLiquidity(caller, underlyingAmtIn, mConfig.initialLtv);
+        uint feeAmt; uint finalTokenReserve;
         if (token == ft) {
             uint newFtReserve;
             uint newXtReserve;
@@ -398,8 +396,8 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
                 (underlyingAmtIn * mConfig.minNLendFeeR) /
                     Constants.DECIMAL_BASE
             );
-            uint finalFtReserve;
-            (finalFtReserve, , mConfig.apr) = TermMaxCurve.buyNegFt(
+
+            (finalTokenReserve, , mConfig.apr) = TermMaxCurve.buyNegFt(
                 TradeParams(
                     feeAmt,
                     newFtReserve,
@@ -408,9 +406,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
                 ),
                 mConfig
             );
-
-            uint ftCurrentReserve = ft.balanceOf(address(this));
-            netOut = ftCurrentReserve - finalFtReserve;
+            
         } else {
             uint newFtReserve;
             uint newXtReserve;
@@ -431,8 +427,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
                 (underlyingAmtIn * mConfig.minNBorrowFeeR) /
                     Constants.DECIMAL_BASE
             );
-            uint finalXtReserve;
-            (, finalXtReserve, mConfig.apr) = TermMaxCurve.buyNegXt(
+            (, finalTokenReserve, mConfig.apr) = TermMaxCurve.buyNegXt(
                 TradeParams(
                     feeAmt,
                     newFtReserve,
@@ -441,25 +436,28 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
                 ),
                 mConfig
             );
-            uint xtCurrentReserve = xt.balanceOf(address(this));
-            netOut = xtCurrentReserve - finalXtReserve;
         }
-
+        {
+            // Fee to protocol
+            uint feeToProtocol = _tranferFeeToTreasurer(
+                mConfig.treasurer,
+                feeAmt,
+                mConfig.protocolFeeRatio
+            );
+            // add new lituidity(exclude fee to protocol)
+            _addLiquidity(
+                caller,
+                underlyingAmtIn - feeToProtocol,
+                mConfig.initialLtv
+            );
+            feeAmt -= feeToProtocol;
+        
+            netOut = token.balanceOf(address(this)) - finalTokenReserve;
+        }
         if (netOut < minTokenOut) {
             revert UnexpectedAmount(minTokenOut, netOut.toUint128());
         }
         token.transfer(caller, netOut);
-        // Fee to protocol
-        {
-            uint feeToProtocol = (feeAmt * mConfig.protocolFeeRatio) /
-                Constants.DECIMAL_BASE;
-            feeAmt -= feeToProtocol;
-            _removeLiquidity(
-                feeToProtocol,
-                mConfig.initialLtv,
-                mConfig.treasurer
-            );
-        }
         // _lock_fee
         _lockFee(feeAmt, mConfig.lockingPercentage, mConfig.initialLtv);
         _config.apr = mConfig.apr;
@@ -560,7 +558,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
             revert UnexpectedAmount(minUnderlyingOut, netOut.toUint128());
         }
         // Fee to prootocol
-        feeAmt = _tranferFeeToTreasurer(
+        feeAmt -= _tranferFeeToTreasurer(
             mConfig.treasurer,
             feeAmt,
             mConfig.protocolFeeRatio
@@ -593,26 +591,15 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         address caller,
         uint256 underlyingAmt
     ) internal {
-        uint ftAmt = _removeLiquidity(
-            underlyingAmt,
-            _config.initialLtv,
-            caller
-        );
+        uint ftAmt = (underlyingAmt * _config.initialLtv) /
+            Constants.DECIMAL_BASE;
         ft.transferFrom(caller, address(this), ftAmt);
         xt.transferFrom(caller, address(this), underlyingAmt);
-    }
+        ft.burn(ftAmt);
+        xt.burn(underlyingAmt);
+        underlying.transfer(caller, underlyingAmt);
 
-    function _removeLiquidity(
-        uint256 amount,
-        uint256 ltv,
-        address to
-    ) internal returns (uint256 removedFt) {
-        removedFt = (amount * ltv) / Constants.DECIMAL_BASE;
-        ft.burn(removedFt);
-        xt.burn(amount);
-        underlying.transfer(to, amount);
-
-        emit RemoveLiquidity(to, amount);
+        emit RemoveLiquidity(caller, underlyingAmt);
     }
 
     /// @notice Lock up a portion of the transaction fee and release it slowly in the later stage
@@ -864,11 +851,10 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         address treasurer,
         uint256 totalFee,
         uint32 protocolFeeRatio
-    ) internal returns (uint256 remainningFee) {
+    ) internal returns (uint256 feeToProtocol) {
         uint feeToProtocol = (totalFee * protocolFeeRatio) /
             Constants.DECIMAL_BASE;
         underlying.transfer(treasurer, feeToProtocol);
-        remainningFee = totalFee - feeToProtocol;
     }
 
     /**
