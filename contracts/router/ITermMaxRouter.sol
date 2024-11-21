@@ -173,7 +173,7 @@ interface ITermMaxRouter {
         address receiver,
         ITermMaxMarket market,
         uint256 collInAmt,
-        uint256 debtAmt,
+        uint256 maxDebtAmt,
         uint256 minBorrowAmt
     ) external returns (uint256 gtId);
 

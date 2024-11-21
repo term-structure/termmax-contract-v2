@@ -620,7 +620,7 @@ contract TermMaxRouter is
         address receiver,
         ITermMaxMarket market,
         uint256 collInAmt,
-        uint256 debtAmt,
+        uint256 maxDebtAmt,
         uint256 borrowAmt
     )
         external
@@ -652,7 +652,7 @@ contract TermMaxRouter is
                 gt,
                 underlying,
                 receiver,
-                debtAmt,
+                maxDebtAmt,
                 collInAmt,
                 borrowAmt
             );
@@ -664,7 +664,7 @@ contract TermMaxRouter is
         IGearingToken gt,
         IERC20 underlying,
         address receiver,
-        uint256 debtAmt,
+        uint256 maxDebtAmt,
         uint256 collInAmt,
         uint256 borrowAmt
     ) internal returns (uint256) {
@@ -674,17 +674,17 @@ contract TermMaxRouter is
          * 3. Transfer UnderlyingToken and GT to Receiver
          */
         (uint256 gtId, uint128 netFtOut) = market.issueFt(
-            debtAmt.toUint128(),
+            maxDebtAmt.toUint128(),
             _encodeAmount(collInAmt)
         );
 
         ft.safeIncreaseAllowance(address(market), netFtOut);
         uint256 netTokenOut = market.sellFt(netFtOut, borrowAmt.toUint128());
         // NOTE: if netTokenOut > borrowAmt, repay
-        uint256 diffBorrow = netTokenOut - borrowAmt;
-        if (diffBorrow > 0) {
-            underlying.safeIncreaseAllowance(address(gt), diffBorrow);
-            gt.repay(gtId, diffBorrow.toUint120(), true);
+        uint256 repayAmt = netTokenOut - borrowAmt;
+        if (repayAmt > 0) {
+            underlying.safeIncreaseAllowance(address(gt), repayAmt);
+            gt.repay(gtId, repayAmt.toUint128(), true);
         }
 
         underlying.safeTransfer(receiver, borrowAmt);
@@ -697,7 +697,7 @@ contract TermMaxRouter is
             receiver,
             gtId,
             collInAmt,
-            debtAmt,
+            maxDebtAmt - repayAmt,
             borrowAmt
         );
 
