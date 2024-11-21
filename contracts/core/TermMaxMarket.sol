@@ -398,12 +398,6 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
                 (underlyingAmtIn * mConfig.minNLendFeeR) /
                     Constants.DECIMAL_BASE
             );
-            // Fee to protocol
-            feeAmt = _tranferFeeToTreasurer(
-                mConfig.treasurer,
-                feeAmt,
-                mConfig.protocolFeeRatio
-            );
             uint finalFtReserve;
             (finalFtReserve, , mConfig.apr) = TermMaxCurve.buyNegFt(
                 TradeParams(
@@ -437,12 +431,6 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
                 (underlyingAmtIn * mConfig.minNBorrowFeeR) /
                     Constants.DECIMAL_BASE
             );
-            // Fee to prootocol
-            feeAmt = _tranferFeeToTreasurer(
-                mConfig.treasurer,
-                feeAmt,
-                mConfig.protocolFeeRatio
-            );
             uint finalXtReserve;
             (, finalXtReserve, mConfig.apr) = TermMaxCurve.buyNegXt(
                 TradeParams(
@@ -461,6 +449,17 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
             revert UnexpectedAmount(minTokenOut, netOut.toUint128());
         }
         token.transfer(caller, netOut);
+        // Fee to protocol
+        {
+            uint feeToProtocol = (feeAmt * mConfig.protocolFeeRatio) /
+                Constants.DECIMAL_BASE;
+            feeAmt -= feeToProtocol;
+            _removeLiquidity(
+                feeToProtocol,
+                mConfig.initialLtv,
+                mConfig.treasurer
+            );
+        }
         // _lock_fee
         _lockFee(feeAmt, mConfig.lockingPercentage, mConfig.initialLtv);
         _config.apr = mConfig.apr;
@@ -594,15 +593,26 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         address caller,
         uint256 underlyingAmt
     ) internal {
-        uint ftAmt = (underlyingAmt * _config.initialLtv) /
-            Constants.DECIMAL_BASE;
+        uint ftAmt = _removeLiquidity(
+            underlyingAmt,
+            _config.initialLtv,
+            caller
+        );
         ft.transferFrom(caller, address(this), ftAmt);
         xt.transferFrom(caller, address(this), underlyingAmt);
-        ft.burn(ftAmt);
-        xt.burn(underlyingAmt);
-        underlying.transfer(caller, underlyingAmt);
+    }
 
-        emit RemoveLiquidity(caller, underlyingAmt);
+    function _removeLiquidity(
+        uint256 amount,
+        uint256 ltv,
+        address to
+    ) internal returns (uint256 removedFt) {
+        removedFt = (amount * ltv) / Constants.DECIMAL_BASE;
+        ft.burn(removedFt);
+        xt.burn(amount);
+        underlying.transfer(to, amount);
+
+        emit RemoveLiquidity(to, amount);
     }
 
     /// @notice Lock up a portion of the transaction fee and release it slowly in the later stage
