@@ -48,22 +48,22 @@ contract E2ETest is Script {
     uint32 liquidationLtv = 0.9e8;
 
     // address config
-    address factoryAddr = address(0x715F4a22c4F4224BFDDB64B980a7363c505015bF);
-    address routerAddr = address(0xDbD9F1346979A7E9c4e9dB326566577349a84CcF);
-    address marketAddr = address(0xD78014C3A86017748a2e831Bc2DCA3eAF9f17764);
+    address factoryAddr = address(0xC4b455704a13c13Ca9dd76729328E0d5f243F443);
+    address routerAddr = address(0x1d89b277203E827a6ef110Ba17b937fAB9C2f631);
+    address marketAddr = address(0xfC1231Bb12Ef99B6D0d2cAf7314B76D072DbE79f);
     address collateralAddr =
-        address(0x3E2628096FE52b255aF0Ce6973B90C9e6A5c808e); // PT-sUSDe-24OCT2024
+        address(0x44212aDA786190340cd586C41b338c4f66AA90a0); // PT-sUSDe-24OCT2024
     address collateralOracleAddr =
-        address(0xD752C02f557580cEC3a50a2deBF3A4C48657EeDe);
+        address(0x8Ddbc0a49B8f93066535f2c683cD5a8e83826151);
     address underlyingAddr =
-        address(0xbcc27BB9eF1C6AC82E1D39874A96C813099aF747); // USDC
+        address(0xFb6c62746B52F998628EDa0DDf79ccf7a06d521E); // USDC
     address underlyingOracleAddr =
-        address(0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6);
-    address ftAddr = address(0x84b006c8092699A2295Afa8e47C05B865ebE9fdD);
-    address xtAddr = address(0xfBCB0465a83F525411c681C5839B583C1FD96Ad1);
-    address lpFtAddr = address(0x4c19C73ce1cc621387D75FbE45F071aaAF1013E9);
-    address lpXtAddr = address(0xe997f16D4aC9278545F5CBeCff9CBc14923b6506);
-    address gtAddr = address(0x309155273D07Cc7a5738ca752503b830EfFde64e);
+        address(0x8BAdE2BBb4AB2533800E22acd8ba2D34DE49acE6);
+    address ftAddr = address(0x66BAF590e1b774BA0A68F4e1ab746A9f05230BF8);
+    address xtAddr = address(0x1a047600a6ad4FBE46987371F1eA4E67293d8089);
+    address lpFtAddr = address(0x86D22dF589432a0c83cE59129CFb4e08287BE30E);
+    address lpXtAddr = address(0x1948083ca3B5667eFd33AD73ea57C2D07d907dd3);
+    address gtAddr = address(0x14886453b502284D4E7558245eA150D41cE0Ea3E);
 
     function run() public {
         MockERC20 underlying = MockERC20(underlyingAddr);
