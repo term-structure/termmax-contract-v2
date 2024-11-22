@@ -3,22 +3,22 @@ pragma solidity ^0.8.27;
 
 import "forge-std/Test.sol";
 import {console} from "forge-std/console.sol";
-import {DeployUtils} from "./utils/DeployUtils.sol";
-import {JSONLoader} from "./utils/JSONLoader.sol";
-import {StateChecker} from "./utils/StateChecker.sol";
-import {SwapUtils} from "./utils/SwapUtils.sol";
-import {LoanUtils} from "./utils/LoanUtils.sol";
+import {DeployUtils} from "../utils/DeployUtils.sol";
+import {JSONLoader} from "../utils/JSONLoader.sol";
+import {StateChecker} from "../utils/StateChecker.sol";
+import {SwapUtils} from "../utils/SwapUtils.sol";
+import {LoanUtils} from "../utils/LoanUtils.sol";
 
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {IPPrincipalToken, IPMarket} from "@pendle/core-v2/contracts/interfaces/IPMarket.sol";
-import {ITermMaxMarket, TermMaxMarket, Constants, IERC20} from "../contracts/core/TermMaxMarket.sol";
-import {MockFlashLoanReceiver} from "../contracts/test/MockFlashLoanReceiver.sol";
-import {MockPriceFeed} from "../contracts/test/MockPriceFeed.sol";
-import {AbstractGearingToken} from "../contracts/core/tokens/AbstractGearingToken.sol";
-import {ITermMaxFactory, TermMaxFactory, IMintableERC20, IGearingToken, AggregatorV3Interface} from "../contracts/core/factory/TermMaxFactory.sol";
-import {MarketConfig} from "../contracts/core/storage/TermMaxStorage.sol";
-import {ISwapAdapter, UniswapV3Adapter} from "../contracts/router/swapAdapters/UniswapV3Adapter.sol";
-import {PendleSwapV3Adapter} from "../contracts/router/swapAdapters/PendleSwapV3Adapter.sol";
+import {ITermMaxMarket, TermMaxMarket, Constants, IERC20} from "contracts/core/TermMaxMarket.sol";
+import {MockFlashLoanReceiver} from "contracts/test/MockFlashLoanReceiver.sol";
+import {MockPriceFeed} from "contracts/test/MockPriceFeed.sol";
+import {AbstractGearingToken} from "contracts/core/tokens/AbstractGearingToken.sol";
+import {ITermMaxFactory, TermMaxFactory, IMintableERC20, IGearingToken, AggregatorV3Interface} from "contracts/core/factory/TermMaxFactory.sol";
+import {MarketConfig} from "contracts/core/storage/TermMaxStorage.sol";
+import {ISwapAdapter, UniswapV3Adapter} from "contracts/router/swapAdapters/UniswapV3Adapter.sol";
+import {PendleSwapV3Adapter} from "contracts/router/swapAdapters/PendleSwapV3Adapter.sol";
 struct SwapUnit {
     address adapter;
     address tokenIn;

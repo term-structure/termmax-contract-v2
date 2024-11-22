@@ -2,6 +2,7 @@
 pragma solidity ^0.8.27;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC721Enumerable} from "@openzeppelin/contracts/interfaces/IERC721Enumerable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
@@ -39,9 +40,11 @@ contract TermMaxRouter is
     using SafeERC20 for IERC20;
     using SafeERC20 for IMintableERC20;
 
-    bytes32 OPERATOR_ROLE = keccak256(abi.encode("OPERATOR_ROLE"));
+    bytes32 constant OPERATOR_ROLE = keccak256(abi.encode("OPERATOR_ROLE"));
 
     mapping(address => bool) public marketWhitelist;
+    mapping(address => bool) public adapterWhitelist;
+
     modifier ensureMarketWhitelist(address market) {
         require(marketWhitelist[market], "Market not whitelisted");
         _;
@@ -52,12 +55,6 @@ contract TermMaxRouter is
         require(marketWhitelist[market], "Market of Gt not whitelisted");
         (, , , , IGearingToken gt_, , ) = ITermMaxMarket(market).tokens();
         require(address(gt_) == gt, "Gt not whitelisted");
-        _;
-    }
-
-    mapping(address => bool) public swapperWhitelist;
-    modifier ensureSwapperWhitelist(address swapper) {
-        require(swapperWhitelist[swapper], "Swapper not whitelisted");
         _;
     }
 
@@ -90,11 +87,59 @@ contract TermMaxRouter is
         marketWhitelist[market] = isWhitelist;
     }
 
-    function setSwapperWhitelist(
-        address swapper,
+    function setAdapterWhitelist(
+        address adapter,
         bool isWhitelist
     ) external onlyRole(OPERATOR_ROLE) {
-        swapperWhitelist[swapper] = isWhitelist;
+        adapterWhitelist[adapter] = isWhitelist;
+    }
+
+    function assetsWithERC20Colleteral(
+        ITermMaxMarket market,
+        address owner
+    )
+        external
+        view
+        override
+        returns (
+            IERC20[6] memory tokens,
+            uint256[6] memory balances,
+            address gtAddr,
+            uint256[] memory gtIds
+        )
+    {
+        (
+            IMintableERC20 ft,
+            IMintableERC20 xt,
+            IMintableERC20 lpFt,
+            IMintableERC20 lpXt,
+            IGearingToken gt,
+            address collateral,
+            IERC20 underlying
+        ) = market.tokens();
+        tokens[0] = ft;
+        tokens[1] = xt;
+        tokens[2] = lpFt;
+        tokens[3] = lpXt;
+        tokens[4] = IERC20(collateral);
+        tokens[5] = underlying;
+        for (uint i = 0; i < 6; ++i) {
+            balances[i] = tokens[i].balanceOf(owner);
+        }
+        gtAddr = address(gt);
+        bytes memory idsData;
+        uint length;
+        for (uint i = 0; i < IERC721Enumerable(gtAddr).totalSupply(); ++i) {
+            uint id = IERC721Enumerable(gtAddr).tokenOfOwnerByIndex(owner, i);
+            if (id != 0) {
+                idsData = abi.encodePacked(idsData, id);
+                length++;
+            } else {
+                break;
+            }
+        }
+        idsData = abi.encodePacked(abi.encode(32), length, idsData);
+        gtIds = abi.decode(idsData, (uint256[]));
     }
 
     /** Leverage Market */
@@ -119,7 +164,6 @@ contract TermMaxRouter is
         );
         (netFtOut) = market.buyFt(tokenInAmt, minFtOut);
         ft.transfer(receiver, netFtOut);
-
         emit Swap(
             market,
             address(underlying),
@@ -913,7 +957,7 @@ contract TermMaxRouter is
         SwapUnit[] memory units
     ) internal returns (bytes memory outData) {
         for (uint i = 0; i < units.length; ++i) {
-            if (!swapperWhitelist[units[i].adapter]) {
+            if (!adapterWhitelist[units[i].adapter]) {
                 revert("Invalid adapter");
             }
             // encode datas

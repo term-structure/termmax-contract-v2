@@ -153,7 +153,6 @@ contract DeployMainnetFork is Script {
     ) public {
         TermMaxRouter router = TermMaxRouter(routerAddr);
         router.setMarketWhitelist(marketAddr, true);
-        router.setSwapperWhitelist(collateralAddr, true);
         router.togglePause(false);
     }
 }
