@@ -9,6 +9,7 @@ import {TermMaxRouter} from "../contracts/router/TermMaxRouter.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {TermMaxMarket} from "../contracts/core/TermMaxMarket.sol";
 import {MockERC20} from "../contracts/test/MockERC20.sol";
+import {MockPriceFeed} from "../contracts/test/MockPriceFeed.sol";
 import {MarketConfig} from "../contracts/core/storage/TermMaxStorage.sol";
 import {IMintableERC20} from "../contracts/core/tokens/IMintableERC20.sol";
 import {IGearingToken, AggregatorV3Interface} from "../contracts/core/tokens/IGearingToken.sol";
@@ -26,7 +27,7 @@ contract DeployMainnetFork is Script {
         MarketConfig({
             treasurer: 0x944a0Af591E2C23a2E81fe4c10Bd9c47Cf866F4b,
             maturity: 1735575942, // current 1726732382
-            openTime: uint64(vm.getBlockTimestamp()),
+            openTime: uint64(vm.getBlockTimestamp() + 200),
             apr: 12000000,
             lsf: 80000000,
             lendFeeRatio: 3000000,
@@ -57,14 +58,19 @@ contract DeployMainnetFork is Script {
         vm.startBroadcast(deployerPrivateKey);
         TermMaxFactory factory = deployFactory(deployerAddr);
         TermMaxRouter router = deployRouter(deployerAddr);
-        (MockERC20 USDC, MockERC20 PT) = deployMockERC20();
+        (
+            MockERC20 usdc,
+            MockERC20 pt,
+            MockPriceFeed usdcOracle,
+            MockPriceFeed ptOracle
+        ) = deployMockERC20();
         TermMaxMarket market = deployMarket(
             deployerAddr,
             address(factory),
-            address(PT),
-            address(USDC),
-            collateralOracleAddr,
-            underlyingOracleAddr
+            address(pt),
+            address(usdc),
+            address(ptOracle),
+            address(usdcOracle)
         );
         (
             IMintableERC20 ft,
@@ -77,7 +83,8 @@ contract DeployMainnetFork is Script {
         ) = market.tokens();
         whitelistMarket(address(router), address(market), address(collateral));
         vm.stopBroadcast();
-
+        // provdieLiquidity(router, market);
+        MarketConfig memory config = market.config();
         console.log("Deploying TermMax Factory with deplyer:", deployerAddr);
         console.log("Factory deployed at:", address(factory));
         console.log("Router deployed at:", address(router));
@@ -87,16 +94,19 @@ contract DeployMainnetFork is Script {
             IERC20Metadata(collateral).symbol(),
             address(collateral)
         );
+        console.log("Collateral Oracle deployed at:", address(ptOracle));
         console.log(
             "Underlying (%s) deployed at: %s",
             IERC20Metadata(address(underlying)).symbol(),
             address(underlying)
         );
+        console.log("Underlying Oracle deployed at:", address(usdcOracle));
         console.log("FT deployed at:", address(ft));
         console.log("XT deployed at:", address(xt));
         console.log("LPFT deployed at:", address(lpFt));
         console.log("LPXT deployed at:", address(lpXt));
         console.log("GT deployed at:", address(gt));
+        console.log("Market open time:", config.openTime);
     }
 
     function deployFactory(
@@ -116,9 +126,37 @@ contract DeployMainnetFork is Script {
         router = TermMaxRouter(proxy);
     }
 
-    function deployMockERC20() public returns (MockERC20 USDC, MockERC20 PT) {
+    function deployMockERC20()
+        public
+        returns (
+            MockERC20 USDC,
+            MockERC20 PT,
+            MockPriceFeed usdcOracle,
+            MockPriceFeed ptOracle
+        )
+    {
         USDC = new MockERC20("Mock USDC", "USDC", 6);
         PT = new MockERC20("Mock PT-sUSDe", "PT-sUSDe", 18);
+        usdcOracle = new MockPriceFeed(deployerAddr);
+        usdcOracle.updateRoundData(
+            MockPriceFeed.RoundData({
+                roundId: 1,
+                answer: 1e8,
+                startedAt: vm.getBlockTimestamp(),
+                updatedAt: vm.getBlockTimestamp(),
+                answeredInRound: 1
+            })
+        );
+        ptOracle = new MockPriceFeed(deployerAddr);
+        ptOracle.updateRoundData(
+            MockPriceFeed.RoundData({
+                roundId: 1,
+                answer: 95e6,
+                startedAt: vm.getBlockTimestamp(),
+                updatedAt: vm.getBlockTimestamp(),
+                answeredInRound: 1
+            })
+        );
     }
 
     function deployMarket(
@@ -154,5 +192,16 @@ contract DeployMainnetFork is Script {
         TermMaxRouter router = TermMaxRouter(routerAddr);
         router.setMarketWhitelist(marketAddr, true);
         router.togglePause(false);
+    }
+
+    function provdieLiquidity(
+        TermMaxRouter router,
+        TermMaxMarket market
+    ) public {
+        (, , , , , , IERC20 underlying) = market.tokens();
+        uint256 amount = 1000e6;
+        MockERC20(address(underlying)).mint(address(this), amount);
+        underlying.approve(address(router), amount);
+        router.provideLiquidity(address(this), market, amount);
     }
 }
