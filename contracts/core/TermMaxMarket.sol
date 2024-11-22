@@ -233,6 +233,21 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         xt.mint(address(this), xtMintedAmt);
     }
 
+    function _removeLiquidity(
+        address to,
+        uint256 underlyingAmt,
+        uint256 ltv
+    ) internal returns (uint128 ftBurnedAmt, uint128 xtBurnedAmt) {
+        underlying.transfer(to, underlyingAmt);
+
+        ftBurnedAmt = ((underlyingAmt * ltv) / Constants.DECIMAL_BASE)
+            .toUint128();
+        xtBurnedAmt = underlyingAmt.toUint128();
+        // Burn tokens to this
+        ft.burn(ftBurnedAmt);
+        xt.burn(xtBurnedAmt);
+    }
+
     /// @notice Calculate how many days until expiration
     function _daysToMaturity(
         uint maturity
@@ -439,10 +454,11 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         }
         {
             // Fee to protocol
-            uint feeToProtocol = _tranferFeeToTreasurer(
+            uint feeToProtocol = _tranferFeeToTreasurerBuyToken(
                 mConfig.treasurer,
                 feeAmt,
-                mConfig.protocolFeeRatio
+                mConfig.protocolFeeRatio,
+                caller
             );
             // add new lituidity(exclude fee to protocol)
             _addLiquidity(
@@ -451,15 +467,21 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
                 mConfig.initialLtv
             );
             feeAmt -= feeToProtocol;
-        
-            netOut = token.balanceOf(address(this)) - finalTokenReserve;
+
+            if (token == ft) {
+                netOut = token.balanceOf(address(this)) - finalTokenReserve - feeAmt *
+                    mConfig.initialLtv / Constants.DECIMAL_BASE;
+            } else {
+                netOut = token.balanceOf(address(this)) - finalTokenReserve - feeAmt;
+            }
+            if (netOut < minTokenOut) {
+                revert UnexpectedAmount(minTokenOut, netOut.toUint128());
+            }
+            token.transfer(caller, netOut);
+            // _lock_fee
+            _lockFee(feeAmt, mConfig.lockingPercentage, mConfig.initialLtv);
+            feeAmt += feeToProtocol;
         }
-        if (netOut < minTokenOut) {
-            revert UnexpectedAmount(minTokenOut, netOut.toUint128());
-        }
-        token.transfer(caller, netOut);
-        // _lock_fee
-        _lockFee(feeAmt, mConfig.lockingPercentage, mConfig.initialLtv);
         _config.apr = mConfig.apr;
         emit BuyToken(
             caller,
@@ -558,17 +580,16 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
             revert UnexpectedAmount(minUnderlyingOut, netOut.toUint128());
         }
         // Fee to prootocol
-        feeAmt -= _tranferFeeToTreasurer(
+        uint256 feeToProtocol = _tranferFeeToTreasurer(
             mConfig.treasurer,
             feeAmt,
-            mConfig.protocolFeeRatio
+            mConfig.protocolFeeRatio,
+            mConfig.initialLtv
         );
 
-        ft.burn((netOut * mConfig.initialLtv) / Constants.DECIMAL_BASE);
-        xt.burn(netOut);
-        _lockFee(feeAmt, mConfig.lockingPercentage, mConfig.initialLtv);
+        _removeLiquidity(caller, netOut, mConfig.initialLtv);
+        _lockFee(feeAmt - feeToProtocol, mConfig.lockingPercentage, mConfig.initialLtv);
 
-        underlying.transfer(caller, netOut);
         _config.apr = mConfig.apr;
         emit SellToken(
             caller,
@@ -595,9 +616,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
             Constants.DECIMAL_BASE;
         ft.transferFrom(caller, address(this), ftAmt);
         xt.transferFrom(caller, address(this), underlyingAmt);
-        ft.burn(ftAmt);
-        xt.burn(underlyingAmt);
-        underlying.transfer(caller, underlyingAmt);
+        _removeLiquidity(caller, underlyingAmt, _config.initialLtv);
 
         emit RemoveLiquidity(caller, underlyingAmt);
     }
@@ -847,14 +866,26 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         lpXt.burn(lpXtBalance);
     }
 
+    function _tranferFeeToTreasurerBuyToken(
+        address treasurer,
+        uint256 totalFee,
+        uint32 protocolFeeRatio,
+        address caller
+    ) internal returns (uint256 feeToProtocol) {
+        feeToProtocol = (totalFee * protocolFeeRatio) /
+            Constants.DECIMAL_BASE;
+        underlying.transferFrom(caller, treasurer, feeToProtocol);
+    }
+
     function _tranferFeeToTreasurer(
         address treasurer,
         uint256 totalFee,
-        uint32 protocolFeeRatio
+        uint32 protocolFeeRatio,
+        uint256 ltv
     ) internal returns (uint256 feeToProtocol) {
-        uint feeToProtocol = (totalFee * protocolFeeRatio) /
+        feeToProtocol = (totalFee * protocolFeeRatio) /
             Constants.DECIMAL_BASE;
-        underlying.transfer(treasurer, feeToProtocol);
+        _removeLiquidity(treasurer, feeToProtocol, ltv);
     }
 
     /**
