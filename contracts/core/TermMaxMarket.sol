@@ -375,9 +375,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
             _daysToMaturity(mConfig.maturity)
         );
 
-        uint feeAmt;
-        // add new lituidity
-        _addLiquidity(caller, underlyingAmtIn, mConfig.initialLtv);
+        uint feeAmt; uint finalTokenReserve;
         if (token == ft) {
             uint newFtReserve;
             uint newXtReserve;
@@ -398,14 +396,8 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
                 (underlyingAmtIn * mConfig.minNLendFeeR) /
                     Constants.DECIMAL_BASE
             );
-            // Fee to protocol
-            feeAmt = _tranferFeeToTreasurer(
-                mConfig.treasurer,
-                feeAmt,
-                mConfig.protocolFeeRatio
-            );
-            uint finalFtReserve;
-            (finalFtReserve, , mConfig.apr) = TermMaxCurve.buyNegFt(
+
+            (finalTokenReserve, , mConfig.apr) = TermMaxCurve.buyNegFt(
                 TradeParams(
                     feeAmt,
                     newFtReserve,
@@ -414,9 +406,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
                 ),
                 mConfig
             );
-
-            uint ftCurrentReserve = ft.balanceOf(address(this));
-            netOut = ftCurrentReserve - finalFtReserve;
+            
         } else {
             uint newFtReserve;
             uint newXtReserve;
@@ -437,14 +427,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
                 (underlyingAmtIn * mConfig.minNBorrowFeeR) /
                     Constants.DECIMAL_BASE
             );
-            // Fee to prootocol
-            feeAmt = _tranferFeeToTreasurer(
-                mConfig.treasurer,
-                feeAmt,
-                mConfig.protocolFeeRatio
-            );
-            uint finalXtReserve;
-            (, finalXtReserve, mConfig.apr) = TermMaxCurve.buyNegXt(
+            (, finalTokenReserve, mConfig.apr) = TermMaxCurve.buyNegXt(
                 TradeParams(
                     feeAmt,
                     newFtReserve,
@@ -453,10 +436,24 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
                 ),
                 mConfig
             );
-            uint xtCurrentReserve = xt.balanceOf(address(this));
-            netOut = xtCurrentReserve - finalXtReserve;
         }
-
+        {
+            // Fee to protocol
+            uint feeToProtocol = _tranferFeeToTreasurer(
+                mConfig.treasurer,
+                feeAmt,
+                mConfig.protocolFeeRatio
+            );
+            // add new lituidity(exclude fee to protocol)
+            _addLiquidity(
+                caller,
+                underlyingAmtIn - feeToProtocol,
+                mConfig.initialLtv
+            );
+            feeAmt -= feeToProtocol;
+        
+            netOut = token.balanceOf(address(this)) - finalTokenReserve;
+        }
         if (netOut < minTokenOut) {
             revert UnexpectedAmount(minTokenOut, netOut.toUint128());
         }
@@ -561,7 +558,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
             revert UnexpectedAmount(minUnderlyingOut, netOut.toUint128());
         }
         // Fee to prootocol
-        feeAmt = _tranferFeeToTreasurer(
+        feeAmt -= _tranferFeeToTreasurer(
             mConfig.treasurer,
             feeAmt,
             mConfig.protocolFeeRatio
@@ -854,11 +851,10 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         address treasurer,
         uint256 totalFee,
         uint32 protocolFeeRatio
-    ) internal returns (uint256 remainningFee) {
+    ) internal returns (uint256 feeToProtocol) {
         uint feeToProtocol = (totalFee * protocolFeeRatio) /
             Constants.DECIMAL_BASE;
         underlying.transfer(treasurer, feeToProtocol);
-        remainningFee = totalFee - feeToProtocol;
     }
 
     /**
