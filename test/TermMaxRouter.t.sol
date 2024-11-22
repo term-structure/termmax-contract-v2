@@ -8,16 +8,16 @@ import {JSONLoader} from "./utils/JSONLoader.sol";
 import {StateChecker} from "./utils/StateChecker.sol";
 import {SwapUtils} from "./utils/SwapUtils.sol";
 
-import {ITermMaxMarket, TermMaxMarket, Constants, TermMaxCurve} from "../contracts/core/TermMaxMarket.sol";
-import {MockERC20, ERC20} from "../contracts/test/MockERC20.sol";
-import {MockPriceFeed} from "../contracts/test/MockPriceFeed.sol";
-
-import {ITermMaxFactory, TermMaxFactory, IMintableERC20, IGearingToken, AggregatorV3Interface} from "../contracts/core/factory/TermMaxFactory.sol";
-import "../contracts/core/storage/TermMaxStorage.sol";
-import {TermMaxRouter} from "../contracts/router/TermMaxRouter.sol";
-import {ITermMaxRouter, SwapUnit} from "../contracts/router/ITermMaxRouter.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {ITermMaxMarket, TermMaxMarket, Constants, TermMaxCurve, IERC20} from "contracts/core/TermMaxMarket.sol";
+import {MockERC20, ERC20} from "contracts/test/MockERC20.sol";
+import {MockPriceFeed} from "contracts/test/MockPriceFeed.sol";
+import {ITermMaxFactory, TermMaxFactory, IMintableERC20, IGearingToken, AggregatorV3Interface} from "contracts/core/factory/TermMaxFactory.sol";
+import "contracts/core/storage/TermMaxStorage.sol";
+import {TermMaxRouter, TermMaxRouter} from "contracts/router/TermMaxRouter.sol";
+import {ITermMaxRouter, SwapUnit} from "contracts/router/ITermMaxRouter.sol";
 import {LoanUtils} from "./utils/LoanUtils.sol";
-import {ISwapAdapter, MockSwapAdapter} from "../contracts/test/MockSwapAdapter.sol";
+import {ISwapAdapter, MockSwapAdapter} from "contracts/test/MockSwapAdapter.sol";
 
 contract TermMaxRouterTest is Test {
     address deployer = vm.envAddress("FORK_DEPLOYER_ADDR");
@@ -31,7 +31,7 @@ contract TermMaxRouterTest is Test {
 
     address treasurer = vm.randomAddress();
     string testdata;
-    ITermMaxRouter router;
+    TermMaxRouter router;
 
     address pool = vm.randomAddress();
     ISwapAdapter adapter;
@@ -86,11 +86,117 @@ contract TermMaxRouterTest is Test {
 
         router = DeployUtils.deployRouter(deployer);
         router.setMarketWhitelist(address(res.market), true);
-        router.setSwapperWhitelist(address(res.collateral), true);
-        router.setSwapperWhitelist(address(adapter), true);
+        router.setAdapterWhitelist(address(adapter), true);
         router.togglePause(false);
 
         vm.stopPrank();
+    }
+
+    function testPause() public {
+        vm.startPrank(deployer);
+        router.togglePause(true);
+
+        assert(router.paused());
+
+        uint128 amount = 10e8;
+        res.underlying.mint(deployer, amount);
+        res.underlying.approve(address(router), amount);
+        vm.expectRevert(abi.encodePacked(bytes4(keccak256("EnforcedPause()"))));
+        router.provideLiquidity(receiver, res.market, amount);
+
+        vm.stopPrank();
+    }
+
+    function testPauseWithoutPermisson() public {
+        vm.startPrank(sender);
+
+        vm.expectRevert();
+        router.togglePause(true);
+
+        vm.stopPrank();
+    }
+
+    function testSetMarketWhitelist() public {
+        vm.startPrank(deployer);
+        assert(router.marketWhitelist(address(res.market)) == true);
+        router.setMarketWhitelist(address(res.market), false);
+
+        uint128 amount = 10e8;
+        res.underlying.mint(deployer, amount);
+        res.underlying.approve(address(router), amount);
+
+        vm.expectRevert(abi.encodePacked("Market not whitelisted"));
+        router.provideLiquidity(receiver, res.market, amount);
+        assert(router.marketWhitelist(address(res.market)) == false);
+        vm.stopPrank();
+    }
+
+    function testSetWhitelistWithoutPermisson() public {
+        vm.startPrank(sender);
+
+        vm.expectRevert();
+        router.setMarketWhitelist(address(res.market), false);
+
+        vm.expectRevert();
+        router.setAdapterWhitelist(address(adapter), false);
+
+        vm.stopPrank();
+    }
+
+    function testReadAssets() public {
+        uint[2] memory gtIdArray;
+        {
+            vm.startPrank(sender);
+
+            uint128 amount = 1000e8;
+            res.underlying.mint(sender, amount * 2);
+            res.underlying.approve(address(router), amount);
+            router.provideLiquidity(receiver, res.market, amount);
+
+            res.collateral.mint(sender, 5e18);
+
+            uint128 debtAmt = 100e8;
+            uint256 collateralAmt = 0.1e18;
+            (gtIdArray[0], ) = LoanUtils.fastMintGt(
+                res,
+                sender,
+                debtAmt,
+                collateralAmt
+            );
+            (gtIdArray[1], ) = LoanUtils.fastMintGt(
+                res,
+                sender,
+                debtAmt,
+                collateralAmt
+            );
+
+            vm.stopPrank();
+        }
+
+        (
+            IERC20[6] memory tokens,
+            uint256[6] memory balances,
+            address gtAddr,
+            uint256[] memory gtIds
+        ) = router.assetsWithERC20Colleteral(res.market, sender);
+
+        assertEq(address(res.ft), address(tokens[0]));
+        assertEq(res.ft.balanceOf(sender), balances[0]);
+        assertEq(address(res.xt), address(tokens[1]));
+        assertEq(res.xt.balanceOf(sender), balances[1]);
+        assertEq(address(res.lpFt), address(tokens[2]));
+        assertEq(res.lpFt.balanceOf(sender), balances[2]);
+        assertEq(address(res.lpXt), address(tokens[3]));
+        assertEq(res.lpXt.balanceOf(sender), balances[3]);
+        assertEq(address(res.collateral), address(tokens[4]));
+        assertEq(res.collateral.balanceOf(sender), balances[4]);
+        assertEq(address(res.underlying), address(tokens[5]));
+        assertEq(res.underlying.balanceOf(sender), balances[5]);
+
+        assertEq(gtAddr, address(res.gt));
+        assertEq(gtIdArray.length, gtIds.length);
+        assertEq(gtIdArray[0], gtIds[0]);
+        assertEq(gtIdArray[1], gtIds[1]);
     }
 
     function testSwapExactTokenForFt() public {
@@ -101,6 +207,21 @@ contract TermMaxRouterTest is Test {
         res.underlying.mint(sender, underlyingAmtIn);
 
         res.underlying.approve(address(router), underlyingAmtIn);
+
+        uint expectOut = vm.parseUint(
+            vm.parseJsonString(testdata, ".expected.testBuyFt.output.netOut")
+        );
+        vm.expectEmit();
+        emit ITermMaxRouter.Swap(
+            res.market,
+            address(res.underlying),
+            address(res.ft),
+            sender,
+            receiver,
+            underlyingAmtIn,
+            expectOut,
+            minTokenOut
+        );
         uint256 netOut = router.swapExactTokenForFt(
             receiver,
             res.market,
@@ -115,15 +236,7 @@ contract TermMaxRouterTest is Test {
             );
         StateChecker.checkMarketState(res, expectedState);
 
-        assert(
-            netOut ==
-                vm.parseUint(
-                    vm.parseJsonString(
-                        testdata,
-                        ".expected.testBuyFt.output.netOut"
-                    )
-                )
-        );
+        assert(netOut == expectOut);
         assert(res.ft.balanceOf(sender) == netOut);
         vm.stopPrank();
     }
@@ -135,6 +248,21 @@ contract TermMaxRouterTest is Test {
         uint128 minTokenOut = 0e8;
         res.underlying.mint(sender, underlyingAmtIn);
         res.underlying.approve(address(router), underlyingAmtIn);
+        uint expectOut = vm.parseUint(
+            vm.parseJsonString(testdata, ".expected.testBuyXt.output.netOut")
+        );
+        vm.expectEmit();
+        emit ITermMaxRouter.Swap(
+            res.market,
+            address(res.underlying),
+            address(res.xt),
+            sender,
+            receiver,
+            underlyingAmtIn,
+            expectOut,
+            minTokenOut
+        );
+
         uint256 netOut = router.swapExactTokenForXt(
             receiver,
             res.market,
@@ -149,15 +277,7 @@ contract TermMaxRouterTest is Test {
             );
         StateChecker.checkMarketState(res, expectedState);
 
-        assert(
-            netOut ==
-                vm.parseUint(
-                    vm.parseJsonString(
-                        testdata,
-                        ".expected.testBuyXt.output.netOut"
-                    )
-                )
-        );
+        assert(netOut == expectOut);
         assert(res.xt.balanceOf(sender) == netOut);
         vm.stopPrank();
     }
@@ -180,6 +300,21 @@ contract TermMaxRouterTest is Test {
         uint128 minTokenOut = 0e8;
 
         res.ft.approve(address(router), ftAmtIn);
+
+        uint expectOut = vm.parseUint(
+            vm.parseJsonString(testdata, ".expected.testSellFt.output.netOut")
+        );
+        vm.expectEmit();
+        emit ITermMaxRouter.Swap(
+            res.market,
+            address(res.ft),
+            address(res.underlying),
+            sender,
+            receiver,
+            ftAmtIn,
+            expectOut,
+            minTokenOut
+        );
         uint256 netOut = router.swapExactFtForToken(
             receiver,
             res.market,
@@ -194,15 +329,7 @@ contract TermMaxRouterTest is Test {
             );
         StateChecker.checkMarketState(res, expectedState);
 
-        assert(
-            netOut ==
-                vm.parseUint(
-                    vm.parseJsonString(
-                        testdata,
-                        ".expected.testSellFt.output.netOut"
-                    )
-                )
-        );
+        assert(netOut == expectOut);
         assert(res.ft.balanceOf(sender) == 0);
         assert(res.underlying.balanceOf(sender) == netOut);
 
@@ -227,6 +354,21 @@ contract TermMaxRouterTest is Test {
         uint128 minTokenOut = 0e8;
 
         res.xt.approve(address(router), xtAmtIn);
+
+        uint expectOut = vm.parseUint(
+            vm.parseJsonString(testdata, ".expected.testSellXt.output.netOut")
+        );
+        vm.expectEmit();
+        emit ITermMaxRouter.Swap(
+            res.market,
+            address(res.xt),
+            address(res.underlying),
+            sender,
+            receiver,
+            xtAmtIn,
+            expectOut,
+            minTokenOut
+        );
         uint256 netOut = router.swapExactXtForToken(
             receiver,
             res.market,
@@ -241,15 +383,7 @@ contract TermMaxRouterTest is Test {
             );
         StateChecker.checkMarketState(res, expectedState);
 
-        assert(
-            netOut ==
-                vm.parseUint(
-                    vm.parseJsonString(
-                        testdata,
-                        ".expected.testSellXt.output.netOut"
-                    )
-                )
-        );
+        assert(netOut == expectOut);
         assert(res.xt.balanceOf(sender) == 0);
         assert(res.underlying.balanceOf(sender) == netOut);
 
@@ -278,7 +412,7 @@ contract TermMaxRouterTest is Test {
             abi.encode(minCollAmt)
         );
 
-        router.leverageFromToken(
+        (uint gtId, ) = router.leverageFromToken(
             receiver,
             res.market,
             tokenInAmt,
@@ -287,7 +421,11 @@ contract TermMaxRouterTest is Test {
             minXTOut,
             units
         );
-
+        (address owner, , , bytes memory collateralData) = res.gt.loanInfo(
+            gtId
+        );
+        assert(owner == sender);
+        assert(minCollAmt == abi.decode(collateralData, (uint256)));
         vm.stopPrank();
     }
 
@@ -328,8 +466,104 @@ contract TermMaxRouterTest is Test {
             maxLtv,
             units
         );
-        (address owner, , , ) = res.gt.loanInfo(gtId);
+        (address owner, , , bytes memory collateralData) = res.gt.loanInfo(
+            gtId
+        );
         assert(owner == sender);
+        assert(minCollAmt == abi.decode(collateralData, (uint256)));
+        vm.stopPrank();
+    }
+
+    function testRevertWhenLtvBiggerThanMaxLtv() public {
+        vm.startPrank(sender);
+        uint128 underlyingAmtIn = 10e8;
+        uint128 minTokenOut = 0e8;
+        res.underlying.mint(sender, underlyingAmtIn);
+        res.underlying.approve(address(router), underlyingAmtIn);
+        uint256 netXtOut = router.swapExactTokenForXt(
+            receiver,
+            res.market,
+            underlyingAmtIn,
+            minTokenOut
+        );
+        uint256 xtInAmt = netXtOut;
+
+        uint256 minCollAmt = (xtInAmt * 1e10) / 2000;
+        uint tokenAmtIn = 1e18;
+        uint256 maxLtv = 0.8e8;
+        res.underlying.mint(sender, tokenAmtIn);
+        res.underlying.approve(address(router), tokenAmtIn);
+
+        SwapUnit[] memory units = new SwapUnit[](1);
+        units[0] = SwapUnit(
+            address(adapter),
+            address(res.underlying),
+            address(res.collateral),
+            abi.encode(minCollAmt)
+        );
+
+        res.xt.approve(address(router), xtInAmt);
+
+        vm.expectRevert(
+            abi.encodePacked("Slippage: ltv bigger than expected ltv")
+        );
+        router.leverageFromXt(
+            receiver,
+            res.market,
+            xtInAmt,
+            tokenAmtIn,
+            maxLtv,
+            units
+        );
+        vm.stopPrank();
+    }
+
+    function testSetAdapterWhitelist() public {
+        vm.startPrank(deployer);
+        assert(router.adapterWhitelist(address(adapter)) == true);
+        router.setAdapterWhitelist(address(adapter), false);
+
+        assert(router.adapterWhitelist(address(adapter)) == false);
+        vm.stopPrank();
+
+        vm.startPrank(sender);
+        uint128 underlyingAmtIn = 10e8;
+        uint128 minTokenOut = 0e8;
+        res.underlying.mint(sender, underlyingAmtIn);
+        res.underlying.approve(address(router), underlyingAmtIn);
+        uint256 netXtOut = router.swapExactTokenForXt(
+            receiver,
+            res.market,
+            underlyingAmtIn,
+            minTokenOut
+        );
+        uint256 xtInAmt = netXtOut;
+
+        uint256 minCollAmt = 10e18;
+        uint tokenAmtIn = 1e18;
+        uint256 maxLtv = 0.8e8;
+        res.underlying.mint(sender, tokenAmtIn);
+        res.underlying.approve(address(router), tokenAmtIn);
+
+        SwapUnit[] memory units = new SwapUnit[](1);
+        units[0] = SwapUnit(
+            address(adapter),
+            address(res.underlying),
+            address(res.collateral),
+            abi.encode(minCollAmt)
+        );
+
+        res.xt.approve(address(router), xtInAmt);
+
+        vm.expectRevert(abi.encodePacked("Invalid adapter"));
+        router.leverageFromXt(
+            receiver,
+            res.market,
+            xtInAmt,
+            tokenAmtIn,
+            maxLtv,
+            units
+        );
         vm.stopPrank();
     }
 
@@ -402,7 +636,74 @@ contract TermMaxRouterTest is Test {
                 underlyingBalanceBefore + collateralValue - debtAmt
         );
 
+        vm.expectRevert(
+            abi.encodePacked(
+                bytes4(keccak256("ERC721NonexistentToken(uint256)")),
+                gtId
+            )
+        );
+        res.gt.loanInfo(gtId);
         vm.stopPrank();
+    }
+
+    function testFlashRepayWithoutApprove() public {
+        vm.startPrank(sender);
+
+        uint128 debtAmt = 1000e8;
+        uint256 collateralAmt = 1e18;
+        uint256 collateralValue = 2000e8;
+
+        (uint256 gtId, ) = LoanUtils.fastMintGt(
+            res,
+            sender,
+            debtAmt,
+            collateralAmt
+        );
+
+        uint256 minUnderlyingAmt = collateralValue;
+        vm.expectRevert(
+            abi.encodePacked("Swap: Transfer collateral from owner failed")
+        );
+        SwapUnit[] memory units = new SwapUnit[](1);
+        units[0] = SwapUnit(
+            address(adapter),
+            address(res.collateral),
+            address(res.underlying),
+            abi.encode(minUnderlyingAmt)
+        );
+
+        router.flashRepayFromColl(sender, res.market, gtId, units);
+        vm.stopPrank();
+    }
+
+    function testExecuteFromInvalidGt() public {
+        vm.prank(sender);
+        vm.expectRevert(abi.encodePacked("Market not whitelisted"));
+        router.executeOperation(sender, res.underlying, 10e8, "");
+
+        FakeGt fg = new FakeGt(sender);
+        vm.prank(address(fg));
+        vm.expectRevert(abi.encodePacked("Market of Gt not whitelisted"));
+        router.executeOperation(
+            sender,
+            res.underlying,
+            10e8,
+            address(res.collateral),
+            "",
+            ""
+        );
+
+        fg = new FakeGt(address(res.market));
+        vm.prank(address(fg));
+        vm.expectRevert(abi.encodePacked("Gt not whitelisted"));
+        router.executeOperation(
+            sender,
+            res.underlying,
+            10e8,
+            address(res.collateral),
+            "",
+            ""
+        );
     }
 
     /** */
@@ -1098,5 +1399,13 @@ contract TermMaxRouterTest is Test {
         res_.xt.approve(address(router), balances[1]);
         res_.lpFt.approve(address(router), balances[2]);
         res_.lpXt.approve(address(router), balances[3]);
+    }
+}
+
+contract FakeGt {
+    address public marketAddr;
+
+    constructor(address market) {
+        marketAddr = market;
     }
 }

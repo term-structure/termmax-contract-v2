@@ -95,7 +95,20 @@ interface ITermMaxRouter {
 
     function setMarketWhitelist(address market, bool isWhitelist) external;
 
-    function setSwapperWhitelist(address swapper, bool isWhitelist) external;
+    function setAdapterWhitelist(address adapter, bool isWhitelist) external;
+
+    function assetsWithERC20Colleteral(
+        ITermMaxMarket market,
+        address owner
+    )
+        external
+        view
+        returns (
+            IERC20[6] memory tokens,
+            uint256[6] memory balances,
+            address gt,
+            uint256[] memory gtIds
+        );
 
     function swapExactTokenForFt(
         address receiver,

@@ -106,9 +106,9 @@ contract ForkRouterTest is Test {
 
         router = DeployUtils.deployRouter(deployer);
         router.setMarketWhitelist(address(res.market), true);
-        router.setSwapperWhitelist(address(res.collateral), true);
-        router.setSwapperWhitelist(address(uniswapAdapter), true);
-        router.setSwapperWhitelist(address(pendleAdapter), true);
+
+        router.setAdapterWhitelist(address(uniswapAdapter), true);
+        router.setAdapterWhitelist(address(pendleAdapter), true);
         router.togglePause(false);
 
         vm.stopPrank();
