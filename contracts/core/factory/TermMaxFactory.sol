@@ -49,11 +49,13 @@ contract TermMaxFactory is ITermMaxFactory, Ownable {
         emit InitializeMarketImplement(marketImplement_);
     }
 
-    /// @notice Set the implementations of TermMax Gearing Token contract
+    /**
+     * @inheritdoc ITermMaxFactory
+     */
     function setGtImplement(
         string memory gtImplementName,
         address gtImplement
-    ) external onlyOwner {
+    ) external override onlyOwner {
         bytes32 key = keccak256(abi.encodePacked(gtImplementName));
         gtImplements[key] = gtImplement;
         emit SetGtImplement(key, gtImplement);

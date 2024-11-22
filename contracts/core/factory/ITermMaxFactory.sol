@@ -50,6 +50,12 @@ interface ITermMaxFactory {
         ITermMaxFactory.DeployParams calldata deployParams
     ) external returns (address market);
 
+    /// @notice Set the implementations of TermMax Gearing Token contract
+    function setGtImplement(
+        string memory gtImplementName,
+        address gtImplement
+    ) external;
+
     /// @notice Predict the address of market
     function predictMarketAddress(
         address collateral,
