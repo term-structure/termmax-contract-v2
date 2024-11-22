@@ -141,7 +141,7 @@ contract ForkRouterTest is Test {
             address(uniswapAdapter),
             weth9Addr,
             weethAddr,
-            abi.encode(poolFee, 0)
+            abi.encode(abi.encodePacked(weth9Addr, poolFee, weethAddr), 0)
         );
         units[1] = SwapUnit(
             address(pendleAdapter),
@@ -164,8 +164,15 @@ contract ForkRouterTest is Test {
 
     function testLeverageFromToken() public {
         vm.startPrank(sender);
-
+        console.log(res.underlying.balanceOf(address(router)));
         _loan();
+        console.log(res.underlying.balanceOf(address(router)));
+        console.log(res.collateral.balanceOf(address(router)));
+        console.log(res.xt.balanceOf(address(router)));
+        console.log(res.ft.balanceOf(address(router)));
+
+        assert(res.underlying.balanceOf(address(router)) == 0);
+        assert(res.collateral.balanceOf(address(router)) == 0);
 
         vm.stopPrank();
     }
@@ -191,7 +198,10 @@ contract ForkRouterTest is Test {
             address(uniswapAdapter),
             weethAddr,
             weth9Addr,
-            abi.encode(poolFee, minUnderlyingAmt)
+            abi.encode(
+                abi.encodePacked(weethAddr, poolFee, weth9Addr),
+                minUnderlyingAmt
+            )
         );
 
         res.collateral.approve(
@@ -224,7 +234,7 @@ contract ForkRouterTest is Test {
             address(uniswapAdapter),
             weth9Addr,
             weethAddr,
-            abi.encode(poolFee, 0)
+            abi.encode(abi.encodePacked(weth9Addr, poolFee, weethAddr), 0)
         );
         units[1] = SwapUnit(
             address(pendleAdapter),

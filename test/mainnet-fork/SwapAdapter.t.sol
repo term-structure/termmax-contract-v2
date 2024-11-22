@@ -39,6 +39,7 @@ contract SwapAdapterTest is Test {
     address treasurer = vm.randomAddress();
     string testdata;
 
+    address usdtAddr = 0xdAC17F958D2ee523a2206206994597C13D831ec7;
     address weth9Addr = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address weethAddr = 0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee;
     address ptWeethMarketAddr = 0x7d372819240D14fB477f17b964f95F33BeB4c704; // 26 Dec 2024
@@ -56,7 +57,7 @@ contract SwapAdapterTest is Test {
     function setUp() public {
         uint256 mainnetFork = vm.createFork(MAINNET_RPC_URL);
         vm.selectFork(mainnetFork);
-        vm.rollFork(21208075); // Nov-17-2024 05:09:23 PM +UTC, 1731388163
+        vm.rollFork(21242000); // Nov-22-2024 08:12:47 AM +UTC
 
         uniswapAdapter = new UniswapV3Adapter(uniswapRouter);
         pendleAdapter = new PendleSwapV3Adapter(pendleRouter);
@@ -64,17 +65,23 @@ contract SwapAdapterTest is Test {
     }
 
     function testDoMutipleSwaps() public {
-        uint amount = 1_00e18;
-        amount = 4.881e18;
+        uint amount = 4.881e18;
         uint24 poolFee = 3000;
         deal(weth9Addr, address(this), amount);
         IERC20(weth9Addr).transfer(address(testRouter), amount);
+
+        console.log(
+            "weeth reserve",
+            IERC20(weethAddr).balanceOf(
+                0x7A415B19932c0105c82FDB6b720bb01B0CC2CAe3
+            )
+        );
         SwapUnit[] memory units = new SwapUnit[](3);
         units[0] = SwapUnit(
             address(uniswapAdapter),
             weth9Addr,
             weethAddr,
-            abi.encode(poolFee, 0)
+            abi.encode(abi.encodePacked(weth9Addr, poolFee, weethAddr), 0)
         );
 
         (, IPPrincipalToken PT, ) = IPMarket(ptWeethMarketAddr).readTokens();
