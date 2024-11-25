@@ -114,6 +114,30 @@ library JSONLoader {
                 )
             )
         );
+        marketConfig.minNLendFeeR = uint32(
+            vm.parseUint(
+                vm.parseJsonString(
+                    testdataJSON,
+                    string.concat(key, ".minNLendFeeR")
+                )
+            )
+        );
+        marketConfig.minNBorrowFeeR = uint32(
+            vm.parseUint(
+                vm.parseJsonString(
+                    testdataJSON,
+                    string.concat(key, ".minNBorrowFeeR")
+                )
+            )
+        );
+        marketConfig.protocolFeeRatio = uint32(
+            vm.parseUint(
+                vm.parseJsonString(
+                    testdataJSON,
+                    string.concat(key, ".protocolFeeRatio")
+                )
+            )
+        );
         marketConfig.treasurer = treasurer;
         marketConfig.rewardIsDistributed = true;
     }

@@ -5,6 +5,8 @@ import {TransferHelper} from "@uniswap/v3-periphery/contracts/libraries/Transfer
 import {ISwapRouter} from "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 import "./ERC20OutputAdapter.sol";
 
+import {console} from "forge-std/Script.sol";
+
 contract UniswapV3Adapter is ERC20OutputAdapter {
     ISwapRouter public immutable router;
 
@@ -16,26 +18,28 @@ contract UniswapV3Adapter is ERC20OutputAdapter {
 
     function swap(
         address tokenIn,
-        address tokenOut,
+        address,
         bytes memory tokenInData,
         bytes memory swapData
     ) external override returns (bytes memory tokenOutData) {
         uint amount = _decodeAmount(tokenInData);
         IERC20(tokenIn).approve(address(router), amount);
-
-        (uint24 poolFee, uint256 amountOutMinimum) = abi.decode(
+        console.log("trade amount", amount);
+        console.log("balance before", IERC20(tokenIn).balanceOf(address(this)));
+        (bytes memory path, uint256 amountOutMinimum) = abi.decode(
             swapData,
-            (uint24, uint256)
+            (bytes, uint256)
         );
         uint amountOut = router.exactInput(
             ISwapRouter.ExactInputParams({
-                path: abi.encodePacked(tokenIn, poolFee, tokenOut),
+                path: path,
                 recipient: address(this),
                 deadline: block.timestamp,
                 amountIn: amount,
                 amountOutMinimum: amountOutMinimum
             })
         );
+        console.log("balance after", IERC20(tokenIn).balanceOf(address(this)));
         return _encodeAmount(amountOut);
     }
 }

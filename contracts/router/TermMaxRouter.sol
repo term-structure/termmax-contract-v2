@@ -188,9 +188,14 @@ contract TermMaxRouter is
         returns (uint256 netTokenOut)
     {
         (IMintableERC20 ft, , , , , , IERC20 underlying) = market.tokens();
-        ft.safeTransferFrom(msg.sender, address(this), ftInAmt);
 
-        ft.safeIncreaseAllowance(address(market), ftInAmt);
+        _transferToSelfAndApproveSpender(
+            ft,
+            msg.sender,
+            address(market),
+            ftInAmt
+        );
+
         (netTokenOut) = market.sellFt(ftInAmt, minTokenOut);
         underlying.transfer(receiver, netTokenOut);
 
@@ -577,7 +582,7 @@ contract TermMaxRouter is
             minXtAmt.toUint128()
         );
         netXtOut = _netXtOut;
-        bytes memory callbackData = abi.encode(address(gt), netXtOut, units);
+        bytes memory callbackData = abi.encode(address(gt), tokenInAmt, units);
         xt.safeIncreaseAllowance(address(market), netXtOut);
         gtId = market.leverageByXt(
             address(this),
