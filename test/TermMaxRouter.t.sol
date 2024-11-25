@@ -597,6 +597,158 @@ contract TermMaxRouterTest is Test {
         vm.stopPrank();
     }
 
+    function testRepay() public {
+        uint128 debtAmt = 100e8;
+        uint256 collateralAmt = 1e18;
+
+        vm.startPrank(sender);
+
+        (uint256 gtId, ) = LoanUtils.fastMintGt(
+            res,
+            sender,
+            debtAmt,
+            collateralAmt
+        );
+
+        res.underlying.mint(sender, debtAmt);
+
+        res.underlying.approve(address(router), debtAmt);
+        uint collateralBalanceBefore = res.collateral.balanceOf(sender);
+        uint underlyingBalanceBefore = res.underlying.balanceOf(sender);
+        StateChecker.MarketState memory state = StateChecker.getMarketState(
+            res
+        );
+        bool byUnderlying = true;
+        vm.expectEmit();
+        emit IGearingToken.Repay(gtId, debtAmt, byUnderlying);
+        router.repay(res.market, gtId, debtAmt);
+
+        uint collateralBalanceAfter = res.collateral.balanceOf(sender);
+        uint underlyingBalanceAfter = res.underlying.balanceOf(sender);
+        state.underlyingReserve += debtAmt;
+        state.collateralReserve -= collateralAmt;
+        StateChecker.checkMarketState(res, state);
+
+        assert(
+            collateralBalanceAfter - collateralBalanceBefore == collateralAmt
+        );
+        assert(underlyingBalanceAfter + debtAmt == underlyingBalanceBefore);
+        vm.expectRevert(
+            abi.encodePacked(
+                bytes4(keccak256("ERC721NonexistentToken(uint256)")),
+                gtId
+            )
+        );
+        res.gt.loanInfo(gtId);
+
+        vm.stopPrank();
+    }
+
+    function testRepayFromFt() public {
+        uint128 debtAmt = 100e8;
+        uint256 collateralAmt = 1e18;
+
+        vm.startPrank(sender);
+
+        (uint256 gtId, ) = LoanUtils.fastMintGt(
+            res,
+            sender,
+            debtAmt,
+            collateralAmt
+        );
+
+        // get FT token
+        res.underlying.mint(sender, debtAmt);
+        res.underlying.approve(address(res.market), debtAmt);
+        (uint128 lpFtOutAmt, uint128 lpXtOutAmt) = res.market.provideLiquidity(
+            debtAmt
+        );
+        res.lpFt.approve(address(res.market), lpFtOutAmt);
+        res.lpXt.approve(address(res.market), lpXtOutAmt);
+        res.market.withdrawLp(lpFtOutAmt, lpXtOutAmt);
+
+        uint collateralBalanceBefore = res.collateral.balanceOf(sender);
+        uint ftBalanceBefore = res.ft.balanceOf(sender);
+        uint ftInGtBefore = res.ft.balanceOf(address(res.gt));
+        StateChecker.MarketState memory state = StateChecker.getMarketState(
+            res
+        );
+
+        res.ft.approve(address(router), debtAmt);
+
+        bool byUnderlying = false;
+        vm.expectEmit();
+        emit IGearingToken.Repay(gtId, debtAmt, byUnderlying);
+        router.repayFromFt(res.market, gtId, debtAmt);
+
+        uint collateralBalanceAfter = res.collateral.balanceOf(sender);
+        uint ftBalanceAfter = res.ft.balanceOf(sender);
+        uint ftInGtAfter = res.ft.balanceOf(address(res.gt));
+        state.collateralReserve -= collateralAmt;
+        StateChecker.checkMarketState(res, state);
+        assert(ftInGtAfter - debtAmt == ftInGtBefore);
+        assert(
+            collateralBalanceAfter - collateralBalanceBefore == collateralAmt
+        );
+        assert(ftBalanceAfter + debtAmt == ftBalanceBefore);
+        vm.expectRevert(
+            abi.encodePacked(
+                bytes4(keccak256("ERC721NonexistentToken(uint256)")),
+                gtId
+            )
+        );
+        res.gt.loanInfo(gtId);
+
+        vm.stopPrank();
+    }
+
+    function testRepayByTokenThroughFt() public {
+        uint128 debtAmt = 100e8;
+        uint256 collateralAmt = 1e18;
+
+        vm.startPrank(sender);
+
+        (uint256 gtId, ) = LoanUtils.fastMintGt(
+            res,
+            sender,
+            debtAmt,
+            collateralAmt
+        );
+
+        res.underlying.mint(sender, debtAmt);
+
+        uint collateralBalanceBefore = res.collateral.balanceOf(sender);
+        uint underlyingBalanceBefore = res.underlying.balanceOf(sender);
+        uint ftBalanceBefore = res.ft.balanceOf(sender);
+
+        res.underlying.approve(address(router), debtAmt);
+
+        bool byUnderlying = false;
+        vm.expectEmit();
+        emit IGearingToken.Repay(gtId, debtAmt, byUnderlying);
+        router.repayByTokenThroughFt(sender, res.market, gtId, debtAmt, debtAmt);
+
+        uint collateralBalanceAfter = res.collateral.balanceOf(sender);
+        uint ftBalanceAfter = res.ft.balanceOf(sender);
+        uint underlyingBalanceAfter = res.underlying.balanceOf(sender);
+
+        assert(underlyingBalanceAfter > underlyingBalanceBefore - debtAmt);
+        assert(
+            collateralBalanceAfter - collateralBalanceBefore == collateralAmt
+        );
+        
+        assert(ftBalanceAfter == ftBalanceBefore);
+        vm.expectRevert(
+            abi.encodePacked(
+                bytes4(keccak256("ERC721NonexistentToken(uint256)")),
+                gtId
+            )
+        );
+        res.gt.loanInfo(gtId);
+
+        vm.stopPrank();
+    }
+
     function testFlashRepay() public {
         vm.startPrank(sender);
 

@@ -221,6 +221,39 @@ contract GtTest is Test {
         vm.stopPrank();
     }
 
+    function testMintGtWhenMintFunctionClosed() public {
+        uint128 debtAmt = 1000e8;
+        uint256 collateralAmt = 1e18;
+        res.collateral.mint(sender, collateralAmt);
+
+        vm.prank(deployer);
+        vm.expectEmit();
+        emit IGearingToken.UpdateMintingSwitch(false);
+        res.market.updateMintingGtSwitch(false);
+
+        vm.startPrank(sender);
+        res.collateral.approve(address(res.gt), collateralAmt);
+        bytes memory collateralData = abi.encode(collateralAmt);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IGearingToken.CanNotMintGtNow.selector)
+        );
+        res.market.issueFt(debtAmt, collateralData);
+
+        vm.stopPrank();
+
+        vm.prank(deployer);
+        vm.expectEmit();
+        emit IGearingToken.UpdateMintingSwitch(true);
+        res.market.updateMintingGtSwitch(true);
+
+        vm.startPrank(sender);
+        res.collateral.approve(address(res.gt), collateralAmt);
+        res.market.issueFt(debtAmt, collateralData);
+
+        vm.stopPrank();
+    }
+
     function testRevertByGtIsNotHealthyWhenIssueFt() public {
         // debt 1780 USD collaretal 2000USD ltv 0.89
         uint128 debtAmt = 1780e8;
