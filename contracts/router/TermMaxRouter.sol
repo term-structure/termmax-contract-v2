@@ -767,12 +767,18 @@ contract TermMaxRouter is
         ITermMaxMarket market,
         uint256 gtId,
         SwapUnit[] memory units
-    ) external ensureMarketWhitelist(address(market)) whenNotPaused {
+    )
+        external
+        ensureMarketWhitelist(address(market))
+        whenNotPaused
+        returns (uint256 netTokenOut)
+    {
         (, , , , IGearingToken gt, , IERC20 underlying) = market.tokens();
 
         gt.flashRepay(gtId, abi.encode(units));
         // transfer remainning underlying token
-        underlying.transfer(receiver, underlying.balanceOf(address(this)));
+        netTokenOut = underlying.balanceOf(address(this));
+        underlying.transfer(receiver, netTokenOut);
     }
 
     function repayFromFt(
@@ -973,11 +979,23 @@ contract TermMaxRouter is
                 inputData,
                 units[i].swapData
             );
+            uint256 tokenInAmtBefore = IERC20(units[i].tokenIn).balanceOf(
+                address(this)
+            );
 
             // delegatecall
             (bool success, bytes memory returnData) = units[i]
                 .adapter
                 .delegatecall(dataToSwap);
+
+            uint256 tokenInAmtAfter = IERC20(units[i].tokenIn).balanceOf(
+                address(this)
+            );
+
+            require(
+                tokenInAmtBefore - tokenInAmtAfter == _decodeAmount(inputData),
+                "Swap: Invalid parital swap"
+            );
 
             require(success, "Swap: Failed");
             inputData = abi.decode(returnData, (bytes));

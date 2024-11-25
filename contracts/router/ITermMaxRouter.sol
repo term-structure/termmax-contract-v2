@@ -201,7 +201,7 @@ interface ITermMaxRouter {
         ITermMaxMarket market,
         uint256 gtId,
         SwapUnit[] memory units
-    ) external;
+    ) external returns (uint256 netTokenOut);
 
     function repayFromFt(
         ITermMaxMarket market,
