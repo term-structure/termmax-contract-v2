@@ -3,34 +3,34 @@ pragma solidity ^0.8.27;
 
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
-import {TermMaxFactory} from "../contracts/core/factory/TermMaxFactory.sol";
-import {ITermMaxFactory} from "../contracts/core/factory/ITermMaxFactory.sol";
-import {TermMaxRouter} from "../contracts/router/TermMaxRouter.sol";
+import {TermMaxFactory} from "../../../contracts/core/factory/TermMaxFactory.sol";
+import {ITermMaxFactory} from "../../../contracts/core/factory/ITermMaxFactory.sol";
+import {TermMaxRouter} from "../../../contracts/router/TermMaxRouter.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {TermMaxMarket} from "../contracts/core/TermMaxMarket.sol";
-import {MockERC20} from "../contracts/test/MockERC20.sol";
-import {MockPriceFeed} from "../contracts/test/MockPriceFeed.sol";
-import {MockPriceFeed} from "../contracts/test/MockPriceFeed.sol";
-import {MarketConfig} from "../contracts/core/storage/TermMaxStorage.sol";
-import {IMintableERC20} from "../contracts/core/tokens/IMintableERC20.sol";
-import {IGearingToken, AggregatorV3Interface} from "../contracts/core/tokens/IGearingToken.sol";
+import {TermMaxMarket} from "../../../contracts/core/TermMaxMarket.sol";
+import {MockERC20} from "../../../contracts/test/MockERC20.sol";
+import {MockPriceFeed} from "../../../contracts/test/MockPriceFeed.sol";
+import {MockPriceFeed} from "../../../contracts/test/MockPriceFeed.sol";
+import {MarketConfig} from "../../../contracts/core/storage/TermMaxStorage.sol";
+import {IMintableERC20} from "../../../contracts/core/tokens/IMintableERC20.sol";
+import {IGearingToken, AggregatorV3Interface} from "../../../contracts/core/tokens/IGearingToken.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {DeployUtils} from "./Utils.sol";
+import {MockSwapAdapter} from "../../../contracts/test/MockSwapAdapter.sol";
+import {JSONLoader} from "../../utils/JSONLoader.sol";
 
 contract DeployArbSepolia is Script {
-    // deployer config
+    // admin config
     uint256 deployerPrivateKey = vm.envUint("ARB_SEPOLIA_DEPLOYER_PRIVATE_KEY");
     address deployerAddr = vm.addr(deployerPrivateKey);
-
-    // factory and router config
+    address adminAddr = vm.envAddress("ARB_SEPOLIA_ADMIN_ADDRESS");
 
     // market config
     bytes32 constant GT_ERC20 = keccak256("GearingTokenWithERC20");
     MarketConfig marketConfig =
         MarketConfig({
             treasurer: 0x944a0Af591E2C23a2E81fe4c10Bd9c47Cf866F4b,
-            maturity: 1735575942, // current 1726732382
+            maturity: 1743120000,
             openTime: uint64(vm.getBlockTimestamp() + 60),
             apr: 12000000,
             lsf: 80000000,
@@ -49,22 +49,26 @@ contract DeployArbSepolia is Script {
     uint32 liquidationLtv = 0.9e8;
 
     function run() public {
+        // uint64 nonce = vm.getNonce(deployerAddr);
+        // vm.setNonce(deployerAddr, nonce + 1);
+
         vm.startBroadcast(deployerPrivateKey);
 
         // deploy factory
-        TermMaxFactory factory = new TermMaxFactory(deployerAddr);
+        TermMaxFactory factory = new TermMaxFactory(adminAddr);
         TermMaxMarket marketImpl = new TermMaxMarket();
         factory.initMarketImplement(address(marketImpl));
 
         // deploy router
         address routerImpl = address(new TermMaxRouter());
-        bytes memory data = abi.encodeCall(
-            TermMaxRouter.initialize,
-            deployerAddr
-        );
+        bytes memory data = abi.encodeCall(TermMaxRouter.initialize, adminAddr);
         address proxy = address(new ERC1967Proxy(routerImpl, data));
         TermMaxRouter router = TermMaxRouter(proxy);
         router.togglePause(false);
+
+        // deploy swap adapter
+        MockSwapAdapter swapAdapter = new MockSwapAdapter(vm.randomAddress());
+        router.setAdapterWhitelist(address(swapAdapter), true);
 
         // deploy underlying & collateral
         MockERC20 pt = new MockERC20(
@@ -72,7 +76,7 @@ contract DeployArbSepolia is Script {
             "PT-sUSDE-27MAR2025",
             18
         );
-        MockPriceFeed ptPriceFeed = new MockPriceFeed(deployerAddr);
+        MockPriceFeed ptPriceFeed = new MockPriceFeed(adminAddr);
         ptPriceFeed.updateRoundData(
             MockPriceFeed.RoundData({
                 roundId: 1,
@@ -84,7 +88,7 @@ contract DeployArbSepolia is Script {
         );
 
         MockERC20 usdc = new MockERC20("USD Coin", "USDC", 6);
-        MockPriceFeed usdcPriceFeed = new MockPriceFeed(deployerAddr);
+        MockPriceFeed usdcPriceFeed = new MockPriceFeed(adminAddr);
         usdcPriceFeed.updateRoundData(
             MockPriceFeed.RoundData({
                 roundId: 1,
@@ -99,7 +103,7 @@ contract DeployArbSepolia is Script {
         ITermMaxFactory.DeployParams memory params = ITermMaxFactory
             .DeployParams({
                 gtKey: GT_ERC20,
-                admin: deployerAddr,
+                admin: adminAddr,
                 collateral: address(pt),
                 underlying: IERC20Metadata(address(usdc)),
                 underlyingOracle: AggregatorV3Interface(address(usdcPriceFeed)),
@@ -126,9 +130,10 @@ contract DeployArbSepolia is Script {
         ) = market.tokens();
 
         console.log("===== Deployment Info =====");
-        console.log("Deplyer:", deployerAddr);
+        console.log("Deplyer:", adminAddr);
         console.log("Factory deployed at:", address(factory));
         console.log("Router deployed at:", address(router));
+        console.log("MockSwapAdapter deployed at:", address(swapAdapter));
         console.log("Market deployed at:", address(market));
         console.log(
             "Collateral (%s) deployed at: %s",

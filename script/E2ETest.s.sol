@@ -20,62 +20,39 @@ import {MockSwapAdapter} from "../contracts/test/MockSwapAdapter.sol";
 
 contract E2ETest is Script {
     // deployer config
-    uint256 userPrivateKey = vm.envUint("FORK_DEPLOYER_PRIVATE_KEY");
+    uint256 userPrivateKey = vm.envUint("ARB_SEPOLIA_DEPLOYER_PRIVATE_KEY");
     address userAddr = vm.addr(userPrivateKey);
-    // address userAddr = address(0x40cA1811DBfcfD3d8593B5E8Ab4a9D8a0fcB4fe8);
-    // address userAddr = address(0x43155bf7Ed1393379f44df7ca7299721917e41Ef);
-
-    // market config
-    bytes32 constant GT_ERC20 = keccak256("GearingTokenWithERC20");
-    MarketConfig marketConfig =
-        MarketConfig({
-            treasurer: 0x944a0Af591E2C23a2E81fe4c10Bd9c47Cf866F4b,
-            maturity: 1735575942, // current 1726732382
-            openTime: 1726734383,
-            apr: 12000000,
-            lsf: 80000000,
-            lendFeeRatio: 3000000,
-            minNLendFeeR: 3000000,
-            borrowFeeRatio: 3000000,
-            minNBorrowFeeR: 3000000,
-            redeemFeeRatio: 50000000,
-            issueFtFeeRatio: 10000000,
-            lockingPercentage: 50000000,
-            initialLtv: 88000000,
-            protocolFeeRatio: 50000000,
-            rewardIsDistributed: true
-        });
-    uint32 maxLtv = 0.89e8;
-    uint32 liquidationLtv = 0.9e8;
 
     // address config
-    address factoryAddr = address(0xC4b455704a13c13Ca9dd76729328E0d5f243F443);
-    address routerAddr = address(0x8Ced9af704F98E9F7dB7Fceb6035Ef366487cc3F);
-    address marketAddr = address(0xfC1231Bb12Ef99B6D0d2cAf7314B76D072DbE79f);
+    address factoryAddr = address(0x65feE48150586e72038884920b92033746f324b0);
+    address routerAddr = address(0x07c20177b6F219367F32fE72D8A70aA299920A8F);
+    address marketAddr = address(0x806fdCb526E084b97541b9e65EaEF60DfF04be95);
     address collateralAddr =
-        address(0x44212aDA786190340cd586C41b338c4f66AA90a0); // PT-sUSDe-24OCT2024
-    address collateralOracleAddr =
-        address(0x8Ddbc0a49B8f93066535f2c683cD5a8e83826151);
+        address(0xcd3379a8b94FaA5F117A3e97c5f244504788cc25);
     address underlyingAddr =
-        address(0xFb6c62746B52F998628EDa0DDf79ccf7a06d521E); // USDC
-    address underlyingOracleAddr =
-        address(0x8BAdE2BBb4AB2533800E22acd8ba2D34DE49acE6);
-    address ftAddr = address(0x66BAF590e1b774BA0A68F4e1ab746A9f05230BF8);
-    address xtAddr = address(0x1a047600a6ad4FBE46987371F1eA4E67293d8089);
-    address lpFtAddr = address(0x86D22dF589432a0c83cE59129CFb4e08287BE30E);
-    address lpXtAddr = address(0x1948083ca3B5667eFd33AD73ea57C2D07d907dd3);
-    address gtAddr = address(0x14886453b502284D4E7558245eA150D41cE0Ea3E);
+        address(0x791124EE95C885cdccD1A4ec62AB328ce1472a36);
+
+    // address underlyingOracleAddr =
+    //     address(0x8BAdE2BBb4AB2533800E22acd8ba2D34DE49acE6);
+    // address collateralOracleAddr =
+    //     address(0x8Ddbc0a49B8f93066535f2c683cD5a8e83826151);
+
+    address ftAddr = address(0x76ee69AB1e720704ca8F0CEe6e92ac8Cc8Fa0c9F);
+    address xtAddr = address(0x00bdc53aC57d27EB509255a465623416a143ffCF);
+    address lpFtAddr = address(0x1Ea586b735e2e98d3B88d290DdfA275f3aCCc5ff);
+    address lpXtAddr = address(0x7eaA9Cd362E45D787B326Aad77E24f81c7298c87);
+    address gtAddr = address(0xD9664F0BC5E371408ed8F8B27913497bb5a26B25);
 
     function run() public {
         MockERC20 underlying = MockERC20(underlyingAddr);
         MockERC20 collateral = MockERC20(collateralAddr);
+        ITermMaxRouter router = ITermMaxRouter(routerAddr);
+        ITermMaxMarket market = ITermMaxMarket(marketAddr);
         IERC20 ft = IERC20(ftAddr);
         IERC20 xt = IERC20(xtAddr);
         IERC20 lpFt = IERC20(lpFtAddr);
         IERC20 lpXt = IERC20(lpXtAddr);
         IGearingToken gt = IGearingToken(gtAddr);
-        ITermMaxRouter router = ITermMaxRouter(routerAddr);
-        ITermMaxMarket market = ITermMaxMarket(marketAddr);
 
         MarketConfig memory config = market.config();
         (, , , , , address collateralM, IERC20 underlyingM) = market.tokens();
@@ -95,14 +72,14 @@ contract E2ETest is Script {
         console.log("LPXT balance:", lpXt.balanceOf(userAddr));
 
         vm.startBroadcast(userPrivateKey);
-        // uint256 amount = 1000e6;
-        // underlying.mint(userAddr, amount);
-        // underlying.approve(routerAddr, amount);
-        // router.provideLiquidity(userAddr, market, amount);
-        address pool = vm.randomAddress();
-        MockSwapAdapter swapAdapter = new MockSwapAdapter(pool);
-        router.setAdapterWhitelist(address(swapAdapter), true);
-        console.log("Swap adapter address:", address(swapAdapter));
+        uint256 amount = 1000000e6;
+        underlying.mint(userAddr, amount);
+        underlying.approve(routerAddr, amount);
+        router.provideLiquidity(userAddr, market, amount);
+        // address pool = vm.randomAddress();
+        // MockSwapAdapter swapAdapter = new MockSwapAdapter(pool);
+        // router.setAdapterWhitelist(address(swapAdapter), true);
+        // console.log("Swap adapter address:", address(swapAdapter));
         vm.stopBroadcast();
 
         console.log("\nAfter broadcast");
