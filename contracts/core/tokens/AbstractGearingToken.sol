@@ -66,7 +66,7 @@ abstract contract AbstractGearingToken is
     /// @notice Mapping relationship between Gearing Token id and loan
     mapping(uint256 => LoanInfo) loanMapping;
     /// @notice The switch of GT minting
-    bool public canMintGt = true;
+    bool public canMintGt;
 
     /**
      * @inheritdoc IGearingToken
@@ -79,6 +79,7 @@ abstract contract AbstractGearingToken is
     ) external override initializer {
         __AbstractGearingToken_init(name, symbol, config_);
         __GearingToken_Implement_init(initalParams);
+        canMintGt = true;
     }
 
     function __AbstractGearingToken_init(
