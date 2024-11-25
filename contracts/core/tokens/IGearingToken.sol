@@ -39,6 +39,8 @@ interface IGearingToken is IERC721 {
         bool liquidatable;
     }
 
+    /// @notice Error for minting gt when the swtich is close
+    error CanNotMintGtNow();
     /// @notice Error for merge loans have different owners
     /// @param id The id of Gearing Token has different owner
     /// @param diffOwner The different owner
@@ -85,6 +87,9 @@ interface IGearingToken is IERC721 {
     /// @notice Error for debt value less than minimal limit
     /// @param debtValue The debtValue is USD, decimals 1e8
     error DebtValueIsTooSmall(uint256 debtValue);
+
+    /// @notice Emitted when updating the switch of minting gt
+    event UpdateMintingSwitch(bool canMintGt);
 
     /// @notice Emitted when merging multiple Gearing Tokens into one
     /// @param owner The owner of those tokens
@@ -140,6 +145,9 @@ interface IGearingToken is IERC721 {
     /// @param treasurer New address of treasurer
     /// @dev Only the market can call this function
     function setTreasurer(address treasurer) external;
+
+    /// @notice Update the switch of minting gt
+    function updateMintingSwitch(bool canMintGt) external;
 
     /// @notice Return the configuration of Gearing Token
     function getGtConfig() external view returns (GtConfig memory);

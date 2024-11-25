@@ -357,6 +357,9 @@ interface ITermMaxMarket {
     /// @notice Open Gearing Token liquidation and collateral reduction
     function unpauseGt() external;
 
+    /// @notice Update the switch of minting gt
+    function updateMintingSwitch(bool canMintGt) external;
+
     // function redeemByPermit(
     //     address caller,
     //     uint256[4] calldata amountArray,

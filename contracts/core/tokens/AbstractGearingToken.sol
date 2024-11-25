@@ -65,6 +65,8 @@ abstract contract AbstractGearingToken is
     uint256 total;
     /// @notice Mapping relationship between Gearing Token id and loan
     mapping(uint256 => LoanInfo) loanMapping;
+    /// @notice The switch of GT minting
+    bool public canMintGt = true;
 
     /**
      * @inheritdoc IGearingToken
@@ -106,6 +108,14 @@ abstract contract AbstractGearingToken is
     /**
      * @inheritdoc IGearingToken
      */
+    function updateMintingSwitch(bool _canMintGt) external override onlyOwner {
+        canMintGt = _canMintGt;
+        emit UpdateMintingSwitch(_canMintGt);
+    }
+
+    /**
+     * @inheritdoc IGearingToken
+     */
     function getGtConfig() external view override returns (GtConfig memory) {
         return _config;
     }
@@ -140,6 +150,9 @@ abstract contract AbstractGearingToken is
         nonReentrant
         returns (uint256 id)
     {
+        if (!canMintGt) {
+            revert CanNotMintGtNow();
+        }
         _transferCollateralFrom(
             collateralProvider,
             address(this),

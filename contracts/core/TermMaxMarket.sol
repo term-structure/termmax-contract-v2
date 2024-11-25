@@ -390,7 +390,8 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
             _daysToMaturity(mConfig.maturity)
         );
 
-        uint feeAmt; uint finalTokenReserve;
+        uint feeAmt;
+        uint finalTokenReserve;
         if (token == ft) {
             uint newFtReserve;
             uint newXtReserve;
@@ -421,7 +422,6 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
                 ),
                 mConfig
             );
-            
         } else {
             uint newFtReserve;
             uint newXtReserve;
@@ -469,10 +469,16 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
             feeAmt -= feeToProtocol;
 
             if (token == ft) {
-                netOut = token.balanceOf(address(this)) - finalTokenReserve - feeAmt *
-                    mConfig.initialLtv / Constants.DECIMAL_BASE;
+                netOut =
+                    token.balanceOf(address(this)) -
+                    finalTokenReserve -
+                    (feeAmt * mConfig.initialLtv) /
+                    Constants.DECIMAL_BASE;
             } else {
-                netOut = token.balanceOf(address(this)) - finalTokenReserve - feeAmt;
+                netOut =
+                    token.balanceOf(address(this)) -
+                    finalTokenReserve -
+                    feeAmt;
             }
             if (netOut < minTokenOut) {
                 revert UnexpectedAmount(minTokenOut, netOut.toUint128());
@@ -588,7 +594,11 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         );
 
         _removeLiquidity(caller, netOut, mConfig.initialLtv);
-        _lockFee(feeAmt - feeToProtocol, mConfig.lockingPercentage, mConfig.initialLtv);
+        _lockFee(
+            feeAmt - feeToProtocol,
+            mConfig.lockingPercentage,
+            mConfig.initialLtv
+        );
 
         _config.apr = mConfig.apr;
         emit SellToken(
@@ -872,8 +882,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         uint32 protocolFeeRatio,
         address caller
     ) internal returns (uint256 feeToProtocol) {
-        feeToProtocol = (totalFee * protocolFeeRatio) /
-            Constants.DECIMAL_BASE;
+        feeToProtocol = (totalFee * protocolFeeRatio) / Constants.DECIMAL_BASE;
         underlying.transferFrom(caller, treasurer, feeToProtocol);
     }
 
@@ -883,15 +892,14 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         uint32 protocolFeeRatio,
         uint256 ltv
     ) internal returns (uint256 feeToProtocol) {
-        feeToProtocol = (totalFee * protocolFeeRatio) /
-            Constants.DECIMAL_BASE;
+        feeToProtocol = (totalFee * protocolFeeRatio) / Constants.DECIMAL_BASE;
         _removeLiquidity(treasurer, feeToProtocol, ltv);
     }
 
     /**
      * @inheritdoc ITermMaxMarket
      */
-    function pause() external onlyOwner {
+    function pause() external override onlyOwner {
         _pause();
         pauseTime = block.timestamp;
     }
@@ -899,7 +907,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
     /**
      * @inheritdoc ITermMaxMarket
      */
-    function unpause() external onlyOwner {
+    function unpause() external override onlyOwner {
         if (_getEvacuateStatus()) {
             revert EvacuationIsActived();
         }
@@ -910,15 +918,22 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
     /**
      * @inheritdoc ITermMaxMarket
      */
-    function pauseGt() external onlyOwner {
+    function pauseGt() external override onlyOwner {
         gt.pause();
     }
 
     /**
      * @inheritdoc ITermMaxMarket
      */
-    function unpauseGt() external onlyOwner {
+    function unpauseGt() external override onlyOwner {
         gt.unpause();
+    }
+
+    /**
+     * @inheritdoc ITermMaxMarket
+     */
+    function updateMintingSwitch(bool canMintGt) external override onlyOwner {
+        gt.updateMintingSwitch(canMintGt);
     }
 
     /**
