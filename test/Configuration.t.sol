@@ -14,7 +14,7 @@ import "../contracts/core/storage/TermMaxStorage.sol";
 
 contract ConfigurationTest is Test {
     address deployer = vm.randomAddress();
-
+    address sender = vm.randomAddress();
     address treasurer = vm.randomAddress();
     uint32 maxLtv = 0.89e8;
     uint32 liquidationLtv = 0.9e8;
@@ -64,7 +64,7 @@ contract ConfigurationTest is Test {
         vm.stopPrank();
     }
 
-    function testSetTreasurerWithoutAuth(address sender) public {
+    function testSetTreasurerWithoutAuth() public {
         vm.startPrank(sender);
         address newTreasurer = vm.randomAddress();
 
@@ -122,7 +122,7 @@ contract ConfigurationTest is Test {
         vm.stopPrank();
     }
 
-    function testSetFeeWithoutAuth(address sender) public {
+    function testSetFeeWithoutAuth() public {
         vm.startPrank(sender);
 
         uint32 lendFeeRatio = 0.01e8;
@@ -165,7 +165,7 @@ contract ConfigurationTest is Test {
         vm.stopPrank();
     }
 
-    function testSetLsfWithoutAuth(address sender) public {
+    function testSetLsfWithoutAuth() public {
         vm.startPrank(sender);
         uint32 lsf = 0.11e8;
         vm.expectRevert(

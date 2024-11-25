@@ -14,7 +14,7 @@ import {MockERC20, ERC20} from "contracts/test/MockERC20.sol";
 import {MockPriceFeed} from "contracts/test/MockPriceFeed.sol";
 import {ITermMaxFactory, TermMaxFactory, IMintableERC20, IGearingToken, AggregatorV3Interface} from "contracts/core/factory/TermMaxFactory.sol";
 import "contracts/core/storage/TermMaxStorage.sol";
-import {TermMaxRouter, TermMaxRouter} from "contracts/router/TermMaxRouter.sol";
+import {TermMaxRouter} from "contracts/router/TermMaxRouter.sol";
 import {ITermMaxRouter, SwapUnit} from "contracts/router/ITermMaxRouter.sol";
 import {LoanUtils} from "./utils/LoanUtils.sol";
 import {ISwapAdapter, MockSwapAdapter} from "contracts/test/MockSwapAdapter.sol";
