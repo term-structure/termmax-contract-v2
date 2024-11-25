@@ -932,7 +932,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
     /**
      * @inheritdoc ITermMaxMarket
      */
-    function updateMintingSwitch(bool canMintGt) external override onlyOwner {
+    function updateMintingGtSwitch(bool canMintGt) external override onlyOwner {
         gt.updateMintingSwitch(canMintGt);
     }
 

@@ -358,7 +358,7 @@ interface ITermMaxMarket {
     function unpauseGt() external;
 
     /// @notice Update the switch of minting gt
-    function updateMintingSwitch(bool canMintGt) external;
+    function updateMintingGtSwitch(bool canMintGt) external;
 
     // function redeemByPermit(
     //     address caller,
