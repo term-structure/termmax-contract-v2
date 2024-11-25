@@ -10,7 +10,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
-import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 
 import {ITermMaxMarket} from "../core/ITermMaxMarket.sol";
@@ -26,7 +26,7 @@ import {SwapUnit, ISwapAdapter} from "./ISwapAdapter.sol";
 
 contract TermMaxRouter is
     UUPSUpgradeable,
-    AccessControlUpgradeable,
+    OwnableUpgradeable,
     PausableUpgradeable,
     IFlashLoanReceiver,
     IFlashRepayer,
@@ -39,8 +39,6 @@ contract TermMaxRouter is
     using MathLib for uint256;
     using SafeERC20 for IERC20;
     using SafeERC20 for IMintableERC20;
-
-    bytes32 constant OPERATOR_ROLE = keccak256(abi.encode("OPERATOR_ROLE"));
 
     mapping(address => bool) public marketWhitelist;
     mapping(address => bool) public adapterWhitelist;
@@ -60,19 +58,17 @@ contract TermMaxRouter is
 
     function _authorizeUpgrade(
         address newImplementation
-    ) internal virtual override onlyRole(DEFAULT_ADMIN_ROLE) {}
+    ) internal virtual override onlyOwner {}
 
     function initialize(address defaultAdmin) public initializer {
         __UUPSUpgradeable_init();
-        __AccessControl_init();
         __Pausable_init();
+        __Ownable_init(defaultAdmin);
 
-        _grantRole(DEFAULT_ADMIN_ROLE, defaultAdmin);
-        _grantRole(OPERATOR_ROLE, defaultAdmin);
         _pause();
     }
 
-    function togglePause(bool isPause) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function togglePause(bool isPause) external onlyOwner {
         if (isPause) {
             _pause();
         } else {
@@ -83,14 +79,14 @@ contract TermMaxRouter is
     function setMarketWhitelist(
         address market,
         bool isWhitelist
-    ) external onlyRole(OPERATOR_ROLE) {
+    ) external onlyOwner {
         marketWhitelist[market] = isWhitelist;
     }
 
     function setAdapterWhitelist(
         address adapter,
         bool isWhitelist
-    ) external onlyRole(OPERATOR_ROLE) {
+    ) external onlyOwner {
         adapterWhitelist[adapter] = isWhitelist;
     }
 
@@ -345,8 +341,6 @@ contract TermMaxRouter is
             lpFtInAmt.toUint128(),
             lpXtInAmt.toUint128()
         );
-        ft.transfer(receiver, ftOutAmt);
-        xt.transfer(receiver, xtOutAmt);
 
         if (ftOutAmt < minFtOut) {
             revert("Slippage: INSUFFICIENT_FT_OUT");
@@ -354,6 +348,9 @@ contract TermMaxRouter is
         if (xtOutAmt < minXtOut) {
             revert("Slippage: INSUFFICIENT_XT_OUT");
         }
+
+        ft.transfer(receiver, ftOutAmt);
+        xt.transfer(receiver, xtOutAmt);
 
         emit WithdrawLiquidityToXtFt(
             market,
@@ -577,11 +574,10 @@ contract TermMaxRouter is
             tokenToBuyXtAmt + tokenInAmt
         );
         underlying.approve(address(market), tokenToBuyXtAmt);
-        uint256 _netXtOut = market.buyXt(
+        netXtOut = market.buyXt(
             tokenToBuyXtAmt.toUint128(),
             minXtAmt.toUint128()
         );
-        netXtOut = _netXtOut;
         bytes memory callbackData = abi.encode(address(gt), tokenInAmt, units);
         xt.safeIncreaseAllowance(address(market), netXtOut);
         gtId = market.leverageByXt(
@@ -808,8 +804,12 @@ contract TermMaxRouter is
             ,
             IERC20 underlying
         ) = market.tokens();
-        underlying.safeTransferFrom(msg.sender, address(this), tokenInAmt);
-        underlying.safeIncreaseAllowance(address(market), tokenInAmt);
+        _transferToSelfAndApproveSpender(
+            underlying,
+            msg.sender,
+            address(market),
+            tokenInAmt
+        );
 
         uint256 netFtOut = market.buyFt(
             tokenInAmt.toUint128(),
@@ -823,15 +823,15 @@ contract TermMaxRouter is
             revert("Debt is already repaid");
         }
 
-        if (netFtOut > debtAmt) {
-            ft.safeIncreaseAllowance(address(gt), debtAmt);
-            gt.repay(gtId, debtAmt, false);
-            ft.safeTransfer(receiver, netFtOut - debtAmt);
-        } else {
-            ft.safeIncreaseAllowance(address(gt), netFtOut);
-            gt.repay(gtId, netFtOut.toUint120(), false);
-        }
+        ft.safeIncreaseAllowance(address(gt), debtAmt);
+        gt.repay(gtId, debtAmt, false);
 
+        if (netFtOut > debtAmt) {
+            uint remainningFt = netFtOut - debtAmt;
+            ft.safeIncreaseAllowance(address(market), remainningFt);
+            uint underlyingOut = market.sellFt(uint128(remainningFt), 0);
+            underlying.transfer(receiver, underlyingOut);
+        }
         emit Repay(market, false, address(underlying), gtId, tokenInAmt);
     }
 

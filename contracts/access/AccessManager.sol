@@ -50,6 +50,77 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
         IOwnable(entity).transferOwnership(to);
     }
 
+    function upgradeSubContract(
+        UUPSUpgradeable proxy,
+        address newImplementation,
+        bytes memory data
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        proxy.upgradeToAndCall(newImplementation, data);
+    }
+
+    /// @notice Set the fee rate of the market
+    function setMarketFeeRate(
+        ITermMaxMarket market,
+        uint32 lendFeeRatio,
+        uint32 minNLendFeeR,
+        uint32 borrowFeeRatio,
+        uint32 minNBorrowFeeR,
+        uint32 redeemFeeRatio,
+        uint32 issueFtfeeRatio,
+        uint32 lockingPercentage,
+        uint32 protocolFeeRatio
+    ) external onlyRole(CURATOR_ROLE) {
+        market.setFeeRate(
+            lendFeeRatio,
+            minNLendFeeR,
+            borrowFeeRatio,
+            minNBorrowFeeR,
+            redeemFeeRatio,
+            issueFtfeeRatio,
+            lockingPercentage,
+            protocolFeeRatio
+        );
+    }
+
+    /// @notice Set the treasurer's address
+    function setMarketTreasurer(
+        ITermMaxMarket market,
+        address treasurer
+    ) external onlyRole(CURATOR_ROLE) {
+        market.setTreasurer(treasurer);
+    }
+
+    /// @notice Set the value of lsf
+    function setMarketLsf(
+        ITermMaxMarket market,
+        uint32 lsf
+    ) external onlyRole(CURATOR_ROLE) {
+        market.setLsf(lsf);
+    }
+
+    function setSwitchOfMintingGt(
+        ITermMaxMarket market,
+        bool state
+    ) external onlyRole(CURATOR_ROLE) {
+        market.updateMintingGtSwitch(state);
+    }
+
+    function setMarketWhitelist(
+        ITermMaxRouter router,
+        address market,
+        bool isWhitelist
+    ) external onlyRole(CURATOR_ROLE) {
+        router.setMarketWhitelist(market, isWhitelist);
+    }
+
+    function setAdapterWhitelist(
+        ITermMaxRouter router,
+        address adapter,
+        bool isWhitelist
+    ) external onlyRole(CURATOR_ROLE) {
+        router.setAdapterWhitelist(adapter, isWhitelist);
+    }
+
     function setSwitchOfMarket(
         ITermMaxMarket market,
         bool state
@@ -70,6 +141,13 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
         } else {
             market.pauseGt();
         }
+    }
+
+    function setSwitchOfRouter(
+        ITermMaxRouter router,
+        bool state
+    ) external onlyRole(PAUSER_ROLE) {
+        router.togglePause(state);
     }
 
     function _authorizeUpgrade(
