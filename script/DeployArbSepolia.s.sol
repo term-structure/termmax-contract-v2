@@ -29,7 +29,7 @@ contract DeployArbSepolia is Script {
         MarketConfig({
             treasurer: 0x944a0Af591E2C23a2E81fe4c10Bd9c47Cf866F4b,
             maturity: 1735575942, // current 1726732382
-            openTime: uint64(vm.getBlockTimestamp() + 200),
+            openTime: uint64(vm.getBlockTimestamp() + 60),
             apr: 12000000,
             lsf: 80000000,
             lendFeeRatio: 3000000,
@@ -48,43 +48,68 @@ contract DeployArbSepolia is Script {
 
     function run() public {
         vm.startBroadcast(deployerPrivateKey);
-        TermMaxFactory factory = DeployUtils.deployFactory(deployerAddr);
-        TermMaxRouter router = DeployUtils.deployRouter(deployerAddr);
-        MockERC20 pt = DeployUtils.deployMockERC20(
-            deployerAddr,
-            "PT-sUSDe-27MAR2025",
-            "PT",
+
+        // deploy factory
+        TermMaxFactory factory = new TermMaxFactory(deployerAddr);
+        TermMaxMarket marketImpl = new TermMaxMarket();
+        factory.initMarketImplement(address(marketImpl));
+
+        // deploy router
+        address routerImpl = address(new TermMaxRouter());
+        bytes memory data = abi.encodeCall(
+            TermMaxRouter.initialize,
+            deployerAddr
+        );
+        address proxy = address(new ERC1967Proxy(routerImpl, data));
+        TermMaxRouter router = TermMaxRouter(proxy);
+        router.togglePause(false);
+
+        // deploy underlying & collateral
+        MockERC20 pt = new MockERC20(
+            "PT Ethena sUSDE 27MAR2025",
+            "PT-sUSDE-27MAR2025",
             18
         );
-        MockPriceFeed ptPriceFeed = DeployUtils.deployMockPriceFeed(
-            deployerAddr,
-            95e6
-        );
-        MockERC20 usdc = DeployUtils.deployMockERC20(
-            deployerAddr,
-            "USDC",
-            "USDC",
-            6
-        );
-        MockPriceFeed usdcPriceFeed = DeployUtils.deployMockPriceFeed(
-            deployerAddr,
-            1e8
+        MockPriceFeed ptPriceFeed = new MockPriceFeed(deployerAddr);
+        ptPriceFeed.updateRoundData(
+            MockPriceFeed.RoundData({
+                roundId: 1,
+                answer: 95e6,
+                startedAt: block.timestamp,
+                updatedAt: block.timestamp,
+                answeredInRound: 1
+            })
         );
 
-        TermMaxMarket market = DeployUtils.deployMarket(
-            deployerAddr,
-            address(factory),
-            address(pt),
-            address(ptPriceFeed),
-            address(usdc),
-            address(usdcPriceFeed),
-            GT_ERC20,
-            liquidationLtv,
-            maxLtv,
-            marketConfig
+        MockERC20 usdc = new MockERC20("USD Coin", "USDC", 6);
+        MockPriceFeed usdcPriceFeed = new MockPriceFeed(deployerAddr);
+        usdcPriceFeed.updateRoundData(
+            MockPriceFeed.RoundData({
+                roundId: 1,
+                answer: 1e8,
+                startedAt: block.timestamp,
+                updatedAt: block.timestamp,
+                answeredInRound: 1
+            })
         );
 
-        DeployUtils.whitelistMarket(address(router), address(market));
+        // deploy market
+        ITermMaxFactory.DeployParams memory params = ITermMaxFactory
+            .DeployParams({
+                gtKey: GT_ERC20,
+                admin: deployerAddr,
+                collateral: address(pt),
+                underlying: IERC20Metadata(address(usdc)),
+                underlyingOracle: AggregatorV3Interface(address(usdcPriceFeed)),
+                liquidationLtv: liquidationLtv,
+                maxLtv: maxLtv,
+                liquidatable: true,
+                marketConfig: marketConfig,
+                gtInitalParams: abi.encode(address(ptPriceFeed))
+            });
+        TermMaxMarket market = TermMaxMarket(factory.createMarket(params));
+
+        router.setMarketWhitelist(address(market), true);
         vm.stopBroadcast();
 
         MarketConfig memory config = market.config();

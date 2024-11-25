@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
+import {console} from "forge-std/console.sol";
 import {TermMaxFactory} from "../contracts/core/factory/TermMaxFactory.sol";
 import {TermMaxRouter} from "../contracts/router/TermMaxRouter.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";

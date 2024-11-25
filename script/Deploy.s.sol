@@ -56,56 +56,56 @@ contract DeployMainnetFork is Script {
 
     function run() public {
         vm.startBroadcast(deployerPrivateKey);
-        TermMaxFactory factory = deployFactory(deployerAddr);
-        TermMaxRouter router = deployRouter(deployerAddr);
-        (
-            MockERC20 usdc,
-            MockERC20 pt,
-            MockPriceFeed usdcOracle,
-            MockPriceFeed ptOracle
-        ) = deployMockERC20();
-        TermMaxMarket market = deployMarket(
-            deployerAddr,
-            address(factory),
-            address(pt),
-            address(usdc),
-            address(ptOracle),
-            address(usdcOracle)
-        );
-        (
-            IMintableERC20 ft,
-            IMintableERC20 xt,
-            IMintableERC20 lpFt,
-            IMintableERC20 lpXt,
-            IGearingToken gt,
-            address collateral,
-            IERC20 underlying
-        ) = market.tokens();
-        whitelistMarket(address(router), address(market), address(collateral));
+        // TermMaxFactory factory = deployFactory(deployerAddr);
+        // TermMaxRouter router = deployRouter(deployerAddr);
+        // (
+        //     MockERC20 usdc,
+        //     MockERC20 pt,
+        //     MockPriceFeed usdcOracle,
+        //     MockPriceFeed ptOracle
+        // ) = deployMockERC20();
+        // TermMaxMarket market = deployMarket(
+        //     deployerAddr,
+        //     address(factory),
+        //     address(pt),
+        //     address(usdc),
+        //     address(ptOracle),
+        //     address(usdcOracle)
+        // );
+        // (
+        //     IMintableERC20 ft,
+        //     IMintableERC20 xt,
+        //     IMintableERC20 lpFt,
+        //     IMintableERC20 lpXt,
+        //     IGearingToken gt,
+        //     address collateral,
+        //     IERC20 underlying
+        // ) = market.tokens();
+        // whitelistMarket(address(router), address(market), address(collateral));
         vm.stopBroadcast();
         // provdieLiquidity(router, market);
-        MarketConfig memory config = market.config();
-        console.log("Deploying TermMax Factory with deplyer:", deployerAddr);
-        console.log("Factory deployed at:", address(factory));
-        console.log("Router deployed at:", address(router));
-        console.log("Market deployed at:", address(market));
-        console.log(
-            "Collateral (%s) deployed at: %s",
-            IERC20Metadata(collateral).symbol(),
-            address(collateral)
-        );
-        console.log("Collateral Oracle deployed at:", address(ptOracle));
-        console.log(
-            "Underlying (%s) deployed at: %s",
-            IERC20Metadata(address(underlying)).symbol(),
-            address(underlying)
-        );
-        console.log("Underlying Oracle deployed at:", address(usdcOracle));
-        console.log("FT deployed at:", address(ft));
-        console.log("XT deployed at:", address(xt));
-        console.log("LPFT deployed at:", address(lpFt));
-        console.log("LPXT deployed at:", address(lpXt));
-        console.log("GT deployed at:", address(gt));
-        console.log("Market open time:", config.openTime);
+        // MarketConfig memory config = market.config();
+        // console.log("Deploying TermMax Factory with deplyer:", deployerAddr);
+        // console.log("Factory deployed at:", address(factory));
+        // console.log("Router deployed at:", address(router));
+        // console.log("Market deployed at:", address(market));
+        // console.log(
+        //     "Collateral (%s) deployed at: %s",
+        //     IERC20Metadata(collateral).symbol(),
+        //     address(collateral)
+        // );
+        // console.log("Collateral Oracle deployed at:", address(ptOracle));
+        // console.log(
+        //     "Underlying (%s) deployed at: %s",
+        //     IERC20Metadata(address(underlying)).symbol(),
+        //     address(underlying)
+        // );
+        // console.log("Underlying Oracle deployed at:", address(usdcOracle));
+        // console.log("FT deployed at:", address(ft));
+        // console.log("XT deployed at:", address(xt));
+        // console.log("LPFT deployed at:", address(lpFt));
+        // console.log("LPXT deployed at:", address(lpXt));
+        // console.log("GT deployed at:", address(gt));
+        // console.log("Market open time:", config.openTime);
     }
 }
