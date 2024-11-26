@@ -33,9 +33,7 @@ interface ITermMaxRouter {
         uint256 lpFtInAmt,
         uint256 lpXtInAmt,
         uint256 ftOutAmt,
-        uint256 xtOutAmt,
-        uint256 minFtInAmt,
-        uint256 minXtInAmt
+        uint256 xtOutAmt
     );
 
     event WithdrawLiquidtyToToken(
@@ -223,20 +221,9 @@ interface ITermMaxRouter {
         uint256 underlyingAmt
     ) external returns (uint128 lpFtOutAmt, uint128 lpXtOutAmt);
 
-    function mergeGt(
-        ITermMaxMarket market,
-        uint256[] memory ids
-    ) external returns (uint256 newId);
-
     function addCollateral(
         ITermMaxMarket market,
         uint256 gtId,
         uint256 addCollateralAmt
-    ) external;
-
-    function removeCollateral(
-        ITermMaxMarket market,
-        uint256 gtId,
-        uint256 removeCollateralAmt
     ) external;
 }

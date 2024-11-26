@@ -670,12 +670,12 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
     }
 
     function _leverageByXt(
-        address caller,
-        address receiver,
+        address loanReceiver,
+        address gtReceiver,
         uint128 xtAmt,
         bytes calldata callbackData
     ) internal returns (uint256 gtId) {
-        xt.transferFrom(caller, address(this), xtAmt);
+        xt.transferFrom(loanReceiver, address(this), xtAmt);
 
         // 1 xt -> 1 underlying raised
         // Debt 1 * initialLtv round up
@@ -685,17 +685,17 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
             1) / Constants.DECIMAL_BASE).toUint128();
 
         // Send debt to borrower
-        underlying.transfer(caller, xtAmt);
+        underlying.transfer(loanReceiver, xtAmt);
         // Callback function
-        bytes memory collateralData = IFlashLoanReceiver(caller)
-            .executeOperation(receiver, underlying, xtAmt, callbackData);
+        bytes memory collateralData = IFlashLoanReceiver(loanReceiver)
+            .executeOperation(gtReceiver, underlying, xtAmt, callbackData);
 
         // Mint GT
-        gtId = gt.mint(caller, receiver, debt, collateralData);
+        gtId = gt.mint(loanReceiver, gtReceiver, debt, collateralData);
 
         xt.burn(xtAmt);
 
-        emit MintGt(caller, receiver, gtId, debt, collateralData);
+        emit MintGt(loanReceiver, gtReceiver, gtId, debt, collateralData);
     }
 
     /**
