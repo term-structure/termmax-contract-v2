@@ -20,7 +20,7 @@ import {LoanUtils} from "./utils/LoanUtils.sol";
 import {ISwapAdapter, MockSwapAdapter} from "contracts/test/MockSwapAdapter.sol";
 
 contract TermMaxRouterTest is Test {
-    address deployer = vm.envAddress("FORK_DEPLOYER_ADDR");
+    address deployer = vm.randomAddress();
 
     DeployUtils.Res res;
 
@@ -726,7 +726,13 @@ contract TermMaxRouterTest is Test {
         bool byUnderlying = false;
         vm.expectEmit();
         emit IGearingToken.Repay(gtId, debtAmt, byUnderlying);
-        router.repayByTokenThroughFt(sender, res.market, gtId, debtAmt, debtAmt);
+        router.repayByTokenThroughFt(
+            sender,
+            res.market,
+            gtId,
+            debtAmt,
+            debtAmt
+        );
 
         uint collateralBalanceAfter = res.collateral.balanceOf(sender);
         uint ftBalanceAfter = res.ft.balanceOf(sender);
@@ -736,7 +742,7 @@ contract TermMaxRouterTest is Test {
         assert(
             collateralBalanceAfter - collateralBalanceBefore == collateralAmt
         );
-        
+
         assert(ftBalanceAfter == ftBalanceBefore);
         vm.expectRevert(
             abi.encodePacked(

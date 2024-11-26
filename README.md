@@ -17,6 +17,12 @@ Edit the `MAINNET_RPC_URL` value if you want to start fork tests.
 
 ### Test
 
+Test without fork.
+
+```shell
+$ forge test --skip Fork
+```
+
 Using test scripts can configure multiple environments more flexibly, it will automatically configure the environment variables you need.
 Do unit test if you have an env file named sepolia.env.
 
