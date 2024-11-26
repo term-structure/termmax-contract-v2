@@ -260,7 +260,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
     /**
      * @inheritdoc ITermMaxMarket
      */
-    function withdrawLp(
+    function withdrawLiquidity(
         uint128 lpFtAmt,
         uint128 lpXtAmt
     )
@@ -270,10 +270,10 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         nonReentrant
         returns (uint128 ftOutAmt, uint128 xtOutAmt)
     {
-        (ftOutAmt, xtOutAmt) = _withdrawLp(msg.sender, lpFtAmt, lpXtAmt);
+        (ftOutAmt, xtOutAmt) = _withdrawLiquidity(msg.sender, lpFtAmt, lpXtAmt);
     }
 
-    function _withdrawLp(
+    function _withdrawLiquidity(
         address caller,
         uint256 lpFtAmt,
         uint256 lpXtAmt
@@ -344,7 +344,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
             xt.transfer(caller, xtOutAmt);
         }
         _config.apr = mConfig.apr;
-        emit WithdrawLP(
+        emit WithdrawLiquidity(
             caller,
             lpFtAmt.toUint128(),
             lpXtAmt.toUint128(),

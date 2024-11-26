@@ -680,7 +680,7 @@ contract TermMaxRouterTest is Test {
         );
         res.lpFt.approve(address(res.market), lpFtOutAmt);
         res.lpXt.approve(address(res.market), lpXtOutAmt);
-        res.market.withdrawLp(lpFtOutAmt, lpXtOutAmt);
+        res.market.withdrawLiquidity(lpFtOutAmt, lpXtOutAmt);
 
         uint collateralBalanceBefore = res.collateral.balanceOf(sender);
         uint ftBalanceBefore = res.ft.balanceOf(sender);
@@ -1039,7 +1039,7 @@ contract TermMaxRouterTest is Test {
         vm.stopPrank();
     }
 
-    function testWithdrawLp() public {
+    function testWithdrawLiquidity() public {
         vm.startPrank(sender);
 
         uint128 underlyingAmtIn = 100e8;
@@ -1057,18 +1057,18 @@ contract TermMaxRouterTest is Test {
         StateChecker.MarketState memory expectedState = JSONLoader
             .getMarketStateFromJson(
                 testdata,
-                ".expected.withdrawLp.contractState"
+                ".expected.withdrawLiquidity.contractState"
             );
         uint expectFtOutAmt = vm.parseUint(
             vm.parseJsonString(
                 testdata,
-                ".expected.withdrawLp.output.lpFtAmount"
+                ".expected.withdrawLiquidity.output.lpFtAmount"
             )
         );
         uint expectXtOutAmt = vm.parseUint(
             vm.parseJsonString(
                 testdata,
-                ".expected.withdrawLp.output.lpXtAmount"
+                ".expected.withdrawLiquidity.output.lpXtAmount"
             )
         );
 
@@ -1131,7 +1131,7 @@ contract TermMaxRouterTest is Test {
         vm.stopPrank();
     }
 
-    function testWithdrawLpWhenFtIsMore() public {
+    function testWithdrawLiquidityWhenFtIsMore() public {
         vm.startPrank(sender);
 
         uint128 underlyingAmtIn = 100e8;
@@ -1149,18 +1149,18 @@ contract TermMaxRouterTest is Test {
         StateChecker.MarketState memory expectedState = JSONLoader
             .getMarketStateFromJson(
                 testdata,
-                ".expected.withdrawLpWhenFtIsMore.contractState"
+                ".expected.withdrawLiquidityWhenFtIsMore.contractState"
             );
         uint expectFtOutAmt = vm.parseUint(
             vm.parseJsonString(
                 testdata,
-                ".expected.withdrawLpWhenFtIsMore.output.lpFtAmount"
+                ".expected.withdrawLiquidityWhenFtIsMore.output.lpFtAmount"
             )
         );
         uint expectXtOutAmt = vm.parseUint(
             vm.parseJsonString(
                 testdata,
-                ".expected.withdrawLpWhenFtIsMore.output.lpXtAmount"
+                ".expected.withdrawLiquidityWhenFtIsMore.output.lpXtAmount"
             )
         );
 
@@ -1183,7 +1183,7 @@ contract TermMaxRouterTest is Test {
         vm.stopPrank();
     }
 
-    function testWithdrawLpWhenXtIsMore() public {
+    function testWithdrawLiquidityWhenXtIsMore() public {
         vm.startPrank(sender);
 
         uint128 underlyingAmtIn = 100e8;
@@ -1201,18 +1201,18 @@ contract TermMaxRouterTest is Test {
         StateChecker.MarketState memory expectedState = JSONLoader
             .getMarketStateFromJson(
                 testdata,
-                ".expected.withdrawLpWhenXtIsMore.contractState"
+                ".expected.withdrawLiquidityWhenXtIsMore.contractState"
             );
         uint expectFtOutAmt = vm.parseUint(
             vm.parseJsonString(
                 testdata,
-                ".expected.withdrawLpWhenXtIsMore.output.lpFtAmount"
+                ".expected.withdrawLiquidityWhenXtIsMore.output.lpFtAmount"
             )
         );
         uint expectXtOutAmt = vm.parseUint(
             vm.parseJsonString(
                 testdata,
-                ".expected.withdrawLpWhenXtIsMore.output.lpXtAmount"
+                ".expected.withdrawLiquidityWhenXtIsMore.output.lpXtAmount"
             )
         );
 
@@ -1235,7 +1235,7 @@ contract TermMaxRouterTest is Test {
         vm.stopPrank();
     }
 
-    function testWithdrawLpBeforeMaturity() public {
+    function testWithdrawLiquidityBeforeMaturity() public {
         vm.startPrank(sender);
 
         uint128 underlyingAmtIn = 100e8;
@@ -1262,7 +1262,7 @@ contract TermMaxRouterTest is Test {
         vm.stopPrank();
     }
 
-    function testWithdrawLpAfterMaturity() public {
+    function testWithdrawLiquidityAfterMaturity() public {
         vm.startPrank(sender);
 
         uint128 underlyingAmtIn = 100e8;
@@ -1318,7 +1318,7 @@ contract TermMaxRouterTest is Test {
             uint lpXtBalance = res.lpXt.balanceOf(sender);
             res.lpXt.approve(address(res.market), lpXtBalance);
 
-            res.market.withdrawLp(0, uint128(lpXtBalance / 2));
+            res.market.withdrawLiquidity(0, uint128(lpXtBalance / 2));
         }
         assert(res.lpFt.balanceOf(address(res.market)) > 0);
         assert(res.lpXt.balanceOf(address(res.market)) > 0);
@@ -1407,7 +1407,7 @@ contract TermMaxRouterTest is Test {
             uint lpXtBalance = res.lpXt.balanceOf(sender);
             res.lpXt.approve(address(res.market), lpXtBalance);
 
-            res.market.withdrawLp(0, uint128(lpXtBalance / 2));
+            res.market.withdrawLiquidity(0, uint128(lpXtBalance / 2));
         }
 
         assert(res.lpFt.balanceOf(address(res.market)) > 0);
