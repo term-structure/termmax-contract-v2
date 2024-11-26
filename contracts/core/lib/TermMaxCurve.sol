@@ -93,7 +93,7 @@ library TermMaxCurve {
         int64 apr,
         uint256 ftReserve
     ) internal pure returns (uint256 virtualXtReserve) {
-        // Ref docs: https://app.gitbook.com/o/ISZNDORWOmik8eC2rxbB/s/bey3QqLkQrkCxlgDKPaz/technical-details/amm-model/definition-d#price
+        // Ref docs: https://docs.ts.finance/termmax/technical-details/amm-model/definition-d#price
         // Ref: Eq. D-4 in the AMM Model section of docs
         // virtualXtReserve = virtualFtReserve / (1 + apr * dayToMaturity / 365 - lvt)
         //                  = virtualFtReserve * 365 / (365 + apr * dayToMaturity - ltv * 365)
@@ -139,7 +139,7 @@ library TermMaxCurve {
         uint256 virtualFtReserve,
         uint256 virtualXtReserve
     ) internal pure returns (int64) {
-        // Ref docs: https://app.gitbook.com/o/ISZNDORWOmik8eC2rxbB/s/bey3QqLkQrkCxlgDKPaz/technical-details/amm-model/definition-d#apr-annual-percentage-rate
+        // Ref docs: https://docs.ts.finance/termmax/technical-details/amm-model/definition-d#apr-annual-percentage-rate
         // Ref: Eq. D-6 in the AMM Model section of docs
         uint leftNumerator = Constants.DECIMAL_BASE *
             Constants.DAYS_IN_YEAR *
@@ -180,7 +180,6 @@ library TermMaxCurve {
         uint32 feeRatio,
         uint32 ltv
     ) internal pure returns (uint256 feeAmt) {
-        //! to be checked
         uint deltaFt = (newFtReserve > ftReserve)
             ? (newFtReserve - ftReserve)
             : (ftReserve - newFtReserve);
@@ -202,7 +201,8 @@ library TermMaxCurve {
         uint32 feeRatio,
         uint32 ltv
     ) private pure returns (uint256 feeAmt) {
-        //! to be checked
+        // Ref docs: https://docs.ts.finance/termmax/technical-details/amm-model/pool-operations/fee-operations-f
+        // Ref: Eq.F-1 in the AMM Model section of docs
         uint l = deltaFt * Constants.DECIMAL_BASE + deltaXt * ltv;
         uint r = deltaXt * Constants.DECIMAL_BASE;
 
@@ -262,7 +262,7 @@ library TermMaxCurve {
             config.apr,
             params.ftReserve
         );
-        // Ref docs: https://app.gitbook.com/o/ISZNDORWOmik8eC2rxbB/s/bey3QqLkQrkCxlgDKPaz/technical-details/amm-model/pool-operations/swap-operations-s#sp4-sell-ft-for-underlying
+        // Ref docs: https://docs.ts.finance/termmax/technical-details/amm-model/pool-operations/swap-operations-s#sp4-sell-ft-for-underlying
         // Ref: Eq.S-16 in the AMM Model section of docs
         uint negB = virtualFtReserve +
             (virtualXtReserve * config.initialLtv) /
@@ -317,7 +317,7 @@ library TermMaxCurve {
             config.apr,
             params.ftReserve
         );
-        // Ref docs: https://app.gitbook.com/o/ISZNDORWOmik8eC2rxbB/s/bey3QqLkQrkCxlgDKPaz/technical-details/amm-model/pool-operations/swap-operations-s#sp8-sell-negative-ft-for-negative-underlying
+        // Ref docs: https://docs.ts.finance/termmax/technical-details/amm-model/pool-operations/swap-operations-s#sp8-sell-negative-ft-for-negative-underlying
         // Ref: Eq.S-32 in the AMM Model section of docs
         uint b = virtualFtReserve +
             (virtualXtReserve * config.initialLtv) /
@@ -328,7 +328,7 @@ library TermMaxCurve {
         // Ref: Eq.S-29 in the AMM Model section of docs
         uint deltaXt = ((((b * b + 4 * negAc)).sqrt() - b) *
             Constants.DECIMAL_BASE) / (config.initialLtv * 2);
-        //! to be checked
+        // Ref: Eq.S-30 in the AMM Model section of docs
         uint deltaFt = virtualFtReserve -
             (virtualFtReserve * virtualXtReserve) /
             (virtualXtReserve + deltaXt);
@@ -374,7 +374,7 @@ library TermMaxCurve {
         );
         uint deltaXt;
         uint deltaFt;
-        // Ref docs: https://app.gitbook.com/o/ISZNDORWOmik8eC2rxbB/s/bey3QqLkQrkCxlgDKPaz/technical-details/amm-model/pool-operations/swap-operations-s#sp3-sell-xt-for-underlying
+        // Ref docs: https://docs.ts.finance/termmax/technical-details/amm-model/pool-operations/swap-operations-s#sp3-sell-xt-for-underlying
         {
             // Ref: Eq.S-12 in the AMM Model section of docs
             uint b = virtualFtReserve +
@@ -432,8 +432,8 @@ library TermMaxCurve {
             config.apr,
             params.ftReserve
         );
-        // Ref docs: https://app.gitbook.com/o/ISZNDORWOmik8eC2rxbB/s/bey3QqLkQrkCxlgDKPaz/technical-details/amm-model/pool-operations/swap-operations-s#sp7-sell-negative-xt-for-negative-underlying
-        // Ref: Eq.S-28 in the AMM Model section of docs 
+        // Ref docs: https://docs.ts.finance/termmax/technical-details/amm-model/pool-operations/swap-operations-s#sp7-sell-negative-xt-for-negative-underlying
+        // Ref: Eq.S-28 in the AMM Model section of docs
         uint negB = virtualFtReserve +
             ((virtualXtReserve + params.amount) * config.initialLtv) /
             Constants.DECIMAL_BASE;
@@ -443,7 +443,7 @@ library TermMaxCurve {
         // Ref: Eq.S-25 in the AMM Model section of docs
         uint deltaXt = ((negB - (negB * negB - 4 * ac).sqrt()) *
             Constants.DECIMAL_BASE) / (config.initialLtv * 2);
-        //! to be checked
+        // Ref: Eq.S-26 in the AMM Model section of docs
         uint deltaFt = (virtualFtReserve * virtualXtReserve) /
             (virtualXtReserve - deltaXt) -
             virtualFtReserve;
@@ -487,7 +487,7 @@ library TermMaxCurve {
             config.apr,
             params.ftReserve
         );
-        // Ref docs: https://app.gitbook.com/o/ISZNDORWOmik8eC2rxbB/s/bey3QqLkQrkCxlgDKPaz/technical-details/amm-model/pool-operations/swap-operations-s#sp2-buy-ft-with-underlying
+        // Ref docs: https://docs.ts.finance/termmax/technical-details/amm-model/pool-operations/swap-operations-s#sp2-buy-ft-with-underlying
         // Ref: Eq.S-6 in the AMM Model section of docs
         uint sigmaXt = params.amount;
         // Ref: Eq.S-7 in the AMM Model section of docs
@@ -534,10 +534,10 @@ library TermMaxCurve {
             config.apr,
             params.ftReserve
         );
-        // Ref docs: https://app.gitbook.com/o/ISZNDORWOmik8eC2rxbB/s/bey3QqLkQrkCxlgDKPaz/technical-details/amm-model/pool-operations/swap-operations-s#sp6-buy-negative-ft-with-negative-underlying
-        // Ref: Eq.S-22 in the AMM Model section of docs 
+        // Ref docs: https://docs.ts.finance/termmax/technical-details/amm-model/pool-operations/swap-operations-s#sp6-buy-negative-ft-with-negative-underlying
+        // Ref: Eq.S-22 in the AMM Model section of docs
         uint sigmaXt = params.amount;
-        // Ref: Eq.S-23 in the AMM Model section of docs 
+        // Ref: Eq.S-23 in the AMM Model section of docs
         uint deltaFt = (virtualFtReserve * virtualXtReserve) /
             (virtualXtReserve - sigmaXt) -
             virtualFtReserve;
@@ -581,7 +581,7 @@ library TermMaxCurve {
             config.apr,
             params.ftReserve
         );
-        // Ref docs: https://app.gitbook.com/o/ISZNDORWOmik8eC2rxbB/s/bey3QqLkQrkCxlgDKPaz/technical-details/amm-model/pool-operations/swap-operations-s#sp1-buy-xt-with-underlying
+        // Ref docs: https://docs.ts.finance/termmax/technical-details/amm-model/pool-operations/swap-operations-s#sp1-buy-xt-with-underlying
         // Ref: Eq.S-1 in the AMM Model section of docs
         uint sigmaFt = (params.amount * config.initialLtv) /
             Constants.DECIMAL_BASE;
@@ -592,7 +592,8 @@ library TermMaxCurve {
         if (virtualXtReserve <= deltaXt || deltaXt >= params.xtReserve) {
             revert LiquidityIsZeroAfterTransaction();
         }
-        // Ref: Eq.D-5 in the AMM Model section of docs (https://app.gitbook.com/o/ISZNDORWOmik8eC2rxbB/s/bey3QqLkQrkCxlgDKPaz/technical-details/amm-model/definition-d#apr-annual-percentage-rate)
+        // Ref docs: https://docs.ts.finance/termmax/technical-details/amm-model/definition-d#apr-annual-percentage-rate
+        // Ref: Eq.D-5 in the AMM Model section of docs
         newApr = calcApr(
             config.initialLtv,
             params.daysToMaturity,
@@ -630,11 +631,11 @@ library TermMaxCurve {
             config.apr,
             params.ftReserve
         );
-        // Ref docs: https://app.gitbook.com/o/ISZNDORWOmik8eC2rxbB/s/bey3QqLkQrkCxlgDKPaz/technical-details/amm-model/pool-operations/swap-operations-s#sp5-buy-negative-xt-with-negative-underlying
-        // Ref: Eq.S-17 in the AMM Model section of docs 
+        // Ref docs: https://docs.ts.finance/termmax/technical-details/amm-model/pool-operations/swap-operations-s#sp5-buy-negative-xt-with-negative-underlying
+        // Ref: Eq.S-17 in the AMM Model section of docs
         uint sigmaFt = (params.amount * config.initialLtv) /
             Constants.DECIMAL_BASE;
-        // Ref: Eq.S-19 in the AMM Model section of docs 
+        // Ref: Eq.S-19 in the AMM Model section of docs
         uint deltaXt = (virtualXtReserve * virtualFtReserve) /
             (virtualFtReserve - sigmaFt) -
             virtualXtReserve;
