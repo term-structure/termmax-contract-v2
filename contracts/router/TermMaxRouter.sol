@@ -359,9 +359,7 @@ contract TermMaxRouter is
             lpFtInAmt,
             lpXtInAmt,
             ftOutAmt,
-            xtOutAmt,
-            minFtOut,
-            minXtOut
+            xtOutAmt
         );
     }
 
@@ -841,19 +839,6 @@ contract TermMaxRouter is
         emit Repay(market, false, address(underlying), gtId, tokenInAmt);
     }
 
-    function mergeGt(
-        ITermMaxMarket market,
-        uint256[] memory ids
-    )
-        external
-        ensureMarketWhitelist(address(market))
-        whenNotPaused
-        returns (uint256 newId)
-    {
-        (, , , , IGearingToken gt, , ) = market.tokens();
-        return gt.merge(ids);
-    }
-
     function addCollateral(
         ITermMaxMarket market,
         uint256 gtId,
@@ -869,16 +854,7 @@ contract TermMaxRouter is
         gt.addCollateral(gtId, _encodeAmount(addCollateralAmt));
     }
 
-    function removeCollateral(
-        ITermMaxMarket market,
-        uint256 gtId,
-        uint256 removeCollateralAmt
-    ) external ensureMarketWhitelist(address(market)) whenNotPaused {
-        (, , , , IGearingToken gt, , ) = market.tokens();
-        gt.removeCollateral(gtId, _encodeAmount(removeCollateralAmt));
-    }
-
-    /// @dev Market flash leverage falshloan callback
+    /// @dev Market flash leverage flashloan callback
     function executeOperation(
         address,
         IERC20,

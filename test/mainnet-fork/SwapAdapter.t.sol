@@ -66,7 +66,7 @@ contract SwapAdapterTest is Test {
 
     function testDoMutipleSwaps() public {
         uint amount = 4.881e18;
-        uint24 poolFee = 3000;
+        uint24 poolFee = 100;
         deal(weth9Addr, address(this), amount);
         IERC20(weth9Addr).transfer(address(testRouter), amount);
 
@@ -102,7 +102,7 @@ contract SwapAdapterTest is Test {
 
         bytes memory tokenOutData = testRouter.swap(units, abi.encode(amount));
 
-        uint256 netBalance = IERC20(weth9Addr).balanceOf(address(testRouter));
+        uint256 netBalance = IERC20(weethAddr).balanceOf(address(testRouter));
         assert(netBalance >= abi.decode(tokenOutData, (uint)));
     }
 }

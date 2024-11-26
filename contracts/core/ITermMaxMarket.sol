@@ -135,14 +135,14 @@ interface ITermMaxMarket {
     event RemoveLiquidity(address indexed caller, uint256 underlyingAmt);
 
     /// @notice Emitted when doing leverage
-    /// @param caller Who call the function
-    /// @param receiver Who receive the Gearing Token
+    /// @param loanReceiver Who call the function
+    /// @param gtReceiver Who receive the Gearing Token
     /// @param gtId The id of Gearing Token
     /// @param debtAmt The amount of debt, unit by underlying token
     /// @param collateralData The encoded data of collateral
     event MintGt(
-        address indexed caller,
-        address indexed receiver,
+        address indexed loanReceiver,
+        address indexed gtReceiver,
         uint256 indexed gtId,
         uint128 debtAmt,
         bytes collateralData
