@@ -150,6 +150,7 @@ contract DeployArbSepolia is Script {
 
         console.log("===== Deployment Info =====");
         console.log("Deplyer:", adminAddr);
+        console.log("Price Feed Operator:", priceFeedOperatorAddr);
         console.log("Faucet deployed at:", address(faucet));
         console.log("Factory deployed at:", address(factory));
         console.log("Router deployed at:", address(router));
