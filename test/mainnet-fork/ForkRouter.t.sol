@@ -245,12 +245,15 @@ contract ForkRouterTest is Test {
         res.xt.approve(address(router), xtInAmt);
 
         vm.expectRevert(
-            abi.encodePacked(
-                "Swap Failed:",
-                abi.encodeWithSelector(
-                    ERC20SwapAdapter.ERC20InvalidPartialSwap.selector,
-                    tokenAmtIn + xtInAmt,
-                    uint(39902378112923432)
+            abi.encodeWithSelector(
+                ITermMaxRouter.SwapFailed.selector,
+                address(uniswapAdapter),
+                abi.encodePacked(
+                    abi.encodeWithSelector(
+                        ERC20SwapAdapter.ERC20InvalidPartialSwap.selector,
+                        tokenAmtIn + xtInAmt,
+                        uint(39902378112923432)
+                    )
                 )
             )
         );

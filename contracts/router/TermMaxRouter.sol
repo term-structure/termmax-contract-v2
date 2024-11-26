@@ -44,15 +44,21 @@ contract TermMaxRouter is
     mapping(address => bool) public adapterWhitelist;
 
     modifier ensureMarketWhitelist(address market) {
-        require(marketWhitelist[market], "Market not whitelisted");
+        if (!marketWhitelist[market]) {
+            revert MarketNotWhitelisted(market);
+        }
         _;
     }
 
     modifier ensureGtWhitelist(address gt) {
         address market = IGearingToken(gt).marketAddr();
-        require(marketWhitelist[market], "Market of Gt not whitelisted");
+        if (!marketWhitelist[market]) {
+            revert MarketNotWhitelisted(market);
+        }
         (, , , , IGearingToken gt_, , ) = ITermMaxMarket(market).tokens();
-        require(address(gt_) == gt, "Gt not whitelisted");
+        if (address(gt_) != gt) {
+            revert GtNotWhitelisted(gt);
+        }
         _;
     }
 
@@ -90,7 +96,7 @@ contract TermMaxRouter is
         adapterWhitelist[adapter] = isWhitelist;
     }
 
-    function assetsWithERC20Colleteral(
+    function assetsWithERC20Collateral(
         ITermMaxMarket market,
         address owner
     )
@@ -584,8 +590,9 @@ contract TermMaxRouter is
             callbackData
         );
         (, , uint128 ltv, bytes memory collateralData) = gt.loanInfo(gtId);
-        require(ltv <= maxLtv, "Slippage: ltv bigger than expected ltv");
-
+        if (ltv > maxLtv) {
+            revert LtvBiggerThanExpected(uint128(maxLtv), ltv);
+        }
         gt.safeTransferFrom(address(this), receiver, gtId);
 
         emit IssueGt(
@@ -642,7 +649,9 @@ contract TermMaxRouter is
         gt.safeTransferFrom(address(this), receiver, gtId);
 
         (, , uint128 ltv, bytes memory collateralData) = gt.loanInfo(gtId);
-        require(ltv <= maxLtv, "Slippage: ltv bigger than expected ltv");
+        if (ltv > maxLtv) {
+            revert LtvBiggerThanExpected(uint128(maxLtv), ltv);
+        }
 
         emit IssueGt(
             market,
@@ -879,8 +888,12 @@ contract TermMaxRouter is
             gt,
             collateralData
         );
-        (bool success, ) = lastUnit.adapter.delegatecall(approvalData);
-        require(success, "Swap: Approve token failed");
+        (bool success, bytes memory returnData) = lastUnit.adapter.delegatecall(
+            approvalData
+        );
+        if (!success) {
+            revert ApproveTokenFailWhenSwap(lastUnit.tokenOut, returnData);
+        }
     }
 
     function _balanceOf(
@@ -931,8 +944,12 @@ contract TermMaxRouter is
             address(this),
             collateralData
         );
-        (bool success, ) = units[0].adapter.delegatecall(dataToTransferFrom);
-        require(success, "Swap: Transfer collateral from owner failed");
+        (bool success, bytes memory returnData) = units[0].adapter.delegatecall(
+            dataToTransferFrom
+        );
+        if (!success) {
+            revert TransferTokenFailWhenSwap(units[0].tokenIn, returnData);
+        }
 
         // do swap
         _doSwap(collateralData, units);
@@ -945,7 +962,7 @@ contract TermMaxRouter is
     ) internal returns (bytes memory outData) {
         for (uint i = 0; i < units.length; ++i) {
             if (!adapterWhitelist[units[i].adapter]) {
-                revert("Invalid adapter");
+                revert AdapterNotWhitelisted(units[i].adapter);
             }
             // encode datas
             bytes memory dataToSwap = abi.encodeWithSelector(
@@ -960,10 +977,9 @@ contract TermMaxRouter is
             (bool success, bytes memory returnData) = units[i]
                 .adapter
                 .delegatecall(dataToSwap);
-            require(
-                success,
-                string(abi.encodePacked("Swap Failed:", returnData))
-            );
+            if (!success) {
+                revert SwapFailed(units[i].adapter, returnData);
+            }
             inputData = abi.decode(returnData, (bytes));
         }
         outData = inputData;
