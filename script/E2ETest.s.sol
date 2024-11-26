@@ -17,6 +17,7 @@ import {IGearingToken, AggregatorV3Interface} from "../contracts/core/tokens/IGe
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {MockSwapAdapter} from "../contracts/test/MockSwapAdapter.sol";
+import {Faucet} from "../contracts/test/testnet/Faucet.sol";
 
 contract E2ETest is Script {
     // deployer config
@@ -24,24 +25,20 @@ contract E2ETest is Script {
     address userAddr = vm.addr(userPrivateKey);
 
     // address config
-    address factoryAddr = address(0x65feE48150586e72038884920b92033746f324b0);
-    address routerAddr = address(0x07c20177b6F219367F32fE72D8A70aA299920A8F);
-    address marketAddr = address(0x806fdCb526E084b97541b9e65EaEF60DfF04be95);
+    address faucetAddr = address(0xf3E27621f6b13d8f4431FbB9C72273143D5Bd60d);
+    address factoryAddr = address(0x4f46c989EE4611352212784b56bc41E2431488a7);
+    address routerAddr = address(0xe7f3Eb4113b2f70Db591596A2dd27a797fc2fe48);
+    address swapAdapter = address(0x26D109174e9367BE59751a0d32A4Db2cA8243A60);
+    address marketAddr = address(0x0fFE9Aa7321dc63a3dC063591C314157FbAC4a52);
     address collateralAddr =
-        address(0xcd3379a8b94FaA5F117A3e97c5f244504788cc25);
+        address(0x8A5673EfCc8d7bBC9C22d0A9282b3320393Af6F9);
     address underlyingAddr =
-        address(0x791124EE95C885cdccD1A4ec62AB328ce1472a36);
-
-    // address underlyingOracleAddr =
-    //     address(0x8BAdE2BBb4AB2533800E22acd8ba2D34DE49acE6);
-    // address collateralOracleAddr =
-    //     address(0x8Ddbc0a49B8f93066535f2c683cD5a8e83826151);
-
-    address ftAddr = address(0x76ee69AB1e720704ca8F0CEe6e92ac8Cc8Fa0c9F);
-    address xtAddr = address(0x00bdc53aC57d27EB509255a465623416a143ffCF);
-    address lpFtAddr = address(0x1Ea586b735e2e98d3B88d290DdfA275f3aCCc5ff);
-    address lpXtAddr = address(0x7eaA9Cd362E45D787B326Aad77E24f81c7298c87);
-    address gtAddr = address(0xD9664F0BC5E371408ed8F8B27913497bb5a26B25);
+        address(0x85E99c1619f941c7B2827550B58d5d8f6B0ae738);
+    address ftAddr = address(0xEFB17e72Df8FbC0E0585b839F0cD676a5a2ad91d);
+    address xtAddr = address(0x4310625D02526f4acE1FD25Db8ec6ddda0e5fAc4);
+    address lpFtAddr = address(0x6c1590364ca5D002CEaBC4724630441c4Ddd1710);
+    address lpXtAddr = address(0x9e509E576A1367F3315bC162C0e640Ae8962c978);
+    address gtAddr = address(0x795A621B83B008D89C39c8aBeF9c7042dC1052Dc);
 
     function run() public {
         MockERC20 underlying = MockERC20(underlyingAddr);
@@ -53,6 +50,7 @@ contract E2ETest is Script {
         IERC20 lpFt = IERC20(lpFtAddr);
         IERC20 lpXt = IERC20(lpXtAddr);
         IGearingToken gt = IGearingToken(gtAddr);
+        Faucet faucet = Faucet(faucetAddr);
 
         MarketConfig memory config = market.config();
         (, , , , , address collateralM, IERC20 underlyingM) = market.tokens();
@@ -72,8 +70,9 @@ contract E2ETest is Script {
         console.log("LPXT balance:", lpXt.balanceOf(userAddr));
 
         vm.startBroadcast(userPrivateKey);
+        Faucet.TokenConfig memory usdcConfig = faucet.getTokenConfig(1);
         uint256 amount = 1000000e6;
-        underlying.mint(userAddr, amount);
+        faucet.devMint(userAddr, usdcConfig.tokenAddr, amount);
         underlying.approve(routerAddr, amount);
         router.provideLiquidity(userAddr, market, amount);
         // address pool = vm.randomAddress();

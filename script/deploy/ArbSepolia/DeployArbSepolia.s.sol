@@ -18,12 +18,16 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {MockSwapAdapter} from "../../../contracts/test/MockSwapAdapter.sol";
 import {JSONLoader} from "../../utils/JSONLoader.sol";
+import {Faucet} from "../../../contracts/test/testnet/Faucet.sol";
+import {FaucetERC20} from "../../../contracts/test/testnet/FaucetERC20.sol";
 
 contract DeployArbSepolia is Script {
     // admin config
     uint256 deployerPrivateKey = vm.envUint("ARB_SEPOLIA_DEPLOYER_PRIVATE_KEY");
     address deployerAddr = vm.addr(deployerPrivateKey);
     address adminAddr = vm.envAddress("ARB_SEPOLIA_ADMIN_ADDRESS");
+    address priceFeedOperatorAddr =
+        vm.envAddress("ARB_SEPOLIA_PRICE_FEED_OPERATOR_ADDRESS");
 
     // market config
     bytes32 constant GT_ERC20 = keccak256("GearingTokenWithERC20");
@@ -49,34 +53,39 @@ contract DeployArbSepolia is Script {
     uint32 liquidationLtv = 0.9e8;
 
     function run() public {
-        // uint64 nonce = vm.getNonce(deployerAddr);
-        // vm.setNonce(deployerAddr, nonce + 1);
-
         vm.startBroadcast(deployerPrivateKey);
 
         // deploy factory
         TermMaxFactory factory = new TermMaxFactory(adminAddr);
+
         TermMaxMarket marketImpl = new TermMaxMarket();
+
         factory.initMarketImplement(address(marketImpl));
 
         // deploy router
         address routerImpl = address(new TermMaxRouter());
+
         bytes memory data = abi.encodeCall(TermMaxRouter.initialize, adminAddr);
         address proxy = address(new ERC1967Proxy(routerImpl, data));
+
         TermMaxRouter router = TermMaxRouter(proxy);
         router.togglePause(false);
 
         // deploy swap adapter
         MockSwapAdapter swapAdapter = new MockSwapAdapter(vm.randomAddress());
+
         router.setAdapterWhitelist(address(swapAdapter), true);
 
+        Faucet faucet = new Faucet(adminAddr);
+
         // deploy underlying & collateral
-        MockERC20 pt = new MockERC20(
+        (FaucetERC20 pt, MockPriceFeed ptPriceFeed) = faucet.addToken(
             "PT Ethena sUSDE 27MAR2025",
             "PT-sUSDE-27MAR2025",
-            18
+            18,
+            1000e18
         );
-        MockPriceFeed ptPriceFeed = new MockPriceFeed(adminAddr);
+
         ptPriceFeed.updateRoundData(
             MockPriceFeed.RoundData({
                 roundId: 1,
@@ -87,8 +96,13 @@ contract DeployArbSepolia is Script {
             })
         );
 
-        MockERC20 usdc = new MockERC20("USD Coin", "USDC", 6);
-        MockPriceFeed usdcPriceFeed = new MockPriceFeed(adminAddr);
+        (FaucetERC20 usdc, MockPriceFeed usdcPriceFeed) = faucet.addToken(
+            "USD Coin",
+            "USDC",
+            6,
+            1000e6
+        );
+
         usdcPriceFeed.updateRoundData(
             MockPriceFeed.RoundData({
                 roundId: 1,
@@ -98,6 +112,10 @@ contract DeployArbSepolia is Script {
                 answeredInRound: 1
             })
         );
+
+        ptPriceFeed.transferOwnership(priceFeedOperatorAddr);
+
+        usdcPriceFeed.transferOwnership(priceFeedOperatorAddr);
 
         // deploy market
         ITermMaxFactory.DeployParams memory params = ITermMaxFactory
@@ -116,6 +134,7 @@ contract DeployArbSepolia is Script {
         TermMaxMarket market = TermMaxMarket(factory.createMarket(params));
 
         router.setMarketWhitelist(address(market), true);
+
         vm.stopBroadcast();
 
         MarketConfig memory config = market.config();
@@ -131,6 +150,7 @@ contract DeployArbSepolia is Script {
 
         console.log("===== Deployment Info =====");
         console.log("Deplyer:", adminAddr);
+        console.log("Faucet deployed at:", address(faucet));
         console.log("Factory deployed at:", address(factory));
         console.log("Router deployed at:", address(router));
         console.log("MockSwapAdapter deployed at:", address(swapAdapter));
