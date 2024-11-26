@@ -1,19 +1,8 @@
-## Foundry
+## TermMax
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
-
-Foundry consists of:
-
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+**Foundry is ...**
 
 ## Documentation
-
-https://book.getfoundry.sh/
-
-## Usage
 
 ### Build
 
@@ -21,28 +10,24 @@ https://book.getfoundry.sh/
 $ forge build
 ```
 
+### Before test
+
+You can find the `example.env` file at env folders, please copy it and put your env configuration in it.
+Edit the `MAINNET_RPC_URL` value if you want to start fork tests.
+
 ### Test
 
+Using test scripts can configure multiple environments more flexibly, it will automatically configure the environment variables you need.
+Do unit test if you have an env file named sepolia.env.
+
 ```shell
-$ forge test
+$ ./test.sh sepolia
 ```
 
-### Format
+You can use the forge test parameter as input.
 
 ```shell
-$ forge fmt
-```
-
-### Gas Snapshots
-
-```shell
-$ forge snapshot
-```
-
-### Anvil
-
-```shell
-$ anvil
+$ ./test.sh sepolia --match-contract xxx -vv
 ```
 
 ### Deploy
@@ -51,16 +36,20 @@ $ anvil
 $ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
 ```
 
-### Cast
+### Format
 
-```shell
-$ cast <subcommand>
+TermMax use Prettier to format codes. Install the plugin by yarn or npm tools.
+Add configurations to your .vscode/settings.json
+
+```json
+  "files.autoSave": "onFocusChange",
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.formatOnSave": true,
+  "[solidity]": {
+    "editor.defaultFormatter": "NomicFoundation.hardhat-solidity"
+  },
 ```
 
-### Help
-
 ```shell
-$ forge --help
-$ anvil --help
-$ cast --help
+$ yarn
 ```
