@@ -5,6 +5,13 @@ import {ITermMaxMarket} from "../core/ITermMaxMarket.sol";
 import {SwapUnit} from "./ISwapAdapter.sol";
 
 interface ITermMaxRouter {
+    error MarketNotWhitelisted(address market);
+    error GtNotWhitelisted(address gt);
+    error AdapterNotWhitelisted(address adapter);
+    error LtvBiggerThanExpected(uint128 expectedLtx, uint128 actualLtv);
+    error ApproveTokenFailWhenSwap(address token, bytes revertData);
+    error TransferTokenFailWhenSwap(address token, bytes revertData);
+    error SwapFailed(address adapter, bytes revertData);
     event Swap(
         ITermMaxMarket indexed market,
         address indexed assetIn,
@@ -95,7 +102,7 @@ interface ITermMaxRouter {
 
     function setAdapterWhitelist(address adapter, bool isWhitelist) external;
 
-    function assetsWithERC20Colleteral(
+    function assetsWithERC20Collateral(
         ITermMaxMarket market,
         address owner
     )

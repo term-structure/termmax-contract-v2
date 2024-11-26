@@ -9,6 +9,7 @@ import {StateChecker} from "./utils/StateChecker.sol";
 import {SwapUtils} from "./utils/SwapUtils.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
 import {ITermMaxMarket, TermMaxMarket, Constants, TermMaxCurve, IERC20} from "contracts/core/TermMaxMarket.sol";
 import {MockERC20, ERC20} from "contracts/test/MockERC20.sol";
 import {MockPriceFeed} from "contracts/test/MockPriceFeed.sol";
@@ -125,7 +126,12 @@ contract TermMaxRouterTest is Test {
         res.underlying.mint(deployer, amount);
         res.underlying.approve(address(router), amount);
 
-        vm.expectRevert(abi.encodePacked("Market not whitelisted"));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ITermMaxRouter.MarketNotWhitelisted.selector,
+                address(res.market)
+            )
+        );
         router.provideLiquidity(receiver, res.market, amount);
         assert(router.marketWhitelist(address(res.market)) == false);
         vm.stopPrank();
@@ -178,7 +184,7 @@ contract TermMaxRouterTest is Test {
             uint256[6] memory balances,
             address gtAddr,
             uint256[] memory gtIds
-        ) = router.assetsWithERC20Colleteral(res.market, sender);
+        ) = router.assetsWithERC20Collateral(res.market, sender);
 
         assertEq(address(res.ft), address(tokens[0]));
         assertEq(res.ft.balanceOf(sender), balances[0]);
@@ -505,7 +511,11 @@ contract TermMaxRouterTest is Test {
         res.xt.approve(address(router), xtInAmt);
 
         vm.expectRevert(
-            abi.encodePacked("Slippage: ltv bigger than expected ltv")
+            abi.encodeWithSelector(
+                ITermMaxRouter.LtvBiggerThanExpected.selector,
+                uint128(maxLtv),
+                uint128(0.88e8)
+            )
         );
         router.leverageFromXt(
             receiver,
@@ -555,7 +565,12 @@ contract TermMaxRouterTest is Test {
 
         res.xt.approve(address(router), xtInAmt);
 
-        vm.expectRevert(abi.encodePacked("Invalid adapter"));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ITermMaxRouter.AdapterNotWhitelisted.selector,
+                address(adapter)
+            )
+        );
         router.leverageFromXt(
             receiver,
             res.market,
@@ -820,7 +835,18 @@ contract TermMaxRouterTest is Test {
 
         uint256 minUnderlyingAmt = collateralValue;
         vm.expectRevert(
-            abi.encodePacked("Swap: Transfer collateral from owner failed")
+            abi.encodeWithSelector(
+                ITermMaxRouter.TransferTokenFailWhenSwap.selector,
+                address(res.collateral),
+                abi.encodePacked(
+                    abi.encodeWithSelector(
+                        IERC20Errors.ERC20InsufficientAllowance.selector,
+                        address(router),
+                        0,
+                        collateralAmt
+                    )
+                )
+            )
         );
         SwapUnit[] memory units = new SwapUnit[](1);
         units[0] = SwapUnit(
@@ -836,12 +862,23 @@ contract TermMaxRouterTest is Test {
 
     function testExecuteFromInvalidGt() public {
         vm.prank(sender);
-        vm.expectRevert(abi.encodePacked("Market not whitelisted"));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ITermMaxRouter.MarketNotWhitelisted.selector,
+                sender
+            )
+        );
         router.executeOperation(sender, res.underlying, 10e8, "");
 
         FakeGt fg = new FakeGt(sender);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ITermMaxRouter.MarketNotWhitelisted.selector,
+                fg.marketAddr()
+            )
+        );
         vm.prank(address(fg));
-        vm.expectRevert(abi.encodePacked("Market of Gt not whitelisted"));
         router.executeOperation(
             sender,
             res.underlying,
@@ -852,8 +889,14 @@ contract TermMaxRouterTest is Test {
         );
 
         fg = new FakeGt(address(res.market));
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ITermMaxRouter.GtNotWhitelisted.selector,
+                address(fg)
+            )
+        );
         vm.prank(address(fg));
-        vm.expectRevert(abi.encodePacked("Gt not whitelisted"));
         router.executeOperation(
             sender,
             res.underlying,
