@@ -979,25 +979,15 @@ contract TermMaxRouter is
                 inputData,
                 units[i].swapData
             );
-            uint256 tokenInAmtBefore = IERC20(units[i].tokenIn).balanceOf(
-                address(this)
-            );
 
             // delegatecall
             (bool success, bytes memory returnData) = units[i]
                 .adapter
                 .delegatecall(dataToSwap);
-
-            uint256 tokenInAmtAfter = IERC20(units[i].tokenIn).balanceOf(
-                address(this)
-            );
-
             require(
-                tokenInAmtBefore - tokenInAmtAfter == _decodeAmount(inputData),
-                "Swap: Invalid parital swap"
+                success,
+                string(abi.encodePacked("Swap Failed:", returnData))
             );
-
-            require(success, "Swap: Failed");
             inputData = abi.decode(returnData, (bytes));
         }
         outData = inputData;

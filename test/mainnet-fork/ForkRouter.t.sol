@@ -13,7 +13,7 @@ import {MockPriceFeed} from "contracts/test/MockPriceFeed.sol";
 import {ITermMaxFactory, TermMaxFactory, IMintableERC20, IGearingToken, AggregatorV3Interface} from "contracts/core/factory/TermMaxFactory.sol";
 import {MarketConfig} from "contracts/core/storage/TermMaxStorage.sol";
 import {TermMaxRouter, ISwapAdapter, ITermMaxRouter, SwapUnit} from "contracts/router/TermMaxRouter.sol";
-import {UniswapV3Adapter} from "contracts/router/swapAdapters/UniswapV3Adapter.sol";
+import {UniswapV3Adapter, ERC20SwapAdapter} from "contracts/router/swapAdapters/UniswapV3Adapter.sol";
 import {PendleSwapV3Adapter} from "contracts/router/swapAdapters/PendleSwapV3Adapter.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -38,8 +38,6 @@ contract ForkRouterTest is Test {
 
     address pendleRouter = 0x888888888889758F76e7103c6CbF23ABbF58F946;
     address uniswapRouter = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
-    uint24 poolFee = 3000;
-
     string MAINNET_RPC_URL = vm.envString("MAINNET_RPC_URL");
 
     UniswapV3Adapter uniswapAdapter;
@@ -153,7 +151,7 @@ contract ForkRouterTest is Test {
         res.underlying.approve(address(router), tokenAmtIn);
 
         SwapUnit[] memory units = new SwapUnit[](2);
-        poolFee = 100;
+        uint24 poolFee = 100;
         units[0] = SwapUnit(
             address(uniswapAdapter),
             weth9Addr,
@@ -207,16 +205,79 @@ contract ForkRouterTest is Test {
         vm.stopPrank();
     }
 
+    function testLeverageFromXtWhenPartialSwap() public {
+        vm.startPrank(sender);
+        uint128 underlyingAmtIn = 0.004e18;
+        deal(address(res.underlying), sender, underlyingAmtIn);
+        uint128 minTokenOut = 0e8;
+        res.underlying.approve(address(router), underlyingAmtIn);
+
+        uint256 netXtOut = router.swapExactTokenForXt(
+            receiver,
+            res.market,
+            underlyingAmtIn,
+            minTokenOut
+        );
+
+        uint256 xtInAmt = netXtOut;
+
+        uint tokenAmtIn = 10e18;
+        uint256 maxLtv = 0.8e8;
+
+        deal(address(res.underlying), sender, tokenAmtIn);
+        res.underlying.approve(address(router), tokenAmtIn);
+
+        SwapUnit[] memory units = new SwapUnit[](2);
+        uint24 poolFee = 3000;
+        units[0] = SwapUnit(
+            address(uniswapAdapter),
+            weth9Addr,
+            weethAddr,
+            abi.encode(abi.encodePacked(weth9Addr, poolFee, weethAddr), 0)
+        );
+        units[1] = SwapUnit(
+            address(pendleAdapter),
+            weethAddr,
+            ptWeethAddr,
+            abi.encode(ptWeethMarketAddr, 0)
+        );
+
+        res.xt.approve(address(router), xtInAmt);
+
+        vm.expectRevert(
+            abi.encodePacked(
+                "Swap Failed:",
+                abi.encodeWithSelector(
+                    ERC20SwapAdapter.ERC20InvalidPartialSwap.selector,
+                    tokenAmtIn + xtInAmt,
+                    uint(39902378112923432)
+                )
+            )
+        );
+        router.leverageFromXt(
+            receiver,
+            res.market,
+            xtInAmt,
+            tokenAmtIn,
+            maxLtv,
+            units
+        );
+
+        vm.stopPrank();
+    }
+
     function testLeverageFromToken() public {
         vm.startPrank(sender);
-        _loan();
+        uint24 poolFee = 100;
+        _loan(poolFee);
         vm.stopPrank();
     }
 
     function testFlashRepay() public {
         vm.startPrank(sender);
+        uint24 poolFee = 100;
 
-        uint256 gtId = _loan();
+        uint256 gtId = _loan(poolFee);
         (, uint128 debtAmt, , bytes memory collateralData) = res.gt.loanInfo(
             gtId
         );
@@ -230,6 +291,7 @@ contract ForkRouterTest is Test {
             weethAddr,
             abi.encode(ptWeethMarketAddr, 0)
         );
+
         units[1] = SwapUnit(
             address(uniswapAdapter),
             weethAddr,
@@ -279,7 +341,7 @@ contract ForkRouterTest is Test {
         vm.stopPrank();
     }
 
-    function _loan() internal returns (uint256 gtId) {
+    function _loan(uint24 poolFee) internal returns (uint256 gtId) {
         uint128 underlyingAmtInForBuyXt = 1e18;
         uint256 tokenInAmt = 2e18;
         uint128 minXTOut = 0e8;
@@ -294,7 +356,6 @@ contract ForkRouterTest is Test {
             address(router),
             underlyingAmtInForBuyXt + tokenInAmt
         );
-        poolFee = 100;
         SwapUnit[] memory units = new SwapUnit[](2);
         units[0] = SwapUnit(
             address(uniswapAdapter),
