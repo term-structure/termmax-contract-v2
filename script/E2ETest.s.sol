@@ -16,6 +16,7 @@ import {IMintableERC20} from "../contracts/core/tokens/IMintableERC20.sol";
 import {IGearingToken, AggregatorV3Interface} from "../contracts/core/tokens/IGearingToken.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {MockSwapAdapter} from "../contracts/test/MockSwapAdapter.sol";
 
 contract E2ETest is Script {
     // deployer config
@@ -49,7 +50,7 @@ contract E2ETest is Script {
 
     // address config
     address factoryAddr = address(0xC4b455704a13c13Ca9dd76729328E0d5f243F443);
-    address routerAddr = address(0x1d89b277203E827a6ef110Ba17b937fAB9C2f631);
+    address routerAddr = address(0x8Ced9af704F98E9F7dB7Fceb6035Ef366487cc3F);
     address marketAddr = address(0xfC1231Bb12Ef99B6D0d2cAf7314B76D072DbE79f);
     address collateralAddr =
         address(0x44212aDA786190340cd586C41b338c4f66AA90a0); // PT-sUSDe-24OCT2024
@@ -94,10 +95,14 @@ contract E2ETest is Script {
         console.log("LPXT balance:", lpXt.balanceOf(userAddr));
 
         vm.startBroadcast(userPrivateKey);
-        uint256 amount = 1000e6;
-        underlying.mint(userAddr, amount);
-        underlying.approve(routerAddr, amount);
-        router.provideLiquidity(userAddr, market, amount);
+        // uint256 amount = 1000e6;
+        // underlying.mint(userAddr, amount);
+        // underlying.approve(routerAddr, amount);
+        // router.provideLiquidity(userAddr, market, amount);
+        address pool = vm.randomAddress();
+        MockSwapAdapter swapAdapter = new MockSwapAdapter(pool);
+        router.setAdapterWhitelist(address(swapAdapter), true);
+        console.log("Swap adapter address:", address(swapAdapter));
         vm.stopBroadcast();
 
         console.log("\nAfter broadcast");

@@ -2,14 +2,14 @@
 pragma solidity ^0.8.27;
 
 import {IERC20Metadata, IERC20} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import {IERC721Enumerable} from "@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 
 /**
  * @title TermMax Gearing token interface
  * @author Term Structure Labs
  */
-interface IGearingToken is IERC721 {
+interface IGearingToken is IERC721Enumerable {
     /// @notice Data of Gearing Token's configuturation
     struct GtConfig {
         /// @notice The market's address
