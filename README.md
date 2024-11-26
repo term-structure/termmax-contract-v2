@@ -44,6 +44,7 @@ $ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --pri
 
 ### Format
 
+Install `esbenp.prettier-vscode` plugin for VsCode.
 TermMax use Prettier to format codes. Install the plugin by yarn or npm tools.
 Add configurations to your .vscode/settings.json
 
