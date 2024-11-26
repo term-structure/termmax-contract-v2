@@ -33,7 +33,8 @@ library TermMaxCurve {
         if (lpTotalSupply == 0) {
             lpOutAmt = tokenIn;
         } else {
-            // lpOutAmt/lpTotalSupply = tokenIn/tokenReserve
+            // Ref docs: https://docs.ts.finance/termmax/technical-details/amm-model/pool-operations/liquidity-operations-l#lo1-provide-liquidity
+            // Ref: Eq.L-3,L-4 in the AMM Model section of docs
             lpOutAmt = (tokenIn * lpTotalSupply) / tokenReserve;
         }
     }
@@ -229,7 +230,6 @@ library TermMaxCurve {
         uint256 lpAmt,
         uint256 totalReward
     ) internal pure returns (uint256 reward) {
-        //! to be checked
         uint t = (lpSupply - totalReward) *
             (2 * maturity - openMarketTime - currentTime);
         reward = ((totalReward * lpAmt) * (currentTime - openMarketTime)) / t;
