@@ -131,7 +131,7 @@ contract TermMaxRouter is
         gtAddr = address(gt);
         bytes memory idsData;
         uint length;
-        for (uint i = 0; i < IERC721Enumerable(gtAddr).totalSupply(); ++i) {
+        for (uint i = 0; i < IERC721Enumerable(gtAddr).balanceOf(owner); ++i) {
             uint id = IERC721Enumerable(gtAddr).tokenOfOwnerByIndex(owner, i);
             if (id != 0) {
                 idsData = abi.encodePacked(idsData, id);
