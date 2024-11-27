@@ -129,19 +129,11 @@ contract TermMaxRouter is
             balances[i] = tokens[i].balanceOf(owner);
         }
         gtAddr = address(gt);
-        bytes memory idsData;
-        uint length;
-        for (uint i = 0; i < IERC721Enumerable(gtAddr).balanceOf(owner); ++i) {
-            uint id = IERC721Enumerable(gtAddr).tokenOfOwnerByIndex(owner, i);
-            if (id != 0) {
-                idsData = abi.encodePacked(idsData, id);
-                length++;
-            } else {
-                break;
-            }
+        uint balance = IERC721Enumerable(gtAddr).balanceOf(owner);
+        gtIds = new uint256[](balance);
+        for (uint i = 0; i < balance; ++i) {
+            gtIds[i] = IERC721Enumerable(gtAddr).tokenOfOwnerByIndex(owner, i);
         }
-        idsData = abi.encodePacked(abi.encode(32), length, idsData);
-        gtIds = abi.decode(idsData, (uint256[]));
     }
 
     /** Leverage Market */
