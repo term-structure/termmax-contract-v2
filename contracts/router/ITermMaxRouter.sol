@@ -4,19 +4,40 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ITermMaxMarket} from "../core/ITermMaxMarket.sol";
 import {SwapUnit} from "./ISwapAdapter.sol";
 
+/**
+ * @title TermMax Router interface
+ * @author Term Structure Labs
+ */
 interface ITermMaxRouter {
+    /// @notice Error for calling the market is not whitelisted
     error MarketNotWhitelisted(address market);
+    /// @notice Error for calling the gt is not whitelisted
     error GtNotWhitelisted(address gt);
+    /// @notice Error for calling the adapter is not whitelisted
     error AdapterNotWhitelisted(address adapter);
-    error LtvBiggerThanExpected(uint128 expectedLtx, uint128 actualLtv);
+    /// @notice Error for the final loan to collateral is bigger than expected
+    error LtvBiggerThanExpected(uint128 expectedLtv, uint128 actualLtv);
+    /// @notice Error for approving token failed when swapping
     error ApproveTokenFailWhenSwap(address token, bytes revertData);
+    /// @notice Error for transfering token failed when swapping
     error TransferTokenFailWhenSwap(address token, bytes revertData);
+    /// @notice Error for failed swapping
     error SwapFailed(address adapter, bytes revertData);
+    /// @notice Error for the token output is less than expected
     error InsufficientTokenOut(
         address token,
         uint256 expectedTokenOut,
         uint256 actualTokenOut
     );
+    /// @notice Emitted when swapping tokens
+    /// @param market The market's address
+    /// @param assetIn The token to swap
+    /// @param assetOut The token want to receive
+    /// @param caller Who provide input token
+    /// @param receiver Who receive output token
+    /// @param inAmt Input amount
+    /// @param outAmt Final output amount
+    /// @param minOutAmt Expected output amount
     event Swap(
         ITermMaxMarket indexed market,
         address indexed assetIn,
@@ -28,6 +49,14 @@ interface ITermMaxRouter {
         uint256 minOutAmt
     );
 
+    /// @notice Emitted when swapping tokens
+    /// @param market The market's address
+    /// @param assetIn The token to provide liquidity
+    /// @param caller Who provide input token
+    /// @param receiver Who receive lp tokens
+    /// @param underlyingInAmt Underlying token input amount
+    /// @param lpFtOutAmt LpFT token output amount
+    /// @param lpXtOutAmt LpXT token output amount
     event AddLiquidity(
         ITermMaxMarket indexed market,
         address indexed assetIn,
@@ -38,6 +67,14 @@ interface ITermMaxRouter {
         uint256 lpXtOutAmt
     );
 
+    /// @notice Emitted when withdrawing FT and XT token by lp tokens
+    /// @param market The market's address
+    /// @param caller Who provide lp tokens
+    /// @param receiver Who receive FT and XT token
+    /// @param lpFtInAmt LpFT token input amount
+    /// @param lpXtInAmt LpXT token input amount
+    /// @param ftOutAmt FT token output amount
+    /// @param xtOutAmt XT token output amount
     event WithdrawLiquidityToXtFt(
         ITermMaxMarket indexed market,
         address caller,
@@ -48,6 +85,15 @@ interface ITermMaxRouter {
         uint256 xtOutAmt
     );
 
+    /// @notice Emitted when withdrawing target token by lp tokens
+    /// @param market The market's address
+    /// @param assetOut The token send to receiver
+    /// @param caller Who provide lp tokens
+    /// @param receiver Who receive target token
+    /// @param lpFtInAmt LpFT token input amount
+    /// @param lpXtInAmt LpXT token input amount
+    /// @param tokenOutAmt Final target token output
+    /// @param minTokenOutAmt Expected output amount
     event WithdrawLiquidtyToToken(
         ITermMaxMarket indexed market,
         address assetOut,
