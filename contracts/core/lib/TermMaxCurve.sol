@@ -33,7 +33,8 @@ library TermMaxCurve {
         if (lpTotalSupply == 0) {
             lpOutAmt = tokenIn;
         } else {
-            // lpOutAmt/lpTotalSupply = tokenIn/tokenReserve
+            // Ref docs: https://docs.ts.finance/termmax/technical-details/amm-model/pool-operations/liquidity-operations-l#lo1-provide-liquidity
+            // Ref: Eq.L-3,L-4 in the AMM Model section of docs
             lpOutAmt = (tokenIn * lpTotalSupply) / tokenReserve;
         }
     }
@@ -65,40 +66,43 @@ library TermMaxCurve {
         tokenAmt = (lpAmt * tokenReserve) / lpTotalSupply;
     }
 
-    /// @notice Calculte the FT token reserve plus alpha
-    /// @param lsf The liquidity scaling factor
+    /// @notice Calculte the virtual FT token reserve
+    /// @param lsf The liquidity scaling factor (variable name for gamma in the formula)
     /// @param ftReserve The FT token reserve of the market
-    /// @return ftPlusAlpha The FT token reserve plus alpha
-    function calcFtPlusAlpha(
+    /// @return virtualFtReserve The virtual FT token reserve
+    function calcVirtualFtReserve(
         uint32 lsf,
         uint256 ftReserve
-    ) internal pure returns (uint256 ftPlusAlpha) {
-        ftPlusAlpha = (ftReserve * Constants.DECIMAL_BASE) / lsf;
-        if (ftPlusAlpha == 0) {
+    ) internal pure returns (uint256 virtualFtReserve) {
+        virtualFtReserve = (ftReserve * Constants.DECIMAL_BASE) / lsf;
+        if (virtualFtReserve == 0) {
             revert LiquidityIsZeroAfterTransaction();
         }
     }
 
-    /// @notice Calculte the XT token reserve plus beta
+    /// @notice Calculte the virtual XT token reserve
     /// @param lsf The liquidity scaling factor
-    /// @param ltv The initial ltv of the market
+    /// @param ltv The initial ltv of the market (variable name for gamma in the formula)
     /// @param daysToMaturity The days until maturity
     /// @param apr The annual interest rate of the market
     /// @param ftReserve The FT token reserve of the market
-    /// @return xtPlusBeta The XT token reserve plus beta
-    function calcXtPlusBeta(
+    /// @return virtualXtReserve The virtual XT token reserve
+    function calcVirtualXtReserve(
         uint32 lsf,
         uint32 ltv,
         uint256 daysToMaturity,
         int64 apr,
         uint256 ftReserve
-    ) internal pure returns (uint256 xtPlusBeta) {
-        // xtReserve + beta = (ftReserve + alpha)/(1 + apr*dayToMaturity/365 - lvt)
-        uint ftPlusAlpha = calcFtPlusAlpha(lsf, ftReserve);
-        // Use Constants.DECIMAL_BASE to solve the problem of precision loss
+    ) internal pure returns (uint256 virtualXtReserve) {
+        // Ref docs: https://docs.ts.finance/termmax/technical-details/amm-model/definition-d#price
+        // Ref: Eq. D-4 in the AMM Model section of docs
+        // virtualXtReserve = virtualFtReserve / (1 + apr * dayToMaturity / 365 - lvt)
+        //                  = virtualFtReserve * 365 / (365 + apr * dayToMaturity - ltv * 365)
+        uint virtualFtReserve = calcVirtualFtReserve(lsf, ftReserve);
+        // Use Constants.DECIMAL_BASE to prevent precision loss
         if (apr >= 0) {
-            xtPlusBeta =
-                (ftPlusAlpha *
+            virtualXtReserve =
+                (virtualFtReserve *
                     Constants.DECIMAL_BASE *
                     Constants.DAYS_IN_YEAR) /
                 (Constants.DECIMAL_BASE *
@@ -108,8 +112,8 @@ library TermMaxCurve {
                     ltv *
                     Constants.DAYS_IN_YEAR);
         } else {
-            xtPlusBeta =
-                (ftPlusAlpha *
+            virtualXtReserve =
+                (virtualFtReserve *
                     Constants.DECIMAL_BASE *
                     Constants.DAYS_IN_YEAR) /
                 (Constants.DECIMAL_BASE *
@@ -119,7 +123,7 @@ library TermMaxCurve {
                     ltv *
                     Constants.DAYS_IN_YEAR);
         }
-        if (xtPlusBeta == 0) {
+        if (virtualXtReserve == 0) {
             revert LiquidityIsZeroAfterTransaction();
         }
     }
@@ -127,24 +131,32 @@ library TermMaxCurve {
     /// @notice Calculte the annual interest rate through curve parameters
     /// @param ltv The initial ltv of the market
     /// @param daysToMaturity The days until maturity
-    /// @param ftPlusAlpha The FT token reserve plus alpha
-    /// @param xtPlusBeta The XT token reserve plus beta
+    /// @param virtualFtReserve The virtual FT token reserve
+    /// @param virtualXtReserve The virtual XT token reserve
     /// @return apr The annual interest rate of the market
     function calcApr(
         uint32 ltv,
         uint256 daysToMaturity,
-        uint256 ftPlusAlpha,
-        uint256 xtPlusBeta
+        uint256 virtualFtReserve,
+        uint256 virtualXtReserve
     ) internal pure returns (int64) {
-        uint l = Constants.DECIMAL_BASE *
+        // Ref docs: https://docs.ts.finance/termmax/technical-details/amm-model/definition-d#apr-annual-percentage-rate
+        // Ref: Eq. D-6 in the AMM Model section of docs
+        uint leftNumerator = Constants.DECIMAL_BASE *
             Constants.DAYS_IN_YEAR *
-            (ftPlusAlpha * Constants.DECIMAL_BASE + xtPlusBeta * ltv);
-        uint r = xtPlusBeta *
+            (virtualFtReserve *
+                Constants.DECIMAL_BASE +
+                virtualXtReserve *
+                ltv);
+        uint rightNumerator = virtualXtReserve *
             Constants.DAYS_IN_YEAR *
             Constants.DECIMAL_BASE_SQ;
-        int numerator = l > r ? int(l - r) : -int(r - l);
-        int denominator = (xtPlusBeta * daysToMaturity * Constants.DECIMAL_BASE)
-            .toInt256();
+        int numerator = leftNumerator > rightNumerator
+            ? int(leftNumerator - rightNumerator)
+            : -int(rightNumerator - leftNumerator);
+        int denominator = (virtualXtReserve *
+            daysToMaturity *
+            Constants.DECIMAL_BASE).toInt256();
         int apr = numerator / denominator;
         if (apr > INT_64_MAX || apr < INT_64_MIN) {
             revert LiquidityIsZeroAfterTransaction();
@@ -152,16 +164,16 @@ library TermMaxCurve {
         return (numerator / denominator).toInt64();
     }
 
-    /// @notice Calculate how much handling fee will be charged for this transaction
+    /// @notice Calculate how much fee will be charged for this transaction
     /// @param ftReserve The FT token reserve of the market
     /// @param xtReserve The XT token reserve of the market
     /// @param newFtReserve The FT token reserve of the market after transaction
     /// @param newXtReserve The XT token reserve of the market after transaction
     /// @param feeRatio Transaction fee ratio
-    ///                 There are different fee ratios for lending and borrowing
+    ///                 There are different fee ratios for lending (buy FT/sell XT) and borrowing (buy XT/sell FT)
     /// @param ltv The initial ltv of the market
     /// @return feeAmt Transaction fee amount
-    function calculateFee(
+    function calculateTxFee(
         uint256 ftReserve,
         uint256 xtReserve,
         uint256 newFtReserve,
@@ -175,7 +187,7 @@ library TermMaxCurve {
         uint deltaXt = (newXtReserve > xtReserve)
             ? (newXtReserve - xtReserve)
             : (xtReserve - newXtReserve);
-        feeAmt = _calculateFeeInternal(deltaFt, deltaXt, feeRatio, ltv);
+        feeAmt = _calculateTxFeeInternal(deltaFt, deltaXt, feeRatio, ltv);
     }
 
     /// @notice Internal helper function for calculating fees
@@ -184,12 +196,14 @@ library TermMaxCurve {
     /// @param feeRatio Transaction fee ratio
     /// @param ltv The initial ltv of the market
     /// @return feeAmt Transaction fee amount
-    function _calculateFeeInternal(
+    function _calculateTxFeeInternal(
         uint256 deltaFt,
         uint256 deltaXt,
         uint32 feeRatio,
         uint32 ltv
     ) private pure returns (uint256 feeAmt) {
+        // Ref docs: https://docs.ts.finance/termmax/technical-details/amm-model/pool-operations/fee-operations-f
+        // Ref: Eq.F-1 in the AMM Model section of docs
         uint l = deltaFt * Constants.DECIMAL_BASE + deltaXt * ltv;
         uint r = deltaXt * Constants.DECIMAL_BASE;
 
@@ -206,8 +220,8 @@ library TermMaxCurve {
     /// @param maturity The unix time of maturity date
     /// @param lpSupply The total supply of this lp token
     /// @param lpAmt The amount of withdraw lp
-    /// @param totalReward The amount of bonus lp held in the market
-    /// @return reward Number of lp's awarded
+    /// @param totalReward The amount of accumulated lp token reward of the market
+    /// @return reward Number of lp token awarded
     function calculateLpReward(
         uint256 currentTime,
         uint256 openMarketTime,
@@ -235,33 +249,42 @@ library TermMaxCurve {
         pure
         returns (uint256 newFtReserve, uint256 newXtReserve, int64 newApr)
     {
-        uint ftPlusAlpha = calcFtPlusAlpha(config.lsf, params.ftReserve);
-        uint xtPlusBeta = calcXtPlusBeta(
+        // Calculate the virtual FT reserves before the transaction
+        uint virtualFtReserve = calcVirtualFtReserve(
+            config.lsf,
+            params.ftReserve
+        );
+        // Calculate the virtual XT reserves before the transaction
+        uint virtualXtReserve = calcVirtualXtReserve(
             config.lsf,
             config.initialLtv,
             params.daysToMaturity,
             config.apr,
             params.ftReserve
         );
-        uint negB = ftPlusAlpha +
-            (xtPlusBeta * config.initialLtv) /
+        // Ref docs: https://docs.ts.finance/termmax/technical-details/amm-model/pool-operations/swap-operations-s#sp4-sell-ft-for-underlying
+        // Ref: Eq.S-16 in the AMM Model section of docs
+        uint negB = virtualFtReserve +
+            (virtualXtReserve * config.initialLtv) /
             Constants.DECIMAL_BASE +
             params.amount;
-        uint ac = ((xtPlusBeta * params.amount) * config.initialLtv) /
+        uint ac = ((virtualXtReserve * params.amount) * config.initialLtv) /
             Constants.DECIMAL_BASE;
+        // Ref: Eq.S-13 in the AMM Model section of docs
         uint deltaXt = ((negB - (negB * negB - 4 * ac).sqrt()) *
             Constants.DECIMAL_BASE) / (config.initialLtv * 2);
+        // Ref: Eq.S-14 in the AMM Model section of docs
         uint deltaFt = params.amount -
             (deltaXt * config.initialLtv) /
             Constants.DECIMAL_BASE;
-        if (xtPlusBeta <= deltaXt || deltaXt >= params.xtReserve) {
+        if (virtualXtReserve <= deltaXt || deltaXt >= params.xtReserve) {
             revert LiquidityIsZeroAfterTransaction();
         }
         newApr = calcApr(
             config.initialLtv,
             params.daysToMaturity,
-            ftPlusAlpha + deltaFt,
-            xtPlusBeta - deltaXt
+            virtualFtReserve + deltaFt,
+            virtualXtReserve - deltaXt
         );
         newFtReserve = params.ftReserve + deltaFt;
         newXtReserve = params.xtReserve - deltaXt;
@@ -281,35 +304,42 @@ library TermMaxCurve {
         pure
         returns (uint256 newFtReserve, uint256 newXtReserve, int64 newApr)
     {
-        uint ftPlusAlpha = calcFtPlusAlpha(config.lsf, params.ftReserve);
-
-        uint xtPlusBeta = calcXtPlusBeta(
+        // Calculate the virtual FT reserves before the transaction
+        uint virtualFtReserve = calcVirtualFtReserve(
+            config.lsf,
+            params.ftReserve
+        );
+        // Calculate the virtual XT reserves before the transaction
+        uint virtualXtReserve = calcVirtualXtReserve(
             config.lsf,
             config.initialLtv,
             params.daysToMaturity,
             config.apr,
             params.ftReserve
         );
-        uint b = ftPlusAlpha +
-            (xtPlusBeta * config.initialLtv) /
+        // Ref docs: https://docs.ts.finance/termmax/technical-details/amm-model/pool-operations/swap-operations-s#sp8-sell-negative-ft-for-negative-underlying
+        // Ref: Eq.S-32 in the AMM Model section of docs
+        uint b = virtualFtReserve +
+            (virtualXtReserve * config.initialLtv) /
             Constants.DECIMAL_BASE -
             params.amount;
-        uint negAc = (xtPlusBeta * params.amount * config.initialLtv) /
+        uint negAc = (virtualXtReserve * params.amount * config.initialLtv) /
             Constants.DECIMAL_BASE;
-
+        // Ref: Eq.S-29 in the AMM Model section of docs
         uint deltaXt = ((((b * b + 4 * negAc)).sqrt() - b) *
             Constants.DECIMAL_BASE) / (config.initialLtv * 2);
-        uint deltaFt = ftPlusAlpha -
-            (ftPlusAlpha * xtPlusBeta) /
-            (xtPlusBeta + deltaXt);
-        if (ftPlusAlpha <= deltaFt || deltaFt >= params.ftReserve) {
+        // Ref: Eq.S-30 in the AMM Model section of docs
+        uint deltaFt = virtualFtReserve -
+            (virtualFtReserve * virtualXtReserve) /
+            (virtualXtReserve + deltaXt);
+        if (virtualFtReserve <= deltaFt || deltaFt >= params.ftReserve) {
             revert LiquidityIsZeroAfterTransaction();
         }
         newApr = calcApr(
             config.initialLtv,
             params.daysToMaturity,
-            ftPlusAlpha - deltaFt,
-            xtPlusBeta + deltaXt
+            virtualFtReserve - deltaFt,
+            virtualXtReserve + deltaXt
         );
         newFtReserve = params.ftReserve - deltaFt;
         newXtReserve = params.xtReserve + deltaXt;
@@ -329,8 +359,13 @@ library TermMaxCurve {
         pure
         returns (uint256 newFtReserve, uint256 newXtReserve, int64 newApr)
     {
-        uint ftPlusAlpha = calcFtPlusAlpha(config.lsf, params.ftReserve);
-        uint xtPlusBeta = calcXtPlusBeta(
+        // Calculate the virtual FT reserves before the transaction
+        uint virtualFtReserve = calcVirtualFtReserve(
+            config.lsf,
+            params.ftReserve
+        );
+        // Calculate the virtual XT reserves before the transaction
+        uint virtualXtReserve = calcVirtualXtReserve(
             config.lsf,
             config.initialLtv,
             params.daysToMaturity,
@@ -339,30 +374,32 @@ library TermMaxCurve {
         );
         uint deltaXt;
         uint deltaFt;
+        // Ref docs: https://docs.ts.finance/termmax/technical-details/amm-model/pool-operations/swap-operations-s#sp3-sell-xt-for-underlying
         {
-            // borrow stack space newFtReserve as b
-            uint b = ftPlusAlpha +
-                ((xtPlusBeta - params.amount) * config.initialLtv) /
+            // Ref: Eq.S-12 in the AMM Model section of docs
+            uint b = virtualFtReserve +
+                ((virtualXtReserve - params.amount) * config.initialLtv) /
                 Constants.DECIMAL_BASE;
-            // borrow stack space newXtReserve as ac
-            uint negAc = ((((params.amount * xtPlusBeta) * config.initialLtv) /
-                Constants.DECIMAL_BASE) * config.initialLtv) /
-                Constants.DECIMAL_BASE;
+            uint negAc = ((((params.amount * virtualXtReserve) *
+                config.initialLtv) / Constants.DECIMAL_BASE) *
+                config.initialLtv) / Constants.DECIMAL_BASE;
+            // Ref: Eq.S-9 in the AMM Model section of docs
             deltaXt =
                 (((b * b + 4 * negAc).sqrt() - b) * Constants.DECIMAL_BASE) /
                 (config.initialLtv * 2);
+            //Ref: Eq.S-10 in the AMM Model section of docs
             deltaFt =
                 ((params.amount - deltaXt) * config.initialLtv) /
                 Constants.DECIMAL_BASE;
         }
-        if (ftPlusAlpha <= deltaFt || deltaFt >= params.ftReserve) {
+        if (virtualFtReserve <= deltaFt || deltaFt >= params.ftReserve) {
             revert LiquidityIsZeroAfterTransaction();
         }
         newApr = calcApr(
             config.initialLtv,
             params.daysToMaturity,
-            ftPlusAlpha - deltaFt,
-            xtPlusBeta + deltaXt
+            virtualFtReserve - deltaFt,
+            virtualXtReserve + deltaXt
         );
         newFtReserve = params.ftReserve - deltaFt;
         newXtReserve = params.xtReserve + deltaXt;
@@ -382,35 +419,42 @@ library TermMaxCurve {
         pure
         returns (uint256 newFtReserve, uint256 newXtReserve, int64 newApr)
     {
-        uint ftPlusAlpha = calcFtPlusAlpha(config.lsf, params.ftReserve);
-        uint xtPlusBeta = calcXtPlusBeta(
+        // Calculate the virtual FT reserves before the transaction
+        uint virtualFtReserve = calcVirtualFtReserve(
+            config.lsf,
+            params.ftReserve
+        );
+        // Calculate the virtual XT reserves before the transaction
+        uint virtualXtReserve = calcVirtualXtReserve(
             config.lsf,
             config.initialLtv,
             params.daysToMaturity,
             config.apr,
             params.ftReserve
         );
-        uint negB = ftPlusAlpha +
-            ((xtPlusBeta + params.amount) * config.initialLtv) /
+        // Ref docs: https://docs.ts.finance/termmax/technical-details/amm-model/pool-operations/swap-operations-s#sp7-sell-negative-xt-for-negative-underlying
+        // Ref: Eq.S-28 in the AMM Model section of docs
+        uint negB = virtualFtReserve +
+            ((virtualXtReserve + params.amount) * config.initialLtv) /
             Constants.DECIMAL_BASE;
-
-        uint ac = ((((params.amount * xtPlusBeta) * config.initialLtv) /
+        uint ac = ((((params.amount * virtualXtReserve) * config.initialLtv) /
             Constants.DECIMAL_BASE) * config.initialLtv) /
             Constants.DECIMAL_BASE;
-
+        // Ref: Eq.S-25 in the AMM Model section of docs
         uint deltaXt = ((negB - (negB * negB - 4 * ac).sqrt()) *
             Constants.DECIMAL_BASE) / (config.initialLtv * 2);
-        uint deltaFt = (ftPlusAlpha * xtPlusBeta) /
-            (xtPlusBeta - deltaXt) -
-            ftPlusAlpha;
-        if (xtPlusBeta <= deltaXt || deltaXt >= params.xtReserve) {
+        // Ref: Eq.S-26 in the AMM Model section of docs
+        uint deltaFt = (virtualFtReserve * virtualXtReserve) /
+            (virtualXtReserve - deltaXt) -
+            virtualFtReserve;
+        if (virtualXtReserve <= deltaXt || deltaXt >= params.xtReserve) {
             revert LiquidityIsZeroAfterTransaction();
         }
         newApr = calcApr(
             config.initialLtv,
             params.daysToMaturity,
-            ftPlusAlpha + deltaFt,
-            xtPlusBeta - deltaXt
+            virtualFtReserve + deltaFt,
+            virtualXtReserve - deltaXt
         );
         newFtReserve = params.ftReserve + deltaFt;
         newXtReserve = params.xtReserve - deltaXt;
@@ -430,29 +474,37 @@ library TermMaxCurve {
         pure
         returns (uint256 newFtReserve, uint256 newXtReserve, int64 newApr)
     {
-        uint ftPlusAlpha = calcFtPlusAlpha(config.lsf, params.ftReserve);
-        uint xtPlusBeta = calcXtPlusBeta(
+        // Calculate the virtual FT reserves before the transaction
+        uint virtualFtReserve = calcVirtualFtReserve(
+            config.lsf,
+            params.ftReserve
+        );
+        // Calculate the virtual XT reserves before the transaction
+        uint virtualXtReserve = calcVirtualXtReserve(
             config.lsf,
             config.initialLtv,
             params.daysToMaturity,
             config.apr,
             params.ftReserve
         );
-        uint deltaXt = params.amount;
-        uint deltaFt = ftPlusAlpha -
-            (ftPlusAlpha * xtPlusBeta) /
-            (xtPlusBeta + deltaXt);
-        if (ftPlusAlpha <= deltaFt || deltaFt >= params.ftReserve) {
+        // Ref docs: https://docs.ts.finance/termmax/technical-details/amm-model/pool-operations/swap-operations-s#sp2-buy-ft-with-underlying
+        // Ref: Eq.S-6 in the AMM Model section of docs
+        uint sigmaXt = params.amount;
+        // Ref: Eq.S-7 in the AMM Model section of docs
+        uint deltaFt = virtualFtReserve -
+            (virtualFtReserve * virtualXtReserve) /
+            (virtualXtReserve + sigmaXt);
+        if (virtualFtReserve <= deltaFt || deltaFt >= params.ftReserve) {
             revert LiquidityIsZeroAfterTransaction();
         }
         newApr = calcApr(
             config.initialLtv,
             params.daysToMaturity,
-            ftPlusAlpha - deltaFt,
-            xtPlusBeta + deltaXt
+            virtualFtReserve - deltaFt,
+            virtualXtReserve + sigmaXt
         );
         newFtReserve = params.ftReserve - deltaFt;
-        newXtReserve = params.xtReserve + deltaXt;
+        newXtReserve = params.xtReserve + sigmaXt;
     }
 
     /// @notice Calculate the changes in market reserves and apr after buying negative FT tokens
@@ -469,29 +521,37 @@ library TermMaxCurve {
         pure
         returns (uint256 newFtReserve, uint256 newXtReserve, int64 newApr)
     {
-        uint ftPlusAlpha = calcFtPlusAlpha(config.lsf, params.ftReserve);
-        uint xtPlusBeta = calcXtPlusBeta(
+        // Calculate the virtual FT reserves before the transaction
+        uint virtualFtReserve = calcVirtualFtReserve(
+            config.lsf,
+            params.ftReserve
+        );
+        // Calculate the virtual XT reserves before the transaction
+        uint virtualXtReserve = calcVirtualXtReserve(
             config.lsf,
             config.initialLtv,
             params.daysToMaturity,
             config.apr,
             params.ftReserve
         );
-        uint deltaXt = params.amount;
-        uint deltaFt = (ftPlusAlpha * xtPlusBeta) /
-            (xtPlusBeta - deltaXt) -
-            ftPlusAlpha;
-        if (xtPlusBeta <= deltaXt || deltaXt >= params.xtReserve) {
+        // Ref docs: https://docs.ts.finance/termmax/technical-details/amm-model/pool-operations/swap-operations-s#sp6-buy-negative-ft-with-negative-underlying
+        // Ref: Eq.S-22 in the AMM Model section of docs
+        uint sigmaXt = params.amount;
+        // Ref: Eq.S-23 in the AMM Model section of docs
+        uint deltaFt = (virtualFtReserve * virtualXtReserve) /
+            (virtualXtReserve - sigmaXt) -
+            virtualFtReserve;
+        if (virtualXtReserve <= sigmaXt || sigmaXt >= params.xtReserve) {
             revert LiquidityIsZeroAfterTransaction();
         }
         newApr = calcApr(
             config.initialLtv,
             params.daysToMaturity,
-            ftPlusAlpha + deltaFt,
-            xtPlusBeta - deltaXt
+            virtualFtReserve + deltaFt,
+            virtualXtReserve - sigmaXt
         );
         newFtReserve = params.ftReserve + deltaFt;
-        newXtReserve = params.xtReserve - deltaXt;
+        newXtReserve = params.xtReserve - sigmaXt;
     }
 
     /// @notice Calculate the changes in market reserves and apr after buying XT tokens
@@ -508,29 +568,39 @@ library TermMaxCurve {
         pure
         returns (uint256 newFtReserve, uint256 newXtReserve, int64 newApr)
     {
-        uint ftPlusAlpha = calcFtPlusAlpha(config.lsf, params.ftReserve);
-        uint xtPlusBeta = calcXtPlusBeta(
+        // Calculate the virtual FT reserves before the transaction
+        uint virtualFtReserve = calcVirtualFtReserve(
+            config.lsf,
+            params.ftReserve
+        );
+        // Calculate the virtual XT reserves before the transaction
+        uint virtualXtReserve = calcVirtualXtReserve(
             config.lsf,
             config.initialLtv,
             params.daysToMaturity,
             config.apr,
             params.ftReserve
         );
-        uint deltaFt = (params.amount * config.initialLtv) /
+        // Ref docs: https://docs.ts.finance/termmax/technical-details/amm-model/pool-operations/swap-operations-s#sp1-buy-xt-with-underlying
+        // Ref: Eq.S-1 in the AMM Model section of docs
+        uint sigmaFt = (params.amount * config.initialLtv) /
             Constants.DECIMAL_BASE;
-        uint deltaXt = xtPlusBeta -
-            (xtPlusBeta * ftPlusAlpha) /
-            (ftPlusAlpha + deltaFt);
-        if (xtPlusBeta <= deltaXt || deltaXt >= params.xtReserve) {
+        // Ref: Eq.S-3 in the AMM Model section of docs
+        uint deltaXt = virtualXtReserve -
+            (virtualXtReserve * virtualFtReserve) /
+            (virtualFtReserve + sigmaFt);
+        if (virtualXtReserve <= deltaXt || deltaXt >= params.xtReserve) {
             revert LiquidityIsZeroAfterTransaction();
         }
+        // Ref docs: https://docs.ts.finance/termmax/technical-details/amm-model/definition-d#apr-annual-percentage-rate
+        // Ref: Eq.D-5 in the AMM Model section of docs
         newApr = calcApr(
             config.initialLtv,
             params.daysToMaturity,
-            ftPlusAlpha + deltaFt,
-            xtPlusBeta - deltaXt
+            virtualFtReserve + sigmaFt,
+            virtualXtReserve - deltaXt
         );
-        newFtReserve = params.ftReserve + deltaFt;
+        newFtReserve = params.ftReserve + sigmaFt;
         newXtReserve = params.xtReserve - deltaXt;
     }
 
@@ -548,30 +618,38 @@ library TermMaxCurve {
         pure
         returns (uint256 newFtReserve, uint256 newXtReserve, int64 newApr)
     {
-        uint ftPlusAlpha = calcFtPlusAlpha(config.lsf, params.ftReserve);
-        uint xtPlusBeta = calcXtPlusBeta(
+        // Calculate the virtual FT reserves before the transaction
+        uint virtualFtReserve = calcVirtualFtReserve(
+            config.lsf,
+            params.ftReserve
+        );
+        // Calculate the virtual XT reserves before the transaction
+        uint virtualXtReserve = calcVirtualXtReserve(
             config.lsf,
             config.initialLtv,
             params.daysToMaturity,
             config.apr,
             params.ftReserve
         );
-        uint deltaFt = (params.amount * config.initialLtv) /
+        // Ref docs: https://docs.ts.finance/termmax/technical-details/amm-model/pool-operations/swap-operations-s#sp5-buy-negative-xt-with-negative-underlying
+        // Ref: Eq.S-17 in the AMM Model section of docs
+        uint sigmaFt = (params.amount * config.initialLtv) /
             Constants.DECIMAL_BASE;
-        uint deltaXt = (xtPlusBeta * ftPlusAlpha) /
-            (ftPlusAlpha - deltaFt) -
-            xtPlusBeta;
-        if (ftPlusAlpha <= deltaFt || deltaFt >= params.ftReserve) {
+        // Ref: Eq.S-19 in the AMM Model section of docs
+        uint deltaXt = (virtualXtReserve * virtualFtReserve) /
+            (virtualFtReserve - sigmaFt) -
+            virtualXtReserve;
+        if (virtualFtReserve <= sigmaFt || sigmaFt >= params.ftReserve) {
             revert LiquidityIsZeroAfterTransaction();
         }
         newApr = calcApr(
             config.initialLtv,
             params.daysToMaturity,
-            ftPlusAlpha - deltaFt,
-            xtPlusBeta + deltaXt
+            virtualFtReserve - sigmaFt,
+            virtualXtReserve + deltaXt
         );
 
-        newFtReserve = params.ftReserve - deltaFt;
+        newFtReserve = params.ftReserve - sigmaFt;
         newXtReserve = params.xtReserve + deltaXt;
     }
 }

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
+
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
@@ -400,7 +401,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
                 mConfig
             );
             // calculate fee
-            feeAmt = TermMaxCurve.calculateFee(
+            feeAmt = TermMaxCurve.calculateTxFee(
                 ftReserve,
                 xtReserve,
                 newFtReserve,
@@ -430,7 +431,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
                 mConfig
             );
             // calculate fee
-            feeAmt = TermMaxCurve.calculateFee(
+            feeAmt = TermMaxCurve.calculateTxFee(
                 ftReserve,
                 xtReserve,
                 newFtReserve,
@@ -549,7 +550,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
             );
             netOut = xtReserve - newXtReserve;
             // calculate fee
-            feeAmt = TermMaxCurve.calculateFee(
+            feeAmt = TermMaxCurve.calculateTxFee(
                 ftReserve,
                 xtReserve,
                 newFtReserve,
@@ -569,7 +570,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
             );
             netOut = tokenAmtIn + xtReserve - newXtReserve;
             // calculate fee
-            feeAmt = TermMaxCurve.calculateFee(
+            feeAmt = TermMaxCurve.calculateTxFee(
                 ftReserve,
                 xtReserve,
                 newFtReserve,

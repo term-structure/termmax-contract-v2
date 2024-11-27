@@ -56,152 +56,56 @@ contract DeployMainnetFork is Script {
 
     function run() public {
         vm.startBroadcast(deployerPrivateKey);
-        TermMaxFactory factory = deployFactory(deployerAddr);
-        TermMaxRouter router = deployRouter(deployerAddr);
-        (
-            MockERC20 usdc,
-            MockERC20 pt,
-            MockPriceFeed usdcOracle,
-            MockPriceFeed ptOracle
-        ) = deployMockERC20();
-        TermMaxMarket market = deployMarket(
-            deployerAddr,
-            address(factory),
-            address(pt),
-            address(usdc),
-            address(ptOracle),
-            address(usdcOracle)
-        );
-        (
-            IMintableERC20 ft,
-            IMintableERC20 xt,
-            IMintableERC20 lpFt,
-            IMintableERC20 lpXt,
-            IGearingToken gt,
-            address collateral,
-            IERC20 underlying
-        ) = market.tokens();
-        whitelistMarket(address(router), address(market), address(collateral));
+        // TermMaxFactory factory = deployFactory(deployerAddr);
+        // TermMaxRouter router = deployRouter(deployerAddr);
+        // (
+        //     MockERC20 usdc,
+        //     MockERC20 pt,
+        //     MockPriceFeed usdcOracle,
+        //     MockPriceFeed ptOracle
+        // ) = deployMockERC20();
+        // TermMaxMarket market = deployMarket(
+        //     deployerAddr,
+        //     address(factory),
+        //     address(pt),
+        //     address(usdc),
+        //     address(ptOracle),
+        //     address(usdcOracle)
+        // );
+        // (
+        //     IMintableERC20 ft,
+        //     IMintableERC20 xt,
+        //     IMintableERC20 lpFt,
+        //     IMintableERC20 lpXt,
+        //     IGearingToken gt,
+        //     address collateral,
+        //     IERC20 underlying
+        // ) = market.tokens();
+        // whitelistMarket(address(router), address(market), address(collateral));
         vm.stopBroadcast();
         // provdieLiquidity(router, market);
-        MarketConfig memory config = market.config();
-        console.log("Deploying TermMax Factory with deplyer:", deployerAddr);
-        console.log("Factory deployed at:", address(factory));
-        console.log("Router deployed at:", address(router));
-        console.log("Market deployed at:", address(market));
-        console.log(
-            "Collateral (%s) deployed at: %s",
-            IERC20Metadata(collateral).symbol(),
-            address(collateral)
-        );
-        console.log("Collateral Oracle deployed at:", address(ptOracle));
-        console.log(
-            "Underlying (%s) deployed at: %s",
-            IERC20Metadata(address(underlying)).symbol(),
-            address(underlying)
-        );
-        console.log("Underlying Oracle deployed at:", address(usdcOracle));
-        console.log("FT deployed at:", address(ft));
-        console.log("XT deployed at:", address(xt));
-        console.log("LPFT deployed at:", address(lpFt));
-        console.log("LPXT deployed at:", address(lpXt));
-        console.log("GT deployed at:", address(gt));
-        console.log("Market open time:", config.openTime);
-    }
-
-    function deployFactory(
-        address adminAddr
-    ) public returns (TermMaxFactory factory) {
-        factory = new TermMaxFactory(adminAddr);
-        TermMaxMarket marketImpl = new TermMaxMarket();
-        factory.initMarketImplement(address(marketImpl));
-    }
-
-    function deployRouter(
-        address adminAddr
-    ) public returns (TermMaxRouter router) {
-        address implementation = address(new TermMaxRouter());
-        bytes memory data = abi.encodeCall(TermMaxRouter.initialize, adminAddr);
-        address proxy = address(new ERC1967Proxy(implementation, data));
-        router = TermMaxRouter(proxy);
-    }
-
-    function deployMockERC20()
-        public
-        returns (
-            MockERC20 USDC,
-            MockERC20 PT,
-            MockPriceFeed usdcOracle,
-            MockPriceFeed ptOracle
-        )
-    {
-        USDC = new MockERC20("Mock USDC", "USDC", 6);
-        PT = new MockERC20("Mock PT-sUSDe", "PT-sUSDe", 18);
-        usdcOracle = new MockPriceFeed(deployerAddr);
-        usdcOracle.updateRoundData(
-            MockPriceFeed.RoundData({
-                roundId: 1,
-                answer: 1e8,
-                startedAt: vm.getBlockTimestamp(),
-                updatedAt: vm.getBlockTimestamp(),
-                answeredInRound: 1
-            })
-        );
-        ptOracle = new MockPriceFeed(deployerAddr);
-        ptOracle.updateRoundData(
-            MockPriceFeed.RoundData({
-                roundId: 1,
-                answer: 95e6,
-                startedAt: vm.getBlockTimestamp(),
-                updatedAt: vm.getBlockTimestamp(),
-                answeredInRound: 1
-            })
-        );
-    }
-
-    function deployMarket(
-        address adminAddr,
-        address factoryAddr,
-        address collateralAddr,
-        address underlyingAddr,
-        address collateralOracleAddr,
-        address underlyingOracleAddr
-    ) public returns (TermMaxMarket market) {
-        ITermMaxFactory factory = ITermMaxFactory(factoryAddr);
-        ITermMaxFactory.DeployParams memory params = ITermMaxFactory
-            .DeployParams({
-                gtKey: GT_ERC20,
-                admin: adminAddr,
-                collateral: collateralAddr,
-                underlying: IERC20Metadata(underlyingAddr),
-                underlyingOracle: AggregatorV3Interface(underlyingOracleAddr),
-                liquidationLtv: liquidationLtv,
-                maxLtv: maxLtv,
-                liquidatable: true,
-                marketConfig: marketConfig,
-                gtInitalParams: abi.encode(collateralOracleAddr)
-            });
-        market = TermMaxMarket(factory.createMarket(params));
-    }
-
-    function whitelistMarket(
-        address routerAddr,
-        address marketAddr,
-        address collateralAddr
-    ) public {
-        TermMaxRouter router = TermMaxRouter(routerAddr);
-        router.setMarketWhitelist(marketAddr, true);
-        router.togglePause(false);
-    }
-
-    function provdieLiquidity(
-        TermMaxRouter router,
-        TermMaxMarket market
-    ) public {
-        (, , , , , , IERC20 underlying) = market.tokens();
-        uint256 amount = 1000e6;
-        MockERC20(address(underlying)).mint(address(this), amount);
-        underlying.approve(address(router), amount);
-        router.provideLiquidity(address(this), market, amount);
+        // MarketConfig memory config = market.config();
+        // console.log("Deploying TermMax Factory with deplyer:", deployerAddr);
+        // console.log("Factory deployed at:", address(factory));
+        // console.log("Router deployed at:", address(router));
+        // console.log("Market deployed at:", address(market));
+        // console.log(
+        //     "Collateral (%s) deployed at: %s",
+        //     IERC20Metadata(collateral).symbol(),
+        //     address(collateral)
+        // );
+        // console.log("Collateral Oracle deployed at:", address(ptOracle));
+        // console.log(
+        //     "Underlying (%s) deployed at: %s",
+        //     IERC20Metadata(address(underlying)).symbol(),
+        //     address(underlying)
+        // );
+        // console.log("Underlying Oracle deployed at:", address(usdcOracle));
+        // console.log("FT deployed at:", address(ft));
+        // console.log("XT deployed at:", address(xt));
+        // console.log("LPFT deployed at:", address(lpFt));
+        // console.log("LPXT deployed at:", address(lpXt));
+        // console.log("GT deployed at:", address(gt));
+        // console.log("Market open time:", config.openTime);
     }
 }

@@ -1,41 +1,45 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import {Script} from "forge-std/Script.sol";
+import "forge-std/Test.sol";
 import {console} from "forge-std/console.sol";
-import {TermMaxFactory} from "../contracts/core/factory/TermMaxFactory.sol";
-import {ITermMaxFactory} from "../contracts/core/factory/ITermMaxFactory.sol";
-import {TermMaxRouter} from "../contracts/router/TermMaxRouter.sol";
-import {ITermMaxRouter} from "../contracts/router/ITermMaxRouter.sol";
+import {TermMaxFactory} from "../../contracts/core/factory/TermMaxFactory.sol";
+import {ITermMaxFactory} from "../../contracts/core/factory/ITermMaxFactory.sol";
+import {TermMaxRouter} from "../../contracts/router/TermMaxRouter.sol";
+import {ITermMaxRouter} from "../../contracts/router/ITermMaxRouter.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {TermMaxMarket} from "../contracts/core/TermMaxMarket.sol";
-import {ITermMaxMarket} from "../contracts/core/TermMaxMarket.sol";
-import {MockERC20} from "../contracts/test/MockERC20.sol";
-import {MarketConfig} from "../contracts/core/storage/TermMaxStorage.sol";
-import {IMintableERC20} from "../contracts/core/tokens/IMintableERC20.sol";
-import {IGearingToken, AggregatorV3Interface} from "../contracts/core/tokens/IGearingToken.sol";
+import {TermMaxMarket} from "../../contracts/core/TermMaxMarket.sol";
+import {ITermMaxMarket} from "../../contracts/core/TermMaxMarket.sol";
+import {MockERC20} from "../../contracts/test/MockERC20.sol";
+import {MarketConfig} from "../../contracts/core/storage/TermMaxStorage.sol";
+import {IMintableERC20} from "../../contracts/core/tokens/IMintableERC20.sol";
+import {IGearingToken, AggregatorV3Interface} from "../../contracts/core/tokens/IGearingToken.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {MockSwapAdapter} from "../contracts/test/MockSwapAdapter.sol";
-import {Faucet} from "../contracts/test/testnet/Faucet.sol";
-import {FaucetERC20} from "../contracts/test/testnet/FaucetERC20.sol";
-import {MockPriceFeed} from "../contracts/test/MockPriceFeed.sol";
-import {SwapUnit} from "../contracts/router/ISwapAdapter.sol";
-import {MarketConfig} from "../contracts/core/storage/TermMaxStorage.sol";
+import {MockSwapAdapter} from "../../contracts/test/MockSwapAdapter.sol";
+import {Faucet} from "../../contracts/test/testnet/Faucet.sol";
+import {FaucetERC20} from "../../contracts/test/testnet/FaucetERC20.sol";
+import {SwapUnit} from "../../contracts/router/ISwapAdapter.sol";
+import {MockPriceFeed} from "../../contracts/test/MockPriceFeed.sol";
 
-contract E2ETest is Script {
+contract E2ETest is Test {
     // deployer config
     uint256 userPrivateKey = vm.envUint("ARB_SEPOLIA_DEPLOYER_PRIVATE_KEY");
     address userAddr = vm.addr(userPrivateKey);
 
     // address config
-    address faucetAddr = address(0x12A9F6A4F06F7EF2595B4DEEa3C05f80F8C38c2a);
-    address routerAddr = address(0x6280790db5007241e6C5Cb76AA8c367C13b98DC9);
-    address swapAdapter = address(0x832B66EFA6578c4fAceE88ADC9d1F42F39E4B3D8);
-    address marketAddr = address(0x73A5E4807F63C50d28113777C3d34CB40d2F6EE2);
+    // address faucetAddr = address(0xdB94B6E81E0b9F0874ABa5F4F8258c31A9b97Ce8);
+    // address factoryAddr = address(0x4f29f479D3e6c41aD3fC8C7c8D6f423Cb2784b8e);
+    address routerAddr = address(0xA53500974648F3d00336a0533955e3404503dB90);
+    address swapAdapter = address(0x98838B33E85A56b2C9c8F7D7D6a1A7d2484b8e67);
+    address marketAddr = address(0x78494Cbb1AB24900f045b673e6640eb0595aD2D7);
+    address collateralPriceFeedAddr =
+        address(0x1Aee5396e5B010Eb6462396c4D8753B66B0ae089);
+    address underlyingPriceFeedAddr =
+        address(0x6f2c71259f2935c106769bEBc3A6a6ED86533616);
 
-    TermMaxMarket market;
-    TermMaxRouter router;
+    TermMaxMarket market = TermMaxMarket(marketAddr);
+    TermMaxRouter router = TermMaxRouter(routerAddr);
     IMintableERC20 ft;
     IMintableERC20 xt;
     IMintableERC20 lpFt;
@@ -45,39 +49,37 @@ contract E2ETest is Script {
     FaucetERC20 collateral;
     FaucetERC20 underlying;
     IERC20 underlyingERC20;
-    MockPriceFeed collateralPriceFeed;
-    MockPriceFeed underlyingPriceFeed;
-    MarketConfig config;
+    MockPriceFeed collateralPriceFeed = MockPriceFeed(collateralPriceFeedAddr);
+    MockPriceFeed underlyingPriceFeed =
+        MockPriceFeed(address(underlyingPriceFeedAddr));
 
-    function run() public {
-        Faucet faucet = Faucet(faucetAddr);
-        router = TermMaxRouter(routerAddr);
-        market = TermMaxMarket(marketAddr);
+    function setUp() public {
+        string memory ARB_SEPOLIA_RPC_URL = vm.envString("ARB_SEPOLIA_RPC_URL");
+        // string memory ARB_SEPOLIA_RPC_URL = "http://127.0.0.1:8545";
+
+        uint256 arbSepoliaFork = vm.createFork(ARB_SEPOLIA_RPC_URL);
+        vm.selectFork(arbSepoliaFork);
+        vm.rollFork(101029414);
+        // vm.warp(1732648114);
+        vm.warp(vm.getBlockTimestamp() + 100);
+
         (ft, xt, lpFt, lpXt, gt, collateralAddr, underlyingERC20) = market
             .tokens();
-        underlying = FaucetERC20(address(underlyingERC20));
         collateral = FaucetERC20(collateralAddr);
+        underlying = FaucetERC20(address(underlyingERC20));
+    }
 
-        underlyingPriceFeed = MockPriceFeed(
-            faucet
-                .getTokenConfig(faucet.getTokenId(address(underlying)))
-                .priceFeedAddr
-        );
-
-        collateralPriceFeed = MockPriceFeed(
-            faucet
-                .getTokenConfig(faucet.getTokenId(collateralAddr))
-                .priceFeedAddr
-        );
-
-        vm.startBroadcast(userPrivateKey);
+    function testIntegration() public {
         // provide liquidity
+        vm.startBroadcast(userPrivateKey);
         uint256 amount = 1000000e6;
-        faucet.devMint(userAddr, address(underlying), amount);
+        underlying.mint(userAddr, amount);
         underlying.approve(routerAddr, amount);
         router.provideLiquidity(userAddr, market, amount);
+        vm.stopBroadcast();
 
         // leverage from token
+        vm.startBroadcast(userPrivateKey);
         uint256 underlyingAmtBase = 10 ** underlying.decimals();
         uint256 collateralAmtBase = 10 ** collateral.decimals();
         uint256 priceBase = 1e8;
@@ -86,8 +88,7 @@ contract E2ETest is Script {
         uint64 secondsInDay = 86400;
         uint64 ltvBase = 1e8;
 
-        config = market.config();
-
+        MarketConfig memory config = market.config();
         uint64 maturity = config.maturity;
         uint64 dayToMaturity = uint64(
             (maturity - vm.getBlockTimestamp() + secondsInDay - 1) /
@@ -135,8 +136,8 @@ contract E2ETest is Script {
             tokenIn: address(underlying),
             tokenOut: address(collateral),
             swapData: abi.encode(
-                address(underlyingPriceFeed),
-                address(collateralPriceFeed)
+                underlyingPriceFeedAddr,
+                collateralPriceFeedAddr
             )
         });
         console.log(
@@ -144,6 +145,7 @@ contract E2ETest is Script {
             tokenToBuyXtAmt / 10 ** underlying.decimals()
         );
         console.log("Token to buy collateral amount:", tokenToBuyCollateralAmt);
+        console.log("xt amount with zero slippage:", xtAmtZeroSlippage);
         console.log(
             "Token out amount:",
             tokenOutAmt / 10 ** collateral.decimals()
@@ -162,7 +164,6 @@ contract E2ETest is Script {
             mintXtAmt,
             swapUnits
         );
-        console.log("xt amount with zero slippage:", xtAmtZeroSlippage);
         console.log("xt amount with slippage:", netXtOut);
         (
             address owner,
@@ -183,17 +184,5 @@ contract E2ETest is Script {
         );
         console.log("Gearing token ltv:", ltv);
         vm.stopBroadcast();
-
-        console.log("\nAfter broadcast");
-        console.log("Current timestamp:", vm.getBlockTimestamp());
-        console.log("Market open time:", config.openTime);
-        console.log("Underlying balance:", underlying.balanceOf(userAddr));
-        console.log("Underlying symbol:", underlying.symbol());
-        console.log("Collateral balance:", collateral.balanceOf(userAddr));
-        console.log("Collateral symbol:", collateral.symbol());
-        console.log("FT balance:", ft.balanceOf(userAddr));
-        console.log("XT balance:", xt.balanceOf(userAddr));
-        console.log("LPFT balance:", lpFt.balanceOf(userAddr));
-        console.log("LPXT balance:", lpXt.balanceOf(userAddr));
     }
 }
