@@ -105,6 +105,15 @@ interface ITermMaxRouter {
         uint256 minTokenOutAmt
     );
 
+    /// @notice Emitted when minting GT by leverage or issueFT
+    /// @param market The market's address
+    /// @param assetIn The input token
+    /// @param caller Who provide input token
+    /// @param receiver Who receive GT
+    /// @param inAmt token input amount
+    /// @param xtInAmt XT token input amount to leverage
+    /// @param collAmt The collateral token amount in GT
+    /// @param ltv The loan to collateral of the GT
     event IssueGt(
         ITermMaxMarket indexed market,
         address indexed assetIn,
@@ -114,20 +123,34 @@ interface ITermMaxRouter {
         uint256 inAmt,
         uint256 xtInAmt,
         uint256 collAmt,
-        uint256 minCollAmt,
-        uint256 minXTAmt
+        uint128 ltv
     );
 
+    /// @notice Emitted when redeemming assets from market
+    /// @param market The market's address
+    /// @param caller Who provide assets
+    /// @param receiver Who receive output tokens
+    /// @param amountArray token input amounts
+    /// @param underlyingOutAmt The underlying token send to receiver
+    /// @param collOutAmt The collateral token send to receiver
     event Redeem(
         ITermMaxMarket indexed market,
-        address indexed assetOut,
         address caller,
         address receiver,
         uint256[4] amountArray,
-        uint256 tokenOutAmt,
+        uint256 underlyingOutAmt,
         uint256 collOutAmt
     );
 
+    /// @notice Emitted when borrowing asset from market
+    /// @param market The market's address
+    /// @param assetOut The output token
+    /// @param caller Who provide collateral asset
+    /// @param receiver Who receive output tokens
+    /// @param gtId The id of loan
+    /// @param collInAmt The collateral token input amount
+    /// @param debtAmt The debt amount of the loan
+    /// @param borrowAmt The final debt token send to receiver
     event Borrow(
         ITermMaxMarket indexed market,
         address indexed assetOut,
@@ -136,9 +159,15 @@ interface ITermMaxRouter {
         uint256 gtId,
         uint256 collInAmt,
         uint256 debtAmt,
-        uint256 minDebtAmt
+        uint256 borrowAmt
     );
 
+    /// @notice Emitted when repaying loan
+    /// @param market The market's address
+    /// @param isRepayFt Repay using FT or underlying token
+    /// @param assetIn The input token to repay loan
+    /// @param gtId The id of loan
+    /// @param inAmt The input amount
     event Repay(
         ITermMaxMarket indexed market,
         bool indexed isRepayFt,
@@ -147,12 +176,26 @@ interface ITermMaxRouter {
         uint256 inAmt
     );
 
+    /// @notice Set the pause status of contract
     function togglePause(bool isPause) external;
 
+    /// @notice Set the market whitelist
+    /// @param market The market's address
+    /// @param isWhitelist Whitelisted or not
     function setMarketWhitelist(address market, bool isWhitelist) external;
 
+    /// @notice Set the adapter whitelist
+    /// @param adapter The adapter's address
+    /// @param isWhitelist Whitelisted or not
     function setAdapterWhitelist(address adapter, bool isWhitelist) external;
 
+    /// @notice Get assets of the owner
+    /// @param market The market's address
+    /// @param owner The owner's address
+    /// @return tokens The tokens
+    /// @return balances The balances of those tokens
+    /// @return gt The GT address
+    /// @return gtIds The GT ids of the owner
     function assetsWithERC20Collateral(
         ITermMaxMarket market,
         address owner
@@ -166,6 +209,12 @@ interface ITermMaxRouter {
             uint256[] memory gtIds
         );
 
+    /// @notice Swap exact underlying for FT
+    /// @param receiver Who receive output tokens
+    /// @param market The market's address
+    /// @param tokenInAmt The underlying input amount
+    /// @param minFtOut Expected FT output
+    /// @return netFtOut Final FT output
     function swapExactTokenForFt(
         address receiver,
         ITermMaxMarket market,
@@ -173,6 +222,12 @@ interface ITermMaxRouter {
         uint128 minFtOut
     ) external returns (uint256 netFtOut);
 
+    /// @notice Swap exact FT for underlying
+    /// @param receiver Who receive output tokens
+    /// @param market The market's address
+    /// @param ftInAmt The FT input amount
+    /// @param minTokenOut Expected underlying output
+    /// @return netTokenOut Final underlying output
     function swapExactFtForToken(
         address receiver,
         ITermMaxMarket market,
@@ -180,6 +235,12 @@ interface ITermMaxRouter {
         uint128 minTokenOut
     ) external returns (uint256 netTokenOut);
 
+    /// @notice Swap exact underlying for XT
+    /// @param receiver Who receive output tokens
+    /// @param market The market's address
+    /// @param tokenInAmt The underlying input amount
+    /// @param minXtOut Expected XT output
+    /// @return netXtOut Final XT output
     function swapExactTokenForXt(
         address receiver,
         ITermMaxMarket market,
@@ -187,6 +248,12 @@ interface ITermMaxRouter {
         uint128 minXtOut
     ) external returns (uint256 netXtOut);
 
+    /// @notice Swap exact XT for underlying
+    /// @param receiver Who receive output tokens
+    /// @param market The market's address
+    /// @param xtInAmt The XT input amount
+    /// @param minTokenOut Expected underlying output
+    /// @return netTokenOut Final underlying output
     function swapExactXtForToken(
         address receiver,
         ITermMaxMarket market,
@@ -194,6 +261,15 @@ interface ITermMaxRouter {
         uint128 minTokenOut
     ) external returns (uint256 netTokenOut);
 
+    /// @notice Withdraw FT and XT token by lp tokens
+    /// @param market The market's address
+    /// @param receiver Who receive FT and XT token
+    /// @param lpFtInAmt LpFT token input amount
+    /// @param lpXtInAmt LpXT token input amount
+    /// @param minFtOut Expected FT token output amount
+    /// @param minXtOut Expected XT token output amount
+    /// @return ftOutAmt FT token output amount
+    /// @return xtOutAmt XT token output amount
     function withdrawLiquidityToFtXt(
         address receiver,
         ITermMaxMarket market,
@@ -203,6 +279,13 @@ interface ITermMaxRouter {
         uint256 minXtOut
     ) external returns (uint256 ftOutAmt, uint256 xtOutAmt);
 
+    /// @notice Withdraw underlying token by lp tokens
+    /// @param receiver Who receive target token
+    /// @param market The market's address
+    /// @param lpFtInAmt LpFT token input amount
+    /// @param lpXtInAmt LpXT token input amount
+    /// @param minTokenOut Expected output amount
+    /// @return netTokenOut Final underlying token output
     function withdrawLiquidityToToken(
         address receiver,
         ITermMaxMarket market,
@@ -211,6 +294,14 @@ interface ITermMaxRouter {
         uint256 minTokenOut
     ) external returns (uint256 netTokenOut);
 
+    /// @notice Redeem assets from market
+    /// @param receiver Who receive output tokens
+    /// @param market The market's address
+    /// @param amountArray token input amounts
+    /// @param minCollOut Expected collateral output
+    /// @param minTokenOut  Expected underlying output
+    /// @return netCollOut Final collateral output
+    /// @return netTokenOut Final underlying output
     function redeem(
         address receiver,
         ITermMaxMarket market,
@@ -219,16 +310,34 @@ interface ITermMaxRouter {
         uint256 minTokenOut
     ) external returns (uint256 netCollOut, uint256 netTokenOut);
 
+    /// @notice Do leverage by underlying token
+    /// @param receiver Who receive GT token
+    /// @param market The market's address
+    /// @param tokenInAmt Underlying token to swap collateral
+    /// @param tokenToBuyXtAmt Underlying token to buy XT
+    /// @param maxLtv The expected ltv of GT
+    /// @param minXtAmt The expected XT amount buying from market
+    /// @param units Swap paths to swap underlying to collateral
+    /// @return gtId The id of loan
+    /// @return netXtOut Final XT token to leverage
     function leverageFromToken(
         address receiver,
         ITermMaxMarket market,
-        uint256 tokenInAmt, // underlying to buy collateral
-        uint256 tokenToBuyXtAmt, // underlying to buy Xt
+        uint256 tokenInAmt,
+        uint256 tokenToBuyXtAmt,
         uint256 maxLtv,
         uint256 minXtAmt,
         SwapUnit[] memory units
     ) external returns (uint256 gtId, uint256 netXtOut);
 
+    /// @notice Do leverage by XT and underlying token
+    /// @param receiver Who receive GT token
+    /// @param market The market's address
+    /// @param xtInAmt XT token to leverage
+    /// @param tokenInAmt Underlying token to swap collateral
+    /// @param maxLtv The expected ltv of GT
+    /// @param units Swap paths to swap underlying to collateral
+    /// @return gtId The id of loan
     function leverageFromXt(
         address receiver,
         ITermMaxMarket market,
@@ -238,6 +347,13 @@ interface ITermMaxRouter {
         SwapUnit[] memory units
     ) external returns (uint256 gtId);
 
+    /// @notice Borrow underlying token from market
+    /// @param receiver Who receive output tokens
+    /// @param market The market's address
+    /// @param collInAmt The collateral token input amount
+    /// @param maxDebtAmt The maxium debt amount of the loan
+    /// @param minBorrowAmt Expected debt token send to receiver
+    /// @return gtId The id of loan
     function borrowTokenFromCollateral(
         address receiver,
         ITermMaxMarket market,
@@ -246,12 +362,32 @@ interface ITermMaxRouter {
         uint256 minBorrowAmt
     ) external returns (uint256 gtId);
 
+    /// @notice Repay the loan through underlying token
+    /// @param market The market's address
+    /// @param gtId The id of loan
+    /// @param repayAmt Repay amount
     function repay(
         ITermMaxMarket market,
         uint256 gtId,
         uint256 repayAmt
     ) external;
 
+    /// @notice Repay the loan through FT
+    /// @param market The market's address
+    /// @param gtId The id of loan
+    /// @param ftInAmt Repay amount
+    function repayFromFt(
+        ITermMaxMarket market,
+        uint256 gtId,
+        uint256 ftInAmt
+    ) external;
+
+    /// @notice Flash repay the loan through collateral
+    /// @param receiver Who receive remaming underlying tokens
+    /// @param market The market's address
+    /// @param gtId The id of loan
+    /// @param units Swap paths to swap collateral to underlying
+    /// @return netTokenOut Remaming underlying output
     function flashRepayFromColl(
         address receiver,
         ITermMaxMarket market,
@@ -259,12 +395,12 @@ interface ITermMaxRouter {
         SwapUnit[] memory units
     ) external returns (uint256 netTokenOut);
 
-    function repayFromFt(
-        ITermMaxMarket market,
-        uint256 gtId,
-        uint256 ftInAmt
-    ) external;
-
+    /// @notice Repay the loan through FT but input underlying
+    /// @param receiver Who receive remaming underlying tokens
+    /// @param market The market's address
+    /// @param gtId The id of loan
+    /// @param tokenInAmt Underlying input
+    /// @param minFtOutToRepay Minimal FT token buy from market to repay the loan
     function repayByTokenThroughFt(
         address receiver,
         ITermMaxMarket market,
@@ -273,12 +409,22 @@ interface ITermMaxRouter {
         uint256 minFtOutToRepay
     ) external;
 
+    /// @notice Provide liquidity to market
+    /// @param receiver Who receive lp tokens
+    /// @param market The market's address
+    /// @param underlyingAmt Underlying input
+    /// @return lpFtOutAmt The LpFT token send to receiver
+    /// @return lpXtOutAmt The LpXT token send to receiver
     function provideLiquidity(
         address receiver,
         ITermMaxMarket market,
         uint256 underlyingAmt
     ) external returns (uint128 lpFtOutAmt, uint128 lpXtOutAmt);
 
+    /// @notice Add collateral token to reduce ltv
+    /// @param market The market's address
+    /// @param gtId The id of loan
+    /// @param addCollateralAmt The collateral tokens add to loan
     function addCollateral(
         ITermMaxMarket market,
         uint256 gtId,
