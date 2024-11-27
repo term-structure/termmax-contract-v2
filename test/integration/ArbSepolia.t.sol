@@ -3,24 +3,24 @@ pragma solidity ^0.8.27;
 
 import "forge-std/Test.sol";
 import {console} from "forge-std/console.sol";
-import {TermMaxFactory} from "../../../contracts/core/factory/TermMaxFactory.sol";
-import {ITermMaxFactory} from "../../../contracts/core/factory/ITermMaxFactory.sol";
-import {TermMaxRouter} from "../../../contracts/router/TermMaxRouter.sol";
-import {ITermMaxRouter} from "../../../contracts/router/ITermMaxRouter.sol";
+import {TermMaxFactory} from "../../contracts/core/factory/TermMaxFactory.sol";
+import {ITermMaxFactory} from "../../contracts/core/factory/ITermMaxFactory.sol";
+import {TermMaxRouter} from "../../contracts/router/TermMaxRouter.sol";
+import {ITermMaxRouter} from "../../contracts/router/ITermMaxRouter.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {TermMaxMarket} from "../../../contracts/core/TermMaxMarket.sol";
-import {ITermMaxMarket} from "../../../contracts/core/TermMaxMarket.sol";
-import {MockERC20} from "../../../contracts/test/MockERC20.sol";
-import {MarketConfig} from "../../../contracts/core/storage/TermMaxStorage.sol";
-import {IMintableERC20} from "../../../contracts/core/tokens/IMintableERC20.sol";
-import {IGearingToken, AggregatorV3Interface} from "../../../contracts/core/tokens/IGearingToken.sol";
+import {TermMaxMarket} from "../../contracts/core/TermMaxMarket.sol";
+import {ITermMaxMarket} from "../../contracts/core/TermMaxMarket.sol";
+import {MockERC20} from "../../contracts/test/MockERC20.sol";
+import {MarketConfig} from "../../contracts/core/storage/TermMaxStorage.sol";
+import {IMintableERC20} from "../../contracts/core/tokens/IMintableERC20.sol";
+import {IGearingToken, AggregatorV3Interface} from "../../contracts/core/tokens/IGearingToken.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {MockSwapAdapter} from "../../../contracts/test/MockSwapAdapter.sol";
-import {Faucet} from "../../../contracts/test/testnet/Faucet.sol";
-import {FaucetERC20} from "../../../contracts/test/testnet/FaucetERC20.sol";
-import {SwapUnit} from "../../../contracts/router/ISwapAdapter.sol";
-import {MockPriceFeed} from "../../../contracts/test/MockPriceFeed.sol";
+import {MockSwapAdapter} from "../../contracts/test/MockSwapAdapter.sol";
+import {Faucet} from "../../contracts/test/testnet/Faucet.sol";
+import {FaucetERC20} from "../../contracts/test/testnet/FaucetERC20.sol";
+import {SwapUnit} from "../../contracts/router/ISwapAdapter.sol";
+import {MockPriceFeed} from "../../contracts/test/MockPriceFeed.sol";
 
 contract E2ETest is Test {
     // deployer config

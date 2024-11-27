@@ -20,8 +20,8 @@ import {MockSwapAdapter} from "../contracts/test/MockSwapAdapter.sol";
 import {Faucet} from "../contracts/test/testnet/Faucet.sol";
 import {FaucetERC20} from "../contracts/test/testnet/FaucetERC20.sol";
 import {MockPriceFeed} from "../contracts/test/MockPriceFeed.sol";
-import {SwapUnit} from "../../../contracts/router/ISwapAdapter.sol";
-import {MarketConfig} from "../../../contracts/core/storage/TermMaxStorage.sol";
+import {SwapUnit} from "../contracts/router/ISwapAdapter.sol";
+import {MarketConfig} from "../contracts/core/storage/TermMaxStorage.sol";
 
 contract E2ETest is Script {
     // deployer config
