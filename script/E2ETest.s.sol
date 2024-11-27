@@ -30,7 +30,7 @@ contract E2ETest is Script {
 
     // address config
     address faucetAddr = address(0x12A9F6A4F06F7EF2595B4DEEa3C05f80F8C38c2a);
-    address routerAddr = address(0x6280790db5007241e6C5Cb76AA8c367C13b98DC9);
+    address routerAddr = address(0x1D4Bf13f05dF5941BBB9f14e9BD34a58D2660360);
     address swapAdapter = address(0x832B66EFA6578c4fAceE88ADC9d1F42F39E4B3D8);
     address marketAddr = address(0x73A5E4807F63C50d28113777C3d34CB40d2F6EE2);
 
@@ -71,117 +71,143 @@ contract E2ETest is Script {
         );
 
         vm.startBroadcast(userPrivateKey);
-        // provide liquidity
-        uint256 amount = 1000000e6;
-        faucet.devMint(userAddr, address(underlying), amount);
-        underlying.approve(routerAddr, amount);
-        router.provideLiquidity(userAddr, market, amount);
+        // // provide liquidity
+        // uint256 amount = 1000000e6;
+        // faucet.devMint(userAddr, address(underlying), amount);
+        // underlying.approve(routerAddr, amount);
+        // router.provideLiquidity(userAddr, market, amount);
 
-        // leverage from token
-        uint256 underlyingAmtBase = 10 ** underlying.decimals();
-        uint256 collateralAmtBase = 10 ** collateral.decimals();
-        uint256 priceBase = 1e8;
-        uint256 aprBase = 1e8;
-        uint64 daysInYear = 365;
-        uint64 secondsInDay = 86400;
-        uint64 ltvBase = 1e8;
-
-        config = market.config();
-
-        uint64 maturity = config.maturity;
-        uint64 dayToMaturity = uint64(
-            (maturity - vm.getBlockTimestamp() + secondsInDay - 1) /
-                secondsInDay
-        );
-        uint64 apr = config.apr > 0 ? uint64(config.apr) : uint64(-config.apr);
-        uint64 initialLtv = config.initialLtv;
-        uint256 ftPrice = (daysInYear * aprBase * priceBase) /
-            (aprBase * daysInYear + apr * dayToMaturity);
-        uint256 xtPrice = priceBase - (ftPrice * initialLtv) / ltvBase;
-        (, int256 collateralAnswer, , , ) = collateralPriceFeed
-            .latestRoundData();
-        (, int256 underlyingAnswer, , , ) = underlyingPriceFeed
-            .latestRoundData();
-
-        uint256 collateralPrice = uint256(collateralAnswer);
-        console.log("FT APR:", apr);
-        console.log("FT price:", ftPrice);
-        console.log("XT price:", xtPrice);
-        console.log("collateral price:", collateralPrice);
-        console.log("underlying price:", underlyingAnswer);
-        console.log("day to maturity:", dayToMaturity);
-        uint256 tokenToBuyCollateralAmt = 0;
-        uint256 tokenToBuyXtAmt = 1000e6;
-        uint256 maxLtv = 89000000;
-        uint256 mintXtAmt = 0;
-
-        uint256 n = priceBase *
-            collateralAmtBase *
-            (tokenToBuyCollateralAmt *
-                underlyingAmtBase *
-                xtPrice +
-                underlyingAmtBase *
-                tokenToBuyXtAmt *
-                priceBase);
-        uint256 d = underlyingAmtBase *
-            underlyingAmtBase *
-            xtPrice *
-            collateralPrice;
-        uint256 tokenOutAmt = n / d;
-        uint256 xtAmtZeroSlippage = (tokenToBuyXtAmt * priceBase) / xtPrice;
-        SwapUnit[] memory swapUnits = new SwapUnit[](1);
-        swapUnits[0] = SwapUnit({
-            adapter: swapAdapter,
-            tokenIn: address(underlying),
-            tokenOut: address(collateral),
-            swapData: abi.encode(
-                address(underlyingPriceFeed),
-                address(collateralPriceFeed)
-            )
-        });
-        console.log(
-            "Token to buy XT amount:",
-            tokenToBuyXtAmt / 10 ** underlying.decimals()
-        );
-        console.log("Token to buy collateral amount:", tokenToBuyCollateralAmt);
-        console.log(
-            "Token out amount:",
-            tokenOutAmt / 10 ** collateral.decimals()
-        );
-        underlying.mint(userAddr, tokenToBuyCollateralAmt + tokenToBuyXtAmt);
-        underlying.approve(
-            routerAddr,
-            tokenToBuyCollateralAmt + tokenToBuyXtAmt
-        );
-        (uint256 gtId, uint256 netXtOut) = router.leverageFromToken(
-            userAddr,
-            market,
-            tokenToBuyCollateralAmt,
-            tokenToBuyXtAmt,
-            maxLtv,
-            mintXtAmt,
-            swapUnits
-        );
-        console.log("xt amount with zero slippage:", xtAmtZeroSlippage);
-        console.log("xt amount with slippage:", netXtOut);
+        // add collateral
+        console.log(address(market));
         (
-            address owner,
-            uint128 debtAmt,
-            uint128 ltv,
-            bytes memory collateralDta
-        ) = gt.loanInfo(gtId);
-        uint128 collateralAmt = abi.decode(collateralDta, (uint128));
-        console.log("Gearing token ID:", gtId);
-        console.log("Gearing token owner:", owner);
-        console.log(
-            "Gearing token debt amount:",
-            debtAmt / 10 ** underlying.decimals()
-        );
-        console.log(
-            "Gearing token collateral amount:",
-            collateralAmt / 10 ** collateral.decimals()
-        );
-        console.log("Gearing token ltv:", ltv);
+            IERC20[6] memory tokens,
+            uint256[6] memory balances,
+            address gtAddr,
+            uint256[] memory gtIds
+        ) = router.assetsWithERC20Collateral(market, userAddr);
+
+        console.log(" gtIds length:", gtIds.length);
+
+        // // deploy router
+        // address routerImpl = address(new TermMaxRouter());
+
+        // bytes memory data = abi.encodeCall(TermMaxRouter.initialize, userAddr);
+        // address proxy = address(new ERC1967Proxy(routerImpl, data));
+
+        // TermMaxRouter router = TermMaxRouter(proxy);
+        // router.togglePause(false);
+
+        // console.log("new router address:", address(router));
+
+        // // deploy swap adapter
+        // router.setMarketWhitelist(address(market), true);
+        // router.setAdapterWhitelist(address(swapAdapter), true);
+
+        // // leverage from token
+        // uint256 underlyingAmtBase = 10 ** underlying.decimals();
+        // uint256 collateralAmtBase = 10 ** collateral.decimals();
+        // uint256 priceBase = 1e8;
+        // uint256 aprBase = 1e8;
+        // uint64 daysInYear = 365;
+        // uint64 secondsInDay = 86400;
+        // uint64 ltvBase = 1e8;
+
+        // config = market.config();
+
+        // uint64 maturity = config.maturity;
+        // uint64 dayToMaturity = uint64(
+        //     (maturity - vm.getBlockTimestamp() + secondsInDay - 1) /
+        //         secondsInDay
+        // );
+        // uint64 apr = config.apr > 0 ? uint64(config.apr) : uint64(-config.apr);
+        // uint64 initialLtv = config.initialLtv;
+        // uint256 ftPrice = (daysInYear * aprBase * priceBase) /
+        //     (aprBase * daysInYear + apr * dayToMaturity);
+        // uint256 xtPrice = priceBase - (ftPrice * initialLtv) / ltvBase;
+        // (, int256 collateralAnswer, , , ) = collateralPriceFeed
+        //     .latestRoundData();
+        // (, int256 underlyingAnswer, , , ) = underlyingPriceFeed
+        //     .latestRoundData();
+
+        // uint256 collateralPrice = uint256(collateralAnswer);
+        // console.log("FT APR:", apr);
+        // console.log("FT price:", ftPrice);
+        // console.log("XT price:", xtPrice);
+        // console.log("collateral price:", collateralPrice);
+        // console.log("underlying price:", underlyingAnswer);
+        // console.log("day to maturity:", dayToMaturity);
+        // uint256 tokenToBuyCollateralAmt = 0;
+        // uint256 tokenToBuyXtAmt = 1000e6;
+        // uint256 maxLtv = 89000000;
+        // uint256 mintXtAmt = 0;
+
+        // uint256 n = priceBase *
+        //     collateralAmtBase *
+        //     (tokenToBuyCollateralAmt *
+        //         underlyingAmtBase *
+        //         xtPrice +
+        //         underlyingAmtBase *
+        //         tokenToBuyXtAmt *
+        //         priceBase);
+        // uint256 d = underlyingAmtBase *
+        //     underlyingAmtBase *
+        //     xtPrice *
+        //     collateralPrice;
+        // uint256 tokenOutAmt = n / d;
+        // uint256 xtAmtZeroSlippage = (tokenToBuyXtAmt * priceBase) / xtPrice;
+        // SwapUnit[] memory swapUnits = new SwapUnit[](1);
+        // swapUnits[0] = SwapUnit({
+        //     adapter: swapAdapter,
+        //     tokenIn: address(underlying),
+        //     tokenOut: address(collateral),
+        //     swapData: abi.encode(
+        //         address(underlyingPriceFeed),
+        //         address(collateralPriceFeed)
+        //     )
+        // });
+        // console.log(
+        //     "Token to buy XT amount:",
+        //     tokenToBuyXtAmt / 10 ** underlying.decimals()
+        // );
+        // console.log("Token to buy collateral amount:", tokenToBuyCollateralAmt);
+        // console.log(
+        //     "Token out amount:",
+        //     tokenOutAmt / 10 ** collateral.decimals()
+        // );
+        // underlying.mint(userAddr, tokenToBuyCollateralAmt + tokenToBuyXtAmt);
+        // underlying.approve(
+        //     routerAddr,
+        //     tokenToBuyCollateralAmt + tokenToBuyXtAmt
+        // );
+        // (uint256 gtId, uint256 netXtOut) = router.leverageFromToken(
+        //     userAddr,
+        //     market,
+        //     tokenToBuyCollateralAmt,
+        //     tokenToBuyXtAmt,
+        //     maxLtv,
+        //     mintXtAmt,
+        //     swapUnits
+        // );
+        // console.log("xt amount with zero slippage:", xtAmtZeroSlippage);
+        // console.log("xt amount with slippage:", netXtOut);
+        // (
+        //     address owner,
+        //     uint128 debtAmt,
+        //     uint128 ltv,
+        //     bytes memory collateralDta
+        // ) = gt.loanInfo(gtId);
+        // uint128 collateralAmt = abi.decode(collateralDta, (uint128));
+        // console.log("Gearing token ID:", gtId);
+        // console.log("Gearing token owner:", owner);
+        // console.log(
+        //     "Gearing token debt amount:",
+        //     debtAmt / 10 ** underlying.decimals()
+        // );
+        // console.log(
+        //     "Gearing token collateral amount:",
+        //     collateralAmt / 10 ** collateral.decimals()
+        // );
+        // console.log("Gearing token ltv:", ltv);
         vm.stopBroadcast();
 
         console.log("\nAfter broadcast");
