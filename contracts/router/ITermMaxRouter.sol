@@ -12,6 +12,11 @@ interface ITermMaxRouter {
     error ApproveTokenFailWhenSwap(address token, bytes revertData);
     error TransferTokenFailWhenSwap(address token, bytes revertData);
     error SwapFailed(address adapter, bytes revertData);
+    error InsufficientTokenOut(
+        address token,
+        uint256 expectedTokenOut,
+        uint256 actualTokenOut
+    );
     event Swap(
         ITermMaxMarket indexed market,
         address indexed assetIn,

@@ -349,10 +349,10 @@ contract TermMaxRouter is
         );
 
         if (ftOutAmt < minFtOut) {
-            revert("Slippage: INSUFFICIENT_FT_OUT");
+            revert InsufficientTokenOut(address(ft), minFtOut, ftOutAmt);
         }
         if (xtOutAmt < minXtOut) {
-            revert("Slippage: INSUFFICIENT_XT_OUT");
+            revert InsufficientTokenOut(address(xt), minXtOut, xtOutAmt);
         }
 
         ft.transfer(receiver, ftOutAmt);
@@ -413,7 +413,11 @@ contract TermMaxRouter is
             xtOutAmt
         );
         if (netTokenOut < minTokenOut) {
-            revert("Slippage: INSUFFICIENT_TOKEN_OUT");
+            revert InsufficientTokenOut(
+                address(underlying),
+                minTokenOut,
+                netTokenOut
+            );
         }
 
         emit WithdrawLiquidtyToToken(
@@ -528,13 +532,21 @@ contract TermMaxRouter is
         IERC20 collateral = IERC20(collateralAddr);
         netCollOut = _balanceOf(collateral, address(this));
         if (netCollOut < minCollOut) {
-            revert("Slippage: INSUFFICIENT_COLLATERAL_OUT");
+            revert InsufficientTokenOut(
+                address(collateral),
+                minCollOut,
+                netCollOut
+            );
         }
         collateral.safeTransfer(receiver, netCollOut);
 
         netTokenOut = _balanceOf(underlying, address(this));
         if (netTokenOut < minTokenOut) {
-            revert("Slippage: INSUFFICIENT_TOKEN_OUT");
+            revert InsufficientTokenOut(
+                address(underlying),
+                minTokenOut,
+                netTokenOut
+            );
         }
         underlying.safeTransfer(receiver, netTokenOut);
 
@@ -829,12 +841,9 @@ contract TermMaxRouter is
             minFtOutToRepay.toUint128()
         );
         if (netFtOut < minFtOutToRepay) {
-            revert("Slippage: INSUFFICIENT_FT_OUT");
+            revert InsufficientTokenOut(address(ft), minFtOutToRepay, netFtOut);
         }
         (, uint128 debtAmt, , ) = gt.loanInfo(gtId);
-        if (debtAmt == 0) {
-            revert("Debt is already repaid");
-        }
 
         ft.safeIncreaseAllowance(address(gt), debtAmt);
         gt.repay(gtId, debtAmt, false);
