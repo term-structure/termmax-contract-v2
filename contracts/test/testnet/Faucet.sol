@@ -14,6 +14,7 @@ contract Faucet is Ownable {
         uint256 mintAmt;
     }
     uint256 public tokenNum;
+    mapping(address => uint256) public getTokenId;
     mapping(uint256 => TokenConfig) public tokenConfigs;
     mapping(address => bool) public isMinted;
     bool public canOnlyMintOnce;
@@ -39,6 +40,7 @@ contract Faucet is Ownable {
             address(priceFeed),
             mintAmt
         );
+        getTokenId[address(token)] = tokenNum;
         tokenNum++;
     }
 

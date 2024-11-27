@@ -16,7 +16,7 @@ import {IMintableERC20} from "../../../contracts/core/tokens/IMintableERC20.sol"
 import {IGearingToken, AggregatorV3Interface} from "../../../contracts/core/tokens/IGearingToken.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {MockSwapAdapter} from "../../../contracts/test/MockSwapAdapter.sol";
+import {SwapAdapter} from "../../../contracts/test/testnet/SwapAdapter.sol";
 import {JSONLoader} from "../../utils/JSONLoader.sol";
 import {Faucet} from "../../../contracts/test/testnet/Faucet.sol";
 import {FaucetERC20} from "../../../contracts/test/testnet/FaucetERC20.sol";
@@ -24,10 +24,14 @@ import {FaucetERC20} from "../../../contracts/test/testnet/FaucetERC20.sol";
 contract DeployArbSepolia is Script {
     // admin config
     uint256 deployerPrivateKey = vm.envUint("ARB_SEPOLIA_DEPLOYER_PRIVATE_KEY");
+    // uint256 deployerPrivateKey =
+    //     0x2a871d0798f97d79848a013d4936a73bf4cc922c825d33c1cf7073dff6d409c6;
     address deployerAddr = vm.addr(deployerPrivateKey);
     address adminAddr = vm.envAddress("ARB_SEPOLIA_ADMIN_ADDRESS");
+    // address adminAddr = 0xa0Ee7A142d267C1f36714E4a8F75612F20a79720;
     address priceFeedOperatorAddr =
         vm.envAddress("ARB_SEPOLIA_PRICE_FEED_OPERATOR_ADDRESS");
+    // address priceFeedOperatorAddr = 0xa0Ee7A142d267C1f36714E4a8F75612F20a79720;
 
     // market config
     bytes32 constant GT_ERC20 = keccak256("GearingTokenWithERC20");
@@ -39,9 +43,9 @@ contract DeployArbSepolia is Script {
             apr: 12000000,
             lsf: 80000000,
             lendFeeRatio: 3000000,
-            minNLendFeeR: 3000000,
+            minNLendFeeR: 100000,
             borrowFeeRatio: 3000000,
-            minNBorrowFeeR: 3000000,
+            minNBorrowFeeR: 100000,
             redeemFeeRatio: 50000000,
             issueFtFeeRatio: 10000000,
             lockingPercentage: 50000000,
@@ -72,7 +76,7 @@ contract DeployArbSepolia is Script {
         router.togglePause(false);
 
         // deploy swap adapter
-        MockSwapAdapter swapAdapter = new MockSwapAdapter(vm.randomAddress());
+        SwapAdapter swapAdapter = new SwapAdapter(vm.randomAddress());
 
         router.setAdapterWhitelist(address(swapAdapter), true);
 
@@ -154,7 +158,7 @@ contract DeployArbSepolia is Script {
         console.log("Faucet deployed at:", address(faucet));
         console.log("Factory deployed at:", address(factory));
         console.log("Router deployed at:", address(router));
-        console.log("MockSwapAdapter deployed at:", address(swapAdapter));
+        console.log("SwapAdapter deployed at:", address(swapAdapter));
         console.log("Market deployed at:", address(market));
         console.log(
             "Collateral (%s) deployed at: %s",
