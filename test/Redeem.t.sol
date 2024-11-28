@@ -114,7 +114,7 @@ contract RedeemTest is Test {
             uint lpXtBalance = res.lpXt.balanceOf(sender);
             res.lpXt.approve(address(res.market), lpXtBalance);
 
-            res.market.withdrawLp(0, uint128(lpXtBalance / 2));
+            res.market.withdrawLiquidity(0, uint128(lpXtBalance / 2));
         }
 
         assert(res.lpFt.balanceOf(address(res.market)) > 0);
@@ -227,7 +227,7 @@ contract RedeemTest is Test {
             uint lpXtBalance = res.lpXt.balanceOf(sender);
             res.lpXt.approve(address(res.market), lpXtBalance);
 
-            res.market.withdrawLp(0, uint128(lpXtBalance / 2));
+            res.market.withdrawLiquidity(0, uint128(lpXtBalance / 2));
         }
 
         assert(res.lpFt.balanceOf(address(res.market)) > 0);

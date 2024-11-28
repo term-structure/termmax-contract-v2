@@ -164,7 +164,7 @@ contract GtTest is Test {
         );
         res.lpFt.approve(address(res.market), lpFtOutAmt);
         res.lpXt.approve(address(res.market), lpXtOutAmt);
-        res.market.withdrawLp(lpFtOutAmt, lpXtOutAmt);
+        res.market.withdrawLiquidity(lpFtOutAmt, lpXtOutAmt);
 
         StateChecker.MarketState memory state = StateChecker.getMarketState(
             res
@@ -344,7 +344,7 @@ contract GtTest is Test {
         );
         res.lpFt.approve(address(res.market), lpFtOutAmt);
         res.lpXt.approve(address(res.market), lpXtOutAmt);
-        res.market.withdrawLp(lpFtOutAmt, lpXtOutAmt);
+        res.market.withdrawLiquidity(lpFtOutAmt, lpXtOutAmt);
 
         res.xt.approve(address(flashLoanReceiver), xtAmt);
 
@@ -429,7 +429,7 @@ contract GtTest is Test {
         );
         res.lpFt.approve(address(res.market), lpFtOutAmt);
         res.lpXt.approve(address(res.market), lpXtOutAmt);
-        res.market.withdrawLp(lpFtOutAmt, lpXtOutAmt);
+        res.market.withdrawLiquidity(lpFtOutAmt, lpXtOutAmt);
 
         uint collateralBalanceBefore = res.collateral.balanceOf(sender);
         uint ftBalanceBefore = res.ft.balanceOf(sender);
