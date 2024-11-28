@@ -151,7 +151,24 @@ contract TermMaxRouterTest is Test {
 
     function testReadAssets() public {
         uint[2] memory gtIdArray;
+        uint128 debtAmt = 100e8;
+        uint256 collateralAmt = 0.1e18;
         {
+            vm.startPrank(deployer);
+            LoanUtils.fastMintGt(
+                res,
+                deployer,
+                debtAmt,
+                collateralAmt
+            );
+            LoanUtils.fastMintGt(
+                res,
+                deployer,
+                debtAmt,
+                collateralAmt
+            );
+            vm.stopPrank();
+            
             vm.startPrank(sender);
 
             uint128 amount = 1000e8;
@@ -160,9 +177,6 @@ contract TermMaxRouterTest is Test {
             router.provideLiquidity(receiver, res.market, amount);
 
             res.collateral.mint(sender, 5e18);
-
-            uint128 debtAmt = 100e8;
-            uint256 collateralAmt = 0.1e18;
             (gtIdArray[0], ) = LoanUtils.fastMintGt(
                 res,
                 sender,

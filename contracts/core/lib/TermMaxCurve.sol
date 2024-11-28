@@ -54,7 +54,7 @@ library TermMaxCurve {
         uint256 currentTime,
         MarketConfig memory config
     ) internal pure returns (uint256 tokenAmt) {
-        uint reward = TermMaxCurve.calculateLpReward(
+        uint reward = calculateLpReward(
             currentTime,
             config.openTime,
             config.maturity,
@@ -161,7 +161,7 @@ library TermMaxCurve {
         if (apr > INT_64_MAX || apr < INT_64_MIN) {
             revert LiquidityIsZeroAfterTransaction();
         }
-        return (numerator / denominator).toInt64();
+        return apr.toInt64();
     }
 
     /// @notice Calculate how much fee will be charged for this transaction
@@ -207,7 +207,9 @@ library TermMaxCurve {
         uint l = deltaFt * Constants.DECIMAL_BASE + deltaXt * ltv;
         uint r = deltaXt * Constants.DECIMAL_BASE;
 
-        if (l > r) {
+        // yield = |l - r|
+        // fee = yield * feeRatio
+        if (l > r) { 
             feeAmt = ((l - r) * feeRatio) / Constants.DECIMAL_BASE_SQ;
         } else {
             feeAmt = ((r - l) * feeRatio) / Constants.DECIMAL_BASE_SQ;
