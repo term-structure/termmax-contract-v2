@@ -240,8 +240,8 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         uint256 ltv
     ) internal returns (uint128 ftBurnedAmt, uint128 xtBurnedAmt) {
         underlying.transfer(to, underlyingAmt);
-
-        ftBurnedAmt = ((underlyingAmt * ltv) / Constants.DECIMAL_BASE)
+        // Carry calculation to avoid the situation that ft amount is 0
+        ftBurnedAmt = ((underlyingAmt * ltv + Constants.DECIMAL_BASE - 1) / Constants.DECIMAL_BASE)
             .toUint128();
         xtBurnedAmt = underlyingAmt.toUint128();
         // Burn tokens to this
@@ -977,7 +977,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         // Case 3: ftAmt == xtAmt*ltv  redeem xtAmt
         uint underlyingAmt = xtAmt;
         if (sameProportionXt > xtAmt) {
-            uint sameProportionFt = (xtAmt * mConfig.initialLtv) /
+            uint sameProportionFt = (xtAmt * mConfig.initialLtv + Constants.DECIMAL_BASE - 1) /
                 Constants.DECIMAL_BASE;
             ft.transfer(caller, ftAmt - sameProportionFt);
             ft.burn(sameProportionFt);
