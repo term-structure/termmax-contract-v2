@@ -16,8 +16,9 @@ interface IOwnable {
  * @author Term Structure Labs
  */
 contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
-
+    /// @notice Role to manage switch
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
+    /// @notice Role to manage configuration items
     bytes32 public constant CURATOR_ROLE = keccak256("CURATOR_ROLE");
 
     constructor(address admin) {
@@ -26,6 +27,7 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
         _grantRole(PAUSER_ROLE, admin);
     }
 
+    /// @notice Set GT implementation to the factory
     function setGtImplement(
         ITermMaxFactory factory,
         string memory gtImplementName,
@@ -42,6 +44,7 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
         market = factory.createMarket(deployParams);
     }
 
+    /// @notice Transfer ownable contract's ownership
     function transferOwnership(
         address entity,
         address to
@@ -49,6 +52,7 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
         IOwnable(entity).transferOwnership(to);
     }
 
+    /// @notice Upgrade the target contract using UUPS
     function upgradeSubContract(
         UUPSUpgradeable proxy,
         address newImplementation,
@@ -97,6 +101,7 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
         market.setLsf(lsf);
     }
 
+    /// @notice Set the switch for this market minting GT
     function setSwitchOfMintingGt(
         ITermMaxMarket market,
         bool state
@@ -104,6 +109,7 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
         market.updateMintingGtSwitch(state);
     }
 
+    /// @notice Set the market whitelist for router
     function setMarketWhitelist(
         ITermMaxRouter router,
         address market,
@@ -112,6 +118,7 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
         router.setMarketWhitelist(market, isWhitelist);
     }
 
+    /// @notice Set the adapter whitelist for router
     function setAdapterWhitelist(
         ITermMaxRouter router,
         address adapter,
@@ -120,6 +127,7 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
         router.setAdapterWhitelist(adapter, isWhitelist);
     }
 
+    /// @notice Set the switch for this market
     function setSwitchOfMarket(
         ITermMaxMarket market,
         bool state
@@ -130,7 +138,7 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
             market.pause();
         }
     }
-
+    /// @notice Set the switch for GT of this market
     function setSwitchOfGt(
         ITermMaxMarket market,
         bool state
@@ -141,7 +149,7 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
             market.pauseGt();
         }
     }
-
+    /// @notice Set the switch for Router
     function setSwitchOfRouter(
         ITermMaxRouter router,
         bool state
