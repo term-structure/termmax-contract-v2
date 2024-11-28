@@ -624,7 +624,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         address caller,
         uint256 underlyingAmt
     ) internal {
-        uint ftAmt = (underlyingAmt * _config.initialLtv + Constants.DECIMAL_BASE - 1) /
+        uint ftAmt = (underlyingAmt * _config.initialLtv) /
             Constants.DECIMAL_BASE;
         ft.transferFrom(caller, address(this), ftAmt);
         xt.transferFrom(caller, address(this), underlyingAmt);
