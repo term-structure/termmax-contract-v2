@@ -16,7 +16,6 @@ interface IOwnable {
  * @author Term Structure Labs
  */
 contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
-    address public immutable zkTrueUp;
 
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
     bytes32 public constant CURATOR_ROLE = keccak256("CURATOR_ROLE");

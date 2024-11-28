@@ -1,6 +1,6 @@
 ## TermMax
 
-TermMax is a decentralized finance (DeFi) platform designed to simplify and enhance leveraged yield strategies. By integrating fixed-rate borrowing and lending mechanisms with leverage functions, TermMax enables investors to borrow at predictable fixed costs, earn expected returns, and maximize leveraged yields. This approach eliminates the need for multiple complex transactions across different protocols, making leveraged yield strategies more accessible, efficient, and profitable for all types of investors. 
+**TermMax is a decentralized finance (DeFi) platform designed to simplify and enhance leveraged yield strategies. By integrating fixed-rate borrowing and lending mechanisms with leverage functions, TermMax enables investors to borrow at predictable fixed costs, earn expected returns, and maximize leveraged yields. This approach eliminates the need for multiple complex transactions across different protocols, making leveraged yield strategies more accessible, efficient, and profitable for all types of investors.**
 
 ## Documentation
 

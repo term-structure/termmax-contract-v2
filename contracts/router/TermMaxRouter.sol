@@ -23,7 +23,10 @@ import {IFlashLoanReceiver} from "../core/IFlashLoanReceiver.sol";
 import {IFlashRepayer} from "../core/tokens/IFlashRepayer.sol";
 import {IGearingToken} from "../core/tokens/IGearingToken.sol";
 import {SwapUnit, ISwapAdapter} from "./ISwapAdapter.sol";
-
+/**
+ * @title TermMax Router
+ * @author Term Structure Labs
+ */
 contract TermMaxRouter is
     UUPSUpgradeable,
     OwnableUpgradeable,
@@ -40,16 +43,19 @@ contract TermMaxRouter is
     using SafeERC20 for IERC20;
     using SafeERC20 for IMintableERC20;
 
+    /// @notice whitelist mapping of market
     mapping(address => bool) public marketWhitelist;
+    /// @notice whitelist mapping of dapter
     mapping(address => bool) public adapterWhitelist;
 
+    /// @notice Check the market is whitelisted
     modifier ensureMarketWhitelist(address market) {
         if (!marketWhitelist[market]) {
             revert MarketNotWhitelisted(market);
         }
         _;
     }
-
+    /// @notice Check the GT is whitelisted
     modifier ensureGtWhitelist(address gt) {
         address market = IGearingToken(gt).marketAddr();
         if (!marketWhitelist[market]) {
@@ -74,6 +80,9 @@ contract TermMaxRouter is
         _pause();
     }
 
+    /**
+     * @inheritdoc ITermMaxRouter
+     */
     function togglePause(bool isPause) external onlyOwner {
         if (isPause) {
             _pause();
@@ -82,6 +91,9 @@ contract TermMaxRouter is
         }
     }
 
+    /**
+     * @inheritdoc ITermMaxRouter
+     */
     function setMarketWhitelist(
         address market,
         bool isWhitelist
@@ -89,6 +101,9 @@ contract TermMaxRouter is
         marketWhitelist[market] = isWhitelist;
     }
 
+    /**
+     * @inheritdoc ITermMaxRouter
+     */
     function setAdapterWhitelist(
         address adapter,
         bool isWhitelist
@@ -96,6 +111,9 @@ contract TermMaxRouter is
         adapterWhitelist[adapter] = isWhitelist;
     }
 
+    /**
+     * @inheritdoc ITermMaxRouter
+     */
     function assetsWithERC20Collateral(
         ITermMaxMarket market,
         address owner
@@ -129,22 +147,16 @@ contract TermMaxRouter is
             balances[i] = tokens[i].balanceOf(owner);
         }
         gtAddr = address(gt);
-        bytes memory idsData;
-        uint length;
-        for (uint i = 0; i < IERC721Enumerable(gtAddr).totalSupply(); ++i) {
-            uint id = IERC721Enumerable(gtAddr).tokenOfOwnerByIndex(owner, i);
-            if (id != 0) {
-                idsData = abi.encodePacked(idsData, id);
-                length++;
-            } else {
-                break;
-            }
+        uint balance = IERC721Enumerable(gtAddr).balanceOf(owner);
+        gtIds = new uint256[](balance);
+        for (uint i = 0; i < balance; ++i) {
+            gtIds[i] = IERC721Enumerable(gtAddr).tokenOfOwnerByIndex(owner, i);
         }
-        idsData = abi.encodePacked(abi.encode(32), length, idsData);
-        gtIds = abi.decode(idsData, (uint256[]));
     }
 
-    /** Leverage Market */
+    /**
+     * @inheritdoc ITermMaxRouter
+     */
     function swapExactTokenForFt(
         address receiver,
         ITermMaxMarket market,
@@ -178,6 +190,9 @@ contract TermMaxRouter is
         );
     }
 
+    /**
+     * @inheritdoc ITermMaxRouter
+     */
     function swapExactFtForToken(
         address receiver,
         ITermMaxMarket market,
@@ -213,6 +228,9 @@ contract TermMaxRouter is
         );
     }
 
+    /**
+     * @inheritdoc ITermMaxRouter
+     */
     function swapExactTokenForXt(
         address receiver,
         ITermMaxMarket market,
@@ -243,6 +261,9 @@ contract TermMaxRouter is
         );
     }
 
+    /**
+     * @inheritdoc ITermMaxRouter
+     */
     function swapExactXtForToken(
         address receiver,
         ITermMaxMarket market,
@@ -273,6 +294,9 @@ contract TermMaxRouter is
         );
     }
 
+    /**
+     * @inheritdoc ITermMaxRouter
+     */
     function provideLiquidity(
         address receiver,
         ITermMaxMarket market,
@@ -314,6 +338,9 @@ contract TermMaxRouter is
         );
     }
 
+    /**
+     * @inheritdoc ITermMaxRouter
+     */
     function withdrawLiquidityToFtXt(
         address receiver,
         ITermMaxMarket market,
@@ -349,10 +376,10 @@ contract TermMaxRouter is
         );
 
         if (ftOutAmt < minFtOut) {
-            revert("Slippage: INSUFFICIENT_FT_OUT");
+            revert InsufficientTokenOut(address(ft), minFtOut, ftOutAmt);
         }
         if (xtOutAmt < minXtOut) {
-            revert("Slippage: INSUFFICIENT_XT_OUT");
+            revert InsufficientTokenOut(address(xt), minXtOut, xtOutAmt);
         }
 
         ft.transfer(receiver, ftOutAmt);
@@ -369,6 +396,9 @@ contract TermMaxRouter is
         );
     }
 
+    /**
+     * @inheritdoc ITermMaxRouter
+     */
     function withdrawLiquidityToToken(
         address receiver,
         ITermMaxMarket market,
@@ -413,7 +443,11 @@ contract TermMaxRouter is
             xtOutAmt
         );
         if (netTokenOut < minTokenOut) {
-            revert("Slippage: INSUFFICIENT_TOKEN_OUT");
+            revert InsufficientTokenOut(
+                address(underlying),
+                minTokenOut,
+                netTokenOut
+            );
         }
 
         emit WithdrawLiquidtyToToken(
@@ -469,6 +503,9 @@ contract TermMaxRouter is
         redeemXtAmt = xtOutAmt < requiredXtAmt ? xtOutAmt : requiredXtAmt;
     }
 
+    /**
+     * @inheritdoc ITermMaxRouter
+     */
     function redeem(
         address receiver,
         ITermMaxMarket market,
@@ -528,19 +565,26 @@ contract TermMaxRouter is
         IERC20 collateral = IERC20(collateralAddr);
         netCollOut = _balanceOf(collateral, address(this));
         if (netCollOut < minCollOut) {
-            revert("Slippage: INSUFFICIENT_COLLATERAL_OUT");
+            revert InsufficientTokenOut(
+                address(collateral),
+                minCollOut,
+                netCollOut
+            );
         }
         collateral.safeTransfer(receiver, netCollOut);
 
         netTokenOut = _balanceOf(underlying, address(this));
         if (netTokenOut < minTokenOut) {
-            revert("Slippage: INSUFFICIENT_TOKEN_OUT");
+            revert InsufficientTokenOut(
+                address(underlying),
+                minTokenOut,
+                netTokenOut
+            );
         }
         underlying.safeTransfer(receiver, netTokenOut);
 
         emit Redeem(
             market,
-            address(underlying),
             msg.sender,
             receiver,
             amountArray,
@@ -549,6 +593,9 @@ contract TermMaxRouter is
         );
     }
 
+    /**
+     * @inheritdoc ITermMaxRouter
+     */
     function leverageFromToken(
         address receiver,
         ITermMaxMarket market,
@@ -604,11 +651,13 @@ contract TermMaxRouter is
             tokenInAmt,
             netXtOut,
             _decodeAmount(collateralData),
-            maxLtv,
-            minXtAmt
+            ltv
         );
     }
 
+    /**
+     * @inheritdoc ITermMaxRouter
+     */
     function leverageFromXt(
         address receiver,
         ITermMaxMarket market,
@@ -662,12 +711,13 @@ contract TermMaxRouter is
             xtInAmt,
             xtInAmt,
             _decodeAmount(collateralData),
-            maxLtv,
-            xtInAmt
+            ltv
         );
     }
 
-    /** Lending Market */
+    /**
+     * @inheritdoc ITermMaxRouter
+     */
     function borrowTokenFromCollateral(
         address receiver,
         ITermMaxMarket market,
@@ -756,6 +806,9 @@ contract TermMaxRouter is
         return gtId;
     }
 
+    /**
+     * @inheritdoc ITermMaxRouter
+     */
     function repay(
         ITermMaxMarket market,
         uint256 gtId,
@@ -769,6 +822,9 @@ contract TermMaxRouter is
         emit Repay(market, false, address(underlying), gtId, repayAmt);
     }
 
+    /**
+     * @inheritdoc ITermMaxRouter
+     */
     function flashRepayFromColl(
         address receiver,
         ITermMaxMarket market,
@@ -788,6 +844,9 @@ contract TermMaxRouter is
         underlying.transfer(receiver, netTokenOut);
     }
 
+    /**
+     * @inheritdoc ITermMaxRouter
+     */
     function repayFromFt(
         ITermMaxMarket market,
         uint256 gtId,
@@ -801,6 +860,9 @@ contract TermMaxRouter is
         emit Repay(market, true, address(ft), gtId, ftInAmt);
     }
 
+    /**
+     * @inheritdoc ITermMaxRouter
+     */
     function repayByTokenThroughFt(
         address receiver,
         ITermMaxMarket market,
@@ -829,12 +891,9 @@ contract TermMaxRouter is
             minFtOutToRepay.toUint128()
         );
         if (netFtOut < minFtOutToRepay) {
-            revert("Slippage: INSUFFICIENT_FT_OUT");
+            revert InsufficientTokenOut(address(ft), minFtOutToRepay, netFtOut);
         }
         (, uint128 debtAmt, , ) = gt.loanInfo(gtId);
-        if (debtAmt == 0) {
-            revert("Debt is already repaid");
-        }
 
         ft.safeIncreaseAllowance(address(gt), debtAmt);
         gt.repay(gtId, debtAmt, false);
@@ -848,6 +907,9 @@ contract TermMaxRouter is
         emit Repay(market, false, address(underlying), gtId, tokenInAmt);
     }
 
+    /**
+     * @inheritdoc ITermMaxRouter
+     */
     function addCollateral(
         ITermMaxMarket market,
         uint256 gtId,

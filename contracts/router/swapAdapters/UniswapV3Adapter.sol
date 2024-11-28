@@ -5,6 +5,10 @@ import {TransferHelper} from "@uniswap/v3-periphery/contracts/libraries/Transfer
 import {ISwapRouter} from "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 import "./ERC20SwapAdapter.sol";
 
+/**
+ * @title TermMax UniswapV3Adapter
+ * @author Term Structure Labs
+ */
 contract UniswapV3Adapter is ERC20SwapAdapter {
     ISwapRouter public immutable router;
 

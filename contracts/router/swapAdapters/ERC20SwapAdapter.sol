@@ -4,12 +4,20 @@ pragma solidity ^0.8.27;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ISwapAdapter} from "../ISwapAdapter.sol";
 
+/**
+ * @title TermMax ERC20SwapAdapter
+ * @author Term Structure Labs
+ */
 abstract contract ERC20SwapAdapter is ISwapAdapter {
+    /// @notice Error for partial swap
     error ERC20InvalidPartialSwap(
         uint256 expectedTradeAmt,
         uint256 actualTradeAmt
     );
 
+    /**
+     * @inheritdoc ISwapAdapter
+     */
     function swap(
         address tokenIn,
         address tokenOut,
@@ -44,6 +52,9 @@ abstract contract ERC20SwapAdapter is ISwapAdapter {
         bytes memory swapData
     ) internal virtual returns (uint256 tokenOutAmt);
 
+    /**
+     * @inheritdoc ISwapAdapter
+     */
     function approveOutputToken(
         address token,
         address spender,
@@ -52,6 +63,9 @@ abstract contract ERC20SwapAdapter is ISwapAdapter {
         IERC20(token).approve(spender, _decodeAmount(tokenData));
     }
 
+    /**
+     * @inheritdoc ISwapAdapter
+     */
     function transferOutputToken(
         address token,
         address to,
@@ -60,6 +74,9 @@ abstract contract ERC20SwapAdapter is ISwapAdapter {
         IERC20(token).transfer(to, _decodeAmount(tokenData));
     }
 
+    /**
+     * @inheritdoc ISwapAdapter
+     */
     function transferInputTokenFrom(
         address token,
         address from,
@@ -69,12 +86,14 @@ abstract contract ERC20SwapAdapter is ISwapAdapter {
         IERC20(token).transferFrom(from, to, _decodeAmount(tokenData));
     }
 
+    /// @notice Encode uin256 to bytes
     function _encodeAmount(
         uint256 amount
     ) internal pure returns (bytes memory data) {
         data = abi.encode(amount);
     }
 
+    /// @notice Decode uin256 from bytes
     function _decodeAmount(
         bytes memory data
     ) internal pure returns (uint256 amount) {
