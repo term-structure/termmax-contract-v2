@@ -84,7 +84,7 @@ interface ITermMaxMarket {
     /// @param ftOutAmt The number of XT tokens received
     /// @param xtOutAmt The number of XT tokens received
     /// @param newApr New apr value with BASE_DECIMALS after do this action
-    event WithdrawLP(
+    event WithdrawLiquidity(
         address indexed caller,
         uint128 lpFtAmt,
         uint128 lpXtAmt,
@@ -267,7 +267,7 @@ interface ITermMaxMarket {
     /// @param lpXtAmt Amount of LpXT token want to burn
     /// @return ftOutAmt  The number of FT tokens obtained
     /// @return xtOutAmt The number of XT tokens obtained
-    function withdrawLp(
+    function withdrawLiquidity(
         uint128 lpFtAmt,
         uint128 lpXtAmt
     ) external returns (uint128 ftOutAmt, uint128 xtOutAmt);

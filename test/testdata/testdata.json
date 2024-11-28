@@ -70,7 +70,7 @@
         "lpXtAmount": "10000000000"
       }
     },
-    "withdrawLp": {
+    "withdrawLiquidity": {
       "contractState": {
         "decimalBase": "100000000",
         "daysInYear": "365",
@@ -96,7 +96,7 @@
         "lpXtAmount": "10000000000"
       }
     },
-    "withdrawLpWhenFtIsMore": {
+    "withdrawLiquidityWhenFtIsMore": {
       "contractState": {
         "decimalBase": "100000000",
         "daysInYear": "365",
@@ -122,7 +122,7 @@
         "lpXtAmount": "5000000000"
       }
     },
-    "withdrawLpWhenXtIsMore": {
+    "withdrawLiquidityWhenXtIsMore": {
       "contractState": {
         "decimalBase": "100000000",
         "daysInYear": "365",

@@ -370,7 +370,7 @@ contract TermMaxRouter is
         lpFt.safeIncreaseAllowance(address(market), lpFtInAmt);
         lpXt.safeIncreaseAllowance(address(market), lpXtInAmt);
 
-        (ftOutAmt, xtOutAmt) = market.withdrawLp(
+        (ftOutAmt, xtOutAmt) = market.withdrawLiquidity(
             lpFtInAmt.toUint128(),
             lpXtInAmt.toUint128()
         );
@@ -427,7 +427,7 @@ contract TermMaxRouter is
         lpFt.safeIncreaseAllowance(address(market), lpFtInAmt);
         lpXt.safeIncreaseAllowance(address(market), lpXtInAmt);
         // NOTE: TermMaxRouter get FT/XT token first and then sell FT/XT to underlying
-        (uint128 ftOutAmt, uint128 xtOutAmt) = market.withdrawLp(
+        (uint128 ftOutAmt, uint128 xtOutAmt) = market.withdrawLiquidity(
             lpFtInAmt.toUint128(),
             lpXtInAmt.toUint128()
         );
