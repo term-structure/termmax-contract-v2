@@ -466,25 +466,20 @@ contract EvacuateTest is Test {
         uint xtReserve = res_.xt.balanceOf(makeAddr);
         xtAmt = (lpXtAmt * xtReserve) / (res_.lpXt.totalSupply() - lpXtReserve);
 
-        uint sameProportionXt = (ftAmt * Constants.DECIMAL_BASE) / initialLtv;
+        uint sameProportionFt = (xtAmt * initialLtv + Constants.DECIMAL_BASE - 1) / Constants.DECIMAL_BASE;
 
         // Judge the max redeemed underlying
         // Case 1: ftAmt > xtAmt*ltv  redeem xtAmt, transfer excess ft
-        // Case 2: ftAmt < xtAmt*ltv  redeem ftAmt/ltv, transfer excess xt
-        // Case 2: ftAmt == xtAmt*ltv  redeem xtAmt
-        underlyingAmt = xtAmt;
-        if (sameProportionXt > xtAmt) {
-            uint sameProportionFt = (xtAmt * initialLtv) /
-                Constants.DECIMAL_BASE;
+        // Case 2: ftAmt <= xtAmt*ltv  redeem ftAmt/ltv, transfer excess xt
+        if (ftAmt > sameProportionFt) {
+            underlyingAmt = xtAmt;
             ftAmt = ftAmt - sameProportionFt;
             xtAmt = 0;
-        } else if (sameProportionXt < xtAmt) {
-            underlyingAmt = sameProportionXt;
-            ftAmt = 0;
-            xtAmt = xtAmt - sameProportionXt;
         } else {
+            uint xtToBurn = (ftAmt * Constants.DECIMAL_BASE) / initialLtv;
+            underlyingAmt = xtToBurn;
             ftAmt = 0;
-            xtAmt = 0;
-        }
+            xtAmt = xtAmt - xtToBurn;
+        } 
     }
 }

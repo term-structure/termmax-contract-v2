@@ -958,57 +958,45 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
     ) internal {
         _burnLpInTheMarket();
         MarketConfig memory mConfig = _config;
+
         // calculate out put amount
         uint ftReserve = ft.balanceOf(address(this));
         uint ftAmt = (lpFtAmt * ftReserve) / lpFt.totalSupply();
         // will burn in the next time
         lpFt.transferFrom(caller, address(this), lpFtAmt);
+
         uint xtReserve = xt.balanceOf(address(this));
         uint xtAmt = (lpXtAmt * xtReserve) / lpXt.totalSupply();
         // will burn in the next time
         lpXt.transferFrom(caller, address(this), lpXtAmt);
 
-        uint sameProportionXt = (ftAmt * Constants.DECIMAL_BASE) /
-            mConfig.initialLtv;
+        uint sameProportionFt = (xtAmt * mConfig.initialLtv + Constants.DECIMAL_BASE - 1) /
+            Constants.DECIMAL_BASE;
 
         // Judge the max redeemed underlying
-        // Case 1: ftAmt > xtAmt*ltv  redeem xtAmt, transfer excess ft
-        // Case 2: ftAmt < xtAmt*ltv  redeem ftAmt/ltv, transfer excess xt
-        // Case 3: ftAmt == xtAmt*ltv  redeem xtAmt
-        uint underlyingAmt = xtAmt;
-        if (sameProportionXt > xtAmt) {
-            uint sameProportionFt = (xtAmt * mConfig.initialLtv + Constants.DECIMAL_BASE - 1) /
-                Constants.DECIMAL_BASE;
+        // Case 1: ftAmt >  xtAmt * ltv  redeem xtAmt, transfer excess ft
+        // Case 2: ftAmt <= xtAmt * ltv  redeem ftAmt/ltv, transfer excess xt
+        if (ftAmt > sameProportionFt) {
             ft.transfer(caller, ftAmt - sameProportionFt);
             ft.burn(sameProportionFt);
             xt.burn(xtAmt);
+            underlying.transfer(caller, xtAmt);
             emit Evacuate(
                 caller,
                 lpFtAmt,
                 lpXtAmt,
                 uint128(ftAmt - sameProportionFt),
                 0,
-                underlyingAmt
-            );
-        } else if (sameProportionXt < xtAmt) {
-            xt.transfer(caller, xtAmt - sameProportionXt);
-            underlyingAmt = sameProportionXt;
-            ft.burn(ftAmt);
-            xt.burn(sameProportionXt);
-            emit Evacuate(
-                caller,
-                lpFtAmt,
-                lpXtAmt,
-                0,
-                uint128(xtAmt - sameProportionXt),
-                underlyingAmt
+                xtAmt
             );
         } else {
+            uint xtToBurn = (ftAmt * Constants.DECIMAL_BASE) / mConfig.initialLtv;
+            xt.transfer(caller, xtAmt - xtToBurn);
             ft.burn(ftAmt);
-            xt.burn(xtAmt);
-            emit Evacuate(caller, lpFtAmt, lpXtAmt, 0, 0, underlyingAmt);
+            xt.burn(xtToBurn);
+            underlying.transfer(caller, xtToBurn);
+            emit Evacuate(caller, lpFtAmt, lpXtAmt, 0, uint128(xtAmt - xtToBurn), xtToBurn);
         }
-        underlying.transfer(caller, underlyingAmt);
     }
 
     function _getEvacuateStatus() internal view returns (bool) {
