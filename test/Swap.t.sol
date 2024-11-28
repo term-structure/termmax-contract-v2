@@ -10,7 +10,7 @@ import {SwapUtils} from "./utils/SwapUtils.sol";
 
 import {IFlashLoanReceiver} from "../contracts/core/IFlashLoanReceiver.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {ITermMaxMarket, TermMaxMarket, Constants} from "../contracts/core/TermMaxMarket.sol";
+import {ITermMaxMarket, TermMaxMarket, Constants, TermMaxCurve} from "../contracts/core/TermMaxMarket.sol";
 import {MockERC20, ERC20} from "../contracts/test/MockERC20.sol";
 import {MockPriceFeed} from "../contracts/test/MockPriceFeed.sol";
 import {ITermMaxFactory, TermMaxFactory, IMintableERC20, IGearingToken, AggregatorV3Interface} from "../contracts/core/factory/TermMaxFactory.sol";
@@ -54,6 +54,20 @@ contract SwapTest is Test {
             )
         );
 
+        // update oracle
+        res.collateralOracle.updateRoundData(
+            JSONLoader.getRoundDataFromJson(
+                testdata,
+                ".priceData.ETH_2000_DAI_1.eth"
+            )
+        );
+        res.underlyingOracle.updateRoundData(
+            JSONLoader.getRoundDataFromJson(
+                testdata,
+                ".priceData.ETH_2000_DAI_1.dai"
+            )
+        );
+
         uint amount = 10000e8;
         res.underlying.mint(deployer, amount);
         res.underlying.approve(address(res.market), amount);
@@ -69,26 +83,50 @@ contract SwapTest is Test {
         uint128 minTokenOut = 0e8;
         res.underlying.mint(sender, underlyingAmtIn);
         res.underlying.approve(address(res.market), underlyingAmtIn);
-        uint256 netOut = res.market.buyFt(underlyingAmtIn, minTokenOut);
 
+        uint actualOut = vm.parseUint(
+            vm.parseJsonString(testdata, ".expected.testBuyFt.output.netOut")
+        );
+        uint fee = vm.parseUint(
+            vm.parseJsonString(testdata, ".expected.testBuyFt.output.fee")
+        );
         StateChecker.MarketState memory expectedState = JSONLoader
             .getMarketStateFromJson(
                 testdata,
                 ".expected.testBuyFt.contractState"
             );
+        vm.expectEmit();
+        emit ITermMaxMarket.BuyToken(
+            sender,
+            res.ft,
+            underlyingAmtIn,
+            minTokenOut,
+            uint128(actualOut),
+            uint128(fee),
+            int64(expectedState.apr)
+        );
+        uint256 netOut = res.market.buyFt(underlyingAmtIn, minTokenOut);
+
         StateChecker.checkMarketState(res, expectedState);
 
-        assert(
-            netOut ==
-                vm.parseUint(
-                    vm.parseJsonString(
-                        testdata,
-                        ".expected.testBuyFt.output.netOut"
-                    )
-                )
-        );
+        assert(netOut == actualOut);
         assert(res.ft.balanceOf(sender) == netOut);
 
+        vm.stopPrank();
+    }
+
+    function testBuyAllFt() public {
+        vm.startPrank(sender);
+
+        uint underlyingAmtIn = 100000000000e8;
+        res.underlying.mint(sender, underlyingAmtIn);
+        res.underlying.approve(address(res.market), underlyingAmtIn);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                TermMaxCurve.LiquidityIsZeroAfterTransaction.selector
+            )
+        );
+        res.market.buyFt(uint128(underlyingAmtIn), 0);
         vm.stopPrank();
     }
 
@@ -158,26 +196,50 @@ contract SwapTest is Test {
         uint128 minTokenOut = 0e8;
         res.underlying.mint(sender, underlyingAmtIn);
         res.underlying.approve(address(res.market), underlyingAmtIn);
-        uint256 netOut = res.market.buyXt(underlyingAmtIn, minTokenOut);
 
+        uint actualOut = vm.parseUint(
+            vm.parseJsonString(testdata, ".expected.testBuyXt.output.netOut")
+        );
+        uint fee = vm.parseUint(
+            vm.parseJsonString(testdata, ".expected.testBuyXt.output.fee")
+        );
         StateChecker.MarketState memory expectedState = JSONLoader
             .getMarketStateFromJson(
                 testdata,
                 ".expected.testBuyXt.contractState"
             );
+        vm.expectEmit();
+        emit ITermMaxMarket.BuyToken(
+            sender,
+            res.xt,
+            underlyingAmtIn,
+            minTokenOut,
+            uint128(actualOut),
+            uint128(fee),
+            int64(expectedState.apr)
+        );
+        uint256 netOut = res.market.buyXt(underlyingAmtIn, minTokenOut);
+
         StateChecker.checkMarketState(res, expectedState);
 
-        assert(
-            netOut ==
-                vm.parseUint(
-                    vm.parseJsonString(
-                        testdata,
-                        ".expected.testBuyXt.output.netOut"
-                    )
-                )
-        );
+        assert(netOut == actualOut);
         assert(res.xt.balanceOf(sender) == netOut);
 
+        vm.stopPrank();
+    }
+
+    function testBuyAllXt() public {
+        vm.startPrank(sender);
+
+        uint underlyingAmtIn = 100000000000e8;
+        res.underlying.mint(sender, underlyingAmtIn);
+        res.underlying.approve(address(res.market), underlyingAmtIn);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                TermMaxCurve.LiquidityIsZeroAfterTransaction.selector
+            )
+        );
+        res.market.buyXt(uint128(underlyingAmtIn), 0);
         vm.stopPrank();
     }
 
@@ -252,24 +314,33 @@ contract SwapTest is Test {
         );
         uint128 minTokenOut = 0e8;
         res.ft.approve(address(res.market), ftAmtIn);
-        uint256 netOut = res.market.sellFt(ftAmtIn, minTokenOut);
 
+        uint actualOut = vm.parseUint(
+            vm.parseJsonString(testdata, ".expected.testSellFt.output.netOut")
+        );
+        uint fee = vm.parseUint(
+            vm.parseJsonString(testdata, ".expected.testSellFt.output.fee")
+        );
         StateChecker.MarketState memory expectedState = JSONLoader
             .getMarketStateFromJson(
                 testdata,
                 ".expected.testSellFt.contractState"
             );
+        vm.expectEmit();
+        emit ITermMaxMarket.SellToken(
+            sender,
+            res.ft,
+            ftAmtIn,
+            minTokenOut,
+            uint128(actualOut),
+            uint128(fee),
+            int64(expectedState.apr)
+        );
+        uint256 netOut = res.market.sellFt(ftAmtIn, minTokenOut);
+
         StateChecker.checkMarketState(res, expectedState);
 
-        assert(
-            netOut ==
-                vm.parseUint(
-                    vm.parseJsonString(
-                        testdata,
-                        ".expected.testSellFt.output.netOut"
-                    )
-                )
-        );
+        assert(netOut == actualOut);
         assert(res.ft.balanceOf(sender) == 0);
         assert(res.underlying.balanceOf(sender) == netOut);
 
@@ -362,24 +433,33 @@ contract SwapTest is Test {
         );
         uint128 minTokenOut = 0e8;
         res.xt.approve(address(res.market), xtAmtIn);
-        uint256 netOut = res.market.sellXt(xtAmtIn, minTokenOut);
 
+        uint actualOut = vm.parseUint(
+            vm.parseJsonString(testdata, ".expected.testSellXt.output.netOut")
+        );
+        uint fee = vm.parseUint(
+            vm.parseJsonString(testdata, ".expected.testSellXt.output.fee")
+        );
         StateChecker.MarketState memory expectedState = JSONLoader
             .getMarketStateFromJson(
                 testdata,
                 ".expected.testSellXt.contractState"
             );
+        vm.expectEmit();
+        emit ITermMaxMarket.SellToken(
+            sender,
+            res.xt,
+            xtAmtIn,
+            minTokenOut,
+            uint128(actualOut),
+            uint128(fee),
+            int64(expectedState.apr)
+        );
+        uint256 netOut = res.market.sellXt(xtAmtIn, minTokenOut);
+
         StateChecker.checkMarketState(res, expectedState);
 
-        assert(
-            netOut ==
-                vm.parseUint(
-                    vm.parseJsonString(
-                        testdata,
-                        ".expected.testSellXt.output.netOut"
-                    )
-                )
-        );
+        assert(netOut == actualOut);
         assert(res.xt.balanceOf(sender) == 0);
         assert(res.underlying.balanceOf(sender) == netOut);
 
@@ -463,7 +543,7 @@ contract SwapTest is Test {
     function testLever() public {
         vm.startPrank(sender);
 
-        uint128 collateralAmtIn = 100e8;
+        uint128 collateralAmtIn = 1e18;
         uint128 debtAmt = 95e8;
         uint128 minTokenOut = 0e8;
         res.collateral.mint(sender, collateralAmtIn);
@@ -485,7 +565,7 @@ contract SwapTest is Test {
     function testLeverBeforeMaturity() public {
         vm.startPrank(sender);
 
-        uint128 collateralAmtIn = 100e8;
+        uint128 collateralAmtIn = 1e18;
         uint128 debtAmt = 95e8;
         uint128 minTokenOut = 0e8;
         res.collateral.mint(sender, collateralAmtIn);
@@ -500,7 +580,7 @@ contract SwapTest is Test {
     function testLeverAfterMaturity() public {
         vm.startPrank(sender);
 
-        uint128 collateralAmtIn = 100e8;
+        uint128 collateralAmtIn = 1e18;
         uint128 debtAmt = 95e8;
         uint128 minTokenOut = 0e8;
         res.collateral.mint(sender, collateralAmtIn);
@@ -536,13 +616,16 @@ contract SwapTest is Test {
 
         uint128 underlyingAmtToRedeem = xtAmt;
         uint128 xtAmtToRedeem = underlyingAmtToRedeem;
-        uint128 ftAmtToRedeem = (underlyingAmtToRedeem *
-            res.market.config().initialLtv) / 1e8;
+        uint128 ftAmtToRedeem = uint128((underlyingAmtToRedeem *
+            res.market.config().initialLtv + Constants.DECIMAL_BASE - 1) / Constants.DECIMAL_BASE);
         res.xt.approve(address(res.market), xtAmtToRedeem);
         res.ft.approve(address(res.market), ftAmtToRedeem);
         StateChecker.MarketState memory state = StateChecker.getMarketState(
             res
         );
+
+        vm.expectEmit();
+        emit ITermMaxMarket.RemoveLiquidity(sender, xtAmtToRedeem);
         res.market.redeemFtAndXtToUnderlying(xtAmtToRedeem);
         state.underlyingReserve -= underlyingAmtToRedeem;
         StateChecker.checkMarketState(res, state);
@@ -571,8 +654,8 @@ contract SwapTest is Test {
 
         uint128 underlyingAmtToRedeem = xtAmt;
         uint128 xtAmtToRedeem = underlyingAmtToRedeem;
-        uint128 ftAmtToRedeem = (underlyingAmtToRedeem *
-            res.market.config().initialLtv) / 1e8;
+        uint128 ftAmtToRedeem = uint128((underlyingAmtToRedeem *
+            res.market.config().initialLtv + Constants.DECIMAL_BASE - 1) / Constants.DECIMAL_BASE);
         res.xt.approve(address(res.market), xtAmtToRedeem);
         res.ft.approve(address(res.market), ftAmtToRedeem);
 
@@ -603,8 +686,8 @@ contract SwapTest is Test {
 
         uint128 underlyingAmtToRedeem = xtAmt;
         uint128 xtAmtToRedeem = underlyingAmtToRedeem;
-        uint128 ftAmtToRedeem = (underlyingAmtToRedeem *
-            res.market.config().initialLtv) / 1e8;
+        uint128 ftAmtToRedeem = uint128((underlyingAmtToRedeem *
+            res.market.config().initialLtv) / Constants.DECIMAL_BASE);
         res.xt.approve(address(res.market), xtAmtToRedeem);
         res.ft.approve(address(res.market), ftAmtToRedeem);
 
@@ -628,16 +711,13 @@ contract SwapTest is Test {
         uint128 xtAmtIn = uint128(
             res.market.buyXt(underlyingAmtInForBuyXt, minXTOut)
         );
-        uint128 collateralAmtIn = xtAmtIn;
+        uint128 collateralAmtIn = 1e18;
         res.collateral.mint(sender, collateralAmtIn);
-        res.collateral.approve(address(res.gt), collateralAmtIn);
         res.xt.approve(address(outer), xtAmtIn);
         bytes memory callbackData = abi.encode(collateralAmtIn);
         outer.leverageByXt(sender, xtAmtIn, callbackData);
         vm.stopPrank();
     }
-
-    //TODO: test case for redemption
 }
 
 contract MockOuter is IFlashLoanReceiver {
@@ -653,6 +733,8 @@ contract MockOuter is IFlashLoanReceiver {
         uint256 amount,
         bytes calldata data
     ) external returns (bytes memory collateralData) {
+        uint128 collateralAmt = abi.decode(data, (uint128));
+        res.collateral.mint(address(this), collateralAmt);
         return data;
     }
 
@@ -664,6 +746,7 @@ contract MockOuter is IFlashLoanReceiver {
         uint128 collateralAmt = abi.decode(callbackData, (uint128));
         res.xt.transferFrom(msg.sender, address(this), xtAmt);
         res.xt.approve(address(res.market), xtAmt);
+        res.collateral.approve(address(res.gt), collateralAmt);
         gtId = res.market.leverageByXt(receiver, xtAmt, callbackData);
     }
 }

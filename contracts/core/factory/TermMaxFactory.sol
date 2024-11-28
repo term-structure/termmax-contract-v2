@@ -3,11 +3,16 @@ pragma solidity ^0.8.27;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {GearingTokenWithERC20, IGearingToken, AggregatorV3Interface} from "../tokens/GearingTokenWithERC20.sol";
+import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
+import {IGearingToken, AggregatorV3Interface, IERC20Metadata, GearingTokenWithERC20} from "../tokens/GearingTokenWithERC20.sol";
 import {MintableERC20, IMintableERC20} from "../tokens/MintableERC20.sol";
 import {ITermMaxMarket} from "../TermMaxMarket.sol";
 import {ITermMaxFactory} from "./ITermMaxFactory.sol";
 
+/**
+ * @title The TermMax factory
+ * @author Term Structure Labs
+ */
 contract TermMaxFactory is ITermMaxFactory, Ownable {
     string constant PREFIX_FT = "FT:";
     string constant PREFIX_XT = "XT:";
@@ -16,133 +21,202 @@ contract TermMaxFactory is ITermMaxFactory, Ownable {
     string constant PREFIX_GNFT = "GT:";
     string constant STRING_CONNECTION = "-";
 
-    GearingTokenWithERC20 immutable gtImplement;
-    MintableERC20 immutable tokenImplement;
+    bytes32 constant GT_ERC20 = keccak256("GearingTokenWithERC20");
 
-    // TODO get bytes from an address
-    bytes marketBytes;
+    /// @notice The implementation of TermMax ERC20 Token contract
+    address public immutable tokenImplement;
+
+    /// @notice The implementation of TermMax Market contract
+    address public marketImplement;
+
+    /// @notice The implementations of TermMax Gearing Token contract
+    /// @dev Based on the abstract GearingToken contract,
+    ///      different GearingTokens can be adapted to various collaterals,
+    ///      such as ERC20 tokens and ERC721 tokens.
+    mapping(bytes32 => address) public gtImplements;
 
     constructor(address admin) Ownable(admin) {
-        gtImplement = new GearingTokenWithERC20();
-        tokenImplement = new MintableERC20();
+        gtImplements[GT_ERC20] = address(new GearingTokenWithERC20());
+        tokenImplement = address(new MintableERC20());
     }
 
-    function initMarketBytes(bytes memory marketBytes_) external onlyOwner {
-        if (marketBytes.length != 0) {
-            revert();
+    /// @notice Initialize the implementation of TermMax Market contract
+    function initMarketImplement(address marketImplement_) external onlyOwner {
+        if (marketImplement != address(0)) {
+            revert MarketImplementInitialized();
         }
-        marketBytes = marketBytes_;
+        marketImplement = marketImplement_;
+        emit InitializeMarketImplement(marketImplement_);
     }
 
-    function createERC20Market(
+    /**
+     * @inheritdoc ITermMaxFactory
+     */
+    function setGtImplement(
+        string memory gtImplementName,
+        address gtImplement
+    ) external override onlyOwner {
+        bytes32 key = keccak256(abi.encodePacked(gtImplementName));
+        gtImplements[key] = gtImplement;
+        emit SetGtImplement(key, gtImplement);
+    }
+
+    /**
+     * @inheritdoc ITermMaxFactory
+     */
+    function predictMarketAddress(
+        address collateral,
+        IERC20Metadata underlying,
+        uint64 openTime,
+        uint64 maturity,
+        uint32 initialLtv
+    ) external view override returns (address market) {
+        return
+            Clones.predictDeterministicAddress(
+                marketImplement,
+                keccak256(
+                    abi.encode(
+                        collateral,
+                        underlying,
+                        openTime,
+                        maturity,
+                        initialLtv
+                    )
+                )
+            );
+    }
+
+    /**
+     * @inheritdoc ITermMaxFactory
+     */
+    function createMarket(
         DeployParams calldata deployParams
     ) external override onlyOwner returns (address market) {
-        if (marketBytes.length == 0) {
-            revert();
+        if (marketImplement == address(0)) {
+            revert MarketImplementIsNotInitialized();
         }
-        bytes memory initCode = abi.encodePacked(
-            marketBytes,
-            abi.encode(
-                address(deployParams.collateral),
-                deployParams.underlying,
-                deployParams.marketConfig
-            )
-        );
-        assembly {
-            market := create2(0, add(initCode, 0x20), mload(initCode), 0)
+        address gtImplement = gtImplements[deployParams.gtKey];
+        if (gtImplement == address(0)) {
+            revert CantNotFindGtImplementation();
         }
-        (IMintableERC20[4] memory tokens, IGearingToken gt) = _deployTokens(
-            market,
-            deployParams
+        {
+            // Deploy clone by implementation and salt
+            market = Clones.cloneDeterministic(
+                marketImplement,
+                keccak256(
+                    abi.encode(
+                        deployParams.collateral,
+                        deployParams.underlying,
+                        deployParams.marketConfig.openTime,
+                        deployParams.marketConfig.maturity,
+                        deployParams.marketConfig.initialLtv
+                    )
+                )
+            );
+        }
+        IGearingToken gt;
+        IMintableERC20[4] memory tokens;
+        {
+            string memory name = string(
+                abi.encodePacked(
+                    IERC20Metadata(deployParams.collateral).name(),
+                    STRING_CONNECTION,
+                    deployParams.underlying.name()
+                )
+            );
+            string memory symbol = string(
+                abi.encodePacked(
+                    IERC20Metadata(deployParams.collateral).symbol(),
+                    STRING_CONNECTION,
+                    deployParams.underlying.symbol()
+                )
+            );
+
+            uint8 decimals = deployParams.underlying.decimals();
+            tokens = _deployTokens(market, name, symbol, decimals);
+
+            string memory gtName = string(abi.encodePacked(PREFIX_GNFT, name));
+            string memory gtSymbol = string(
+                abi.encodePacked(PREFIX_GNFT, symbol)
+            );
+            gt = IGearingToken(
+                Clones.cloneDeterministic(
+                    gtImplement,
+                    keccak256(
+                        abi.encode(
+                            market,
+                            deployParams.collateral,
+                            deployParams.underlying
+                        )
+                    )
+                )
+            );
+            gt.initialize(
+                gtName,
+                gtSymbol,
+                IGearingToken.GtConfig({
+                    market: address(market),
+                    collateral: address(deployParams.collateral),
+                    underlying: deployParams.underlying,
+                    ft: tokens[0],
+                    treasurer: deployParams.marketConfig.treasurer,
+                    underlyingOracle: deployParams.underlyingOracle,
+                    maturity: deployParams.marketConfig.maturity,
+                    liquidationLtv: deployParams.liquidationLtv,
+                    maxLtv: deployParams.maxLtv,
+                    liquidatable: deployParams.liquidatable
+                }),
+                deployParams.gtInitalParams
+            );
+        }
+
+        ITermMaxMarket(market).initialize(
+            deployParams.admin,
+            address(deployParams.collateral),
+            deployParams.underlying,
+            tokens,
+            gt,
+            deployParams.marketConfig
         );
-        ITermMaxMarket(market).initialize(tokens, gt);
-        Ownable(market).transferOwnership(deployParams.admin);
     }
 
     function _deployTokens(
         address market,
-        ITermMaxFactory.DeployParams memory deployParams
-    ) internal returns (IMintableERC20[4] memory tokens, IGearingToken gt) {
-        string memory collateralName = deployParams.collateral.name();
-        string memory collateralSymbol = deployParams.collateral.symbol();
+        string memory name,
+        string memory symbol,
+        uint8 decimals
+    ) internal returns (IMintableERC20[4] memory tokens) {
         {
-            uint8 decimals = deployParams.underlying.decimals();
             // Deploy tokens
-
             tokens[0] = _deployMintableERC20(
                 address(market),
                 PREFIX_FT,
-                collateralName,
-                collateralSymbol,
+                name,
+                symbol,
                 decimals
             );
             tokens[1] = _deployMintableERC20(
                 address(market),
                 PREFIX_XT,
-                collateralName,
-                collateralSymbol,
+                name,
+                symbol,
                 decimals
             );
             tokens[2] = _deployMintableERC20(
                 address(market),
                 PREFIX_LP_FT,
-                collateralName,
-                collateralSymbol,
+                name,
+                symbol,
                 decimals
             );
             tokens[3] = _deployMintableERC20(
                 address(market),
                 PREFIX_LP_XT,
-                collateralName,
-                collateralSymbol,
+                name,
+                symbol,
                 decimals
             );
         }
-
-        string memory gtName = string(
-            abi.encodePacked(
-                PREFIX_GNFT,
-                deployParams.underlying.name(),
-                STRING_CONNECTION,
-                collateralName
-            )
-        );
-        string memory gtSymbol = string(
-            abi.encodePacked(
-                PREFIX_GNFT,
-                deployParams.underlying.symbol(),
-                STRING_CONNECTION,
-                collateralSymbol
-            )
-        );
-        gt = IGearingToken(
-            address(
-                new ERC1967Proxy(
-                    address(gtImplement),
-                    abi.encodeCall(
-                        GearingTokenWithERC20.initialize,
-                        (
-                            gtName,
-                            gtSymbol,
-                            deployParams.admin,
-                            IGearingToken.GtConfig({
-                                market: address(market),
-                                collateral: address(deployParams.collateral),
-                                underlying: deployParams.underlying,
-                                ft: tokens[0],
-                                treasurer: deployParams.marketConfig.treasurer,
-                                underlyingOracle: deployParams.underlyingOracle,
-                                maturity: deployParams.marketConfig.maturity,
-                                liquidationLtv: deployParams.liquidationLtv,
-                                maxLtv: deployParams.maxLtv,
-                                liquidatable: deployParams.liquidatable
-                            }),
-                            deployParams.collateralOracle
-                        )
-                    )
-                )
-            )
-        );
     }
 
     function _deployMintableERC20(
@@ -151,20 +225,15 @@ contract TermMaxFactory is ITermMaxFactory, Ownable {
         string memory name,
         string memory symbol,
         uint8 decimals
-    ) internal returns (IMintableERC20) {
+    ) internal returns (IMintableERC20 token) {
         name = string(abi.encodePacked(prefix, name));
         symbol = string(abi.encodePacked(prefix, symbol));
-        return
-            IMintableERC20(
-                address(
-                    new ERC1967Proxy(
-                        address(tokenImplement),
-                        abi.encodeCall(
-                            MintableERC20.initialize,
-                            (market, name, symbol, decimals)
-                        )
-                    )
-                )
-            );
+        token = IMintableERC20(
+            Clones.cloneDeterministic(
+                tokenImplement,
+                keccak256(abi.encode(market, name, symbol))
+            )
+        );
+        token.initialize(market, name, symbol, decimals);
     }
 }

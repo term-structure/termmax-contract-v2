@@ -4,16 +4,23 @@ out = "out"
 libs = ["lib"]
 evmVersion = "cancun"
 gas_reports = ["TermMaxMarket", "ERC20GearingNft"]
+viaIR = true
+optimizer = true
+optimizer_runs = 200
 
 remappings = [
     "@openzeppelin/contracts=lib/openzeppelin-contracts/contracts",
     "@openzeppelin/contracts-upgradeable=lib/openzeppelin-contracts-upgradeable/contracts",
     "@chainlink/contracts=lib/chainlink/contracts",
-    "forge-std=lib/forge-std/src",
+    "@pendle/core-v2/contracts=lib/pendle-core-v2-public/contracts",
+    "@uniswap/v3-core/contracts=lib/v3-core/contracts",
+    "@uniswap/v3-periphery/contracts=lib/v3-periphery/contracts",
+    "forge-std=lib/forge-std/src"
 ]
 
 fs_permissions = [
-    { access = "read", path = "test/testdata" }
+    { access = "read", path = "test/testdata" },
+    { access = "read", path = "script/deploy/deploydata" }
 ]
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
