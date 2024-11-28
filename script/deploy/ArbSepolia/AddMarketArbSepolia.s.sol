@@ -17,7 +17,7 @@ import {IGearingToken, AggregatorV3Interface} from "../../../contracts/core/toke
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {MockSwapAdapter} from "../../../contracts/test/MockSwapAdapter.sol";
-import {JSONLoader} from "../../utils/JSONLoader.sol";
+import {JSONLoader} from "../../utils/JsonLoader.sol";
 
 contract DeployArbSepolia is Script {
     // admin config

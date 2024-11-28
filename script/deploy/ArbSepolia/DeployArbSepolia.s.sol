@@ -17,7 +17,7 @@ import {IGearingToken, AggregatorV3Interface} from "../../../contracts/core/toke
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {SwapAdapter} from "../../../contracts/test/testnet/SwapAdapter.sol";
-import {JSONLoader} from "../../utils/JSONLoader.sol";
+import {JSONLoader} from "../../utils/JsonLoader.sol";
 import {Faucet} from "../../../contracts/test/testnet/Faucet.sol";
 import {FaucetERC20} from "../../../contracts/test/testnet/FaucetERC20.sol";
 

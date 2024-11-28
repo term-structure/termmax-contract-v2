@@ -616,8 +616,8 @@ contract SwapTest is Test {
 
         uint128 underlyingAmtToRedeem = xtAmt;
         uint128 xtAmtToRedeem = underlyingAmtToRedeem;
-        uint128 ftAmtToRedeem = (underlyingAmtToRedeem *
-            res.market.config().initialLtv) / 1e8;
+        uint128 ftAmtToRedeem = uint128((underlyingAmtToRedeem *
+            res.market.config().initialLtv + Constants.DECIMAL_BASE - 1) / Constants.DECIMAL_BASE);
         res.xt.approve(address(res.market), xtAmtToRedeem);
         res.ft.approve(address(res.market), ftAmtToRedeem);
         StateChecker.MarketState memory state = StateChecker.getMarketState(
@@ -654,8 +654,8 @@ contract SwapTest is Test {
 
         uint128 underlyingAmtToRedeem = xtAmt;
         uint128 xtAmtToRedeem = underlyingAmtToRedeem;
-        uint128 ftAmtToRedeem = (underlyingAmtToRedeem *
-            res.market.config().initialLtv) / 1e8;
+        uint128 ftAmtToRedeem = uint128((underlyingAmtToRedeem *
+            res.market.config().initialLtv + Constants.DECIMAL_BASE - 1) / Constants.DECIMAL_BASE);
         res.xt.approve(address(res.market), xtAmtToRedeem);
         res.ft.approve(address(res.market), ftAmtToRedeem);
 
@@ -686,8 +686,8 @@ contract SwapTest is Test {
 
         uint128 underlyingAmtToRedeem = xtAmt;
         uint128 xtAmtToRedeem = underlyingAmtToRedeem;
-        uint128 ftAmtToRedeem = (underlyingAmtToRedeem *
-            res.market.config().initialLtv) / 1e8;
+        uint128 ftAmtToRedeem = uint128((underlyingAmtToRedeem *
+            res.market.config().initialLtv) / Constants.DECIMAL_BASE);
         res.xt.approve(address(res.market), xtAmtToRedeem);
         res.ft.approve(address(res.market), ftAmtToRedeem);
 
