@@ -895,14 +895,17 @@ contract TermMaxRouter is
         }
         (, uint128 debtAmt, , ) = gt.loanInfo(gtId);
 
-        ft.safeIncreaseAllowance(address(gt), debtAmt);
-        gt.repay(gtId, debtAmt, false);
-
         if (netFtOut > debtAmt) {
             uint remainningFt = netFtOut - debtAmt;
             ft.safeIncreaseAllowance(address(market), remainningFt);
             uint underlyingOut = market.sellFt(uint128(remainningFt), 0);
             underlying.transfer(receiver, underlyingOut);
+
+            ft.safeIncreaseAllowance(address(gt), debtAmt);
+            gt.repay(gtId, debtAmt, false);
+        }else{
+            ft.safeIncreaseAllowance(address(gt), netFtOut);
+            gt.repay(gtId, uint128(netFtOut), false);
         }
         emit Repay(market, false, address(underlying), gtId, tokenInAmt);
     }

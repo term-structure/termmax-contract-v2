@@ -784,6 +784,52 @@ contract TermMaxRouterTest is Test {
         vm.stopPrank();
     }
 
+    function testPartialRepayByTokenThroughFt() public {
+        uint128 debtAmt = 100e8;
+        uint256 collateralAmt = 1e18;
+
+        vm.startPrank(sender);
+
+        (uint256 gtId, ) = LoanUtils.fastMintGt(
+            res,
+            sender,
+            debtAmt,
+            collateralAmt
+        );
+        uint repayAmIn = debtAmt/2;
+        res.underlying.mint(sender, repayAmIn);
+
+        uint collateralBalanceBefore = res.collateral.balanceOf(sender);
+        uint underlyingBalanceBefore = res.underlying.balanceOf(sender);
+        uint ftBalanceBefore = res.ft.balanceOf(sender);
+
+        res.underlying.approve(address(router), repayAmIn);
+
+        bool byUnderlying = false;
+        vm.expectEmit();
+        emit IGearingToken.Repay(gtId, 5095183523, byUnderlying);
+        router.repayByTokenThroughFt(
+            sender,
+            res.market,
+            gtId,
+            repayAmIn,
+            repayAmIn
+        );
+
+        uint collateralBalanceAfter = res.collateral.balanceOf(sender);
+        uint ftBalanceAfter = res.ft.balanceOf(sender);
+        uint underlyingBalanceAfter = res.underlying.balanceOf(sender);
+
+        assert(underlyingBalanceAfter == underlyingBalanceBefore - repayAmIn);
+        assert(
+            collateralBalanceAfter  == collateralBalanceBefore
+        );
+
+        assert(ftBalanceAfter == ftBalanceBefore);
+
+        vm.stopPrank();
+    }
+
     function testFlashRepay() public {
         vm.startPrank(sender);
 
