@@ -202,14 +202,13 @@ library TermMaxCurve {
         uint32 feeRatio,
         uint32 ltv
     ) private pure returns (uint256 feeAmt) {
-        // Ref docs: https://docs.ts.finance/termmax/technical-details/amm-model/pool-operations/fee-operations-f
+        // Ref docs: https://docs.ts.finance/termmax/technical-details/amm-model/pool-operations/fee-operations-f#transaction-fee
         // Ref: Eq.F-1 in the AMM Model section of docs
         uint l = deltaFt * Constants.DECIMAL_BASE + deltaXt * ltv;
         uint r = deltaXt * Constants.DECIMAL_BASE;
 
-        // yield = |l - r|
-        // fee = yield * feeRatio
-        if (l > r) { 
+        // Ref: Eq.F-2 in the AMM Model section of docs
+        if (l > r) {
             feeAmt = ((l - r) * feeRatio) / Constants.DECIMAL_BASE_SQ;
         } else {
             feeAmt = ((r - l) * feeRatio) / Constants.DECIMAL_BASE_SQ;
@@ -232,6 +231,8 @@ library TermMaxCurve {
         uint256 lpAmt,
         uint256 totalReward
     ) internal pure returns (uint256 reward) {
+        // Ref docs: https://docs.ts.finance/termmax/technical-details/amm-model/pool-operations/fee-operations-f#transaction-fee-distribution
+        // Ref: Eq.F-3 in the AMM Model section of docs
         uint t = (lpSupply - totalReward) *
             (2 * maturity - openMarketTime - currentTime);
         reward = ((totalReward * lpAmt) * (currentTime - openMarketTime)) / t;
