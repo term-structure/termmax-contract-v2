@@ -11,6 +11,8 @@ import "./AbstractGearingToken.sol";
 contract GearingTokenWithERC20 is AbstractGearingToken {
     using SafeCast for uint256;
     using SafeCast for int256;
+    using SafeERC20 for IERC20;
+    using SafeERC20 for IERC20Metadata;
     using MathLib for *;
 
     /// @notice The oracle of collateral in USD
@@ -59,7 +61,7 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
         if (amount == 0) {
             return;
         }
-        IERC20(_config.collateral).transferFrom(from, to, amount);
+        IERC20(_config.collateral).safeTransferFrom(from, to, amount);
     }
 
     /**
@@ -73,7 +75,7 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
         if (amount == 0) {
             return;
         }
-        IERC20(_config.collateral).transfer(to, amount);
+        IERC20(_config.collateral).safeTransfer(to, amount);
     }
 
     /**

@@ -177,7 +177,7 @@ contract TermMaxRouter is
             tokenInAmt
         );
         (netFtOut) = market.buyFt(tokenInAmt, minFtOut);
-        ft.transfer(receiver, netFtOut);
+        ft.safeTransfer(receiver, netFtOut);
         emit Swap(
             market,
             address(underlying),
@@ -214,7 +214,7 @@ contract TermMaxRouter is
         );
 
         (netTokenOut) = market.sellFt(ftInAmt, minTokenOut);
-        underlying.transfer(receiver, netTokenOut);
+        underlying.safeTransfer(receiver, netTokenOut);
 
         emit Swap(
             market,
@@ -247,7 +247,7 @@ contract TermMaxRouter is
 
         underlying.safeIncreaseAllowance(address(market), tokenInAmt);
         (netXtOut) = market.buyXt(tokenInAmt, minXtOut);
-        xt.transfer(receiver, netXtOut);
+        xt.safeTransfer(receiver, netXtOut);
 
         emit Swap(
             market,
@@ -280,7 +280,7 @@ contract TermMaxRouter is
 
         xt.safeIncreaseAllowance(address(market), xtInAmt);
         (netTokenOut) = market.sellXt(xtInAmt, minTokenOut);
-        underlying.transfer(receiver, netTokenOut);
+        underlying.safeTransfer(receiver, netTokenOut);
 
         emit Swap(
             market,
@@ -324,8 +324,8 @@ contract TermMaxRouter is
         );
 
         (lpFtOutAmt, lpXtOutAmt) = market.provideLiquidity(underlyingAmt);
-        lpFt.transfer(receiver, lpFtOutAmt);
-        lpXt.transfer(receiver, lpXtOutAmt);
+        lpFt.safeTransfer(receiver, lpFtOutAmt);
+        lpXt.safeTransfer(receiver, lpXtOutAmt);
 
         emit AddLiquidity(
             market,
@@ -382,8 +382,8 @@ contract TermMaxRouter is
             revert InsufficientTokenOut(address(xt), minXtOut, xtOutAmt);
         }
 
-        ft.transfer(receiver, ftOutAmt);
-        xt.transfer(receiver, xtOutAmt);
+        ft.safeTransfer(receiver, ftOutAmt);
+        xt.safeTransfer(receiver, xtOutAmt);
 
         emit WithdrawLiquidityToXtFt(
             market,
@@ -486,7 +486,7 @@ contract TermMaxRouter is
         if (remainXtAmt > 0) {
             underlyingAmtOut += market.sellXt(remainXtAmt, 0);
         }
-        underlying.transfer(receiver, underlyingAmtOut);
+        underlying.safeTransfer(receiver, underlyingAmtOut);
     }
 
     function _calculateRedeemAmounts(
@@ -619,7 +619,7 @@ contract TermMaxRouter is
             ,
             IERC20 underlying
         ) = market.tokens();
-        underlying.transferFrom(
+        underlying.safeTransferFrom(
             msg.sender,
             address(this),
             tokenToBuyXtAmt + tokenInAmt
@@ -790,7 +790,7 @@ contract TermMaxRouter is
         }
 
         underlying.safeTransfer(receiver, borrowAmt);
-        gt.transferFrom(address(this), receiver, gtId);
+        gt.safeTransferFrom(address(this), receiver, gtId);
 
         emit Borrow(
             market,
@@ -839,9 +839,9 @@ contract TermMaxRouter is
         (, , , , IGearingToken gt, , IERC20 underlying) = market.tokens();
 
         gt.flashRepay(gtId, abi.encode(units));
-        // transfer remainning underlying token
+        // safeTransfer remainning underlying token
         netTokenOut = underlying.balanceOf(address(this));
-        underlying.transfer(receiver, netTokenOut);
+        underlying.safeTransfer(receiver, netTokenOut);
     }
 
     /**
@@ -899,7 +899,7 @@ contract TermMaxRouter is
             uint remainningFt = netFtOut - debtAmt;
             ft.safeIncreaseAllowance(address(market), remainningFt);
             uint underlyingOut = market.sellFt(uint128(remainningFt), 0);
-            underlying.transfer(receiver, underlyingOut);
+            underlying.safeTransfer(receiver, underlyingOut);
 
             ft.safeIncreaseAllowance(address(gt), debtAmt);
             gt.repay(gtId, debtAmt, false);
@@ -1001,7 +1001,7 @@ contract TermMaxRouter is
     ) external override ensureGtWhitelist(msg.sender) {
         SwapUnit[] memory units = abi.decode(callbackData, (SwapUnit[]));
 
-        // transfer collateral
+        // safeTransfer collateral
         bytes memory dataToTransferFrom = abi.encodeWithSelector(
             ISwapAdapter.transferInputTokenFrom.selector,
             units[0].tokenIn,

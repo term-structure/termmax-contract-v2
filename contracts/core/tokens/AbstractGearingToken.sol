@@ -6,6 +6,7 @@ import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Own
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Constants} from "../lib/Constants.sol";
 import {IFlashRepayer} from "./IFlashRepayer.sol";
 import {IGearingToken, AggregatorV3Interface, IERC20Metadata, IERC20} from "./IGearingToken.sol";
@@ -23,6 +24,8 @@ abstract contract AbstractGearingToken is
 {
     using SafeCast for uint256;
     using SafeCast for int256;
+    using SafeERC20 for IERC20;
+    using SafeERC20 for IERC20Metadata;
 
     struct LoanInfo {
         /// @notice Debt amount in underlying token
@@ -263,10 +266,10 @@ abstract contract AbstractGearingToken is
         }
 
         if (byUnderlying) {
-            config.underlying.transferFrom(msg.sender, config.market, repayAmt);
+            config.underlying.safeTransferFrom(msg.sender, config.market, repayAmt);
         } else {
             // Those ft tokens have been approved to market and will be burn after maturity
-            config.ft.transferFrom(msg.sender, address(this), repayAmt);
+            config.ft.safeTransferFrom(msg.sender, address(this), repayAmt);
         }
         _repay(id, repayAmt);
         emit Repay(id, repayAmt, byUnderlying);
@@ -292,7 +295,7 @@ abstract contract AbstractGearingToken is
             loan.collateralData,
             callbackData
         );
-        config.underlying.transferFrom(msg.sender, config.market, loan.debtAmt);
+        config.underlying.safeTransferFrom(msg.sender, config.market, loan.debtAmt);
         _burnInternal(id);
         emit Repay(id, loan.debtAmt, true);
     }
@@ -469,7 +472,7 @@ abstract contract AbstractGearingToken is
             revert RepayAmtExceedsMaxRepayAmt(id, repayAmt, maxRepayAmt);
         }
         // Transfer token
-        config.underlying.transferFrom(msg.sender, config.market, repayAmt);
+        config.underlying.safeTransferFrom(msg.sender, config.market, repayAmt);
         // Do liquidate
 
         (
