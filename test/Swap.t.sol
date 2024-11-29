@@ -545,14 +545,13 @@ contract SwapTest is Test {
 
         uint128 collateralAmtIn = 1e18;
         uint128 debtAmt = 95e8;
-        uint128 minTokenOut = 0e8;
         res.collateral.mint(sender, collateralAmtIn);
         res.collateral.approve(address(res.gt), collateralAmtIn);
 
         StateChecker.MarketState memory state = StateChecker.getMarketState(
             res
         );
-        (uint256 gtId, uint128 netOut) = res.market.issueFt(
+        res.market.issueFt(
             debtAmt,
             abi.encode(collateralAmtIn)
         );
@@ -567,7 +566,6 @@ contract SwapTest is Test {
 
         uint128 collateralAmtIn = 1e18;
         uint128 debtAmt = 95e8;
-        uint128 minTokenOut = 0e8;
         res.collateral.mint(sender, collateralAmtIn);
         res.collateral.approve(address(res.gt), collateralAmtIn);
 
@@ -582,7 +580,6 @@ contract SwapTest is Test {
 
         uint128 collateralAmtIn = 1e18;
         uint128 debtAmt = 95e8;
-        uint128 minTokenOut = 0e8;
         res.collateral.mint(sender, collateralAmtIn);
         res.collateral.approve(address(res.gt), collateralAmtIn);
 
@@ -610,9 +607,8 @@ contract SwapTest is Test {
         uint128 minFtOut = 0e8;
         res.underlying.mint(sender, underlyingAmtInForBuyFt);
         res.underlying.approve(address(res.market), underlyingAmtInForBuyFt);
-        uint128 ftAmt = uint128(
-            res.market.buyFt(underlyingAmtInForBuyFt, minFtOut) / 2
-        );
+
+        res.market.buyFt(underlyingAmtInForBuyFt, minFtOut);
 
         uint128 underlyingAmtToRedeem = xtAmt;
         uint128 xtAmtToRedeem = underlyingAmtToRedeem;
@@ -648,9 +644,8 @@ contract SwapTest is Test {
         uint128 minFtOut = 0e8;
         res.underlying.mint(sender, underlyingAmtInForBuyFt);
         res.underlying.approve(address(res.market), underlyingAmtInForBuyFt);
-        uint128 ftAmt = uint128(
-            res.market.buyFt(underlyingAmtInForBuyFt, minFtOut) / 2
-        );
+        
+        res.market.buyFt(underlyingAmtInForBuyFt, minFtOut);
 
         uint128 underlyingAmtToRedeem = xtAmt;
         uint128 xtAmtToRedeem = underlyingAmtToRedeem;
@@ -680,9 +675,7 @@ contract SwapTest is Test {
         uint128 minFtOut = 0e8;
         res.underlying.mint(sender, underlyingAmtInForBuyFt);
         res.underlying.approve(address(res.market), underlyingAmtInForBuyFt);
-        uint128 ftAmt = uint128(
-            res.market.buyFt(underlyingAmtInForBuyFt, minFtOut) / 2
-        );
+        res.market.buyFt(underlyingAmtInForBuyFt, minFtOut);
 
         uint128 underlyingAmtToRedeem = xtAmt;
         uint128 xtAmtToRedeem = underlyingAmtToRedeem;
@@ -728,9 +721,9 @@ contract MockOuter is IFlashLoanReceiver {
     }
 
     function executeOperation(
-        address sender,
-        IERC20 asset,
-        uint256 amount,
+        address,
+        IERC20,
+        uint256,
         bytes calldata data
     ) external returns (bytes memory collateralData) {
         uint128 collateralAmt = abi.decode(data, (uint128));
