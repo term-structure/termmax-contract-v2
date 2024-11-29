@@ -352,14 +352,14 @@ interface ITermMaxRouter {
     /// @param market The market's address
     /// @param collInAmt The collateral token input amount
     /// @param maxDebtAmt The maxium debt amount of the loan
-    /// @param minBorrowAmt Expected debt token send to receiver
+    /// @param borrowAmt Debt token send to receiver
     /// @return gtId The id of loan
     function borrowTokenFromCollateral(
         address receiver,
         ITermMaxMarket market,
         uint256 collInAmt,
         uint256 maxDebtAmt,
-        uint256 minBorrowAmt
+        uint256 borrowAmt
     ) external returns (uint256 gtId);
 
     /// @notice Repay the loan through underlying token
