@@ -23,20 +23,22 @@ import {FaucetERC20} from "../../../contracts/test/testnet/FaucetERC20.sol";
 
 contract AddMarketArbSepolia is Script {
     // admin config
-    // uint256 deployerPrivateKey = vm.envUint("ARB_SEPOLIA_DEPLOYER_PRIVATE_KEY");
-    // address deployerAddr = vm.addr(deployerPrivateKey);
-    // address adminAddr = vm.envAddress("ARB_SEPOLIA_ADMIN_ADDRESS");
-    address priceFeedOperatorAddr =
-        vm.envAddress("LOCAL_PRICE_FEED_OPERATOR_ADDRESS");
-
-    uint256 deployerPrivateKey = vm.envUint("LOCAL_DEPLOYER_PRIVATE_KEY");
+    uint256 deployerPrivateKey = vm.envUint("ARB_SEPOLIA_DEPLOYER_PRIVATE_KEY");
     address deployerAddr = vm.addr(deployerPrivateKey);
-    address adminAddr = vm.envAddress("LOCAL_ADMIN_ADDRESS");
+    address adminAddr = vm.envAddress("ARB_SEPOLIA_ADMIN_ADDRESS");
+    address priceFeedOperatorAddr =
+        vm.envAddress("ARB_SEPOLIA_PRICE_FEED_OPERATOR_ADDRESS");
+    // address priceFeedOperatorAddr =
+    //     vm.envAddress("LOCAL_PRICE_FEED_OPERATOR_ADDRESS");
+
+    // uint256 deployerPrivateKey = vm.envUint("LOCAL_DEPLOYER_PRIVATE_KEY");
+    // address deployerAddr = vm.addr(deployerPrivateKey);
+    // address adminAddr = vm.envAddress("LOCAL_ADMIN_ADDRESS");
 
     // address config
-    address faucetAddr = address(0x29a79095352a718B3D7Fe84E1F14E9F34A35598e);
-    address factoryAddr = address(0x12975173B87F7595EE45dFFb2Ab812ECE596Bf84);
-    address routerAddr = address(0x05B4CB126885fb10464fdD12666FEb25E2563B76);
+    address faucetAddr = address(0x8Db9e50faB347979dCA19DB2e87ea4FeEe4C1f96);
+    address factoryAddr = address(0x7aa7C04E6E976418b5DB424E805dA4163333428A);
+    address routerAddr = address(0x246a663a3dC327E935da21c5DBa05d277ada1C11);
 
     function run() public {
         Faucet faucet = Faucet(faucetAddr);
@@ -61,7 +63,7 @@ contract AddMarketArbSepolia is Script {
         for (uint256 i; i < configs.length; i++) {
             console.log("----- Market %d -----", i);
             JsonLoader.Config memory config = configs[i];
-            vm.startPrank(adminAddr);
+            vm.startBroadcast(deployerPrivateKey);
             // deploy underlying & collateral
             (FaucetERC20 collateral, MockPriceFeed collateralPriceFeed) = faucet
                 .addToken(
@@ -105,7 +107,7 @@ contract AddMarketArbSepolia is Script {
             MarketConfig memory marketConfig = MarketConfig({
                 treasurer: config.marketConfig.treasurer,
                 maturity: config.marketConfig.maturity,
-                openTime: uint64(vm.getBlockTimestamp() + 60),
+                openTime: uint64(vm.getBlockTimestamp() + 100),
                 apr: config.marketConfig.apr,
                 lsf: config.marketConfig.lsf,
                 lendFeeRatio: config.marketConfig.lendFeeRatio,
@@ -141,6 +143,11 @@ contract AddMarketArbSepolia is Script {
             TermMaxMarket market = TermMaxMarket(factory.createMarket(params));
 
             router.setMarketWhitelist(address(market), true);
+
+            // uint256 initialLiquidityAmt = 1000000 * 10 ** underlying.decimals();
+            // underlying.mint(adminAddr, initialLiquidityAmt);
+            // underlying.approve(address(router), initialLiquidityAmt);
+            // router.provideLiquidity(adminAddr, market, initialLiquidityAmt);
 
             console.log("Market deployed at:", address(market));
             console.log(
@@ -183,7 +190,7 @@ contract AddMarketArbSepolia is Script {
 
             // printMarketConfig(market);
 
-            vm.stopPrank();
+            vm.stopBroadcast();
         }
     }
 

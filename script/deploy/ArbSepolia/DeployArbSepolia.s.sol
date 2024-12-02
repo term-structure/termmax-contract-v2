@@ -21,15 +21,13 @@ import {Faucet} from "../../../contracts/test/testnet/Faucet.sol";
 
 contract DeployArbSepolia is Script {
     // admin config
-    // uint256 deployerPrivateKey = vm.envUint("ARB_SEPOLIA_DEPLOYER_PRIVATE_KEY");
-    // uint256 deployerPrivateKey =
-    //     0x2a871d0798f97d79848a013d4936a73bf4cc922c825d33c1cf7073dff6d409c6;
-    // address deployerAddr = vm.addr(deployerPrivateKey);
-    // address adminAddr = vm.envAddress("ARB_SEPOLIA_ADMIN_ADDRESS");
-
-    uint256 deployerPrivateKey = vm.envUint("LOCAL_DEPLOYER_PRIVATE_KEY");
+    uint256 deployerPrivateKey = vm.envUint("ARB_SEPOLIA_DEPLOYER_PRIVATE_KEY");
     address deployerAddr = vm.addr(deployerPrivateKey);
-    address adminAddr = vm.envAddress("LOCAL_ADMIN_ADDRESS");
+    address adminAddr = vm.envAddress("ARB_SEPOLIA_ADMIN_ADDRESS");
+
+    // uint256 deployerPrivateKey = vm.envUint("LOCAL_DEPLOYER_PRIVATE_KEY");
+    // address deployerAddr = vm.addr(deployerPrivateKey);
+    // address adminAddr = vm.envAddress("LOCAL_ADMIN_ADDRESS");
 
     // address adminAddr = 0xa0Ee7A142d267C1f36714E4a8F75612F20a79720;
 
