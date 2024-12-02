@@ -10,13 +10,13 @@ contract MockFlashRepayer is IFlashRepayer {
         gt = gt_;
     }
 
-    function flashRepay(uint256 id) external {
-        gt.flashRepay(id, abi.encode(msg.sender));
+    function flashRepay(uint256 id, bool byUnderlying) external {
+        gt.flashRepay(id, byUnderlying, abi.encode(msg.sender));
     }
 
     function executeOperation(
         address owner,
-        IERC20 debtToken,
+        IERC20 repayToken,
         uint128 debtAmt,
         address collateralToken,
         bytes memory collateralData,
@@ -28,6 +28,6 @@ contract MockFlashRepayer is IFlashRepayer {
             address(this),
             abi.decode(collateralData, (uint))
         );
-        debtToken.approve(address(gt), debtAmt);
+        repayToken.approve(address(gt), debtAmt);
     }
 }

@@ -324,11 +324,79 @@ contract ForkRouterTest is Test {
             sender,
             res.market,
             gtId,
+            true,
             units
         );
 
         uint256 underlyingAmtAfterRepay = res.underlying.balanceOf(sender);
 
+        assert(
+            underlyingAmtAfterRepay - underlyingAmtBeforeRepay == netTokenOut
+        );
+
+        assert(res.underlying.balanceOf(address(router)) == 0);
+        assert(res.collateral.balanceOf(address(router)) == 0);
+        assert(res.xt.balanceOf(address(router)) == 0);
+        assert(res.ft.balanceOf(address(router)) == 0);
+        assert(IERC20(weth9Addr).balanceOf(address(router)) == 0);
+        assert(IERC20(weethAddr).balanceOf(address(router)) == 0);
+        assert(IERC20(ptWeethAddr).balanceOf(address(router)) == 0);
+
+        vm.stopPrank();
+    }
+
+    function testFlashRepayByFt() public {
+        vm.startPrank(sender);
+        uint24 poolFee = 100;
+
+        uint256 gtId = _loan(poolFee);
+        (, uint128 debtAmt, , bytes memory collateralData) = res.gt.loanInfo(
+            gtId
+        );
+
+        uint256 minUnderlyingAmt = debtAmt;
+
+        SwapUnit[] memory units = new SwapUnit[](2);
+        units[0] = SwapUnit(
+            address(pendleAdapter),
+            ptWeethAddr,
+            weethAddr,
+            abi.encode(ptWeethMarketAddr, 0)
+        );
+
+        units[1] = SwapUnit(
+            address(uniswapAdapter),
+            weethAddr,
+            weth9Addr,
+            abi.encode(
+                abi.encodePacked(weethAddr, poolFee, weth9Addr),
+                minUnderlyingAmt
+            )
+        );
+
+        res.collateral.approve(
+            address(router),
+            abi.decode(collateralData, (uint))
+        );
+
+        assert(res.underlying.balanceOf(address(router)) == 0);
+        assert(res.collateral.balanceOf(address(router)) == 0);
+        assert(res.xt.balanceOf(address(router)) == 0);
+        assert(res.ft.balanceOf(address(router)) == 0);
+        assert(IERC20(weth9Addr).balanceOf(address(router)) == 0);
+        assert(IERC20(weethAddr).balanceOf(address(router)) == 0);
+        assert(IERC20(ptWeethAddr).balanceOf(address(router)) == 0);
+
+        uint256 underlyingAmtBeforeRepay = res.underlying.balanceOf(sender);
+
+        uint256 netTokenOut = router.flashRepayFromColl(
+            sender,
+            res.market,
+            gtId,
+            false,
+            units
+        );
+        uint256 underlyingAmtAfterRepay = res.underlying.balanceOf(sender);
         assert(
             underlyingAmtAfterRepay - underlyingAmtBeforeRepay == netTokenOut
         );

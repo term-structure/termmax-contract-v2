@@ -386,12 +386,14 @@ interface ITermMaxRouter {
     /// @param receiver Who receive remaming underlying tokens
     /// @param market The market's address
     /// @param gtId The id of loan
+    /// @param byUnderlying Repay using underlying token or bonds token
     /// @param units Swap paths to swap collateral to underlying
     /// @return netTokenOut Remaming underlying output
     function flashRepayFromColl(
         address receiver,
         ITermMaxMarket market,
         uint256 gtId,
+        bool byUnderlying,
         SwapUnit[] memory units
     ) external returns (uint256 netTokenOut);
 
