@@ -48,7 +48,7 @@ contract AddMarketArbSepolia is Script {
         string memory deployData = vm.readFile(
             string.concat(
                 vm.projectRoot(),
-                "/script/deploy/deploydata/deployData.json"
+                "/script/deploy/deploydata/arbSepolia.json"
             )
         );
 

@@ -1,5 +1,5 @@
 {
-  "configNum": "3",
+  "configNum": "4",
   "configs": {
     "configs_0": {
       "marketConfig": {
@@ -103,6 +103,42 @@
       "collateralConfig": {
         "name": "PT weETH 26JUN2025",
         "symbol": "PT-weETH-26JUN2025",
+        "decimals": "18",
+        "mintAmt": "1000000000000000000000",
+        "initialPrice": "349200000000",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    },
+    "configs_3": {
+      "marketConfig": {
+        "openTime": "1750982400",
+        "maturity": "1750982400",
+        "initialLtv": "88000000",
+        "apr": "1000000",
+        "lsf": "80000000",
+        "lendFeeRatio": "5000000",
+        "borrowFeeRatio": "5000000",
+        "issueFtFeeRatio": "300000",
+        "lockingPercentage": "50000000",
+        "protocolFeeRatio": "20000000",
+        "minNLendFeeR": "100000",
+        "minNBorrowFeeR": "100000",
+        "redeemFeeRatio": "0",
+        "maxLtv": "89000000",
+        "liquidationLtv": "90000000",
+        "liquidatable": true,
+        "treasurer": "0x7ab945445958819a74b48e8Bd5F9E39ed74bdE9E"
+      },
+      "underlyingConfig": {
+        "name": "Wrapped Ether ",
+        "symbol": "WETH",
+        "decimals": "18",
+        "mintAmt": "1000000000000000000000",
+        "initialPrice": "360000000000"
+      },
+      "collateralConfig": {
+        "name": "PT rsETH 26JUN2025",
+        "symbol": "PT-rsETH-26JUN2025",
         "decimals": "18",
         "mintAmt": "1000000000000000000000",
         "initialPrice": "349200000000",
