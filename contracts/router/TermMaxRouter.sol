@@ -849,7 +849,7 @@ contract TermMaxRouter is
             netTokenOut = ft.balanceOf(address(this));
             ft.safeIncreaseAllowance(address(market), netTokenOut);
             netTokenOut = market.sellFt(uint128(netTokenOut), 0);
-            underlying.safeTransferFrom(address(this), receiver, netTokenOut);
+            underlying.safeTransfer(receiver, netTokenOut);
         }
     }
 
