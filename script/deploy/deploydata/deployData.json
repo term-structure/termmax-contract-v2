@@ -1,66 +1,113 @@
-[
-  {
-    "marketConfig": {
-      "openTime": "1727799942",
-      "maturity": "1743120000",
-      "initialLtv": "88000000",
-      "apr": "12000000",
-      "lsf": "80000000",
-      "lendFeeRatio": "3000000",
-      "borrowFeeRatio": "3000000",
-      "issueFtFeeRatio": "3000000",
-      "lockingPercentage": "50000000",
-      "protocolFeeRatio": "20000000",
-      "minNLendFeeR": "100",
-      "minNBorrowFeeR": "100",
-      "maxLtv": "89000000",
-      "liquidationLtv": "90000000",
-      "liquidatable": true,
-      "treasurer": "0x944a0Af591E2C23a2E81fe4c10Bd9c47Cf866F4b"
+{
+  "configNum": "3",
+  "configs": {
+    "configs_0": {
+      "marketConfig": {
+        "openTime": "1743120000",
+        "maturity": "1743120000",
+        "initialLtv": "88000000",
+        "apr": "12000000",
+        "lsf": "80000000",
+        "lendFeeRatio": "3000000",
+        "borrowFeeRatio": "3000000",
+        "issueFtFeeRatio": "3000000",
+        "lockingPercentage": "50000000",
+        "protocolFeeRatio": "20000000",
+        "minNLendFeeR": "100000",
+        "minNBorrowFeeR": "100000",
+        "redeemFeeRatio": "0",
+        "maxLtv": "89000000",
+        "liquidationLtv": "90000000",
+        "liquidatable": true,
+        "treasurer": "0x7ab945445958819a74b48e8Bd5F9E39ed74bdE9E"
+      },
+      "underlyingConfig": {
+        "name": "USD Coin",
+        "symbol": "USDC",
+        "decimals": "6",
+        "mintAmt": "1000000000",
+        "initialPrice": "100000000"
+      },
+      "collateralConfig": {
+        "name": "PT Ethena sUSDE 27MAR2025",
+        "symbol": "PT-sUSDE-27MAR2025",
+        "decimals": "18",
+        "mintAmt": "1000000000000000000000",
+        "initialPrice": "94000000",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
     },
-    "underlyingConfig": {
-      "name": "USD Coin",
-      "symbol": "USDC",
-      "decimals": "6",
-      "initialPrice": "100000000"
+    "configs_1": {
+      "marketConfig": {
+        "openTime": "1743120000",
+        "maturity": "1743120000",
+        "initialLtv": "88000000",
+        "apr": "12000000",
+        "lsf": "80000000",
+        "lendFeeRatio": "3000000",
+        "borrowFeeRatio": "3000000",
+        "issueFtFeeRatio": "3000000",
+        "lockingPercentage": "50000000",
+        "protocolFeeRatio": "20000000",
+        "minNLendFeeR": "100000",
+        "minNBorrowFeeR": "100000",
+        "redeemFeeRatio": "0",
+        "maxLtv": "89000000",
+        "liquidationLtv": "90000000",
+        "liquidatable": true,
+        "treasurer": "0x7ab945445958819a74b48e8Bd5F9E39ed74bdE9E"
+      },
+      "underlyingConfig": {
+        "name": "Gains Network USDC",
+        "symbol": "gUSDC",
+        "decimals": "6",
+        "mintAmt": "1000000000",
+        "initialPrice": "100000000"
+      },
+      "collateralConfig": {
+        "name": "PT gUSDC 26JUN2025",
+        "symbol": "PT-gUSDC-26JUN2025",
+        "decimals": "6",
+        "mintAmt": "1000000000",
+        "initialPrice": "97000000",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
     },
-    "collateralConfig": {
-      "name": "PT Ethena sUSDE 27MAR2025",
-      "symbol": "PT-sUSDE-27MAR2025",
-      "decimals": "18",
-      "initialPrice": "95000000"
-    }
-  },
-  {
-    "marketConfig": {
-      "openTime": "1727799942",
-      "maturity": "1743120000",
-      "initialLtv": "88000000",
-      "apr": "12000000",
-      "lsf": "80000000",
-      "lendFeeRatio": "3000000",
-      "borrowFeeRatio": "3000000",
-      "issueFtFeeRatio": "3000000",
-      "lockingPercentage": "50000000",
-      "protocolFeeRatio": "20000000",
-      "minNLendFeeR": "100",
-      "minNBorrowFeeR": "100",
-      "maxLtv": "89000000",
-      "liquidationLtv": "90000000",
-      "liquidatable": true,
-      "treasurer": "0x944a0Af591E2C23a2E81fe4c10Bd9c47Cf866F4b"
-    },
-    "underlyingConfig": {
-      "name": "USD Coin",
-      "symbol": "USDC",
-      "decimals": "6",
-      "initialPrice": "100000000"
-    },
-    "collateralConfig": {
-      "name": "PT Ethena sUSDE 27MAR2025",
-      "symbol": "PT-sUSDE-27MAR2025",
-      "decimals": "18",
-      "initialPrice": "95000000"
+    "configs_2": {
+      "marketConfig": {
+        "openTime": "1750982400",
+        "maturity": "1750982400",
+        "initialLtv": "88000000",
+        "apr": "12000000",
+        "lsf": "80000000",
+        "lendFeeRatio": "3000000",
+        "borrowFeeRatio": "3000000",
+        "issueFtFeeRatio": "3000000",
+        "lockingPercentage": "50000000",
+        "protocolFeeRatio": "20000000",
+        "minNLendFeeR": "100000",
+        "minNBorrowFeeR": "100000",
+        "redeemFeeRatio": "0",
+        "maxLtv": "89000000",
+        "liquidationLtv": "90000000",
+        "liquidatable": true,
+        "treasurer": "0x7ab945445958819a74b48e8Bd5F9E39ed74bdE9E"
+      },
+      "underlyingConfig": {
+        "name": "Wrapped Ether ",
+        "symbol": "WETH",
+        "decimals": "18",
+        "mintAmt": "1000000000000000000000",
+        "initialPrice": "360000000000"
+      },
+      "collateralConfig": {
+        "name": "PT weETH 26JUN2025",
+        "symbol": "PT-weETH-26JUN2025",
+        "decimals": "18",
+        "mintAmt": "1000000000000000000000",
+        "initialPrice": "349200000000",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
     }
   }
-]
+}
