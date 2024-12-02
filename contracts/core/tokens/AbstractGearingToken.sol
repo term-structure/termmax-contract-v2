@@ -277,6 +277,7 @@ abstract contract AbstractGearingToken is
 
     function flashRepay(
         uint256 id,
+        bool byUnderlying,
         bytes calldata callbackData
     ) external override nonReentrant {
         GtConfig memory config = _config;
@@ -287,17 +288,19 @@ abstract contract AbstractGearingToken is
         address owner = ownerOf(id);
         // Transfer collateral to the owner
         _transferCollateral(owner, loan.collateralData);
+        IERC20 repayToken = byUnderlying? config.underlying:config.ft;
+
         IFlashRepayer(msg.sender).executeOperation(
             owner,
-            config.underlying,
+            repayToken,
             loan.debtAmt,
             config.collateral,
             loan.collateralData,
             callbackData
         );
-        config.underlying.safeTransferFrom(msg.sender, config.market, loan.debtAmt);
+        repayToken.safeTransferFrom(msg.sender, config.market, loan.debtAmt);
         _burnInternal(id);
-        emit Repay(id, loan.debtAmt, true);
+        emit Repay(id, loan.debtAmt, byUnderlying);
     }
 
     function _repay(uint256 id, uint128 repayAmt) internal {

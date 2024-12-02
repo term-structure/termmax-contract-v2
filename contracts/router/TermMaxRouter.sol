@@ -624,7 +624,7 @@ contract TermMaxRouter is
             address(this),
             tokenToBuyXtAmt + tokenInAmt
         );
-        underlying.approve(address(market), tokenToBuyXtAmt);
+        underlying.safeIncreaseAllowance(address(market), tokenToBuyXtAmt);
         netXtOut = market.buyXt(
             tokenToBuyXtAmt.toUint128(),
             minXtAmt.toUint128()
@@ -829,6 +829,7 @@ contract TermMaxRouter is
         address receiver,
         ITermMaxMarket market,
         uint256 gtId,
+        bool byUnderlying,
         SwapUnit[] memory units
     )
         external
@@ -836,12 +837,20 @@ contract TermMaxRouter is
         whenNotPaused
         returns (uint256 netTokenOut)
     {
-        (, , , , IGearingToken gt, , IERC20 underlying) = market.tokens();
+        (IMintableERC20 ft, , , , IGearingToken gt, , IERC20 underlying) = market.tokens();
 
-        gt.flashRepay(gtId, abi.encode(units));
-        // safeTransfer remainning underlying token
-        netTokenOut = underlying.balanceOf(address(this));
-        underlying.safeTransfer(receiver, netTokenOut);
+        gt.flashRepay(gtId, byUnderlying, abi.encode(market, ft ,units));
+        if(byUnderlying){
+            // SafeTransfer remainning underlying token
+            netTokenOut = underlying.balanceOf(address(this));
+            underlying.safeTransfer(receiver, netTokenOut);
+        }else{
+            // Swap remainning ft to underlying token
+            netTokenOut = ft.balanceOf(address(this));
+            ft.safeIncreaseAllowance(address(market), netTokenOut);
+            netTokenOut = market.sellFt(uint128(netTokenOut), 0);
+            underlying.safeTransfer(receiver, netTokenOut);
+        }
     }
 
     /**
@@ -993,13 +1002,13 @@ contract TermMaxRouter is
     /// @dev Gt flash repay flashloan callback
     function executeOperation(
         address owner,
-        IERC20 debtToken,
+        IERC20 repayToken,
         uint128 debtAmt,
         address,
         bytes memory collateralData,
         bytes calldata callbackData
     ) external override ensureGtWhitelist(msg.sender) {
-        SwapUnit[] memory units = abi.decode(callbackData, (SwapUnit[]));
+        (ITermMaxMarket market, address ft, SwapUnit[] memory units) = abi.decode(callbackData, (ITermMaxMarket, address, SwapUnit[]));
 
         // safeTransfer collateral
         bytes memory dataToTransferFrom = abi.encodeWithSelector(
@@ -1017,8 +1026,15 @@ contract TermMaxRouter is
         }
 
         // do swap
-        _doSwap(collateralData, units);
-        debtToken.approve(msg.sender, debtAmt);
+        bytes memory outData = _doSwap(collateralData, units);
+
+        if(address(repayToken) == ft){
+            IERC20 underlying = IERC20(units[units.length -1].tokenOut);
+            uint amount = abi.decode(outData, (uint));
+            underlying.safeIncreaseAllowance(address(market), amount);
+            market.buyFt(uint128(amount), debtAmt);
+        }
+        repayToken.safeIncreaseAllowance(msg.sender, debtAmt);
     }
 
     function _doSwap(
