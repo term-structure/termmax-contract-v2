@@ -17,170 +17,206 @@ import {IGearingToken, AggregatorV3Interface} from "../../../contracts/core/toke
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {MockSwapAdapter} from "../../../contracts/test/MockSwapAdapter.sol";
-import {JSONLoader} from "../../utils/JsonLoader.sol";
+import {JsonLoader} from "../../utils/JsonLoader.sol";
+import {Faucet} from "../../../contracts/test/testnet/Faucet.sol";
+import {FaucetERC20} from "../../../contracts/test/testnet/FaucetERC20.sol";
 
-contract DeployArbSepolia is Script {
+contract AddMarketArbSepolia is Script {
     // admin config
     uint256 deployerPrivateKey = vm.envUint("ARB_SEPOLIA_DEPLOYER_PRIVATE_KEY");
     address deployerAddr = vm.addr(deployerPrivateKey);
     address adminAddr = vm.envAddress("ARB_SEPOLIA_ADMIN_ADDRESS");
+    address priceFeedOperatorAddr =
+        vm.envAddress("ARB_SEPOLIA_PRICE_FEED_OPERATOR_ADDRESS");
+    // address priceFeedOperatorAddr =
+    //     vm.envAddress("LOCAL_PRICE_FEED_OPERATOR_ADDRESS");
 
-    // market config
-    bytes32 constant GT_ERC20 = keccak256("GearingTokenWithERC20");
+    // uint256 deployerPrivateKey = vm.envUint("LOCAL_DEPLOYER_PRIVATE_KEY");
+    // address deployerAddr = vm.addr(deployerPrivateKey);
+    // address adminAddr = vm.envAddress("LOCAL_ADMIN_ADDRESS");
+
+    // address config
+    address faucetAddr = address(0x8Db9e50faB347979dCA19DB2e87ea4FeEe4C1f96);
+    address factoryAddr = address(0x7aa7C04E6E976418b5DB424E805dA4163333428A);
+    address routerAddr = address(0x246a663a3dC327E935da21c5DBa05d277ada1C11);
 
     function run() public {
+        Faucet faucet = Faucet(faucetAddr);
+        TermMaxFactory factory = TermMaxFactory(factoryAddr);
+        TermMaxRouter router = TermMaxRouter(routerAddr);
+
         string memory deployData = vm.readFile(
-            string.concat(
-                vm.projectRoot(),
-                "/script/deploy/deploydata/testData.json"
-            )
-        );
-        JSONLoader.run(
             string.concat(
                 vm.projectRoot(),
                 "/script/deploy/deploydata/deployData.json"
             )
         );
-        // JSONLoader.getConfigFromJson(deployData);
 
-        //     config.marketConfig.openTime = uint64(block.timestamp + 60);
+        JsonLoader.Config[] memory configs = JsonLoader.getConfigsFromJson(
+            deployData
+        );
 
-        //     vm.startBroadcast(deployerPrivateKey);
+        console.log("Deplyer:", adminAddr);
+        console.log("Price Feed Operator:", priceFeedOperatorAddr);
+        console.log("");
 
-        //     // deploy factory
-        //     TermMaxFactory factory = new TermMaxFactory(adminAddr);
-        //     TermMaxMarket marketImpl = new TermMaxMarket();
-        //     factory.initMarketImplement(address(marketImpl));
+        for (uint256 i; i < configs.length; i++) {
+            console.log("----- Market %d -----", i);
+            JsonLoader.Config memory config = configs[i];
+            vm.startBroadcast(deployerPrivateKey);
+            // deploy underlying & collateral
+            (FaucetERC20 collateral, MockPriceFeed collateralPriceFeed) = faucet
+                .addToken(
+                    config.collateralConfig.name,
+                    config.collateralConfig.symbol,
+                    config.collateralConfig.decimals,
+                    config.collateralConfig.mintAmt
+                );
 
-        //     // deploy router
-        //     address routerImpl = address(new TermMaxRouter());
-        //     bytes memory data = abi.encodeCall(TermMaxRouter.initialize, adminAddr);
-        //     address proxy = address(new ERC1967Proxy(routerImpl, data));
-        //     TermMaxRouter router = TermMaxRouter(proxy);
-        //     router.togglePause(false);
+            collateralPriceFeed.updateRoundData(
+                MockPriceFeed.RoundData({
+                    roundId: 1,
+                    answer: config.collateralConfig.initialPrice,
+                    startedAt: block.timestamp,
+                    updatedAt: block.timestamp,
+                    answeredInRound: 1
+                })
+            );
 
-        //     // deploy swap adapter
-        //     MockSwapAdapter swapAdapter = new MockSwapAdapter(vm.randomAddress());
-        //     router.setAdapterWhitelist(address(swapAdapter), true);
+            (FaucetERC20 underlying, MockPriceFeed underlyingPriceFeed) = faucet
+                .addToken(
+                    config.underlyingConfig.name,
+                    config.underlyingConfig.symbol,
+                    config.underlyingConfig.decimals,
+                    config.underlyingConfig.mintAmt
+                );
 
-        //     // deploy underlying & collateral
+            underlyingPriceFeed.updateRoundData(
+                MockPriceFeed.RoundData({
+                    roundId: 1,
+                    answer: config.underlyingConfig.initialPrice,
+                    startedAt: block.timestamp,
+                    updatedAt: block.timestamp,
+                    answeredInRound: 1
+                })
+            );
 
-        //     MockERC20 collateral = new MockERC20(
-        //         config.collateralConfig.name,
-        //         config.collateralConfig.symbol,
-        //         config.collateralConfig.decimals
-        //     );
-        //     MockPriceFeed collateralPriceFeed = new MockPriceFeed(adminAddr);
-        //     collateralPriceFeed.updateRoundData(
-        //         MockPriceFeed.RoundData({
-        //             roundId: 1,
-        //             answer: config.collateralConfig.initialPrice,
-        //             startedAt: block.timestamp,
-        //             updatedAt: block.timestamp,
-        //             answeredInRound: 1
-        //         })
-        //     );
+            collateralPriceFeed.transferOwnership(priceFeedOperatorAddr);
+            underlyingPriceFeed.transferOwnership(priceFeedOperatorAddr);
 
-        //     MockERC20 underlying = new MockERC20(
-        //         config.underlyingConfig.name,
-        //         config.underlyingConfig.symbol,
-        //         config.underlyingConfig.decimals
-        //     );
-        //     MockPriceFeed underlingPriceFeed = new MockPriceFeed(adminAddr);
-        //     underlingPriceFeed.updateRoundData(
-        //         MockPriceFeed.RoundData({
-        //             roundId: 1,
-        //             answer: config.underlyingConfig.initialPrice,
-        //             startedAt: block.timestamp,
-        //             updatedAt: block.timestamp,
-        //             answeredInRound: 1
-        //         })
-        //     );
+            MarketConfig memory marketConfig = MarketConfig({
+                treasurer: config.marketConfig.treasurer,
+                maturity: config.marketConfig.maturity,
+                openTime: uint64(vm.getBlockTimestamp() + 100),
+                apr: config.marketConfig.apr,
+                lsf: config.marketConfig.lsf,
+                lendFeeRatio: config.marketConfig.lendFeeRatio,
+                minNLendFeeR: config.marketConfig.minNLendFeeR,
+                borrowFeeRatio: config.marketConfig.borrowFeeRatio,
+                minNBorrowFeeR: config.marketConfig.minNBorrowFeeR,
+                redeemFeeRatio: config.marketConfig.redeemFeeRatio,
+                issueFtFeeRatio: config.marketConfig.issueFtFeeRatio,
+                lockingPercentage: config.marketConfig.lockingPercentage,
+                initialLtv: config.marketConfig.initialLtv,
+                protocolFeeRatio: config.marketConfig.protocolFeeRatio,
+                rewardIsDistributed: false
+            });
 
-        //     // deploy market
-        //     ITermMaxFactory.DeployParams memory params = ITermMaxFactory
-        //         .DeployParams({
-        //             gtKey: GT_ERC20,
-        //             admin: adminAddr,
-        //             collateral: address(collateral),
-        //             underlying: IERC20Metadata(address(underlying)),
-        //             underlyingOracle: AggregatorV3Interface(
-        //                 address(underlingPriceFeed)
-        //             ),
-        //             liquidationLtv: config.liquidationLtv,
-        //             maxLtv: config.maxLtv,
-        //             liquidatable: config.liquidatable,
-        //             marketConfig: config.marketConfig,
-        //             gtInitalParams: abi.encode(address(collateralPriceFeed))
-        //         });
-        //     TermMaxMarket market = TermMaxMarket(factory.createMarket(params));
+            // deploy market
+            ITermMaxFactory.DeployParams memory params = ITermMaxFactory
+                .DeployParams({
+                    gtKey: keccak256(
+                        bytes(config.collateralConfig.gtKeyIdentifier)
+                    ),
+                    admin: adminAddr,
+                    collateral: address(collateral),
+                    underlying: IERC20Metadata(address(underlying)),
+                    underlyingOracle: AggregatorV3Interface(
+                        address(underlyingPriceFeed)
+                    ),
+                    liquidationLtv: config.marketConfig.liquidationLtv,
+                    maxLtv: config.marketConfig.maxLtv,
+                    liquidatable: config.marketConfig.liquidatable,
+                    marketConfig: marketConfig,
+                    gtInitalParams: abi.encode(address(collateralPriceFeed))
+                });
+            TermMaxMarket market = TermMaxMarket(factory.createMarket(params));
 
-        //     router.setMarketWhitelist(address(market), true);
-        //     vm.stopBroadcast();
+            router.setMarketWhitelist(address(market), true);
 
-        //     MarketConfig memory marketConfig = market.config();
+            // uint256 initialLiquidityAmt = 1000000 * 10 ** underlying.decimals();
+            // underlying.mint(adminAddr, initialLiquidityAmt);
+            // underlying.approve(address(router), initialLiquidityAmt);
+            // router.provideLiquidity(adminAddr, market, initialLiquidityAmt);
 
-        //     (
-        //         IMintableERC20 ft,
-        //         IMintableERC20 xt,
-        //         IMintableERC20 lpFt,
-        //         IMintableERC20 lpXt,
-        //         IGearingToken gt,
-        //         ,
+            console.log("Market deployed at:", address(market));
+            console.log(
+                "Collateral (%s) deployed at: %s",
+                IERC20Metadata(collateral).symbol(),
+                address(collateral)
+            );
+            console.log(
+                "Collateral price feed deployed at:",
+                address(collateralPriceFeed)
+            );
+            console.log(
+                "Underlying (%s) deployed at: %s",
+                IERC20Metadata(address(underlying)).symbol(),
+                address(underlying)
+            );
+            console.log(
+                "Underlying price feed deployed at:",
+                address(underlyingPriceFeed)
+            );
+            {
+                (
+                    IMintableERC20 ft,
+                    IMintableERC20 xt,
+                    IMintableERC20 lpFt,
+                    IMintableERC20 lpXt,
+                    IGearingToken gt,
+                    ,
 
-        //     ) = market.tokens();
+                ) = market.tokens();
 
-        //     console.log("===== Deployment Info =====");
-        //     console.log("Deplyer:", adminAddr);
-        //     console.log("Factory deployed at:", address(factory));
-        //     console.log("Router deployed at:", address(router));
-        //     console.log("MockSwapAdapter deployed at:", address(swapAdapter));
-        //     console.log("Market deployed at:", address(market));
-        //     console.log(
-        //         "Collateral (%s) deployed at: %s",
-        //         IERC20Metadata(collateral).symbol(),
-        //         address(collateral)
-        //     );
-        //     console.log(
-        //         "Collateral price feed deployed at:",
-        //         address(collateralPriceFeed)
-        //     );
-        //     console.log(
-        //         "Underlying (%s) deployed at: %s",
-        //         IERC20Metadata(address(underlying)).symbol(),
-        //         address(underlying)
-        //     );
-        //     console.log(
-        //         "Underlying price feed deployed at:",
-        //         address(underlingPriceFeed)
-        //     );
-        //     console.log("FT deployed at:", address(ft));
-        //     console.log("XT deployed at:", address(xt));
-        //     console.log("LPFT deployed at:", address(lpFt));
-        //     console.log("LPXT deployed at:", address(lpXt));
-        //     console.log("GT deployed at:", address(gt));
+                console.log("FT deployed at:", address(ft));
+                console.log("XT deployed at:", address(xt));
+                console.log("LPFT deployed at:", address(lpFt));
+                console.log("LPXT deployed at:", address(lpXt));
+                console.log("GT deployed at:", address(gt));
+            }
 
-        //     console.log("===== Market Info =====");
-        //     console.log("Treasurer:", marketConfig.treasurer);
-        //     console.log("Maturity:", marketConfig.maturity);
-        //     console.log("Open Time:", marketConfig.openTime);
-        //     console.log("Initial APR:", marketConfig.apr);
-        //     console.log("Liquidity Scaling Factor:", marketConfig.lsf);
-        //     console.log("Lending Fee Ratio:", marketConfig.lendFeeRatio);
-        //     console.log(
-        //         "Min Notional Lending Fee Ratio:",
-        //         marketConfig.minNLendFeeR
-        //     );
-        //     console.log("Borrowing Fee Ratio:", marketConfig.borrowFeeRatio);
-        //     console.log(
-        //         "Min Notional Borrowing Fee Ratio:",
-        //         marketConfig.minNBorrowFeeR
-        //     );
-        //     console.log("Redeem Fee Ratio:", marketConfig.redeemFeeRatio);
-        //     console.log("Issue FT Fee Ratio:", marketConfig.issueFtFeeRatio);
-        //     console.log("Protocol Fee Ratio:", marketConfig.protocolFeeRatio);
-        //     console.log("Locking Percentage:", marketConfig.lockingPercentage);
-        //     console.log("Initial LTV:", marketConfig.initialLtv);
-        //     console.log("Reward Is Distributed:", marketConfig.rewardIsDistributed);
+            console.log("");
+
+            // printMarketConfig(market);
+
+            vm.stopBroadcast();
+        }
+    }
+
+    function printMarketConfig(TermMaxMarket market) public view {
+        MarketConfig memory marketConfig = market.config();
+        console.log("===== Market Info =====");
+        console.log("Treasurer:", marketConfig.treasurer);
+        console.log("Maturity:", marketConfig.maturity);
+        console.log("Open Time:", marketConfig.openTime);
+        console.log("Initial APR:", marketConfig.apr);
+        console.log("Liquidity Scaling Factor:", marketConfig.lsf);
+        console.log("Lending Fee Ratio:", marketConfig.lendFeeRatio);
+        console.log(
+            "Min Notional Lending Fee Ratio:",
+            marketConfig.minNLendFeeR
+        );
+        console.log("Borrowing Fee Ratio:", marketConfig.borrowFeeRatio);
+        console.log(
+            "Min Notional Borrowing Fee Ratio:",
+            marketConfig.minNBorrowFeeR
+        );
+        console.log("Redeem Fee Ratio:", marketConfig.redeemFeeRatio);
+        console.log("Issue FT Fee Ratio:", marketConfig.issueFtFeeRatio);
+        console.log("Protocol Fee Ratio:", marketConfig.protocolFeeRatio);
+        console.log("Locking Percentage:", marketConfig.lockingPercentage);
+        console.log("Initial LTV:", marketConfig.initialLtv);
+        console.log("Reward Is Distributed:", marketConfig.rewardIsDistributed);
     }
 }

@@ -560,7 +560,7 @@ contract GtTest is Test {
         bool byUnderlying = true;
         vm.expectEmit();
         emit IGearingToken.Repay(gtId, debtAmt, byUnderlying);
-        flashRepayer.flashRepay(gtId);
+        flashRepayer.flashRepay(gtId, byUnderlying);
 
         uint collateralBalanceAfter = res.collateral.balanceOf(sender);
         uint underlyingBalanceAfter = res.underlying.balanceOf(sender);
@@ -574,6 +574,55 @@ contract GtTest is Test {
         assert(res.underlying.balanceOf(address(flashRepayer)) == 0);
         assert(collateralBalanceAfter == collateralBalanceBefore);
         assert(underlyingBalanceAfter == underlyingBalanceBefore);
+        vm.expectRevert(
+            abi.encodePacked(
+                bytes4(keccak256("ERC721NonexistentToken(uint256)")),
+                gtId
+            )
+        );
+        res.gt.loanInfo(gtId);
+
+        vm.stopPrank();
+    }
+
+    function testFlashRepayThroughFt() public {
+        uint128 debtAmt = 100e8;
+        uint256 collateralAmt = 1e18;
+
+        vm.startPrank(sender);
+
+        (uint256 gtId, ) = LoanUtils.fastMintGt(
+            res,
+            sender,
+            debtAmt,
+            collateralAmt
+        );
+        deal(address(res.ft), address(flashRepayer), debtAmt);
+        // res.ft.mint(address(flashRepayer), debtAmt);
+        res.collateral.approve(address(flashRepayer), collateralAmt);
+
+        uint collateralBalanceBefore = res.collateral.balanceOf(sender);
+        uint ftBalanceBefore = res.ft.balanceOf(sender);
+        StateChecker.MarketState memory state = StateChecker.getMarketState(
+            res
+        );
+        bool byUnderlying = false;
+        vm.expectEmit();
+        emit IGearingToken.Repay(gtId, debtAmt, byUnderlying);
+        flashRepayer.flashRepay(gtId, byUnderlying);
+
+        uint collateralBalanceAfter = res.collateral.balanceOf(sender);
+        uint ftBalanceAfter = res.ft.balanceOf(sender);
+        state.ftReserve += debtAmt;
+        state.collateralReserve -= collateralAmt;
+        StateChecker.checkMarketState(res, state);
+
+        assert(
+            res.collateral.balanceOf(address(flashRepayer)) == collateralAmt
+        );
+        assert(res.underlying.balanceOf(address(flashRepayer)) == 0);
+        assert(collateralBalanceAfter == collateralBalanceBefore);
+        assert(ftBalanceAfter == ftBalanceBefore);
         vm.expectRevert(
             abi.encodePacked(
                 bytes4(keccak256("ERC721NonexistentToken(uint256)")),
@@ -629,7 +678,7 @@ contract GtTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(IGearingToken.GtIsExpired.selector, gtId)
         );
-        flashRepayer.flashRepay(gtId);
+        flashRepayer.flashRepay(gtId, true);
     }
 
     function testMerge() public {
