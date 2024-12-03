@@ -215,6 +215,9 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         lpXtOutAmt = TermMaxCurve
             .calculateLpOut(xtMintedAmt, xtReserve, lpXtTotalSupply)
             .toUint128();
+        if(lpFtOutAmt == 0 || lpXtOutAmt == 0){
+            revert LpOutputAmtIsZero(underlyingAmt); 
+        }
         lpXt.mint(caller, lpXtOutAmt);
         lpFt.mint(caller, lpFtOutAmt);
 

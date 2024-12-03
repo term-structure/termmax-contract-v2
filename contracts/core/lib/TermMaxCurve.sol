@@ -35,7 +35,11 @@ library TermMaxCurve {
         } else {
             // Ref docs: https://docs.ts.finance/termmax/technical-details/amm-model/pool-operations/liquidity-operations-l#lo1-provide-liquidity
             // Ref: Eq.L-3,L-4 in the AMM Model section of docs
-            lpOutAmt = (tokenIn * lpTotalSupply) / tokenReserve;
+            // Ref docs: https://eips.ethereum.org/EIPS/eip-4626[EIP-4626].
+            // xref: erc4626.adoc#inflation-attack[here].
+            // The `Constants.DECIMAL_BASE` corresponds to an offset in the decimal representation 
+            // between the underlying asset's decimals and the lp token.
+            lpOutAmt = (tokenIn * lpTotalSupply * Constants.DECIMAL_BASE) / tokenReserve;
         }
     }
 

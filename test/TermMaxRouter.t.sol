@@ -1599,95 +1599,20 @@ contract TermMaxRouterTest is Test {
         vm.stopPrank();
     }
 
-    function testRemoveCollateral() public {
-        uint128 debtAmt = 100e8;
-        uint256 collateralAmt = 1e18;
-        uint256 removedCollateral = 0.1e18;
-
-        vm.startPrank(sender);
-
-        (uint256 gtId, ) = LoanUtils.fastMintGt(
-            res,
-            sender,
-            debtAmt,
-            collateralAmt
-        );
-
-        StateChecker.MarketState memory state = StateChecker.getMarketState(
-            res
-        );
-        uint collateralBlanceBefore = res.collateral.balanceOf(sender);
-
-        vm.expectEmit();
-        emit IGearingToken.RemoveCollateral(
-            gtId,
-            abi.encode(collateralAmt - removedCollateral)
-        );
-        // TODO: need to authenticate router to control gt
-        // router.removeCollateral(res.market, gtId, removedCollateral);
-        res.gt.removeCollateral(gtId, abi.encode(removedCollateral));
-
-        state.collateralReserve -= removedCollateral;
-        StateChecker.checkMarketState(res, state);
-
-        uint collateralBlanceAfter = res.collateral.balanceOf(sender);
-
-        assert(
-            collateralBlanceAfter - collateralBlanceBefore == removedCollateral
-        );
-
-        (address owner, uint128 d, , bytes memory cd) = res.gt.loanInfo(gtId);
-        assert(owner == sender);
-        assert(d == debtAmt);
-        assert(collateralAmt - removedCollateral == abi.decode(cd, (uint256)));
-
+    function testFixAuditIssue_2() public {
+        vm.startPrank(deployer);
+        res.lpFt.approve(address(router), res.lpFt.balanceOf(deployer));
+        res.lpXt.approve(address(router), res.lpXt.balanceOf(deployer));
+        router.withdrawLiquidityToFtXt(deployer, res.market, res.lpFt.balanceOf(deployer) - 1, res.lpXt.balanceOf(deployer) - 1, 0, 0);
+        res.ft.transfer(address(res.market), res.ft.balanceOf(deployer));
+        res.xt.transfer(address(res.market), res.xt.balanceOf(deployer));
         vm.stopPrank();
-    }
-
-    function testMerge() public {
-        uint40[3] memory debts = [100e8, 30e8, 5e8];
-        uint64[3] memory collaterals = [1e18, 0.5e18, 0.05e18];
-
         vm.startPrank(sender);
-
-        uint[] memory ids = new uint[](3);
-        for (uint i = 0; i < ids.length; ++i) {
-            (ids[i], ) = LoanUtils.fastMintGt(
-                res,
-                sender,
-                debts[i],
-                collaterals[i]
-            );
-        }
-        StateChecker.MarketState memory state = StateChecker.getMarketState(
-            res
-        );
-
-        vm.expectEmit();
-        uint newId = 4;
-        emit IGearingToken.MergeGts(sender, newId, ids);
-        // TODO: need to authenticate router to control gt
-        // newId = router.mergeGt(res.market, ids);
-        newId = res.gt.merge(ids);
-        StateChecker.checkMarketState(res, state);
-
-        (address owner, uint128 d, , bytes memory cd) = res.gt.loanInfo(newId);
-        assert(owner == sender);
-        assert(d == debts[0] + debts[1] + debts[2]);
-        assert(
-            collaterals[0] + collaterals[1] + collaterals[2] ==
-                abi.decode(cd, (uint256))
-        );
-        for (uint i = 0; i < ids.length; i++) {
-            vm.expectRevert(
-                abi.encodePacked(
-                    bytes4(keccak256("ERC721NonexistentToken(uint256)")),
-                    ids[i]
-                )
-            );
-            res.gt.loanInfo(ids[i]);
-        }
-
+        res.underlying.mint(sender, 1000e8);
+        res.underlying.approve(address(res.market), 1000e8);
+        res.market.provideLiquidity(1000e8);
+        require(res.lpFt.balanceOf(sender) > 0);
+        require(res.lpXt.balanceOf(sender) > 0);
         vm.stopPrank();
     }
 

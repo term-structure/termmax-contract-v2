@@ -173,6 +173,27 @@ contract LpTest is Test {
         vm.stopPrank();
     }
 
+    function testProvideLiquidityRceiveNothing() public {
+        vm.startPrank(deployer);
+        res.lpFt.approve(address(res.market), res.lpFt.balanceOf(deployer));
+        res.lpXt.approve(address(res.market), res.lpXt.balanceOf(deployer));
+        res.market.withdrawLiquidity(uint128(res.lpFt.balanceOf(deployer) - 1), uint128(res.lpXt.balanceOf(deployer) - 1));
+
+        res.ft.transfer(address(res.market), res.ft.balanceOf(deployer));
+        res.xt.transfer(address(res.market), res.xt.balanceOf(deployer));
+        vm.stopPrank();
+        console.log(res.ft.balanceOf(deployer));
+        vm.startPrank(sender);
+
+        uint underlyingAmtIn = res.xt.balanceOf(address(res.market)) / Constants.DECIMAL_BASE / 2;
+        res.underlying.mint(sender, underlyingAmtIn);
+        res.underlying.approve(address(res.market), underlyingAmtIn);
+
+        vm.expectRevert(abi.encodeWithSelector(ITermMaxMarket.LpOutputAmtIsZero.selector, uint256(underlyingAmtIn)));
+        res.market.provideLiquidity(underlyingAmtIn);
+        vm.stopPrank();
+    }
+
     function testProvideLiquidityBeforeMaturity() public {
         vm.startPrank(sender);
 
