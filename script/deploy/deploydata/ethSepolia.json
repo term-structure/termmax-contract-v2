@@ -6,7 +6,7 @@
         "openTime": "1743120000",
         "maturity": "1743120000",
         "initialLtv": "88000000",
-        "apr": "3000000",
+        "apr": "15000000",
         "lsf": "80000000",
         "lendFeeRatio": "5000000",
         "borrowFeeRatio": "5000000",
@@ -22,27 +22,27 @@
         "treasurer": "0x7ab945445958819a74b48e8Bd5F9E39ed74bdE9E"
       },
       "underlyingConfig": {
-        "name": "Gains Network USDC",
-        "symbol": "gUSDC",
-        "decimals": "6",
-        "mintAmt": "1000000000",
+        "name": "Usual USD",
+        "symbol": "USD0",
+        "decimals": "18",
+        "mintAmt": "1000000000000000000000",
         "initialPrice": "100000000"
       },
       "collateralConfig": {
-        "name": "PT gUSDC 26JUN2025",
-        "symbol": "PT-gUSDC-26JUN2025",
-        "decimals": "6",
-        "mintAmt": "1000000000",
-        "initialPrice": "97000000",
+        "name": "PT USD0++ 27MAR2025",
+        "symbol": "PT-USD0++-27MAR2025",
+        "decimals": "18",
+        "mintAmt": "1000000000000000000000",
+        "initialPrice": "92000000",
         "gtKeyIdentifier": "GearingTokenWithERC20"
       }
     },
     "configs_1": {
       "marketConfig": {
-        "openTime": "1750982400",
-        "maturity": "1750982400",
+        "openTime": "1743120000",
+        "maturity": "1743120000",
         "initialLtv": "88000000",
-        "apr": "2000000",
+        "apr": "15000000",
         "lsf": "80000000",
         "lendFeeRatio": "5000000",
         "borrowFeeRatio": "5000000",
@@ -58,18 +58,18 @@
         "treasurer": "0x7ab945445958819a74b48e8Bd5F9E39ed74bdE9E"
       },
       "underlyingConfig": {
-        "name": "Wrapped Ether",
-        "symbol": "WETH",
-        "decimals": "18",
-        "mintAmt": "1000000000000000000000",
-        "initialPrice": "360000000000"
+        "name": "USD Coin",
+        "symbol": "USDC",
+        "decimals": "6",
+        "mintAmt": "1000000000",
+        "initialPrice": "100000000"
       },
       "collateralConfig": {
-        "name": "PT weETH 26JUN2025",
-        "symbol": "PT-weETH-26JUN2025",
+        "name": "PT Ethena sUSDE 27MAR2025",
+        "symbol": "PT-sUSDE-27MAR2025",
         "decimals": "18",
         "mintAmt": "1000000000000000000000",
-        "initialPrice": "349200000000",
+        "initialPrice": "93700000",
         "gtKeyIdentifier": "GearingTokenWithERC20"
       }
     },
@@ -94,15 +94,15 @@
         "treasurer": "0x7ab945445958819a74b48e8Bd5F9E39ed74bdE9E"
       },
       "underlyingConfig": {
-        "name": "Wrapped Ether",
+        "name": "Wrapped Ether ",
         "symbol": "WETH",
         "decimals": "18",
         "mintAmt": "1000000000000000000000",
         "initialPrice": "360000000000"
       },
       "collateralConfig": {
-        "name": "PT rsETH 26JUN2025",
-        "symbol": "PT-rsETH-26JUN2025",
+        "name": "PT Puffer ETH 26JUN2025",
+        "symbol": "PT-pufETH-26JUN2025",
         "decimals": "18",
         "mintAmt": "1000000000000000000000",
         "initialPrice": "349200000000",
@@ -111,10 +111,10 @@
     },
     "configs_3": {
       "marketConfig": {
-        "openTime": "1733302800",
-        "maturity": "1733302800",
+        "openTime": "1743120000",
+        "maturity": "1743120000",
         "initialLtv": "88000000",
-        "apr": "3000000",
+        "apr": "2000000",
         "lsf": "80000000",
         "lendFeeRatio": "5000000",
         "borrowFeeRatio": "5000000",
@@ -130,18 +130,18 @@
         "treasurer": "0x7ab945445958819a74b48e8Bd5F9E39ed74bdE9E"
       },
       "underlyingConfig": {
-        "name": "Gains Network USDC",
-        "symbol": "gUSDC",
-        "decimals": "6",
-        "mintAmt": "1000000000",
-        "initialPrice": "100000000"
+        "name": "Wrapped BTC",
+        "symbol": "WBTC",
+        "decimals": "8",
+        "mintAmt": "100000000000",
+        "initialPrice": "9000000000000"
       },
       "collateralConfig": {
-        "name": "PT gUSDC 26JUN2025",
-        "symbol": "PT-gUSDC-26JUN2025",
-        "decimals": "6",
-        "mintAmt": "1000000000",
-        "initialPrice": "97000000",
+        "name": "PT Lombard LBTC 27MAR2025",
+        "symbol": "PT-LBTC-27MAR2025",
+        "decimals": "8",
+        "mintAmt": "100000000000",
+        "initialPrice": "8820000000000",
         "gtKeyIdentifier": "GearingTokenWithERC20"
       }
     }
