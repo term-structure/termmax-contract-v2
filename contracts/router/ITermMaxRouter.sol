@@ -29,6 +29,13 @@ interface ITermMaxRouter {
         uint256 expectedTokenOut,
         uint256 actualTokenOut
     );
+
+    /// @notice Emitted when setting the market whitelist
+    event UpdateMarketWhiteList(address market, bool isWhitelist);
+
+    /// @notice Emitted when setting the swap adapter whitelist
+    event UpdateSwapAdapterWhiteList(address adapter, bool isWhitelist);
+    
     /// @notice Emitted when swapping tokens
     /// @param market The market's address
     /// @param assetIn The token to swap

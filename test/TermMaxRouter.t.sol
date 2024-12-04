@@ -120,6 +120,8 @@ contract TermMaxRouterTest is Test {
     function testSetMarketWhitelist() public {
         vm.startPrank(deployer);
         assert(router.marketWhitelist(address(res.market)) == true);
+        vm.expectEmit();
+        emit ITermMaxRouter.UpdateMarketWhiteList(address(res.market), false);
         router.setMarketWhitelist(address(res.market), false);
 
         uint128 amount = 10e8;
@@ -545,6 +547,8 @@ contract TermMaxRouterTest is Test {
     function testSetAdapterWhitelist() public {
         vm.startPrank(deployer);
         assert(router.adapterWhitelist(address(adapter)) == true);
+        vm.expectEmit();
+        emit ITermMaxRouter.UpdateSwapAdapterWhiteList(address(adapter), false);
         router.setAdapterWhitelist(address(adapter), false);
 
         assert(router.adapterWhitelist(address(adapter)) == false);

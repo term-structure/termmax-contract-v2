@@ -99,6 +99,7 @@ contract TermMaxRouter is
         bool isWhitelist
     ) external onlyOwner {
         marketWhitelist[market] = isWhitelist;
+        emit UpdateMarketWhiteList(market, isWhitelist);
     }
 
     /**
@@ -109,6 +110,7 @@ contract TermMaxRouter is
         bool isWhitelist
     ) external onlyOwner {
         adapterWhitelist[adapter] = isWhitelist;
+        emit UpdateSwapAdapterWhiteList(adapter, isWhitelist);
     }
 
     /**
