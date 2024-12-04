@@ -1,5 +1,5 @@
 {
-  "configNum": "4",
+  "configNum": "6",
   "configs": {
     "configs_0": {
       "marketConfig": {
@@ -111,8 +111,80 @@
     },
     "configs_3": {
       "marketConfig": {
-        "openTime": "1733302800",
-        "maturity": "1733302800",
+        "openTime": "1733389200",
+        "maturity": "1733389200",
+        "initialLtv": "88000000",
+        "apr": "3000000",
+        "lsf": "80000000",
+        "lendFeeRatio": "5000000",
+        "borrowFeeRatio": "5000000",
+        "issueFtFeeRatio": "300000",
+        "lockingPercentage": "50000000",
+        "protocolFeeRatio": "20000000",
+        "minNLendFeeR": "100000",
+        "minNBorrowFeeR": "100000",
+        "redeemFeeRatio": "0",
+        "maxLtv": "89000000",
+        "liquidationLtv": "90000000",
+        "liquidatable": true,
+        "treasurer": "0x7ab945445958819a74b48e8Bd5F9E39ed74bdE9E"
+      },
+      "underlyingConfig": {
+        "name": "Gains Network USDC",
+        "symbol": "gUSDC",
+        "decimals": "6",
+        "mintAmt": "1000000000",
+        "initialPrice": "100000000"
+      },
+      "collateralConfig": {
+        "name": "PT gUSDC 26JUN2025",
+        "symbol": "PT-gUSDC-26JUN2025",
+        "decimals": "6",
+        "mintAmt": "1000000000",
+        "initialPrice": "97000000",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    },
+    "configs_4": {
+      "marketConfig": {
+        "openTime": "1733475600",
+        "maturity": "1733475600",
+        "initialLtv": "88000000",
+        "apr": "3000000",
+        "lsf": "80000000",
+        "lendFeeRatio": "5000000",
+        "borrowFeeRatio": "5000000",
+        "issueFtFeeRatio": "300000",
+        "lockingPercentage": "50000000",
+        "protocolFeeRatio": "20000000",
+        "minNLendFeeR": "100000",
+        "minNBorrowFeeR": "100000",
+        "redeemFeeRatio": "0",
+        "maxLtv": "89000000",
+        "liquidationLtv": "90000000",
+        "liquidatable": true,
+        "treasurer": "0x7ab945445958819a74b48e8Bd5F9E39ed74bdE9E"
+      },
+      "underlyingConfig": {
+        "name": "Gains Network USDC",
+        "symbol": "gUSDC",
+        "decimals": "6",
+        "mintAmt": "1000000000",
+        "initialPrice": "100000000"
+      },
+      "collateralConfig": {
+        "name": "PT gUSDC 26JUN2025",
+        "symbol": "PT-gUSDC-26JUN2025",
+        "decimals": "6",
+        "mintAmt": "1000000000",
+        "initialPrice": "97000000",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    },
+    "configs_5": {
+      "marketConfig": {
+        "openTime": "1733562000",
+        "maturity": "1733562000",
         "initialLtv": "88000000",
         "apr": "3000000",
         "lsf": "80000000",

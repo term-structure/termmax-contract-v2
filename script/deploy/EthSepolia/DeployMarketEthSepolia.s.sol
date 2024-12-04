@@ -31,9 +31,16 @@ contract DeloyMarketEthSepolia is DeployBase {
         vm.envAddress("ETH_SEPOLIA_PRICE_FEED_OPERATOR_ADDRESS");
 
     // address config
-    address faucetAddr = address(0xDE467b4b52A9C159dEd38BB68D304F049bA187E4);
-    address factoryAddr = address(0x6e0d016ac48a79a642D4Bc67289d12F712C0A6e2);
-    address routerAddr = address(0x13bA0534926c5bA1516A7e488B177C0cF57e440e);
+    address faucetAddr = address(0x8ade0c89f9a751fB2112AeF41C4E817dC62Cd0c5);
+    address factoryAddr = address(0x7c48A59E3346D8A0cdDB221a836b84F706dc372e);
+    address routerAddr = address(0xdC325533007E364fCc715667228B5278C75CC416);
+
+    address[] devs = [
+        address(0x19A736387ea2F42AcAb1BC0FdE15e667e63ea9cC), // Sunny
+        address(0x9b1A93b6C9F275FE1720e18331315Ec35484a662), // Mingyu
+        address(0x86e59Ec7629b58E1575997B9dF9622a496f0b4Eb), // Garrick
+        address(0xE355d5D8aa52EF0FbbD037C4a3C5E6Fd659cf46B) // Aaron
+    ];
 
     function run() public {
         Faucet faucet = Faucet(faucetAddr);
@@ -51,6 +58,14 @@ contract DeloyMarketEthSepolia is DeployBase {
             priceFeedOperatorAddr,
             600
         );
+
+        console.log("Faucet token number:", faucet.tokenNum());
+
+        for (uint i = 0; i < devs.length; i++) {
+            console.log("Mint faucet tokens to %s", devs[i]);
+            faucet.devBatchMint(devs[i]);
+        }
+
         vm.stopBroadcast();
 
         console.log("===== Git Info =====");
