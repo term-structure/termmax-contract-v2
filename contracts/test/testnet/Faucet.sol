@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
+import {console} from "forge-std/console.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {FaucetERC20} from "./FaucetERC20.sol";
 import {MockPriceFeed} from "../MockPriceFeed.sol";
@@ -67,9 +68,9 @@ contract Faucet is Ownable {
     }
 
     function batchMint() public {
-        if (canOnlyMintOnce && !isMinted[msg.sender]) revert OnlyMintOnce();
-        if (canOnlyMintOnce) isMinted[msg.sender] = true;
-        for (uint256 i = 0; i < tokenNum; i++) {
+        if (canOnlyMintOnce && isMinted[msg.sender]) revert OnlyMintOnce();
+        isMinted[msg.sender] = true;
+        for (uint256 i = 1; i < tokenNum + 1; i++) {
             TokenConfig memory tokenConfig = tokenConfigs[i];
             FaucetERC20(tokenConfig.tokenAddr).mint(
                 msg.sender,
@@ -79,7 +80,7 @@ contract Faucet is Ownable {
     }
 
     function devBatchMint(address to) public onlyOwner {
-        for (uint256 i = 0; i < tokenNum; i++) {
+        for (uint256 i = 1; i < tokenNum + 1; i++) {
             TokenConfig memory tokenConfig = tokenConfigs[i];
             FaucetERC20(tokenConfig.tokenAddr).mint(to, tokenConfig.mintAmt);
         }

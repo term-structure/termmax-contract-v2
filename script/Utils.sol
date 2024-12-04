@@ -34,7 +34,6 @@ library DeployUtils {
     }
 
     function deployMockERC20(
-        address adminAddr,
         string memory name,
         string memory symbol,
         uint8 decimals

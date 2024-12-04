@@ -20,7 +20,7 @@ contract FaucetERC20 is ERC20, Ownable {
         return _decimals;
     }
 
-    function mint(address to, uint256 amount) external {
+    function mint(address to, uint256 amount) external onlyOwner {
         _mint(to, amount);
     }
 }
