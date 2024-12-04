@@ -55,6 +55,14 @@ contract LpTest is Test {
         uint amount = 10000e8;
         res.underlying.mint(deployer, amount);
         res.underlying.approve(address(res.market), amount);
+
+        vm.expectEmit();
+        emit ITermMaxMarket.ProvideLiquidity(
+            deployer,
+            uint128(amount),
+            uint128(amount * marketConfig.initialLtv / Constants.DECIMAL_BASE),
+            uint128(amount)
+        );
         res.market.provideLiquidity(amount);
 
         vm.stopPrank();
@@ -182,7 +190,6 @@ contract LpTest is Test {
         res.ft.transfer(address(res.market), res.ft.balanceOf(deployer));
         res.xt.transfer(address(res.market), res.xt.balanceOf(deployer));
         vm.stopPrank();
-        console.log(res.ft.balanceOf(deployer));
         vm.startPrank(sender);
 
         uint underlyingAmtIn = res.xt.balanceOf(address(res.market)) / Constants.DECIMAL_BASE / 2;
