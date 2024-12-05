@@ -35,7 +35,11 @@ library TermMaxCurve {
         } else {
             // Ref docs: https://docs.ts.finance/termmax/technical-details/amm-model/pool-operations/liquidity-operations-l#lo1-provide-liquidity
             // Ref: Eq.L-3,L-4 in the AMM Model section of docs
-            lpOutAmt = (tokenIn * lpTotalSupply) / tokenReserve;
+            // Ref docs: https://eips.ethereum.org/EIPS/eip-4626[EIP-4626].
+            // xref: erc4626.adoc#inflation-attack[here].
+            // The `Constants.DECIMAL_BASE` corresponds to an offset in the decimal representation 
+            // between the underlying asset's decimals and the lp token.
+            lpOutAmt = (tokenIn * lpTotalSupply * Constants.DECIMAL_BASE) / tokenReserve;
         }
     }
 
@@ -236,6 +240,43 @@ library TermMaxCurve {
         uint t = (lpSupply - totalReward) *
             (2 * maturity - openMarketTime - currentTime);
         reward = ((totalReward * lpAmt) * (currentTime - openMarketTime)) / t;
+    }
+
+    /// @notice Calculate the actually lp tokens to liquidity provider
+    /// @param currentTime Current unix time
+    /// @param openMarketTime The unix time when the market starts trading
+    /// @param maturity The unix time of maturity date
+    /// @param lpSupply The total supply of this lp token
+    /// @param lpAmt The amount of minted lp
+    /// @param totalReward The amount of accumulated lp token reward of the market
+    /// @return finalLpAmt Number of lp token to provider
+    function calculateLpWithoutReward(
+        uint256 currentTime,
+        uint256 openMarketTime,
+        uint256 maturity,
+        uint256 lpSupply,
+        uint256 lpAmt,
+        uint256 totalReward
+    ) internal pure returns (uint256 finalLpAmt) {
+        // |--------------------|----|
+        // x                    y
+        // x: lp exclude market
+        // y: lp in market
+
+        // c = y * (currentTime - openTime) / (maturityDay - currentTime + maturityDay - openTime)
+
+
+        // |--------------------|-|--|
+        //                     c
+
+        // user provide 110 Ft -> mint 100lpFt in contract -> transfer 100lpFt * (x)/(x + c) to user
+        if(lpSupply == 0 || totalReward ==0){
+            return lpAmt;
+        }
+        uint rewardLp = totalReward * (currentTime - openMarketTime) /
+            (2 * maturity - openMarketTime - currentTime);
+        uint lpExcludeMarket = lpSupply - totalReward;
+        finalLpAmt = (lpAmt * lpExcludeMarket) / (lpExcludeMarket + rewardLp);
     }
 
     /// @notice Calculate the changes in market reserves and apr after selling FT tokens

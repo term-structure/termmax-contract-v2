@@ -215,9 +215,23 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         lpXtOutAmt = TermMaxCurve
             .calculateLpOut(xtMintedAmt, xtReserve, lpXtTotalSupply)
             .toUint128();
-        lpXt.mint(caller, lpXtOutAmt);
-        lpFt.mint(caller, lpFtOutAmt);
-
+        if(lpFtOutAmt == 0 || lpXtOutAmt == 0){
+            revert LpOutputAmtIsZero(underlyingAmt); 
+        }
+        {
+            MarketConfig memory mConfig = _config;
+            uint totalFtRewards = lpFt.balanceOf(address(this));
+            lpFt.mint(address(this), lpFtOutAmt);
+            lpFtOutAmt = TermMaxCurve.calculateLpWithoutReward(block.timestamp, mConfig.openTime,
+             mConfig.maturity, lpFtTotalSupply, lpFtOutAmt, totalFtRewards).toUint128();
+            
+            uint totalXtRewards = lpXt.balanceOf(address(this));
+            lpXt.mint(address(this), lpXtOutAmt);
+            lpXtOutAmt = TermMaxCurve.calculateLpWithoutReward(block.timestamp, mConfig.openTime,
+             mConfig.maturity, lpXtTotalSupply, lpXtOutAmt, totalXtRewards).toUint128();
+        }
+        lpFt.safeTransfer(caller, lpFtOutAmt);
+        lpXt.safeTransfer(caller, lpXtOutAmt);
         emit ProvideLiquidity(caller, underlyingAmt, lpFtOutAmt, lpXtOutAmt);
     }
 

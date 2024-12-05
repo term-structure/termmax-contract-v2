@@ -55,6 +55,14 @@ contract LpTest is Test {
         uint amount = 10000e8;
         res.underlying.mint(deployer, amount);
         res.underlying.approve(address(res.market), amount);
+
+        vm.expectEmit();
+        emit ITermMaxMarket.ProvideLiquidity(
+            deployer,
+            uint128(amount),
+            uint128(amount * marketConfig.initialLtv / Constants.DECIMAL_BASE),
+            uint128(amount)
+        );
         res.market.provideLiquidity(amount);
 
         vm.stopPrank();
@@ -170,6 +178,26 @@ contract LpTest is Test {
         assert(res.lpFt.balanceOf(sender) == lpFtOutAmtFirstTime + lpFtOutAmt);
         assert(res.lpXt.balanceOf(sender) == lpXtOutAmtFirstTime + lpXtOutAmt);
 
+        vm.stopPrank();
+    }
+
+    function testProvideLiquidityRceiveNothing() public {
+        vm.startPrank(deployer);
+        res.lpFt.approve(address(res.market), res.lpFt.balanceOf(deployer));
+        res.lpXt.approve(address(res.market), res.lpXt.balanceOf(deployer));
+        res.market.withdrawLiquidity(uint128(res.lpFt.balanceOf(deployer) - 1), uint128(res.lpXt.balanceOf(deployer) - 1));
+
+        res.ft.transfer(address(res.market), res.ft.balanceOf(deployer));
+        res.xt.transfer(address(res.market), res.xt.balanceOf(deployer));
+        vm.stopPrank();
+        vm.startPrank(sender);
+
+        uint underlyingAmtIn = res.xt.balanceOf(address(res.market)) / Constants.DECIMAL_BASE / 2;
+        res.underlying.mint(sender, underlyingAmtIn);
+        res.underlying.approve(address(res.market), underlyingAmtIn);
+
+        vm.expectRevert(abi.encodeWithSelector(ITermMaxMarket.LpOutputAmtIsZero.selector, uint256(underlyingAmtIn)));
+        res.market.provideLiquidity(underlyingAmtIn);
         vm.stopPrank();
     }
 
