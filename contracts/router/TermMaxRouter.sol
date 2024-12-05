@@ -496,14 +496,17 @@ contract TermMaxRouter is
         uint128 xtOutAmt,
         uint128 initialLtv
     ) internal pure returns (uint128 redeemFtAmt, uint128 redeemXtAmt) {
-        uint128 requiredFtAmt = (xtOutAmt * initialLtv) /
-            Constants.DECIMAL_BASE.toUint128();
+        uint128 requiredFtAmt = (xtOutAmt *
+            initialLtv +
+            Constants.DECIMAL_BASE.toUint128() -
+            1) / Constants.DECIMAL_BASE.toUint128();
         uint128 requiredXtAmt = (ftOutAmt *
             Constants.DECIMAL_BASE.toUint128()) / initialLtv;
 
         redeemFtAmt = ftOutAmt < requiredFtAmt ? ftOutAmt : requiredFtAmt;
         redeemXtAmt = xtOutAmt < requiredXtAmt ? xtOutAmt : requiredXtAmt;
     }
+
 
     /**
      * @inheritdoc ITermMaxRouter

@@ -1204,6 +1204,35 @@ contract TermMaxRouterTest is Test {
         vm.stopPrank();
     }
 
+    function testWithdrawLiquidityToToken(uint128 withdrawAmt) public {
+        uint128 underlyingAmtIn = 100e8;
+        vm.assume(withdrawAmt > 0 && withdrawAmt < 80e8);
+        vm.startPrank(sender);
+
+        
+        res.underlying.mint(sender, underlyingAmtIn);
+        res.underlying.approve(address(router), underlyingAmtIn);
+        (uint128 lpFtOutAmt, uint128 lpXtOutAmt) = router.provideLiquidity(
+            receiver,
+            res.market,
+            underlyingAmtIn
+        );
+        assert(lpFtOutAmt > withdrawAmt && lpXtOutAmt > withdrawAmt);
+
+        res.lpFt.approve(address(router), withdrawAmt);
+        res.lpXt.approve(address(router), withdrawAmt);
+
+        router.withdrawLiquidityToToken(
+            receiver,
+            res.market,
+            withdrawAmt,
+            withdrawAmt,
+            0
+        );
+
+        vm.stopPrank();
+    }
+
     function testRevertByLiquidityIsZeroAfterTransaction() public {
         vm.startPrank(deployer);
 
