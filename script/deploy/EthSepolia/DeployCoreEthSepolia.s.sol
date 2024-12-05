@@ -18,46 +18,33 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {SwapAdapter} from "../../../contracts/test/testnet/SwapAdapter.sol";
 import {Faucet} from "../../../contracts/test/testnet/Faucet.sol";
+import {DeployBase} from "../DeployBase.s.sol";
 
-contract DeployArbSepolia is Script {
+contract DeployCoreEthSepolia is DeployBase {
     // admin config
-    uint256 deployerPrivateKey = vm.envUint("ARB_SEPOLIA_DEPLOYER_PRIVATE_KEY");
+    uint256 deployerPrivateKey = vm.envUint("ETH_SEPOLIA_DEPLOYER_PRIVATE_KEY");
     address deployerAddr = vm.addr(deployerPrivateKey);
-    address adminAddr = vm.envAddress("ARB_SEPOLIA_ADMIN_ADDRESS");
-
-    // uint256 deployerPrivateKey = vm.envUint("LOCAL_DEPLOYER_PRIVATE_KEY");
-    // address deployerAddr = vm.addr(deployerPrivateKey);
-    // address adminAddr = vm.envAddress("LOCAL_ADMIN_ADDRESS");
-
-    // address adminAddr = 0xa0Ee7A142d267C1f36714E4a8F75612F20a79720;
-
-    // address priceFeedOperatorAddr = 0xa0Ee7A142d267C1f36714E4a8F75612F20a79720;
+    address adminAddr = vm.envAddress("ETH_SEPOLIA_ADMIN_ADDRESS");
 
     function run() public {
         vm.startBroadcast(deployerPrivateKey);
-
-        // deploy factory
-        TermMaxFactory factory = new TermMaxFactory(adminAddr);
-        TermMaxMarket marketImpl = new TermMaxMarket();
-        factory.initMarketImplement(address(marketImpl));
-
-        // deploy router
-        address routerImpl = address(new TermMaxRouter());
-        bytes memory data = abi.encodeCall(TermMaxRouter.initialize, adminAddr);
-        address proxy = address(new ERC1967Proxy(routerImpl, data));
-        TermMaxRouter router = TermMaxRouter(proxy);
-        router.togglePause(false);
-
-        // deploy swap adapter
-        SwapAdapter swapAdapter = new SwapAdapter(vm.randomAddress());
-        router.setAdapterWhitelist(address(swapAdapter), true);
-
-        // deploy faucet
-        Faucet faucet = new Faucet(adminAddr);
+        (
+            Faucet faucet,
+            TermMaxFactory factory,
+            TermMaxRouter router,
+            SwapAdapter swapAdapter
+        ) = deployCore(adminAddr);
         vm.stopBroadcast();
 
-        console.log("===== Deployment Info =====");
-        console.log("Deplyer:", adminAddr);
+        console.log("===== Git Info =====");
+        console.log("Git branch:", getGitBranch());
+        console.log("Git commit hash:");
+        console.logBytes(getGitCommitHash());
+        console.log();
+
+        console.log("===== Core Info =====");
+        console.log("Deplyer:", deployerAddr);
+        console.log("Admin:", adminAddr);
         console.log("Faucet deployed at:", address(faucet));
         console.log("Factory deployed at:", address(factory));
         console.log("Router deployed at:", address(router));

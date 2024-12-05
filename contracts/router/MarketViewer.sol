@@ -1,0 +1,97 @@
+
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.27;
+
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC721Enumerable} from "@openzeppelin/contracts/interfaces/IERC721Enumerable.sol";
+import {ITermMaxMarket} from "../core/ITermMaxMarket.sol";
+import {IMintableERC20} from "../core/tokens/IMintableERC20.sol";
+import {IGearingToken} from "../core/tokens/IGearingToken.sol";
+
+
+contract MarketViewer {
+  struct LoanPosition {
+    uint256 loanId;
+    uint256 collateralAmt;
+    uint256 debtAmt;
+  }
+  struct Position {
+    uint256 underlyingBalance;
+    uint256 collateralBalance;
+    uint256 ftBalance;
+    uint256 xtBalance;
+    uint256 lpFtBalance;
+    uint256 lpXtBalance;
+    LoanPosition[] gtInfo;
+  }
+
+  function getPositionDetail(
+    ITermMaxMarket market,
+    address owner
+  )
+    external
+    view
+    returns (
+      Position memory position
+    )
+  {
+    (
+      IMintableERC20 ft,
+      IMintableERC20 xt,
+      IMintableERC20 lpFt,
+      IMintableERC20 lpXt,
+      IGearingToken gt,
+      address collateral,
+      IERC20 underlying
+    ) = market.tokens();
+    position.underlyingBalance = underlying.balanceOf(owner);
+    position.collateralBalance = IERC20(collateral).balanceOf(owner);
+    position.ftBalance = ft.balanceOf(owner);
+    position.xtBalance = xt.balanceOf(owner);
+    position.lpFtBalance = lpFt.balanceOf(owner);
+    position.lpXtBalance = lpXt.balanceOf(owner);
+
+    IERC721Enumerable gtNft = IERC721Enumerable(address(gt));
+    uint balance = gtNft.balanceOf(owner);
+    position.gtInfo = new LoanPosition[](balance);
+
+    for (uint i = 0; i < balance; ++i) {
+      uint256 loanId = gtNft.tokenOfOwnerByIndex(owner, i);
+      position.gtInfo[i].loanId = loanId;
+      (address _o, uint128 debtAmt,uint128 _ltv, bytes memory collateralData) = gt.loanInfo(loanId);
+      position.gtInfo[i].debtAmt = debtAmt;
+      position.gtInfo[i].collateralAmt = _decodeAmount(collateralData);
+    }
+  }
+
+  function getAllLoanPosition(
+    ITermMaxMarket market,
+    address owner
+  )
+    external
+    view
+    returns (
+      LoanPosition[] memory
+    )
+  {
+    ( ,,,,IGearingToken gt,, ) = market.tokens();
+    IERC721Enumerable gtNft = IERC721Enumerable(address(gt));
+    uint balance = gtNft.balanceOf(owner);
+    LoanPosition[] memory loanPositions = new LoanPosition[](balance);
+    for (uint i = 0; i < balance; ++i) {
+      uint256 loanId = gtNft.tokenOfOwnerByIndex(owner, i);
+      (address _o, uint128 debtAmt,uint128 _ltv, bytes memory collateralData) = gt.loanInfo(loanId);
+      loanPositions[i].loanId = loanId;
+      loanPositions[i].debtAmt = debtAmt;
+      loanPositions[i].collateralAmt = _decodeAmount(collateralData);
+    }
+    return loanPositions;
+  }
+
+  function _decodeAmount(
+    bytes memory collateralData
+  ) internal pure returns (uint256) {
+    return abi.decode(collateralData, (uint));
+  }
+}

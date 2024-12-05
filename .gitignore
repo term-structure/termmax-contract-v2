@@ -37,3 +37,6 @@ ignition/deployments/chain-31337
 
 # vnev
 /venv
+
+# log
+/log

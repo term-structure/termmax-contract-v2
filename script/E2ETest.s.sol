@@ -29,13 +29,18 @@ contract E2ETest is Script {
     address userAddr = vm.addr(userPrivateKey);
 
     // address config
-    address faucetAddr = address(0x12A9F6A4F06F7EF2595B4DEEa3C05f80F8C38c2a);
-    address routerAddr = address(0x1D4Bf13f05dF5941BBB9f14e9BD34a58D2660360);
-    address swapAdapter = address(0x832B66EFA6578c4fAceE88ADC9d1F42F39E4B3D8);
-    address marketAddr = address(0x73A5E4807F63C50d28113777C3d34CB40d2F6EE2);
+    address faucetAddr = address(0x1346C9F8e04ad7a33F47625e674e1449D1849A84);
+    address routerAddr = address(0xd3c3DB013d1eC1004f7D03553662e03529DA92e6);
+    address swapAdapter = address(0x3BB5734b9fEdd0e27913487e6370B9AFfec477Ca);
+    address[] markets = [
+        address(0x031138b4c90Abc8c7602D8514BD80B8f432eD990),
+        address(0xa65Fc86A2094DEF29eFc128ed3B4BC73fDe0ca0d),
+        address(0xCf7004758997fb7B5b0De50C8CD7a6407ebD7522)
+    ];
 
     TermMaxMarket market;
     TermMaxRouter router;
+    Faucet faucet;
     IMintableERC20 ft;
     IMintableERC20 xt;
     IMintableERC20 lpFt;
@@ -50,43 +55,53 @@ contract E2ETest is Script {
     MarketConfig config;
 
     function run() public {
-        Faucet faucet = Faucet(faucetAddr);
+        faucet = Faucet(faucetAddr);
         router = TermMaxRouter(routerAddr);
-        market = TermMaxMarket(marketAddr);
-        (ft, xt, lpFt, lpXt, gt, collateralAddr, underlyingERC20) = market
-            .tokens();
-        underlying = FaucetERC20(address(underlyingERC20));
-        collateral = FaucetERC20(collateralAddr);
-
-        underlyingPriceFeed = MockPriceFeed(
-            faucet
-                .getTokenConfig(faucet.getTokenId(address(underlying)))
-                .priceFeedAddr
-        );
-
-        collateralPriceFeed = MockPriceFeed(
-            faucet
-                .getTokenConfig(faucet.getTokenId(collateralAddr))
-                .priceFeedAddr
-        );
 
         vm.startBroadcast(userPrivateKey);
         // // provide liquidity
-        // uint256 amount = 1000000e6;
-        // faucet.devMint(userAddr, address(underlying), amount);
-        // underlying.approve(routerAddr, amount);
-        // router.provideLiquidity(userAddr, market, amount);
+        for (uint i = 0; i < markets.length; i++) {
+            address marketAddr = markets[i];
+            market = TermMaxMarket(marketAddr);
+            (ft, xt, lpFt, lpXt, gt, collateralAddr, underlyingERC20) = market
+                .tokens();
+            console.log("Market address", marketAddr);
+            console.log("ft address", address(ft));
+            console.log("xt address", address(xt));
+            console.log("lpFt address", address(lpFt));
+            console.log("lpXt address", address(lpXt));
+            console.log("gt address", address(gt));
+            console.log("collateral address", collateralAddr);
+            console.log("underlying address", address(underlyingERC20));
+            underlying = FaucetERC20(address(underlyingERC20));
+            collateral = FaucetERC20(collateralAddr);
 
-        // add collateral
-        console.log(address(market));
-        (
-            IERC20[6] memory tokens,
-            uint256[6] memory balances,
-            address gtAddr,
-            uint256[] memory gtIds
-        ) = router.assetsWithERC20Collateral(market, userAddr);
+            underlyingPriceFeed = MockPriceFeed(
+                faucet
+                    .getTokenConfig(faucet.getTokenId(address(underlying)))
+                    .priceFeedAddr
+            );
 
-        console.log(" gtIds length:", gtIds.length);
+            collateralPriceFeed = MockPriceFeed(
+                faucet
+                    .getTokenConfig(faucet.getTokenId(collateralAddr))
+                    .priceFeedAddr
+            );
+            (, int256 ans, , , ) = underlyingPriceFeed.latestRoundData();
+            uint256 underlyingPrice = uint256(ans);
+            uint256 priceDecimalBase = 10 ** underlyingPriceFeed.decimals();
+            uint256 amount = ((2000000 * priceDecimalBase) / underlyingPrice) *
+                10 ** underlying.decimals();
+            console.log(amount);
+            faucet.devMint(userAddr, address(underlying), amount);
+            console.log("Underlying balance: ", underlying.balanceOf(userAddr));
+            underlying.approve(routerAddr, amount);
+            router.provideLiquidity(userAddr, market, amount);
+            console.log("FT Reserve: ", ft.balanceOf(address(market)));
+            console.log("XT Reserve: ", xt.balanceOf(address(market)));
+            console.log("LPFT Reserve: ", lpFt.balanceOf(userAddr));
+            console.log("LPXT Reserve: ", lpXt.balanceOf(userAddr));
+        }
 
         // // deploy router
         // address routerImpl = address(new TermMaxRouter());
@@ -210,16 +225,16 @@ contract E2ETest is Script {
         // console.log("Gearing token ltv:", ltv);
         vm.stopBroadcast();
 
-        console.log("\nAfter broadcast");
-        console.log("Current timestamp:", vm.getBlockTimestamp());
-        console.log("Market open time:", config.openTime);
-        console.log("Underlying balance:", underlying.balanceOf(userAddr));
-        console.log("Underlying symbol:", underlying.symbol());
-        console.log("Collateral balance:", collateral.balanceOf(userAddr));
-        console.log("Collateral symbol:", collateral.symbol());
-        console.log("FT balance:", ft.balanceOf(userAddr));
-        console.log("XT balance:", xt.balanceOf(userAddr));
-        console.log("LPFT balance:", lpFt.balanceOf(userAddr));
-        console.log("LPXT balance:", lpXt.balanceOf(userAddr));
+        // console.log("\nAfter broadcast");
+        // console.log("Current timestamp:", vm.getBlockTimestamp());
+        // console.log("Market open time:", config.openTime);
+        // console.log("Underlying balance:", underlying.balanceOf(userAddr));
+        // console.log("Underlying symbol:", underlying.symbol());
+        // console.log("Collateral balance:", collateral.balanceOf(userAddr));
+        // console.log("Collateral symbol:", collateral.symbol());
+        // console.log("FT balance:", ft.balanceOf(userAddr));
+        // console.log("XT balance:", xt.balanceOf(userAddr));
+        // console.log("LPFT balance:", lpFt.balanceOf(userAddr));
+        // console.log("LPXT balance:", lpXt.balanceOf(userAddr));
     }
 }
