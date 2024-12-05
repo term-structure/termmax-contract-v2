@@ -200,9 +200,9 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
             collateralDecimals) /
             (valueAndPrice.underlyingDecimals * Constants.DECIMAL_BASE);
 
-        uint rewardToLiquidator = (cEqualRepayAmt * REWARD_TO_LIQUIDATOR) /
+        uint rewardToLiquidator = (cEqualRepayAmt * GearingTokenConstants.REWARD_TO_LIQUIDATOR) /
             Constants.DECIMAL_BASE;
-        uint rewardToProtocol = (cEqualRepayAmt * REWARD_TO_PROTOCOL) /
+        uint rewardToProtocol = (cEqualRepayAmt * GearingTokenConstants.REWARD_TO_PROTOCOL) /
             Constants.DECIMAL_BASE;
 
         uint removedCollateralAmt = cEqualRepayAmt +
