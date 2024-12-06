@@ -60,8 +60,8 @@ contract LpTest is Test {
         emit ITermMaxMarket.ProvideLiquidity(
             deployer,
             uint128(amount),
-            uint128(amount * marketConfig.initialLtv / Constants.DECIMAL_BASE),
-            uint128(amount)
+            uint128(amount * marketConfig.initialLtv),
+            uint128(amount * Constants.DECIMAL_BASE)
         );
         res.market.provideLiquidity(amount);
 
