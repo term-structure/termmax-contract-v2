@@ -15,7 +15,8 @@ import {MockFlashLoanReceiver} from "../contracts/test/MockFlashLoanReceiver.sol
 import {MockFlashRepayer} from "../contracts/test/MockFlashRepayer.sol";
 import {MockPriceFeed} from "../contracts/test/MockPriceFeed.sol";
 import {AbstractGearingToken} from "../contracts/core/tokens/AbstractGearingToken.sol";
-import {ITermMaxFactory, TermMaxFactory, IMintableERC20, IGearingToken, AggregatorV3Interface} from "../contracts/core/factory/TermMaxFactory.sol";
+import {ITermMaxFactory, TermMaxFactory, IMintableERC20, IGearingToken} from "../contracts/core/factory/TermMaxFactory.sol";
+import {IOracle, OracleAggregator, AggregatorV3Interface} from "contracts/core/oracle/OracleAggregator.sol";
 import "../contracts/core/storage/TermMaxStorage.sol";
 
 contract GtTest is Test {
@@ -202,57 +203,38 @@ contract GtTest is Test {
         vm.stopPrank();
     }
 
-    function testMintGtWhenPaused() public {
-        // debt 1780 USD collaretal 2000USD ltv 0.89
-        uint128 debtAmt = 1780e8;
-        uint256 collateralAmt = 1e18;
-        res.collateral.mint(sender, collateralAmt);
+    // function testMintGtWhenMintFunctionClosed() public {
+    //     uint128 debtAmt = 1000e8;
+    //     uint256 collateralAmt = 1e18;
+    //     res.collateral.mint(sender, collateralAmt);
 
-        vm.prank(deployer);
-        res.market.pauseGt();
-        vm.startPrank(sender);
+    //     vm.prank(deployer);
+    //     vm.expectEmit();
+    //     emit IGearingToken.UpdateMintingSwitch(false);
+    //     res.market.updateMintingGtSwitch(false);
 
-        res.collateral.approve(address(res.gt), collateralAmt);
-        bytes memory collateralData = abi.encode(collateralAmt);
+    //     vm.startPrank(sender);
+    //     res.collateral.approve(address(res.gt), collateralAmt);
+    //     bytes memory collateralData = abi.encode(collateralAmt);
 
-        vm.expectRevert(abi.encodeWithSelector(EnforcedPause.selector));
-        res.market.issueFt(debtAmt, collateralData);
+    //     vm.expectRevert(
+    //         abi.encodeWithSelector(IGearingToken.CanNotMintGtNow.selector)
+    //     );
+    //     res.market.issueFt(debtAmt, collateralData);
 
-        vm.stopPrank();
-    }
+    //     vm.stopPrank();
 
-    function testMintGtWhenMintFunctionClosed() public {
-        uint128 debtAmt = 1000e8;
-        uint256 collateralAmt = 1e18;
-        res.collateral.mint(sender, collateralAmt);
+    //     vm.prank(deployer);
+    //     vm.expectEmit();
+    //     emit IGearingToken.UpdateMintingSwitch(true);
+    //     res.market.updateMintingGtSwitch(true);
 
-        vm.prank(deployer);
-        vm.expectEmit();
-        emit IGearingToken.UpdateMintingSwitch(false);
-        res.market.updateMintingGtSwitch(false);
+    //     vm.startPrank(sender);
+    //     res.collateral.approve(address(res.gt), collateralAmt);
+    //     res.market.issueFt(debtAmt, collateralData);
 
-        vm.startPrank(sender);
-        res.collateral.approve(address(res.gt), collateralAmt);
-        bytes memory collateralData = abi.encode(collateralAmt);
-
-        vm.expectRevert(
-            abi.encodeWithSelector(IGearingToken.CanNotMintGtNow.selector)
-        );
-        res.market.issueFt(debtAmt, collateralData);
-
-        vm.stopPrank();
-
-        vm.prank(deployer);
-        vm.expectEmit();
-        emit IGearingToken.UpdateMintingSwitch(true);
-        res.market.updateMintingGtSwitch(true);
-
-        vm.startPrank(sender);
-        res.collateral.approve(address(res.gt), collateralAmt);
-        res.market.issueFt(debtAmt, collateralData);
-
-        vm.stopPrank();
-    }
+    //     vm.stopPrank();
+    // }
 
     function testRevertByGtIsNotHealthyWhenIssueFt() public {
         // debt 1780 USD collaretal 2000USD ltv 0.89
@@ -879,33 +861,33 @@ contract GtTest is Test {
         vm.stopPrank();
     }
 
-    function testRemoveCollateralWhenPaused() public {
-        // debt 100 USD collaretal 2200USD
-        uint128 debtAmt = 100e8;
-        uint256 collateralAmt = 1.1e18;
-        uint256 removedCollateral = 0.1e18;
-        vm.startPrank(sender);
+    // function testRemoveCollateralWhenPaused() public {
+    //     // debt 100 USD collaretal 2200USD
+    //     uint128 debtAmt = 100e8;
+    //     uint256 collateralAmt = 1.1e18;
+    //     uint256 removedCollateral = 0.1e18;
+    //     vm.startPrank(sender);
 
-        (uint256 gtId, ) = LoanUtils.fastMintGt(
-            res,
-            sender,
-            debtAmt,
-            collateralAmt
-        );
-        vm.stopPrank();
-        vm.prank(deployer);
-        res.market.pauseGt();
+    //     (uint256 gtId, ) = LoanUtils.fastMintGt(
+    //         res,
+    //         sender,
+    //         debtAmt,
+    //         collateralAmt
+    //     );
+    //     vm.stopPrank();
+    //     vm.prank(deployer);
+    //     res.market.pauseGt();
 
-        vm.expectRevert(abi.encodeWithSelector(EnforcedPause.selector));
-        vm.prank(sender);
-        res.gt.removeCollateral(gtId, abi.encode(removedCollateral));
+    //     vm.expectRevert(abi.encodeWithSelector(EnforcedPause.selector));
+    //     vm.prank(sender);
+    //     res.gt.removeCollateral(gtId, abi.encode(removedCollateral));
 
-        vm.prank(deployer);
-        res.market.unpauseGt();
+    //     vm.prank(deployer);
+    //     res.market.unpauseGt();
 
-        vm.prank(sender);
-        res.gt.removeCollateral(gtId, abi.encode(removedCollateral));
-    }
+    //     vm.prank(sender);
+    //     res.gt.removeCollateral(gtId, abi.encode(removedCollateral));
+    // }
 
     function testRevertByGtIsNotHealthyWhenRemoveCollateral() public {
         // debt 1780 USD collaretal 2200USD
@@ -1501,55 +1483,55 @@ contract GtTest is Test {
         assert(maxRepayAmt == 0);
     }
 
-    function testLiquidateWhenPaused() public {
-        uint128 debtAmt = 1000e8;
-        uint256 collateralAmt = 1e18;
+    // function testLiquidateWhenPaused() public {
+    //     uint128 debtAmt = 1000e8;
+    //     uint256 collateralAmt = 1e18;
 
-        vm.startPrank(sender);
+    //     vm.startPrank(sender);
 
-        (uint256 gtId, ) = LoanUtils.fastMintGt(
-            res,
-            sender,
-            debtAmt,
-            collateralAmt
-        );
-        vm.stopPrank();
-        vm.startPrank(deployer);
-        // update oracle
-        res.collateralOracle.updateRoundData(
-            JSONLoader.getRoundDataFromJson(
-                testdata,
-                ".priceData.ETH_1000_DAI_1.eth"
-            )
-        );
-        res.underlyingOracle.updateRoundData(
-            JSONLoader.getRoundDataFromJson(
-                testdata,
-                ".priceData.ETH_1000_DAI_1.dai"
-            )
-        );
-        vm.stopPrank();
+    //     (uint256 gtId, ) = LoanUtils.fastMintGt(
+    //         res,
+    //         sender,
+    //         debtAmt,
+    //         collateralAmt
+    //     );
+    //     vm.stopPrank();
+    //     vm.startPrank(deployer);
+    //     // update oracle
+    //     res.collateralOracle.updateRoundData(
+    //         JSONLoader.getRoundDataFromJson(
+    //             testdata,
+    //             ".priceData.ETH_1000_DAI_1.eth"
+    //         )
+    //     );
+    //     res.underlyingOracle.updateRoundData(
+    //         JSONLoader.getRoundDataFromJson(
+    //             testdata,
+    //             ".priceData.ETH_1000_DAI_1.dai"
+    //         )
+    //     );
+    //     vm.stopPrank();
 
-        vm.prank(deployer);
-        res.market.pauseGt();
+    //     vm.prank(deployer);
+    //     res.market.pauseGt();
 
-        address liquidator = vm.randomAddress();
-        vm.startPrank(liquidator);
+    //     address liquidator = vm.randomAddress();
+    //     vm.startPrank(liquidator);
 
-        res.underlying.mint(liquidator, debtAmt);
-        res.underlying.approve(address(res.gt), debtAmt);
+    //     res.underlying.mint(liquidator, debtAmt);
+    //     res.underlying.approve(address(res.gt), debtAmt);
 
-        vm.expectRevert(abi.encodeWithSelector(EnforcedPause.selector));
-        res.gt.liquidate(gtId, debtAmt);
+    //     vm.expectRevert(abi.encodeWithSelector(EnforcedPause.selector));
+    //     res.gt.liquidate(gtId, debtAmt);
 
-        vm.stopPrank();
+    //     vm.stopPrank();
 
-        vm.prank(deployer);
-        res.market.unpauseGt();
+    //     vm.prank(deployer);
+    //     res.market.unpauseGt();
 
-        vm.prank(liquidator);
-        res.gt.liquidate(gtId, debtAmt);
-    }
+    //     vm.prank(liquidator);
+    //     res.gt.liquidate(gtId, debtAmt);
+    // }
 
     function testRevertByGtIsSafeWhenLiquidate() public {
         uint128 debtAmt = 1000e8;

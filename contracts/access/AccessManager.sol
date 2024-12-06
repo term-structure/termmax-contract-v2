@@ -6,6 +6,7 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 import {ITermMaxMarket} from "contracts/core/ITermMaxMarket.sol";
 import {ITermMaxFactory} from "contracts/core/factory/ITermMaxFactory.sol";
 import {ITermMaxRouter} from "contracts/router/ITermMaxRouter.sol";
+import {IOracle} from "contracts/core/oracle/IOracle.sol";
 
 interface IOwnable {
     function transferOwnership(address newOwner) external;
@@ -21,7 +22,9 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
     /// @notice Role to manage configuration items
     bytes32 public constant CURATOR_ROLE = keccak256("CURATOR_ROLE");
 
-    constructor(address admin) {
+    function initialize(address admin) public initializer {
+        __UUPSUpgradeable_init();
+        __AccessControl_init();
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(CURATOR_ROLE, admin);
         _grantRole(PAUSER_ROLE, admin);
@@ -89,6 +92,11 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
         router.setAdapterWhitelist(adapter, isWhitelist);
     }
 
+    /// @notice Set the oracle
+    function setOracle(IOracle aggregator, address asset, IOracle.Oracle memory oracle) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        aggregator.setOracle(asset, oracle);
+    }
+
     /// @notice Set the fee rate of the market
     function setMarketFeeRate(
         ITermMaxMarket market,
@@ -134,12 +142,9 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
         market.setProviderWhitelist(provider, isWhiteList);
     }
 
-    /// @notice Set the switch for this market minting GT
-    function setSwitchOfMintingGt(
-        ITermMaxMarket market,
-        bool state
-    ) external onlyRole(CURATOR_ROLE) {
-        market.updateMintingGtSwitch(state);
+    /// @notice Set the configuration of Gearing Token
+    function updateGtConfig(ITermMaxMarket market, bytes memory configData) external onlyRole(CURATOR_ROLE){
+        market.updateGtConfig(configData);
     }
 
     /// @notice Set the switch for this market
@@ -153,17 +158,7 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
             market.pause();
         }
     }
-    /// @notice Set the switch for GT of this market
-    function setSwitchOfGt(
-        ITermMaxMarket market,
-        bool state
-    ) external onlyRole(PAUSER_ROLE) {
-        if (state) {
-            market.unpauseGt();
-        } else {
-            market.pauseGt();
-        }
-    }
+
     /// @notice Set the switch for Router
     function setSwitchOfRouter(
         ITermMaxRouter router,

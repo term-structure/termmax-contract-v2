@@ -14,7 +14,8 @@ import {ITermMaxMarket, TermMaxMarket, Constants, IERC20, MathLib} from "../cont
 import {MockFlashLoanReceiver} from "../contracts/test/MockFlashLoanReceiver.sol";
 import {MockPriceFeed} from "../contracts/test/MockPriceFeed.sol";
 import {AbstractGearingToken} from "../contracts/core/tokens/AbstractGearingToken.sol";
-import {ITermMaxFactory, TermMaxFactory, IMintableERC20, IGearingToken, AggregatorV3Interface} from "../contracts/core/factory/TermMaxFactory.sol";
+import {ITermMaxFactory, TermMaxFactory, IMintableERC20, IGearingToken} from "../contracts/core/factory/TermMaxFactory.sol";
+import {IOracle, OracleAggregator, AggregatorV3Interface} from "contracts/core/oracle/OracleAggregator.sol";
 import "../contracts/core/storage/TermMaxStorage.sol";
 
 contract EvacuateTest is Test {

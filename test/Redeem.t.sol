@@ -14,7 +14,8 @@ import {ITermMaxMarket, TermMaxMarket, Constants, IERC20} from "../contracts/cor
 import {MockFlashLoanReceiver} from "../contracts/test/MockFlashLoanReceiver.sol";
 import {MockPriceFeed} from "../contracts/test/MockPriceFeed.sol";
 import {AbstractGearingToken} from "../contracts/core/tokens/AbstractGearingToken.sol";
-import {ITermMaxFactory, TermMaxFactory, IMintableERC20, IGearingToken, AggregatorV3Interface} from "../contracts/core/factory/TermMaxFactory.sol";
+import {ITermMaxFactory, TermMaxFactory, IMintableERC20, IGearingToken} from "../contracts/core/factory/TermMaxFactory.sol";
+import {IOracle, OracleAggregator, AggregatorV3Interface} from "contracts/core/oracle/OracleAggregator.sol";
 import "../contracts/core/storage/TermMaxStorage.sol";
 
 contract RedeemTest is Test {
@@ -145,7 +146,6 @@ contract RedeemTest is Test {
             deliveryData
         );
         res.market.redeem(senderBalances);
-        console.log("sender !");
         vm.stopPrank();
         uint underlyingAfter = res.underlying.balanceOf(sender);
         uint collateralAfter = res.collateral.balanceOf(sender);

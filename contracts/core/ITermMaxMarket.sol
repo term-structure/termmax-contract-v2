@@ -366,21 +366,6 @@ interface ITermMaxMarket {
     /// @notice Open Market Trading
     function unpause() external;
 
-    /// @notice Suspension of Gearing Token liquidation and collateral reduction
-    function pauseGt() external;
-
-    /// @notice Open Gearing Token liquidation and collateral reduction
-    function unpauseGt() external;
-
-    /// @notice Update the switch of minting gt
-    function updateMintingGtSwitch(bool canMintGt) external;
-
-    // function redeemByPermit(
-    //     address caller,
-    //     uint256[4] calldata amountArray,
-    //     uint256[4] calldata deadlineArray,
-    //     uint8[4] calldata vArray,
-    //     bytes32[4] calldata rArrray,
-    //     bytes32[4] calldata sArray
-    // ) external;
+    /// @notice Set the configuration of Gearing Token
+    function updateGtConfig(bytes memory configData) external;
 }

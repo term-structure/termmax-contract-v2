@@ -11,8 +11,7 @@ import {MarketConfig} from "../contracts/core/storage/TermMaxStorage.sol";
 import {ITermMaxFactory} from "../contracts/core/factory/ITermMaxFactory.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {AggregatorV3Interface} from "../contracts/core/tokens/IGearingToken.sol";
-import {MarketConfig} from "../contracts/core/storage/TermMaxStorage.sol";
+import {IOracle, OracleAggregator, AggregatorV3Interface} from "contracts/core/oracle/OracleAggregator.sol";
 
 library DeployUtils {
     function deployFactory(
@@ -57,16 +56,28 @@ library DeployUtils {
         );
     }
 
+    function deployOracleAggregator(
+        address adminAddr
+    ) public returns (OracleAggregator oracle) {
+        oracle = new OracleAggregator();
+        bytes memory data = abi.encodeCall(OracleAggregator.initialize, adminAddr);
+        ERC1967Proxy proxy = new ERC1967Proxy(
+            address(oracle),
+            data
+        );
+        oracle = OracleAggregator(address(proxy));
+    }
+
     function deployMarket(
         address adminAddr,
         address factoryAddr,
+        address oracle,
         address collateralAddr,
-        address collateralOracleAddr,
         address underlyingAddr,
-        address underlyingOracleAddr,
         bytes32 getKey,
         uint32 liquidationLtv,
         uint32 maxLtv,
+        uint256 collateralCapacity,
         MarketConfig memory marketConfig
     ) public returns (TermMaxMarket market) {
         ITermMaxFactory factory = ITermMaxFactory(factoryAddr);
@@ -76,12 +87,12 @@ library DeployUtils {
                 admin: adminAddr,
                 collateral: collateralAddr,
                 underlying: IERC20Metadata(underlyingAddr),
-                underlyingOracle: AggregatorV3Interface(underlyingOracleAddr),
+                oracle: IOracle(oracle),
                 liquidationLtv: liquidationLtv,
                 maxLtv: maxLtv,
                 liquidatable: true,
                 marketConfig: marketConfig,
-                gtInitalParams: abi.encode(collateralOracleAddr)
+                gtInitalParams: abi.encode(collateralCapacity)
             });
         market = TermMaxMarket(factory.createMarket(params));
     }

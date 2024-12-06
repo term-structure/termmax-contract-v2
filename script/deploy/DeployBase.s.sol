@@ -13,13 +13,14 @@ import {MockPriceFeed} from "../../contracts/test/MockPriceFeed.sol";
 import {MockPriceFeed} from "../../contracts/test/MockPriceFeed.sol";
 import {MarketConfig} from "../../contracts/core/storage/TermMaxStorage.sol";
 import {IMintableERC20} from "../../contracts/core/tokens/IMintableERC20.sol";
-import {IGearingToken, AggregatorV3Interface} from "../../contracts/core/tokens/IGearingToken.sol";
+import {IGearingToken} from "../../contracts/core/tokens/IGearingToken.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {SwapAdapter} from "../../contracts/test/testnet/SwapAdapter.sol";
 import {Faucet} from "../../contracts/test/testnet/Faucet.sol";
 import {JsonLoader} from "../utils/JsonLoader.sol";
 import {FaucetERC20} from "../../contracts/test/testnet/FaucetERC20.sol";
+import {IOracle, OracleAggregator, AggregatorV3Interface} from "contracts/core/oracle/OracleAggregator.sol";
 
 contract DeployBase is Script {
     function deployCore(
@@ -57,6 +58,7 @@ contract DeployBase is Script {
         address factoryAddr,
         address routerAddr,
         address faucetAddr,
+        address oracleAggregatorAddr,
         string memory deployDataPath,
         address adminAddr,
         address priceFeedOperatorAddr,
@@ -147,7 +149,8 @@ contract DeployBase is Script {
                     faucet.getTokenConfig(tokenId).priceFeedAddr
                 );
             }
-
+            OracleAggregator(oracleAggregatorAddr).setOracle(address(underlying), IOracle.Oracle(underlyingPriceFeed, underlyingPriceFeed, 7 days));
+            OracleAggregator(oracleAggregatorAddr).setOracle(address(collateral), IOracle.Oracle(collateralPriceFeed, collateralPriceFeed, 7 days));
             MarketConfig memory marketConfig = MarketConfig({
                 treasurer: config.marketConfig.treasurer,
                 maturity: config.marketConfig.maturity,
@@ -175,14 +178,12 @@ contract DeployBase is Script {
                     admin: adminAddr,
                     collateral: address(collateral),
                     underlying: IERC20Metadata(address(underlying)),
-                    underlyingOracle: AggregatorV3Interface(
-                        address(underlyingPriceFeed)
-                    ),
+                    oracle: IOracle(oracleAggregatorAddr),
                     liquidationLtv: config.marketConfig.liquidationLtv,
                     maxLtv: config.marketConfig.maxLtv,
                     liquidatable: config.marketConfig.liquidatable,
                     marketConfig: marketConfig,
-                    gtInitalParams: abi.encode(address(collateralPriceFeed))
+                    gtInitalParams: abi.encode(type(uint256).max)
                 });
             TermMaxMarket market = TermMaxMarket(factory.createMarket(params));
             markets[i] = market;
