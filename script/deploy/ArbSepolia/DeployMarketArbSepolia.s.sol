@@ -31,9 +31,9 @@ contract DeloyMarketArbSepolia is DeployBase {
         vm.envAddress("ARB_SEPOLIA_PRICE_FEED_OPERATOR_ADDRESS");
 
     // address config
-    address faucetAddr = address(0x4785e84635eC8712B444BfbfE6d53481A78cCf5a);
-    address factoryAddr = address(0x663E500Ceba7234F72E51d7dbD186bEC48f04a2D);
-    address routerAddr = address(0xA712cCaC67DCBaB141687391Cf1604966b80319D);
+    address faucetAddr = address(0xb12A0134a24CF7654C15369d73CC2C8ab095B4b3);
+    address factoryAddr = address(0x57d9F729C9a818230baBEcD44A04520A32e893B8);
+    address routerAddr = address(0xc5e9504Bfd53Ca21a0343a3778c7192da20635A9);
 
     address[] devs = [
         address(0x19A736387ea2F42AcAb1BC0FdE15e667e63ea9cC), // Sunny
@@ -46,7 +46,7 @@ contract DeloyMarketArbSepolia is DeployBase {
         Faucet faucet = Faucet(faucetAddr);
         string memory deployDataPath = string.concat(
             vm.projectRoot(),
-            "/script/deploy/deploydata/arbSepolia.json"
+            "/script/deploy/deploydata/tmp.json"
         );
         vm.startBroadcast(deployerPrivateKey);
         TermMaxMarket[] memory markets = deployMarkets(
