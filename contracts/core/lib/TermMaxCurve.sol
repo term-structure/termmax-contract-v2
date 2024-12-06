@@ -36,7 +36,7 @@ library TermMaxCurve {
         // xref: erc4626.adoc#inflation-attack[here].
         // The `Constants.DECIMAL_BASE` corresponds to an offset in the decimal representation 
         // between the underlying asset's decimals and the lp token.
-        return lpTotalSupply == 0 ? tokenIn : (tokenIn * lpTotalSupply * Constants.DECIMAL_BASE) / tokenReserve;
+        return lpTotalSupply == 0 ? tokenIn * Constants.DECIMAL_BASE : (tokenIn * lpTotalSupply) / tokenReserve;
     }
 
     /// @notice Calculate how many tokens should be transfer to the liquidity provider
