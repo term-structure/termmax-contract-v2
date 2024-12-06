@@ -1145,7 +1145,7 @@ contract TermMaxRouterTest is Test {
         res.underlying.approve(address(router), underlyingAmtIn);
         vm.warp(res.market.config().maturity);
         vm.expectRevert(
-            abi.encodeWithSelector(ITermMaxMarket.MarketWasClosed.selector)
+            abi.encodeWithSelector(ITermMaxMarket.MarketIsNotOpen.selector)
         );
         router.provideLiquidity(receiver, res.market, underlyingAmtIn);
 
@@ -1420,7 +1420,7 @@ contract TermMaxRouterTest is Test {
         res.lpXt.approve(address(router), lpXtOutAmt);
         vm.warp(res.market.config().maturity);
         vm.expectRevert(
-            abi.encodeWithSelector(ITermMaxMarket.MarketWasClosed.selector)
+            abi.encodeWithSelector(ITermMaxMarket.MarketIsNotOpen.selector)
         );
         router.withdrawLiquidityToFtXt(
             receiver,

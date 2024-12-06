@@ -8,6 +8,7 @@ import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/ut
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Constants} from "../lib/Constants.sol";
+import {GearingTokenConstants} from "../lib/GearingTokenConstants.sol";
 import {IFlashRepayer} from "./IFlashRepayer.sol";
 import {IGearingToken, AggregatorV3Interface, IERC20Metadata, IERC20} from "./IGearingToken.sol";
 
@@ -49,18 +50,7 @@ abstract contract AbstractGearingToken is
         bytes collateralPriceData;
     }
 
-    /// @notice The percentage of repay amount to liquidator while do liquidate, decimals 1e8
-    uint256 constant REWARD_TO_LIQUIDATOR = 0.05e8;
-    /// @notice The percentage of repay amount to protocol while do liquidate, decimals 1e8
-    uint256 constant REWARD_TO_PROTOCOL = 0.05e8;
-    /// @notice Semi-liquidation threshold: if the value of the collateral reaches this value,
-    ///         only partial liquidation can be performed, decimals 1e8.
-    uint256 constant HALF_LIQUIDATION_THRESHOLD = 10000e8;
-    /// @notice Minimum debt value, decimals 1e8.
-    uint256 constant MINIMAL_DEBT_VALUE = 5e8;
-
-    uint256 constant UINT_MAX = type(uint256).max;
-    uint128 constant UINT128_MAX = type(uint128).max;
+    
 
     /// @notice Configuturation of Gearing Token
     GtConfig _config;
@@ -95,7 +85,7 @@ abstract contract AbstractGearingToken is
         __Pausable_init();
         _config = config_;
         // Market will burn those tokens after maturity
-        config_.ft.approve(config_.market, UINT_MAX);
+        config_.ft.approve(config_.market, type(uint256).max);
     }
 
     function __GearingToken_Implement_init(
@@ -434,7 +424,7 @@ abstract contract AbstractGearingToken is
                 maxRepayAmt = (valueAndPrice.collateralValue *
                     Constants.DECIMAL_BASE) /
                     valueAndPrice.priceDecimals <
-                    HALF_LIQUIDATION_THRESHOLD
+                    GearingTokenConstants.HALF_LIQUIDATION_THRESHOLD
                     ? loan.debtAmt
                     : loan.debtAmt / 2;
             }
@@ -614,7 +604,7 @@ abstract contract AbstractGearingToken is
         ValueAndPrice memory valueAndPrice
     ) internal pure returns (uint128 ltv) {
         if (valueAndPrice.collateralValue == 0) {
-            return UINT128_MAX;
+            return type(uint128).max;
         }
         // debtValueWithDecimals(price decimals) collateralValue(base decimals)
         ltv = ((valueAndPrice.debtValueWithDecimals *
@@ -670,7 +660,7 @@ abstract contract AbstractGearingToken is
     function _checkDebtValue(ValueAndPrice memory valueAndPrice) internal pure {
         uint debtValue = (valueAndPrice.debtValueWithDecimals *
             Constants.DECIMAL_BASE) / valueAndPrice.priceDecimals;
-        if (debtValue < MINIMAL_DEBT_VALUE) {
+        if (debtValue < GearingTokenConstants.MINIMAL_DEBT_VALUE) {
             revert DebtValueIsTooSmall(debtValue);
         }
     }

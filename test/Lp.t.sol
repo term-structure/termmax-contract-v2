@@ -221,11 +221,34 @@ contract LpTest is Test {
         res.underlying.approve(address(res.market), underlyingAmtIn);
         vm.warp(res.market.config().maturity);
         vm.expectRevert(
-            abi.encodeWithSelector(ITermMaxMarket.MarketWasClosed.selector)
+            abi.encodeWithSelector(ITermMaxMarket.MarketIsNotOpen.selector)
         );
         res.market.provideLiquidity(underlyingAmtIn);
 
         vm.stopPrank();
+    }
+
+    function testProvideLiquidityWithProviderWhitelist() public {
+        vm.prank(deployer);
+        res.market.setProviderWhitelist(address(0), false);
+
+        vm.startPrank(sender);
+
+        uint128 underlyingAmtIn = 100e8;
+        res.underlying.mint(sender, underlyingAmtIn);
+        res.underlying.approve(address(res.market), underlyingAmtIn);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(ITermMaxMarket.ProviderNotWhitelisted.selector, sender)
+        );
+        res.market.provideLiquidity(underlyingAmtIn);
+
+        vm.stopPrank();
+
+        vm.prank(deployer);
+        res.market.setProviderWhitelist(sender, true);
+        vm.prank(sender);
+        res.market.provideLiquidity(underlyingAmtIn);
     }
 
     function testWithdrawLiquidity() public {
@@ -448,7 +471,7 @@ contract LpTest is Test {
         res.lpXt.approve(address(res.market), lpXtOutAmt);
         vm.warp(res.market.config().maturity);
         vm.expectRevert(
-            abi.encodeWithSelector(ITermMaxMarket.MarketWasClosed.selector)
+            abi.encodeWithSelector(ITermMaxMarket.MarketIsNotOpen.selector)
         );
         res.market.withdrawLiquidity(lpFtOutAmt, lpXtOutAmt);
 

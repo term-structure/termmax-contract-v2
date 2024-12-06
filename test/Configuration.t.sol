@@ -195,4 +195,59 @@ contract ConfigurationTest is Test {
 
         vm.stopPrank();
     }
+
+    function testSetProviderWhitelist() public {
+        address provider = vm.randomAddress();
+        
+        assertTrue(res.market.providerWhitelist(address(0)), "All providers should be whitelisted by default");
+        // Test unauthorized access
+        vm.startPrank(sender);
+        vm.expectRevert(abi.encodePacked(
+                bytes4(keccak256("OwnableUnauthorizedAccount(address)")),
+                abi.encode(sender)
+            ));
+        res.market.setProviderWhitelist(provider, true);
+        vm.stopPrank();
+
+        // Test setting whitelist as owner
+        vm.startPrank(deployer);
+        vm.expectEmit();
+        emit ITermMaxMarket.UpdateProviderWhitelist(provider, true);
+        res.market.setProviderWhitelist(provider, true);
+        assertTrue(res.market.providerWhitelist(provider), "Provider should be whitelisted");
+
+        // Test removing from whitelist
+        vm.expectEmit();
+        emit ITermMaxMarket.UpdateProviderWhitelist(provider, false);
+        res.market.setProviderWhitelist(provider, false);
+        assertFalse(res.market.providerWhitelist(provider), "Provider should not be whitelisted");
+        vm.stopPrank();
+    }
+
+    function testSetMultipleProviderWhitelist() public {
+        address[] memory providers = new address[](3);
+        providers[0] = vm.randomAddress();
+        providers[1] = vm.randomAddress();
+        providers[2] = vm.randomAddress();
+
+        vm.startPrank(deployer);
+        
+        // Whitelist multiple providers
+        for (uint i = 0; i < providers.length; i++) {
+            res.market.setProviderWhitelist(providers[i], true);
+            assertTrue(res.market.providerWhitelist(providers[i]), "Provider should be whitelisted");
+        }
+
+        // Verify each provider's status
+        for (uint i = 0; i < providers.length; i++) {
+            assertTrue(res.market.providerWhitelist(providers[i]), "Provider should remain whitelisted");
+        }
+
+        // Remove whitelist status
+        for (uint i = 0; i < providers.length; i++) {
+            res.market.setProviderWhitelist(providers[i], false);
+            assertFalse(res.market.providerWhitelist(providers[i]), "Provider should not be whitelisted");
+        }
+        vm.stopPrank();
+    }
 }

@@ -6,7 +6,6 @@ import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ITermMaxMarket, MarketConfig, IMintableERC20, IERC20} from "./ITermMaxMarket.sol";
-import {IMintableERC20} from "./tokens/IMintableERC20.sol";
 import {IGearingToken} from "./tokens/IGearingToken.sol";
 import {IFlashLoanReceiver} from "./IFlashLoanReceiver.sol";
 import {TermMaxCurve, MathLib, TradeParams} from "./lib/TermMaxCurve.sol";
@@ -35,15 +34,13 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
     /// @notice The time when the contract is suspended
     uint256 pauseTime;
 
+    mapping(address => bool) public providerWhitelist;
+
     /// @notice Check if the market is tradable
     modifier isOpen() {
-        // Check pausable switch
         _requireNotPaused();
-        if (block.timestamp < _config.openTime) {
+        if (block.timestamp < _config.openTime || block.timestamp >= _config.maturity) {
             revert MarketIsNotOpen();
-        }
-        if (block.timestamp >= _config.maturity) {
-            revert MarketWasClosed();
         }
         _;
     }
@@ -59,25 +56,25 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         IGearingToken gt_,
         MarketConfig memory config_
     ) external override {
-        // __initializeOwner will revert if already initialized
         __initializeOwner(admin);
-        if (address(collateral_) == address(underlying_)) {
+        if (address(collateral_) == address(underlying_)) 
             revert CollateralCanNotEqualUnderlyinng();
-        }
+        
         if (
             config_.openTime < block.timestamp ||
             config_.maturity < config_.openTime
-        ) {
+        ) 
             revert InvalidTime(config_.openTime, config_.maturity);
-        }
-        if (config_.lsf == 0 || config_.lsf > Constants.DECIMAL_BASE) {
+        
+        if (config_.lsf == 0 || config_.lsf > Constants.DECIMAL_BASE) 
             revert InvalidLsf(config_.lsf);
-        }
+        
         underlying = underlying_;
         collateral = collateral_;
         config_.rewardIsDistributed = false;
         _config = config_;
-
+        // Allow all providers
+        providerWhitelist[address(0)] = true;
         ft = tokens_[0];
         xt = tokens_[1];
         lpFt = tokens_[2];
@@ -170,13 +167,17 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
      * @inheritdoc ITermMaxMarket
      */
     function setLsf(uint32 lsf) external override onlyOwner {
-        if (lsf == 0 || lsf > Constants.DECIMAL_BASE) {
+        if (lsf == 0 || lsf > Constants.DECIMAL_BASE) 
             revert InvalidLsf(lsf);
-        }
 
         _config.lsf = lsf;
 
         emit UpdateLsf(lsf);
+    }
+
+    function setProviderWhitelist(address provider, bool isWhiteList) external override onlyOwner {
+        providerWhitelist[provider] = isWhiteList;
+        emit UpdateProviderWhitelist(provider, isWhiteList);
     }
 
     /**
@@ -190,6 +191,9 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         nonReentrant
         returns (uint128 lpFtOutAmt, uint128 lpXtOutAmt)
     {
+        // If address(0) is not in the white list, and the caller is not in the white list, revert
+        if (!providerWhitelist[address(0)] && !providerWhitelist[msg.sender])
+         revert ProviderNotWhitelisted(msg.sender);
         (lpFtOutAmt, lpXtOutAmt) = _provideLiquidity(msg.sender, underlyingAmt);
     }
 
@@ -197,9 +201,9 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         address caller,
         uint256 underlyingAmt
     ) internal returns (uint128 lpFtOutAmt, uint128 lpXtOutAmt) {
+        
         uint ftReserve = ft.balanceOf(address(this));
         uint lpFtTotalSupply = lpFt.totalSupply();
-
         uint xtReserve = xt.balanceOf(address(this));
         uint lpXtTotalSupply = lpXt.totalSupply();
         (uint128 ftMintedAmt, uint128 xtMintedAmt) = _addLiquidity(
@@ -208,28 +212,36 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
             _config.initialLtv
         );
 
-        lpFtOutAmt = TermMaxCurve
-            .calculateLpOut(ftMintedAmt, ftReserve, lpFtTotalSupply)
-            .toUint128();
-
-        lpXtOutAmt = TermMaxCurve
-            .calculateLpOut(xtMintedAmt, xtReserve, lpXtTotalSupply)
-            .toUint128();
-        if(lpFtOutAmt == 0 || lpXtOutAmt == 0){
-            revert LpOutputAmtIsZero(underlyingAmt); 
-        }
-        {
-            MarketConfig memory mConfig = _config;
-            uint totalFtRewards = lpFt.balanceOf(address(this));
-            lpFt.mint(address(this), lpFtOutAmt);
-            lpFtOutAmt = TermMaxCurve.calculateLpWithoutReward(block.timestamp, mConfig.openTime,
-             mConfig.maturity, lpFtTotalSupply, lpFtOutAmt, totalFtRewards).toUint128();
-            
-            uint totalXtRewards = lpXt.balanceOf(address(this));
-            lpXt.mint(address(this), lpXtOutAmt);
-            lpXtOutAmt = TermMaxCurve.calculateLpWithoutReward(block.timestamp, mConfig.openTime,
-             mConfig.maturity, lpXtTotalSupply, lpXtOutAmt, totalXtRewards).toUint128();
-        }
+        lpFtOutAmt = TermMaxCurve.calculateLpOut(ftMintedAmt, ftReserve, lpFtTotalSupply).toUint128();
+        lpXtOutAmt = TermMaxCurve.calculateLpOut(xtMintedAmt, xtReserve, lpXtTotalSupply).toUint128();
+        
+        if(lpFtOutAmt == 0 || lpXtOutAmt == 0) revert LpOutputAmtIsZero(underlyingAmt);
+        
+        MarketConfig memory mConfig = _config;
+        uint totalFtRewards = lpFt.balanceOf(address(this));
+        uint totalXtRewards = lpXt.balanceOf(address(this));
+        
+        lpFt.mint(address(this), lpFtOutAmt);
+        lpXt.mint(address(this), lpXtOutAmt);
+        
+        lpFtOutAmt = TermMaxCurve.calculateLpWithoutReward(
+            block.timestamp, 
+            mConfig.openTime,
+            mConfig.maturity, 
+            lpFtTotalSupply, 
+            lpFtOutAmt, 
+            totalFtRewards
+        ).toUint128();
+        
+        lpXtOutAmt = TermMaxCurve.calculateLpWithoutReward(
+            block.timestamp,
+            mConfig.openTime,
+            mConfig.maturity,
+            lpXtTotalSupply,
+            lpXtOutAmt,
+            totalXtRewards
+        ).toUint128();
+        
         lpFt.safeTransfer(caller, lpFtOutAmt);
         lpXt.safeTransfer(caller, lpXtOutAmt);
         emit ProvideLiquidity(caller, underlyingAmt, lpFtOutAmt, lpXtOutAmt);

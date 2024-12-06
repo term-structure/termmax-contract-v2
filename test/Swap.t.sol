@@ -182,7 +182,7 @@ contract SwapTest is Test {
         res.underlying.approve(address(res.market), underlyingAmtIn);
         vm.warp(res.market.config().maturity);
         vm.expectRevert(
-            abi.encodeWithSelector(ITermMaxMarket.MarketWasClosed.selector)
+            abi.encodeWithSelector(ITermMaxMarket.MarketIsNotOpen.selector)
         );
         res.market.buyFt(underlyingAmtIn, minTokenOut);
 
@@ -295,7 +295,7 @@ contract SwapTest is Test {
         res.underlying.approve(address(res.market), underlyingAmtIn);
         vm.warp(res.market.config().maturity);
         vm.expectRevert(
-            abi.encodeWithSelector(ITermMaxMarket.MarketWasClosed.selector)
+            abi.encodeWithSelector(ITermMaxMarket.MarketIsNotOpen.selector)
         );
         res.market.buyXt(underlyingAmtIn, minTokenOut);
 
@@ -414,7 +414,7 @@ contract SwapTest is Test {
         res.ft.approve(address(res.market), ftAmtIn);
         vm.warp(res.market.config().maturity);
         vm.expectRevert(
-            abi.encodeWithSelector(ITermMaxMarket.MarketWasClosed.selector)
+            abi.encodeWithSelector(ITermMaxMarket.MarketIsNotOpen.selector)
         );
         res.market.sellFt(ftAmtIn, minTokenOut);
 
@@ -533,7 +533,7 @@ contract SwapTest is Test {
         res.xt.approve(address(res.market), xtAmtIn);
         vm.warp(res.market.config().maturity);
         vm.expectRevert(
-            abi.encodeWithSelector(ITermMaxMarket.MarketWasClosed.selector)
+            abi.encodeWithSelector(ITermMaxMarket.MarketIsNotOpen.selector)
         );
         res.market.sellXt(xtAmtIn, minTokenOut);
 
@@ -585,7 +585,7 @@ contract SwapTest is Test {
 
         vm.warp(res.market.config().maturity);
         vm.expectRevert(
-            abi.encodeWithSelector(ITermMaxMarket.MarketWasClosed.selector)
+            abi.encodeWithSelector(ITermMaxMarket.MarketIsNotOpen.selector)
         );
         res.market.issueFt(debtAmt, abi.encode(collateralAmtIn));
 
@@ -686,7 +686,7 @@ contract SwapTest is Test {
 
         vm.warp(res.market.config().maturity);
         vm.expectRevert(
-            abi.encodeWithSelector(ITermMaxMarket.MarketWasClosed.selector)
+            abi.encodeWithSelector(ITermMaxMarket.MarketIsNotOpen.selector)
         );
         res.market.redeemFtAndXtToUnderlying(xtAmtToRedeem);
 

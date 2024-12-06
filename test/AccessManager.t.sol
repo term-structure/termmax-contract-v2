@@ -166,6 +166,42 @@ contract AccessManagerTest is Test {
         manager.createMarket(factory, params);
     }
 
+    function testCreateMarketAndWhitelist() public {
+        vm.startPrank(deployer);
+        TermMaxFactory factory = new TermMaxFactory(deployer);
+
+        TermMaxMarket m = new TermMaxMarket();
+
+        vm.expectEmit();
+        emit ITermMaxFactory.InitializeMarketImplement(address(m));
+        factory.initMarketImplement(address(m));
+
+        MockERC20 collateral = new MockERC20("ETH", "ETH", 18);
+        MockERC20 underlying = new MockERC20("DAI", "DAI", 8);
+
+        MockPriceFeed underlyingOracle = new MockPriceFeed(deployer);
+        MockPriceFeed collateralOracle = new MockPriceFeed(deployer);
+
+        ITermMaxFactory.DeployParams memory params = ITermMaxFactory
+            .DeployParams({
+                gtKey: DeployUtils.GT_ERC20,
+                admin: deployer,
+                collateral: address(collateral),
+                underlying: underlying,
+                underlyingOracle: underlyingOracle,
+                liquidationLtv: liquidationLtv,
+                maxLtv: maxLtv,
+                liquidatable: true,
+                marketConfig: marketConfig,
+                gtInitalParams: abi.encode(collateralOracle)
+            });
+        vm.warp(marketConfig.openTime - 1 days);
+        IOwnable(address(factory)).transferOwnership(address(manager));
+        address market = manager.createMarketAndWhitelist(router, factory, params);
+        assert(router.marketWhitelist(market));
+        vm.stopPrank();
+    }
+
     function testUpgradeSubContract() public {
         TermMaxRouter routerV2 = new TermMaxRouter();
 
@@ -357,6 +393,31 @@ contract AccessManagerTest is Test {
         vm.stopPrank();
     }
 
+    function testSetProviderWhitelist() public {
+         vm.startPrank(deployer);
+
+        vm.expectEmit();
+        emit ITermMaxMarket.UpdateProviderWhitelist(sender, true);
+        manager.setProviderWhitelist(res.market, sender, true);
+
+        vm.stopPrank();
+    }
+
+    function testSetProviderWhitelistWithoutAuth() public {
+        vm.startPrank(sender);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector,
+                sender,
+                manager.CURATOR_ROLE()
+            )
+        );
+        manager.setProviderWhitelist(res.market, sender, true);
+
+        vm.stopPrank();
+    }
+
     function testSetSwitchOfMintingGt() public {
         vm.prank(deployer);
         vm.expectEmit();
@@ -387,7 +448,7 @@ contract AccessManagerTest is Test {
             abi.encodeWithSelector(
                 IAccessControl.AccessControlUnauthorizedAccount.selector,
                 sender,
-                manager.CURATOR_ROLE()
+                manager.DEFAULT_ADMIN_ROLE()
             )
         );
         vm.prank(sender);
@@ -408,7 +469,7 @@ contract AccessManagerTest is Test {
             abi.encodeWithSelector(
                 IAccessControl.AccessControlUnauthorizedAccount.selector,
                 sender,
-                manager.CURATOR_ROLE()
+                manager.DEFAULT_ADMIN_ROLE()
             )
         );
         vm.prank(sender);
@@ -424,7 +485,7 @@ contract AccessManagerTest is Test {
         vm.stopPrank();
     }
 
-    function testSetSwitchOfMarketWithoutAut() public {
+    function testSetSwitchOfMarketWithoutAuth() public {
         vm.startPrank(sender);
         vm.expectRevert(
             abi.encodeWithSelector(
