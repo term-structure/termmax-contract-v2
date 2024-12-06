@@ -6,7 +6,7 @@
 # ./deploy.sh arbSepolia market
 source .env
 
-current_date=$(date "+%Y-%m-%d")
+current_date=$(date "+%Y-%m-%d:%H:%M:%S")
 
 # Ensure correct spacing and syntax in condition checks
 if [ "$1" == "ArbSepolia" ]; then

@@ -30,10 +30,10 @@
 //     address priceFeedOperatorAddr =
 //         vm.envAddress("ETH_SEPOLIA_PRICE_FEED_OPERATOR_ADDRESS");
 
-//     // address config
-//     address faucetAddr = address(0x8ade0c89f9a751fB2112AeF41C4E817dC62Cd0c5);
-//     address factoryAddr = address(0x7c48A59E3346D8A0cdDB221a836b84F706dc372e);
-//     address routerAddr = address(0xdC325533007E364fCc715667228B5278C75CC416);
+    // address config
+    address faucetAddr = address(0xd3d72c3f82a35c0f26F2E0d2c43DB9E5Db11B6FC);
+    address factoryAddr = address(0xa8726b82E53d6999bb2fCAdDc73Ec2914412e9fd);
+    address routerAddr = address(0xf8C57f9eed9e8C3a86eEd0EdA7A2B4154F0eb97c);
 
 //     address[] devs = [
 //         address(0x19A736387ea2F42AcAb1BC0FdE15e667e63ea9cC), // Sunny

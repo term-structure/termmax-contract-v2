@@ -30,13 +30,14 @@ contract E2ETest is Script {
     address userAddr = vm.addr(userPrivateKey);
 
     // address config
-    address faucetAddr = address(0x1346C9F8e04ad7a33F47625e674e1449D1849A84);
-    address routerAddr = address(0xd3c3DB013d1eC1004f7D03553662e03529DA92e6);
-    address swapAdapter = address(0x3BB5734b9fEdd0e27913487e6370B9AFfec477Ca);
+    address faucetAddr = address(0xb12A0134a24CF7654C15369d73CC2C8ab095B4b3);
+    address routerAddr = address(0xc5e9504Bfd53Ca21a0343a3778c7192da20635A9);
+    address swapAdapter = address(0x66C4419330b032e57B81451c168aE0EA8C7Ad830);
     address[] markets = [
-        address(0x031138b4c90Abc8c7602D8514BD80B8f432eD990),
-        address(0xa65Fc86A2094DEF29eFc128ed3B4BC73fDe0ca0d),
-        address(0xCf7004758997fb7B5b0De50C8CD7a6407ebD7522)
+        address(0x07eFb4FEE55f520838891A3cFDe8c860DfEA6229),
+        address(0x3C5cCDFB3d8Cf11Ec8207c8Cb00009c812dc5603),
+        address(0x1FfB7B0D3D3B017070bB5685087dEC673981cC6B)
+        // address(0xE99967782d07Fbb271A996D221e8513A687c789C)
     ];
 
     TermMaxMarket market;
@@ -60,10 +61,13 @@ contract E2ETest is Script {
         router = TermMaxRouter(routerAddr);
 
         vm.startBroadcast(userPrivateKey);
-        // // provide liquidity
+        // provide liquidity
         for (uint i = 0; i < markets.length; i++) {
             address marketAddr = markets[i];
             market = TermMaxMarket(marketAddr);
+            config = market.config();
+            console.log("current timestamp:", vm.getBlockTimestamp());
+            console.log("market open time:", config.openTime);
             (ft, xt, lpFt, lpXt, gt, collateralAddr, underlyingERC20) = market
                 .tokens();
             console.log("Market address", marketAddr);
@@ -91,8 +95,11 @@ contract E2ETest is Script {
             (, int256 ans, , , ) = underlyingPriceFeed.latestRoundData();
             uint256 underlyingPrice = uint256(ans);
             uint256 priceDecimalBase = 10 ** underlyingPriceFeed.decimals();
-            uint256 amount = ((2000000 * priceDecimalBase) / underlyingPrice) *
-                10 ** underlying.decimals();
+            console.log("price decimal base:", priceDecimalBase);
+            console.log("underlying price:", underlyingPrice);
+            uint256 amount = ((2000000 *
+                priceDecimalBase *
+                10 ** underlying.decimals()) / underlyingPrice);
             console.log(amount);
             faucet.devMint(userAddr, address(underlying), amount);
             console.log("Underlying balance: ", underlying.balanceOf(userAddr));
@@ -119,7 +126,22 @@ contract E2ETest is Script {
         // router.setMarketWhitelist(address(market), true);
         // router.setAdapterWhitelist(address(swapAdapter), true);
 
-        // // leverage from token
+        // leverage from token
+        // market = TermMaxMarket(markets[0]);
+        // (ft, xt, lpFt, lpXt, gt, collateralAddr, underlyingERC20) = market
+        //     .tokens();
+        // collateral = FaucetERC20(collateralAddr);
+        // underlying = FaucetERC20(address(underlyingERC20));
+        // collateralPriceFeed = MockPriceFeed(
+        //     faucet
+        //         .getTokenConfig(faucet.getTokenId(collateralAddr))
+        //         .priceFeedAddr
+        // );
+        // underlyingPriceFeed = MockPriceFeed(
+        //     faucet
+        //         .getTokenConfig(faucet.getTokenId(address(underlyingERC20)))
+        //         .priceFeedAddr
+        // );
         // uint256 underlyingAmtBase = 10 ** underlying.decimals();
         // uint256 collateralAmtBase = 10 ** collateral.decimals();
         // uint256 priceBase = 1e8;
