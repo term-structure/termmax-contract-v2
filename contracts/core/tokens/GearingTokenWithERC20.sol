@@ -15,15 +15,33 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
     using SafeERC20 for IERC20Metadata;
     using MathLib for *;
 
-    /// @notice The oracle of collateral in USD
-    AggregatorV3Interface public collateralOracle;
+    /// @notice The operation failed because the collateral capacity is exceeded
+    error CollateralCapacityExceeded();
+
+    uint256 public collateralCapacity;
 
     function __GearingToken_Implement_init(
         bytes memory initalParams
     ) internal override onlyInitializing {
-        collateralOracle = AggregatorV3Interface(
-            abi.decode(initalParams, (address))
+        collateralCapacity = abi.decode(
+            initalParams,
+            (uint256)
         );
+    }
+
+    function _updateConfig(bytes memory configData) internal virtual override {
+        collateralCapacity = abi.decode(
+            configData,
+            (uint256)
+        );
+    }
+
+    function _checkBeforeMint(uint128 ,
+        bytes memory collateralData) internal virtual override {
+
+        if(IERC20(_config.collateral).balanceOf(address(this)) + _decodeAmount(collateralData) > collateralCapacity) {
+            revert CollateralCapacityExceeded();
+        }
     }
 
     function _delivery(
@@ -98,19 +116,19 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
     /**
      * @inheritdoc AbstractGearingToken
      */
-    function _getCollateralPriceData()
+    function _getCollateralPriceData(GtConfig memory config)
         internal
         view
         virtual
         override
         returns (bytes memory priceData)
     {
-        uint decimals = 10 ** collateralOracle.decimals();
-        (, int256 answer, , , ) = collateralOracle.latestRoundData();
-        uint price = answer.toUint256();
+        (uint256 price, uint8 decimals) = config.oracle.getPrice(config.collateral);
+        uint priceDecimals = 10 ** decimals;
+
         uint cTokenDecimals = 10 **
-            IERC20Metadata(_config.collateral).decimals();
-        priceData = abi.encode(price, decimals, cTokenDecimals);
+            IERC20Metadata(config.collateral).decimals();
+        priceData = abi.encode(price, priceDecimals, cTokenDecimals);
     }
 
     /// @notice Encode amount to collateral data

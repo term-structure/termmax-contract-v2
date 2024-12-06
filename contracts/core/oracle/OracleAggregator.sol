@@ -1,0 +1,53 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.27;
+
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {AggregatorV3Interface, IOracle} from "./IOracle.sol";
+
+contract OracleAggregator is IOracle, UUPSUpgradeable, OwnableUpgradeable {
+
+    /// @notice Oracles
+    mapping(address => Oracle) public oracles;
+
+    function initialize(address _owner) external initializer{
+        __Ownable_init(_owner);
+    }
+
+    function _authorizeUpgrade(
+        address newImplementation
+    ) internal virtual override onlyOwner() {}
+
+    /**
+     * @inheritdoc IOracle
+     */
+    function setOracle(address asset, Oracle memory oracle) external onlyOwner {
+        oracles[asset] = oracle;
+        emit UpdateOracle(asset, oracle.aggregator, oracle.backupAggregator, oracle.heartbeat);
+    }
+
+    /// @notice Remove oracle
+    function removeOracle(address asset) external onlyOwner {
+        delete oracles[asset];
+        emit UpdateOracle(asset, AggregatorV3Interface(address(0)), AggregatorV3Interface(address(0)), 0);
+    }
+
+    /**
+     * @inheritdoc IOracle
+     */
+    function getPrice(address asset) external override view returns (uint256 price, uint8 decimals) {
+        Oracle memory oracle = oracles[asset];
+        (, int256 answer,, uint256 updatedAt,) = oracle.aggregator.latestRoundData();
+        if(oracle.heartbeat + updatedAt < block.timestamp || answer <= 0){
+            // switch backupAggregator
+            (, answer,, updatedAt,) = oracle.backupAggregator.latestRoundData();
+            if(oracle.heartbeat + updatedAt < block.timestamp || answer <= 0){
+                revert OracleIsNotWorking(asset);
+            }
+            decimals = oracle.backupAggregator.decimals();
+        }else{
+            decimals = oracle.aggregator.decimals(); 
+        }
+        price = uint256(answer);
+    }
+}

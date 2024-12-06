@@ -10,15 +10,15 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 import {TermMaxMarket} from "../../../contracts/core/TermMaxMarket.sol";
 import {MockERC20} from "../../../contracts/test/MockERC20.sol";
 import {MockPriceFeed} from "../../../contracts/test/MockPriceFeed.sol";
-import {MockPriceFeed} from "../../../contracts/test/MockPriceFeed.sol";
 import {MarketConfig} from "../../../contracts/core/storage/TermMaxStorage.sol";
 import {IMintableERC20} from "../../../contracts/core/tokens/IMintableERC20.sol";
-import {IGearingToken, AggregatorV3Interface} from "../../../contracts/core/tokens/IGearingToken.sol";
+import {IGearingToken} from "../../../contracts/core/tokens/IGearingToken.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {SwapAdapter} from "../../../contracts/test/testnet/SwapAdapter.sol";
 import {Faucet} from "../../../contracts/test/testnet/Faucet.sol";
 import {DeployBase} from "../DeployBase.s.sol";
+import {IOracle, OracleAggregator, AggregatorV3Interface} from "contracts/core/oracle/OracleAggregator.sol";
 
 contract DeployCoreEthSepolia is DeployBase {
     // admin config

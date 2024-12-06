@@ -12,10 +12,11 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 import {ITermMaxMarket, TermMaxMarket, Constants, Pausable} from "../contracts/core/TermMaxMarket.sol";
 import {MockERC20, ERC20} from "../contracts/test/MockERC20.sol";
 import {MockPriceFeed} from "../contracts/test/MockPriceFeed.sol";
-import {ITermMaxFactory, TermMaxFactory, IMintableERC20, IGearingToken, AggregatorV3Interface, GearingTokenWithERC20} from "../contracts/core/factory/TermMaxFactory.sol";
+import {ITermMaxFactory, TermMaxFactory, IMintableERC20, IGearingToken, GearingTokenWithERC20} from "../contracts/core/factory/TermMaxFactory.sol";
 import "../contracts/core/storage/TermMaxStorage.sol";
 import {IOwnable, AccessManager} from "contracts/access/AccessManager.sol";
 import {TermMaxRouter} from "contracts/router/TermMaxRouter.sol";
+import {IOracle, OracleAggregator, AggregatorV3Interface} from "contracts/core/oracle/OracleAggregator.sol";
 
 contract AccessManagerTest is Test {
     address deployer = vm.randomAddress();
@@ -68,7 +69,7 @@ contract AccessManagerTest is Test {
         IOwnable(address(res.factory)).transferOwnership(address(manager));
         IOwnable(address(res.market)).transferOwnership(address(manager));
         IOwnable(address(router)).transferOwnership(address(manager));
-
+        IOwnable(address(res.oracle)).transferOwnership(address(manager));
         vm.stopPrank();
     }
 
@@ -105,21 +106,18 @@ contract AccessManagerTest is Test {
         MockERC20 collateral = new MockERC20("ETH", "ETH", 18);
         MockERC20 underlying = new MockERC20("DAI", "DAI", 8);
 
-        MockPriceFeed underlyingOracle = new MockPriceFeed(deployer);
-        MockPriceFeed collateralOracle = new MockPriceFeed(deployer);
-
         ITermMaxFactory.DeployParams memory params = ITermMaxFactory
             .DeployParams({
                 gtKey: DeployUtils.GT_ERC20,
                 admin: deployer,
                 collateral: address(collateral),
                 underlying: underlying,
-                underlyingOracle: underlyingOracle,
+                oracle: res.oracle,
                 liquidationLtv: liquidationLtv,
                 maxLtv: maxLtv,
                 liquidatable: true,
                 marketConfig: marketConfig,
-                gtInitalParams: abi.encode(collateralOracle)
+                gtInitalParams: abi.encode(0)
             });
         vm.warp(marketConfig.openTime - 1 days);
         IOwnable(address(factory)).transferOwnership(address(manager));
@@ -140,21 +138,18 @@ contract AccessManagerTest is Test {
         MockERC20 collateral = new MockERC20("ETH", "ETH", 18);
         MockERC20 underlying = new MockERC20("DAI", "DAI", 8);
 
-        MockPriceFeed underlyingOracle = new MockPriceFeed(deployer);
-        MockPriceFeed collateralOracle = new MockPriceFeed(deployer);
-
         ITermMaxFactory.DeployParams memory params = ITermMaxFactory
             .DeployParams({
                 gtKey: DeployUtils.GT_ERC20,
                 admin: deployer,
                 collateral: address(collateral),
                 underlying: underlying,
-                underlyingOracle: underlyingOracle,
+                oracle: res.oracle,
                 liquidationLtv: liquidationLtv,
                 maxLtv: maxLtv,
                 liquidatable: true,
                 marketConfig: marketConfig,
-                gtInitalParams: abi.encode(collateralOracle)
+                gtInitalParams: abi.encode(0)
             });
         vm.warp(marketConfig.openTime - 1 days);
         IOwnable(address(factory)).transferOwnership(address(manager));
@@ -184,21 +179,18 @@ contract AccessManagerTest is Test {
         MockERC20 collateral = new MockERC20("ETH", "ETH", 18);
         MockERC20 underlying = new MockERC20("DAI", "DAI", 8);
 
-        MockPriceFeed underlyingOracle = new MockPriceFeed(deployer);
-        MockPriceFeed collateralOracle = new MockPriceFeed(deployer);
-
         ITermMaxFactory.DeployParams memory params = ITermMaxFactory
             .DeployParams({
                 gtKey: DeployUtils.GT_ERC20,
                 admin: deployer,
                 collateral: address(collateral),
                 underlying: underlying,
-                underlyingOracle: underlyingOracle,
+                oracle: res.oracle,
                 liquidationLtv: liquidationLtv,
                 maxLtv: maxLtv,
                 liquidatable: true,
                 marketConfig: marketConfig,
-                gtInitalParams: abi.encode(collateralOracle)
+                gtInitalParams: abi.encode(0)
             });
         vm.warp(marketConfig.openTime - 1 days);
         IOwnable(address(factory)).transferOwnership(address(manager));
@@ -289,6 +281,63 @@ contract AccessManagerTest is Test {
         );
         manager.setMarketTreasurer(res.market, newTreasurer);
 
+        vm.stopPrank();
+    }
+
+    function testSetGtCapacity() public {
+        vm.startPrank(deployer);
+        uint256 newGtCapacity = 1000e8;
+        vm.expectEmit();
+        emit IGearingToken.UpdateConfig(abi.encode(newGtCapacity));
+        manager.updateGtConfig(res.market, abi.encode(newGtCapacity));
+        assert(GearingTokenWithERC20(address(res.gt)).collateralCapacity() == newGtCapacity);
+        vm.stopPrank();
+    }
+
+    function testSetGtCapacityWithoutAuth() public {
+        vm.startPrank(sender);
+        uint256 newGtCapacity = 1000e8;
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector,
+                sender,
+                manager.CURATOR_ROLE()
+            )
+        );
+        manager.updateGtConfig(res.market, abi.encode(newGtCapacity));
+        vm.stopPrank();
+    }
+
+    function testSetOracle() public {
+        vm.startPrank(deployer);
+        
+        MockPriceFeed pricefeed = new MockPriceFeed(deployer);
+        IOracle.Oracle memory oracle = IOracle.Oracle(pricefeed, pricefeed, 1);
+        
+        vm.expectEmit();
+        emit IOracle.UpdateOracle(address(res.collateral), pricefeed, pricefeed, 1);
+        manager.setOracle(res.oracle, address(res.collateral), oracle);
+
+        (AggregatorV3Interface aggregator, AggregatorV3Interface backupAggregator, uint32 heartbeat) = OracleAggregator(address(res.oracle)).oracles(address(res.collateral)); // onChain
+        assert(aggregator == oracle.aggregator);
+        assert(backupAggregator == oracle.backupAggregator);
+        assert(heartbeat == oracle.heartbeat);
+        vm.stopPrank();
+    }
+
+    function testSetOracleWithoutAuth() public {
+        vm.startPrank(sender);
+
+        MockPriceFeed pricefeed = new MockPriceFeed(deployer);
+        IOracle.Oracle memory oracle = IOracle.Oracle(pricefeed, pricefeed, 1);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector,
+                sender,
+                manager.DEFAULT_ADMIN_ROLE()
+            )
+        );
+        manager.setOracle(res.oracle, address(res.collateral), oracle);
         vm.stopPrank();
     }
 
@@ -423,25 +472,6 @@ contract AccessManagerTest is Test {
         vm.stopPrank();
     }
 
-    function testSetSwitchOfMintingGt() public {
-        vm.prank(deployer);
-        vm.expectEmit();
-        emit IGearingToken.UpdateMintingSwitch(false);
-        manager.setSwitchOfMintingGt(res.market, false);
-    }
-
-    function testSetSwitchOfMintingGtWithoutAuth() public {
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector,
-                sender,
-                manager.CURATOR_ROLE()
-            )
-        );
-        vm.prank(sender);
-        manager.setSwitchOfMintingGt(res.market, false);
-    }
-
     function testSetMarketWhitelist() public {
         vm.prank(deployer);
         manager.setMarketWhitelist(router, address(res.market), false);
@@ -503,28 +533,6 @@ contract AccessManagerTest is Test {
         vm.stopPrank();
     }
 
-    function testSetSwitchOfGt() public {
-        vm.startPrank(deployer);
-        manager.setSwitchOfGt(res.market, false);
-        assert(Pausable(address(res.gt)).paused() == true);
-        manager.setSwitchOfGt(res.market, true);
-        assert(Pausable(address(res.gt)).paused() == false);
-        vm.stopPrank();
-    }
-
-    function testSetSwitchOfGtWithoutAut() public {
-        vm.startPrank(sender);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector,
-                sender,
-                manager.PAUSER_ROLE()
-            )
-        );
-        manager.setSwitchOfGt(res.market, false);
-        vm.stopPrank();
-    }
-
     function testSetSwitchOfRouter() public {
         vm.startPrank(deployer);
         manager.setSwitchOfRouter(router, false);
@@ -534,7 +542,7 @@ contract AccessManagerTest is Test {
         vm.stopPrank();
     }
 
-    function testSetSwitchOfRouterWithoutAut() public {
+    function testSetSwitchOfRouterWithoutAuth() public {
         vm.startPrank(sender);
         vm.expectRevert(
             abi.encodeWithSelector(

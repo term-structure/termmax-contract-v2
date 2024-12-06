@@ -10,7 +10,8 @@ import {SwapUtils} from "../utils/SwapUtils.sol";
 import {ITermMaxMarket, TermMaxMarket, Constants, TermMaxCurve} from "contracts/core/TermMaxMarket.sol";
 import {MockPriceFeed} from "contracts/test/MockPriceFeed.sol";
 
-import {ITermMaxFactory, TermMaxFactory, IMintableERC20, IGearingToken, AggregatorV3Interface} from "contracts/core/factory/TermMaxFactory.sol";
+import {ITermMaxFactory, TermMaxFactory, IMintableERC20, IGearingToken} from "contracts/core/factory/TermMaxFactory.sol";
+import {IOracle, OracleAggregator, AggregatorV3Interface} from "contracts/core/oracle/OracleAggregator.sol";
 import {MarketConfig} from "contracts/core/storage/TermMaxStorage.sol";
 import {TermMaxRouter, ISwapAdapter, ITermMaxRouter, SwapUnit} from "contracts/router/TermMaxRouter.sol";
 import {UniswapV3Adapter, ERC20SwapAdapter} from "contracts/router/swapAdapters/UniswapV3Adapter.sol";
@@ -84,17 +85,21 @@ contract ForkRouterTest is Test {
         vm.warp(marketConfig.openTime + 3600);
 
         // update oracle
-        res.collateralOracle.updateRoundData(
-            JSONLoader.getRoundDataFromJson(
+        
+        MockPriceFeed.RoundData memory ptRoundData =JSONLoader.getRoundDataFromJson(
                 testdata,
                 ".priceData.ETH_2000_PT_WEETH_1800.ptWeeth"
-            )
-        );
-        res.underlyingOracle.updateRoundData(
-            JSONLoader.getRoundDataFromJson(
+            );
+        ptRoundData.updatedAt = block.timestamp;
+        res.collateralOracle.updateRoundData(ptRoundData);
+
+        MockPriceFeed.RoundData memory weethRoundData =JSONLoader.getRoundDataFromJson(
                 testdata,
                 ".priceData.ETH_2000_PT_WEETH_1800.eth"
-            )
+            );
+        weethRoundData.updatedAt = block.timestamp; 
+        res.underlyingOracle.updateRoundData(
+            weethRoundData
         );
 
         uint amount = 10_000e18;

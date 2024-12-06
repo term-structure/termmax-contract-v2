@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {IGearingToken, AggregatorV3Interface} from "../tokens/IGearingToken.sol";
+import {IGearingToken, IOracle} from "../tokens/IGearingToken.sol";
 import {IMintableERC20} from "../tokens/MintableERC20.sol";
 import "../storage/TermMaxStorage.sol";
 
@@ -31,8 +31,8 @@ interface ITermMaxFactory {
         address collateral;
         /// @notice Underlying token
         IERC20Metadata underlying;
-        /// @notice The oracle of underlying token
-        AggregatorV3Interface underlyingOracle;
+        /// @notice The oracle aggregator
+        IOracle oracle;
         /// @notice The liquidation threshold of loan to collateral in Gearing Token
         uint32 liquidationLtv;
         /// @notice The threshold of loan to collateral when minting Gearing Token

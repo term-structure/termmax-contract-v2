@@ -948,22 +948,8 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
     /**
      * @inheritdoc ITermMaxMarket
      */
-    function pauseGt() external override onlyOwner {
-        gt.pause();
-    }
-
-    /**
-     * @inheritdoc ITermMaxMarket
-     */
-    function unpauseGt() external override onlyOwner {
-        gt.unpause();
-    }
-
-    /**
-     * @inheritdoc ITermMaxMarket
-     */
-    function updateMintingGtSwitch(bool canMintGt) external override onlyOwner {
-        gt.updateMintingSwitch(canMintGt);
+    function updateGtConfig(bytes memory configData) external override onlyOwner{
+        gt.updateConfig(configData);
     }
 
     /**

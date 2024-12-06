@@ -9,7 +9,8 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 import {TermMaxMarket, ITermMaxMarket} from "../contracts/core/TermMaxMarket.sol";
 import {MarketConfig} from "../contracts/core/storage/TermMaxStorage.sol";
 import {IMintableERC20} from "../contracts/core/tokens/IMintableERC20.sol";
-import {IGearingToken, AggregatorV3Interface} from "../contracts/core/tokens/IGearingToken.sol";
+import {IGearingToken} from "../contracts/core/tokens/IGearingToken.sol";
+import {IOracle, OracleAggregator, AggregatorV3Interface} from "contracts/core/oracle/OracleAggregator.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {UniswapV3Adapter, ERC20SwapAdapter} from "contracts/router/swapAdapters/UniswapV3Adapter.sol";
@@ -44,6 +45,28 @@ contract FactoryScript is Script {
     }
 }
 
+contract OracleScript is Script {
+    // put your config here
+    address admin; 
+
+    function run() public {
+        vm.startBroadcast();
+        address deployer = msg.sender;
+        console.log("Deploy OracleAggregator with deployer", deployer);
+        console.log("--------------------------------------------------");
+        OracleAggregator implementation = new OracleAggregator();
+        bytes memory data = abi.encodeCall(OracleAggregator.initialize, deployer);
+        ERC1967Proxy oracle = new ERC1967Proxy(
+            address(implementation),
+            data
+        );
+        console.log("OracleAggregator deloy at", address(oracle));
+
+        OracleAggregator(address(oracle)).transferOwnership(admin);
+        vm.stopBroadcast();
+    }
+}
+
 contract MarketScript is Script {
     // put your market config here
     address admin;
@@ -52,8 +75,7 @@ contract MarketScript is Script {
 
     address collateralAddr;
     address underlyingAddr;
-    address underlyingOracleAddr;
-    address collateralOracleAddr;
+    address oracleAggregator;
 
     uint64 maturity;
     uint64 openTime;
@@ -71,6 +93,7 @@ contract MarketScript is Script {
     uint32 lockingPercentage;
     uint32 initialLtv;
     uint32 protocolFeeRatio;
+    uint256 collateralCapacity;
 
     function run() public {
         vm.startBroadcast();
@@ -102,12 +125,12 @@ contract MarketScript is Script {
                 admin: admin,
                 collateral: collateralAddr,
                 underlying: IERC20Metadata(underlyingAddr),
-                underlyingOracle: AggregatorV3Interface(underlyingOracleAddr),
+                oracle: IOracle(oracleAggregator),
                 liquidationLtv: liquidationLtv,
                 maxLtv: maxLtv,
                 liquidatable: true,
                 marketConfig: marketConfig,
-                gtInitalParams: abi.encode(collateralOracleAddr)
+                gtInitalParams: abi.encode(collateralCapacity)
             });
         ITermMaxMarket market = ITermMaxMarket(factory.createMarket(params));
         console.log("TermMax market deloy at", address(market));
@@ -165,7 +188,7 @@ contract RouterScript is Script {
         console.log("PendleSwapV3Adapter deloy at", address(pendleAdapter));
 
         router.setAdapterWhitelist(address(uniswapAdapter), true);
-        router.setAdapterWhitelist(address(uniswapAdapter), true);
+        router.setAdapterWhitelist(address(pendleAdapter), true);
         router.transferOwnership(admin);
         vm.stopBroadcast();
     }
