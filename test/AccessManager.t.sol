@@ -8,6 +8,7 @@ import {JSONLoader} from "./utils/JSONLoader.sol";
 
 import {IAccessControl} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {IERC1967} from "@openzeppelin/contracts/interfaces/IERC1967.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {ITermMaxMarket, TermMaxMarket, Constants, Pausable} from "../contracts/core/TermMaxMarket.sol";
 import {MockERC20, ERC20} from "../contracts/test/MockERC20.sol";
 import {MockPriceFeed} from "../contracts/test/MockPriceFeed.sol";
@@ -58,7 +59,11 @@ contract AccessManagerTest is Test {
 
         router = DeployUtils.deployRouter(deployer);
 
-        manager = new AccessManager(deployer);
+        AccessManager implementation = new AccessManager();
+        bytes memory data = abi.encodeCall(AccessManager.initialize, deployer);
+        address proxy = address(new ERC1967Proxy(address(implementation), data));
+
+        manager = AccessManager(proxy);
 
         IOwnable(address(res.factory)).transferOwnership(address(manager));
         IOwnable(address(res.market)).transferOwnership(address(manager));

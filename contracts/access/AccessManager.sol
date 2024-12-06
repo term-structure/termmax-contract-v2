@@ -21,7 +21,9 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
     /// @notice Role to manage configuration items
     bytes32 public constant CURATOR_ROLE = keccak256("CURATOR_ROLE");
 
-    constructor(address admin) {
+    function initialize(address admin) public initializer {
+        __UUPSUpgradeable_init();
+        __AccessControl_init();
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(CURATOR_ROLE, admin);
         _grantRole(PAUSER_ROLE, admin);
