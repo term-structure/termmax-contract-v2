@@ -393,6 +393,31 @@ contract AccessManagerTest is Test {
         vm.stopPrank();
     }
 
+    function testSetProviderWhitelist() public {
+         vm.startPrank(deployer);
+
+        vm.expectEmit();
+        emit ITermMaxMarket.UpdateProviderWhitelist(sender, true);
+        manager.setProviderWhitelist(res.market, sender, true);
+
+        vm.stopPrank();
+    }
+
+    function testSetProviderWhitelistWithoutAuth() public {
+        vm.startPrank(sender);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector,
+                sender,
+                manager.CURATOR_ROLE()
+            )
+        );
+        manager.setProviderWhitelist(res.market, sender, true);
+
+        vm.stopPrank();
+    }
+
     function testSetSwitchOfMintingGt() public {
         vm.prank(deployer);
         vm.expectEmit();
@@ -460,7 +485,7 @@ contract AccessManagerTest is Test {
         vm.stopPrank();
     }
 
-    function testSetSwitchOfMarketWithoutAut() public {
+    function testSetSwitchOfMarketWithoutAuth() public {
         vm.startPrank(sender);
         vm.expectRevert(
             abi.encodeWithSelector(

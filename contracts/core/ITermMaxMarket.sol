@@ -22,6 +22,8 @@ interface ITermMaxMarket {
     error MarketIsNotOpen();
     /// @notice Error for the maturity day has been reached
     error MarketWasClosed();
+    /// @notice Error for provider not whitelisted
+    error ProviderNotWhitelisted(address provider);
     /// @notice Error for receiving zero lp token when providing liquidity
     error LpOutputAmtIsZero(uint256 underlyingAmt);
     /// @notice Error for the actual output value does not match the expected value
@@ -66,6 +68,8 @@ interface ITermMaxMarket {
     event UpdateTreasurer(address indexed treasurer);
     /// @notice Emitted when change the value of lsf
     event UpdateLsf(uint32 lsf);
+    /// @notice Emitted when setting the market whitelist
+    event UpdateProviderWhitelist(address provider, bool isWhiteList);
 
     /// @notice Emitted when providing liquidity to market
     /// @param caller Who call the function
@@ -255,6 +259,15 @@ interface ITermMaxMarket {
             address collateral,
             IERC20 underlying
         );
+    /// @notice Return the provider's white list
+    /// @param provider Provider address
+    /// @return true if the provider is in the white list
+    function providerWhitelist(address provider) external view returns (bool);
+
+    /// @notice Set the provider's white list
+    /// @param provider Provider address
+    /// @param isWhiteList true if the provider is in the white list
+    function setProviderWhitelist(address provider, bool isWhiteList) external;
 
     /// @notice Provide liquidity to market
     /// @param underlyingAmt Amount of underlying token provided

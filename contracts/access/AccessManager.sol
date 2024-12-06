@@ -128,6 +128,11 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
     ) external onlyRole(CURATOR_ROLE) {
         market.setLsf(lsf);
     }
+    
+    /// @notice Set the provider's white list
+    function setProviderWhitelist(ITermMaxMarket market, address provider, bool isWhiteList) external onlyRole(CURATOR_ROLE) {
+        market.setProviderWhitelist(provider, isWhiteList);
+    }
 
     /// @notice Set the switch for this market minting GT
     function setSwitchOfMintingGt(
