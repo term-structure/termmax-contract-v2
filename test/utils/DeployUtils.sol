@@ -71,7 +71,7 @@ library DeployUtils {
                 marketConfig: marketConfig,
                 gtInitalParams: abi.encode(type(uint256).max)
             });
-
+        res.marketConfig = marketConfig;
         res.market = ITermMaxMarket(res.factory.createMarket(params));
         (res.ft, res.xt, res.lpFt, res.lpXt, res.gt, , ) = res.market.tokens();
     }
