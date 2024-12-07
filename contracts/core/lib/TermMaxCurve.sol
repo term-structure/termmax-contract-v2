@@ -32,11 +32,7 @@ library TermMaxCurve {
     ) internal pure returns (uint256) {
         // Ref docs: https://docs.ts.finance/termmax/technical-details/amm-model/pool-operations/liquidity-operations-l#lo1-provide-liquidity
         // Ref: Eq.L-3,L-4 in the AMM Model section of docs
-        // Ref docs: https://eips.ethereum.org/EIPS/eip-4626[EIP-4626].
-        // xref: erc4626.adoc#inflation-attack[here].
-        // The `Constants.DECIMAL_BASE` corresponds to an offset in the decimal representation 
-        // between the underlying asset's decimals and the lp token.
-        return lpTotalSupply == 0 ? tokenIn * Constants.DECIMAL_BASE : (tokenIn * lpTotalSupply) / tokenReserve;
+        return lpTotalSupply == 0 ? tokenIn : (tokenIn * lpTotalSupply) / tokenReserve;
     }
 
     /// @notice Calculate how many tokens should be transfer to the liquidity provider

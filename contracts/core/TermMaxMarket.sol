@@ -11,7 +11,6 @@ import {IFlashLoanReceiver} from "./IFlashLoanReceiver.sol";
 import {TermMaxCurve, MathLib, TradeParams} from "./lib/TermMaxCurve.sol";
 import {Constants} from "./lib/Constants.sol";
 import {Ownable} from "./access/Ownable.sol";
-import {console} from "forge-std/console.sol";
 
 /**
  * @title TermMax Market
