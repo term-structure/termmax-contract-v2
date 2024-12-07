@@ -36,8 +36,8 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
     uint256 private pauseTime;
 
     // Track token reserves
-    uint256 private ftReserve;
-    uint256 private xtReserve;
+    uint128 private ftReserve;
+    uint128 private xtReserve;
 
     mapping(address => bool) public providerWhitelist;
 
@@ -110,7 +110,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
     /**
      * @inheritdoc ITermMaxMarket
      */
-    function ftXtReserves() public view override returns (uint256, uint256) {
+    function ftXtReserves() public view override returns (uint128, uint128) {
         return (ftReserve, xtReserve);
     }
 
@@ -519,13 +519,13 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
                     finalTokenReserve -
                     (feeAmt * mConfig.initialLtv) /
                     Constants.DECIMAL_BASE;
-                ftReserve -= netOut;
+                ftReserve -= netOut.toUint128();
             } else {
                 netOut =
                     xtReserve -
                     finalTokenReserve -
                     feeAmt;
-                xtReserve -= netOut;
+                xtReserve -= netOut.toUint128();
             }
             if (netOut < minTokenOut) {
                 revert UnexpectedAmount(minTokenOut, netOut.toUint128());
@@ -672,8 +672,8 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
             Constants.DECIMAL_BASE;
         ft.safeTransferFrom(caller, address(this), ftAmt);
         xt.safeTransferFrom(caller, address(this), underlyingAmt);
-        ftReserve += ftAmt;
-        xtReserve += underlyingAmt;
+        ftReserve += ftAmt.toUint128();
+        xtReserve += underlyingAmt.toUint128();
         _removeLiquidity(caller, underlyingAmt, _config.initialLtv);
 
         emit RemoveLiquidity(caller, underlyingAmt);
@@ -743,7 +743,6 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
 
         xt.burn(xtAmt);
         xtReserve -= xtAmt;
-
         emit MintGt(loanReceiver, gtReceiver, gtId, debt, collateralData);
     }
 
@@ -1043,7 +1042,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
      * @inheritdoc ITermMaxMarket
      */
     function withdrawExcessFtXt(address to, uint128 ftAmt, uint128 xtAmt) external onlyOwner { 
-        if(ftAmt + ftReserve > ft.balanceOf(address(this)) || xtAmt + xtReserve > xt.balanceOf(address(this)))
+        if(uint256(ftAmt) + ftReserve > ft.balanceOf(address(this)) || uint256(xtAmt) + xtReserve > xt.balanceOf(address(this)))
             revert NotEnoughFtOrXtToWithdraw();
         ft.safeTransfer(to, ftAmt);
         xt.safeTransfer(to, xtAmt); 
