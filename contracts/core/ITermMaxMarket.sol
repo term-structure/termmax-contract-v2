@@ -36,6 +36,8 @@ interface ITermMaxMarket {
     error EvacuationIsNotActived();
     /// @notice Error for evacuation mode is actived
     error EvacuationIsActived();
+    /// @notice Error for not enough excess FT/XT to withdraw
+    error NotEnoughFtOrXtToWithdraw();
 
     /// @notice Emitted when market initialized
     /// @param collateral Collateral token
@@ -200,6 +202,11 @@ interface ITermMaxMarket {
         uint128 xtAmt,
         uint256 underlyingAmt
     );
+    /// @notice Emitted when withdrawing the excess FT and XT
+    /// @param to Who receive the excess FT and XT
+    /// @param ftAmt The number of FT tokens received
+    /// @param xtAmt The number of XT tokens received
+    event WithdrawExcessFtXt(address indexed to, uint128 ftAmt, uint128 xtAmt);
 
     /// @notice Initialize the token and configuration of the market
     /// @param admin Administrator address for configuring parameters such as transaction fees
@@ -371,4 +378,7 @@ interface ITermMaxMarket {
 
     /// @notice Set the configuration of Gearing Token
     function updateGtConfig(bytes memory configData) external;
+
+    /// @notice Withdraw the excess FT and XT
+    function withdrawExcessFtXt(address to, uint128 ftAmt, uint128 xtAmt) external;
 }

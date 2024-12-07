@@ -110,7 +110,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
     /**
      * @inheritdoc ITermMaxMarket
      */
-    function ftXtReserves() public view override returns (uint256 ftReserve, uint256 xtReserve) {
+    function ftXtReserves() public view override returns (uint256, uint256) {
         return (ftReserve, xtReserve);
     }
 
@@ -994,11 +994,11 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         MarketConfig memory mConfig = _config;
 
         // calculate out put amount
-        uint ftAmt = (lpFtAmt * ftReserve) / lpFt.totalSupply();
+        uint ftAmt = (lpFtAmt * ft.balanceOf(address(this))) / lpFt.totalSupply();
         // will burn in the next time
         lpFt.safeTransferFrom(caller, address(this), lpFtAmt);
 
-        uint xtAmt = (lpXtAmt * xtReserve) / lpXt.totalSupply();
+        uint xtAmt = (lpXtAmt * xt.balanceOf(address(this))) / lpXt.totalSupply();
         // will burn in the next time
         lpXt.safeTransferFrom(caller, address(this), lpXtAmt);
 
@@ -1029,8 +1029,6 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
             underlying.safeTransfer(caller, xtToBurn);
             emit Evacuate(caller, lpFtAmt, lpXtAmt, 0, uint128(xtAmt - xtToBurn), xtToBurn);
         }
-        ftReserve -= ftAmt;
-        xtReserve -= xtAmt;
     }
 
     function _getEvacuateStatus() internal view returns (bool) {
@@ -1039,5 +1037,16 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
             block.timestamp - pauseTime >
             Constants.WAITING_TIME_EVACUATION_ACTIVE &&
             block.timestamp < _config.maturity;
+    }
+
+    /**
+     * @inheritdoc ITermMaxMarket
+     */
+    function withdrawExcessFtXt(address to, uint128 ftAmt, uint128 xtAmt) external onlyOwner { 
+        if(ftAmt + ftReserve > ft.balanceOf(address(this)) || xtAmt + xtReserve > xt.balanceOf(address(this)))
+            revert NotEnoughFtOrXtToWithdraw();
+        ft.safeTransfer(to, ftAmt);
+        xt.safeTransfer(to, xtAmt); 
+        emit WithdrawExcessFtXt(to, ftAmt, xtAmt);
     }
 }
