@@ -443,7 +443,6 @@ contract EvacuateTest is Test {
         
         // Withdraw the excess tokens
         vm.expectEmit();
-        
         emit ITermMaxMarket.WithdrawExcessFtXt(deployer, excessFt, excessXt);
         res.market.withdrawExcessFtXt(deployer, excessFt, excessXt);
         vm.stopPrank();

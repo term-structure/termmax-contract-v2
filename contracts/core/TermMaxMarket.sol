@@ -257,7 +257,14 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         ).toUint128();
         lpFt.safeTransfer(caller, lpFtOutAmt);
         lpXt.safeTransfer(caller, lpXtOutAmt);
-        emit ProvideLiquidity(caller, underlyingAmt, lpFtOutAmt, lpXtOutAmt);
+        emit ProvideLiquidity(
+            caller,
+            underlyingAmt,
+            lpFtOutAmt,
+            lpXtOutAmt,
+            ftReserve,
+            xtReserve
+        );
     }
 
     function _addLiquidity(
@@ -396,7 +403,9 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
             lpXtAmt.toUint128(),
             ftOutAmt,
             xtOutAmt,
-            mConfig.apr
+            mConfig.apr,
+            ftReserve,
+            xtReserve
         );
     }
 
@@ -543,7 +552,9 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
             minTokenOut,
             netOut.toUint128(),
             feeAmt.toUint128(),
-            mConfig.apr
+            mConfig.apr,
+            ftReserve,
+            xtReserve
         );
     }
 
@@ -654,7 +665,9 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
             minUnderlyingOut,
             netOut.toUint128(),
             feeAmt.toUint128(),
-            mConfig.apr
+            mConfig.apr,
+            ftReserve,
+            xtReserve
         );
     }
 
@@ -676,7 +689,12 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         xtReserve += underlyingAmt.toUint128();
         _removeLiquidity(caller, underlyingAmt, _config.initialLtv);
 
-        emit RemoveLiquidity(caller, underlyingAmt);
+        emit RemoveLiquidity(
+            caller,
+            underlyingAmt,
+            ftReserve,
+            xtReserve
+        );
     }
 
     /// @notice Lock up a portion of the transaction fee and release it slowly in the later stage
@@ -780,7 +798,14 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         ft.mint(caller, ftOutAmt);
         ftReserve += ftOutAmt;
 
-        emit IssueFt(caller, gtId, debt, ftOutAmt, issueFee, collateralData);
+        emit IssueFt(
+            caller,
+            gtId,
+            debt,
+            ftOutAmt,
+            issueFee,
+            collateralData
+        );
     }
 
     /**
@@ -791,31 +816,6 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
     ) external virtual override nonReentrant {
         _redeem(msg.sender, amountArray);
     }
-
-    // function redeemByPermit(
-    //     address caller,
-    //     uint256[4] calldata amountArray,
-    //     uint256[4] calldata deadlineArray,
-    //     uint8[4] calldata vArray,
-    //     bytes32[4] calldata rArrray,
-    //     bytes32[4] calldata sArray
-    // ) external virtual override nonReentrant {
-    //     IMintableERC20[4] memory permitTokens = [lpFt, lpXt, ft, xt];
-    //     for (uint i = 0; i < amountArray.length; ++i) {
-    //         if (amountArray[i] > 0) {
-    //             permitTokens[i].permit(
-    //                 sender,
-    //                 address(this),
-    //                 amountArray[i],
-    //                 deadlineArray[i],
-    //                 vArray[i],
-    //                 rArrray[i],
-    //                 sArray[i]
-    //             );
-    //         }
-    //     }
-    //     _redeem(sender, amountArray);
-    // }
 
     function _redeem(address caller, uint256[4] calldata amountArray) internal {
         MarketConfig memory mConfig = _config;

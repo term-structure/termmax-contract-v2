@@ -78,11 +78,15 @@ interface ITermMaxMarket {
     /// @param underlyingAmt Amount of underlying token provided
     /// @param lpFtAmt  The number of LpFT tokens received
     /// @param lpXtAmt The number of LpXT tokens received
+    /// @param ftReserve The new FT reserve amount
+    /// @param xtReserve The new XT reserve amount
     event ProvideLiquidity(
         address indexed caller,
         uint256 underlyingAmt,
         uint128 lpFtAmt,
-        uint128 lpXtAmt
+        uint128 lpXtAmt,
+        uint128 ftReserve,
+        uint128 xtReserve
     );
 
     /// @notice Emitted when withdrawing FT/XT from market
@@ -92,13 +96,17 @@ interface ITermMaxMarket {
     /// @param ftOutAmt The number of XT tokens received
     /// @param xtOutAmt The number of XT tokens received
     /// @param newApr New apr value with BASE_DECIMALS after do this action
+    /// @param ftReserve The new FT reserve amount
+    /// @param xtReserve The new XT reserve amount
     event WithdrawLiquidity(
         address indexed caller,
         uint128 lpFtAmt,
         uint128 lpXtAmt,
         uint128 ftOutAmt,
         uint128 xtOutAmt,
-        int64 newApr
+        int64 newApr,
+        uint128 ftReserve,
+        uint128 xtReserve
     );
 
     /// @notice Emitted when buy FT/XT using underlying token
@@ -109,6 +117,8 @@ interface ITermMaxMarket {
     /// @param actualAmt The number of FT/XT tokens received
     /// @param feeAmt Transaction Fees
     /// @param newApr New apr value with BASE_DECIMALS after do this action
+    /// @param ftReserve The new FT reserve amount
+    /// @param xtReserve The new XT reserve amount
     event BuyToken(
         address indexed caller,
         IMintableERC20 indexed token,
@@ -116,7 +126,9 @@ interface ITermMaxMarket {
         uint128 expectedAmt,
         uint128 actualAmt,
         uint128 feeAmt,
-        int64 newApr
+        int64 newApr,
+        uint128 ftReserve,
+        uint128 xtReserve
     );
 
     /// @notice Emitted when sell FT/XT
@@ -127,6 +139,8 @@ interface ITermMaxMarket {
     /// @param actualAmt The number of underluing tokens received
     /// @param feeAmt Transaction Fees
     /// @param newApr New apr value with BASE_DECIMALS after do this action
+    /// @param ftReserve The new FT reserve amount
+    /// @param xtReserve The new XT reserve amount
     event SellToken(
         address indexed caller,
         IMintableERC20 indexed token,
@@ -134,13 +148,22 @@ interface ITermMaxMarket {
         uint128 expectedAmt,
         uint128 actualAmt,
         uint128 feeAmt,
-        int64 newApr
+        int64 newApr,
+        uint128 ftReserve,
+        uint128 xtReserve
     );
 
     /// @notice Emitted when removing liquidity from market
     /// @param caller Who call the function
     /// @param underlyingAmt the amount of underlying removed
-    event RemoveLiquidity(address indexed caller, uint256 underlyingAmt);
+    /// @param ftReserve The new FT reserve amount
+    /// @param xtReserve The new XT reserve amount
+    event RemoveLiquidity(
+        address indexed caller,
+        uint256 underlyingAmt,
+        uint128 ftReserve,
+        uint128 xtReserve
+    );
 
     /// @notice Emitted when doing leverage
     /// @param loanReceiver Who call the function

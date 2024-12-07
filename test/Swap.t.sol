@@ -104,7 +104,9 @@ contract SwapTest is Test {
             minTokenOut,
             uint128(actualOut),
             uint128(fee),
-            int64(expectedState.apr)
+            int64(expectedState.apr),
+            uint128(expectedState.ftReserve),
+            uint128(expectedState.xtReserve)
         );
         uint256 netOut = res.market.buyFt(underlyingAmtIn, minTokenOut);
 
@@ -217,7 +219,9 @@ contract SwapTest is Test {
             minTokenOut,
             uint128(actualOut),
             uint128(fee),
-            int64(expectedState.apr)
+            int64(expectedState.apr),
+            uint128(expectedState.ftReserve),
+            uint128(expectedState.xtReserve)
         );
         uint256 netOut = res.market.buyXt(underlyingAmtIn, minTokenOut);
 
@@ -335,7 +339,9 @@ contract SwapTest is Test {
             minTokenOut,
             uint128(actualOut),
             uint128(fee),
-            int64(expectedState.apr)
+            int64(expectedState.apr),
+            uint128(expectedState.ftReserve),
+            uint128(expectedState.xtReserve)
         );
         uint256 netOut = res.market.sellFt(ftAmtIn, minTokenOut);
 
@@ -454,7 +460,9 @@ contract SwapTest is Test {
             minTokenOut,
             uint128(actualOut),
             uint128(fee),
-            int64(expectedState.apr)
+            int64(expectedState.apr),
+            uint128(expectedState.ftReserve),
+            uint128(expectedState.xtReserve)
         );
         uint256 netOut = res.market.sellXt(xtAmtIn, minTokenOut);
 
@@ -622,7 +630,8 @@ contract SwapTest is Test {
         );
 
         vm.expectEmit();
-        emit ITermMaxMarket.RemoveLiquidity(sender, xtAmtToRedeem);
+        emit ITermMaxMarket.RemoveLiquidity(sender, xtAmtToRedeem, uint128(state.ftReserve),
+            uint128(state.xtReserve));
         res.market.redeemFtAndXtToUnderlying(xtAmtToRedeem);
         state.underlyingReserve -= underlyingAmtToRedeem;
         StateChecker.checkMarketState(res, state);

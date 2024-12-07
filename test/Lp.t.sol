@@ -57,13 +57,6 @@ contract LpTest is Test {
         res.underlying.mint(deployer, amount);
         res.underlying.approve(address(res.market), amount);
 
-        vm.expectEmit();
-        emit ITermMaxMarket.ProvideLiquidity(
-            deployer,
-            uint128(amount),
-            uint128(amount * marketConfig.initialLtv),
-            uint128(amount * Constants.DECIMAL_BASE)
-        );
         res.market.provideLiquidity(amount);
 
         vm.stopPrank();
@@ -88,22 +81,24 @@ contract LpTest is Test {
                 ".expected.provideLiquidity.output.lpXtAmount"
             )
         );
-        vm.expectEmit();
-        emit ITermMaxMarket.ProvideLiquidity(
-            sender,
-            underlyingAmtIn,
-            uint128(expectLpFtOutAmt),
-            uint128(expectLpXtOutAmt)
-        );
-        (uint128 lpFtOutAmt, uint128 lpXtOutAmt) = res.market.provideLiquidity(
-            underlyingAmtIn
-        );
-
         StateChecker.MarketState memory expectedState = JSONLoader
             .getMarketStateFromJson(
                 testdata,
                 ".expected.provideLiquidity.contractState"
             );
+        vm.expectEmit();
+        emit ITermMaxMarket.ProvideLiquidity(
+            sender,
+            underlyingAmtIn,
+            uint128(expectLpFtOutAmt),
+            uint128(expectLpXtOutAmt),
+            uint128(expectedState.ftReserve),
+            uint128(expectedState.xtReserve)
+        );
+        (uint128 lpFtOutAmt, uint128 lpXtOutAmt) = res.market.provideLiquidity(
+            underlyingAmtIn
+        );
+
         StateChecker.checkMarketState(res, expectedState);
 
         assert(
@@ -156,22 +151,25 @@ contract LpTest is Test {
                 ".expected.provideLiquidityTwice.output.lpXtAmount"
             )
         );
-        vm.expectEmit();
-        emit ITermMaxMarket.ProvideLiquidity(
-            sender,
-            underlyingAmtIn,
-            uint128(expectLpFtOutAmt),
-            uint128(expectLpXtOutAmt)
-        );
-        (uint128 lpFtOutAmt, uint128 lpXtOutAmt) = res.market.provideLiquidity(
-            underlyingAmtIn
-        );
-
         StateChecker.MarketState memory expectedState = JSONLoader
             .getMarketStateFromJson(
                 testdata,
                 ".expected.provideLiquidityTwice.contractState"
             );
+        vm.expectEmit();
+        emit ITermMaxMarket.ProvideLiquidity(
+            sender,
+            underlyingAmtIn,
+            uint128(expectLpFtOutAmt),
+            uint128(expectLpXtOutAmt),
+            uint128(expectedState.ftReserve),
+            uint128(expectedState.xtReserve)
+        );
+        (uint128 lpFtOutAmt, uint128 lpXtOutAmt) = res.market.provideLiquidity(
+            underlyingAmtIn
+        );
+
+        
         StateChecker.checkMarketState(res, expectedState);
 
         assert(lpFtOutAmt == expectLpFtOutAmt);
@@ -289,7 +287,9 @@ contract LpTest is Test {
             lpXtOutAmt,
             uint128(expectFtOutAmt),
             uint128(expectXtOutAmt),
-            int64(expectedState.apr)
+            int64(expectedState.apr),
+            uint128(expectedState.ftReserve),
+            uint128(expectedState.xtReserve)
         );
         (uint128 ftOutAmt, uint128 xtOutAmt) = res.market.withdrawLiquidity(
             lpFtOutAmt,
@@ -369,7 +369,9 @@ contract LpTest is Test {
             lpXtOutAmt / 2,
             uint128(expectFtOutAmt),
             uint128(expectXtOutAmt),
-            int64(expectedState.apr)
+            int64(expectedState.apr),
+            uint128(expectedState.ftReserve),
+            uint128(expectedState.xtReserve)
         );
         (uint128 ftOutAmt, uint128 xtOutAmt) = res.market.withdrawLiquidity(
             lpFtOutAmt,
@@ -423,7 +425,9 @@ contract LpTest is Test {
             lpXtOutAmt,
             uint128(expectFtOutAmt),
             uint128(expectXtOutAmt),
-            int64(expectedState.apr)
+            int64(expectedState.apr),
+            uint128(expectedState.ftReserve),
+            uint128(expectedState.xtReserve)
         );
         (uint128 ftOutAmt, uint128 xtOutAmt) = res.market.withdrawLiquidity(
             lpFtOutAmt / 2,
