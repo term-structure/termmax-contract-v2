@@ -36,6 +36,8 @@ interface ITermMaxMarket {
     error EvacuationIsNotActived();
     /// @notice Error for evacuation mode is actived
     error EvacuationIsActived();
+    /// @notice Error for not enough excess FT/XT to withdraw
+    error NotEnoughFtOrXtToWithdraw();
 
     /// @notice Emitted when market initialized
     /// @param collateral Collateral token
@@ -76,11 +78,15 @@ interface ITermMaxMarket {
     /// @param underlyingAmt Amount of underlying token provided
     /// @param lpFtAmt  The number of LpFT tokens received
     /// @param lpXtAmt The number of LpXT tokens received
+    /// @param ftReserve The new FT reserve amount
+    /// @param xtReserve The new XT reserve amount
     event ProvideLiquidity(
         address indexed caller,
         uint256 underlyingAmt,
         uint128 lpFtAmt,
-        uint128 lpXtAmt
+        uint128 lpXtAmt,
+        uint128 ftReserve,
+        uint128 xtReserve
     );
 
     /// @notice Emitted when withdrawing FT/XT from market
@@ -90,13 +96,17 @@ interface ITermMaxMarket {
     /// @param ftOutAmt The number of XT tokens received
     /// @param xtOutAmt The number of XT tokens received
     /// @param newApr New apr value with BASE_DECIMALS after do this action
+    /// @param ftReserve The new FT reserve amount
+    /// @param xtReserve The new XT reserve amount
     event WithdrawLiquidity(
         address indexed caller,
         uint128 lpFtAmt,
         uint128 lpXtAmt,
         uint128 ftOutAmt,
         uint128 xtOutAmt,
-        int64 newApr
+        int64 newApr,
+        uint128 ftReserve,
+        uint128 xtReserve
     );
 
     /// @notice Emitted when buy FT/XT using underlying token
@@ -107,6 +117,8 @@ interface ITermMaxMarket {
     /// @param actualAmt The number of FT/XT tokens received
     /// @param feeAmt Transaction Fees
     /// @param newApr New apr value with BASE_DECIMALS after do this action
+    /// @param ftReserve The new FT reserve amount
+    /// @param xtReserve The new XT reserve amount
     event BuyToken(
         address indexed caller,
         IMintableERC20 indexed token,
@@ -114,7 +126,9 @@ interface ITermMaxMarket {
         uint128 expectedAmt,
         uint128 actualAmt,
         uint128 feeAmt,
-        int64 newApr
+        int64 newApr,
+        uint128 ftReserve,
+        uint128 xtReserve
     );
 
     /// @notice Emitted when sell FT/XT
@@ -125,6 +139,8 @@ interface ITermMaxMarket {
     /// @param actualAmt The number of underluing tokens received
     /// @param feeAmt Transaction Fees
     /// @param newApr New apr value with BASE_DECIMALS after do this action
+    /// @param ftReserve The new FT reserve amount
+    /// @param xtReserve The new XT reserve amount
     event SellToken(
         address indexed caller,
         IMintableERC20 indexed token,
@@ -132,13 +148,22 @@ interface ITermMaxMarket {
         uint128 expectedAmt,
         uint128 actualAmt,
         uint128 feeAmt,
-        int64 newApr
+        int64 newApr,
+        uint128 ftReserve,
+        uint128 xtReserve
     );
 
     /// @notice Emitted when removing liquidity from market
     /// @param caller Who call the function
     /// @param underlyingAmt the amount of underlying removed
-    event RemoveLiquidity(address indexed caller, uint256 underlyingAmt);
+    /// @param ftReserve The new FT reserve amount
+    /// @param xtReserve The new XT reserve amount
+    event RemoveLiquidity(
+        address indexed caller,
+        uint256 underlyingAmt,
+        uint128 ftReserve,
+        uint128 xtReserve
+    );
 
     /// @notice Emitted when doing leverage
     /// @param loanReceiver Who call the function
@@ -200,6 +225,11 @@ interface ITermMaxMarket {
         uint128 xtAmt,
         uint256 underlyingAmt
     );
+    /// @notice Emitted when withdrawing the excess FT and XT
+    /// @param to Who receive the excess FT and XT
+    /// @param ftAmt The number of FT tokens received
+    /// @param xtAmt The number of XT tokens received
+    event WithdrawExcessFtXt(address indexed to, uint128 ftAmt, uint128 xtAmt);
 
     /// @notice Initialize the token and configuration of the market
     /// @param admin Administrator address for configuring parameters such as transaction fees
@@ -238,6 +268,9 @@ interface ITermMaxMarket {
 
     /// @notice Set the value of lsf
     function setLsf(uint32 lsf) external;
+    
+    /// @notice Return the reserves of FT and XT
+    function ftXtReserves() external view returns (uint128 ftReserve, uint128 xtReserve);
 
     /// @notice Return the tokens in TermMax Market
     /// @return ft Fixed-rate Token(bond token). Earning Fixed Income with High Certainty
@@ -368,4 +401,7 @@ interface ITermMaxMarket {
 
     /// @notice Set the configuration of Gearing Token
     function updateGtConfig(bytes memory configData) external;
+
+    /// @notice Withdraw the excess FT and XT
+    function withdrawExcessFtXt(address to, uint128 ftAmt, uint128 xtAmt) external;
 }

@@ -416,6 +416,52 @@ contract EvacuateTest is Test {
         assert(state.lpFtReserve == 0);
         assert(state.lpXtReserve == 0);
     }
+    
+    function testWithdrawExcessFtXt() public {
+        
+        vm.startPrank(deployer);
+        res.lpFt.approve(address(res.market), res.lpFt.balanceOf(deployer));
+        res.lpXt.approve(address(res.market), res.lpXt.balanceOf(deployer));
+        (uint128 excessFt, uint128 excessXt) = res.market
+            .withdrawLiquidity(uint128(res.lpFt.balanceOf(deployer) -1), uint128(res.lpXt.balanceOf(deployer) -1));
+        res.ft.transfer(address(res.market), excessFt);
+        res.xt.transfer(address(res.market), excessXt);
+        // Get initial balances
+        uint256 initialDeployerFt = res.ft.balanceOf(deployer);
+        uint256 initialDeployerXt = res.xt.balanceOf(deployer);
+        
+        // Get current reserves
+        (uint256 ftReserve, uint256 xtReserve) = res.market.ftXtReserves();
+        
+        // Try to withdraw more than excess (should fail)
+        vm.expectRevert(ITermMaxMarket.NotEnoughFtOrXtToWithdraw.selector);
+        res.market.withdrawExcessFtXt(
+            deployer,
+            excessFt + 1,
+            0
+        );
+        
+        // Withdraw the excess tokens
+        vm.expectEmit();
+        emit ITermMaxMarket.WithdrawExcessFtXt(deployer, excessFt, excessXt);
+        res.market.withdrawExcessFtXt(deployer, excessFt, excessXt);
+        vm.stopPrank();
+        
+        // Verify balances after withdrawal
+        assertEq(res.ft.balanceOf(deployer), initialDeployerFt + excessFt, "Incorrect FT balance after withdrawal");
+        assertEq(res.xt.balanceOf(deployer), initialDeployerXt + excessXt, "Incorrect XT balance after withdrawal");
+        
+        // Verify reserves remained unchanged
+        (uint256 newFtReserve, uint256 newXtReserve) = res.market.ftXtReserves();
+        assertEq(newFtReserve, ftReserve, "FT reserve should not change");
+        assertEq(newXtReserve, xtReserve, "XT reserve should not change");
+        
+        // Verify non-owner cannot withdraw
+        vm.startPrank(sender);
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", sender));
+        res.market.withdrawExcessFtXt(sender, 1, 1);
+        vm.stopPrank();
+    }
 
     function _getBalancesAndApproveAll(
         DeployUtils.Res memory res_,

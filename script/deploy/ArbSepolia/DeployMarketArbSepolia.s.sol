@@ -34,6 +34,7 @@ contract DeloyMarketArbSepolia is DeployBase {
     address faucetAddr = address(0xb12A0134a24CF7654C15369d73CC2C8ab095B4b3);
     address factoryAddr = address(0x57d9F729C9a818230baBEcD44A04520A32e893B8);
     address routerAddr = address(0xc5e9504Bfd53Ca21a0343a3778c7192da20635A9);
+    address oracleAggregatorAddr;
 
     address[] devs = [
         address(0x19A736387ea2F42AcAb1BC0FdE15e667e63ea9cC), // Sunny
