@@ -97,6 +97,16 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
         aggregator.setOracle(asset, oracle);
     }
 
+    /// @notice Withdraw excess FT and XT tokens from the market
+    function withdrawExcessFtXt(
+        ITermMaxMarket market,
+        address to,
+        uint128 ftAmt,
+        uint128 xtAmt
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        market.withdrawExcessFtXt(to, ftAmt, xtAmt);
+    }
+
     /// @notice Set the fee rate of the market
     function setMarketFeeRate(
         ITermMaxMarket market,

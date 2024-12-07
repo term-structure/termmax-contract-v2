@@ -70,6 +70,19 @@ contract AccessManagerTest is Test {
         IOwnable(address(res.market)).transferOwnership(address(manager));
         IOwnable(address(router)).transferOwnership(address(manager));
         IOwnable(address(res.oracle)).transferOwnership(address(manager));
+        
+        uint amount = 10000e8;
+        res.underlying.mint(deployer, amount);
+        res.underlying.approve(address(res.market), amount);
+        res.market.provideLiquidity(amount);
+
+        vm.stopPrank();
+
+        res.underlying.mint(sender, amount);
+
+        vm.startPrank(sender);
+        res.underlying.approve(address(res.market), amount);
+        res.market.provideLiquidity(amount);
         vm.stopPrank();
     }
 
@@ -552,6 +565,56 @@ contract AccessManagerTest is Test {
             )
         );
         manager.setSwitchOfRouter(router, false);
+        vm.stopPrank();
+    }
+
+    function testWithdrawExcessFtXt() public {
+        vm.startPrank(deployer);
+        res.lpFt.approve(address(res.market), res.lpFt.balanceOf(deployer));
+        res.lpXt.approve(address(res.market), res.lpXt.balanceOf(deployer));
+        (uint128 excessFt, uint128 excessXt) = res.market
+            .withdrawLiquidity(uint128(res.lpFt.balanceOf(deployer)/2), uint128(res.lpXt.balanceOf(deployer)/2));
+        res.ft.transfer(address(res.market), excessFt);
+        res.xt.transfer(address(res.market), excessXt);
+        
+        address recipient = vm.randomAddress();
+        
+        // Record initial balances
+        uint256 initialRecipientFt = res.ft.balanceOf(recipient);
+        uint256 initialRecipientXt = res.xt.balanceOf(recipient);
+        
+        // Get initial reserves
+        (uint256 ftReserve, uint256 xtReserve) = res.market.ftXtReserves();
+        
+        // Withdraw excess tokens through AccessManager
+        vm.expectEmit();
+        emit ITermMaxMarket.WithdrawExcessFtXt(recipient, excessFt, excessXt);
+        manager.withdrawExcessFtXt(res.market, recipient, excessFt, excessXt);
+        
+        // Verify balances
+        assertEq(res.ft.balanceOf(recipient), initialRecipientFt + excessFt, "Incorrect FT balance after withdrawal");
+        assertEq(res.xt.balanceOf(recipient), initialRecipientXt + excessXt, "Incorrect XT balance after withdrawal");
+        
+        // Verify reserves unchanged
+        (uint256 newFtReserve, uint256 newXtReserve) = res.market.ftXtReserves();
+        assertEq(newFtReserve, ftReserve, "FT reserve should not change");
+        assertEq(newXtReserve, xtReserve, "XT reserve should not change");
+        
+        vm.stopPrank();
+    }
+
+    function testWithdrawExcessFtXtWithoutAuth() public {
+        vm.startPrank(sender);
+        
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector,
+                sender,
+                manager.DEFAULT_ADMIN_ROLE()
+            )
+        );
+        manager.withdrawExcessFtXt(res.market, sender, 1, 1);
+        
         vm.stopPrank();
     }
 }
