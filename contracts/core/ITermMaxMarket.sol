@@ -238,6 +238,9 @@ interface ITermMaxMarket {
 
     /// @notice Set the value of lsf
     function setLsf(uint32 lsf) external;
+    
+    /// @notice Return the reserves of FT and XT
+    function ftXtReserves() external view returns (uint256 ftReserve, uint256 xtReserve);
 
     /// @notice Return the tokens in TermMax Market
     /// @return ft Fixed-rate Token(bond token). Earning Fixed Income with High Certainty
