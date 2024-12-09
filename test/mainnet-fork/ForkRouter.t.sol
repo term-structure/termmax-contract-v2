@@ -286,7 +286,7 @@ contract ForkRouterTest is Test {
         uint24 poolFee = 100;
 
         uint256 gtId = _loan(poolFee);
-        (, uint128 debtAmt, , bytes memory collateralData) = res.gt.loanInfo(
+        (, uint128 debtAmt, ,) = res.gt.loanInfo(
             gtId
         );
 
@@ -310,10 +310,7 @@ contract ForkRouterTest is Test {
             )
         );
 
-        res.collateral.approve(
-            address(router),
-            abi.decode(collateralData, (uint))
-        );
+        res.gt.approve(address(router), gtId);
 
         assert(res.underlying.balanceOf(address(router)) == 0);
         assert(res.collateral.balanceOf(address(router)) == 0);
@@ -355,7 +352,7 @@ contract ForkRouterTest is Test {
         uint24 poolFee = 100;
 
         uint256 gtId = _loan(poolFee);
-        (, uint128 debtAmt, , bytes memory collateralData) = res.gt.loanInfo(
+        (, uint128 debtAmt, ,) = res.gt.loanInfo(
             gtId
         );
 
@@ -379,10 +376,7 @@ contract ForkRouterTest is Test {
             )
         );
 
-        res.collateral.approve(
-            address(router),
-            abi.decode(collateralData, (uint))
-        );
+        res.gt.approve(address(router), gtId);
 
         assert(res.underlying.balanceOf(address(router)) == 0);
         assert(res.collateral.balanceOf(address(router)) == 0);

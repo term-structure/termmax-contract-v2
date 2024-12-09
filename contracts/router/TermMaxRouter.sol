@@ -3,6 +3,7 @@ pragma solidity ^0.8.27;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC721Enumerable} from "@openzeppelin/contracts/interfaces/IERC721Enumerable.sol";
+import {IERC721Receiver} from "@openzeppelin/contracts/interfaces/IERC721Receiver.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
@@ -33,7 +34,8 @@ contract TermMaxRouter is
     PausableUpgradeable,
     IFlashLoanReceiver,
     IFlashRepayer,
-    ITermMaxRouter
+    ITermMaxRouter,
+    IERC721Receiver
 {
     using Address for address;
     using SafeCast for uint256;
@@ -843,10 +845,8 @@ contract TermMaxRouter is
         returns (uint256 netTokenOut)
     {
         (IMintableERC20 ft, , , , IGearingToken gt, , IERC20 underlying) = market.tokens();
-        if(gt.ownerOf(gtId) != msg.sender){
-            revert IGearingToken.CallerIsNotTheOwner(gtId);
-        }
-        gt.flashRepay(gtId, byUnderlying, abi.encode(msg.sender,market, ft ,units));
+        gt.safeTransferFrom(msg.sender, address(this), gtId, "");
+        gt.flashRepay(gtId, byUnderlying, abi.encode(market, ft ,units));
         if(byUnderlying){
             // SafeTransfer remainning underlying token
             netTokenOut = underlying.balanceOf(address(this));
@@ -1008,30 +1008,13 @@ contract TermMaxRouter is
 
     /// @dev Gt flash repay flashloan callback
     function executeOperation(
-        address,
         IERC20 repayToken,
         uint128 debtAmt,
         address,
         bytes memory collateralData,
         bytes calldata callbackData
     ) external override ensureGtWhitelist(msg.sender) {
-        (address msgSender, ITermMaxMarket market, address ft, SwapUnit[] memory units) = abi.decode(callbackData, (address,ITermMaxMarket, address, SwapUnit[]));
-
-        // safeTransfer collateral
-        bytes memory dataToTransferFrom = abi.encodeWithSelector(
-            ISwapAdapter.transferInputTokenFrom.selector,
-            units[0].tokenIn,
-            msgSender,
-            address(this),
-            collateralData
-        );
-        (bool success, bytes memory returnData) = units[0].adapter.delegatecall(
-            dataToTransferFrom
-        );
-        if (!success) {
-            revert TransferTokenFailWhenSwap(units[0].tokenIn, returnData);
-        }
-
+        (ITermMaxMarket market, address ft, SwapUnit[] memory units) = abi.decode(callbackData, (ITermMaxMarket, address, SwapUnit[]));
         // do swap
         bytes memory outData = _doSwap(collateralData, units);
 
@@ -1071,5 +1054,14 @@ contract TermMaxRouter is
             inputData = abi.decode(returnData, (bytes));
         }
         outData = inputData;
+    }
+
+    function onERC721Received(
+        address,
+        address,
+        uint256,
+        bytes calldata
+    ) external pure override returns (bytes4) {
+        return this.onERC721Received.selector;
     }
 }

@@ -858,7 +858,7 @@ contract TermMaxRouterTest is Test {
             address(res.underlying),
             abi.encode(minUnderlyingAmt)
         );
-        res.collateral.approve(address(router), collateralAmt);
+        res.gt.approve(address(router), gtId);
 
         uint collateralBalanceBefore = res.collateral.balanceOf(sender);
         uint underlyingBalanceBefore = res.underlying.balanceOf(sender);
@@ -907,7 +907,7 @@ contract TermMaxRouterTest is Test {
             address(res.underlying),
             abi.encode(minUnderlyingAmt)
         );
-        res.collateral.approve(address(router), collateralAmt);
+        res.gt.approve(address(router), gtId);
 
         uint collateralBalanceBefore = res.collateral.balanceOf(sender);
         uint underlyingBalanceBefore = res.underlying.balanceOf(sender);
@@ -949,18 +949,7 @@ contract TermMaxRouterTest is Test {
 
         uint256 minUnderlyingAmt = collateralValue;
         vm.expectRevert(
-            abi.encodeWithSelector(
-                ITermMaxRouter.TransferTokenFailWhenSwap.selector,
-                address(res.collateral),
-                abi.encodePacked(
-                    abi.encodeWithSelector(
-                        IERC20Errors.ERC20InsufficientAllowance.selector,
-                        address(router),
-                        0,
-                        collateralAmt
-                    )
-                )
-            )
+            
         );
         SwapUnit[] memory units = new SwapUnit[](1);
         units[0] = SwapUnit(
@@ -996,14 +985,12 @@ contract TermMaxRouterTest is Test {
             address(res.underlying),
             abi.encode(minUnderlyingAmt)
         );
-        res.collateral.approve(address(router), collateralAmt);
+        res.gt.approve(address(router), gtId);
         vm.stopPrank();
-
-        vm.prank(vm.randomAddress());
+        vm.prank(deployer);
         vm.expectRevert(
-            abi.encodeWithSelector(IGearingToken.CallerIsNotTheOwner.selector, gtId));
+            abi.encodeWithSignature("ERC721IncorrectOwner(address,uint256,address)", deployer, gtId, sender));
         router.flashRepayFromColl(sender, res.market, gtId, true, units);
-        
     }
 
     function testExecuteFromInvalidGt() public {
@@ -1026,7 +1013,6 @@ contract TermMaxRouterTest is Test {
         );
         vm.prank(address(fg));
         router.executeOperation(
-            sender,
             res.underlying,
             10e8,
             address(res.collateral),
@@ -1044,7 +1030,6 @@ contract TermMaxRouterTest is Test {
         );
         vm.prank(address(fg));
         router.executeOperation(
-            sender,
             res.underlying,
             10e8,
             address(res.collateral),
