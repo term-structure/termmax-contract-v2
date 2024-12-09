@@ -843,8 +843,10 @@ contract TermMaxRouter is
         returns (uint256 netTokenOut)
     {
         (IMintableERC20 ft, , , , IGearingToken gt, , IERC20 underlying) = market.tokens();
-
-        gt.flashRepay(gtId, byUnderlying, abi.encode(market, ft ,units));
+        if(gt.ownerOf(gtId) != msg.sender){
+            revert IGearingToken.CallerIsNotTheOwner(gtId);
+        }
+        gt.flashRepay(gtId, byUnderlying, abi.encode(msg.sender,market, ft ,units));
         if(byUnderlying){
             // SafeTransfer remainning underlying token
             netTokenOut = underlying.balanceOf(address(this));
@@ -1006,20 +1008,20 @@ contract TermMaxRouter is
 
     /// @dev Gt flash repay flashloan callback
     function executeOperation(
-        address owner,
+        address,
         IERC20 repayToken,
         uint128 debtAmt,
         address,
         bytes memory collateralData,
         bytes calldata callbackData
     ) external override ensureGtWhitelist(msg.sender) {
-        (ITermMaxMarket market, address ft, SwapUnit[] memory units) = abi.decode(callbackData, (ITermMaxMarket, address, SwapUnit[]));
+        (address msgSender, ITermMaxMarket market, address ft, SwapUnit[] memory units) = abi.decode(callbackData, (address,ITermMaxMarket, address, SwapUnit[]));
 
         // safeTransfer collateral
         bytes memory dataToTransferFrom = abi.encodeWithSelector(
             ISwapAdapter.transferInputTokenFrom.selector,
             units[0].tokenIn,
-            owner,
+            msgSender,
             address(this),
             collateralData
         );

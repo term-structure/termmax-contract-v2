@@ -974,6 +974,38 @@ contract TermMaxRouterTest is Test {
         vm.stopPrank();
     }
 
+    function testFlashRepayFromRandomAddress() public {
+        vm.startPrank(sender);
+
+        uint128 debtAmt = 1000e8;
+        uint256 collateralAmt = 1e18;
+        uint256 collateralValue = 2000e8;
+
+        (uint256 gtId, ) = LoanUtils.fastMintGt(
+            res,
+            sender,
+            debtAmt,
+            collateralAmt
+        );
+
+        uint256 minUnderlyingAmt = collateralValue;
+        SwapUnit[] memory units = new SwapUnit[](1);
+        units[0] = SwapUnit(
+            address(adapter),
+            address(res.collateral),
+            address(res.underlying),
+            abi.encode(minUnderlyingAmt)
+        );
+        res.collateral.approve(address(router), collateralAmt);
+        vm.stopPrank();
+
+        vm.prank(vm.randomAddress());
+        vm.expectRevert(
+            abi.encodeWithSelector(IGearingToken.CallerIsNotTheOwner.selector, gtId));
+        router.flashRepayFromColl(sender, res.market, gtId, true, units);
+        
+    }
+
     function testExecuteFromInvalidGt() public {
         vm.prank(sender);
         vm.expectRevert(
