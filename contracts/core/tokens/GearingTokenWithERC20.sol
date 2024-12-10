@@ -18,6 +18,10 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
     /// @notice The operation failed because the collateral capacity is exceeded
     error CollateralCapacityExceeded();
 
+    /// @notice The operation failed because the amount can not be uint256 max
+    error AmountCanNotBeUint256Max();
+
+    /// @notice The max capacity of collateral token
     uint256 public collateralCapacity;
 
     function __GearingToken_Implement_init(
@@ -134,8 +138,11 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
     /// @notice Encode amount to collateral data
     function _decodeAmount(
         bytes memory collateralData
-    ) internal pure returns (uint256) {
-        return abi.decode(collateralData, (uint));
+    ) internal pure returns (uint256 amount) {
+        amount = abi.decode(collateralData, (uint));
+        if (amount == type(uint256).max) {
+            revert AmountCanNotBeUint256Max();
+        }
     }
 
     /// @notice Decode amount from collateral data
