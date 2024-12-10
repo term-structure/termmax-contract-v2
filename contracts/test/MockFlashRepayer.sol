@@ -19,9 +19,9 @@ contract MockFlashRepayer is IFlashRepayer, IERC721Receiver {
     function executeOperation(
         IERC20 repayToken,
         uint128 debtAmt,
-        address collateralToken,
-        bytes memory collateralData,
-        bytes calldata callbackData
+        address,
+        bytes memory,
+        bytes calldata
     ) external override {
         repayToken.approve(address(gt), debtAmt);
     }

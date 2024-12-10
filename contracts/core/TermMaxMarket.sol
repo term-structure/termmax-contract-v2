@@ -199,7 +199,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
      * @inheritdoc ITermMaxMarket
      */
     function provideLiquidity(
-        uint256 underlyingAmt
+        uint128 underlyingAmt
     )
         external
         isOpen

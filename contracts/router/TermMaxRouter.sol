@@ -327,7 +327,7 @@ contract TermMaxRouter is
             underlyingAmt
         );
 
-        (lpFtOutAmt, lpXtOutAmt) = market.provideLiquidity(underlyingAmt);
+        (lpFtOutAmt, lpXtOutAmt) = market.provideLiquidity(uint128(underlyingAmt));
         lpFt.safeTransfer(receiver, lpFtOutAmt);
         lpXt.safeTransfer(receiver, lpXtOutAmt);
 

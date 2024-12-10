@@ -83,7 +83,7 @@ contract GtTest is Test {
         uint amount = 10000e8;
         res.underlying.mint(deployer, amount);
         res.underlying.approve(address(res.market), amount);
-        res.market.provideLiquidity(amount);
+        res.market.provideLiquidity(uint128(amount));
 
         vm.stopPrank();
     }
@@ -1598,7 +1598,7 @@ contract GtTest is Test {
             uint amount = 10000e8;
             rt.underlying.mint(deployer, amount);
             rt.underlying.approve(address(rt.market), amount);
-            rt.market.provideLiquidity(amount);
+            rt.market.provideLiquidity(uint128(amount));
 
             vm.stopPrank();
         }

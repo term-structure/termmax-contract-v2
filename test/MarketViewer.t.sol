@@ -93,7 +93,7 @@ contract MarketViewerTest is Test {
         uint amount = 10000e8;
         res.underlying.mint(deployer, amount);
         res.underlying.approve(address(res.market), amount);
-        res.market.provideLiquidity(amount);
+        res.market.provideLiquidity(uint128(amount));
 
         router = DeployUtils.deployRouter(deployer);
         router.setMarketWhitelist(address(res.market), true);
@@ -110,7 +110,7 @@ contract MarketViewerTest is Test {
         uint128 minTokenOut = 0e8;
         res.underlying.mint(sender, underlyingAmtIn);
         res.underlying.approve(address(router), underlyingAmtIn);
-        uint256 netFtOut = router.swapExactTokenForFt(
+        router.swapExactTokenForFt(
             sender,
             res.market,
             underlyingAmtIn,
@@ -119,10 +119,7 @@ contract MarketViewerTest is Test {
 
         res.underlying.mint(sender, underlyingAmtIn);
         res.underlying.approve(address(router), underlyingAmtIn);
-        uint expectOut = vm.parseUint(
-            vm.parseJsonString(testdata, ".expected.testBuyXt.output.netOut")
-        );
-        uint256 netXtOut = router.swapExactTokenForXt(
+        router.swapExactTokenForXt(
                 sender,
                 res.market,
                 underlyingAmtIn,
@@ -140,7 +137,7 @@ contract MarketViewerTest is Test {
         res.collateral.approve(address(res.gt), loanCollateralAmt);
 
         bytes memory collateralData = abi.encode(loanCollateralAmt);
-        (uint256 gtId, uint128 ftOutAmt) = res.market.issueFt(
+        (uint256 gtId,) = res.market.issueFt(
             debtAmt,
             collateralData
         );

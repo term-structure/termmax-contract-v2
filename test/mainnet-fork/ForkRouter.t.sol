@@ -106,7 +106,7 @@ contract ForkRouterTest is Test {
         deal(address(res.underlying), deployer, amount);
 
         res.underlying.approve(address(res.market), amount);
-        res.market.provideLiquidity(amount);
+        res.market.provideLiquidity(uint128(amount));
 
         router = DeployUtils.deployRouter(deployer);
         router.setMarketWhitelist(address(res.market), true);
