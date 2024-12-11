@@ -161,7 +161,7 @@ contract ForkRouterTest is Test {
             address(uniswapAdapter),
             weth9Addr,
             weethAddr,
-            abi.encode(abi.encodePacked(weth9Addr, poolFee, weethAddr), 0)
+            abi.encode(abi.encodePacked(weth9Addr, poolFee, weethAddr),block.timestamp + 3600, 0)
         );
         units[1] = SwapUnit(
             address(pendleAdapter),
@@ -238,7 +238,7 @@ contract ForkRouterTest is Test {
             address(uniswapAdapter),
             weth9Addr,
             weethAddr,
-            abi.encode(abi.encodePacked(weth9Addr, poolFee, weethAddr), 0)
+            abi.encode(abi.encodePacked(weth9Addr, poolFee, weethAddr), block.timestamp + 3600, 0)
         );
         units[1] = SwapUnit(
             address(pendleAdapter),
@@ -306,6 +306,7 @@ contract ForkRouterTest is Test {
             weth9Addr,
             abi.encode(
                 abi.encodePacked(weethAddr, poolFee, weth9Addr),
+                block.timestamp + 3600,
                 minUnderlyingAmt
             )
         );
@@ -431,7 +432,7 @@ contract ForkRouterTest is Test {
             address(uniswapAdapter),
             weth9Addr,
             weethAddr,
-            abi.encode(abi.encodePacked(weth9Addr, poolFee, weethAddr), 0)
+            abi.encode(abi.encodePacked(weth9Addr, poolFee, weethAddr), block.timestamp + 3600, 0)
         );
         units[1] = SwapUnit(
             address(pendleAdapter),
