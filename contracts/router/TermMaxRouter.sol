@@ -963,11 +963,9 @@ contract TermMaxRouter is
         collateralData = _doSwap(abi.encode(totalAmount), units);
         SwapUnit memory lastUnit = units[units.length - 1];
         // encode collateral data and approve
-        bytes memory approvalData = abi.encodeWithSelector(
-            ISwapAdapter.approveOutputToken.selector,
-            lastUnit.tokenOut,
-            gt,
-            collateralData
+        bytes memory approvalData = abi.encodeCall(
+            ISwapAdapter.approveOutputToken,
+            (lastUnit.tokenOut, gt, collateralData)
         );
         (bool success, bytes memory returnData) = lastUnit.adapter.delegatecall(
             approvalData
@@ -1036,12 +1034,9 @@ contract TermMaxRouter is
                 revert AdapterNotWhitelisted(units[i].adapter);
             }
             // encode datas
-            bytes memory dataToSwap = abi.encodeWithSelector(
-                ISwapAdapter.swap.selector,
-                units[i].tokenIn,
-                units[i].tokenOut,
-                inputData,
-                units[i].swapData
+            bytes memory dataToSwap = abi.encodeCall(
+                ISwapAdapter.swap,
+                (units[i].tokenIn, units[i].tokenOut, inputData, units[i].swapData)
             );
 
             // delegatecall

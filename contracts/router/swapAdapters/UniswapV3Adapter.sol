@@ -18,7 +18,7 @@ contract UniswapV3Adapter is ERC20SwapAdapter {
 
     function _swap(
         IERC20 tokenIn,
-        IERC20 tokenOut,
+        IERC20,
         uint256 amount,
         bytes memory swapData
     ) internal virtual override returns (uint256 tokenOutAmt) {
