@@ -38,13 +38,13 @@
         "maturity": "1735575942",
         "lpFtReserve": "0",
         "lpXtReserve": "0",
-        "lpFtTotalSupply": "88880000000000000000",
-        "lpXtTotalSupply": "101000000000000000000",
+        "lpFtTotalSupply": "888800000000",
+        "lpXtTotalSupply": "1010000000000",
         "currentTime": "1730391942"
       },
       "output": {
-        "lpFtAmount": "880000000000000000",
-        "lpXtAmount": "1000000000000000000"
+        "lpFtAmount": "8800000000",
+        "lpXtAmount": "10000000000"
       }
     },
     "provideLiquidityTwice": {
@@ -64,13 +64,13 @@
         "maturity": "1735575942",
         "lpFtReserve": "0",
         "lpXtReserve": "0",
-        "lpFtTotalSupply": "89760000000000000000",
-        "lpXtTotalSupply": "102000000000000000000",
+        "lpFtTotalSupply": "897600000000",
+        "lpXtTotalSupply": "1020000000000",
         "currentTime": "1730391942"
       },
       "output": {
-        "lpFtAmount": "880000000000000000",
-        "lpXtAmount": "1000000000000000000"
+        "lpFtAmount": "8800000000",
+        "lpXtAmount": "10000000000"
       }
     },
     "withdrawLiquidity": {
@@ -90,8 +90,8 @@
         "maturity": "1735575942",
         "lpFtReserve": "0",
         "lpXtReserve": "0",
-        "lpFtTotalSupply": "88000000000000000000",
-        "lpXtTotalSupply": "100000000000000000000",
+        "lpFtTotalSupply": "880000000000",
+        "lpXtTotalSupply": "1000000000000",
         "currentTime": "1730391942"
       },
       "output": {
@@ -116,8 +116,8 @@
         "maturity": "1735575942",
         "lpFtReserve": "0",
         "lpXtReserve": "0",
-        "lpFtTotalSupply": "88000000000000000000",
-        "lpXtTotalSupply": "100500000000000000000",
+        "lpFtTotalSupply": "880000000000",
+        "lpXtTotalSupply": "1005000000000",
         "currentTime": "1730391942"
       },
       "output": {
@@ -142,8 +142,8 @@
         "maturity": "1735575942",
         "lpFtReserve": "0",
         "lpXtReserve": "0",
-        "lpFtTotalSupply": "88440000000000000000",
-        "lpXtTotalSupply": "100000000000000000000",
+        "lpFtTotalSupply": "884400000000",
+        "lpXtTotalSupply": "1000000000000",
         "currentTime": "1730391942"
       },
       "output": {
@@ -166,10 +166,10 @@
         "lendFeeRatio": "3000000",
         "borrowFeeRatio": "3000000",
         "maturity": "1735575942",
-        "lpFtReserve": "206762102427670",
-        "lpXtReserve": "232263383448795",
-        "lpFtTotalSupply": "88000206762102427670",
-        "lpXtTotalSupply": "100000232263383448795",
+        "lpFtReserve": "2067621",
+        "lpXtReserve": "2322633",
+        "lpFtTotalSupply": "880002067621",
+        "lpXtTotalSupply": "1000002322633",
         "currentTime": "1730391942"
       },
       "output": {
@@ -192,10 +192,10 @@
         "lendFeeRatio": "3000000",
         "borrowFeeRatio": "3000000",
         "maturity": "1735575942",
-        "lpFtReserve": "1361680119335215",
-        "lpXtReserve": "1666495087175972",
-        "lpFtTotalSupply": "88001361680119335215",
-        "lpXtTotalSupply": "100001666495087175972",
+        "lpFtReserve": "13616801",
+        "lpXtReserve": "16664950",
+        "lpFtTotalSupply": "880013616801",
+        "lpXtTotalSupply": "1000016664950",
         "currentTime": "1730391942"
       },
       "output": {
@@ -218,10 +218,10 @@
         "lendFeeRatio": "3000000",
         "borrowFeeRatio": "3000000",
         "maturity": "1735575942",
-        "lpFtReserve": "413076635400674",
-        "lpXtReserve": "466711778239083",
-        "lpFtTotalSupply": "88000413076635400674",
-        "lpXtTotalSupply": "100000466711778239083",
+        "lpFtReserve": "4130766",
+        "lpXtReserve": "4667116",
+        "lpFtTotalSupply": "880004130766",
+        "lpXtTotalSupply": "1000004667116",
         "currentTime": "1730391942"
       },
       "output": {
@@ -244,10 +244,10 @@
         "lendFeeRatio": "3000000",
         "borrowFeeRatio": "3000000",
         "maturity": "1735575942",
-        "lpFtReserve": "2731429368659811",
-        "lpXtReserve": "3223030261149887",
-        "lpFtTotalSupply": "88002731429368659811",
-        "lpXtTotalSupply": "100003223030261149887",
+        "lpFtReserve": "27314293",
+        "lpXtReserve": "32230301",
+        "lpFtTotalSupply": "880027314293",
+        "lpXtTotalSupply": "1000032230301",
         "currentTime": "1730391942"
       },
       "output": {
