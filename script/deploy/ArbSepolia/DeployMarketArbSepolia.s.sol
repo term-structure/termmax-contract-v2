@@ -10,8 +10,10 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 import {TermMaxMarket} from "../../../contracts/core/TermMaxMarket.sol";
 import {MockERC20} from "../../../contracts/test/MockERC20.sol";
 import {MockPriceFeed} from "../../../contracts/test/MockPriceFeed.sol";
+import {MockPriceFeed} from "../../../contracts/test/MockPriceFeed.sol";
 import {MarketConfig} from "../../../contracts/core/storage/TermMaxStorage.sol";
 import {IMintableERC20} from "../../../contracts/core/tokens/IMintableERC20.sol";
+import {IOracle} from "../../../contracts/core/oracle/IOracle.sol";
 import {IGearingToken} from "../../../contracts/core/tokens/IGearingToken.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
@@ -20,9 +22,9 @@ import {JsonLoader} from "../../utils/JsonLoader.sol";
 import {Faucet} from "../../../contracts/test/testnet/Faucet.sol";
 import {FaucetERC20} from "../../../contracts/test/testnet/FaucetERC20.sol";
 import {DeployBase} from "../DeployBase.s.sol";
-import {IOracle, OracleAggregator, AggregatorV3Interface} from "contracts/core/oracle/OracleAggregator.sol";
 
 contract DeloyMarketArbSepolia is DeployBase {
+    uint256 currentBlockNum = block.number;
     // admin config
     uint256 deployerPrivateKey = vm.envUint("ARB_SEPOLIA_DEPLOYER_PRIVATE_KEY");
     address deployerAddr = vm.addr(deployerPrivateKey);
@@ -31,10 +33,9 @@ contract DeloyMarketArbSepolia is DeployBase {
         vm.envAddress("ARB_SEPOLIA_PRICE_FEED_OPERATOR_ADDRESS");
 
     // address config
-    address faucetAddr = address(0xb12A0134a24CF7654C15369d73CC2C8ab095B4b3);
-    address factoryAddr = address(0x57d9F729C9a818230baBEcD44A04520A32e893B8);
-    address routerAddr = address(0xc5e9504Bfd53Ca21a0343a3778c7192da20635A9);
-    address oracleAggregatorAddr;
+    address faucetAddr = address(0x7a9ec4cE938837C2bf7B43e7a71DB05CFf90B1FC);
+    address factoryAddr = address(0x2A733482A65E2e037491ADA30E8B3547b2Ca95e1);
+    address routerAddr = address(0xc3ea773230D7F7Dae97f782d447d54C7B1739Eb2);
 
     address[] devs = [
         address(0x19A736387ea2F42AcAb1BC0FdE15e667e63ea9cC), // Sunny
@@ -47,18 +48,17 @@ contract DeloyMarketArbSepolia is DeployBase {
         Faucet faucet = Faucet(faucetAddr);
         string memory deployDataPath = string.concat(
             vm.projectRoot(),
-            "/script/deploy/deploydata/tmp.json"
+            "/script/deploy/deploydata/arbSepolia.json"
         );
         vm.startBroadcast(deployerPrivateKey);
         TermMaxMarket[] memory markets = deployMarkets(
             factoryAddr,
             routerAddr,
-            oracleAggregatorAddr,
             faucetAddr,
             deployDataPath,
             adminAddr,
             priceFeedOperatorAddr,
-            100
+            200
         );
 
         console.log("Faucet token number:", faucet.tokenNum());
@@ -79,6 +79,7 @@ contract DeloyMarketArbSepolia is DeployBase {
         console.log("===== Address Info =====");
         console.log("Deplyer:", deployerAddr);
         console.log("Price Feed Operator:", priceFeedOperatorAddr);
+        console.log("Deployed at block number:", currentBlockNum);
         console.log("");
 
         for (uint i = 0; i < markets.length; i++) {

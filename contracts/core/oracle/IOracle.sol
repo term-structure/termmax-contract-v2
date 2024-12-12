@@ -21,13 +21,16 @@ interface IOracle {
     /// @param backupAggregator The address of the backup aggregator
     /// @param heartbeat The heartbeat of the oracle
     event UpdateOracle(
-    address indexed asset,
-    AggregatorV3Interface indexed aggregator,
-    AggregatorV3Interface indexed backupAggregator,
-    uint32 heartbeat);
+        address indexed asset,
+        AggregatorV3Interface indexed aggregator,
+        AggregatorV3Interface indexed backupAggregator,
+        uint32 heartbeat
+    );
 
     /// @notice Get the price of an asset
-    function getPrice(address asset) external view returns (uint256 price, uint8 decimals);
+    function getPrice(
+        address asset
+    ) external view returns (uint256 price, uint8 decimals);
 
     /// @notice Set oracle
     function setOracle(address asset, Oracle memory oracle) external;
