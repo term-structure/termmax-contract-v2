@@ -133,8 +133,8 @@ abstract contract AbstractGearingToken is
     )
         external
         override
-        onlyOwner
         nonReentrant
+        onlyOwner
         returns (uint256 id)
     {
         _checkBeforeMint(debtAmt, collateralData);
@@ -554,8 +554,8 @@ abstract contract AbstractGearingToken is
     )
         external
         override
-        onlyOwner
         nonReentrant
+        onlyOwner
         returns (bytes memory deliveryData)
     {
         deliveryData = _delivery(proportion);
