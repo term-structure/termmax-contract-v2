@@ -307,7 +307,7 @@ interface ITermMaxMarket {
     /// @return lpFtOutAmt  The number of LpFT tokens obtained
     /// @return lpXtOutAmt The number of LpXT tokens obtained
     function provideLiquidity(
-        uint256 underlyingAmt
+        uint128 underlyingAmt
     ) external returns (uint128 lpFtOutAmt, uint128 lpXtOutAmt);
 
     /// @notice Withdraw FT/XT from Market

@@ -84,7 +84,7 @@ contract TermMaxRouterTest is Test {
         uint amount = 10000e8;
         res.underlying.mint(deployer, amount);
         res.underlying.approve(address(res.market), amount);
-        res.market.provideLiquidity(amount);
+        res.market.provideLiquidity(uint128(amount));
 
         router = DeployUtils.deployRouter(deployer);
         router.setMarketWhitelist(address(res.market), true);
@@ -858,7 +858,7 @@ contract TermMaxRouterTest is Test {
             address(res.underlying),
             abi.encode(minUnderlyingAmt)
         );
-        res.collateral.approve(address(router), collateralAmt);
+        res.gt.approve(address(router), gtId);
 
         uint collateralBalanceBefore = res.collateral.balanceOf(sender);
         uint underlyingBalanceBefore = res.underlying.balanceOf(sender);
@@ -907,7 +907,7 @@ contract TermMaxRouterTest is Test {
             address(res.underlying),
             abi.encode(minUnderlyingAmt)
         );
-        res.collateral.approve(address(router), collateralAmt);
+        res.gt.approve(address(router), gtId);
 
         uint collateralBalanceBefore = res.collateral.balanceOf(sender);
         uint underlyingBalanceBefore = res.underlying.balanceOf(sender);
@@ -949,18 +949,7 @@ contract TermMaxRouterTest is Test {
 
         uint256 minUnderlyingAmt = collateralValue;
         vm.expectRevert(
-            abi.encodeWithSelector(
-                ITermMaxRouter.TransferTokenFailWhenSwap.selector,
-                address(res.collateral),
-                abi.encodePacked(
-                    abi.encodeWithSelector(
-                        IERC20Errors.ERC20InsufficientAllowance.selector,
-                        address(router),
-                        0,
-                        collateralAmt
-                    )
-                )
-            )
+            
         );
         SwapUnit[] memory units = new SwapUnit[](1);
         units[0] = SwapUnit(
@@ -972,6 +961,36 @@ contract TermMaxRouterTest is Test {
 
         router.flashRepayFromColl(sender, res.market, gtId, true, units);
         vm.stopPrank();
+    }
+
+    function testFlashRepayFromRandomAddress() public {
+        vm.startPrank(sender);
+
+        uint128 debtAmt = 1000e8;
+        uint256 collateralAmt = 1e18;
+        uint256 collateralValue = 2000e8;
+
+        (uint256 gtId, ) = LoanUtils.fastMintGt(
+            res,
+            sender,
+            debtAmt,
+            collateralAmt
+        );
+
+        uint256 minUnderlyingAmt = collateralValue;
+        SwapUnit[] memory units = new SwapUnit[](1);
+        units[0] = SwapUnit(
+            address(adapter),
+            address(res.collateral),
+            address(res.underlying),
+            abi.encode(minUnderlyingAmt)
+        );
+        res.gt.approve(address(router), gtId);
+        vm.stopPrank();
+        vm.prank(deployer);
+        vm.expectRevert(
+            abi.encodeWithSignature("ERC721IncorrectOwner(address,uint256,address)", deployer, gtId, sender));
+        router.flashRepayFromColl(sender, res.market, gtId, true, units);
     }
 
     function testExecuteFromInvalidGt() public {
@@ -994,7 +1013,6 @@ contract TermMaxRouterTest is Test {
         );
         vm.prank(address(fg));
         router.executeOperation(
-            sender,
             res.underlying,
             10e8,
             address(res.collateral),
@@ -1012,7 +1030,6 @@ contract TermMaxRouterTest is Test {
         );
         vm.prank(address(fg));
         router.executeOperation(
-            sender,
             res.underlying,
             10e8,
             address(res.collateral),

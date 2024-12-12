@@ -133,8 +133,8 @@ abstract contract AbstractGearingToken is
     )
         external
         override
-        onlyOwner
         nonReentrant
+        onlyOwner
         returns (uint256 id)
     {
         _checkBeforeMint(debtAmt, collateralData);
@@ -268,13 +268,14 @@ abstract contract AbstractGearingToken is
             revert GtIsExpired(id);
         }
         LoanInfo memory loan = loanMapping[id];
-        address owner = ownerOf(id);
+        if(ownerOf(id) != msg.sender) {
+            revert CallerIsNotTheOwner(id);
+        }
         // Transfer collateral to the owner
-        _transferCollateral(owner, loan.collateralData);
+        _transferCollateral(msg.sender, loan.collateralData);
         IERC20 repayToken = byUnderlying? config.underlying:config.ft;
 
         IFlashRepayer(msg.sender).executeOperation(
-            owner,
             repayToken,
             loan.debtAmt,
             config.collateral,
@@ -553,8 +554,8 @@ abstract contract AbstractGearingToken is
     )
         external
         override
-        onlyOwner
         nonReentrant
+        onlyOwner
         returns (bytes memory deliveryData)
     {
         deliveryData = _delivery(proportion);

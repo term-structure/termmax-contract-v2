@@ -57,7 +57,7 @@ contract LpTest is Test {
         res.underlying.mint(deployer, amount);
         res.underlying.approve(address(res.market), amount);
 
-        res.market.provideLiquidity(amount);
+        res.market.provideLiquidity(uint128(amount));
 
         vm.stopPrank();
     }

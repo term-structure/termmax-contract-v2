@@ -106,7 +106,7 @@ contract ForkRouterTest is Test {
         deal(address(res.underlying), deployer, amount);
 
         res.underlying.approve(address(res.market), amount);
-        res.market.provideLiquidity(amount);
+        res.market.provideLiquidity(uint128(amount));
 
         router = DeployUtils.deployRouter(deployer);
         router.setMarketWhitelist(address(res.market), true);
@@ -161,7 +161,7 @@ contract ForkRouterTest is Test {
             address(uniswapAdapter),
             weth9Addr,
             weethAddr,
-            abi.encode(abi.encodePacked(weth9Addr, poolFee, weethAddr), 0)
+            abi.encode(abi.encodePacked(weth9Addr, poolFee, weethAddr),block.timestamp + 3600, 0)
         );
         units[1] = SwapUnit(
             address(pendleAdapter),
@@ -238,7 +238,7 @@ contract ForkRouterTest is Test {
             address(uniswapAdapter),
             weth9Addr,
             weethAddr,
-            abi.encode(abi.encodePacked(weth9Addr, poolFee, weethAddr), 0)
+            abi.encode(abi.encodePacked(weth9Addr, poolFee, weethAddr), block.timestamp + 3600, 0)
         );
         units[1] = SwapUnit(
             address(pendleAdapter),
@@ -286,7 +286,7 @@ contract ForkRouterTest is Test {
         uint24 poolFee = 100;
 
         uint256 gtId = _loan(poolFee);
-        (, uint128 debtAmt, , bytes memory collateralData) = res.gt.loanInfo(
+        (, uint128 debtAmt, ,) = res.gt.loanInfo(
             gtId
         );
 
@@ -306,14 +306,12 @@ contract ForkRouterTest is Test {
             weth9Addr,
             abi.encode(
                 abi.encodePacked(weethAddr, poolFee, weth9Addr),
+                block.timestamp + 3600,
                 minUnderlyingAmt
             )
         );
 
-        res.collateral.approve(
-            address(router),
-            abi.decode(collateralData, (uint))
-        );
+        res.gt.approve(address(router), gtId);
 
         assert(res.underlying.balanceOf(address(router)) == 0);
         assert(res.collateral.balanceOf(address(router)) == 0);
@@ -355,7 +353,7 @@ contract ForkRouterTest is Test {
         uint24 poolFee = 100;
 
         uint256 gtId = _loan(poolFee);
-        (, uint128 debtAmt, , bytes memory collateralData) = res.gt.loanInfo(
+        (, uint128 debtAmt, ,) = res.gt.loanInfo(
             gtId
         );
 
@@ -379,10 +377,7 @@ contract ForkRouterTest is Test {
             )
         );
 
-        res.collateral.approve(
-            address(router),
-            abi.decode(collateralData, (uint))
-        );
+        res.gt.approve(address(router), gtId);
 
         assert(res.underlying.balanceOf(address(router)) == 0);
         assert(res.collateral.balanceOf(address(router)) == 0);
@@ -437,7 +432,7 @@ contract ForkRouterTest is Test {
             address(uniswapAdapter),
             weth9Addr,
             weethAddr,
-            abi.encode(abi.encodePacked(weth9Addr, poolFee, weethAddr), 0)
+            abi.encode(abi.encodePacked(weth9Addr, poolFee, weethAddr), block.timestamp + 3600, 0)
         );
         units[1] = SwapUnit(
             address(pendleAdapter),

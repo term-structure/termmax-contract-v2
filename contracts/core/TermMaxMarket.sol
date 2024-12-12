@@ -11,7 +11,6 @@ import {IFlashLoanReceiver} from "./IFlashLoanReceiver.sol";
 import {TermMaxCurve, MathLib, TradeParams} from "./lib/TermMaxCurve.sol";
 import {Constants} from "./lib/Constants.sol";
 import {Ownable} from "./access/Ownable.sol";
-import {console} from "forge-std/console.sol";
 
 /**
  * @title TermMax Market
@@ -200,11 +199,11 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
      * @inheritdoc ITermMaxMarket
      */
     function provideLiquidity(
-        uint256 underlyingAmt
+        uint128 underlyingAmt
     )
         external
-        isOpen
         nonReentrant
+        isOpen
         returns (uint128 lpFtOutAmt, uint128 lpXtOutAmt)
     {
         // If address(0) is not in the white list, and the caller is not in the white list, revert
@@ -319,8 +318,8 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
     )
         external
         override
-        isOpen
         nonReentrant
+        isOpen
         returns (uint128 ftOutAmt, uint128 xtOutAmt)
     {
         (ftOutAmt, xtOutAmt) = _withdrawLiquidity(msg.sender, lpFtAmt, lpXtAmt);
@@ -731,7 +730,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         address receiver,
         uint128 xtAmt,
         bytes calldata callbackData
-    ) external override isOpen nonReentrant returns (uint256 gtId) {
+    ) external override nonReentrant isOpen returns (uint256 gtId) {
         return _leverageByXt(msg.sender, receiver, xtAmt, callbackData);
     }
 
@@ -773,8 +772,8 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
     )
         external
         override
-        isOpen
         nonReentrant
+        isOpen
         returns (uint256 gtId, uint128 ftOutAmt)
     {
         return _issueFt(msg.sender, debt, collateralData);

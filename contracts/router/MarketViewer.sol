@@ -59,7 +59,7 @@ contract MarketViewer {
     for (uint i = 0; i < balance; ++i) {
       uint256 loanId = gtNft.tokenOfOwnerByIndex(owner, i);
       position.gtInfo[i].loanId = loanId;
-      (address _o, uint128 debtAmt,uint128 _ltv, bytes memory collateralData) = gt.loanInfo(loanId);
+      (, uint128 debtAmt,, bytes memory collateralData) = gt.loanInfo(loanId);
       position.gtInfo[i].debtAmt = debtAmt;
       position.gtInfo[i].collateralAmt = _decodeAmount(collateralData);
     }
@@ -81,7 +81,7 @@ contract MarketViewer {
     LoanPosition[] memory loanPositions = new LoanPosition[](balance);
     for (uint i = 0; i < balance; ++i) {
       uint256 loanId = gtNft.tokenOfOwnerByIndex(owner, i);
-      (address _o, uint128 debtAmt,uint128 _ltv, bytes memory collateralData) = gt.loanInfo(loanId);
+      (, uint128 debtAmt,, bytes memory collateralData) = gt.loanInfo(loanId);
       loanPositions[i].loanId = loanId;
       loanPositions[i].debtAmt = debtAmt;
       loanPositions[i].collateralAmt = _decodeAmount(collateralData);

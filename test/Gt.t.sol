@@ -83,7 +83,7 @@ contract GtTest is Test {
         uint amount = 10000e8;
         res.underlying.mint(deployer, amount);
         res.underlying.approve(address(res.market), amount);
-        res.market.provideLiquidity(amount);
+        res.market.provideLiquidity(uint128(amount));
 
         vm.stopPrank();
     }
@@ -524,7 +524,7 @@ contract GtTest is Test {
         );
 
         res.underlying.mint(address(flashRepayer), debtAmt);
-        res.collateral.approve(address(flashRepayer), collateralAmt);
+        res.gt.approve(address(flashRepayer), gtId);
 
         uint collateralBalanceBefore = res.collateral.balanceOf(sender);
         uint underlyingBalanceBefore = res.underlying.balanceOf(sender);
@@ -572,8 +572,8 @@ contract GtTest is Test {
             collateralAmt
         );
         deal(address(res.ft), address(flashRepayer), debtAmt);
-        // res.ft.mint(address(flashRepayer), debtAmt);
-        res.collateral.approve(address(flashRepayer), collateralAmt);
+
+        res.gt.approve(address(flashRepayer), gtId);
 
         uint collateralBalanceBefore = res.collateral.balanceOf(sender);
         uint ftBalanceBefore = res.ft.balanceOf(sender);
@@ -647,7 +647,7 @@ contract GtTest is Test {
         );
         vm.warp(marketConfig.maturity);
         res.underlying.mint(address(flashRepayer), debtAmt);
-        res.collateral.approve(address(flashRepayer), collateralAmt);
+        res.gt.approve(address(flashRepayer), gtId);
 
         vm.expectRevert(
             abi.encodeWithSelector(IGearingToken.GtIsExpired.selector, gtId)
@@ -1598,7 +1598,7 @@ contract GtTest is Test {
             uint amount = 10000e8;
             rt.underlying.mint(deployer, amount);
             rt.underlying.approve(address(rt.market), amount);
-            rt.market.provideLiquidity(amount);
+            rt.market.provideLiquidity(uint128(amount));
 
             vm.stopPrank();
         }

@@ -93,6 +93,67 @@ contract FactoryTest is Test {
         vm.stopPrank();
     }
 
+    function testDeployRepeatedly() public {
+        vm.startPrank(deployer);
+        TermMaxFactory factory = new TermMaxFactory(deployer);
+
+        TermMaxMarket m = new TermMaxMarket();
+
+        vm.expectEmit();
+        emit ITermMaxFactory.InitializeMarketImplement(address(m));
+        factory.initMarketImplement(address(m));
+
+        MockERC20 collateral = new MockERC20("ETH", "ETH", 18);
+        MockERC20 underlying = new MockERC20("DAI", "DAI", 8);
+
+        IOracle oracle = IOracle(vm.randomAddress());
+        uint collateralCapacity = type(uint256).max;
+        ITermMaxFactory.DeployParams memory params = ITermMaxFactory
+            .DeployParams({
+                gtKey: DeployUtils.GT_ERC20,
+                admin: deployer,
+                collateral: address(collateral),
+                underlying: underlying,
+                oracle: oracle,
+                liquidationLtv: liquidationLtv,
+                maxLtv: maxLtv,
+                liquidatable: true,
+                marketConfig: marketConfig,
+                gtInitalParams: abi.encode(collateralCapacity)
+            });
+
+        vm.expectEmit();
+        
+        ITermMaxMarket market = ITermMaxMarket(factory.createMarket(params));
+        assert(
+            keccak256(abi.encode(market.config())) ==
+                keccak256(abi.encode(marketConfig))
+        );
+        (IMintableERC20 ft, , , , IGearingToken gt, , ) = market.tokens();
+        IGearingToken.GtConfig memory gtConfig = IGearingToken.GtConfig({
+            market: address(market),
+            collateral: address(collateral),
+            underlying: underlying,
+            ft: ft,
+            treasurer: treasurer,
+            oracle: oracle,
+            maturity: marketConfig.maturity,
+            liquidationLtv: liquidationLtv,
+            maxLtv: maxLtv,
+            liquidatable: true
+        });
+        assert(
+            keccak256(abi.encode(gt.getGtConfig())) ==
+                keccak256(abi.encode(gtConfig))
+        );
+        assert(GearingTokenWithERC20(address(gt)).collateralCapacity() == collateralCapacity);
+
+        vm.expectRevert(abi.encodeWithSignature("FailedDeployment()"));
+        factory.createMarket(params);
+
+        vm.stopPrank();
+    }
+
     function testDeployMarketWithInvalidTime() public {
         vm.startPrank(deployer);
         TermMaxFactory factory = new TermMaxFactory(deployer);

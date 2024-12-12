@@ -6,7 +6,7 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 import {IGearingToken, IOracle, IERC20Metadata, GearingTokenWithERC20} from "../tokens/GearingTokenWithERC20.sol";
 import {MintableERC20, IMintableERC20} from "../tokens/MintableERC20.sol";
-import {ITermMaxMarket, Constants} from "../TermMaxMarket.sol";
+import {ITermMaxMarket} from "../TermMaxMarket.sol";
 import {ITermMaxFactory} from "./ITermMaxFactory.sol";
 
 /**
@@ -208,14 +208,14 @@ contract TermMaxFactory is ITermMaxFactory, Ownable {
                 PREFIX_LP_FT,
                 name,
                 symbol,
-                decimals + Constants.DECIMAL_NUMBER
+                decimals
             );
             tokens[3] = _deployMintableERC20(
                 address(market),
                 PREFIX_LP_XT,
                 name,
                 symbol,
-                decimals + Constants.DECIMAL_NUMBER
+                decimals
             );
         }
     }

@@ -18,20 +18,20 @@ contract UniswapV3Adapter is ERC20SwapAdapter {
 
     function _swap(
         IERC20 tokenIn,
-        IERC20,
+        IERC20 tokenOut,
         uint256 amount,
         bytes memory swapData
     ) internal virtual override returns (uint256 tokenOutAmt) {
         IERC20(tokenIn).approve(address(router), amount);
-        (bytes memory path, uint256 amountOutMinimum) = abi.decode(
+        (bytes memory path,uint256 deadline, uint256 amountOutMinimum) = abi.decode(
             swapData,
-            (bytes, uint256)
+            (bytes, uint256, uint256)
         );
         tokenOutAmt = router.exactInput(
             ISwapRouter.ExactInputParams({
                 path: path,
                 recipient: address(this),
-                deadline: block.timestamp,
+                deadline: deadline,
                 amountIn: amount,
                 amountOutMinimum: amountOutMinimum
             })
