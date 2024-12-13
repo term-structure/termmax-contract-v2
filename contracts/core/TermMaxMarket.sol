@@ -413,9 +413,10 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
      */
     function buyFt(
         uint128 underlyingAmtIn,
-        uint128 minTokenOut
+        uint128 minTokenOut,
+        uint32 lsf
     ) external override nonReentrant isOpen returns (uint256 netOut) {
-        netOut = _buyToken(msg.sender, ft, underlyingAmtIn, minTokenOut);
+        netOut = _buyToken(msg.sender, ft, underlyingAmtIn, minTokenOut, lsf);
     }
 
     /**
@@ -423,19 +424,24 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
      */
     function buyXt(
         uint128 underlyingAmtIn,
-        uint128 minTokenOut
+        uint128 minTokenOut,
+        uint32 lsf
     ) external override nonReentrant isOpen returns (uint256 netOut) {
-        netOut = _buyToken(msg.sender, xt, underlyingAmtIn, minTokenOut);
+        netOut = _buyToken(msg.sender, xt, underlyingAmtIn, minTokenOut, lsf);
     }
 
     function _buyToken(
         address caller,
         IMintableERC20 token,
         uint128 underlyingAmtIn,
-        uint128 minTokenOut
+        uint128 minTokenOut,
+        uint32 lsf
     ) internal returns (uint256 netOut) {
         // Get old reserves
         MarketConfig memory mConfig = _config;
+        if(lsf != mConfig.lsf){
+            revert LsfChanged();
+        }
         TradeParams memory tradeParams = TradeParams(
             underlyingAmtIn,
             ftReserve,
@@ -562,9 +568,10 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
      */
     function sellFt(
         uint128 ftAmtIn,
-        uint128 minUnderlyingOut
+        uint128 minUnderlyingOut,
+        uint32 lsf
     ) external override nonReentrant isOpen returns (uint256 netOut) {
-        netOut = _sellToken(msg.sender, ft, ftAmtIn, minUnderlyingOut);
+        netOut = _sellToken(msg.sender, ft, ftAmtIn, minUnderlyingOut, lsf);
     }
 
     /**
@@ -572,21 +579,24 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
      */
     function sellXt(
         uint128 xtAmtIn,
-        uint128 minUnderlyingOut
+        uint128 minUnderlyingOut,
+        uint32 lsf
     ) external override nonReentrant isOpen returns (uint256 netOut) {
-        netOut = _sellToken(msg.sender, xt, xtAmtIn, minUnderlyingOut);
+        netOut = _sellToken(msg.sender, xt, xtAmtIn, minUnderlyingOut, lsf);
     }
 
     function _sellToken(
         address caller,
         IMintableERC20 token,
         uint128 tokenAmtIn,
-        uint128 minUnderlyingOut
+        uint128 minUnderlyingOut,
+        uint32 lsf
     ) internal returns (uint256 netOut) {
-
-        token.safeTransferFrom(caller, address(this), tokenAmtIn);
-
         MarketConfig memory mConfig = _config;
+        if(lsf != mConfig.lsf){
+            revert LsfChanged();
+        }
+        token.safeTransferFrom(caller, address(this), tokenAmtIn);
         TradeParams memory tradeParams = TradeParams(
             tokenAmtIn,
             ftReserve,

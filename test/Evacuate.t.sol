@@ -93,7 +93,7 @@ contract EvacuateTest is Test {
         {
             uint ftBalance = res.ft.balanceOf(sender);
             res.ft.approve(address(res.market), ftBalance);
-            res.market.sellFt(uint128(ftBalance / 2), 0);
+            res.market.sellFt(uint128(ftBalance / 2), 0, res.marketConfig.lsf);
 
             uint lpXtBalance = res.lpXt.balanceOf(sender);
             res.lpXt.approve(address(res.market), lpXtBalance);
@@ -164,7 +164,7 @@ contract EvacuateTest is Test {
         {
             uint ftBalance = res.ft.balanceOf(sender);
             res.ft.approve(address(res.market), ftBalance);
-            res.market.sellFt(uint128(ftBalance / 2), 0);
+            res.market.sellFt(uint128(ftBalance / 2), 0, res.marketConfig.lsf);
 
             uint lpXtBalance = res.lpXt.balanceOf(sender);
             res.lpXt.approve(address(res.market), lpXtBalance);
@@ -201,7 +201,7 @@ contract EvacuateTest is Test {
         {
             uint ftBalance = res.ft.balanceOf(sender);
             res.ft.approve(address(res.market), ftBalance);
-            res.market.sellFt(uint128(ftBalance / 2), 0);
+            res.market.sellFt(uint128(ftBalance / 2), 0, res.marketConfig.lsf);
 
             uint lpXtBalance = res.lpXt.balanceOf(sender);
             res.lpXt.approve(address(res.market), lpXtBalance);
@@ -236,7 +236,7 @@ contract EvacuateTest is Test {
         {
             uint ftBalance = res.ft.balanceOf(sender);
             res.ft.approve(address(res.market), ftBalance);
-            res.market.sellFt(uint128(ftBalance / 2), 0);
+            res.market.sellFt(uint128(ftBalance / 2), 0, res.marketConfig.lsf);
 
             uint lpXtBalance = res.lpXt.balanceOf(sender);
             res.lpXt.approve(address(res.market), lpXtBalance);
@@ -276,7 +276,7 @@ contract EvacuateTest is Test {
         {
             uint ftBalance = res.ft.balanceOf(sender);
             res.ft.approve(address(res.market), ftBalance);
-            res.market.sellFt(uint128(ftBalance / 2), 0);
+            res.market.sellFt(uint128(ftBalance / 2), 0, res.marketConfig.lsf);
 
             uint lpXtBalance = res.lpXt.balanceOf(sender);
             res.lpXt.approve(address(res.market), lpXtBalance);
@@ -318,7 +318,7 @@ contract EvacuateTest is Test {
         {
             uint ftBalance = res.ft.balanceOf(sender);
             res.ft.approve(address(res.market), ftBalance);
-            res.market.sellFt(uint128(ftBalance / 2), 0);
+            res.market.sellFt(uint128(ftBalance / 2), 0, res.marketConfig.lsf);
 
             uint lpXtBalance = res.lpXt.balanceOf(sender);
             res.lpXt.approve(address(res.market), lpXtBalance);

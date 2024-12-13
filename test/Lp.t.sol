@@ -457,7 +457,7 @@ contract LpTest is Test {
         vm.startPrank(deployer);
         res.underlying.mint(deployer, underlyingAmtIn);
         res.underlying.approve(address(res.market), underlyingAmtIn);
-        res.market.buyFt(underlyingAmtIn, 0e8);
+        res.market.buyFt(underlyingAmtIn, 0e8, res.marketConfig.lsf);
 
         vm.warp(res.market.config().maturity - 1);
 

@@ -129,12 +129,12 @@ contract ForkRouterTest is Test {
         uint256 xtAmtBeforeSwap = res.xt.balanceOf(sender);
         assert(res.underlying.balanceOf(address(router)) == 0);
         assert(res.xt.balanceOf(address(router)) == 0);
-
         uint256 netXtOut = router.swapExactTokenForXt(
             receiver,
             res.market,
             underlyingAmtIn,
-            minTokenOut
+            minTokenOut,
+            res.marketConfig.lsf
         );
 
         uint256 underlyingAmtAfterSwap = res.underlying.balanceOf(sender);
@@ -221,7 +221,8 @@ contract ForkRouterTest is Test {
             receiver,
             res.market,
             underlyingAmtIn,
-            minTokenOut
+            minTokenOut,
+            res.marketConfig.lsf
         );
 
         uint256 xtInAmt = netXtOut;
@@ -328,7 +329,8 @@ contract ForkRouterTest is Test {
             res.market,
             gtId,
             true,
-            units
+            units,
+            res.marketConfig.lsf
         );
 
         uint256 underlyingAmtAfterRepay = res.underlying.balanceOf(sender);
@@ -394,7 +396,8 @@ contract ForkRouterTest is Test {
             res.market,
             gtId,
             false,
-            units
+            units,
+            res.marketConfig.lsf
         );
         uint256 underlyingAmtAfterRepay = res.underlying.balanceOf(sender);
         assert(
@@ -463,7 +466,8 @@ contract ForkRouterTest is Test {
             underlyingAmtInForBuyXt,
             maxLtv,
             minXTOut,
-            units
+            units,
+            res.marketConfig.lsf
         );
 
         uint256 underlyingAmtAfterSwap = res.underlying.balanceOf(sender);

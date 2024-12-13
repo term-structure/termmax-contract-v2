@@ -221,12 +221,14 @@ interface ITermMaxRouter {
     /// @param market The market's address
     /// @param tokenInAmt The underlying input amount
     /// @param minFtOut Expected FT output
+    /// @param lsf LSF parameter
     /// @return netFtOut Final FT output
     function swapExactTokenForFt(
         address receiver,
         ITermMaxMarket market,
         uint128 tokenInAmt,
-        uint128 minFtOut
+        uint128 minFtOut,
+        uint32 lsf
     ) external returns (uint256 netFtOut);
 
     /// @notice Swap exact FT for underlying
@@ -234,12 +236,14 @@ interface ITermMaxRouter {
     /// @param market The market's address
     /// @param ftInAmt The FT input amount
     /// @param minTokenOut Expected underlying output
+    /// @param lsf LSF parameter
     /// @return netTokenOut Final underlying output
     function swapExactFtForToken(
         address receiver,
         ITermMaxMarket market,
         uint128 ftInAmt,
-        uint128 minTokenOut
+        uint128 minTokenOut,
+        uint32 lsf
     ) external returns (uint256 netTokenOut);
 
     /// @notice Swap exact underlying for XT
@@ -247,12 +251,14 @@ interface ITermMaxRouter {
     /// @param market The market's address
     /// @param tokenInAmt The underlying input amount
     /// @param minXtOut Expected XT output
+    /// @param lsf LSF parameter
     /// @return netXtOut Final XT output
     function swapExactTokenForXt(
         address receiver,
         ITermMaxMarket market,
         uint128 tokenInAmt,
-        uint128 minXtOut
+        uint128 minXtOut,
+        uint32 lsf
     ) external returns (uint256 netXtOut);
 
     /// @notice Swap exact XT for underlying
@@ -260,12 +266,14 @@ interface ITermMaxRouter {
     /// @param market The market's address
     /// @param xtInAmt The XT input amount
     /// @param minTokenOut Expected underlying output
+    /// @param lsf LSF parameter
     /// @return netTokenOut Final underlying output
     function swapExactXtForToken(
         address receiver,
         ITermMaxMarket market,
         uint128 xtInAmt,
-        uint128 minTokenOut
+        uint128 minTokenOut,
+        uint32 lsf
     ) external returns (uint256 netTokenOut);
 
     /// @notice Withdraw FT and XT token by lp tokens
@@ -292,13 +300,15 @@ interface ITermMaxRouter {
     /// @param lpFtInAmt LpFT token input amount
     /// @param lpXtInAmt LpXT token input amount
     /// @param minTokenOut Expected output amount
+    /// @param lsf LSF parameter
     /// @return netTokenOut Final underlying token output
     function withdrawLiquidityToToken(
         address receiver,
         ITermMaxMarket market,
         uint256 lpFtInAmt,
         uint256 lpXtInAmt,
-        uint256 minTokenOut
+        uint256 minTokenOut,
+        uint32 lsf
     ) external returns (uint256 netTokenOut);
 
     /// @notice Redeem assets from market
@@ -307,6 +317,7 @@ interface ITermMaxRouter {
     /// @param amountArray token input amounts
     /// @param minCollOut Expected collateral output
     /// @param minTokenOut  Expected underlying output
+
     /// @return netCollOut Final collateral output
     /// @return netTokenOut Final underlying output
     function redeem(
@@ -325,6 +336,7 @@ interface ITermMaxRouter {
     /// @param maxLtv The expected ltv of GT
     /// @param minXtAmt The expected XT amount buying from market
     /// @param units Swap paths to swap underlying to collateral
+    /// @param lsf LSF parameter
     /// @return gtId The id of loan
     /// @return netXtOut Final XT token to leverage
     function leverageFromToken(
@@ -334,7 +346,8 @@ interface ITermMaxRouter {
         uint256 tokenToBuyXtAmt,
         uint256 maxLtv,
         uint256 minXtAmt,
-        SwapUnit[] memory units
+        SwapUnit[] memory units,
+        uint32 lsf
     ) external returns (uint256 gtId, uint256 netXtOut);
 
     /// @notice Do leverage by XT and underlying token
@@ -360,13 +373,15 @@ interface ITermMaxRouter {
     /// @param collInAmt The collateral token input amount
     /// @param maxDebtAmt The maxium debt amount of the loan
     /// @param borrowAmt Debt token send to receiver
+    /// @param lsf LSF parameter
     /// @return gtId The id of loan
     function borrowTokenFromCollateral(
         address receiver,
         ITermMaxMarket market,
         uint256 collInAmt,
         uint256 maxDebtAmt,
-        uint256 borrowAmt
+        uint256 borrowAmt,
+        uint32 lsf
     ) external returns (uint256 gtId);
 
     /// @notice Repay the loan through underlying token
@@ -395,13 +410,15 @@ interface ITermMaxRouter {
     /// @param gtId The id of loan
     /// @param byUnderlying Repay using underlying token or bonds token
     /// @param units Swap paths to swap collateral to underlying
+    /// @param lsf LSF parameter
     /// @return netTokenOut Remaming underlying output
     function flashRepayFromColl(
         address receiver,
         ITermMaxMarket market,
         uint256 gtId,
         bool byUnderlying,
-        SwapUnit[] memory units
+        SwapUnit[] memory units,
+        uint32 lsf
     ) external returns (uint256 netTokenOut);
 
     /// @notice Repay the loan through FT but input underlying
@@ -410,12 +427,14 @@ interface ITermMaxRouter {
     /// @param gtId The id of loan
     /// @param tokenInAmt Underlying input
     /// @param minFtOutToRepay Minimal FT token buy from market to repay the loan
+    /// @param lsf LSF parameter
     function repayByTokenThroughFt(
         address receiver,
         ITermMaxMarket market,
         uint256 gtId,
         uint256 tokenInAmt,
-        uint256 minFtOutToRepay
+        uint256 minFtOutToRepay,
+        uint32 lsf
     ) external;
 
     /// @notice Provide liquidity to market

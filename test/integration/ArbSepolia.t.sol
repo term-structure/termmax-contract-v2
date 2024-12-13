@@ -163,7 +163,8 @@ contract E2ETest is Test {
             tokenToBuyXtAmt,
             maxLtv,
             mintXtAmt,
-            swapUnits
+            swapUnits,
+            config.lsf
         );
         console.log("xt amount with slippage:", netXtOut);
         (
