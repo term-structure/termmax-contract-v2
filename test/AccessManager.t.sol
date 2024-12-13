@@ -267,23 +267,54 @@ contract AccessManagerTest is Test {
         vm.stopPrank();
     }
 
-    function testSetTreasurer() public {
+    function testUpdateMarketConfig() public {
         vm.startPrank(deployer);
-        address newTreasurer = vm.randomAddress();
+
+        MarketConfig memory newConfig = res.market.config();
+        newConfig.treasurer = vm.randomAddress();
+        newConfig.lsf = 0.11e8;
+        newConfig.lendFeeRatio = 0.01e8;
+        newConfig.minNLendFeeR = 0.02e8;
+        newConfig.borrowFeeRatio = 0.03e8;
+        newConfig.minNBorrowFeeR = 0.04e8;
+        newConfig.redeemFeeRatio = 0.05e8;
+        newConfig.issueFtFeeRatio = 0.06e8;
+        newConfig.lockingPercentage = 0.07e8;
+        newConfig.protocolFeeRatio = 0.08e8;
 
         vm.expectEmit();
-        emit ITermMaxMarket.UpdateTreasurer(newTreasurer);
+        emit ITermMaxMarket.UpdateMarketConfig(newConfig);
+        manager.updateMarketConfig(res.market, newConfig);
 
-        manager.setMarketTreasurer(res.market, newTreasurer);
-        assert(res.market.config().treasurer == newTreasurer);
+        MarketConfig memory updatedConfig = res.market.config();
+        assertEq(updatedConfig.treasurer, newConfig.treasurer);
+        assertEq(updatedConfig.lsf, newConfig.lsf);
+        assertEq(updatedConfig.lendFeeRatio, newConfig.lendFeeRatio);
+        assertEq(updatedConfig.minNLendFeeR, newConfig.minNLendFeeR);
+        assertEq(updatedConfig.borrowFeeRatio, newConfig.borrowFeeRatio);
+        assertEq(updatedConfig.minNBorrowFeeR, newConfig.minNBorrowFeeR);
+        assertEq(updatedConfig.redeemFeeRatio, newConfig.redeemFeeRatio);
+        assertEq(updatedConfig.issueFtFeeRatio, newConfig.issueFtFeeRatio);
+        assertEq(updatedConfig.lockingPercentage, newConfig.lockingPercentage);
+        assertEq(updatedConfig.protocolFeeRatio, newConfig.protocolFeeRatio);
 
-        assert(res.gt.getGtConfig().treasurer == newTreasurer);
         vm.stopPrank();
     }
 
-    function testSetTreasurerWithoutAuth() public {
+    function testUpdateMarketConfigWithoutAuth() public {
         vm.startPrank(sender);
-        address newTreasurer = vm.randomAddress();
+
+        MarketConfig memory newConfig = res.market.config();
+        newConfig.treasurer = vm.randomAddress();
+        newConfig.lsf = 0.11e8;
+        newConfig.lendFeeRatio = 0.01e8;
+        newConfig.minNLendFeeR = 0.02e8;
+        newConfig.borrowFeeRatio = 0.03e8;
+        newConfig.minNBorrowFeeR = 0.04e8;
+        newConfig.redeemFeeRatio = 0.05e8;
+        newConfig.issueFtFeeRatio = 0.06e8;
+        newConfig.lockingPercentage = 0.07e8;
+        newConfig.protocolFeeRatio = 0.08e8;
 
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -292,7 +323,32 @@ contract AccessManagerTest is Test {
                 manager.CURATOR_ROLE()
             )
         );
-        manager.setMarketTreasurer(res.market, newTreasurer);
+        manager.updateMarketConfig(res.market, newConfig);
+        vm.stopPrank();
+    }
+
+    function testUpdateMarketConfigInvalidLsf() public {
+        vm.startPrank(deployer);
+
+        MarketConfig memory newConfig = res.market.config();
+        newConfig.lsf = uint32(Constants.DECIMAL_BASE + 1);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ITermMaxMarket.InvalidLsf.selector,
+                newConfig.lsf
+            )
+        );
+        manager.updateMarketConfig(res.market, newConfig);
+
+        newConfig.lsf = 0;
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ITermMaxMarket.InvalidLsf.selector,
+                newConfig.lsf
+            )
+        );
+        manager.updateMarketConfig(res.market, newConfig);
 
         vm.stopPrank();
     }
@@ -351,112 +407,6 @@ contract AccessManagerTest is Test {
             )
         );
         manager.setOracle(res.oracle, address(res.collateral), oracle);
-        vm.stopPrank();
-    }
-
-    function testSetFee() public {
-        vm.startPrank(deployer);
-
-        uint32 lendFeeRatio = 0.01e8;
-        uint32 minNLendFeeR = 0.02e8;
-        uint32 borrowFeeRatio = 0.03e8;
-        uint32 minNBorrowFeeR = 0.04e8;
-        uint32 redeemFeeRatio = 0.05e8;
-        uint32 issueFtFeeRatio = 0.06e8;
-        uint32 lockingPercentage = 0.07e8;
-        uint32 protocolFeeRatio = 0.08e8;
-        vm.expectEmit();
-        emit ITermMaxMarket.UpdateFeeRate(
-            lendFeeRatio,
-            minNLendFeeR,
-            borrowFeeRatio,
-            minNBorrowFeeR,
-            redeemFeeRatio,
-            issueFtFeeRatio,
-            lockingPercentage,
-            protocolFeeRatio
-        );
-        manager.setMarketFeeRate(
-            res.market,
-            lendFeeRatio,
-            minNLendFeeR,
-            borrowFeeRatio,
-            minNBorrowFeeR,
-            redeemFeeRatio,
-            issueFtFeeRatio,
-            lockingPercentage,
-            protocolFeeRatio
-        );
-
-        assert(res.market.config().lendFeeRatio == lendFeeRatio);
-        assert(res.market.config().minNLendFeeR == minNLendFeeR);
-        assert(res.market.config().borrowFeeRatio == borrowFeeRatio);
-        assert(res.market.config().minNBorrowFeeR == minNBorrowFeeR);
-        assert(res.market.config().redeemFeeRatio == redeemFeeRatio);
-        assert(res.market.config().issueFtFeeRatio == issueFtFeeRatio);
-        assert(res.market.config().lockingPercentage == lockingPercentage);
-        assert(res.market.config().protocolFeeRatio == protocolFeeRatio);
-        vm.stopPrank();
-    }
-
-    function testSetFeeWithoutAuth() public {
-        vm.startPrank(sender);
-
-        uint32 lendFeeRatio = 0.01e8;
-        uint32 minNLendFeeR = 0.02e8;
-        uint32 borrowFeeRatio = 0.03e8;
-        uint32 minNBorrowFeeR = 0.04e8;
-        uint32 redeemFeeRatio = 0.05e8;
-        uint32 issueFtFeeRatio = 0.06e8;
-        uint32 lockingPercentage = 0.07e8;
-        uint32 protocolFeeRatio = 0.08e8;
-
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector,
-                sender,
-                manager.CURATOR_ROLE()
-            )
-        );
-        manager.setMarketFeeRate(
-            res.market,
-            lendFeeRatio,
-            minNLendFeeR,
-            borrowFeeRatio,
-            minNBorrowFeeR,
-            redeemFeeRatio,
-            issueFtFeeRatio,
-            lockingPercentage,
-            protocolFeeRatio
-        );
-        vm.stopPrank();
-    }
-
-    function testSetLsf() public {
-        vm.startPrank(deployer);
-        uint32 lsf = 0.11e8;
-
-        vm.expectEmit();
-        emit ITermMaxMarket.UpdateLsf(lsf);
-        manager.setMarketLsf(res.market, lsf);
-
-        assert(res.market.config().lsf == lsf);
-
-        vm.stopPrank();
-    }
-
-    function testSetLsfWithoutAuth() public {
-        vm.startPrank(sender);
-        uint32 lsf = 0.11e8;
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector,
-                sender,
-                manager.CURATOR_ROLE()
-            )
-        );
-        manager.setMarketLsf(res.market, lsf);
-
         vm.stopPrank();
     }
 

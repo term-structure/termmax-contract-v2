@@ -57,19 +57,10 @@ interface ITermMaxMarket {
         IGearingToken gt
     );
 
-    /// @notice Emitted when setting fees
-    event UpdateFeeRate(
-        uint32 lendFeeRatio,
-        uint32 minNLendFeeR,
-        uint32 borrowFeeRatio,
-        uint32 minNBorrowFeeR,
-        uint32 redeemFeeRatio,
-        uint32 issueFtfeeRatio,
-        uint32 lockingPercentage,
-        uint32 protocolFeeRatio
+    /// @notice Emitted when market config is updated
+    event UpdateMarketConfig(
+        MarketConfig config
     );
-    /// @notice Emitted when setting treasurer address
-    event UpdateTreasurer(address indexed treasurer);
     /// @notice Emitted when change the value of lsf
     event UpdateLsf(uint32 lsf);
     /// @notice Emitted when setting the market whitelist
@@ -253,24 +244,14 @@ interface ITermMaxMarket {
     /// @notice Return the configuration
     function config() external view returns (MarketConfig memory);
 
-    /// @notice Set the fee rate of the market
-    function setFeeRate(
-        uint32 lendFeeRatio,
-        uint32 minNLendFeeR,
-        uint32 borrowFeeRatio,
-        uint32 minNBorrowFeeR,
-        uint32 redeemFeeRatio,
-        uint32 issueFtfeeRatio,
-        uint32 lockingPercentage,
-        uint32 protocolFeeRatio
+    /// @notice Set the market configuration
+    function updateMarketConfig(
+        MarketConfig calldata newConfig
     ) external;
 
-    /// @notice Set the treasurer's address
-    function setTreasurer(address treasurer) external;
+    /// @notice Set the provider's whitelist
+    function setProviderWhitelist(address provider, bool isWhiteList) external;
 
-    /// @notice Set the value of lsf
-    function setLsf(uint32 lsf) external;
-    
     /// @notice Return the reserves of FT and XT
     function ftXtReserves() external view returns (uint128 ftReserve, uint128 xtReserve);
 
@@ -293,16 +274,11 @@ interface ITermMaxMarket {
             IGearingToken gt,
             address collateral,
             IERC20 underlying
-        );
+    );
     /// @notice Return the provider's white list
     /// @param provider Provider address
     /// @return true if the provider is in the white list
     function providerWhitelist(address provider) external view returns (bool);
-
-    /// @notice Set the provider's white list
-    /// @param provider Provider address
-    /// @param isWhiteList true if the provider is in the white list
-    function setProviderWhitelist(address provider, bool isWhiteList) external;
 
     /// @notice Provide liquidity to market
     /// @param underlyingAmt Amount of underlying token provided

@@ -136,58 +136,30 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
     /**
      * @inheritdoc ITermMaxMarket
      */
-    function setFeeRate(
-        uint32 lendFeeRatio,
-        uint32 minNLendFeeR,
-        uint32 borrowFeeRatio,
-        uint32 minNBorrowFeeR,
-        uint32 redeemFeeRatio,
-        uint32 issueFtFeeRatio,
-        uint32 lockingPercentage,
-        uint32 protocolFeeRatio
+    function updateMarketConfig(
+        MarketConfig calldata newConfig
     ) external override onlyOwner {
         MarketConfig memory mConfig = _config;
-        mConfig.lendFeeRatio = lendFeeRatio;
-        mConfig.minNLendFeeR = minNLendFeeR;
-        mConfig.borrowFeeRatio = borrowFeeRatio;
-        mConfig.minNBorrowFeeR = minNBorrowFeeR;
-        mConfig.redeemFeeRatio = redeemFeeRatio;
-        mConfig.issueFtFeeRatio = issueFtFeeRatio;
-        mConfig.lockingPercentage = lockingPercentage;
-        mConfig.protocolFeeRatio = protocolFeeRatio;
+        if(newConfig.treasurer != mConfig.treasurer){
+            mConfig.treasurer = newConfig.treasurer;
+            gt.setTreasurer(newConfig.treasurer);
+        }
+        if (newConfig.lsf == 0 || newConfig.lsf > Constants.DECIMAL_BASE) {
+            revert InvalidLsf(newConfig.lsf);
+        }
+        mConfig.lsf = newConfig.lsf;
+        mConfig.minApr = newConfig.minApr;
+        mConfig.lendFeeRatio = newConfig.lendFeeRatio;
+        mConfig.minNLendFeeR = newConfig.minNLendFeeR;
+        mConfig.borrowFeeRatio = newConfig.borrowFeeRatio;
+        mConfig.minNBorrowFeeR = newConfig.minNBorrowFeeR;
+        mConfig.redeemFeeRatio = newConfig.redeemFeeRatio;
+        mConfig.issueFtFeeRatio = newConfig.issueFtFeeRatio;
+        mConfig.lockingPercentage = newConfig.lockingPercentage;
+        mConfig.protocolFeeRatio = newConfig.protocolFeeRatio;
+        
         _config = mConfig;
-        emit UpdateFeeRate(
-            lendFeeRatio,
-            minNLendFeeR,
-            borrowFeeRatio,
-            minNBorrowFeeR,
-            redeemFeeRatio,
-            issueFtFeeRatio,
-            lockingPercentage,
-            protocolFeeRatio
-        );
-    }
-
-    /**
-     * @inheritdoc ITermMaxMarket
-     */
-    function setTreasurer(address treasurer) external override onlyOwner {
-        _config.treasurer = treasurer;
-        gt.setTreasurer(treasurer);
-
-        emit UpdateTreasurer(treasurer);
-    }
-
-    /**
-     * @inheritdoc ITermMaxMarket
-     */
-    function setLsf(uint32 lsf) external override onlyOwner {
-        if (lsf == 0 || lsf > Constants.DECIMAL_BASE) 
-            revert InvalidLsf(lsf);
-
-        _config.lsf = lsf;
-
-        emit UpdateLsf(lsf);
+        emit UpdateMarketConfig(mConfig);
     }
 
     function setProviderWhitelist(address provider, bool isWhiteList) external override onlyOwner {

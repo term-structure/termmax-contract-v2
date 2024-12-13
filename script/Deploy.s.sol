@@ -29,6 +29,7 @@ contract DeployMainnetFork is Script {
             maturity: 1735575942, // current 1726732382
             openTime: uint64(vm.getBlockTimestamp() + 200),
             apr: 12000000,
+            minApr: 0,
             lsf: 80000000,
             lendFeeRatio: 3000000,
             minNLendFeeR: 3000000,

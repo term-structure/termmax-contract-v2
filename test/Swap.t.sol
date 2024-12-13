@@ -731,14 +731,15 @@ contract SwapTest is Test {
         res.underlying.approve(address(res.market), underlyingAmtIn);
 
         // Try to buy with different LSF than market config
-        uint32 differentLsf = res.marketConfig.lsf + 1;
+        uint32 oldLsf = res.marketConfig.lsf;
         vm.stopPrank();
         vm.prank(deployer);
-        res.market.setLsf(differentLsf);
+        res.marketConfig.lsf = oldLsf + 1;
+        res.market.updateMarketConfig(res.marketConfig);
 
         vm.expectRevert(ITermMaxMarket.LsfChanged.selector);
         vm.prank(sender);
-        res.market.buyFt(underlyingAmtIn, minTokenOut, res.marketConfig.lsf);
+        res.market.buyFt(underlyingAmtIn, minTokenOut, oldLsf);
     }
 
     function testSellFtWithDifferentLsf() public {
@@ -755,14 +756,15 @@ contract SwapTest is Test {
 
         // Try to sell with different LSF
         res.ft.approve(address(res.market), ftAmtIn);
-        uint32 differentLsf = res.marketConfig.lsf + 1;
+        uint32 oldLsf = res.marketConfig.lsf;
         vm.stopPrank();
         vm.prank(deployer);
-        res.market.setLsf(differentLsf);
+        res.marketConfig.lsf = oldLsf + 1;
+        res.market.updateMarketConfig(res.marketConfig);
 
         vm.expectRevert(ITermMaxMarket.LsfChanged.selector);
         vm.prank(sender);
-        res.market.sellFt(ftAmtIn, 0, res.marketConfig.lsf);
+        res.market.sellFt(ftAmtIn, 0, oldLsf);
     }
 }
 
