@@ -57,6 +57,7 @@ contract ConfigurationTest is Test {
         MarketConfig memory newConfig = res.market.config();
         newConfig.treasurer = vm.randomAddress();
         newConfig.lsf = 0.11e8;
+        newConfig.minApr = -0.3e8;
         newConfig.lendFeeRatio = 0.01e8;
         newConfig.minNLendFeeR = 0.02e8;
         newConfig.borrowFeeRatio = 0.03e8;
@@ -73,6 +74,7 @@ contract ConfigurationTest is Test {
         MarketConfig memory updatedConfig = res.market.config();
         assertEq(updatedConfig.treasurer, newConfig.treasurer);
         assertEq(updatedConfig.lsf, newConfig.lsf);
+        assertEq(updatedConfig.minApr, newConfig.minApr);
         assertEq(updatedConfig.lendFeeRatio, newConfig.lendFeeRatio);
         assertEq(updatedConfig.minNLendFeeR, newConfig.minNLendFeeR);
         assertEq(updatedConfig.borrowFeeRatio, newConfig.borrowFeeRatio);

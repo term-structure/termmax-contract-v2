@@ -180,26 +180,6 @@ contract LpTest is Test {
         vm.stopPrank();
     }
 
-    // function testProvideLiquidityRceiveNothing() public {
-    //     vm.startPrank(deployer);
-    //     res.lpFt.approve(address(res.market), res.lpFt.balanceOf(deployer));
-    //     res.lpXt.approve(address(res.market), res.lpXt.balanceOf(deployer));
-    //     res.market.withdrawLiquidity(uint128(res.lpFt.balanceOf(deployer) - 1), uint128(res.lpXt.balanceOf(deployer) - 1));
-
-    //     res.ft.transfer(address(res.market), res.ft.balanceOf(deployer));
-    //     res.xt.transfer(address(res.market), res.xt.balanceOf(deployer));
-    //     vm.stopPrank();
-    //     vm.startPrank(sender);
-
-    //     uint underlyingAmtIn = res.xt.balanceOf(address(res.market)) / Constants.DECIMAL_BASE / 2;
-    //     res.underlying.mint(sender, underlyingAmtIn);
-    //     res.underlying.approve(address(res.market), underlyingAmtIn);
-
-    //     vm.expectRevert(abi.encodeWithSelector(ITermMaxMarket.LpOutputAmtIsZero.selector, uint256(underlyingAmtIn)));
-    //     res.market.provideLiquidity(underlyingAmtIn);
-    //     vm.stopPrank();
-    // }
-
     function testProvideLiquidityBeforeMaturity() public {
         vm.startPrank(sender);
 
@@ -544,6 +524,34 @@ contract LpTest is Test {
         );
         res.market.withdrawLiquidity(lpFtOutAmt, lpXtOutAmt);
 
+        vm.stopPrank();
+    }
+
+    function testWithdrawLiquidityWhenAprTooSmall() public {
+        int64 minApr = marketConfig.apr - 1;
+        marketConfig.minApr = minApr;
+        vm.prank(deployer);
+        res.market.updateMarketConfig(marketConfig);
+
+        vm.startPrank(sender);
+        uint128 underlyingAmtIn = 100e8;
+        res.underlying.mint(sender, underlyingAmtIn);
+        res.underlying.approve(address(res.market), underlyingAmtIn);
+        (uint128 lpFtOutAmt, uint128 lpXtOutAmt) = res.market.provideLiquidity(
+            underlyingAmtIn
+        );
+
+        res.lpFt.approve(address(res.market), lpFtOutAmt);
+
+        vm.expectRevert(abi.encodeWithSelector(
+            ITermMaxMarket.AprLessThanMinApr.selector,
+            11815766,
+            minApr
+        ));
+        res.market.withdrawLiquidity(
+            lpFtOutAmt,
+            0
+        );
         vm.stopPrank();
     }
 }

@@ -28,6 +28,8 @@ interface ITermMaxMarket {
     error LpOutputAmtIsZero(uint256 underlyingAmt);
     /// @notice Error for lsf is changed between user post trade request
     error LsfChanged();
+    /// @notice Error for apr is less than min apr
+    error AprLessThanMinApr(int64 apr, int64 minApr);
     /// @notice Error for the actual output value does not match the expected value
     error UnexpectedAmount(uint128 expectedAmt, uint128 actualAmt);
     /// @notice Error for redeeming before the liquidation window

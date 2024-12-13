@@ -42,6 +42,7 @@ contract SwapTest is Test {
             testdata,
             ".marketConfig"
         );
+        marketConfig.minApr = -0.9e8;
         res = DeployUtils.deployMarket(
             deployer,
             marketConfig,
@@ -187,6 +188,29 @@ contract SwapTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(ITermMaxMarket.MarketIsNotOpen.selector)
         );
+        res.market.buyFt(underlyingAmtIn, minTokenOut, res.marketConfig.lsf);
+
+        vm.stopPrank();
+    }
+
+    function testBuyFtWhenAprTooSmall() public {
+        int64 minApr = marketConfig.apr - 1;
+        marketConfig.minApr = minApr;
+        vm.prank(deployer);
+        res.market.updateMarketConfig(marketConfig);
+
+        vm.startPrank(sender);
+
+        uint128 underlyingAmtIn = 100e8;
+        uint128 minTokenOut = 0e8;
+        res.underlying.mint(sender, underlyingAmtIn);
+        res.underlying.approve(address(res.market), underlyingAmtIn);
+
+        vm.expectRevert(abi.encodeWithSelector(
+            ITermMaxMarket.AprLessThanMinApr.selector,
+            11784596,
+            minApr
+        ));
         res.market.buyFt(underlyingAmtIn, minTokenOut, res.marketConfig.lsf);
 
         vm.stopPrank();
@@ -544,6 +568,36 @@ contract SwapTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(ITermMaxMarket.MarketIsNotOpen.selector)
         );
+        res.market.sellXt(xtAmtIn, minTokenOut, res.marketConfig.lsf);
+
+        vm.stopPrank();
+    }
+
+    function testSellXtWhenAprTooSmall() public {
+        vm.startPrank(sender);
+
+        uint128 underlyingAmtInForBuyXt = 100e8;
+        uint128 minXtOut = 0e8;
+        res.underlying.mint(sender, underlyingAmtInForBuyXt);
+        res.underlying.approve(address(res.market), underlyingAmtInForBuyXt);
+        uint128 xtAmtIn = uint128(
+            res.market.buyXt(underlyingAmtInForBuyXt, minXtOut, res.marketConfig.lsf)
+        );
+        vm.stopPrank();
+        int64 minApr = res.market.config().apr - 1;
+        marketConfig.minApr = minApr;
+        vm.prank(deployer);
+        res.market.updateMarketConfig(marketConfig);
+
+        vm.startPrank(sender);
+        uint128 minTokenOut = 0e8;
+        res.xt.approve(address(res.market), xtAmtIn);
+        
+        vm.expectRevert(abi.encodeWithSelector(
+            ITermMaxMarket.AprLessThanMinApr.selector,
+            12002705,
+            minApr
+        ));
         res.market.sellXt(xtAmtIn, minTokenOut, res.marketConfig.lsf);
 
         vm.stopPrank();

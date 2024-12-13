@@ -367,7 +367,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
             xt.safeTransfer(caller, xtOutAmt);
             xtReserve -= xtOutAmt;
         }
-        _config.apr = mConfig.apr;
+        _updateApr(mConfig);
         emit WithdrawLiquidity(
             caller,
             lpFtAmt.toUint128(),
@@ -521,7 +521,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
             _lockFee(feeAmt, mConfig.lockingPercentage, mConfig.initialLtv);
             feeAmt += feeToProtocol;
         }
-        _config.apr = mConfig.apr;
+        _updateApr(mConfig);
         emit BuyToken(
             caller,
             token,
@@ -638,7 +638,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
             mConfig.initialLtv
         );
 
-        _config.apr = mConfig.apr;
+        _updateApr(mConfig);
         emit SellToken(
             caller,
             token,
@@ -1017,6 +1017,12 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
             block.timestamp - pauseTime >
             Constants.WAITING_TIME_EVACUATION_ACTIVE &&
             block.timestamp < _config.maturity;
+    }
+
+    function _updateApr(MarketConfig memory mConfig) private{
+        if(mConfig.apr < mConfig.minApr)
+            revert AprLessThanMinApr(mConfig.apr, mConfig.minApr); 
+        _config.apr = mConfig.apr;
     }
 
     /**
