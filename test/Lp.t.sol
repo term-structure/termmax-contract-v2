@@ -444,6 +444,70 @@ contract LpTest is Test {
         vm.stopPrank();
     }
 
+    function testWithdrawLiquidityWhenHasTrade() public {
+        vm.startPrank(sender);
+
+        uint128 underlyingAmtIn = 100e8;
+        res.underlying.mint(sender, underlyingAmtIn);
+        res.underlying.approve(address(res.market), underlyingAmtIn);
+        (uint128 lpFtOutAmt, uint128 lpXtOutAmt) = res.market.provideLiquidity(
+            underlyingAmtIn
+        );
+
+        vm.startPrank(deployer);
+        res.underlying.mint(deployer, underlyingAmtIn);
+        res.underlying.approve(address(res.market), underlyingAmtIn);
+        res.market.buyFt(underlyingAmtIn, 0e8);
+
+        vm.warp(res.market.config().maturity - 1);
+
+        vm.startPrank(sender);
+        res.lpFt.approve(address(res.market), lpFtOutAmt);
+        res.lpXt.approve(address(res.market), lpXtOutAmt);
+
+        StateChecker.MarketState memory expectedState = JSONLoader
+            .getMarketStateFromJson(
+                testdata,
+                ".expected.withdrawLiquidityWhenHasTrade.contractState"
+            );
+        uint expectFtOutAmt = vm.parseUint(
+            vm.parseJsonString(
+                testdata,
+                ".expected.withdrawLiquidityWhenHasTrade.output.lpFtAmount"
+            )
+        );
+        uint expectXtOutAmt = vm.parseUint(
+            vm.parseJsonString(
+                testdata,
+                ".expected.withdrawLiquidityWhenHasTrade.output.lpXtAmount"
+            )
+        );
+        vm.expectEmit();
+        emit ITermMaxMarket.WithdrawLiquidity(
+            sender,
+            lpFtOutAmt,
+            lpXtOutAmt,
+            uint128(expectFtOutAmt),
+            uint128(expectXtOutAmt),
+            int64(expectedState.apr),
+            uint128(expectedState.ftReserve),
+            uint128(expectedState.xtReserve)
+        );
+        (uint128 ftOutAmt, uint128 xtOutAmt) = res.market.withdrawLiquidity(
+            lpFtOutAmt,
+            lpXtOutAmt
+        );
+
+        StateChecker.checkMarketState(res, expectedState);
+
+        assert(ftOutAmt == expectFtOutAmt);
+        assert(xtOutAmt == expectXtOutAmt);
+        assert(res.ft.balanceOf(sender) == ftOutAmt);
+        assert(res.xt.balanceOf(sender) == xtOutAmt);
+
+        vm.stopPrank();
+    }
+
     function testWithdrawLiquidityBeforeMaturity() public {
         vm.startPrank(sender);
 

@@ -15,6 +15,8 @@ library StateChecker {
         uint lpXtReserve;
         uint underlyingReserve;
         uint collateralReserve;
+        uint lpFtTotalSupply;
+        uint lpXtTotalSupply;
     }
 
     function checkMarketState(
@@ -43,11 +45,18 @@ library StateChecker {
             res.underlying.balanceOf(market) == expect.underlyingReserve,
             "underlyingReserve unexpect"
         );
-
         require(
             res.collateral.balanceOf(address(res.gt)) ==
                 expect.collateralReserve,
             "collateralReserve unexpect"
+        );
+        require(
+            res.lpFt.totalSupply() == expect.lpFtTotalSupply,
+            "lpFtTotalSupply unexpect"
+        );
+        require(
+            res.lpXt.totalSupply() == expect.lpXtTotalSupply,
+            "lpXtTotalSupply unexpect"
         );
     }
 
@@ -62,6 +71,8 @@ library StateChecker {
         state.lpXtReserve = res.lpXt.balanceOf(market);
         state.underlyingReserve = res.underlying.balanceOf(market);
         state.collateralReserve = res.collateral.balanceOf(address(res.gt));
+        state.lpFtTotalSupply = res.lpFt.totalSupply();
+        state.lpXtTotalSupply = res.lpXt.totalSupply();
     }
 
     function getUserBalances(
