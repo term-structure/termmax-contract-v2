@@ -333,32 +333,32 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         MarketConfig memory mConfig = _config;
         // calculate out put amount
         if (lpFtAmt > 0) {
-            ftOutAmt = TermMaxCurve
-                .calculateLpWithReward(
-                    lpFtAmt,
-                    lpFt.totalSupply(),
-                    lpFt.balanceOf(address(this)),
-                    ftReserve,
-                    block.timestamp,
-                    mConfig
-                )
-                .toUint128();
+            uint lpFtTotalSupply = lpFt.totalSupply();
+            uint256 lpFtAmtWithReward = lpFtAmt + TermMaxCurve.calculateLpReward(
+                block.timestamp,
+                mConfig.openTime,
+                mConfig.maturity,
+                lpFtTotalSupply,
+                lpFtAmt,
+                lpFt.balanceOf(address(this))
+            );
+            ftOutAmt = ((lpFtAmtWithReward * ftReserve) / lpFtTotalSupply).toUint128();
             lpFt.safeTransferFrom(caller, address(this), lpFtAmt);
-            lpFt.burn(lpFtAmt);
+            lpFt.burn(lpFtAmtWithReward);
         }
         if (lpXtAmt > 0) {
-            xtOutAmt = TermMaxCurve
-                .calculateLpWithReward(
-                    lpXtAmt,
-                    lpXt.totalSupply(),
-                    lpXt.balanceOf(address(this)),
-                    xtReserve,
-                    block.timestamp,
-                    mConfig
-                )
-                .toUint128();
+            uint lpXtTotalSupply = lpXt.totalSupply();
+            uint256 lpXtAmtWithReward = lpXtAmt + TermMaxCurve.calculateLpReward(
+                block.timestamp,
+                mConfig.openTime,
+                mConfig.maturity,
+                lpXtTotalSupply,
+                lpXtAmt,
+                lpXt.balanceOf(address(this))
+            );
+            xtOutAmt = ((lpXtAmtWithReward * xtReserve) / lpXtTotalSupply).toUint128();
             lpXt.safeTransferFrom(caller, address(this), lpXtAmt);
-            lpXt.burn(lpXtAmt);
+            lpXt.burn(lpXtAmtWithReward);
         }
         if (xtOutAmt >= xtReserve || ftOutAmt >= ftReserve) {
             revert TermMaxCurve.LiquidityIsZeroAfterTransaction();

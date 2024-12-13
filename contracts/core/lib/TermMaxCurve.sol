@@ -35,32 +35,6 @@ library TermMaxCurve {
         return lpTotalSupply == 0 ? tokenIn : (tokenIn * lpTotalSupply) / tokenReserve;
     }
 
-    /// @notice Calculate how many tokens should be transfer to the liquidity provider
-    /// @param lpAmt The amount of lp to withdraw
-    /// @param lpTotalSupply The total supply of this lp token
-    /// @param lpReserve The lp token balance of market
-    /// @param tokenReserve The token balance of market
-    /// @param config Market configuration data
-    /// @return tokenAmt The amount of tokens transfer to the liquidity provider
-    function calculateLpWithReward(
-        uint256 lpAmt,
-        uint256 lpTotalSupply,
-        uint256 lpReserve,
-        uint256 tokenReserve,
-        uint256 currentTime,
-        MarketConfig memory config
-    ) internal pure returns (uint256) {
-        lpAmt += calculateLpReward(
-            currentTime,
-            config.openTime,
-            config.maturity,
-            lpTotalSupply,
-            lpAmt,
-            lpReserve
-        );
-        return (lpAmt * tokenReserve) / lpTotalSupply;
-    }
-
     /// @notice Calculte the virtual FT token reserve
     /// @param lsf The liquidity scaling factor (variable name for gamma in the formula)
     /// @param ftReserve The FT token reserve of the market
