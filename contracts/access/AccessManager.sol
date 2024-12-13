@@ -7,6 +7,7 @@ import {ITermMaxMarket} from "contracts/core/ITermMaxMarket.sol";
 import {ITermMaxFactory} from "contracts/core/factory/ITermMaxFactory.sol";
 import {ITermMaxRouter} from "contracts/router/ITermMaxRouter.sol";
 import {IOracle} from "contracts/core/oracle/IOracle.sol";
+import {MarketConfig} from "contracts/core/storage/TermMaxStorage.sol";
 
 interface IOwnable {
     function transferOwnership(address newOwner) external;
@@ -107,46 +108,14 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
         market.withdrawExcessFtXt(to, ftAmt, xtAmt);
     }
 
-    /// @notice Set the fee rate of the market
-    function setMarketFeeRate(
+    /// @notice Update the market configuration
+    function updateMarketConfig(
         ITermMaxMarket market,
-        uint32 lendFeeRatio,
-        uint32 minNLendFeeR,
-        uint32 borrowFeeRatio,
-        uint32 minNBorrowFeeR,
-        uint32 redeemFeeRatio,
-        uint32 issueFtfeeRatio,
-        uint32 lockingPercentage,
-        uint32 protocolFeeRatio
+        MarketConfig calldata newConfig
     ) external onlyRole(CURATOR_ROLE) {
-        market.setFeeRate(
-            lendFeeRatio,
-            minNLendFeeR,
-            borrowFeeRatio,
-            minNBorrowFeeR,
-            redeemFeeRatio,
-            issueFtfeeRatio,
-            lockingPercentage,
-            protocolFeeRatio
-        );
+        market.updateMarketConfig(newConfig);
     }
 
-    /// @notice Set the treasurer's address
-    function setMarketTreasurer(
-        ITermMaxMarket market,
-        address treasurer
-    ) external onlyRole(CURATOR_ROLE) {
-        market.setTreasurer(treasurer);
-    }
-
-    /// @notice Set the value of lsf
-    function setMarketLsf(
-        ITermMaxMarket market,
-        uint32 lsf
-    ) external onlyRole(CURATOR_ROLE) {
-        market.setLsf(lsf);
-    }
-    
     /// @notice Set the provider's white list
     function setProviderWhitelist(ITermMaxMarket market, address provider, bool isWhiteList) external onlyRole(CURATOR_ROLE) {
         market.setProviderWhitelist(provider, isWhiteList);

@@ -18,6 +18,9 @@ struct MarketConfig {
     /// @dev    The annual interest rate will automatically change due to market fluctuations,
     ///         and the annual interest rate will not exceed the market initial LTV(loan to collateral) limit
     int64 apr;
+    /// @notice The minimum annual interest rate for borrowing in the market
+    ///         i.e. 0.05e8 means 5% of the interest
+    int64 minApr;
     /// @notice The liquidity scaling factor
     ///         i.e. 0.1e8 means 0.1
     /// @dev    TODO

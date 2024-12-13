@@ -42,6 +42,7 @@ contract SwapTest is Test {
             testdata,
             ".marketConfig"
         );
+        marketConfig.minApr = -0.9e8;
         res = DeployUtils.deployMarket(
             deployer,
             marketConfig,
@@ -108,7 +109,7 @@ contract SwapTest is Test {
             uint128(expectedState.ftReserve),
             uint128(expectedState.xtReserve)
         );
-        uint256 netOut = res.market.buyFt(underlyingAmtIn, minTokenOut);
+        uint256 netOut = res.market.buyFt(underlyingAmtIn, minTokenOut, res.marketConfig.lsf);
 
         StateChecker.checkMarketState(res, expectedState);
 
@@ -129,7 +130,7 @@ contract SwapTest is Test {
                 TermMaxCurve.LiquidityIsZeroAfterTransaction.selector
             )
         );
-        res.market.buyFt(uint128(underlyingAmtIn), 0);
+        res.market.buyFt(uint128(underlyingAmtIn), 0, res.marketConfig.lsf);
         vm.stopPrank();
     }
 
@@ -156,7 +157,7 @@ contract SwapTest is Test {
                 expectedNetOut
             )
         );
-        res.market.buyFt(underlyingAmtIn, minTokenOut);
+        res.market.buyFt(underlyingAmtIn, minTokenOut, res.marketConfig.lsf);
 
         vm.stopPrank();
     }
@@ -170,7 +171,7 @@ contract SwapTest is Test {
         res.underlying.mint(sender, underlyingAmtIn);
         res.underlying.approve(address(res.market), underlyingAmtIn);
         vm.warp(res.market.config().maturity - 1);
-        res.market.buyFt(underlyingAmtIn, minTokenOut);
+        res.market.buyFt(underlyingAmtIn, minTokenOut, res.marketConfig.lsf);
 
         vm.stopPrank();
     }
@@ -187,7 +188,30 @@ contract SwapTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(ITermMaxMarket.MarketIsNotOpen.selector)
         );
-        res.market.buyFt(underlyingAmtIn, minTokenOut);
+        res.market.buyFt(underlyingAmtIn, minTokenOut, res.marketConfig.lsf);
+
+        vm.stopPrank();
+    }
+
+    function testBuyFtWhenAprTooSmall() public {
+        int64 minApr = marketConfig.apr - 1;
+        marketConfig.minApr = minApr;
+        vm.prank(deployer);
+        res.market.updateMarketConfig(marketConfig);
+
+        vm.startPrank(sender);
+
+        uint128 underlyingAmtIn = 100e8;
+        uint128 minTokenOut = 0e8;
+        res.underlying.mint(sender, underlyingAmtIn);
+        res.underlying.approve(address(res.market), underlyingAmtIn);
+
+        vm.expectRevert(abi.encodeWithSelector(
+            ITermMaxMarket.AprLessThanMinApr.selector,
+            11784596,
+            minApr
+        ));
+        res.market.buyFt(underlyingAmtIn, minTokenOut, res.marketConfig.lsf);
 
         vm.stopPrank();
     }
@@ -223,7 +247,7 @@ contract SwapTest is Test {
             uint128(expectedState.ftReserve),
             uint128(expectedState.xtReserve)
         );
-        uint256 netOut = res.market.buyXt(underlyingAmtIn, minTokenOut);
+        uint256 netOut = res.market.buyXt(underlyingAmtIn, minTokenOut, res.marketConfig.lsf);
 
         StateChecker.checkMarketState(res, expectedState);
 
@@ -244,7 +268,7 @@ contract SwapTest is Test {
                 TermMaxCurve.LiquidityIsZeroAfterTransaction.selector
             )
         );
-        res.market.buyXt(uint128(underlyingAmtIn), 0);
+        res.market.buyXt(uint128(underlyingAmtIn), 0, res.marketConfig.lsf);
         vm.stopPrank();
     }
 
@@ -271,7 +295,7 @@ contract SwapTest is Test {
                 expectedNetOut
             )
         );
-        res.market.buyXt(underlyingAmtIn, minTokenOut);
+        res.market.buyXt(underlyingAmtIn, minTokenOut, res.marketConfig.lsf);
 
         vm.stopPrank();
     }
@@ -285,7 +309,7 @@ contract SwapTest is Test {
         res.underlying.mint(sender, underlyingAmtIn);
         res.underlying.approve(address(res.market), underlyingAmtIn);
         vm.warp(res.market.config().maturity - 1);
-        res.market.buyXt(underlyingAmtIn, minTokenOut);
+        res.market.buyXt(underlyingAmtIn, minTokenOut, res.marketConfig.lsf);
 
         vm.stopPrank();
     }
@@ -302,7 +326,7 @@ contract SwapTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(ITermMaxMarket.MarketIsNotOpen.selector)
         );
-        res.market.buyXt(underlyingAmtIn, minTokenOut);
+        res.market.buyXt(underlyingAmtIn, minTokenOut, res.marketConfig.lsf);
 
         vm.stopPrank();
     }
@@ -315,7 +339,7 @@ contract SwapTest is Test {
         res.underlying.mint(sender, underlyingAmtInForBuyFt);
         res.underlying.approve(address(res.market), underlyingAmtInForBuyFt);
         uint128 ftAmtIn = uint128(
-            res.market.buyFt(underlyingAmtInForBuyFt, minFtOut)
+            res.market.buyFt(underlyingAmtInForBuyFt, minFtOut, res.marketConfig.lsf)
         );
         uint128 minTokenOut = 0e8;
         res.ft.approve(address(res.market), ftAmtIn);
@@ -343,7 +367,7 @@ contract SwapTest is Test {
             uint128(expectedState.ftReserve),
             uint128(expectedState.xtReserve)
         );
-        uint256 netOut = res.market.sellFt(ftAmtIn, minTokenOut);
+        uint256 netOut = res.market.sellFt(ftAmtIn, minTokenOut, res.marketConfig.lsf);
 
         StateChecker.checkMarketState(res, expectedState);
 
@@ -370,7 +394,7 @@ contract SwapTest is Test {
         res.underlying.mint(sender, underlyingAmtInForBuyFt);
         res.underlying.approve(address(res.market), underlyingAmtInForBuyFt);
         uint128 ftAmtIn = uint128(
-            res.market.buyFt(underlyingAmtInForBuyFt, minFtOut)
+            res.market.buyFt(underlyingAmtInForBuyFt, minFtOut, res.marketConfig.lsf)
         );
         uint128 minTokenOut = expectedNetOut + 1;
 
@@ -382,7 +406,7 @@ contract SwapTest is Test {
                 expectedNetOut
             )
         );
-        res.market.sellFt(ftAmtIn, minTokenOut);
+        res.market.sellFt(ftAmtIn, minTokenOut, res.marketConfig.lsf);
 
         vm.stopPrank();
     }
@@ -395,13 +419,13 @@ contract SwapTest is Test {
         res.underlying.mint(sender, underlyingAmtInForBuyFt);
         res.underlying.approve(address(res.market), underlyingAmtInForBuyFt);
         uint128 ftAmtIn = uint128(
-            res.market.buyFt(underlyingAmtInForBuyFt, minFtOut)
+            res.market.buyFt(underlyingAmtInForBuyFt, minFtOut, res.marketConfig.lsf)
         );
         uint128 minTokenOut = 0e8;
 
         res.ft.approve(address(res.market), ftAmtIn);
         vm.warp(res.market.config().maturity - 1);
-        res.market.sellFt(ftAmtIn, minTokenOut);
+        res.market.sellFt(ftAmtIn, minTokenOut, res.marketConfig.lsf);
 
         vm.stopPrank();
     }
@@ -414,7 +438,7 @@ contract SwapTest is Test {
         res.underlying.mint(sender, underlyingAmtInForBuyFt);
         res.underlying.approve(address(res.market), underlyingAmtInForBuyFt);
         uint128 ftAmtIn = uint128(
-            res.market.buyFt(underlyingAmtInForBuyFt, minFtOut)
+            res.market.buyFt(underlyingAmtInForBuyFt, minFtOut, res.marketConfig.lsf)
         );
         uint128 minTokenOut = 0e8;
 
@@ -423,7 +447,7 @@ contract SwapTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(ITermMaxMarket.MarketIsNotOpen.selector)
         );
-        res.market.sellFt(ftAmtIn, minTokenOut);
+        res.market.sellFt(ftAmtIn, minTokenOut, res.marketConfig.lsf);
 
         vm.stopPrank();
     }
@@ -436,7 +460,7 @@ contract SwapTest is Test {
         res.underlying.mint(sender, underlyingAmtInForBuyXt);
         res.underlying.approve(address(res.market), underlyingAmtInForBuyXt);
         uint128 xtAmtIn = uint128(
-            res.market.buyXt(underlyingAmtInForBuyXt, minXTOut)
+            res.market.buyXt(underlyingAmtInForBuyXt, minXTOut, res.marketConfig.lsf)
         );
         uint128 minTokenOut = 0e8;
         res.xt.approve(address(res.market), xtAmtIn);
@@ -464,7 +488,7 @@ contract SwapTest is Test {
             uint128(expectedState.ftReserve),
             uint128(expectedState.xtReserve)
         );
-        uint256 netOut = res.market.sellXt(xtAmtIn, minTokenOut);
+        uint256 netOut = res.market.sellXt(xtAmtIn, minTokenOut, res.marketConfig.lsf);
 
         StateChecker.checkMarketState(res, expectedState);
 
@@ -491,7 +515,7 @@ contract SwapTest is Test {
         res.underlying.mint(sender, underlyingAmtInForBuyXt);
         res.underlying.approve(address(res.market), underlyingAmtInForBuyXt);
         uint128 xtAmtIn = uint128(
-            res.market.buyXt(underlyingAmtInForBuyXt, minXtOut)
+            res.market.buyXt(underlyingAmtInForBuyXt, minXtOut, res.marketConfig.lsf)
         );
         uint128 minTokenOut = expectedNetOut + 1;
 
@@ -503,7 +527,7 @@ contract SwapTest is Test {
                 expectedNetOut
             )
         );
-        res.market.sellXt(xtAmtIn, minTokenOut);
+        res.market.sellXt(xtAmtIn, minTokenOut, res.marketConfig.lsf);
 
         vm.stopPrank();
     }
@@ -516,13 +540,13 @@ contract SwapTest is Test {
         res.underlying.mint(sender, underlyingAmtInForBuyXt);
         res.underlying.approve(address(res.market), underlyingAmtInForBuyXt);
         uint128 xtAmtIn = uint128(
-            res.market.buyXt(underlyingAmtInForBuyXt, minXtOut)
+            res.market.buyXt(underlyingAmtInForBuyXt, minXtOut, res.marketConfig.lsf)
         );
         uint128 minTokenOut = 0e8;
 
         res.xt.approve(address(res.market), xtAmtIn);
         vm.warp(res.market.config().maturity - 1);
-        res.market.sellXt(xtAmtIn, minTokenOut);
+        res.market.sellXt(xtAmtIn, minTokenOut, res.marketConfig.lsf);
 
         vm.stopPrank();
     }
@@ -535,7 +559,7 @@ contract SwapTest is Test {
         res.underlying.mint(sender, underlyingAmtInForBuyXt);
         res.underlying.approve(address(res.market), underlyingAmtInForBuyXt);
         uint128 xtAmtIn = uint128(
-            res.market.buyXt(underlyingAmtInForBuyXt, minXtOut)
+            res.market.buyXt(underlyingAmtInForBuyXt, minXtOut, res.marketConfig.lsf)
         );
         uint128 minTokenOut = 0e8;
 
@@ -544,7 +568,37 @@ contract SwapTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(ITermMaxMarket.MarketIsNotOpen.selector)
         );
-        res.market.sellXt(xtAmtIn, minTokenOut);
+        res.market.sellXt(xtAmtIn, minTokenOut, res.marketConfig.lsf);
+
+        vm.stopPrank();
+    }
+
+    function testSellXtWhenAprTooSmall() public {
+        vm.startPrank(sender);
+
+        uint128 underlyingAmtInForBuyXt = 100e8;
+        uint128 minXtOut = 0e8;
+        res.underlying.mint(sender, underlyingAmtInForBuyXt);
+        res.underlying.approve(address(res.market), underlyingAmtInForBuyXt);
+        uint128 xtAmtIn = uint128(
+            res.market.buyXt(underlyingAmtInForBuyXt, minXtOut, res.marketConfig.lsf)
+        );
+        vm.stopPrank();
+        int64 minApr = res.market.config().apr - 1;
+        marketConfig.minApr = minApr;
+        vm.prank(deployer);
+        res.market.updateMarketConfig(marketConfig);
+
+        vm.startPrank(sender);
+        uint128 minTokenOut = 0e8;
+        res.xt.approve(address(res.market), xtAmtIn);
+        
+        vm.expectRevert(abi.encodeWithSelector(
+            ITermMaxMarket.AprLessThanMinApr.selector,
+            12002705,
+            minApr
+        ));
+        res.market.sellXt(xtAmtIn, minTokenOut, res.marketConfig.lsf);
 
         vm.stopPrank();
     }
@@ -609,7 +663,7 @@ contract SwapTest is Test {
         res.underlying.mint(sender, underlyingAmtInForBuyXt);
         res.underlying.approve(address(res.market), underlyingAmtInForBuyXt);
         uint128 xtAmt = uint128(
-            res.market.buyXt(underlyingAmtInForBuyXt, minXTOut) / 2
+            res.market.buyXt(underlyingAmtInForBuyXt, minXTOut, res.marketConfig.lsf) / 2
         );
 
         uint128 underlyingAmtInForBuyFt = 9e8;
@@ -617,7 +671,7 @@ contract SwapTest is Test {
         res.underlying.mint(sender, underlyingAmtInForBuyFt);
         res.underlying.approve(address(res.market), underlyingAmtInForBuyFt);
 
-        res.market.buyFt(underlyingAmtInForBuyFt, minFtOut);
+        res.market.buyFt(underlyingAmtInForBuyFt, minFtOut, res.marketConfig.lsf);
 
         uint128 underlyingAmtToRedeem = xtAmt;
         uint128 xtAmtToRedeem = underlyingAmtToRedeem;
@@ -647,7 +701,7 @@ contract SwapTest is Test {
         res.underlying.mint(sender, underlyingAmtInForBuyXt);
         res.underlying.approve(address(res.market), underlyingAmtInForBuyXt);
         uint128 xtAmt = uint128(
-            res.market.buyXt(underlyingAmtInForBuyXt, minXTOut) / 2
+            res.market.buyXt(underlyingAmtInForBuyXt, minXTOut, res.marketConfig.lsf) / 2
         );
 
         uint128 underlyingAmtInForBuyFt = 9e8;
@@ -655,7 +709,7 @@ contract SwapTest is Test {
         res.underlying.mint(sender, underlyingAmtInForBuyFt);
         res.underlying.approve(address(res.market), underlyingAmtInForBuyFt);
         
-        res.market.buyFt(underlyingAmtInForBuyFt, minFtOut);
+        res.market.buyFt(underlyingAmtInForBuyFt, minFtOut, res.marketConfig.lsf);
 
         uint128 underlyingAmtToRedeem = xtAmt;
         uint128 xtAmtToRedeem = underlyingAmtToRedeem;
@@ -678,14 +732,14 @@ contract SwapTest is Test {
         res.underlying.mint(sender, underlyingAmtInForBuyXt);
         res.underlying.approve(address(res.market), underlyingAmtInForBuyXt);
         uint128 xtAmt = uint128(
-            res.market.buyXt(underlyingAmtInForBuyXt, minXTOut) / 2
+            res.market.buyXt(underlyingAmtInForBuyXt, minXTOut, res.marketConfig.lsf) / 2
         );
 
         uint128 underlyingAmtInForBuyFt = 9e8;
         uint128 minFtOut = 0e8;
         res.underlying.mint(sender, underlyingAmtInForBuyFt);
         res.underlying.approve(address(res.market), underlyingAmtInForBuyFt);
-        res.market.buyFt(underlyingAmtInForBuyFt, minFtOut);
+        res.market.buyFt(underlyingAmtInForBuyFt, minFtOut, res.marketConfig.lsf);
 
         uint128 underlyingAmtToRedeem = xtAmt;
         uint128 xtAmtToRedeem = underlyingAmtToRedeem;
@@ -712,7 +766,7 @@ contract SwapTest is Test {
         res.underlying.mint(sender, underlyingAmtInForBuyXt);
         res.underlying.approve(address(res.market), underlyingAmtInForBuyXt);
         uint128 xtAmtIn = uint128(
-            res.market.buyXt(underlyingAmtInForBuyXt, minXTOut)
+            res.market.buyXt(underlyingAmtInForBuyXt, minXTOut, res.marketConfig.lsf)
         );
         uint128 collateralAmtIn = 1e18;
         res.collateral.mint(sender, collateralAmtIn);
@@ -720,6 +774,51 @@ contract SwapTest is Test {
         bytes memory callbackData = abi.encode(collateralAmtIn);
         outer.leverageByXt(sender, xtAmtIn, callbackData);
         vm.stopPrank();
+    }
+
+    function testBuyFtWithDifferentLsf() public {
+        vm.startPrank(sender);
+
+        uint128 underlyingAmtIn = 100e8;
+        uint128 minTokenOut = 0e8;
+        res.underlying.mint(sender, underlyingAmtIn);
+        res.underlying.approve(address(res.market), underlyingAmtIn);
+
+        // Try to buy with different LSF than market config
+        uint32 oldLsf = res.marketConfig.lsf;
+        vm.stopPrank();
+        vm.prank(deployer);
+        res.marketConfig.lsf = oldLsf + 1;
+        res.market.updateMarketConfig(res.marketConfig);
+
+        vm.expectRevert(ITermMaxMarket.LsfChanged.selector);
+        vm.prank(sender);
+        res.market.buyFt(underlyingAmtIn, minTokenOut, oldLsf);
+    }
+
+    function testSellFtWithDifferentLsf() public {
+        vm.startPrank(sender);
+
+        // First buy FT with correct LSF
+        uint128 underlyingAmtIn = 100e8;
+        uint128 minFtOut = 0e8;
+        res.underlying.mint(sender, underlyingAmtIn);
+        res.underlying.approve(address(res.market), underlyingAmtIn);
+        uint128 ftAmtIn = uint128(
+            res.market.buyFt(underlyingAmtIn, minFtOut, res.marketConfig.lsf)
+        );
+
+        // Try to sell with different LSF
+        res.ft.approve(address(res.market), ftAmtIn);
+        uint32 oldLsf = res.marketConfig.lsf;
+        vm.stopPrank();
+        vm.prank(deployer);
+        res.marketConfig.lsf = oldLsf + 1;
+        res.market.updateMarketConfig(res.marketConfig);
+
+        vm.expectRevert(ITermMaxMarket.LsfChanged.selector);
+        vm.prank(sender);
+        res.market.sellFt(ftAmtIn, 0, oldLsf);
     }
 }
 

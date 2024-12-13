@@ -26,6 +26,10 @@ interface ITermMaxMarket {
     error ProviderNotWhitelisted(address provider);
     /// @notice Error for receiving zero lp token when providing liquidity
     error LpOutputAmtIsZero(uint256 underlyingAmt);
+    /// @notice Error for lsf is changed between user post trade request
+    error LsfChanged();
+    /// @notice Error for apr is less than min apr
+    error AprLessThanMinApr(int64 apr, int64 minApr);
     /// @notice Error for the actual output value does not match the expected value
     error UnexpectedAmount(uint128 expectedAmt, uint128 actualAmt);
     /// @notice Error for redeeming before the liquidation window
@@ -55,19 +59,10 @@ interface ITermMaxMarket {
         IGearingToken gt
     );
 
-    /// @notice Emitted when setting fees
-    event UpdateFeeRate(
-        uint32 lendFeeRatio,
-        uint32 minNLendFeeR,
-        uint32 borrowFeeRatio,
-        uint32 minNBorrowFeeR,
-        uint32 redeemFeeRatio,
-        uint32 issueFtfeeRatio,
-        uint32 lockingPercentage,
-        uint32 protocolFeeRatio
+    /// @notice Emitted when market config is updated
+    event UpdateMarketConfig(
+        MarketConfig config
     );
-    /// @notice Emitted when setting treasurer address
-    event UpdateTreasurer(address indexed treasurer);
     /// @notice Emitted when change the value of lsf
     event UpdateLsf(uint32 lsf);
     /// @notice Emitted when setting the market whitelist
@@ -251,24 +246,14 @@ interface ITermMaxMarket {
     /// @notice Return the configuration
     function config() external view returns (MarketConfig memory);
 
-    /// @notice Set the fee rate of the market
-    function setFeeRate(
-        uint32 lendFeeRatio,
-        uint32 minNLendFeeR,
-        uint32 borrowFeeRatio,
-        uint32 minNBorrowFeeR,
-        uint32 redeemFeeRatio,
-        uint32 issueFtfeeRatio,
-        uint32 lockingPercentage,
-        uint32 protocolFeeRatio
+    /// @notice Set the market configuration
+    function updateMarketConfig(
+        MarketConfig calldata newConfig
     ) external;
 
-    /// @notice Set the treasurer's address
-    function setTreasurer(address treasurer) external;
+    /// @notice Set the provider's whitelist
+    function setProviderWhitelist(address provider, bool isWhiteList) external;
 
-    /// @notice Set the value of lsf
-    function setLsf(uint32 lsf) external;
-    
     /// @notice Return the reserves of FT and XT
     function ftXtReserves() external view returns (uint128 ftReserve, uint128 xtReserve);
 
@@ -291,16 +276,11 @@ interface ITermMaxMarket {
             IGearingToken gt,
             address collateral,
             IERC20 underlying
-        );
+    );
     /// @notice Return the provider's white list
     /// @param provider Provider address
     /// @return true if the provider is in the white list
     function providerWhitelist(address provider) external view returns (bool);
-
-    /// @notice Set the provider's white list
-    /// @param provider Provider address
-    /// @param isWhiteList true if the provider is in the white list
-    function setProviderWhitelist(address provider, bool isWhiteList) external;
 
     /// @notice Provide liquidity to market
     /// @param underlyingAmt Amount of underlying token provided
@@ -323,37 +303,45 @@ interface ITermMaxMarket {
     /// @notice Buy FT using underlying token
     /// @param underlyingAmtIn The number of unterlying tokens input
     /// @param minTokenOut Minimum number of FT token outputs required
+    /// @param lsf The value of lsf
     /// @return netOut The actual number of FT tokens received
     function buyFt(
         uint128 underlyingAmtIn,
-        uint128 minTokenOut
+        uint128 minTokenOut,
+        uint32 lsf
     ) external returns (uint256 netOut);
 
     /// @notice Buy XT using underlying token
     /// @param underlyingAmtIn The number of unterlying tokens input
     /// @param minTokenOut Minimum number of XT token outputs required
+    /// @param lsf The value of lsf
     /// @return netOut The actual number of XT tokens received
     function buyXt(
         uint128 underlyingAmtIn,
-        uint128 minTokenOut
+        uint128 minTokenOut,
+        uint32 lsf
     ) external returns (uint256 netOut);
 
     /// @notice Sell FT to get underlying token
     /// @param ftAmtIn The number of FT tokens input
     /// @param minUnderlyingOut Minimum number of underlying token outputs required
+    /// @param lsf The value of lsf
     /// @return netOut The actual number of underlying tokens received
     function sellFt(
         uint128 ftAmtIn,
-        uint128 minUnderlyingOut
+        uint128 minUnderlyingOut,
+        uint32 lsf
     ) external returns (uint256 netOut);
 
     /// @notice Sell XT to get underlying token
     /// @param xtAmtIn The number of XT tokens input
     /// @param minUnderlyingOut Minimum number of underlying token outputs required
+    /// @param lsf The value of lsf
     /// @return netOut The actual number of underlying tokens received
     function sellXt(
         uint128 xtAmtIn,
-        uint128 minUnderlyingOut
+        uint128 minUnderlyingOut,
+        uint32 lsf
     ) external returns (uint256 netOut);
 
     /// @notice Sell ​​FT and XT in equal proportion to initial LTV for underlying token.

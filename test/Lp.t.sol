@@ -180,26 +180,6 @@ contract LpTest is Test {
         vm.stopPrank();
     }
 
-    // function testProvideLiquidityRceiveNothing() public {
-    //     vm.startPrank(deployer);
-    //     res.lpFt.approve(address(res.market), res.lpFt.balanceOf(deployer));
-    //     res.lpXt.approve(address(res.market), res.lpXt.balanceOf(deployer));
-    //     res.market.withdrawLiquidity(uint128(res.lpFt.balanceOf(deployer) - 1), uint128(res.lpXt.balanceOf(deployer) - 1));
-
-    //     res.ft.transfer(address(res.market), res.ft.balanceOf(deployer));
-    //     res.xt.transfer(address(res.market), res.xt.balanceOf(deployer));
-    //     vm.stopPrank();
-    //     vm.startPrank(sender);
-
-    //     uint underlyingAmtIn = res.xt.balanceOf(address(res.market)) / Constants.DECIMAL_BASE / 2;
-    //     res.underlying.mint(sender, underlyingAmtIn);
-    //     res.underlying.approve(address(res.market), underlyingAmtIn);
-
-    //     vm.expectRevert(abi.encodeWithSelector(ITermMaxMarket.LpOutputAmtIsZero.selector, uint256(underlyingAmtIn)));
-    //     res.market.provideLiquidity(underlyingAmtIn);
-    //     vm.stopPrank();
-    // }
-
     function testProvideLiquidityBeforeMaturity() public {
         vm.startPrank(sender);
 
@@ -444,6 +424,70 @@ contract LpTest is Test {
         vm.stopPrank();
     }
 
+    function testWithdrawLiquidityWhenHasTrade() public {
+        vm.startPrank(sender);
+
+        uint128 underlyingAmtIn = 100e8;
+        res.underlying.mint(sender, underlyingAmtIn);
+        res.underlying.approve(address(res.market), underlyingAmtIn);
+        (uint128 lpFtOutAmt, uint128 lpXtOutAmt) = res.market.provideLiquidity(
+            underlyingAmtIn
+        );
+
+        vm.startPrank(deployer);
+        res.underlying.mint(deployer, underlyingAmtIn);
+        res.underlying.approve(address(res.market), underlyingAmtIn);
+        res.market.buyFt(underlyingAmtIn, 0e8, res.marketConfig.lsf);
+
+        vm.warp(res.market.config().maturity - 1);
+
+        vm.startPrank(sender);
+        res.lpFt.approve(address(res.market), lpFtOutAmt);
+        res.lpXt.approve(address(res.market), lpXtOutAmt);
+
+        StateChecker.MarketState memory expectedState = JSONLoader
+            .getMarketStateFromJson(
+                testdata,
+                ".expected.withdrawLiquidityWhenHasTrade.contractState"
+            );
+        uint expectFtOutAmt = vm.parseUint(
+            vm.parseJsonString(
+                testdata,
+                ".expected.withdrawLiquidityWhenHasTrade.output.lpFtAmount"
+            )
+        );
+        uint expectXtOutAmt = vm.parseUint(
+            vm.parseJsonString(
+                testdata,
+                ".expected.withdrawLiquidityWhenHasTrade.output.lpXtAmount"
+            )
+        );
+        vm.expectEmit();
+        emit ITermMaxMarket.WithdrawLiquidity(
+            sender,
+            lpFtOutAmt,
+            lpXtOutAmt,
+            uint128(expectFtOutAmt),
+            uint128(expectXtOutAmt),
+            int64(expectedState.apr),
+            uint128(expectedState.ftReserve),
+            uint128(expectedState.xtReserve)
+        );
+        (uint128 ftOutAmt, uint128 xtOutAmt) = res.market.withdrawLiquidity(
+            lpFtOutAmt,
+            lpXtOutAmt
+        );
+
+        StateChecker.checkMarketState(res, expectedState);
+
+        assert(ftOutAmt == expectFtOutAmt);
+        assert(xtOutAmt == expectXtOutAmt);
+        assert(res.ft.balanceOf(sender) == ftOutAmt);
+        assert(res.xt.balanceOf(sender) == xtOutAmt);
+
+        vm.stopPrank();
+    }
+
     function testWithdrawLiquidityBeforeMaturity() public {
         vm.startPrank(sender);
 
@@ -480,6 +524,34 @@ contract LpTest is Test {
         );
         res.market.withdrawLiquidity(lpFtOutAmt, lpXtOutAmt);
 
+        vm.stopPrank();
+    }
+
+    function testWithdrawLiquidityWhenAprTooSmall() public {
+        int64 minApr = marketConfig.apr - 1;
+        marketConfig.minApr = minApr;
+        vm.prank(deployer);
+        res.market.updateMarketConfig(marketConfig);
+
+        vm.startPrank(sender);
+        uint128 underlyingAmtIn = 100e8;
+        res.underlying.mint(sender, underlyingAmtIn);
+        res.underlying.approve(address(res.market), underlyingAmtIn);
+        (uint128 lpFtOutAmt, uint128 lpXtOutAmt) = res.market.provideLiquidity(
+            underlyingAmtIn
+        );
+
+        res.lpFt.approve(address(res.market), lpFtOutAmt);
+
+        vm.expectRevert(abi.encodeWithSelector(
+            ITermMaxMarket.AprLessThanMinApr.selector,
+            11815766,
+            minApr
+        ));
+        res.market.withdrawLiquidity(
+            lpFtOutAmt,
+            0
+        );
         vm.stopPrank();
     }
 }

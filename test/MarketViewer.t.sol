@@ -114,7 +114,8 @@ contract MarketViewerTest is Test {
             sender,
             res.market,
             underlyingAmtIn,
-            minTokenOut
+            minTokenOut,
+            res.marketConfig.lsf
         );
 
         res.underlying.mint(sender, underlyingAmtIn);
@@ -123,7 +124,8 @@ contract MarketViewerTest is Test {
                 sender,
                 res.market,
                 underlyingAmtIn,
-                minTokenOut
+                minTokenOut,
+                res.marketConfig.lsf
             );
 
         res.underlying.mint(sender, underlyingAmtIn);

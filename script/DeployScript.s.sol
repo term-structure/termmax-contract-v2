@@ -107,6 +107,7 @@ contract MarketScript is Script {
             maturity: maturity,
             openTime: openTime,
             apr: apr,
+            minApr: 0,
             lsf: lsf,
             lendFeeRatio: lendFeeRatio,
             minNLendFeeR: minNLendFeeR,

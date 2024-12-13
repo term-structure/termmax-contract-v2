@@ -153,6 +153,7 @@ contract DeployBase is Script {
                 maturity: config.marketConfig.maturity,
                 openTime: uint64(vm.getBlockTimestamp() + openTimeDelay),
                 apr: config.marketConfig.apr,
+                minApr: 0,
                 lsf: config.marketConfig.lsf,
                 lendFeeRatio: config.marketConfig.lendFeeRatio,
                 minNLendFeeR: config.marketConfig.minNLendFeeR,
