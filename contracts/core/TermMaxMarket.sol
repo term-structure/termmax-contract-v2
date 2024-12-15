@@ -1031,11 +1031,13 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
     /**
      * @inheritdoc ITermMaxMarket
      */
-    function withdrawExcessFtXt(address to, uint128 ftAmt, uint128 xtAmt) external onlyOwner { 
+    function withdrawExcessFtXt(address to, uint128 ftAmt, uint128 xtAmt) external onlyOwner isOpen { 
         if(uint256(ftAmt) + ftReserve > ft.balanceOf(address(this)) || uint256(xtAmt) + xtReserve > xt.balanceOf(address(this)))
             revert NotEnoughFtOrXtToWithdraw();
-        ft.safeTransfer(to, ftAmt);
-        xt.safeTransfer(to, xtAmt); 
+        if(ftAmt > 0)
+            ft.safeTransfer(to, ftAmt);
+        if(xtAmt > 0)
+            xt.safeTransfer(to, xtAmt);
         emit WithdrawExcessFtXt(to, ftAmt, xtAmt);
     }
 }
