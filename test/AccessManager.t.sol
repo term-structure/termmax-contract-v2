@@ -410,6 +410,88 @@ contract AccessManagerTest is Test {
         vm.stopPrank();
     }
 
+    function testRemoveOracle() public {
+        vm.startPrank(deployer);
+
+        address asset = vm.randomAddress();
+        AggregatorV3Interface aggregator = AggregatorV3Interface(vm.randomAddress());
+        AggregatorV3Interface backupAggregator = AggregatorV3Interface(vm.randomAddress());
+        uint32 heartbeat = 3600;
+
+        // First set an oracle
+        IOracle.Oracle memory oracle = IOracle.Oracle({
+            aggregator: aggregator,
+            backupAggregator: backupAggregator,
+            heartbeat: heartbeat
+        });
+        manager.setOracle(res.oracle, asset, oracle);
+
+        // Then remove it
+        vm.expectEmit();
+        emit IOracle.UpdateOracle(asset, AggregatorV3Interface(address(0)), AggregatorV3Interface(address(0)), 0);
+        manager.removeOracle(res.oracle, asset);
+
+        vm.stopPrank();
+    }
+
+    function testRemoveOracleWithoutAuth() public {
+        vm.startPrank(sender);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector,
+                sender,
+                manager.DEFAULT_ADMIN_ROLE()
+            )
+        );
+        manager.removeOracle(res.oracle, address(0));
+
+        vm.stopPrank();
+    }
+
+    function testRemoveOracleInvalidAsset() public {
+        vm.startPrank(deployer);
+
+        vm.expectRevert(IOracle.InvalidAssetOrOracle.selector);
+        manager.removeOracle(res.oracle, address(0));
+
+        vm.stopPrank();
+    }
+
+    function testSetOracleInvalidAsset() public {
+        vm.startPrank(deployer);
+
+        // Test with zero asset address
+        AggregatorV3Interface aggregator = AggregatorV3Interface(vm.randomAddress());
+        AggregatorV3Interface backupAggregator = AggregatorV3Interface(vm.randomAddress());
+        uint32 heartbeat = 3600;
+
+        IOracle.Oracle memory oracle = IOracle.Oracle({
+            aggregator: aggregator,
+            backupAggregator: backupAggregator,
+            heartbeat: heartbeat
+        });
+
+        vm.expectRevert(IOracle.InvalidAssetOrOracle.selector);
+        manager.setOracle(res.oracle, address(0), oracle);
+
+        // Test with zero aggregator address
+        oracle.aggregator = AggregatorV3Interface(address(0));
+        oracle.backupAggregator = backupAggregator;
+
+        vm.expectRevert(IOracle.InvalidAssetOrOracle.selector);
+        manager.setOracle(res.oracle, vm.randomAddress(), oracle);
+
+        // Test with zero backup aggregator address
+        oracle.aggregator = aggregator;
+        oracle.backupAggregator = AggregatorV3Interface(address(0));
+
+        vm.expectRevert(IOracle.InvalidAssetOrOracle.selector);
+        manager.setOracle(res.oracle, vm.randomAddress(), oracle);
+
+        vm.stopPrank();
+    }
+
     function testSetProviderWhitelist() public {
          vm.startPrank(deployer);
 

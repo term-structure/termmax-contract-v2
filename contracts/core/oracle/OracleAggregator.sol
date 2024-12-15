@@ -22,12 +22,18 @@ contract OracleAggregator is IOracle, UUPSUpgradeable, OwnableUpgradeable {
      * @inheritdoc IOracle
      */
     function setOracle(address asset, Oracle memory oracle) external onlyOwner {
+        if (asset == address(0) || address(oracle.aggregator) == address(0) || address(oracle.backupAggregator) == address(0)) {
+            revert InvalidAssetOrOracle();
+        }
         oracles[asset] = oracle;
         emit UpdateOracle(asset, oracle.aggregator, oracle.backupAggregator, oracle.heartbeat);
     }
 
     /// @notice Remove oracle
     function removeOracle(address asset) external onlyOwner {
+        if (asset == address(0)) {
+            revert InvalidAssetOrOracle();
+        }
         delete oracles[asset];
         emit UpdateOracle(asset, AggregatorV3Interface(address(0)), AggregatorV3Interface(address(0)), 0);
     }
