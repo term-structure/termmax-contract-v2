@@ -15,6 +15,9 @@ interface IOracle {
     /// @notice Error thrown when the oracle is not working
     error OracleIsNotWorking(address asset);
 
+    /// @notice Error thrown when the asset or oracle address is invalid
+    error InvalidAssetOrOracle();
+
     /// @notice Event emitted when the oracle of asset is updated
     /// @param asset The address of the asset
     /// @param aggregator The address of the aggregator
@@ -34,4 +37,7 @@ interface IOracle {
 
     /// @notice Set oracle
     function setOracle(address asset, Oracle memory oracle) external;
+
+    /// @notice Remove oracle
+    function removeOracle(address asset) external;
 }

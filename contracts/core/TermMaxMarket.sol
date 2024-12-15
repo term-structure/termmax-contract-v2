@@ -162,6 +162,9 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         emit UpdateMarketConfig(mConfig);
     }
 
+    /**
+     * @inheritdoc ITermMaxMarket
+     */
     function setProviderWhitelist(address provider, bool isWhiteList) external override onlyOwner {
         providerWhitelist[provider] = isWhiteList;
         emit UpdateProviderWhitelist(provider, isWhiteList);
