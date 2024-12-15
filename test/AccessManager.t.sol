@@ -635,6 +635,36 @@ contract AccessManagerTest is Test {
         vm.stopPrank();
     }
 
+    function testWithdrawExcessFtXtWhenPaused() public {
+        vm.startPrank(deployer);
+        
+        // First pause the market
+        manager.setSwitchOfMarket(res.market, false);
+
+        uint128 ftAmt = 1e18;
+        uint128 xtAmt = 1e18;
+
+        vm.expectRevert(abi.encodeWithSignature("EnforcedPause()"));
+        manager.withdrawExcessFtXt(res.market, deployer, ftAmt, xtAmt);
+
+        vm.stopPrank();
+    }
+
+    function testWithdrawExcessFtXtAfterMaturity() public {
+        vm.startPrank(deployer);
+        
+        // Set time after market maturity
+        vm.warp(marketConfig.maturity + 1);
+
+        uint128 ftAmt = 1e18;
+        uint128 xtAmt = 1e18;
+
+        vm.expectRevert(ITermMaxMarket.MarketIsNotOpen.selector);
+        manager.withdrawExcessFtXt(res.market, deployer, ftAmt, xtAmt);
+
+        vm.stopPrank();
+    }
+
     function testWithdrawExcessFtXtWithoutAuth() public {
         vm.startPrank(sender);
         
