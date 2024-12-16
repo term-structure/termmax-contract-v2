@@ -14,7 +14,7 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
  * @author Term Structure Labs
  * @notice Use the customized price feed contract to normalized price feed interface for TermMax Protocol
  */
-contract PTWithRedStonePriceFeed is AggregatorV3Interface {
+contract PTWithPriceFeed is AggregatorV3Interface {
     using Math for uint256;
     using SafeCast for *;
     using PendlePYOracleLib for IPMarket;
@@ -25,8 +25,8 @@ contract PTWithRedStonePriceFeed is AggregatorV3Interface {
     IPMarket public immutable MARKET;
     // TWAP duration
     uint32 public immutable DURATION;
-    // RedStone price feed interface
-    AggregatorV3Interface public immutable REDSTONE_PRICE_FEED;
+    // Price feed interface
+    AggregatorV3Interface public immutable PRICE_FEED;
 
     // error to call `getRoundData` function
     error GetRoundDataNotSupported();
@@ -40,21 +40,21 @@ contract PTWithRedStonePriceFeed is AggregatorV3Interface {
      * @param pendlePYLpOracle The Pendle PY LP oracle contract
      * @param market The Pendle market contract
      * @param duration The TWAP duration
-     * @param redStonePriceFeed The RedStone price feed interface
+     * @param priceFeed The price feed interface
      */
     constructor(
         PendlePYLpOracle pendlePYLpOracle,
         IPMarket market,
         uint32 duration,
-        AggregatorV3Interface redStonePriceFeed
+        AggregatorV3Interface priceFeed
     ) {
-        (, int256 answer, , , ) = redStonePriceFeed.latestRoundData();
+        (, int256 answer, , , ) = priceFeed.latestRoundData();
         if (answer == 0) revert PriceIsZero();
 
         PY_LP_ORACLE = pendlePYLpOracle;
         MARKET = market;
         DURATION = duration;
-        REDSTONE_PRICE_FEED = redStonePriceFeed;
+        PRICE_FEED = priceFeed;
 
         if (!_oracleIsReady()) revert OracleIsNotReady();
     }
@@ -107,7 +107,7 @@ contract PTWithRedStonePriceFeed is AggregatorV3Interface {
             startedAt,
             updatedAt,
             answeredInRound
-        ) = REDSTONE_PRICE_FEED.latestRoundData();
+        ) = PRICE_FEED.latestRoundData();
         answer = ptRateInSy.mulDiv(answer.toUint256(), PMath.ONE).toInt256();
 
         return (roundId, answer, startedAt, updatedAt, answeredInRound);
@@ -127,17 +127,17 @@ contract PTWithRedStonePriceFeed is AggregatorV3Interface {
         return !increaseCardinalityRequired && oldestObservationSatisfied;
     }
 
-    /** ========== Return original redstone data ========== */
+    /** ========== Return original price feed data ========== */
 
     function decimals() external view returns (uint8) {
-        return REDSTONE_PRICE_FEED.decimals();
+        return PRICE_FEED.decimals();
     }
 
     function description() external view returns (string memory) {
-        return REDSTONE_PRICE_FEED.description();
+        return PRICE_FEED.description();
     }
 
     function version() external view returns (uint256) {
-        return REDSTONE_PRICE_FEED.version();
+        return PRICE_FEED.version();
     }
 }

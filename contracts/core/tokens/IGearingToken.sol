@@ -3,7 +3,7 @@ pragma solidity ^0.8.27;
 
 import {IERC20Metadata, IERC20} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {IERC721Enumerable} from "@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol";
-import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
+import {IOracle} from "../oracle/IOracle.sol";
 
 /**
  * @title TermMax Gearing token interface
@@ -22,8 +22,8 @@ interface IGearingToken is IERC721Enumerable {
         IERC20 ft;
         /// @notice The treasurer's address, which will receive protocol reward while liquidation
         address treasurer;
-        /// @notice The price feed of underlying token
-        AggregatorV3Interface underlyingOracle;
+        /// @notice The oracle aggregator
+        IOracle oracle;
         /// @notice The unix time of maturity date
         uint64 maturity;
         /// @notice The debt liquidation threshold
@@ -39,8 +39,6 @@ interface IGearingToken is IERC721Enumerable {
         bool liquidatable;
     }
 
-    /// @notice Error for minting gt when the swtich is close
-    error CanNotMintGtNow();
     /// @notice Error for merge loans have different owners
     /// @param id The id of Gearing Token has different owner
     /// @param diffOwner The different owner
@@ -88,8 +86,8 @@ interface IGearingToken is IERC721Enumerable {
     /// @param debtValue The debtValue is USD, decimals 1e8
     error DebtValueIsTooSmall(uint256 debtValue);
 
-    /// @notice Emitted when updating the switch of minting gt
-    event UpdateMintingSwitch(bool canMintGt);
+    /// @notice Emitted when updating the configuration
+    event UpdateConfig(bytes configData);
 
     /// @notice Emitted when merging multiple Gearing Tokens into one
     /// @param owner The owner of those tokens
@@ -146,8 +144,8 @@ interface IGearingToken is IERC721Enumerable {
     /// @dev Only the market can call this function
     function setTreasurer(address treasurer) external;
 
-    /// @notice Update the switch of minting gt
-    function updateMintingSwitch(bool canMintGt) external;
+    /// @notice Set the configuration of Gearing Token
+    function updateConfig(bytes memory configData) external;
 
     /// @notice Return the configuration of Gearing Token
     function getGtConfig() external view returns (GtConfig memory);
@@ -205,7 +203,8 @@ interface IGearingToken is IERC721Enumerable {
     /// @notice Repay the debt of Gearing Token,
     ///         the collateral will send by flashloan first.
     /// @param id The id of Gearing Token
-    function flashRepay(uint256 id, bytes calldata callbackData) external;
+    /// @param byUnderlying Repay using underlying token or bonds token
+    function flashRepay(uint256 id, bool byUnderlying, bytes calldata callbackData) external;
 
     /// @notice Remove collateral from the loan.
     ///         Require the loan to value bigger than maxLtv after this action.
@@ -250,10 +249,4 @@ interface IGearingToken is IERC721Enumerable {
     function getCollateralValue(
         bytes memory collateralData
     ) external view returns (uint256 collateralValue);
-
-    /// @notice Suspension of Gearing Token liquidation and collateral reduction
-    function pause() external;
-
-    /// @notice Open Gearing Token liquidation and collateral reduction
-    function unpause() external;
 }

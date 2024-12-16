@@ -41,6 +41,18 @@ library JSONLoader {
                 string.concat(key, ".collateralReserve")
             )
         );
+        state.lpFtTotalSupply = vm.parseUint(
+            vm.parseJsonString(
+                testdataJSON,
+                string.concat(key, ".lpFtTotalSupply")
+            )
+        );
+        state.lpXtTotalSupply = vm.parseUint(
+            vm.parseJsonString(
+                testdataJSON,
+                string.concat(key, ".lpXtTotalSupply")
+            )
+        );
     }
 
     function getMarketConfigFromJson(

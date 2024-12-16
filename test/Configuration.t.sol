@@ -9,7 +9,7 @@ import {JSONLoader} from "./utils/JSONLoader.sol";
 import {ITermMaxMarket, TermMaxMarket, Constants} from "../contracts/core/TermMaxMarket.sol";
 import {MockERC20, ERC20} from "../contracts/test/MockERC20.sol";
 import {MockPriceFeed} from "../contracts/test/MockPriceFeed.sol";
-import {ITermMaxFactory, TermMaxFactory, IMintableERC20, IGearingToken, AggregatorV3Interface, GearingTokenWithERC20} from "../contracts/core/factory/TermMaxFactory.sol";
+import {ITermMaxFactory, TermMaxFactory, IMintableERC20, IGearingToken, GearingTokenWithERC20} from "../contracts/core/factory/TermMaxFactory.sol";
 import "../contracts/core/storage/TermMaxStorage.sol";
 
 contract ConfigurationTest is Test {
@@ -51,22 +51,59 @@ contract ConfigurationTest is Test {
         vm.stopPrank();
     }
 
-    function testSetTreasurer() public {
+    function testUpdateMarketConfig() public {
         vm.startPrank(deployer);
-        address newTreasurer = vm.randomAddress();
+
+        MarketConfig memory newConfig = res.market.config();
+        newConfig.treasurer = vm.randomAddress();
+        newConfig.lsf = 0.11e8;
+        newConfig.minApr = -0.3e8;
+        newConfig.lendFeeRatio = 0.01e8;
+        newConfig.minNLendFeeR = 0.02e8;
+        newConfig.borrowFeeRatio = 0.03e8;
+        newConfig.minNBorrowFeeR = 0.04e8;
+        newConfig.redeemFeeRatio = 0.05e8;
+        newConfig.issueFtFeeRatio = 0.06e8;
+        newConfig.lockingPercentage = 0.07e8;
+        newConfig.protocolFeeRatio = 0.08e8;
 
         vm.expectEmit();
-        emit ITermMaxMarket.UpdateTreasurer(newTreasurer);
-        res.market.setTreasurer(newTreasurer);
-        assert(res.market.config().treasurer == newTreasurer);
+        emit ITermMaxMarket.UpdateMarketConfig(newConfig);
+        res.market.updateMarketConfig(newConfig);
 
-        assert(res.gt.getGtConfig().treasurer == newTreasurer);
+        MarketConfig memory updatedConfig = res.market.config();
+        assertEq(updatedConfig.treasurer, newConfig.treasurer);
+        assertEq(updatedConfig.lsf, newConfig.lsf);
+        assertEq(updatedConfig.minApr, newConfig.minApr);
+        assertEq(updatedConfig.lendFeeRatio, newConfig.lendFeeRatio);
+        assertEq(updatedConfig.minNLendFeeR, newConfig.minNLendFeeR);
+        assertEq(updatedConfig.borrowFeeRatio, newConfig.borrowFeeRatio);
+        assertEq(updatedConfig.minNBorrowFeeR, newConfig.minNBorrowFeeR);
+        assertEq(updatedConfig.redeemFeeRatio, newConfig.redeemFeeRatio);
+        assertEq(updatedConfig.issueFtFeeRatio, newConfig.issueFtFeeRatio);
+        assertEq(updatedConfig.lockingPercentage, newConfig.lockingPercentage);
+        assertEq(updatedConfig.protocolFeeRatio, newConfig.protocolFeeRatio);
+
+        // Check GT treasurer is updated
+        assert(res.gt.getGtConfig().treasurer == newConfig.treasurer);
+
         vm.stopPrank();
     }
 
-    function testSetTreasurerWithoutAuth() public {
+    function testUpdateMarketConfigWithoutAuth() public {
         vm.startPrank(sender);
-        address newTreasurer = vm.randomAddress();
+
+        MarketConfig memory newConfig = res.market.config();
+        newConfig.treasurer = vm.randomAddress();
+        newConfig.lsf = 0.11e8;
+        newConfig.lendFeeRatio = 0.01e8;
+        newConfig.minNLendFeeR = 0.02e8;
+        newConfig.borrowFeeRatio = 0.03e8;
+        newConfig.minNBorrowFeeR = 0.04e8;
+        newConfig.redeemFeeRatio = 0.05e8;
+        newConfig.issueFtFeeRatio = 0.06e8;
+        newConfig.lockingPercentage = 0.07e8;
+        newConfig.protocolFeeRatio = 0.08e8;
 
         vm.expectRevert(
             abi.encodePacked(
@@ -74,125 +111,89 @@ contract ConfigurationTest is Test {
                 abi.encode(sender)
             )
         );
-        res.market.setTreasurer(newTreasurer);
+        res.market.updateMarketConfig(newConfig);
 
         vm.stopPrank();
     }
 
-    function testSetFee() public {
+    function testUpdateMarketConfigInvalidLsf() public {
         vm.startPrank(deployer);
 
-        uint32 lendFeeRatio = 0.01e8;
-        uint32 minNLendFeeR = 0.02e8;
-        uint32 borrowFeeRatio = 0.03e8;
-        uint32 minNBorrowFeeR = 0.04e8;
-        uint32 redeemFeeRatio = 0.05e8;
-        uint32 issueFtFeeRatio = 0.06e8;
-        uint32 lockingPercentage = 0.07e8;
-        uint32 protocolFeeRatio = 0.08e8;
-        vm.expectEmit();
-        emit ITermMaxMarket.UpdateFeeRate(
-            lendFeeRatio,
-            minNLendFeeR,
-            borrowFeeRatio,
-            minNBorrowFeeR,
-            redeemFeeRatio,
-            issueFtFeeRatio,
-            lockingPercentage,
-            protocolFeeRatio
-        );
-        res.market.setFeeRate(
-            lendFeeRatio,
-            minNLendFeeR,
-            borrowFeeRatio,
-            minNBorrowFeeR,
-            redeemFeeRatio,
-            issueFtFeeRatio,
-            lockingPercentage,
-            protocolFeeRatio
-        );
-        assert(res.market.config().lendFeeRatio == lendFeeRatio);
-        assert(res.market.config().minNLendFeeR == minNLendFeeR);
-        assert(res.market.config().borrowFeeRatio == borrowFeeRatio);
-        assert(res.market.config().minNBorrowFeeR == minNBorrowFeeR);
-        assert(res.market.config().redeemFeeRatio == redeemFeeRatio);
-        assert(res.market.config().issueFtFeeRatio == issueFtFeeRatio);
-        assert(res.market.config().lockingPercentage == lockingPercentage);
-        assert(res.market.config().protocolFeeRatio == protocolFeeRatio);
-        vm.stopPrank();
-    }
-
-    function testSetFeeWithoutAuth() public {
-        vm.startPrank(sender);
-
-        uint32 lendFeeRatio = 0.01e8;
-        uint32 minNLendFeeR = 0.02e8;
-        uint32 borrowFeeRatio = 0.03e8;
-        uint32 minNBorrowFeeR = 0.04e8;
-        uint32 redeemFeeRatio = 0.05e8;
-        uint32 issueFtFeeRatio = 0.06e8;
-        uint32 lockingPercentage = 0.07e8;
-        uint32 protocolFeeRatio = 0.08e8;
+        MarketConfig memory newConfig = res.market.config();
+        newConfig.lsf = uint32(Constants.DECIMAL_BASE + 1);
 
         vm.expectRevert(
-            abi.encodePacked(
-                bytes4(keccak256("OwnableUnauthorizedAccount(address)")),
-                abi.encode(sender)
+            abi.encodeWithSelector(
+                ITermMaxMarket.InvalidLsf.selector,
+                newConfig.lsf
             )
         );
-        res.market.setFeeRate(
-            lendFeeRatio,
-            minNLendFeeR,
-            borrowFeeRatio,
-            minNBorrowFeeR,
-            redeemFeeRatio,
-            issueFtFeeRatio,
-            lockingPercentage,
-            protocolFeeRatio
-        );
-        vm.stopPrank();
-    }
+        res.market.updateMarketConfig(newConfig);
 
-    function testSetLsf() public {
-        vm.startPrank(deployer);
-        uint32 lsf = 0.11e8;
-
-        vm.expectEmit();
-        emit ITermMaxMarket.UpdateLsf(lsf);
-        res.market.setLsf(lsf);
-        assert(res.market.config().lsf == lsf);
-
-        vm.stopPrank();
-    }
-
-    function testSetLsfWithoutAuth() public {
-        vm.startPrank(sender);
-        uint32 lsf = 0.11e8;
+        newConfig.lsf = 0;
         vm.expectRevert(
-            abi.encodePacked(
-                bytes4(keccak256("OwnableUnauthorizedAccount(address)")),
-                abi.encode(sender)
+            abi.encodeWithSelector(
+                ITermMaxMarket.InvalidLsf.selector,
+                newConfig.lsf
             )
         );
-        res.market.setLsf(lsf);
+        res.market.updateMarketConfig(newConfig);
 
         vm.stopPrank();
     }
 
-    function testSetLsfWithoutInvalidLsf() public {
+    function testSetProviderWhitelist() public {
+        address provider = vm.randomAddress();
+        
+        assertTrue(res.market.providerWhitelist(address(0)), "All providers should be whitelisted by default");
+        // Test unauthorized access
+        vm.startPrank(sender);
+        vm.expectRevert(abi.encodePacked(
+                bytes4(keccak256("OwnableUnauthorizedAccount(address)")),
+                abi.encode(sender)
+            ));
+        res.market.setProviderWhitelist(provider, true);
+        vm.stopPrank();
+
+        // Test setting whitelist as owner
         vm.startPrank(deployer);
-        uint32 lsf = 0;
-        vm.expectRevert(
-            abi.encodeWithSelector(ITermMaxMarket.InvalidLsf.selector, lsf)
-        );
-        res.market.setLsf(lsf);
+        vm.expectEmit();
+        emit ITermMaxMarket.UpdateProviderWhitelist(provider, true);
+        res.market.setProviderWhitelist(provider, true);
+        assertTrue(res.market.providerWhitelist(provider), "Provider should be whitelisted");
 
-        lsf = 1.01e8;
-        vm.expectRevert(
-            abi.encodeWithSelector(ITermMaxMarket.InvalidLsf.selector, lsf)
-        );
-        res.market.setLsf(lsf);
+        // Test removing from whitelist
+        vm.expectEmit();
+        emit ITermMaxMarket.UpdateProviderWhitelist(provider, false);
+        res.market.setProviderWhitelist(provider, false);
+        assertFalse(res.market.providerWhitelist(provider), "Provider should not be whitelisted");
+        vm.stopPrank();
+    }
 
+    function testSetMultipleProviderWhitelist() public {
+        address[] memory providers = new address[](3);
+        providers[0] = vm.randomAddress();
+        providers[1] = vm.randomAddress();
+        providers[2] = vm.randomAddress();
+
+        vm.startPrank(deployer);
+        
+        // Whitelist multiple providers
+        for (uint i = 0; i < providers.length; i++) {
+            res.market.setProviderWhitelist(providers[i], true);
+            assertTrue(res.market.providerWhitelist(providers[i]), "Provider should be whitelisted");
+        }
+
+        // Verify each provider's status
+        for (uint i = 0; i < providers.length; i++) {
+            assertTrue(res.market.providerWhitelist(providers[i]), "Provider should remain whitelisted");
+        }
+
+        // Remove whitelist status
+        for (uint i = 0; i < providers.length; i++) {
+            res.market.setProviderWhitelist(providers[i], false);
+            assertFalse(res.market.providerWhitelist(providers[i]), "Provider should not be whitelisted");
+        }
         vm.stopPrank();
     }
 }

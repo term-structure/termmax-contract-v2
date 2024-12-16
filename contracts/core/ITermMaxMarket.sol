@@ -22,6 +22,14 @@ interface ITermMaxMarket {
     error MarketIsNotOpen();
     /// @notice Error for the maturity day has been reached
     error MarketWasClosed();
+    /// @notice Error for provider not whitelisted
+    error ProviderNotWhitelisted(address provider);
+    /// @notice Error for receiving zero lp token when providing liquidity
+    error LpOutputAmtIsZero(uint256 underlyingAmt);
+    /// @notice Error for lsf is changed between user post trade request
+    error LsfChanged();
+    /// @notice Error for apr is less than min apr
+    error AprLessThanMinApr(int64 apr, int64 minApr);
     /// @notice Error for the actual output value does not match the expected value
     error UnexpectedAmount(uint128 expectedAmt, uint128 actualAmt);
     /// @notice Error for redeeming before the liquidation window
@@ -32,6 +40,8 @@ interface ITermMaxMarket {
     error EvacuationIsNotActived();
     /// @notice Error for evacuation mode is actived
     error EvacuationIsActived();
+    /// @notice Error for not enough excess FT/XT to withdraw
+    error NotEnoughFtOrXtToWithdraw();
 
     /// @notice Emitted when market initialized
     /// @param collateral Collateral token
@@ -49,32 +59,29 @@ interface ITermMaxMarket {
         IGearingToken gt
     );
 
-    /// @notice Emitted when setting fees
-    event UpdateFeeRate(
-        uint32 lendFeeRatio,
-        uint32 minNLendFeeR,
-        uint32 borrowFeeRatio,
-        uint32 minNBorrowFeeR,
-        uint32 redeemFeeRatio,
-        uint32 issueFtfeeRatio,
-        uint32 lockingPercentage,
-        uint32 protocolFeeRatio
+    /// @notice Emitted when market config is updated
+    event UpdateMarketConfig(
+        MarketConfig config
     );
-    /// @notice Emitted when setting treasurer address
-    event UpdateTreasurer(address indexed treasurer);
     /// @notice Emitted when change the value of lsf
     event UpdateLsf(uint32 lsf);
+    /// @notice Emitted when setting the market whitelist
+    event UpdateProviderWhitelist(address provider, bool isWhiteList);
 
     /// @notice Emitted when providing liquidity to market
     /// @param caller Who call the function
     /// @param underlyingAmt Amount of underlying token provided
     /// @param lpFtAmt  The number of LpFT tokens received
     /// @param lpXtAmt The number of LpXT tokens received
+    /// @param ftReserve The new FT reserve amount
+    /// @param xtReserve The new XT reserve amount
     event ProvideLiquidity(
         address indexed caller,
         uint256 underlyingAmt,
         uint128 lpFtAmt,
-        uint128 lpXtAmt
+        uint128 lpXtAmt,
+        uint128 ftReserve,
+        uint128 xtReserve
     );
 
     /// @notice Emitted when withdrawing FT/XT from market
@@ -84,13 +91,17 @@ interface ITermMaxMarket {
     /// @param ftOutAmt The number of XT tokens received
     /// @param xtOutAmt The number of XT tokens received
     /// @param newApr New apr value with BASE_DECIMALS after do this action
+    /// @param ftReserve The new FT reserve amount
+    /// @param xtReserve The new XT reserve amount
     event WithdrawLiquidity(
         address indexed caller,
         uint128 lpFtAmt,
         uint128 lpXtAmt,
         uint128 ftOutAmt,
         uint128 xtOutAmt,
-        int64 newApr
+        int64 newApr,
+        uint128 ftReserve,
+        uint128 xtReserve
     );
 
     /// @notice Emitted when buy FT/XT using underlying token
@@ -101,6 +112,8 @@ interface ITermMaxMarket {
     /// @param actualAmt The number of FT/XT tokens received
     /// @param feeAmt Transaction Fees
     /// @param newApr New apr value with BASE_DECIMALS after do this action
+    /// @param ftReserve The new FT reserve amount
+    /// @param xtReserve The new XT reserve amount
     event BuyToken(
         address indexed caller,
         IMintableERC20 indexed token,
@@ -108,7 +121,9 @@ interface ITermMaxMarket {
         uint128 expectedAmt,
         uint128 actualAmt,
         uint128 feeAmt,
-        int64 newApr
+        int64 newApr,
+        uint128 ftReserve,
+        uint128 xtReserve
     );
 
     /// @notice Emitted when sell FT/XT
@@ -119,6 +134,8 @@ interface ITermMaxMarket {
     /// @param actualAmt The number of underluing tokens received
     /// @param feeAmt Transaction Fees
     /// @param newApr New apr value with BASE_DECIMALS after do this action
+    /// @param ftReserve The new FT reserve amount
+    /// @param xtReserve The new XT reserve amount
     event SellToken(
         address indexed caller,
         IMintableERC20 indexed token,
@@ -126,13 +143,22 @@ interface ITermMaxMarket {
         uint128 expectedAmt,
         uint128 actualAmt,
         uint128 feeAmt,
-        int64 newApr
+        int64 newApr,
+        uint128 ftReserve,
+        uint128 xtReserve
     );
 
     /// @notice Emitted when removing liquidity from market
     /// @param caller Who call the function
     /// @param underlyingAmt the amount of underlying removed
-    event RemoveLiquidity(address indexed caller, uint256 underlyingAmt);
+    /// @param ftReserve The new FT reserve amount
+    /// @param xtReserve The new XT reserve amount
+    event RemoveLiquidity(
+        address indexed caller,
+        uint256 underlyingAmt,
+        uint128 ftReserve,
+        uint128 xtReserve
+    );
 
     /// @notice Emitted when doing leverage
     /// @param loanReceiver Who call the function
@@ -194,6 +220,11 @@ interface ITermMaxMarket {
         uint128 xtAmt,
         uint256 underlyingAmt
     );
+    /// @notice Emitted when withdrawing the excess FT and XT
+    /// @param to Who receive the excess FT and XT
+    /// @param ftAmt The number of FT tokens received
+    /// @param xtAmt The number of XT tokens received
+    event WithdrawExcessFtXt(address indexed to, uint128 ftAmt, uint128 xtAmt);
 
     /// @notice Initialize the token and configuration of the market
     /// @param admin Administrator address for configuring parameters such as transaction fees
@@ -215,23 +246,16 @@ interface ITermMaxMarket {
     /// @notice Return the configuration
     function config() external view returns (MarketConfig memory);
 
-    /// @notice Set the fee rate of the market
-    function setFeeRate(
-        uint32 lendFeeRatio,
-        uint32 minNLendFeeR,
-        uint32 borrowFeeRatio,
-        uint32 minNBorrowFeeR,
-        uint32 redeemFeeRatio,
-        uint32 issueFtfeeRatio,
-        uint32 lockingPercentage,
-        uint32 protocolFeeRatio
+    /// @notice Set the market configuration
+    function updateMarketConfig(
+        MarketConfig calldata newConfig
     ) external;
 
-    /// @notice Set the treasurer's address
-    function setTreasurer(address treasurer) external;
+    /// @notice Set the provider's whitelist
+    function setProviderWhitelist(address provider, bool isWhiteList) external;
 
-    /// @notice Set the value of lsf
-    function setLsf(uint32 lsf) external;
+    /// @notice Return the reserves of FT and XT
+    function ftXtReserves() external view returns (uint128 ftReserve, uint128 xtReserve);
 
     /// @notice Return the tokens in TermMax Market
     /// @return ft Fixed-rate Token(bond token). Earning Fixed Income with High Certainty
@@ -252,14 +276,18 @@ interface ITermMaxMarket {
             IGearingToken gt,
             address collateral,
             IERC20 underlying
-        );
+    );
+    /// @notice Return the provider's white list
+    /// @param provider Provider address
+    /// @return true if the provider is in the white list
+    function providerWhitelist(address provider) external view returns (bool);
 
     /// @notice Provide liquidity to market
     /// @param underlyingAmt Amount of underlying token provided
     /// @return lpFtOutAmt  The number of LpFT tokens obtained
     /// @return lpXtOutAmt The number of LpXT tokens obtained
     function provideLiquidity(
-        uint256 underlyingAmt
+        uint128 underlyingAmt
     ) external returns (uint128 lpFtOutAmt, uint128 lpXtOutAmt);
 
     /// @notice Withdraw FT/XT from Market
@@ -275,37 +303,45 @@ interface ITermMaxMarket {
     /// @notice Buy FT using underlying token
     /// @param underlyingAmtIn The number of unterlying tokens input
     /// @param minTokenOut Minimum number of FT token outputs required
+    /// @param lsf The value of lsf
     /// @return netOut The actual number of FT tokens received
     function buyFt(
         uint128 underlyingAmtIn,
-        uint128 minTokenOut
+        uint128 minTokenOut,
+        uint32 lsf
     ) external returns (uint256 netOut);
 
     /// @notice Buy XT using underlying token
     /// @param underlyingAmtIn The number of unterlying tokens input
     /// @param minTokenOut Minimum number of XT token outputs required
+    /// @param lsf The value of lsf
     /// @return netOut The actual number of XT tokens received
     function buyXt(
         uint128 underlyingAmtIn,
-        uint128 minTokenOut
+        uint128 minTokenOut,
+        uint32 lsf
     ) external returns (uint256 netOut);
 
     /// @notice Sell FT to get underlying token
     /// @param ftAmtIn The number of FT tokens input
     /// @param minUnderlyingOut Minimum number of underlying token outputs required
+    /// @param lsf The value of lsf
     /// @return netOut The actual number of underlying tokens received
     function sellFt(
         uint128 ftAmtIn,
-        uint128 minUnderlyingOut
+        uint128 minUnderlyingOut,
+        uint32 lsf
     ) external returns (uint256 netOut);
 
     /// @notice Sell XT to get underlying token
     /// @param xtAmtIn The number of XT tokens input
     /// @param minUnderlyingOut Minimum number of underlying token outputs required
+    /// @param lsf The value of lsf
     /// @return netOut The actual number of underlying tokens received
     function sellXt(
         uint128 xtAmtIn,
-        uint128 minUnderlyingOut
+        uint128 minUnderlyingOut,
+        uint32 lsf
     ) external returns (uint256 netOut);
 
     /// @notice Sell ​​FT and XT in equal proportion to initial LTV for underlying token.
@@ -351,21 +387,9 @@ interface ITermMaxMarket {
     /// @notice Open Market Trading
     function unpause() external;
 
-    /// @notice Suspension of Gearing Token liquidation and collateral reduction
-    function pauseGt() external;
+    /// @notice Set the configuration of Gearing Token
+    function updateGtConfig(bytes memory configData) external;
 
-    /// @notice Open Gearing Token liquidation and collateral reduction
-    function unpauseGt() external;
-
-    /// @notice Update the switch of minting gt
-    function updateMintingGtSwitch(bool canMintGt) external;
-
-    // function redeemByPermit(
-    //     address caller,
-    //     uint256[4] calldata amountArray,
-    //     uint256[4] calldata deadlineArray,
-    //     uint8[4] calldata vArray,
-    //     bytes32[4] calldata rArrray,
-    //     bytes32[4] calldata sArray
-    // ) external;
+    /// @notice Withdraw the excess FT and XT
+    function withdrawExcessFtXt(address to, uint128 ftAmt, uint128 xtAmt) external;
 }

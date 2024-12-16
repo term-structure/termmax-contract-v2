@@ -6,6 +6,8 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 import {ITermMaxMarket} from "contracts/core/ITermMaxMarket.sol";
 import {ITermMaxFactory} from "contracts/core/factory/ITermMaxFactory.sol";
 import {ITermMaxRouter} from "contracts/router/ITermMaxRouter.sol";
+import {IOracle} from "contracts/core/oracle/IOracle.sol";
+import {MarketConfig} from "contracts/core/storage/TermMaxStorage.sol";
 
 interface IOwnable {
     function transferOwnership(address newOwner) external;
@@ -21,7 +23,9 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
     /// @notice Role to manage configuration items
     bytes32 public constant CURATOR_ROLE = keccak256("CURATOR_ROLE");
 
-    constructor(address admin) {
+    function initialize(address admin) public initializer {
+        __UUPSUpgradeable_init();
+        __AccessControl_init();
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(CURATOR_ROLE, admin);
         _grantRole(PAUSER_ROLE, admin);
@@ -44,6 +48,16 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
         market = factory.createMarket(deployParams);
     }
 
+    /// @notice Deploy a new market
+    function createMarketAndWhitelist(
+        ITermMaxRouter router,
+        ITermMaxFactory factory,
+        ITermMaxFactory.DeployParams calldata deployParams
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) returns (address market) {
+        market = factory.createMarket(deployParams);
+        router.setMarketWhitelist(market, true);
+    }
+
     /// @notice Transfer ownable contract's ownership
     function transferOwnership(
         address entity,
@@ -61,60 +75,12 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
         proxy.upgradeToAndCall(newImplementation, data);
     }
 
-    /// @notice Set the fee rate of the market
-    function setMarketFeeRate(
-        ITermMaxMarket market,
-        uint32 lendFeeRatio,
-        uint32 minNLendFeeR,
-        uint32 borrowFeeRatio,
-        uint32 minNBorrowFeeR,
-        uint32 redeemFeeRatio,
-        uint32 issueFtfeeRatio,
-        uint32 lockingPercentage,
-        uint32 protocolFeeRatio
-    ) external onlyRole(CURATOR_ROLE) {
-        market.setFeeRate(
-            lendFeeRatio,
-            minNLendFeeR,
-            borrowFeeRatio,
-            minNBorrowFeeR,
-            redeemFeeRatio,
-            issueFtfeeRatio,
-            lockingPercentage,
-            protocolFeeRatio
-        );
-    }
-
-    /// @notice Set the treasurer's address
-    function setMarketTreasurer(
-        ITermMaxMarket market,
-        address treasurer
-    ) external onlyRole(CURATOR_ROLE) {
-        market.setTreasurer(treasurer);
-    }
-
-    /// @notice Set the value of lsf
-    function setMarketLsf(
-        ITermMaxMarket market,
-        uint32 lsf
-    ) external onlyRole(CURATOR_ROLE) {
-        market.setLsf(lsf);
-    }
-
-    /// @notice Set the switch for this market minting GT
-    function setSwitchOfMintingGt(
-        ITermMaxMarket market,
-        bool state
-    ) external onlyRole(CURATOR_ROLE) {
-        market.updateMintingGtSwitch(state);
-    }
-
-    /// @notice Set the market whitelist for router
+        /// @notice Set the market whitelist for router
     function setMarketWhitelist(
         ITermMaxRouter router,
         address market,
         bool isWhitelist
-    ) external onlyRole(CURATOR_ROLE) {
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         router.setMarketWhitelist(market, isWhitelist);
     }
 
@@ -123,8 +89,46 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
         ITermMaxRouter router,
         address adapter,
         bool isWhitelist
-    ) external onlyRole(CURATOR_ROLE) {
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         router.setAdapterWhitelist(adapter, isWhitelist);
+    }
+
+    /// @notice Set the oracle
+    function setOracle(IOracle aggregator, address asset, IOracle.Oracle memory oracle) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        aggregator.setOracle(asset, oracle);
+    }
+
+    /// @notice Remove the oracle
+    function removeOracle(IOracle aggregator, address asset) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        aggregator.removeOracle(asset);
+    }
+
+    /// @notice Withdraw excess FT and XT tokens from the market
+    function withdrawExcessFtXt(
+        ITermMaxMarket market,
+        address to,
+        uint128 ftAmt,
+        uint128 xtAmt
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        market.withdrawExcessFtXt(to, ftAmt, xtAmt);
+    }
+
+    /// @notice Update the market configuration
+    function updateMarketConfig(
+        ITermMaxMarket market,
+        MarketConfig calldata newConfig
+    ) external onlyRole(CURATOR_ROLE) {
+        market.updateMarketConfig(newConfig);
+    }
+
+    /// @notice Set the provider's white list
+    function setProviderWhitelist(ITermMaxMarket market, address provider, bool isWhiteList) external onlyRole(CURATOR_ROLE) {
+        market.setProviderWhitelist(provider, isWhiteList);
+    }
+
+    /// @notice Set the configuration of Gearing Token
+    function updateGtConfig(ITermMaxMarket market, bytes memory configData) external onlyRole(CURATOR_ROLE){
+        market.updateGtConfig(configData);
     }
 
     /// @notice Set the switch for this market
@@ -138,17 +142,7 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
             market.pause();
         }
     }
-    /// @notice Set the switch for GT of this market
-    function setSwitchOfGt(
-        ITermMaxMarket market,
-        bool state
-    ) external onlyRole(PAUSER_ROLE) {
-        if (state) {
-            market.unpauseGt();
-        } else {
-            market.pauseGt();
-        }
-    }
+
     /// @notice Set the switch for Router
     function setSwitchOfRouter(
         ITermMaxRouter router,

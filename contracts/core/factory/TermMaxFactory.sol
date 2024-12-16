@@ -4,7 +4,7 @@ pragma solidity ^0.8.27;
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
-import {IGearingToken, AggregatorV3Interface, IERC20Metadata, GearingTokenWithERC20} from "../tokens/GearingTokenWithERC20.sol";
+import {IGearingToken, IOracle, IERC20Metadata, GearingTokenWithERC20} from "../tokens/GearingTokenWithERC20.sol";
 import {MintableERC20, IMintableERC20} from "../tokens/MintableERC20.sol";
 import {ITermMaxMarket} from "../TermMaxMarket.sol";
 import {ITermMaxFactory} from "./ITermMaxFactory.sol";
@@ -160,7 +160,7 @@ contract TermMaxFactory is ITermMaxFactory, Ownable {
                     underlying: deployParams.underlying,
                     ft: tokens[0],
                     treasurer: deployParams.marketConfig.treasurer,
-                    underlyingOracle: deployParams.underlyingOracle,
+                    oracle: deployParams.oracle,
                     maturity: deployParams.marketConfig.maturity,
                     liquidationLtv: deployParams.liquidationLtv,
                     maxLtv: deployParams.maxLtv,
@@ -202,6 +202,7 @@ contract TermMaxFactory is ITermMaxFactory, Ownable {
                 symbol,
                 decimals
             );
+            // Lp tokens' decimals must bigger than their underlying
             tokens[2] = _deployMintableERC20(
                 address(market),
                 PREFIX_LP_FT,

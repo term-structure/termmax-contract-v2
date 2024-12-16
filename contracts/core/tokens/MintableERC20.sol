@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import {ERC20PermitUpgradeable, ERC20Upgradeable, IERC20Permit} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
+import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {IMintableERC20} from "./IMintableERC20.sol";
 
@@ -10,7 +10,7 @@ import {IMintableERC20} from "./IMintableERC20.sol";
  * @author Term Structure Labs
  */
 contract MintableERC20 is
-    ERC20PermitUpgradeable,
+    ERC20Upgradeable,
     OwnableUpgradeable,
     IMintableERC20
 {
@@ -27,7 +27,6 @@ contract MintableERC20 is
         uint8 decimals_
     ) public override initializer {
         __ERC20_init(name, symbol);
-        __ERC20Permit_init(name);
         __Ownable_init(market);
         _decimals = decimals_;
     }
@@ -51,24 +50,6 @@ contract MintableERC20 is
      */
     function burn(uint256 amount) external override onlyOwner {
         _burn(msg.sender, amount);
-    }
-
-    /**
-     * @inheritdoc ERC20PermitUpgradeable
-     */
-    function permit(
-        address owner,
-        address spender,
-        uint256 value,
-        uint256 deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) public virtual override {
-        if (spender != marketAddr()) {
-            revert SpenderIsNotMarket(spender);
-        }
-        super.permit(owner, spender, value, deadline, v, r, s);
     }
 
     /**

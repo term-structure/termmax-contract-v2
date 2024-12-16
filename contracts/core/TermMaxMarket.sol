@@ -4,9 +4,8 @@ pragma solidity ^0.8.27;
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ITermMaxMarket, MarketConfig, IMintableERC20, IERC20} from "./ITermMaxMarket.sol";
-import {IMintableERC20} from "./tokens/IMintableERC20.sol";
 import {IGearingToken} from "./tokens/IGearingToken.sol";
 import {IFlashLoanReceiver} from "./IFlashLoanReceiver.sol";
 import {TermMaxCurve, MathLib, TradeParams} from "./lib/TermMaxCurve.sol";
@@ -20,28 +19,32 @@ import {Ownable} from "./access/Ownable.sol";
 contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
     using SafeCast for uint256;
     using SafeCast for int256;
+    using SafeERC20 for IERC20;
+    using SafeERC20 for IMintableERC20;
     using MathLib for *;
 
-    MarketConfig _config;
-    address collateral;
-    IERC20 underlying;
-    IMintableERC20 ft;
-    IMintableERC20 xt;
-    IMintableERC20 lpFt;
-    IMintableERC20 lpXt;
-    IGearingToken gt;
+    MarketConfig private _config;
+    address private collateral;
+    IERC20 private underlying;
+    IMintableERC20 private ft;
+    IMintableERC20 private xt;
+    IMintableERC20 private lpFt;
+    IMintableERC20 private lpXt;
+    IGearingToken private gt;
     /// @notice The time when the contract is suspended
-    uint256 pauseTime;
+    uint256 private pauseTime;
+
+    // Track token reserves
+    uint128 private ftReserve;
+    uint128 private xtReserve;
+
+    mapping(address => bool) public providerWhitelist;
 
     /// @notice Check if the market is tradable
     modifier isOpen() {
-        // Check pausable switch
         _requireNotPaused();
-        if (block.timestamp < _config.openTime) {
+        if (block.timestamp < _config.openTime || block.timestamp >= _config.maturity) {
             revert MarketIsNotOpen();
-        }
-        if (block.timestamp >= _config.maturity) {
-            revert MarketWasClosed();
         }
         _;
     }
@@ -57,30 +60,34 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         IGearingToken gt_,
         MarketConfig memory config_
     ) external override {
-        // __initializeOwner will revert if already initialized
         __initializeOwner(admin);
-        if (address(collateral_) == address(underlying_)) {
+        if (address(collateral_) == address(underlying_)) 
             revert CollateralCanNotEqualUnderlyinng();
-        }
+        
         if (
             config_.openTime < block.timestamp ||
             config_.maturity < config_.openTime
-        ) {
+        ) 
             revert InvalidTime(config_.openTime, config_.maturity);
-        }
-        if (config_.lsf == 0 || config_.lsf > Constants.DECIMAL_BASE) {
+        
+        if (config_.lsf == 0 || config_.lsf > Constants.DECIMAL_BASE) 
             revert InvalidLsf(config_.lsf);
-        }
+        
         underlying = underlying_;
         collateral = collateral_;
         config_.rewardIsDistributed = false;
         _config = config_;
-
+        // Allow all providers
+        providerWhitelist[address(0)] = true;
         ft = tokens_[0];
         xt = tokens_[1];
         lpFt = tokens_[2];
         lpXt = tokens_[3];
         gt = gt_;
+
+        // Initialize reserves to 0
+        ftReserve = 0;
+        xtReserve = 0;
 
         emit MarketInitialized(
             collateral,
@@ -97,6 +104,13 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
      */
     function config() public view override returns (MarketConfig memory) {
         return _config;
+    }
+
+    /**
+     * @inheritdoc ITermMaxMarket
+     */
+    function ftXtReserves() public view override returns (uint128, uint128) {
+        return (ftReserve, xtReserve);
     }
 
     /**
@@ -122,72 +136,54 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
     /**
      * @inheritdoc ITermMaxMarket
      */
-    function setFeeRate(
-        uint32 lendFeeRatio,
-        uint32 minNLendFeeR,
-        uint32 borrowFeeRatio,
-        uint32 minNBorrowFeeR,
-        uint32 redeemFeeRatio,
-        uint32 issueFtFeeRatio,
-        uint32 lockingPercentage,
-        uint32 protocolFeeRatio
+    function updateMarketConfig(
+        MarketConfig calldata newConfig
     ) external override onlyOwner {
         MarketConfig memory mConfig = _config;
-        mConfig.lendFeeRatio = lendFeeRatio;
-        mConfig.minNLendFeeR = minNLendFeeR;
-        mConfig.borrowFeeRatio = borrowFeeRatio;
-        mConfig.minNBorrowFeeR = minNBorrowFeeR;
-        mConfig.redeemFeeRatio = redeemFeeRatio;
-        mConfig.issueFtFeeRatio = issueFtFeeRatio;
-        mConfig.lockingPercentage = lockingPercentage;
-        mConfig.protocolFeeRatio = protocolFeeRatio;
-        _config = mConfig;
-        emit UpdateFeeRate(
-            lendFeeRatio,
-            minNLendFeeR,
-            borrowFeeRatio,
-            minNBorrowFeeR,
-            redeemFeeRatio,
-            issueFtFeeRatio,
-            lockingPercentage,
-            protocolFeeRatio
-        );
-    }
-
-    /**
-     * @inheritdoc ITermMaxMarket
-     */
-    function setTreasurer(address treasurer) external override onlyOwner {
-        _config.treasurer = treasurer;
-        gt.setTreasurer(treasurer);
-
-        emit UpdateTreasurer(treasurer);
-    }
-
-    /**
-     * @inheritdoc ITermMaxMarket
-     */
-    function setLsf(uint32 lsf) external override onlyOwner {
-        if (lsf == 0 || lsf > Constants.DECIMAL_BASE) {
-            revert InvalidLsf(lsf);
+        if(newConfig.treasurer != mConfig.treasurer){
+            mConfig.treasurer = newConfig.treasurer;
+            gt.setTreasurer(newConfig.treasurer);
         }
+        if (newConfig.lsf == 0 || newConfig.lsf > Constants.DECIMAL_BASE) {
+            revert InvalidLsf(newConfig.lsf);
+        }
+        mConfig.lsf = newConfig.lsf;
+        mConfig.minApr = newConfig.minApr;
+        mConfig.lendFeeRatio = newConfig.lendFeeRatio;
+        mConfig.minNLendFeeR = newConfig.minNLendFeeR;
+        mConfig.borrowFeeRatio = newConfig.borrowFeeRatio;
+        mConfig.minNBorrowFeeR = newConfig.minNBorrowFeeR;
+        mConfig.redeemFeeRatio = newConfig.redeemFeeRatio;
+        mConfig.issueFtFeeRatio = newConfig.issueFtFeeRatio;
+        mConfig.lockingPercentage = newConfig.lockingPercentage;
+        mConfig.protocolFeeRatio = newConfig.protocolFeeRatio;
+        
+        _config = mConfig;
+        emit UpdateMarketConfig(mConfig);
+    }
 
-        _config.lsf = lsf;
-
-        emit UpdateLsf(lsf);
+    /**
+     * @inheritdoc ITermMaxMarket
+     */
+    function setProviderWhitelist(address provider, bool isWhiteList) external override onlyOwner {
+        providerWhitelist[provider] = isWhiteList;
+        emit UpdateProviderWhitelist(provider, isWhiteList);
     }
 
     /**
      * @inheritdoc ITermMaxMarket
      */
     function provideLiquidity(
-        uint256 underlyingAmt
+        uint128 underlyingAmt
     )
         external
-        isOpen
         nonReentrant
+        isOpen
         returns (uint128 lpFtOutAmt, uint128 lpXtOutAmt)
     {
+        // If address(0) is not in the white list, and the caller is not in the white list, revert
+        if (!providerWhitelist[address(0)] && !providerWhitelist[msg.sender])
+         revert ProviderNotWhitelisted(msg.sender);
         (lpFtOutAmt, lpXtOutAmt) = _provideLiquidity(msg.sender, underlyingAmt);
     }
 
@@ -195,28 +191,54 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         address caller,
         uint256 underlyingAmt
     ) internal returns (uint128 lpFtOutAmt, uint128 lpXtOutAmt) {
-        uint ftReserve = ft.balanceOf(address(this));
+        
         uint lpFtTotalSupply = lpFt.totalSupply();
-
-        uint xtReserve = xt.balanceOf(address(this));
         uint lpXtTotalSupply = lpXt.totalSupply();
+        uint oldFtReserve = ftReserve;
+        uint oldXtReserve = xtReserve;
         (uint128 ftMintedAmt, uint128 xtMintedAmt) = _addLiquidity(
             caller,
             underlyingAmt,
             _config.initialLtv
         );
-
-        lpFtOutAmt = TermMaxCurve
-            .calculateLpOut(ftMintedAmt, ftReserve, lpFtTotalSupply)
-            .toUint128();
-
-        lpXtOutAmt = TermMaxCurve
-            .calculateLpOut(xtMintedAmt, xtReserve, lpXtTotalSupply)
-            .toUint128();
-        lpXt.mint(caller, lpXtOutAmt);
-        lpFt.mint(caller, lpFtOutAmt);
-
-        emit ProvideLiquidity(caller, underlyingAmt, lpFtOutAmt, lpXtOutAmt);
+        lpFtOutAmt = TermMaxCurve.calculateLpOut(ftMintedAmt, oldFtReserve, lpFtTotalSupply).toUint128();
+        lpXtOutAmt = TermMaxCurve.calculateLpOut(xtMintedAmt, oldXtReserve, lpXtTotalSupply).toUint128();
+        if(lpFtOutAmt == 0 || lpXtOutAmt == 0) revert LpOutputAmtIsZero(underlyingAmt);
+        
+        MarketConfig memory mConfig = _config;
+        uint totalFtRewards = lpFt.balanceOf(address(this));
+        uint totalXtRewards = lpXt.balanceOf(address(this));
+        
+        lpFt.mint(address(this), lpFtOutAmt);
+        lpXt.mint(address(this), lpXtOutAmt);
+        
+        lpFtOutAmt = TermMaxCurve.calculateLpWithoutReward(
+            block.timestamp, 
+            mConfig.openTime,
+            mConfig.maturity, 
+            lpFtTotalSupply, 
+            lpFtOutAmt, 
+            totalFtRewards
+        ).toUint128();
+        
+        lpXtOutAmt = TermMaxCurve.calculateLpWithoutReward(
+            block.timestamp,
+            mConfig.openTime,
+            mConfig.maturity,
+            lpXtTotalSupply,
+            lpXtOutAmt,
+            totalXtRewards
+        ).toUint128();
+        lpFt.safeTransfer(caller, lpFtOutAmt);
+        lpXt.safeTransfer(caller, lpXtOutAmt);
+        emit ProvideLiquidity(
+            caller,
+            underlyingAmt,
+            lpFtOutAmt,
+            lpXtOutAmt,
+            ftReserve,
+            xtReserve
+        );
     }
 
     function _addLiquidity(
@@ -224,7 +246,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         uint256 underlyingAmt,
         uint256 ltv
     ) internal returns (uint128 ftMintedAmt, uint128 xtMintedAmt) {
-        underlying.transferFrom(caller, address(this), underlyingAmt);
+        underlying.safeTransferFrom(caller, address(this), underlyingAmt);
 
         ftMintedAmt = ((underlyingAmt * ltv) / Constants.DECIMAL_BASE)
             .toUint128();
@@ -232,6 +254,8 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         // Mint tokens to this
         ft.mint(address(this), ftMintedAmt);
         xt.mint(address(this), xtMintedAmt);
+        ftReserve += ftMintedAmt;
+        xtReserve += xtMintedAmt;
     }
 
     function _removeLiquidity(
@@ -239,7 +263,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         uint256 underlyingAmt,
         uint256 ltv
     ) internal returns (uint128 ftBurnedAmt, uint128 xtBurnedAmt) {
-        underlying.transfer(to, underlyingAmt);
+        underlying.safeTransfer(to, underlyingAmt);
         // Carry calculation to avoid the situation that ft amount is 0
         ftBurnedAmt = ((underlyingAmt * ltv + Constants.DECIMAL_BASE - 1) / Constants.DECIMAL_BASE)
             .toUint128();
@@ -247,6 +271,8 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         // Burn tokens to this
         ft.burn(ftBurnedAmt);
         xt.burn(xtBurnedAmt);
+        ftReserve -= ftBurnedAmt;
+        xtReserve -= xtBurnedAmt;
     }
 
     /// @notice Calculate how many days until expiration
@@ -267,8 +293,8 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
     )
         external
         override
-        isOpen
         nonReentrant
+        isOpen
         returns (uint128 ftOutAmt, uint128 xtOutAmt)
     {
         (ftOutAmt, xtOutAmt) = _withdrawLiquidity(msg.sender, lpFtAmt, lpXtAmt);
@@ -281,35 +307,33 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
     ) internal returns (uint128 ftOutAmt, uint128 xtOutAmt) {
         MarketConfig memory mConfig = _config;
         // calculate out put amount
-        uint ftReserve = ft.balanceOf(address(this));
         if (lpFtAmt > 0) {
-            ftOutAmt = TermMaxCurve
-                .calculateLpWithReward(
-                    lpFtAmt,
-                    lpFt.totalSupply(),
-                    lpFt.balanceOf(address(this)),
-                    ftReserve,
-                    block.timestamp,
-                    mConfig
-                )
-                .toUint128();
-            lpFt.transferFrom(caller, address(this), lpFtAmt);
-            lpFt.burn(lpFtAmt);
+            uint lpFtTotalSupply = lpFt.totalSupply();
+            uint256 lpFtAmtWithReward = lpFtAmt + TermMaxCurve.calculateLpReward(
+                block.timestamp,
+                mConfig.openTime,
+                mConfig.maturity,
+                lpFtTotalSupply,
+                lpFtAmt,
+                lpFt.balanceOf(address(this))
+            );
+            ftOutAmt = ((lpFtAmtWithReward * ftReserve) / lpFtTotalSupply).toUint128();
+            lpFt.safeTransferFrom(caller, address(this), lpFtAmt);
+            lpFt.burn(lpFtAmtWithReward);
         }
-        uint xtReserve = xt.balanceOf(address(this));
         if (lpXtAmt > 0) {
-            xtOutAmt = TermMaxCurve
-                .calculateLpWithReward(
-                    lpXtAmt,
-                    lpXt.totalSupply(),
-                    lpXt.balanceOf(address(this)),
-                    xtReserve,
-                    block.timestamp,
-                    mConfig
-                )
-                .toUint128();
-            lpXt.transferFrom(caller, address(this), lpXtAmt);
-            lpXt.burn(lpXtAmt);
+            uint lpXtTotalSupply = lpXt.totalSupply();
+            uint256 lpXtAmtWithReward = lpXtAmt + TermMaxCurve.calculateLpReward(
+                block.timestamp,
+                mConfig.openTime,
+                mConfig.maturity,
+                lpXtTotalSupply,
+                lpXtAmt,
+                lpXt.balanceOf(address(this))
+            );
+            xtOutAmt = ((lpXtAmtWithReward * xtReserve) / lpXtTotalSupply).toUint128();
+            lpXt.safeTransferFrom(caller, address(this), lpXtAmt);
+            lpXt.burn(lpXtAmtWithReward);
         }
         if (xtOutAmt >= xtReserve || ftOutAmt >= ftReserve) {
             revert TermMaxCurve.LiquidityIsZeroAfterTransaction();
@@ -339,19 +363,23 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
             (, , mConfig.apr) = TermMaxCurve.sellNegFt(tradeParams, mConfig);
         }
         if (ftOutAmt > 0) {
-            ft.transfer(caller, ftOutAmt);
+            ft.safeTransfer(caller, ftOutAmt);
+            ftReserve -= ftOutAmt;
         }
         if (xtOutAmt > 0) {
-            xt.transfer(caller, xtOutAmt);
+            xt.safeTransfer(caller, xtOutAmt);
+            xtReserve -= xtOutAmt;
         }
-        _config.apr = mConfig.apr;
+        _updateApr(mConfig);
         emit WithdrawLiquidity(
             caller,
             lpFtAmt.toUint128(),
             lpXtAmt.toUint128(),
             ftOutAmt,
             xtOutAmt,
-            mConfig.apr
+            mConfig.apr,
+            ftReserve,
+            xtReserve
         );
     }
 
@@ -360,9 +388,10 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
      */
     function buyFt(
         uint128 underlyingAmtIn,
-        uint128 minTokenOut
+        uint128 minTokenOut,
+        uint32 lsf
     ) external override nonReentrant isOpen returns (uint256 netOut) {
-        netOut = _buyToken(msg.sender, ft, underlyingAmtIn, minTokenOut);
+        netOut = _buyToken(msg.sender, ft, underlyingAmtIn, minTokenOut, lsf);
     }
 
     /**
@@ -370,21 +399,24 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
      */
     function buyXt(
         uint128 underlyingAmtIn,
-        uint128 minTokenOut
+        uint128 minTokenOut,
+        uint32 lsf
     ) external override nonReentrant isOpen returns (uint256 netOut) {
-        netOut = _buyToken(msg.sender, xt, underlyingAmtIn, minTokenOut);
+        netOut = _buyToken(msg.sender, xt, underlyingAmtIn, minTokenOut, lsf);
     }
 
     function _buyToken(
         address caller,
         IMintableERC20 token,
         uint128 underlyingAmtIn,
-        uint128 minTokenOut
+        uint128 minTokenOut,
+        uint32 lsf
     ) internal returns (uint256 netOut) {
         // Get old reserves
-        uint ftReserve = ft.balanceOf(address(this));
-        uint xtReserve = xt.balanceOf(address(this));
         MarketConfig memory mConfig = _config;
+        if(lsf != mConfig.lsf){
+            revert LsfChanged();
+        }
         TradeParams memory tradeParams = TradeParams(
             underlyingAmtIn,
             ftReserve,
@@ -472,25 +504,27 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
 
             if (token == ft) {
                 netOut =
-                    token.balanceOf(address(this)) -
+                    ftReserve -
                     finalTokenReserve -
                     (feeAmt * mConfig.initialLtv) /
                     Constants.DECIMAL_BASE;
+                ftReserve -= netOut.toUint128();
             } else {
                 netOut =
-                    token.balanceOf(address(this)) -
+                    xtReserve -
                     finalTokenReserve -
                     feeAmt;
+                xtReserve -= netOut.toUint128();
             }
             if (netOut < minTokenOut) {
                 revert UnexpectedAmount(minTokenOut, netOut.toUint128());
             }
-            token.transfer(caller, netOut);
+            token.safeTransfer(caller, netOut);
             // _lock_fee
             _lockFee(feeAmt, mConfig.lockingPercentage, mConfig.initialLtv);
             feeAmt += feeToProtocol;
         }
-        _config.apr = mConfig.apr;
+        _updateApr(mConfig);
         emit BuyToken(
             caller,
             token,
@@ -498,7 +532,9 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
             minTokenOut,
             netOut.toUint128(),
             feeAmt.toUint128(),
-            mConfig.apr
+            mConfig.apr,
+            ftReserve,
+            xtReserve
         );
     }
 
@@ -507,9 +543,10 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
      */
     function sellFt(
         uint128 ftAmtIn,
-        uint128 minUnderlyingOut
+        uint128 minUnderlyingOut,
+        uint32 lsf
     ) external override nonReentrant isOpen returns (uint256 netOut) {
-        netOut = _sellToken(msg.sender, ft, ftAmtIn, minUnderlyingOut);
+        netOut = _sellToken(msg.sender, ft, ftAmtIn, minUnderlyingOut, lsf);
     }
 
     /**
@@ -517,24 +554,24 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
      */
     function sellXt(
         uint128 xtAmtIn,
-        uint128 minUnderlyingOut
+        uint128 minUnderlyingOut,
+        uint32 lsf
     ) external override nonReentrant isOpen returns (uint256 netOut) {
-        netOut = _sellToken(msg.sender, xt, xtAmtIn, minUnderlyingOut);
+        netOut = _sellToken(msg.sender, xt, xtAmtIn, minUnderlyingOut, lsf);
     }
 
     function _sellToken(
         address caller,
         IMintableERC20 token,
         uint128 tokenAmtIn,
-        uint128 minUnderlyingOut
+        uint128 minUnderlyingOut,
+        uint32 lsf
     ) internal returns (uint256 netOut) {
-        // Get old reserves
-        uint ftReserve = ft.balanceOf(address(this));
-        uint xtReserve = xt.balanceOf(address(this));
-
-        token.transferFrom(caller, address(this), tokenAmtIn);
-
         MarketConfig memory mConfig = _config;
+        if(lsf != mConfig.lsf){
+            revert LsfChanged();
+        }
+        token.safeTransferFrom(caller, address(this), tokenAmtIn);
         TradeParams memory tradeParams = TradeParams(
             tokenAmtIn,
             ftReserve,
@@ -562,6 +599,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
             feeAmt = feeAmt.max(
                 (netOut * mConfig.minNBorrowFeeR) / Constants.DECIMAL_BASE
             );
+            ftReserve += tokenAmtIn;
         } else {
             uint newFtReserve;
             uint newXtReserve;
@@ -582,6 +620,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
             feeAmt = feeAmt.max(
                 (netOut * mConfig.minNLendFeeR) / Constants.DECIMAL_BASE
             );
+            xtReserve += tokenAmtIn;
         }
         netOut -= feeAmt;
         if (netOut < minUnderlyingOut) {
@@ -602,7 +641,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
             mConfig.initialLtv
         );
 
-        _config.apr = mConfig.apr;
+        _updateApr(mConfig);
         emit SellToken(
             caller,
             token,
@@ -610,7 +649,9 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
             minUnderlyingOut,
             netOut.toUint128(),
             feeAmt.toUint128(),
-            mConfig.apr
+            mConfig.apr,
+            ftReserve,
+            xtReserve
         );
     }
 
@@ -626,11 +667,18 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
     ) internal {
         uint ftAmt = (underlyingAmt * _config.initialLtv + Constants.DECIMAL_BASE - 1) /
             Constants.DECIMAL_BASE;
-        ft.transferFrom(caller, address(this), ftAmt);
-        xt.transferFrom(caller, address(this), underlyingAmt);
+        ft.safeTransferFrom(caller, address(this), ftAmt);
+        xt.safeTransferFrom(caller, address(this), underlyingAmt);
+        ftReserve += ftAmt.toUint128();
+        xtReserve += underlyingAmt.toUint128();
         _removeLiquidity(caller, underlyingAmt, _config.initialLtv);
 
-        emit RemoveLiquidity(caller, underlyingAmt);
+        emit RemoveLiquidity(
+            caller,
+            underlyingAmt,
+            ftReserve,
+            xtReserve
+        );
     }
 
     /// @notice Lock up a portion of the transaction fee and release it slowly in the later stage
@@ -647,14 +695,14 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
 
         uint lpFtAmt = TermMaxCurve.calculateLpOut(
             ftAmount,
-            ft.balanceOf(address(this)) - ftAmount,
+            ftReserve - ftAmount,
             lpFt.totalSupply()
         );
         lpFt.mint(address(this), lpFtAmt);
 
         uint lpXtAmt = TermMaxCurve.calculateLpOut(
             feeToLock,
-            xt.balanceOf(address(this)) - feeToLock,
+            xtReserve - feeToLock,
             lpXt.totalSupply()
         );
         lpXt.mint(address(this), lpXtAmt);
@@ -667,7 +715,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         address receiver,
         uint128 xtAmt,
         bytes calldata callbackData
-    ) external override isOpen nonReentrant returns (uint256 gtId) {
+    ) external override nonReentrant isOpen returns (uint256 gtId) {
         return _leverageByXt(msg.sender, receiver, xtAmt, callbackData);
     }
 
@@ -677,7 +725,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         uint128 xtAmt,
         bytes calldata callbackData
     ) internal returns (uint256 gtId) {
-        xt.transferFrom(loanReceiver, address(this), xtAmt);
+        xt.safeTransferFrom(loanReceiver, address(this), xtAmt);
 
         // 1 xt -> 1 underlying raised
         // Debt 1 * initialLtv round up
@@ -687,7 +735,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
             1) / Constants.DECIMAL_BASE).toUint128();
 
         // Send debt to borrower
-        underlying.transfer(loanReceiver, xtAmt);
+        underlying.safeTransfer(loanReceiver, xtAmt);
         // Callback function
         bytes memory collateralData = IFlashLoanReceiver(loanReceiver)
             .executeOperation(gtReceiver, underlying, xtAmt, callbackData);
@@ -696,7 +744,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         gtId = gt.mint(loanReceiver, gtReceiver, debt, collateralData);
 
         xt.burn(xtAmt);
-
+        xtReserve -= xtAmt;
         emit MintGt(loanReceiver, gtReceiver, gtId, debt, collateralData);
     }
 
@@ -709,8 +757,8 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
     )
         external
         override
-        isOpen
         nonReentrant
+        isOpen
         returns (uint256 gtId, uint128 ftOutAmt)
     {
         return _issueFt(msg.sender, debt, collateralData);
@@ -729,10 +777,19 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
             Constants.DECIMAL_BASE).toUint128();
         // Mint ft amount = debt amount, send issueFee to treasurer and other to caller
         ft.mint(mConfig.treasurer, issueFee);
+        ftReserve += issueFee;
         ftOutAmt = debt - issueFee;
         ft.mint(caller, ftOutAmt);
+        ftReserve += ftOutAmt;
 
-        emit IssueFt(caller, gtId, debt, ftOutAmt, issueFee, collateralData);
+        emit IssueFt(
+            caller,
+            gtId,
+            debt,
+            ftOutAmt,
+            issueFee,
+            collateralData
+        );
     }
 
     /**
@@ -743,31 +800,6 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
     ) external virtual override nonReentrant {
         _redeem(msg.sender, amountArray);
     }
-
-    // function redeemByPermit(
-    //     address caller,
-    //     uint256[4] calldata amountArray,
-    //     uint256[4] calldata deadlineArray,
-    //     uint8[4] calldata vArray,
-    //     bytes32[4] calldata rArrray,
-    //     bytes32[4] calldata sArray
-    // ) external virtual override nonReentrant {
-    //     IMintableERC20[4] memory permitTokens = [lpFt, lpXt, ft, xt];
-    //     for (uint i = 0; i < amountArray.length; ++i) {
-    //         if (amountArray[i] > 0) {
-    //             permitTokens[i].permit(
-    //                 sender,
-    //                 address(this),
-    //                 amountArray[i],
-    //                 deadlineArray[i],
-    //                 vArray[i],
-    //                 rArrray[i],
-    //                 sArray[i]
-    //             );
-    //         }
-    //     }
-    //     _redeem(sender, amountArray);
-    // }
 
     function _redeem(address caller, uint256[4] calldata amountArray) internal {
         MarketConfig memory mConfig = _config;
@@ -794,14 +826,14 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
 
             uint lpXtAmt = amountArray[3];
             if (lpXtAmt > 0) {
-                lpXt.transferFrom(caller, address(this), lpXtAmt);
+                lpXt.safeTransferFrom(caller, address(this), lpXtAmt);
                 uint lpXtTotalSupply = lpXt.totalSupply();
-                uint xtReserve = xt.balanceOf(address(this));
-                xtAmt += (lpXtAmt * xtReserve) / lpXtTotalSupply;
+
+                xtAmt += (lpXtAmt * xt.balanceOf(address(this))) / lpXtTotalSupply;
                 lpXt.burn(lpXtAmt);
             }
             if (amountArray[1] > 0) {
-                xt.transferFrom(caller, address(this), amountArray[1]);
+                xt.safeTransferFrom(caller, address(this), amountArray[1]);
             }
             // k = (1 - initalLtv) * DECIMAL_BASE
             uint k = Constants.DECIMAL_BASE - mConfig.initialLtv;
@@ -822,16 +854,15 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
             // Calculate lp tokens output
             uint lpFtAmt = amountArray[2];
             if (lpFtAmt > 0) {
-                lpFt.transferFrom(caller, address(this), lpFtAmt);
+                lpFt.safeTransferFrom(caller, address(this), lpFtAmt);
                 uint lpFtTotalSupply = lpFt.totalSupply();
-                uint ftReserve = ft.balanceOf(address(this));
-                ftAmt += (lpFtAmt * ftReserve) / lpFtTotalSupply;
+                ftAmt += (lpFtAmt * ft.balanceOf(address(this))) / lpFtTotalSupply;
                 lpFt.burn(lpFtAmt);
             }
             proportion = (ftAmt * Constants.DECIMAL_BASE_SQ) / ft.totalSupply();
 
             if (amountArray[0] > 0) {
-                ft.transferFrom(caller, address(this), amountArray[0]);
+                ft.safeTransferFrom(caller, address(this), amountArray[0]);
             }
             if (ftAmt > 0) {
                 ft.burn(ftAmt);
@@ -849,10 +880,10 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
             feeAmt =
                 (underlyingAmt * mConfig.redeemFeeRatio) /
                 Constants.DECIMAL_BASE;
-            underlying.transfer(mConfig.treasurer, feeAmt);
+            underlying.safeTransfer(mConfig.treasurer, feeAmt);
             underlyingAmt -= feeAmt;
         }
-        underlying.transfer(caller, underlyingAmt);
+        underlying.safeTransfer(caller, underlyingAmt);
         emit Redeem(
             caller,
             proportion.toUint128(),
@@ -867,7 +898,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         _burnLpInTheMarket();
         // Burn all ft in gt
         uint amount = ft.balanceOf(address(gt));
-        ft.transferFrom(address(gt), address(this), amount);
+        ft.safeTransferFrom(address(gt), address(this), amount);
         ft.burn(amount);
     }
 
@@ -885,7 +916,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         address caller
     ) internal returns (uint256 feeToProtocol) {
         feeToProtocol = (totalFee * protocolFeeRatio) / Constants.DECIMAL_BASE;
-        underlying.transferFrom(caller, treasurer, feeToProtocol);
+        underlying.safeTransferFrom(caller, treasurer, feeToProtocol);
     }
 
     function _tranferFeeToTreasurer(
@@ -920,22 +951,8 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
     /**
      * @inheritdoc ITermMaxMarket
      */
-    function pauseGt() external override onlyOwner {
-        gt.pause();
-    }
-
-    /**
-     * @inheritdoc ITermMaxMarket
-     */
-    function unpauseGt() external override onlyOwner {
-        gt.unpause();
-    }
-
-    /**
-     * @inheritdoc ITermMaxMarket
-     */
-    function updateMintingGtSwitch(bool canMintGt) external override onlyOwner {
-        gt.updateMintingSwitch(canMintGt);
+    function updateGtConfig(bytes memory configData) external override onlyOwner{
+        gt.updateConfig(configData);
     }
 
     /**
@@ -960,27 +977,25 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         MarketConfig memory mConfig = _config;
 
         // calculate out put amount
-        uint ftReserve = ft.balanceOf(address(this));
-        uint ftAmt = (lpFtAmt * ftReserve) / lpFt.totalSupply();
+        uint ftAmt = (lpFtAmt * ft.balanceOf(address(this))) / lpFt.totalSupply();
         // will burn in the next time
-        lpFt.transferFrom(caller, address(this), lpFtAmt);
+        lpFt.safeTransferFrom(caller, address(this), lpFtAmt);
 
-        uint xtReserve = xt.balanceOf(address(this));
-        uint xtAmt = (lpXtAmt * xtReserve) / lpXt.totalSupply();
+        uint xtAmt = (lpXtAmt * xt.balanceOf(address(this))) / lpXt.totalSupply();
         // will burn in the next time
-        lpXt.transferFrom(caller, address(this), lpXtAmt);
+        lpXt.safeTransferFrom(caller, address(this), lpXtAmt);
 
         uint sameProportionFt = (xtAmt * mConfig.initialLtv + Constants.DECIMAL_BASE - 1) /
             Constants.DECIMAL_BASE;
 
         // Judge the max redeemed underlying
-        // Case 1: ftAmt >  xtAmt * ltv  redeem xtAmt, transfer excess ft
-        // Case 2: ftAmt <= xtAmt * ltv  redeem ftAmt/ltv, transfer excess xt
+        // Case 1: ftAmt >  xtAmt * ltv  redeem xtAmt, safeTransfer excess ft
+        // Case 2: ftAmt <= xtAmt * ltv  redeem ftAmt/ltv, safeTransfer excess xt
         if (ftAmt > sameProportionFt) {
-            ft.transfer(caller, ftAmt - sameProportionFt);
+            ft.safeTransfer(caller, ftAmt - sameProportionFt);
             ft.burn(sameProportionFt);
             xt.burn(xtAmt);
-            underlying.transfer(caller, xtAmt);
+            underlying.safeTransfer(caller, xtAmt);
             emit Evacuate(
                 caller,
                 lpFtAmt,
@@ -991,10 +1006,10 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
             );
         } else {
             uint xtToBurn = (ftAmt * Constants.DECIMAL_BASE) / mConfig.initialLtv;
-            xt.transfer(caller, xtAmt - xtToBurn);
+            xt.safeTransfer(caller, xtAmt - xtToBurn);
             ft.burn(ftAmt);
             xt.burn(xtToBurn);
-            underlying.transfer(caller, xtToBurn);
+            underlying.safeTransfer(caller, xtToBurn);
             emit Evacuate(caller, lpFtAmt, lpXtAmt, 0, uint128(xtAmt - xtToBurn), xtToBurn);
         }
     }
@@ -1005,5 +1020,24 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
             block.timestamp - pauseTime >
             Constants.WAITING_TIME_EVACUATION_ACTIVE &&
             block.timestamp < _config.maturity;
+    }
+
+    function _updateApr(MarketConfig memory mConfig) private{
+        if(mConfig.apr < mConfig.minApr)
+            revert AprLessThanMinApr(mConfig.apr, mConfig.minApr); 
+        _config.apr = mConfig.apr;
+    }
+
+    /**
+     * @inheritdoc ITermMaxMarket
+     */
+    function withdrawExcessFtXt(address to, uint128 ftAmt, uint128 xtAmt) external onlyOwner isOpen { 
+        if(uint256(ftAmt) + ftReserve > ft.balanceOf(address(this)) || uint256(xtAmt) + xtReserve > xt.balanceOf(address(this)))
+            revert NotEnoughFtOrXtToWithdraw();
+        if(ftAmt > 0)
+            ft.safeTransfer(to, ftAmt);
+        if(xtAmt > 0)
+            xt.safeTransfer(to, xtAmt);
+        emit WithdrawExcessFtXt(to, ftAmt, xtAmt);
     }
 }

@@ -12,7 +12,7 @@ import {MockERC20} from "../contracts/test/MockERC20.sol";
 import {MockPriceFeed} from "../contracts/test/MockPriceFeed.sol";
 import {MarketConfig} from "../contracts/core/storage/TermMaxStorage.sol";
 import {IMintableERC20} from "../contracts/core/tokens/IMintableERC20.sol";
-import {IGearingToken, AggregatorV3Interface} from "../contracts/core/tokens/IGearingToken.sol";
+import {IGearingToken} from "../contracts/core/tokens/IGearingToken.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
@@ -29,6 +29,7 @@ contract DeployMainnetFork is Script {
             maturity: 1735575942, // current 1726732382
             openTime: uint64(vm.getBlockTimestamp() + 200),
             apr: 12000000,
+            minApr: 0,
             lsf: 80000000,
             lendFeeRatio: 3000000,
             minNLendFeeR: 3000000,

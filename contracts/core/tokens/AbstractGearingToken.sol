@@ -3,12 +3,13 @@ pragma solidity ^0.8.27;
 
 import {ERC721EnumerableUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Constants} from "../lib/Constants.sol";
+import {GearingTokenConstants} from "../lib/GearingTokenConstants.sol";
 import {IFlashRepayer} from "./IFlashRepayer.sol";
-import {IGearingToken, AggregatorV3Interface, IERC20Metadata, IERC20} from "./IGearingToken.sol";
+import {IGearingToken, IOracle, IERC20Metadata, IERC20} from "./IGearingToken.sol";
 
 /**
  * @title TermMax Gearing Token
@@ -18,11 +19,12 @@ abstract contract AbstractGearingToken is
     OwnableUpgradeable,
     ERC721EnumerableUpgradeable,
     ReentrancyGuardUpgradeable,
-    PausableUpgradeable,
     IGearingToken
 {
     using SafeCast for uint256;
     using SafeCast for int256;
+    using SafeERC20 for IERC20;
+    using SafeERC20 for IERC20Metadata;
 
     struct LoanInfo {
         /// @notice Debt amount in underlying token
@@ -46,27 +48,12 @@ abstract contract AbstractGearingToken is
         bytes collateralPriceData;
     }
 
-    /// @notice The percentage of repay amount to liquidator while do liquidate, decimals 1e8
-    uint256 constant REWARD_TO_LIQUIDATOR = 0.05e8;
-    /// @notice The percentage of repay amount to protocol while do liquidate, decimals 1e8
-    uint256 constant REWARD_TO_PROTOCOL = 0.05e8;
-    /// @notice Semi-liquidation threshold: if the value of the collateral reaches this value,
-    ///         only partial liquidation can be performed, decimals 1e8.
-    uint256 constant HALF_LIQUIDATION_THRESHOLD = 10000e8;
-    /// @notice Minimum debt value, decimals 1e8.
-    uint256 constant MINIMAL_DEBT_VALUE = 5e8;
-
-    uint256 constant UINT_MAX = type(uint256).max;
-    uint128 constant UINT128_MAX = type(uint128).max;
-
     /// @notice Configuturation of Gearing Token
     GtConfig _config;
     /// @notice Total supply of Gearing Token
     uint256 total;
     /// @notice Mapping relationship between Gearing Token id and loan
     mapping(uint256 => LoanInfo) loanMapping;
-    /// @notice The switch of GT minting
-    bool public canMintGt;
 
     /**
      * @inheritdoc IGearingToken
@@ -79,7 +66,6 @@ abstract contract AbstractGearingToken is
     ) external override initializer {
         __AbstractGearingToken_init(name, symbol, config_);
         __GearingToken_Implement_init(initalParams);
-        canMintGt = true;
     }
 
     function __AbstractGearingToken_init(
@@ -89,10 +75,9 @@ abstract contract AbstractGearingToken is
     ) internal onlyInitializing {
         __ERC721_init(name, symbol);
         __Ownable_init(config_.market);
-        __Pausable_init();
         _config = config_;
         // Market will burn those tokens after maturity
-        config_.ft.approve(config_.market, UINT_MAX);
+        config_.ft.approve(config_.market, type(uint256).max);
     }
 
     function __GearingToken_Implement_init(
@@ -109,10 +94,12 @@ abstract contract AbstractGearingToken is
     /**
      * @inheritdoc IGearingToken
      */
-    function updateMintingSwitch(bool _canMintGt) external override onlyOwner {
-        canMintGt = _canMintGt;
-        emit UpdateMintingSwitch(_canMintGt);
+    function updateConfig(bytes memory configData) external onlyOwner {
+       _updateConfig(configData);
+       emit UpdateConfig(configData);
     }
+
+    function _updateConfig(bytes memory configData) internal virtual;
 
     /**
      * @inheritdoc IGearingToken
@@ -146,14 +133,11 @@ abstract contract AbstractGearingToken is
     )
         external
         override
-        onlyOwner
-        whenNotPaused
         nonReentrant
+        onlyOwner
         returns (uint256 id)
     {
-        if (!canMintGt) {
-            revert CanNotMintGtNow();
-        }
+        _checkBeforeMint(debtAmt, collateralData);
         _transferCollateralFrom(
             collateralProvider,
             address(this),
@@ -161,6 +145,10 @@ abstract contract AbstractGearingToken is
         );
         id = _mintInternal(to, debtAmt, collateralData, _config);
     }
+
+    /// @notice Check if the loan can be minted
+    function _checkBeforeMint(uint128 debtAmt,
+        bytes memory collateralData) internal virtual;
 
     function _mintInternal(
         address to,
@@ -170,9 +158,8 @@ abstract contract AbstractGearingToken is
     ) internal returns (uint256 id) {
         LoanInfo memory loan = LoanInfo(debtAmt, collateralData);
         ValueAndPrice memory valueAndPrice = _getValueAndPrice(
-            config.underlyingOracle,
-            loan,
-            config.underlying.decimals()
+            config,
+            loan
         );
         _checkDebtValue(valueAndPrice);
         uint128 ltv = _calculateLtv(valueAndPrice);
@@ -206,9 +193,8 @@ abstract contract AbstractGearingToken is
         collateralData = loan.collateralData;
         ltv = _calculateLtv(
             _getValueAndPrice(
-                _config.underlyingOracle,
-                loan,
-                _config.underlying.decimals()
+                _config,
+                loan
             )
         );
     }
@@ -263,10 +249,10 @@ abstract contract AbstractGearingToken is
         }
 
         if (byUnderlying) {
-            config.underlying.transferFrom(msg.sender, config.market, repayAmt);
+            config.underlying.safeTransferFrom(msg.sender, config.market, repayAmt);
         } else {
             // Those ft tokens have been approved to market and will be burn after maturity
-            config.ft.transferFrom(msg.sender, address(this), repayAmt);
+            config.ft.safeTransferFrom(msg.sender, address(this), repayAmt);
         }
         _repay(id, repayAmt);
         emit Repay(id, repayAmt, byUnderlying);
@@ -274,6 +260,7 @@ abstract contract AbstractGearingToken is
 
     function flashRepay(
         uint256 id,
+        bool byUnderlying,
         bytes calldata callbackData
     ) external override nonReentrant {
         GtConfig memory config = _config;
@@ -281,20 +268,23 @@ abstract contract AbstractGearingToken is
             revert GtIsExpired(id);
         }
         LoanInfo memory loan = loanMapping[id];
-        address owner = ownerOf(id);
+        if(ownerOf(id) != msg.sender) {
+            revert CallerIsNotTheOwner(id);
+        }
         // Transfer collateral to the owner
-        _transferCollateral(owner, loan.collateralData);
+        _transferCollateral(msg.sender, loan.collateralData);
+        IERC20 repayToken = byUnderlying? config.underlying:config.ft;
+
         IFlashRepayer(msg.sender).executeOperation(
-            owner,
-            config.underlying,
+            repayToken,
             loan.debtAmt,
             config.collateral,
             loan.collateralData,
             callbackData
         );
-        config.underlying.transferFrom(msg.sender, config.market, loan.debtAmt);
+        repayToken.safeTransferFrom(msg.sender, config.market, loan.debtAmt);
         _burnInternal(id);
-        emit Repay(id, loan.debtAmt, true);
+        emit Repay(id, loan.debtAmt, byUnderlying);
     }
 
     function _repay(uint256 id, uint128 repayAmt) internal {
@@ -319,7 +309,7 @@ abstract contract AbstractGearingToken is
     function removeCollateral(
         uint256 id,
         bytes memory collateralData
-    ) external override nonReentrant whenNotPaused {
+    ) external override nonReentrant {
         if (msg.sender != ownerOf(id)) {
             revert CallerIsNotTheOwner(id);
         }
@@ -335,9 +325,8 @@ abstract contract AbstractGearingToken is
         _transferCollateral(msg.sender, collateralData);
 
         ValueAndPrice memory valueAndPrice = _getValueAndPrice(
-            config.underlyingOracle,
-            loan,
-            config.underlying.decimals()
+            config,
+            loan
         );
         _checkDebtValue(valueAndPrice);
         uint128 ltv = _calculateLtv(valueAndPrice);
@@ -402,9 +391,8 @@ abstract contract AbstractGearingToken is
         )
     {
         valueAndPrice = _getValueAndPrice(
-            config.underlyingOracle,
-            loan,
-            config.underlying.decimals()
+            config,
+            loan
         );
         ltv = _calculateLtv(valueAndPrice);
 
@@ -428,7 +416,7 @@ abstract contract AbstractGearingToken is
                 maxRepayAmt = (valueAndPrice.collateralValue *
                     Constants.DECIMAL_BASE) /
                     valueAndPrice.priceDecimals <
-                    HALF_LIQUIDATION_THRESHOLD
+                    GearingTokenConstants.HALF_LIQUIDATION_THRESHOLD
                     ? loan.debtAmt
                     : loan.debtAmt / 2;
             }
@@ -441,7 +429,7 @@ abstract contract AbstractGearingToken is
     function liquidate(
         uint256 id,
         uint128 repayAmt
-    ) external override nonReentrant whenNotPaused {
+    ) external override nonReentrant {
         LoanInfo memory loan = loanMapping[id];
         GtConfig memory config = _config;
         if (!config.liquidatable) {
@@ -469,7 +457,7 @@ abstract contract AbstractGearingToken is
             revert RepayAmtExceedsMaxRepayAmt(id, repayAmt, maxRepayAmt);
         }
         // Transfer token
-        config.underlying.transferFrom(msg.sender, config.market, repayAmt);
+        config.underlying.safeTransferFrom(msg.sender, config.market, repayAmt);
         // Do liquidate
 
         (
@@ -553,7 +541,7 @@ abstract contract AbstractGearingToken is
     function getCollateralValue(
         bytes memory collateralData
     ) external view override returns (uint256 collateralValue) {
-        bytes memory priceData = _getCollateralPriceData();
+        bytes memory priceData = _getCollateralPriceData(_config);
         return _getCollateralValue(collateralData, priceData);
     }
 
@@ -566,8 +554,8 @@ abstract contract AbstractGearingToken is
     )
         external
         override
-        onlyOwner
         nonReentrant
+        onlyOwner
         returns (bytes memory deliveryData)
     {
         deliveryData = _delivery(proportion);
@@ -579,22 +567,20 @@ abstract contract AbstractGearingToken is
     ) internal virtual returns (bytes memory deliveryData);
 
     function _getValueAndPrice(
-        AggregatorV3Interface underlyingOracle,
-        LoanInfo memory loan,
-        uint8 erc20Decimals
+        GtConfig memory config,
+        LoanInfo memory loan
     ) internal view returns (ValueAndPrice memory valueAndPrice) {
-        valueAndPrice.collateralPriceData = _getCollateralPriceData();
+        valueAndPrice.collateralPriceData = _getCollateralPriceData(config);
         valueAndPrice.collateralValue = _getCollateralValue(
             loan.collateralData,
             valueAndPrice.collateralPriceData
         );
+        
+        uint8 priceDecimals;
+        (valueAndPrice.underlyingPrice, priceDecimals) = config.oracle.getPrice(address(config.underlying));
+        valueAndPrice.priceDecimals = 10 ** priceDecimals;
 
-        (
-            valueAndPrice.underlyingPrice,
-            valueAndPrice.priceDecimals
-        ) = _getPrice(underlyingOracle);
-
-        valueAndPrice.underlyingDecimals = 10 ** erc20Decimals;
+        valueAndPrice.underlyingDecimals = 10 ** config.underlying.decimals();
 
         valueAndPrice.debtValueWithDecimals =
             (loan.debtAmt * valueAndPrice.underlyingPrice) /
@@ -608,22 +594,13 @@ abstract contract AbstractGearingToken is
         ValueAndPrice memory valueAndPrice
     ) internal pure returns (uint128 ltv) {
         if (valueAndPrice.collateralValue == 0) {
-            return UINT128_MAX;
+            return type(uint128).max;
         }
         // debtValueWithDecimals(price decimals) collateralValue(base decimals)
         ltv = ((valueAndPrice.debtValueWithDecimals *
             Constants.DECIMAL_BASE_SQ) /
             (valueAndPrice.collateralValue * valueAndPrice.priceDecimals))
             .toUint128();
-    }
-
-    /// @notice Return the price given by the oracle in USD
-    function _getPrice(
-        AggregatorV3Interface priceFeed
-    ) internal view returns (uint256 price, uint256 decimals) {
-        decimals = 10 ** priceFeed.decimals();
-        (, int256 answer, , , ) = priceFeed.latestRoundData();
-        price = answer.toUint256();
     }
 
     /// @notice Merge collateral data
@@ -655,7 +632,7 @@ abstract contract AbstractGearingToken is
     ) internal view virtual returns (uint256 collateralValue);
 
     /// @notice Return the encoded price of collateral in USD
-    function _getCollateralPriceData()
+    function _getCollateralPriceData(GtConfig memory config)
         internal
         view
         virtual
@@ -664,22 +641,8 @@ abstract contract AbstractGearingToken is
     function _checkDebtValue(ValueAndPrice memory valueAndPrice) internal pure {
         uint debtValue = (valueAndPrice.debtValueWithDecimals *
             Constants.DECIMAL_BASE) / valueAndPrice.priceDecimals;
-        if (debtValue < MINIMAL_DEBT_VALUE) {
+        if (debtValue < GearingTokenConstants.MINIMAL_DEBT_VALUE) {
             revert DebtValueIsTooSmall(debtValue);
         }
-    }
-
-    /**
-     * @inheritdoc IGearingToken
-     */
-    function pause() external onlyOwner {
-        _pause();
-    }
-
-    /**
-     * @inheritdoc IGearingToken
-     */
-    function unpause() external onlyOwner {
-        _unpause();
     }
 }

@@ -17,8 +17,8 @@ library TermMaxCurve {
     /// @notice Error for transaction lead to liquidity depletion
     error LiquidityIsZeroAfterTransaction();
 
-    int constant INT_64_MAX = type(int64).max;
-    int constant INT_64_MIN = type(int64).min;
+    int constant private INT_64_MAX = type(int64).max;
+    int constant private INT_64_MIN = type(int64).min;
 
     /// @notice Calculate how many lp tokens should be minted to the liquidity provider
     /// @param tokenIn The amount of tokens provided
@@ -29,41 +29,10 @@ library TermMaxCurve {
         uint256 tokenIn,
         uint256 tokenReserve,
         uint256 lpTotalSupply
-    ) internal pure returns (uint256 lpOutAmt) {
-        if (lpTotalSupply == 0) {
-            lpOutAmt = tokenIn;
-        } else {
-            // Ref docs: https://docs.ts.finance/termmax/technical-details/amm-model/pool-operations/liquidity-operations-l#lo1-provide-liquidity
-            // Ref: Eq.L-3,L-4 in the AMM Model section of docs
-            lpOutAmt = (tokenIn * lpTotalSupply) / tokenReserve;
-        }
-    }
-
-    /// @notice Calculate how many tokens should be transfer to the liquidity provider
-    /// @param lpAmt The amount of lp to withdraw
-    /// @param lpTotalSupply The total supply of this lp token
-    /// @param lpReserve The lp token balance of market
-    /// @param tokenReserve The token balance of market
-    /// @param config Market configuration data
-    /// @return tokenAmt The amount of tokens transfer to the liquidity provider
-    function calculateLpWithReward(
-        uint256 lpAmt,
-        uint256 lpTotalSupply,
-        uint256 lpReserve,
-        uint256 tokenReserve,
-        uint256 currentTime,
-        MarketConfig memory config
-    ) internal pure returns (uint256 tokenAmt) {
-        uint reward = calculateLpReward(
-            currentTime,
-            config.openTime,
-            config.maturity,
-            lpTotalSupply,
-            lpAmt,
-            lpReserve
-        );
-        lpAmt += reward;
-        tokenAmt = (lpAmt * tokenReserve) / lpTotalSupply;
+    ) internal pure returns (uint256) {
+        // Ref docs: https://docs.ts.finance/termmax/technical-details/amm-model/pool-operations/liquidity-operations-l#lo1-provide-liquidity
+        // Ref: Eq.L-3,L-4 in the AMM Model section of docs
+        return lpTotalSupply == 0 ? tokenIn : (tokenIn * lpTotalSupply) / tokenReserve;
     }
 
     /// @notice Calculte the virtual FT token reserve
@@ -75,9 +44,7 @@ library TermMaxCurve {
         uint256 ftReserve
     ) internal pure returns (uint256 virtualFtReserve) {
         virtualFtReserve = (ftReserve * Constants.DECIMAL_BASE) / lsf;
-        if (virtualFtReserve == 0) {
-            revert LiquidityIsZeroAfterTransaction();
-        }
+        if (virtualFtReserve == 0) revert LiquidityIsZeroAfterTransaction();
     }
 
     /// @notice Calculte the virtual XT token reserve
@@ -158,9 +125,8 @@ library TermMaxCurve {
             daysToMaturity *
             Constants.DECIMAL_BASE).toInt256();
         int apr = numerator / denominator;
-        if (apr > INT_64_MAX || apr < INT_64_MIN) {
+        if (apr > INT_64_MAX || apr < INT_64_MIN) 
             revert LiquidityIsZeroAfterTransaction();
-        }
         return apr.toInt64();
     }
 
@@ -180,14 +146,14 @@ library TermMaxCurve {
         uint256 newXtReserve,
         uint32 feeRatio,
         uint32 ltv
-    ) internal pure returns (uint256 feeAmt) {
+    ) internal pure returns (uint256) {
         uint deltaFt = (newFtReserve > ftReserve)
             ? (newFtReserve - ftReserve)
             : (ftReserve - newFtReserve);
         uint deltaXt = (newXtReserve > xtReserve)
             ? (newXtReserve - xtReserve)
             : (xtReserve - newXtReserve);
-        feeAmt = _calculateTxFeeInternal(deltaFt, deltaXt, feeRatio, ltv);
+        return _calculateTxFeeInternal(deltaFt, deltaXt, feeRatio, ltv);
     }
 
     /// @notice Internal helper function for calculating fees
@@ -201,18 +167,16 @@ library TermMaxCurve {
         uint256 deltaXt,
         uint32 feeRatio,
         uint32 ltv
-    ) private pure returns (uint256 feeAmt) {
+    ) private pure returns (uint256) {
         // Ref docs: https://docs.ts.finance/termmax/technical-details/amm-model/pool-operations/fee-operations-f#transaction-fee
         // Ref: Eq.F-1 in the AMM Model section of docs
         uint l = deltaFt * Constants.DECIMAL_BASE + deltaXt * ltv;
         uint r = deltaXt * Constants.DECIMAL_BASE;
 
         // Ref: Eq.F-2 in the AMM Model section of docs
-        if (l > r) {
-            feeAmt = ((l - r) * feeRatio) / Constants.DECIMAL_BASE_SQ;
-        } else {
-            feeAmt = ((r - l) * feeRatio) / Constants.DECIMAL_BASE_SQ;
-        }
+        return l > r ? 
+            ((l - r) * feeRatio) / Constants.DECIMAL_BASE_SQ :
+            ((r - l) * feeRatio) / Constants.DECIMAL_BASE_SQ;
     }
 
     /// @notice Calculate the reward to liquidity provider
@@ -236,6 +200,43 @@ library TermMaxCurve {
         uint t = (lpSupply - totalReward) *
             (2 * maturity - openMarketTime - currentTime);
         reward = ((totalReward * lpAmt) * (currentTime - openMarketTime)) / t;
+    }
+
+    /// @notice Calculate the actually lp tokens to liquidity provider
+    /// @param currentTime Current unix time
+    /// @param openMarketTime The unix time when the market starts trading
+    /// @param maturity The unix time of maturity date
+    /// @param lpSupply The total supply of this lp token
+    /// @param lpAmt The amount of minted lp
+    /// @param totalReward The amount of accumulated lp token reward of the market
+    /// @return finalLpAmt Number of lp token to provider
+    function calculateLpWithoutReward(
+        uint256 currentTime,
+        uint256 openMarketTime,
+        uint256 maturity,
+        uint256 lpSupply,
+        uint256 lpAmt,
+        uint256 totalReward
+    ) internal pure returns (uint256 finalLpAmt) {
+        // |--------------------|----|
+        // x                    y
+        // x: lp exclude market
+        // y: lp in market
+
+        // c = y * (currentTime - openTime) / (maturityDay - currentTime + maturityDay - openTime)
+
+
+        // |--------------------|-|--|
+        //                     c
+
+        // user provide 110 Ft -> mint 100lpFt in contract -> transfer 100lpFt * (x)/(x + c) to user
+        if(lpSupply == 0 || totalReward ==0){
+            return lpAmt;
+        }
+        uint rewardLp = totalReward * (currentTime - openMarketTime) /
+            (2 * maturity - openMarketTime - currentTime);
+        uint lpExcludeMarket = lpSupply - totalReward;
+        finalLpAmt = (lpAmt * lpExcludeMarket) / (lpExcludeMarket + rewardLp);
     }
 
     /// @notice Calculate the changes in market reserves and apr after selling FT tokens

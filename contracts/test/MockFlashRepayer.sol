@@ -2,32 +2,36 @@
 pragma solidity ^0.8.27;
 
 import {IGearingToken, IERC20, IFlashRepayer} from "../core/tokens/AbstractGearingToken.sol";
+import {IERC721Receiver} from "@openzeppelin/contracts/interfaces/IERC721Receiver.sol";
 
-contract MockFlashRepayer is IFlashRepayer {
+contract MockFlashRepayer is IFlashRepayer, IERC721Receiver {
     IGearingToken gt;
 
     constructor(IGearingToken gt_) {
         gt = gt_;
     }
 
-    function flashRepay(uint256 id) external {
-        gt.flashRepay(id, abi.encode(msg.sender));
+    function flashRepay(uint256 id, bool byUnderlying) external {
+        gt.safeTransferFrom(msg.sender, address(this), id, "");
+        gt.flashRepay(id, byUnderlying, abi.encode(msg.sender));
     }
 
     function executeOperation(
-        address owner,
-        IERC20 debtToken,
+        IERC20 repayToken,
         uint128 debtAmt,
-        address collateralToken,
-        bytes memory collateralData,
-        bytes calldata callbackData
+        address,
+        bytes memory,
+        bytes calldata
     ) external override {
-        assert(owner == abi.decode(callbackData, (address)));
-        IERC20(collateralToken).transferFrom(
-            owner,
-            address(this),
-            abi.decode(collateralData, (uint))
-        );
-        debtToken.approve(address(gt), debtAmt);
+        repayToken.approve(address(gt), debtAmt);
+    }
+
+    function onERC721Received(
+        address,
+        address,
+        uint256,
+        bytes calldata
+    ) external pure override returns (bytes4) {
+        return this.onERC721Received.selector;
     }
 }

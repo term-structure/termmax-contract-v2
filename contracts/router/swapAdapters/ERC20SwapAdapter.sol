@@ -2,6 +2,7 @@
 pragma solidity ^0.8.27;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ISwapAdapter} from "../ISwapAdapter.sol";
 
 /**
@@ -9,6 +10,8 @@ import {ISwapAdapter} from "../ISwapAdapter.sol";
  * @author Term Structure Labs
  */
 abstract contract ERC20SwapAdapter is ISwapAdapter {
+    using SafeERC20 for IERC20;
+    
     /// @notice Error for partial swap
     error ERC20InvalidPartialSwap(
         uint256 expectedTradeAmt,
@@ -71,7 +74,7 @@ abstract contract ERC20SwapAdapter is ISwapAdapter {
         address to,
         bytes memory tokenData
     ) external override {
-        IERC20(token).transfer(to, _decodeAmount(tokenData));
+        IERC20(token).safeTransfer(to, _decodeAmount(tokenData));
     }
 
     /**
@@ -83,7 +86,7 @@ abstract contract ERC20SwapAdapter is ISwapAdapter {
         address to,
         bytes memory tokenData
     ) external override {
-        IERC20(token).transferFrom(from, to, _decodeAmount(tokenData));
+        IERC20(token).safeTransferFrom(from, to, _decodeAmount(tokenData));
     }
 
     /// @notice Encode uin256 to bytes

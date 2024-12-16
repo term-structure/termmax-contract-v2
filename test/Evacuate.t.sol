@@ -14,7 +14,8 @@ import {ITermMaxMarket, TermMaxMarket, Constants, IERC20, MathLib} from "../cont
 import {MockFlashLoanReceiver} from "../contracts/test/MockFlashLoanReceiver.sol";
 import {MockPriceFeed} from "../contracts/test/MockPriceFeed.sol";
 import {AbstractGearingToken} from "../contracts/core/tokens/AbstractGearingToken.sol";
-import {ITermMaxFactory, TermMaxFactory, IMintableERC20, IGearingToken, AggregatorV3Interface} from "../contracts/core/factory/TermMaxFactory.sol";
+import {ITermMaxFactory, TermMaxFactory, IMintableERC20, IGearingToken} from "../contracts/core/factory/TermMaxFactory.sol";
+import {IOracle, OracleAggregator, AggregatorV3Interface} from "contracts/core/oracle/OracleAggregator.sol";
 import "../contracts/core/storage/TermMaxStorage.sol";
 
 contract EvacuateTest is Test {
@@ -74,7 +75,7 @@ contract EvacuateTest is Test {
         uint amount = 10000e8;
         res.underlying.mint(deployer, amount);
         res.underlying.approve(address(res.market), amount);
-        res.market.provideLiquidity(amount);
+        res.market.provideLiquidity(uint128(amount));
 
         vm.stopPrank();
 
@@ -82,7 +83,7 @@ contract EvacuateTest is Test {
 
         vm.startPrank(sender);
         res.underlying.approve(address(res.market), amount);
-        res.market.provideLiquidity(amount);
+        res.market.provideLiquidity(uint128(amount));
         vm.stopPrank();
     }
 
@@ -92,7 +93,7 @@ contract EvacuateTest is Test {
         {
             uint ftBalance = res.ft.balanceOf(sender);
             res.ft.approve(address(res.market), ftBalance);
-            res.market.sellFt(uint128(ftBalance / 2), 0);
+            res.market.sellFt(uint128(ftBalance / 2), 0, res.marketConfig.lsf);
 
             uint lpXtBalance = res.lpXt.balanceOf(sender);
             res.lpXt.approve(address(res.market), lpXtBalance);
@@ -163,7 +164,7 @@ contract EvacuateTest is Test {
         {
             uint ftBalance = res.ft.balanceOf(sender);
             res.ft.approve(address(res.market), ftBalance);
-            res.market.sellFt(uint128(ftBalance / 2), 0);
+            res.market.sellFt(uint128(ftBalance / 2), 0, res.marketConfig.lsf);
 
             uint lpXtBalance = res.lpXt.balanceOf(sender);
             res.lpXt.approve(address(res.market), lpXtBalance);
@@ -200,7 +201,7 @@ contract EvacuateTest is Test {
         {
             uint ftBalance = res.ft.balanceOf(sender);
             res.ft.approve(address(res.market), ftBalance);
-            res.market.sellFt(uint128(ftBalance / 2), 0);
+            res.market.sellFt(uint128(ftBalance / 2), 0, res.marketConfig.lsf);
 
             uint lpXtBalance = res.lpXt.balanceOf(sender);
             res.lpXt.approve(address(res.market), lpXtBalance);
@@ -235,7 +236,7 @@ contract EvacuateTest is Test {
         {
             uint ftBalance = res.ft.balanceOf(sender);
             res.ft.approve(address(res.market), ftBalance);
-            res.market.sellFt(uint128(ftBalance / 2), 0);
+            res.market.sellFt(uint128(ftBalance / 2), 0, res.marketConfig.lsf);
 
             uint lpXtBalance = res.lpXt.balanceOf(sender);
             res.lpXt.approve(address(res.market), lpXtBalance);
@@ -275,7 +276,7 @@ contract EvacuateTest is Test {
         {
             uint ftBalance = res.ft.balanceOf(sender);
             res.ft.approve(address(res.market), ftBalance);
-            res.market.sellFt(uint128(ftBalance / 2), 0);
+            res.market.sellFt(uint128(ftBalance / 2), 0, res.marketConfig.lsf);
 
             uint lpXtBalance = res.lpXt.balanceOf(sender);
             res.lpXt.approve(address(res.market), lpXtBalance);
@@ -317,7 +318,7 @@ contract EvacuateTest is Test {
         {
             uint ftBalance = res.ft.balanceOf(sender);
             res.ft.approve(address(res.market), ftBalance);
-            res.market.sellFt(uint128(ftBalance / 2), 0);
+            res.market.sellFt(uint128(ftBalance / 2), 0, res.marketConfig.lsf);
 
             uint lpXtBalance = res.lpXt.balanceOf(sender);
             res.lpXt.approve(address(res.market), lpXtBalance);
@@ -414,6 +415,52 @@ contract EvacuateTest is Test {
         assert(state.xtReserve == 0);
         assert(state.lpFtReserve == 0);
         assert(state.lpXtReserve == 0);
+    }
+    
+    function testWithdrawExcessFtXt() public {
+        
+        vm.startPrank(deployer);
+        res.lpFt.approve(address(res.market), res.lpFt.balanceOf(deployer));
+        res.lpXt.approve(address(res.market), res.lpXt.balanceOf(deployer));
+        (uint128 excessFt, uint128 excessXt) = res.market
+            .withdrawLiquidity(uint128(res.lpFt.balanceOf(deployer) -1), uint128(res.lpXt.balanceOf(deployer) -1));
+        res.ft.transfer(address(res.market), excessFt);
+        res.xt.transfer(address(res.market), excessXt);
+        // Get initial balances
+        uint256 initialDeployerFt = res.ft.balanceOf(deployer);
+        uint256 initialDeployerXt = res.xt.balanceOf(deployer);
+        
+        // Get current reserves
+        (uint256 ftReserve, uint256 xtReserve) = res.market.ftXtReserves();
+        
+        // Try to withdraw more than excess (should fail)
+        vm.expectRevert(ITermMaxMarket.NotEnoughFtOrXtToWithdraw.selector);
+        res.market.withdrawExcessFtXt(
+            deployer,
+            excessFt + 1,
+            0
+        );
+        
+        // Withdraw the excess tokens
+        vm.expectEmit();
+        emit ITermMaxMarket.WithdrawExcessFtXt(deployer, excessFt, excessXt);
+        res.market.withdrawExcessFtXt(deployer, excessFt, excessXt);
+        vm.stopPrank();
+        
+        // Verify balances after withdrawal
+        assertEq(res.ft.balanceOf(deployer), initialDeployerFt + excessFt, "Incorrect FT balance after withdrawal");
+        assertEq(res.xt.balanceOf(deployer), initialDeployerXt + excessXt, "Incorrect XT balance after withdrawal");
+        
+        // Verify reserves remained unchanged
+        (uint256 newFtReserve, uint256 newXtReserve) = res.market.ftXtReserves();
+        assertEq(newFtReserve, ftReserve, "FT reserve should not change");
+        assertEq(newXtReserve, xtReserve, "XT reserve should not change");
+        
+        // Verify non-owner cannot withdraw
+        vm.startPrank(sender);
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", sender));
+        res.market.withdrawExcessFtXt(sender, 1, 1);
+        vm.stopPrank();
     }
 
     function _getBalancesAndApproveAll(

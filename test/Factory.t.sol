@@ -9,7 +9,8 @@ import {JSONLoader} from "./utils/JSONLoader.sol";
 import {ITermMaxMarket, TermMaxMarket, Constants} from "../contracts/core/TermMaxMarket.sol";
 import {MockERC20, ERC20} from "../contracts/test/MockERC20.sol";
 import {MockPriceFeed} from "../contracts/test/MockPriceFeed.sol";
-import {ITermMaxFactory, TermMaxFactory, IMintableERC20, IGearingToken, AggregatorV3Interface, GearingTokenWithERC20} from "../contracts/core/factory/TermMaxFactory.sol";
+import {ITermMaxFactory, TermMaxFactory, IMintableERC20, IGearingToken, GearingTokenWithERC20} from "../contracts/core/factory/TermMaxFactory.sol";
+import {IOracle, OracleAggregator, AggregatorV3Interface} from "contracts/core/oracle/OracleAggregator.sol";
 import "../contracts/core/storage/TermMaxStorage.sol";
 
 contract FactoryTest is Test {
@@ -48,21 +49,20 @@ contract FactoryTest is Test {
         MockERC20 collateral = new MockERC20("ETH", "ETH", 18);
         MockERC20 underlying = new MockERC20("DAI", "DAI", 8);
 
-        MockPriceFeed underlyingOracle = new MockPriceFeed(deployer);
-        MockPriceFeed collateralOracle = new MockPriceFeed(deployer);
-
+        IOracle oracle = IOracle(vm.randomAddress());
+        uint collateralCapacity = type(uint256).max;
         ITermMaxFactory.DeployParams memory params = ITermMaxFactory
             .DeployParams({
                 gtKey: DeployUtils.GT_ERC20,
                 admin: deployer,
                 collateral: address(collateral),
                 underlying: underlying,
-                underlyingOracle: underlyingOracle,
+                oracle: oracle,
                 liquidationLtv: liquidationLtv,
                 maxLtv: maxLtv,
                 liquidatable: true,
                 marketConfig: marketConfig,
-                gtInitalParams: abi.encode(collateralOracle)
+                gtInitalParams: abi.encode(collateralCapacity)
             });
 
         vm.expectEmit();
@@ -79,7 +79,7 @@ contract FactoryTest is Test {
             underlying: underlying,
             ft: ft,
             treasurer: treasurer,
-            underlyingOracle: underlyingOracle,
+            oracle: oracle,
             maturity: marketConfig.maturity,
             liquidationLtv: liquidationLtv,
             maxLtv: maxLtv,
@@ -89,6 +89,68 @@ contract FactoryTest is Test {
             keccak256(abi.encode(gt.getGtConfig())) ==
                 keccak256(abi.encode(gtConfig))
         );
+        assert(GearingTokenWithERC20(address(gt)).collateralCapacity() == collateralCapacity);
+        vm.stopPrank();
+    }
+
+    function testDeployRepeatedly() public {
+        vm.startPrank(deployer);
+        TermMaxFactory factory = new TermMaxFactory(deployer);
+
+        TermMaxMarket m = new TermMaxMarket();
+
+        vm.expectEmit();
+        emit ITermMaxFactory.InitializeMarketImplement(address(m));
+        factory.initMarketImplement(address(m));
+
+        MockERC20 collateral = new MockERC20("ETH", "ETH", 18);
+        MockERC20 underlying = new MockERC20("DAI", "DAI", 8);
+
+        IOracle oracle = IOracle(vm.randomAddress());
+        uint collateralCapacity = type(uint256).max;
+        ITermMaxFactory.DeployParams memory params = ITermMaxFactory
+            .DeployParams({
+                gtKey: DeployUtils.GT_ERC20,
+                admin: deployer,
+                collateral: address(collateral),
+                underlying: underlying,
+                oracle: oracle,
+                liquidationLtv: liquidationLtv,
+                maxLtv: maxLtv,
+                liquidatable: true,
+                marketConfig: marketConfig,
+                gtInitalParams: abi.encode(collateralCapacity)
+            });
+
+        vm.expectEmit();
+        
+        ITermMaxMarket market = ITermMaxMarket(factory.createMarket(params));
+        assert(
+            keccak256(abi.encode(market.config())) ==
+                keccak256(abi.encode(marketConfig))
+        );
+        (IMintableERC20 ft, , , , IGearingToken gt, , ) = market.tokens();
+        IGearingToken.GtConfig memory gtConfig = IGearingToken.GtConfig({
+            market: address(market),
+            collateral: address(collateral),
+            underlying: underlying,
+            ft: ft,
+            treasurer: treasurer,
+            oracle: oracle,
+            maturity: marketConfig.maturity,
+            liquidationLtv: liquidationLtv,
+            maxLtv: maxLtv,
+            liquidatable: true
+        });
+        assert(
+            keccak256(abi.encode(gt.getGtConfig())) ==
+                keccak256(abi.encode(gtConfig))
+        );
+        assert(GearingTokenWithERC20(address(gt)).collateralCapacity() == collateralCapacity);
+
+        vm.expectRevert(abi.encodeWithSignature("FailedDeployment()"));
+        factory.createMarket(params);
+
         vm.stopPrank();
     }
 
@@ -102,8 +164,6 @@ contract FactoryTest is Test {
         MockERC20 collateral = new MockERC20("ETH", "ETH", 18);
         MockERC20 underlying = new MockERC20("DAI", "DAI", 8);
 
-        MockPriceFeed underlyingOracle = new MockPriceFeed(deployer);
-        MockPriceFeed collateralOracle = new MockPriceFeed(deployer);
         marketConfig.openTime = uint64(block.timestamp - 1);
         ITermMaxFactory.DeployParams memory params = ITermMaxFactory
             .DeployParams({
@@ -111,12 +171,12 @@ contract FactoryTest is Test {
                 admin: deployer,
                 collateral: address(collateral),
                 underlying: underlying,
-                underlyingOracle: underlyingOracle,
+                oracle: IOracle(vm.randomAddress()),
                 liquidationLtv: liquidationLtv,
                 maxLtv: maxLtv,
                 liquidatable: true,
                 marketConfig: marketConfig,
-                gtInitalParams: abi.encode(collateralOracle)
+                gtInitalParams: abi.encode(0)
             });
 
         vm.expectRevert(
@@ -153,8 +213,6 @@ contract FactoryTest is Test {
         MockERC20 collateral = new MockERC20("ETH", "ETH", 18);
         MockERC20 underlying = new MockERC20("DAI", "DAI", 8);
 
-        MockPriceFeed underlyingOracle = new MockPriceFeed(deployer);
-        MockPriceFeed collateralOracle = new MockPriceFeed(deployer);
         marketConfig.lsf = 0;
         ITermMaxFactory.DeployParams memory params = ITermMaxFactory
             .DeployParams({
@@ -162,12 +220,12 @@ contract FactoryTest is Test {
                 admin: deployer,
                 collateral: address(collateral),
                 underlying: underlying,
-                underlyingOracle: underlyingOracle,
+                oracle: IOracle(vm.randomAddress()),
                 liquidationLtv: liquidationLtv,
                 maxLtv: maxLtv,
                 liquidatable: true,
                 marketConfig: marketConfig,
-                gtInitalParams: abi.encode(collateralOracle)
+                gtInitalParams: abi.encode(0)
             });
 
         vm.expectRevert(
@@ -188,21 +246,18 @@ contract FactoryTest is Test {
         MockERC20 collateral = new MockERC20("ETH", "ETH", 18);
         MockERC20 underlying = new MockERC20("DAI", "DAI", 8);
 
-        MockPriceFeed underlyingOracle = new MockPriceFeed(deployer);
-        MockPriceFeed collateralOracle = new MockPriceFeed(deployer);
-
         ITermMaxFactory.DeployParams memory params = ITermMaxFactory
             .DeployParams({
                 gtKey: DeployUtils.GT_ERC20,
                 admin: deployer,
                 collateral: address(collateral),
                 underlying: underlying,
-                underlyingOracle: underlyingOracle,
+                oracle: IOracle(vm.randomAddress()),
                 liquidationLtv: liquidationLtv,
                 maxLtv: maxLtv,
                 liquidatable: true,
                 marketConfig: marketConfig,
-                gtInitalParams: abi.encode(collateralOracle)
+                gtInitalParams: abi.encode(0)
             });
 
         vm.expectRevert(
@@ -224,21 +279,18 @@ contract FactoryTest is Test {
         MockERC20 collateral = new MockERC20("ETH", "ETH", 18);
         MockERC20 underlying = new MockERC20("DAI", "DAI", 8);
 
-        MockPriceFeed underlyingOracle = new MockPriceFeed(deployer);
-        MockPriceFeed collateralOracle = new MockPriceFeed(deployer);
-
         ITermMaxFactory.DeployParams memory params = ITermMaxFactory
             .DeployParams({
                 gtKey: bytes32(0),
                 admin: deployer,
                 collateral: address(collateral),
                 underlying: underlying,
-                underlyingOracle: underlyingOracle,
+                oracle: IOracle(vm.randomAddress()),
                 liquidationLtv: liquidationLtv,
                 maxLtv: maxLtv,
                 liquidatable: true,
                 marketConfig: marketConfig,
-                gtInitalParams: abi.encode(collateralOracle)
+                gtInitalParams: abi.encode(0)
             });
 
         vm.expectRevert(
