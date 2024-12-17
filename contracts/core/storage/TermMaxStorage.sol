@@ -2,6 +2,26 @@
 pragma solidity ^0.8.27;
 
 /**
+ * @title The data struct of token pair
+ * @author Term Structure Labs
+ */
+/// @notice Date of token pair configuration 
+struct TokenPairConfig {
+    /// @notice The treasurer's address, which will receive protocol fee
+    address treasurer;
+    /// @notice The unix time of maturity date
+    uint64 maturity;
+    /// @notice The unix time when the market starts trading
+    uint64 openTime;
+    /// @notice The fee ratio when redeemming all assets after maturity
+    ///         i.e. 0.01e8 means 1%
+    uint32 redeemFeeRatio;
+    /// @notice The fee ratio when issuing FT tokens by collateral
+    ///         i.e. 0.01e8 means 1%
+    uint32 issueFtFeeRatio;
+}
+
+/**
  * @title The data struct of market
  * @author Term Structure Labs
  */
