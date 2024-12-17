@@ -21,7 +21,6 @@ contract TermMaxTokenPair is ITermMaxTokenPair, ReentrancyGuard, Ownable, Pausab
     using SafeCast for int256;
     using SafeERC20 for IERC20;
     using SafeERC20 for IMintableERC20;
-    // using MathLib for *;
 
     TokenPairConfig private _config;
     address private collateral;
