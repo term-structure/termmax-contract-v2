@@ -110,14 +110,6 @@ library JSONLoader {
                 )
             )
         );
-        marketConfig.lockingPercentage = uint32(
-            vm.parseUint(
-                vm.parseJsonString(
-                    testdataJSON,
-                    string.concat(key, ".lockingPercentage")
-                )
-            )
-        );
         marketConfig.issueFtFeeRatio = uint32(
             vm.parseUint(
                 vm.parseJsonString(

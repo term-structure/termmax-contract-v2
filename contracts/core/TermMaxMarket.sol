@@ -206,29 +206,29 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         if(lpFtOutAmt == 0 || lpXtOutAmt == 0) revert LpOutputAmtIsZero(underlyingAmt);
         
         MarketConfig memory mConfig = _config;
-        uint totalFtRewards = lpFt.balanceOf(address(this));
-        uint totalXtRewards = lpXt.balanceOf(address(this));
+        // uint totalFtRewards = lpFt.balanceOf(address(this));
+        // uint totalXtRewards = lpXt.balanceOf(address(this));
         
         lpFt.mint(address(this), lpFtOutAmt);
         lpXt.mint(address(this), lpXtOutAmt);
         
-        lpFtOutAmt = TermMaxCurve.calculateLpWithoutReward(
-            block.timestamp, 
-            mConfig.openTime,
-            mConfig.maturity, 
-            lpFtTotalSupply, 
-            lpFtOutAmt, 
-            totalFtRewards
-        ).toUint128();
+        // lpFtOutAmt = TermMaxCurve.calculateLpWithoutReward(
+        //     block.timestamp, 
+        //     mConfig.openTime,
+        //     mConfig.maturity, 
+        //     lpFtTotalSupply, 
+        //     lpFtOutAmt, 
+        //     totalFtRewards
+        // ).toUint128();
         
-        lpXtOutAmt = TermMaxCurve.calculateLpWithoutReward(
-            block.timestamp,
-            mConfig.openTime,
-            mConfig.maturity,
-            lpXtTotalSupply,
-            lpXtOutAmt,
-            totalXtRewards
-        ).toUint128();
+        // lpXtOutAmt = TermMaxCurve.calculateLpWithoutReward(
+        //     block.timestamp,
+        //     mConfig.openTime,
+        //     mConfig.maturity,
+        //     lpXtTotalSupply,
+        //     lpXtOutAmt,
+        //     totalXtRewards
+        // ).toUint128();
         lpFt.safeTransfer(caller, lpFtOutAmt);
         lpXt.safeTransfer(caller, lpXtOutAmt);
         emit ProvideLiquidity(
@@ -309,31 +309,37 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         // calculate out put amount
         if (lpFtAmt > 0) {
             uint lpFtTotalSupply = lpFt.totalSupply();
-            uint256 lpFtAmtWithReward = lpFtAmt + TermMaxCurve.calculateLpReward(
-                block.timestamp,
-                mConfig.openTime,
-                mConfig.maturity,
-                lpFtTotalSupply,
-                lpFtAmt,
-                lpFt.balanceOf(address(this))
-            );
-            ftOutAmt = ((lpFtAmtWithReward * ftReserve) / lpFtTotalSupply).toUint128();
+            // uint256 lpFtAmtWithReward = lpFtAmt + TermMaxCurve.calculateLpReward(
+            //     block.timestamp,
+            //     mConfig.openTime,
+            //     mConfig.maturity,
+            //     lpFtTotalSupply,
+            //     lpFtAmt,
+            //     lpFt.balanceOf(address(this))
+            // );
+            // ftOutAmt = ((lpFtAmtWithReward * ftReserve) / lpFtTotalSupply).toUint128();
+            // lpFt.safeTransferFrom(caller, address(this), lpFtAmt);
+            // lpFt.burn(lpFtAmtWithReward);
+            ftOutAmt = ((lpFtAmt * ftReserve) / lpFtTotalSupply).toUint128();
             lpFt.safeTransferFrom(caller, address(this), lpFtAmt);
-            lpFt.burn(lpFtAmtWithReward);
+            lpFt.burn(lpFtAmt);
         }
         if (lpXtAmt > 0) {
             uint lpXtTotalSupply = lpXt.totalSupply();
-            uint256 lpXtAmtWithReward = lpXtAmt + TermMaxCurve.calculateLpReward(
-                block.timestamp,
-                mConfig.openTime,
-                mConfig.maturity,
-                lpXtTotalSupply,
-                lpXtAmt,
-                lpXt.balanceOf(address(this))
-            );
-            xtOutAmt = ((lpXtAmtWithReward * xtReserve) / lpXtTotalSupply).toUint128();
+            // uint256 lpXtAmtWithReward = lpXtAmt + TermMaxCurve.calculateLpReward(
+            //     block.timestamp,
+            //     mConfig.openTime,
+            //     mConfig.maturity,
+            //     lpXtTotalSupply,
+            //     lpXtAmt,
+            //     lpXt.balanceOf(address(this))
+            // );
+            // xtOutAmt = ((lpXtAmtWithReward * xtReserve) / lpXtTotalSupply).toUint128();
+            // lpXt.safeTransferFrom(caller, address(this), lpXtAmt);
+            // lpXt.burn(lpXtAmtWithReward);
+            xtOutAmt = ((lpXtAmt * xtReserve) / lpXtTotalSupply).toUint128();
             lpXt.safeTransferFrom(caller, address(this), lpXtAmt);
-            lpXt.burn(lpXtAmtWithReward);
+            lpXt.burn(lpXtAmt);
         }
         if (xtOutAmt >= xtReserve || ftOutAmt >= ftReserve) {
             revert TermMaxCurve.LiquidityIsZeroAfterTransaction();
@@ -520,8 +526,8 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
                 revert UnexpectedAmount(minTokenOut, netOut.toUint128());
             }
             token.safeTransfer(caller, netOut);
-            // _lock_fee
-            _lockFee(feeAmt, mConfig.lockingPercentage, mConfig.initialLtv);
+            // // _lock_fee
+            // _lockFee(feeAmt, mConfig.lockingPercentage, mConfig.initialLtv);
             feeAmt += feeToProtocol;
         }
         _updateApr(mConfig);
@@ -627,7 +633,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
             revert UnexpectedAmount(minUnderlyingOut, netOut.toUint128());
         }
         // Fee to prootocol
-        uint256 feeToProtocol = _tranferFeeToTreasurer(
+        _tranferFeeToTreasurer(
             mConfig.treasurer,
             feeAmt,
             mConfig.protocolFeeRatio,
@@ -635,11 +641,11 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         );
 
         _removeLiquidity(caller, netOut, mConfig.initialLtv);
-        _lockFee(
-            feeAmt - feeToProtocol,
-            mConfig.lockingPercentage,
-            mConfig.initialLtv
-        );
+        // _lockFee(
+        //     feeAmt - feeToProtocol,
+        //     mConfig.lockingPercentage,
+        //     mConfig.initialLtv
+        // );
 
         _updateApr(mConfig);
         emit SellToken(
@@ -681,32 +687,32 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         );
     }
 
-    /// @notice Lock up a portion of the transaction fee and release it slowly in the later stage
-    function _lockFee(
-        uint256 feeAmount,
-        uint256 lockingPercentage,
-        uint256 initialLtv
-    ) internal {
-        uint feeToLock = (feeAmount *
-            lockingPercentage +
-            Constants.DECIMAL_BASE -
-            1) / Constants.DECIMAL_BASE;
-        uint ftAmount = (feeToLock * initialLtv) / Constants.DECIMAL_BASE;
+    // /// @notice Lock up a portion of the transaction fee and release it slowly in the later stage
+    // function _lockFee(
+    //     uint256 feeAmount,
+    //     uint256 lockingPercentage,
+    //     uint256 initialLtv
+    // ) internal {
+    //     uint feeToLock = (feeAmount *
+    //         lockingPercentage +
+    //         Constants.DECIMAL_BASE -
+    //         1) / Constants.DECIMAL_BASE;
+    //     uint ftAmount = (feeToLock * initialLtv) / Constants.DECIMAL_BASE;
 
-        uint lpFtAmt = TermMaxCurve.calculateLpOut(
-            ftAmount,
-            ftReserve - ftAmount,
-            lpFt.totalSupply()
-        );
-        lpFt.mint(address(this), lpFtAmt);
+    //     uint lpFtAmt = TermMaxCurve.calculateLpOut(
+    //         ftAmount,
+    //         ftReserve - ftAmount,
+    //         lpFt.totalSupply()
+    //     );
+    //     lpFt.mint(address(this), lpFtAmt);
 
-        uint lpXtAmt = TermMaxCurve.calculateLpOut(
-            feeToLock,
-            xtReserve - feeToLock,
-            lpXt.totalSupply()
-        );
-        lpXt.mint(address(this), lpXtAmt);
-    }
+    //     uint lpXtAmt = TermMaxCurve.calculateLpOut(
+    //         feeToLock,
+    //         xtReserve - feeToLock,
+    //         lpXt.totalSupply()
+    //     );
+    //     lpXt.mint(address(this), lpXtAmt);
+    // }
 
     /**
      * @inheritdoc ITermMaxMarket
