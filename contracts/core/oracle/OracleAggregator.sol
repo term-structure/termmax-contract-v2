@@ -10,6 +10,10 @@ contract OracleAggregator is IOracle, UUPSUpgradeable, OwnableUpgradeable {
     /// @notice Oracles
     mapping(address => Oracle) public oracles;
 
+    constructor() {
+        _disableInitializers();
+    }
+
     function initialize(address _owner) external initializer{
         __Ownable_init(_owner);
     }
