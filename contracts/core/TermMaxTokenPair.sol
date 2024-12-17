@@ -34,7 +34,7 @@ contract TermMaxTokenPair is ITermMaxTokenPair, ReentrancyGuard, Ownable, Pausab
     modifier isOpen() {
         _requireNotPaused();
         if (block.timestamp < _config.openTime || block.timestamp >= _config.maturity) {
-            revert MarketIsNotOpen();
+            revert TermIsNotOpen();
         }
         _;
     }
@@ -46,7 +46,8 @@ contract TermMaxTokenPair is ITermMaxTokenPair, ReentrancyGuard, Ownable, Pausab
         address admin,
         address collateral_,
         IERC20 underlying_,
-        IMintableERC20[4] memory tokens_,
+        IMintableERC20 ft_,
+        IMintableERC20 xt_,
         IGearingToken gt_,
         TokenPairConfig memory config_
     ) external override {
@@ -63,16 +64,17 @@ contract TermMaxTokenPair is ITermMaxTokenPair, ReentrancyGuard, Ownable, Pausab
         underlying = underlying_;
         collateral = collateral_;
         _config = config_;
-        ft = tokens_[0];
-        xt = tokens_[1];
+        ft = ft_;
+        xt = xt_;
         gt = gt_;
 
-        emit MarketInitialized(
+        emit TokenPairInitialized(
             collateral,
             underlying,
             _config.openTime,
             _config.maturity,
-            tokens_,
+            ft_,
+            xt_,
             gt_
         );
     }
