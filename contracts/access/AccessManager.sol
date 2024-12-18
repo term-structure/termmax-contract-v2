@@ -18,10 +18,31 @@ interface IOwnable {
  * @author Term Structure Labs
  */
 contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
+    /// @notice Error when msg.sender is not curator
+    error MsgSenderIsNotCurator(ITermMaxMarket market);
+
+    /// @notice Emit when updating market curator
+    /// @param market The market's address
+    /// @param curator The curator's address
+    event UpdateMarketCurator(
+        ITermMaxMarket market,
+        address curator
+    );
+
     /// @notice Role to manage switch
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
-    /// @notice Role to manage configuration items
     bytes32 public constant CURATOR_ROLE = keccak256("CURATOR_ROLE");
+    
+    /// @notice Market curators
+    mapping(ITermMaxMarket => address) public marketCurators;
+
+    modifier onlyCurator(ITermMaxMarket market) {
+        if(hasRole(CURATOR_ROLE, msg.sender) || marketCurators[market] == msg.sender) {
+            _;
+        }else{
+            revert MsgSenderIsNotCurator(market);
+        }
+    }
 
     function initialize(address admin) public initializer {
         __UUPSUpgradeable_init();
@@ -75,7 +96,7 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
         proxy.upgradeToAndCall(newImplementation, data);
     }
 
-        /// @notice Set the market whitelist for router
+    /// @notice Set the market whitelist for router
     function setMarketWhitelist(
         ITermMaxRouter router,
         address market,
@@ -113,21 +134,27 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
         market.withdrawExcessFtXt(to, ftAmt, xtAmt);
     }
 
+    /// @notice Set the market curator
+    function setMarketCurator(ITermMaxMarket market, address curator) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        marketCurators[market] = curator;
+        emit UpdateMarketCurator(market, curator);
+    }
+
     /// @notice Update the market configuration
     function updateMarketConfig(
         ITermMaxMarket market,
         MarketConfig calldata newConfig
-    ) external onlyRole(CURATOR_ROLE) {
+    ) external onlyCurator(market) {
         market.updateMarketConfig(newConfig);
     }
 
     /// @notice Set the provider's white list
-    function setProviderWhitelist(ITermMaxMarket market, address provider, bool isWhiteList) external onlyRole(CURATOR_ROLE) {
+    function setProviderWhitelist(ITermMaxMarket market, address provider, bool isWhiteList) external onlyCurator(market) {
         market.setProviderWhitelist(provider, isWhiteList);
     }
 
     /// @notice Set the configuration of Gearing Token
-    function updateGtConfig(ITermMaxMarket market, bytes memory configData) external onlyRole(CURATOR_ROLE){
+    function updateGtConfig(ITermMaxMarket market, bytes memory configData) external onlyCurator(market){
         market.updateGtConfig(configData);
     }
 
