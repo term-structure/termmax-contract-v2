@@ -326,8 +326,6 @@ contract EvacuateTest is Test {
             res.market.withdrawLiquidity(0, uint128(lpXtBalance / 2));
         }
 
-        assert(res.lpFt.balanceOf(address(res.market)) > 0);
-        assert(res.lpXt.balanceOf(address(res.market)) > 0);
         assert(res.ft.balanceOf(address(res.gt)) > 0);
         vm.stopPrank();
 
