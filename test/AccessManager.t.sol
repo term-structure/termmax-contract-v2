@@ -318,9 +318,8 @@ contract AccessManagerTest is Test {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector,
-                sender,
-                manager.CURATOR_ROLE()
+                AccessManager.MsgSenderIsNotCurator.selector,
+                res.market
             )
         );
         manager.updateMarketConfig(res.market, newConfig);
@@ -368,9 +367,8 @@ contract AccessManagerTest is Test {
         uint256 newGtCapacity = 1000e8;
         vm.expectRevert(
             abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector,
-                sender,
-                manager.CURATOR_ROLE()
+                AccessManager.MsgSenderIsNotCurator.selector,
+                res.market
             )
         );
         manager.updateGtConfig(res.market, abi.encode(newGtCapacity));
@@ -507,9 +505,8 @@ contract AccessManagerTest is Test {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector,
-                sender,
-                manager.CURATOR_ROLE()
+                AccessManager.MsgSenderIsNotCurator.selector,
+                res.market
             )
         );
         manager.setProviderWhitelist(res.market, sender, true);
@@ -677,6 +674,62 @@ contract AccessManagerTest is Test {
         );
         manager.withdrawExcessFtXt(res.market, sender, 1, 1);
         
+        vm.stopPrank();
+    }
+
+    function testMarketCurator() public {
+        address curator = vm.randomAddress();
+        
+        // Test setting curator
+        vm.prank(deployer);
+        manager.setMarketCurator(res.market, curator);
+        assertEq(manager.marketCurators(res.market), curator);
+        
+        // Test curator permissions
+        vm.startPrank(curator);
+        MarketConfig memory newConfig = res.market.config();
+        manager.updateMarketConfig(res.market, newConfig);
+        manager.setProviderWhitelist(res.market, vm.randomAddress(), true);
+        manager.updateGtConfig(res.market, abi.encode(1));
+        vm.stopPrank();
+        
+        // Test non-curator permissions
+        vm.prank(vm.randomAddress());
+        vm.expectRevert(abi.encodeWithSelector(AccessManager.MsgSenderIsNotCurator.selector, res.market));
+        manager.updateMarketConfig(res.market, newConfig);
+    }
+
+    function testSetMarketCuratorByNonAdmin() public {
+        address curator = vm.randomAddress();
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector,
+                sender,
+                manager.DEFAULT_ADMIN_ROLE()
+            )
+        );
+        vm.prank(sender);
+        manager.setMarketCurator(res.market, curator);
+    }
+
+    function testMarketCuratorAndGlobalCurator() public {
+        address marketCurator = vm.randomAddress();
+        address globalCurator = vm.randomAddress();
+        
+        vm.startPrank(deployer);
+        manager.setMarketCurator(res.market, marketCurator);
+        manager.grantRole(manager.CURATOR_ROLE(), globalCurator);
+        vm.stopPrank();
+        
+        // Test market curator permissions
+        vm.startPrank(marketCurator);
+        MarketConfig memory newConfig = res.market.config();
+        manager.updateMarketConfig(res.market, newConfig);
+        vm.stopPrank();
+        
+        // Test global curator permissions
+        vm.startPrank(globalCurator);
+        manager.updateMarketConfig(res.market, newConfig);
         vm.stopPrank();
     }
 }

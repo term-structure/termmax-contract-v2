@@ -537,7 +537,7 @@ contract LpTest is Test {
         uint128 underlyingAmtIn = 100e8;
         res.underlying.mint(sender, underlyingAmtIn);
         res.underlying.approve(address(res.market), underlyingAmtIn);
-        (uint128 lpFtOutAmt, uint128 lpXtOutAmt) = res.market.provideLiquidity(
+        (uint128 lpFtOutAmt, ) = res.market.provideLiquidity(
             underlyingAmtIn
         );
 
