@@ -1724,6 +1724,43 @@ contract TermMaxRouterTest is Test {
         res_.lpFt.approve(address(router), balances[2]);
         res_.lpXt.approve(address(router), balances[3]);
     }
+
+    function testLpPriceIncreaseAfterTrades() public {
+        uint providedAmount = 1000e18;
+        res.underlying.mint(sender, providedAmount);
+        vm.startPrank(sender);
+        res.underlying.approve(address(res.market), providedAmount);
+        res.market.provideLiquidity(uint128(providedAmount));
+        vm.stopPrank();
+
+        for (uint i = 0; i < 100; i++) {
+            address trader = vm.randomAddress();
+            uint128 amount = 10000e8;
+            res.underlying.mint(trader, amount);
+            vm.startPrank(trader);
+            res.underlying.approve(address(res.market), amount);
+            if (i % 2 == 0) {
+                res.market.buyFt(amount, 0e8, res.marketConfig.lsf);
+            } else {
+                res.market.buyXt(amount, 0e8, res.marketConfig.lsf);
+            }
+            vm.stopPrank();
+        }
+        vm.startPrank(deployer);
+        res.underlying.mint(deployer, providedAmount);
+        res.underlying.approve(address(res.market), providedAmount);
+        res.market.provideLiquidity(uint128(providedAmount));
+        vm.stopPrank();
+
+        vm.startPrank(sender);
+        res.lpFt.approve(address(router), res.lpFt.balanceOf(sender));
+        res.lpXt.approve(address(router), res.lpXt.balanceOf(sender));
+
+        uint tokenOut = router.withdrawLiquidityToToken(sender, res.market, res.lpFt.balanceOf(sender), res.lpXt.balanceOf(sender), 0, res.marketConfig.lsf);
+        console.log("tokenOut", tokenOut);
+        assert(tokenOut > providedAmount);
+        vm.stopPrank();
+    }
 }
 
 contract FakeGt {
