@@ -74,6 +74,10 @@ contract TermMaxRouter is
         address newImplementation
     ) internal virtual override onlyOwner {}
 
+    constructor() {
+        _disableInitializers();
+    }
+
     function initialize(address defaultAdmin) public initializer {
         __UUPSUpgradeable_init();
         __Pausable_init();

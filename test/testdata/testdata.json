@@ -12,7 +12,6 @@
     "borrowFeeRatio": "3000000",
     "redeemFeeRatio": "0",
     "issueFtFeeRatio": "3000000",
-    "lockingPercentage": "50000000",
     "protocolFeeRatio": "20000000",
     "minNLendFeeR": "100",
     "minNBorrowFeeR": "100",
@@ -166,10 +165,10 @@
         "lendFeeRatio": "3000000",
         "borrowFeeRatio": "3000000",
         "maturity": "1735575942",
-        "lpFtReserve": "2047301",
-        "lpXtReserve": "2300070",
-        "lpFtTotalSupply": "880002047301",
-        "lpXtTotalSupply": "1000002300070",
+        "lpFtReserve": "0",
+        "lpXtReserve": "0",
+        "lpFtTotalSupply": "880000000000",
+        "lpXtTotalSupply": "1000000000000",
         "currentTime": "1735575941"
       },
       "output": {
@@ -192,10 +191,10 @@
         "lendFeeRatio": "3000000",
         "borrowFeeRatio": "3000000",
         "maturity": "1735575942",
-        "lpFtReserve": "2067621",
-        "lpXtReserve": "2322633",
-        "lpFtTotalSupply": "880002067621",
-        "lpXtTotalSupply": "1000002322633",
+        "lpFtReserve": "0",
+        "lpXtReserve": "0",
+        "lpFtTotalSupply": "880000000000",
+        "lpXtTotalSupply": "1000000000000",
         "currentTime": "1730391942"
       },
       "output": {
@@ -218,10 +217,10 @@
         "lendFeeRatio": "3000000",
         "borrowFeeRatio": "3000000",
         "maturity": "1735575942",
-        "lpFtReserve": "13616801",
-        "lpXtReserve": "16664950",
-        "lpFtTotalSupply": "880013616801",
-        "lpXtTotalSupply": "1000016664950",
+        "lpFtReserve": "0",
+        "lpXtReserve": "0",
+        "lpFtTotalSupply": "880000000000",
+        "lpXtTotalSupply": "1000000000000",
         "currentTime": "1730391942"
       },
       "output": {
@@ -244,10 +243,10 @@
         "lendFeeRatio": "3000000",
         "borrowFeeRatio": "3000000",
         "maturity": "1735575942",
-        "lpFtReserve": "4130766",
-        "lpXtReserve": "4667116",
-        "lpFtTotalSupply": "880004130766",
-        "lpXtTotalSupply": "1000004667116",
+        "lpFtReserve": "0",
+        "lpXtReserve": "0",
+        "lpFtTotalSupply": "880000000000",
+        "lpXtTotalSupply": "1000000000000",
         "currentTime": "1730391942"
       },
       "output": {
@@ -270,10 +269,10 @@
         "lendFeeRatio": "3000000",
         "borrowFeeRatio": "3000000",
         "maturity": "1735575942",
-        "lpFtReserve": "27314293",
-        "lpXtReserve": "32230301",
-        "lpFtTotalSupply": "880027314293",
-        "lpXtTotalSupply": "1000032230301",
+        "lpFtReserve": "0",
+        "lpXtReserve": "0",
+        "lpFtTotalSupply": "880000000000",
+        "lpXtTotalSupply": "1000000000000",
         "currentTime": "1730391942"
       },
       "output": {
