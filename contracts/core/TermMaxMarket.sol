@@ -209,8 +209,8 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         // uint totalFtRewards = lpFt.balanceOf(address(this));
         // uint totalXtRewards = lpXt.balanceOf(address(this));
         
-        lpFt.mint(address(this), lpFtOutAmt);
-        lpXt.mint(address(this), lpXtOutAmt);
+        // lpFt.mint(address(this), lpFtOutAmt);
+        // lpXt.mint(address(this), lpXtOutAmt);
         
         // lpFtOutAmt = TermMaxCurve.calculateLpWithoutReward(
         //     block.timestamp, 
@@ -229,8 +229,10 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         //     lpXtOutAmt,
         //     totalXtRewards
         // ).toUint128();
-        lpFt.safeTransfer(caller, lpFtOutAmt);
-        lpXt.safeTransfer(caller, lpXtOutAmt);
+        // lpFt.safeTransfer(caller, lpFtOutAmt);
+        // lpXt.safeTransfer(caller, lpXtOutAmt);
+        lpFt.mint(caller, lpFtOutAmt);
+        lpXt.mint(caller, lpXtOutAmt);
         emit ProvideLiquidity(
             caller,
             underlyingAmt,
