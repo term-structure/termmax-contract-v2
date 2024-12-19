@@ -39,8 +39,6 @@ contract MarketViewer {
     (
       IMintableERC20 ft,
       IMintableERC20 xt,
-      IMintableERC20 lpFt,
-      IMintableERC20 lpXt,
       IGearingToken gt,
       address collateral,
       IERC20 underlying
@@ -49,8 +47,6 @@ contract MarketViewer {
     position.collateralBalance = IERC20(collateral).balanceOf(owner);
     position.ftBalance = ft.balanceOf(owner);
     position.xtBalance = xt.balanceOf(owner);
-    position.lpFtBalance = lpFt.balanceOf(owner);
-    position.lpXtBalance = lpXt.balanceOf(owner);
 
     IERC721Enumerable gtNft = IERC721Enumerable(address(gt));
     uint balance = gtNft.balanceOf(owner);
@@ -75,7 +71,7 @@ contract MarketViewer {
       LoanPosition[] memory
     )
   {
-    ( ,,,,IGearingToken gt,, ) = market.tokens();
+    ( ,,IGearingToken gt,, ) = market.tokens();
     IERC721Enumerable gtNft = IERC721Enumerable(address(gt));
     uint balance = gtNft.balanceOf(owner);
     LoanPosition[] memory loanPositions = new LoanPosition[](balance);
