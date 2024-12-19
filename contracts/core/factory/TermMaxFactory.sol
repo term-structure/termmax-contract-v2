@@ -90,14 +90,10 @@ contract TermMaxFactory is ITermMaxFactory, Ownable {
      * @inheritdoc ITermMaxFactory
      */
     function createMarket(
-        DeployParams calldata deployParams
+        MarketDeployParams calldata deployParams
     ) external override onlyOwner returns (address market) {
         if (marketImplement == address(0)) {
             revert MarketImplementIsNotInitialized();
-        }
-        address gtImplement = gtImplements[deployParams.gtKey];
-        if (gtImplement == address(0)) {
-            revert CantNotFindGtImplementation();
         }
         {
             // Deploy clone by implementation and salt
@@ -105,77 +101,15 @@ contract TermMaxFactory is ITermMaxFactory, Ownable {
                 marketImplement,
                 keccak256(
                     abi.encode(
-                        deployParams.collateral,
-                        deployParams.underlying,
-                        deployParams.marketConfig.openTime,
-                        deployParams.marketConfig.maturity,
-                        deployParams.marketConfig.initialLtv
+                        deployParams.tokenPair,
+                        deployParams.marketConfig.maker
                     )
                 )
             );
         }
-        IGearingToken gt;
-        IMintableERC20[4] memory tokens;
-        {
-            string memory name = string(
-                abi.encodePacked(
-                    IERC20Metadata(deployParams.collateral).name(),
-                    STRING_CONNECTION,
-                    deployParams.underlying.name()
-                )
-            );
-            string memory symbol = string(
-                abi.encodePacked(
-                    IERC20Metadata(deployParams.collateral).symbol(),
-                    STRING_CONNECTION,
-                    deployParams.underlying.symbol()
-                )
-            );
-
-            uint8 decimals = deployParams.underlying.decimals();
-            tokens = _deployTokens(market, name, symbol, decimals);
-
-            string memory gtName = string(abi.encodePacked(PREFIX_GNFT, name));
-            string memory gtSymbol = string(
-                abi.encodePacked(PREFIX_GNFT, symbol)
-            );
-            gt = IGearingToken(
-                Clones.cloneDeterministic(
-                    gtImplement,
-                    keccak256(
-                        abi.encode(
-                            market,
-                            deployParams.collateral,
-                            deployParams.underlying
-                        )
-                    )
-                )
-            );
-            gt.initialize(
-                gtName,
-                gtSymbol,
-                IGearingToken.GtConfig({
-                    market: address(market),
-                    collateral: address(deployParams.collateral),
-                    underlying: deployParams.underlying,
-                    ft: tokens[0],
-                    treasurer: deployParams.marketConfig.treasurer,
-                    oracle: deployParams.oracle,
-                    maturity: deployParams.marketConfig.maturity,
-                    liquidationLtv: deployParams.liquidationLtv,
-                    maxLtv: deployParams.maxLtv,
-                    liquidatable: deployParams.liquidatable
-                }),
-                deployParams.gtInitalParams
-            );
-        }
-
         ITermMaxMarket(market).initialize(
             deployParams.admin,
-            address(deployParams.collateral),
-            deployParams.underlying,
-            tokens,
-            gt,
+            deployParams.tokenPair,
             deployParams.marketConfig
         );
     }
