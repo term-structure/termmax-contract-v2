@@ -2,6 +2,7 @@
 pragma solidity ^0.8.27;
 
 import {ITermMaxMarket, IFlashLoanReceiver, IGearingToken, IERC20} from "../core/TermMaxMarket.sol";
+import {ITermMaxTokenPair} from "../core/ITermMaxTokenPair.sol";
 
 contract MockFlashLoanReceiver is IFlashLoanReceiver {
     ITermMaxMarket market;
@@ -13,7 +14,7 @@ contract MockFlashLoanReceiver is IFlashLoanReceiver {
     constructor(ITermMaxMarket market_) {
         market = market_;
 
-        (, xt, , , gt, collateral, underlying) = market.tokens();
+        (, xt, gt, collateral, underlying) = market.tokens();
     }
 
     function executeOperation(
@@ -41,6 +42,8 @@ contract MockFlashLoanReceiver is IFlashLoanReceiver {
     ) external returns (uint256 gtId) {
         xt.transferFrom(msg.sender, address(this), xtAmt);
         xt.approve(address(market), xtAmt);
-        gtId = market.leverageByXt(msg.sender, xtAmt, callbackData);
+        ITermMaxTokenPair tokenPair = ITermMaxMarket(market).tokenPair();
+        
+        gtId = tokenPair.leverageByXt(msg.sender, xtAmt, callbackData);
     }
 }
