@@ -43,7 +43,7 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
     /// @notice Deploy a new market
     function createMarket(
         ITermMaxFactory factory,
-        ITermMaxFactory.DeployParams calldata deployParams
+        ITermMaxFactory.MarketDeployParams calldata deployParams
     ) external onlyRole(DEFAULT_ADMIN_ROLE) returns (address market) {
         market = factory.createMarket(deployParams);
     }
@@ -52,7 +52,7 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
     function createMarketAndWhitelist(
         ITermMaxRouter router,
         ITermMaxFactory factory,
-        ITermMaxFactory.DeployParams calldata deployParams
+        ITermMaxFactory.MarketDeployParams calldata deployParams
     ) external onlyRole(DEFAULT_ADMIN_ROLE) returns (address market) {
         market = factory.createMarket(deployParams);
         router.setMarketWhitelist(market, true);
@@ -103,16 +103,6 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
         aggregator.removeOracle(asset);
     }
 
-    /// @notice Withdraw excess FT and XT tokens from the market
-    function withdrawExcessFtXt(
-        ITermMaxMarket market,
-        address to,
-        uint128 ftAmt,
-        uint128 xtAmt
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        market.withdrawExcessFtXt(to, ftAmt, xtAmt);
-    }
-
     /// @notice Update the market configuration
     function updateMarketConfig(
         ITermMaxMarket market,
@@ -122,14 +112,14 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
     }
 
     /// @notice Set the provider's white list
-    function setProviderWhitelist(ITermMaxMarket market, address provider, bool isWhiteList) external onlyRole(CURATOR_ROLE) {
-        market.setProviderWhitelist(provider, isWhiteList);
+    function setProvider(ITermMaxMarket market, address provider) external onlyRole(CURATOR_ROLE) {
+        market.setProvider(provider);
     }
 
-    /// @notice Set the configuration of Gearing Token
-    function updateGtConfig(ITermMaxMarket market, bytes memory configData) external onlyRole(CURATOR_ROLE){
-        market.updateGtConfig(configData);
-    }
+    // /// @notice Set the configuration of Gearing Token
+    // function updateGtConfig(ITermMaxMarket market, bytes memory configData) external onlyRole(CURATOR_ROLE){
+    //     market.updateGtConfig(configData);
+    // }
 
     /// @notice Set the switch for this market
     function setSwitchOfMarket(
