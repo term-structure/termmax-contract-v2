@@ -11,6 +11,7 @@ import {IGearingToken} from "./tokens/IGearingToken.sol";
 import {IFlashLoanReceiver} from "./IFlashLoanReceiver.sol";
 import {Constants} from "./lib/Constants.sol";
 import {Ownable} from "./access/Ownable.sol";
+import {TermMaxCurve} from "./lib/TermMaxCurve.sol";
 
 /**
  * @title TermMax Market
@@ -29,10 +30,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
     /// @notice Check if the market is tradable
     modifier isOpen() {
         _requireNotPaused();
-        if (
-            block.timestamp < _config.openTime ||
-            block.timestamp >= _config.maturity
-        ) {
+        if (block.timestamp < _config.openTime || block.timestamp >= _config.maturity) {
             revert MarketIsNotOpen();
         }
         _;
@@ -41,16 +39,10 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
     /**
      * @inheritdoc ITermMaxMarket
      */
-    function initialize(
-        address admin,
-        ITermMaxTokenPair tokenPair_,
-        MarketConfig memory config_
-    ) external override {
+    function initialize(address admin, ITermMaxTokenPair tokenPair_, MarketConfig memory config_) external override {
         __initializeOwner(admin);
-        if (
-            config_.openTime < block.timestamp ||
-            config_.maturity < config_.openTime
-        ) revert InvalidTime(config_.openTime, config_.maturity);
+        if (config_.openTime < block.timestamp || config_.maturity < config_.openTime)
+            revert InvalidTime(config_.openTime, config_.maturity);
 
         _config = config_;
 
@@ -77,33 +69,21 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
     /**
      * @inheritdoc ITermMaxMarket
      */
-    function tokenPair()
-        external
-        view
-        override
-        returns (ITermMaxTokenPair)
-    {
+    function tokenPair() external view override returns (ITermMaxTokenPair) {
         return _tokenPair;
     }
 
     /**
      * @inheritdoc ITermMaxMarket
      */
-    function tokens()
-        external
-        view
-        override
-        returns (IMintableERC20, IMintableERC20, IGearingToken, address, IERC20)
-    {
+    function tokens() external view override returns (IMintableERC20, IMintableERC20, IGearingToken, address, IERC20) {
         return _tokenPair.tokens();
     }
 
     /**
      * @inheritdoc ITermMaxMarket
      */
-    function updateMarketConfig(
-        MarketConfig calldata newConfig
-    ) external override onlyOwner {
+    function updateMarketConfig(MarketConfig calldata newConfig) external override onlyOwner {
         (, , IGearingToken gt, , ) = _tokenPair.tokens();
         if (newConfig.openTime != _config.openTime) revert TOBEDEFINED();
         if (newConfig.maturity != _config.maturity) revert TOBEDEFINED();
@@ -128,12 +108,8 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
     }
 
     /// @notice Calculate how many days until expiration
-    function _daysToMaturity(
-        uint maturity
-    ) internal view returns (uint256 daysToMaturity) {
-        daysToMaturity =
-            (maturity - block.timestamp + Constants.SECONDS_IN_DAY - 1) /
-            Constants.SECONDS_IN_DAY;
+    function _daysToMaturity(uint maturity) internal view returns (uint256 daysToMaturity) {
+        daysToMaturity = (maturity - block.timestamp + Constants.SECONDS_IN_DAY - 1) / Constants.SECONDS_IN_DAY;
     }
 
     /**
