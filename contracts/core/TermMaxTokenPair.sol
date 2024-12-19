@@ -130,14 +130,37 @@ contract TermMaxTokenPair is ITermMaxTokenPair, ReentrancyGuard, Ownable, Pausab
             Constants.SECONDS_IN_DAY;
     }
 
-    function redeemFtAndXtToUnderlying(
+    function mintFtAndXt(
+        address caller,
+        address receiver,
         uint256 underlyingAmt
     ) external override nonReentrant isOpen {
-        _redeemFtAndXtToUnderlying(msg.sender, underlyingAmt);
+        _mintFtAndXt(caller, receiver, underlyingAmt);
+    }
+
+    function _mintFtAndXt(
+        address caller,
+        address receiver,
+        uint256 underlyingAmt
+    ) internal {
+        underlying.safeTransferFrom(caller, address(this), underlyingAmt);
+        
+        ft.mint(receiver, underlyingAmt);
+        xt.mint(receiver, underlyingAmt);
+    }
+
+
+    function redeemFtAndXtToUnderlying(
+        address caller,
+        address receiver,
+        uint256 underlyingAmt
+    ) external override nonReentrant isOpen {
+        _redeemFtAndXtToUnderlying(caller, receiver, underlyingAmt);
     }
 
     function _redeemFtAndXtToUnderlying(
         address caller,
+        address receiver,
         uint256 underlyingAmt
     ) internal {
         ft.safeTransferFrom(caller, address(this), underlyingAmt);
@@ -146,7 +169,7 @@ contract TermMaxTokenPair is ITermMaxTokenPair, ReentrancyGuard, Ownable, Pausab
         ft.burn(underlyingAmt);
         xt.burn(underlyingAmt);
 
-        underlying.safeTransfer(caller, underlyingAmt);
+        underlying.safeTransfer(receiver, underlyingAmt);
     }
 
     /**

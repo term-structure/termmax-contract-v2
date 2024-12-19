@@ -19,6 +19,9 @@ struct TokenPairConfig {
     /// @notice The fee ratio when issuing FT tokens by collateral
     ///         i.e. 0.01e8 means 1%
     uint32 issueFtFeeRatio;
+    /// @notice The percentage of handling fee charged by the protocol
+    ///         i.e. 0.5e8 means 50%
+    uint32 protocolFeeRatio;
 }
 
 /**

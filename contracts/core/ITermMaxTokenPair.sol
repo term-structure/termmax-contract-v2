@@ -131,10 +131,15 @@ interface ITermMaxTokenPair {
             IERC20 underlying
         );
 
-    /// @notice Sell ​​FT and XT in equal proportion to initial LTV for underlying token.
+    /// @notice Mint FT and XT tokens by underlying token.
     ///         No price slippage or handling fees.
-    /// @param underlyingAmt Amount of underlying token want to obtain
-    function redeemFtAndXtToUnderlying(uint256 underlyingAmt) external;
+    /// @param underlyingAmt Amount of underlying token want to lock
+    function mintFtAndXt(address caller, address receiver, uint256 underlyingAmt) external;
+
+    /// @notice redeem FT and XT to underlying token.
+    ///         No price slippage or handling fees.
+    /// @param underlyingAmt Amount of underlying token want to redeem
+    function redeemFtAndXtToUnderlying(address caller, address receiver, uint256 underlyingAmt) external;
 
     /// @notice Using collateral to issue FT tokens.
     ///         Caller will get FT(bond) tokens equal to the debt amount subtract issue fee
