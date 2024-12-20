@@ -6,7 +6,8 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 import {IGearingToken, IOracle, IERC20Metadata, GearingTokenWithERC20} from "../tokens/GearingTokenWithERC20.sol";
 import {MintableERC20, IMintableERC20} from "../tokens/MintableERC20.sol";
-import {ITermMaxMarket} from "../TermMaxMarket.sol";
+import {ITermMaxTokenPair} from "../ITermMaxTokenPair.sol";
+import {ITermMaxMarket} from "../ITermMaxMarket.sol";
 import {ITermMaxFactory} from "./ITermMaxFactory.sol";
 
 /**
@@ -26,6 +27,9 @@ contract TermMaxFactory is ITermMaxFactory, Ownable {
     /// @notice The implementation of TermMax ERC20 Token contract
     address public immutable tokenImplement;
 
+    /// @notice The implementation of TermMax Token Pair contract
+    address public tokenPairImplement;
+
     /// @notice The implementation of TermMax Market contract
     address public marketImplement;
 
@@ -38,6 +42,15 @@ contract TermMaxFactory is ITermMaxFactory, Ownable {
     constructor(address admin) Ownable(admin) {
         gtImplements[GT_ERC20] = address(new GearingTokenWithERC20());
         tokenImplement = address(new MintableERC20());
+    }
+
+    /// @notice Initialize the implementation of TermMax Token Pair contract
+    function initTokenPairImplement(address marketImplement_) external onlyOwner {
+        if (marketImplement != address(0)) {
+            revert TokenPairImplementInitialized();
+        }
+        marketImplement = marketImplement_;
+        emit InitializeTokenPairImplement(marketImplement_);
     }
 
     /// @notice Initialize the implementation of TermMax Market contract
@@ -64,23 +77,132 @@ contract TermMaxFactory is ITermMaxFactory, Ownable {
     /**
      * @inheritdoc ITermMaxFactory
      */
-    function predictMarketAddress(
-        address collateral,
+    function predictTokenPairAddress(
+        IERC20Metadata collateral,
         IERC20Metadata underlying,
-        uint64 openTime,
-        uint64 maturity,
-        uint32 initialLtv
+        uint maturity
+    ) external view override returns (address tokenPair) {
+        return
+            Clones.predictDeterministicAddress(
+                tokenPairImplement,
+                keccak256(
+                    abi.encode(
+                        collateral,
+                        underlying,
+                        maturity
+                    )
+                )
+            );
+    }
+
+    /**
+     * @inheritdoc ITermMaxFactory
+     */
+    function createTokenPair(
+        TokenPairDeployParams calldata deployParams
+    ) external override onlyOwner returns (address tokenPair) {
+        if (tokenPairImplement == address(0)) {
+            revert TokenPairImplementIsNotInitialized();
+        }
+        address gtImplement = gtImplements[deployParams.gtKey];
+        if (gtImplement == address(0)) {
+            revert CantNotFindGtImplementation();
+        }
+        {
+            // Deploy clone by implementation and salt
+            tokenPair = Clones.cloneDeterministic(
+                tokenPairImplement,
+                keccak256(
+                    abi.encode(
+                        deployParams.collateral,
+                        deployParams.underlying,
+                        deployParams.tokenPairConfig.maturity
+                    )
+                )
+            );
+        }
+        IGearingToken gt;
+        IMintableERC20 ft;
+        IMintableERC20 xt;
+        {
+            string memory name = string(
+                abi.encodePacked(
+                    IERC20Metadata(deployParams.collateral).name(),
+                    STRING_CONNECTION,
+                    deployParams.underlying.name()
+                )
+            );
+            string memory symbol = string(
+                abi.encodePacked(
+                    IERC20Metadata(deployParams.collateral).symbol(),
+                    STRING_CONNECTION,
+                    deployParams.underlying.symbol()
+                )
+            );
+
+            uint8 decimals = deployParams.underlying.decimals();
+            (ft, xt) = _deployTokens(tokenPair, name, symbol, decimals);
+
+            string memory gtName = string(abi.encodePacked(PREFIX_GNFT, name));
+            string memory gtSymbol = string(
+                abi.encodePacked(PREFIX_GNFT, symbol)
+            );
+            gt = IGearingToken(
+                Clones.cloneDeterministic(
+                    gtImplement,
+                    keccak256(
+                        abi.encode(
+                            tokenPair,
+                            deployParams.collateral,
+                            deployParams.underlying
+                        )
+                    )
+                )
+            );
+            gt.initialize(
+                gtName,
+                gtSymbol,
+                IGearingToken.GtConfig({
+                    tokenPair: address(tokenPair),
+                    collateral: address(deployParams.collateral),
+                    underlying: deployParams.underlying,
+                    ft: ft,
+                    treasurer: deployParams.tokenPairConfig.treasurer,
+                    oracle: deployParams.oracle,
+                    maturity: deployParams.tokenPairConfig.maturity,
+                    liquidationLtv: deployParams.liquidationLtv,
+                    maxLtv: deployParams.maxLtv,
+                    liquidatable: deployParams.liquidatable
+                }),
+                deployParams.gtInitalParams
+            );
+        }
+
+        ITermMaxTokenPair(tokenPair).initialize(
+            deployParams.admin,
+            address(deployParams.collateral),
+            deployParams.underlying,
+            ft,
+            xt,
+            gt,
+            deployParams.tokenPairConfig
+        );
+    }
+
+    /**
+     * @inheritdoc ITermMaxFactory
+     */
+    function predictMarketAddress(
+        ITermMaxTokenPair tokenPair,
+        address maker
     ) external view override returns (address market) {
         return
             Clones.predictDeterministicAddress(
                 marketImplement,
                 keccak256(
                     abi.encode(
-                        collateral,
-                        underlying,
-                        openTime,
-                        maturity,
-                        initialLtv
+                        tokenPair,
+                        maker
                     )
                 )
             );
@@ -119,34 +241,19 @@ contract TermMaxFactory is ITermMaxFactory, Ownable {
         string memory name,
         string memory symbol,
         uint8 decimals
-    ) internal returns (IMintableERC20[4] memory tokens) {
+    ) internal returns (IMintableERC20 ft, IMintableERC20 xt) {
         {
             // Deploy tokens
-            tokens[0] = _deployMintableERC20(
+            ft = _deployMintableERC20(
                 address(market),
                 PREFIX_FT,
                 name,
                 symbol,
                 decimals
             );
-            tokens[1] = _deployMintableERC20(
+            xt = _deployMintableERC20(
                 address(market),
                 PREFIX_XT,
-                name,
-                symbol,
-                decimals
-            );
-            // Lp tokens' decimals must bigger than their underlying
-            tokens[2] = _deployMintableERC20(
-                address(market),
-                PREFIX_LP_FT,
-                name,
-                symbol,
-                decimals
-            );
-            tokens[3] = _deployMintableERC20(
-                address(market),
-                PREFIX_LP_XT,
                 name,
                 symbol,
                 decimals
