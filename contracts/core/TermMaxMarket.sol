@@ -103,14 +103,14 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
 
         (uint xtReserve, uint ftReserve) = ftXtReserves();
         if (newFtReserve > ftReserve) {
-            ft.safeTransferFrom(msg.sender, address(this), newFtReserve - ftReserve);
+            ft.safeTransferFrom(_config.maker, address(this), newFtReserve - ftReserve);
         } else if (newFtReserve < ftReserve) {
-            ft.safeTransfer(msg.sender, ftReserve - newFtReserve);
+            ft.safeTransfer(_config.maker, ftReserve - newFtReserve);
         }
         if (newXtReserve > xtReserve) {
-            xt.safeTransferFrom(msg.sender, address(this), newXtReserve - xtReserve);
+            xt.safeTransferFrom(_config.maker, address(this), newXtReserve - xtReserve);
         } else if (newXtReserve < xtReserve) {
-            xt.safeTransfer(msg.sender, xtReserve - newXtReserve);
+            xt.safeTransfer(_config.maker, xtReserve - newXtReserve);
         }
 
         emit UpdateMarketConfig(_config);
