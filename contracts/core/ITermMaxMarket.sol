@@ -36,9 +36,7 @@ interface ITermMaxMarket {
     /// @notice Error for the actual output value does not match the expected value
     error UnexpectedAmount(uint128 expectedAmt, uint128 actualAmt);
     /// @notice Error for redeeming before the liquidation window
-    error CanNotRedeemBeforeFinalLiquidationDeadline(
-        uint256 liquidationDeadline
-    );
+    error CanNotRedeemBeforeFinalLiquidationDeadline(uint256 liquidationDeadline);
     /// @notice Error for evacuation mode is not actived
     error EvacuationIsNotActived();
     /// @notice Error for evacuation mode is actived
@@ -50,11 +48,7 @@ interface ITermMaxMarket {
     /// @param tokenPair Underlying token
     /// @param openTime The unix time when the market starts trading
     /// @param maturity The unix time of maturity date
-    event MarketInitialized(
-        ITermMaxTokenPair indexed tokenPair,
-        uint64 openTime,
-        uint64 maturity
-    );
+    event MarketInitialized(ITermMaxTokenPair indexed tokenPair, uint64 openTime, uint64 maturity);
 
     /// @notice Emitted when market config is updated
     event UpdateMarketConfig(MarketConfig config);
@@ -148,12 +142,7 @@ interface ITermMaxMarket {
     /// @param underlyingAmt the amount of underlying removed
     /// @param ftReserve The new FT reserve amount
     /// @param xtReserve The new XT reserve amount
-    event RemoveLiquidity(
-        address indexed caller,
-        uint256 underlyingAmt,
-        uint128 ftReserve,
-        uint128 xtReserve
-    );
+    event RemoveLiquidity(address indexed caller, uint256 underlyingAmt, uint128 ftReserve, uint128 xtReserve);
 
     /// @notice Emitted when doing leverage
     /// @param loanReceiver Who call the function
@@ -192,13 +181,7 @@ interface ITermMaxMarket {
     /// @param underlyingAmt The amount of underlying received
     /// @param feeAmt Redeemming Fees
     /// @param deliveryData The encoded data of collateral received
-    event Redeem(
-        address indexed caller,
-        uint128 proportion,
-        uint128 underlyingAmt,
-        uint128 feeAmt,
-        bytes deliveryData
-    );
+    event Redeem(address indexed caller, uint128 proportion, uint128 underlyingAmt, uint128 feeAmt, bytes deliveryData);
 
     /// @notice Emitted when evacuating liquidity
     /// @param caller Who call the function
@@ -226,35 +209,26 @@ interface ITermMaxMarket {
     /// @param tokenPair The token pair of the market
     /// @param config_ Configuration of market
     /// @dev Only factory will call this function once when deploying new market
-    function initialize(
-        address admin,
-        ITermMaxTokenPair tokenPair,
-        MarketConfig memory config_
-    ) external;
+    function initialize(address admin, ITermMaxTokenPair tokenPair, MarketConfig memory config_) external;
 
     /// @notice Return the configuration
     function config() external view returns (MarketConfig memory);
 
     /// @notice Set the market configuration
-    function updateMarketConfig(MarketConfig calldata newConfig) external;
+    /// @param newConfig New configuration
+    /// @param newFtReserve New FT reserve amount
+    /// @param newXtReserve New XT reserve amount
+    function updateMarketConfig(MarketConfig calldata newConfig, uint newFtReserve, uint newXtReserve) external;
 
     /// @notice Set the provider's whitelist
     function setProvider(address provider) external;
 
     /// @notice Return the reserves of FT and XT
-    function ftXtReserves()
-        external
-        view
-        returns (uint256 ftReserve, uint256 xtReserve);
+    function ftXtReserves() external view returns (uint256 ftReserve, uint256 xtReserve);
 
     /// @notice Return the tokens in TermMax Market
     /// @return tokenPair Token Pair
-    function tokenPair()
-        external
-        view
-        returns (
-            ITermMaxTokenPair tokenPair
-        );
+    function tokenPair() external view returns (ITermMaxTokenPair tokenPair);
 
     /// @notice Return the tokens in TermMax Market
     /// @return ft Fixed-rate Token(bond token). Earning Fixed Income with High Certainty
@@ -265,49 +239,31 @@ interface ITermMaxMarket {
     function tokens()
         external
         view
-        returns (
-            IMintableERC20 ft,
-            IMintableERC20 xt,
-            IGearingToken gt,
-            address collateral,
-            IERC20 underlying
-        );
+        returns (IMintableERC20 ft, IMintableERC20 xt, IGearingToken gt, address collateral, IERC20 underlying);
 
     /// @notice Buy FT using underlying token
     /// @param underlyingAmtIn The number of unterlying tokens input
     /// @param minTokenOut Minimum number of FT token outputs required
     /// @return netOut The actual number of FT tokens received
-    function buyFt(
-        uint128 underlyingAmtIn,
-        uint128 minTokenOut
-    ) external returns (uint256 netOut);
+    function buyFt(uint128 underlyingAmtIn, uint128 minTokenOut) external returns (uint256 netOut);
 
     /// @notice Buy XT using underlying token
     /// @param underlyingAmtIn The number of unterlying tokens input
     /// @param minTokenOut Minimum number of XT token outputs required
     /// @return netOut The actual number of XT tokens received
-    function buyXt(
-        uint128 underlyingAmtIn,
-        uint128 minTokenOut
-    ) external returns (uint256 netOut);
+    function buyXt(uint128 underlyingAmtIn, uint128 minTokenOut) external returns (uint256 netOut);
 
     /// @notice Sell FT to get underlying token
     /// @param ftAmtIn The number of FT tokens input
     /// @param minUnderlyingOut Minimum number of underlying token outputs required
     /// @return netOut The actual number of underlying tokens received
-    function sellFt(
-        uint128 ftAmtIn,
-        uint128 minUnderlyingOut
-    ) external returns (uint256 netOut);
+    function sellFt(uint128 ftAmtIn, uint128 minUnderlyingOut) external returns (uint256 netOut);
 
     /// @notice Sell XT to get underlying token
     /// @param xtAmtIn The number of XT tokens input
     /// @param minUnderlyingOut Minimum number of underlying token outputs required
     /// @return netOut The actual number of underlying tokens received
-    function sellXt(
-        uint128 xtAmtIn,
-        uint128 minUnderlyingOut
-    ) external returns (uint256 netOut);
+    function sellXt(uint128 xtAmtIn, uint128 minUnderlyingOut) external returns (uint256 netOut);
 
     /// @notice Suspension of market trading
     function pause() external;

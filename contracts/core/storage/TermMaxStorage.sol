@@ -56,6 +56,10 @@ struct MarketConfig {
     /// @notice The minmally notional borrowing fee ratio
     ///         i.e. 0.01e8 means 1%
     uint32 minNBorrowFeeR;
+    /// @notice show if the market is borrow only
+    bool isBorrowOnly;
+    /// @notice show if the market is lend only
+    bool isLendOly;
     /// @notice The curve cuts of the market
     CurveCut[] curveCuts;
 }

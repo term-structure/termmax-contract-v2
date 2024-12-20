@@ -83,20 +83,37 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
     /**
      * @inheritdoc ITermMaxMarket
      */
-    function updateMarketConfig(MarketConfig calldata newConfig) external override onlyOwner {
-        (, , IGearingToken gt, , ) = _tokenPair.tokens();
+    function updateMarketConfig(
+        MarketConfig calldata newConfig,
+        uint newFtReserve,
+        uint newXtReserve
+    ) external override onlyOwner {
+        (IMintableERC20 ft, IMintableERC20 xt, , , ) = _tokenPair.tokens();
         if (newConfig.openTime != _config.openTime) revert TOBEDEFINED();
         if (newConfig.maturity != _config.maturity) revert TOBEDEFINED();
         if (newConfig.maker != _config.maker) revert TOBEDEFINED();
-        if (newConfig.treasurer != _config.treasurer) {
-            gt.setTreasurer(newConfig.treasurer);
+        if (newConfig.treasurer != _config.treasurer) revert TOBEDEFINED();
+        if (newConfig.curveCuts.length == 0) revert TOBEDEFINED();
+        if (newConfig.curveCuts[0].xtReserve != 0) revert TOBEDEFINED();
+        for (uint i = 1; i < newConfig.curveCuts.length; i++) {
+            if (newConfig.curveCuts[i].xtReserve <= newConfig.curveCuts[i - 1].xtReserve) revert TOBEDEFINED();
         }
+        if (newConfig.isBorrowOnly && newConfig.isLendOly) revert TOBEDEFINED();
         _config = newConfig;
+
+        (uint xtReserve, uint ftReserve) = ftXtReserves();
+        if (newFtReserve > ftReserve) {
+            ft.safeTransferFrom(msg.sender, address(this), newFtReserve - ftReserve);
+        } else if (newFtReserve < ftReserve) {
+            ft.safeTransfer(msg.sender, ftReserve - newFtReserve);
+        }
+        if (newXtReserve > xtReserve) {
+            xt.safeTransferFrom(msg.sender, address(this), newXtReserve - xtReserve);
+        } else if (newXtReserve < xtReserve) {
+            xt.safeTransfer(msg.sender, xtReserve - newXtReserve);
+        }
+
         emit UpdateMarketConfig(_config);
-        //TODO: check xtReserve of cuts is increasing and start from zero
-        //TODO: check apr of cuts is decreasing
-        //TODO: adjust ft and xt reserves
-        //TODO: only lend/ only borrow
     }
 
     /**
@@ -215,7 +232,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         (IMintableERC20 ft, IMintableERC20 xt, , , IERC20 underlying) = _tokenPair.tokens();
         uint daysToMaturity = _daysToMaturity(_config.maturity);
         uint oriXtReserve = xt.balanceOf(address(this));
-        
+
         (uint underlyingAmtOut, uint feeAmt, bool isXtIn) = func(daysToMaturity, oriXtReserve, tokenAmtIn);
         IMintableERC20 tokenIn = isXtIn ? xt : ft;
 
