@@ -210,6 +210,8 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
     ) internal view returns (uint tokenAmtOut, uint feeAmt, bool isXtOut) {
         (, uint negDeltaFt) = TermMaxCurve.buyFt(daysToMaturity, _config.curveCuts, oriXtReserve, underlyingAmtIn);
         feeAmt = (negDeltaFt * _config.lendFeeRatio) / Constants.DECIMAL_BASE;
+        uint minFeeAmt = (underlyingAmtIn * _config.minNLendFeeR) / Constants.DECIMAL_BASE;
+        feeAmt = feeAmt < minFeeAmt ? minFeeAmt : feeAmt;
         (, tokenAmtOut) = TermMaxCurve.buyFt(daysToMaturity, _config.curveCuts, oriXtReserve, underlyingAmtIn - feeAmt);
         isXtOut = false;
     }
@@ -220,6 +222,8 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         uint underlyingAmtIn
     ) internal view returns (uint tokenAmtOut, uint feeAmt, bool isXtOut) {
         feeAmt = (underlyingAmtIn * _config.borrowFeeRatio) / Constants.DECIMAL_BASE;
+        uint minFeeAmt = (underlyingAmtIn * _config.minNBorrowFeeR) / Constants.DECIMAL_BASE;
+        feeAmt = feeAmt < minFeeAmt ? minFeeAmt : feeAmt;
         (tokenAmtOut, ) = TermMaxCurve.buyXt(daysToMaturity, _config.curveCuts, oriXtReserve, underlyingAmtIn - feeAmt);
         isXtOut = true;
     }
@@ -252,6 +256,8 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         uint deltaFt;
         (underlyingAmtOut, deltaFt) = TermMaxCurve.sellFt(daysToMaturity, _config.curveCuts, oriXtReserve, tokenAmtIn);
         feeAmt = (deltaFt * _config.borrowFeeRatio) / Constants.DECIMAL_BASE;
+        uint minFeeAmt = (underlyingAmtOut * _config.minNBorrowFeeR) / Constants.DECIMAL_BASE;
+        feeAmt = feeAmt < minFeeAmt ? minFeeAmt : feeAmt;
         isXtIn = false;
     }
 
@@ -262,6 +268,8 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
     ) internal view returns (uint underlyingAmtOut, uint feeAmt, bool isXtIn) {
         (, underlyingAmtOut) = TermMaxCurve.sellXt(daysToMaturity, _config.curveCuts, oriXtReserve, tokenAmtIn);
         feeAmt = (underlyingAmtOut * _config.lendFeeRatio) / Constants.DECIMAL_BASE;
+        uint minFeeAmt = (underlyingAmtOut * _config.minNLendFeeR) / Constants.DECIMAL_BASE;
+        feeAmt = feeAmt < minFeeAmt ? minFeeAmt : feeAmt;
         isXtIn = true;
     }
 }
