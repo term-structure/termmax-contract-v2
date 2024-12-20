@@ -241,6 +241,9 @@ interface ITermMaxMarket {
         view
         returns (IMintableERC20 ft, IMintableERC20 xt, IGearingToken gt, address collateral, IERC20 underlying);
 
+    /// @notice Return the apr of the market
+    function apr() external view returns (uint apr_);
+
     /// @notice Buy FT using underlying token
     /// @param underlyingAmtIn The number of unterlying tokens input
     /// @param minTokenOut Minimum number of FT token outputs required

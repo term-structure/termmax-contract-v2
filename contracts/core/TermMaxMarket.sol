@@ -83,6 +83,23 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
     /**
      * @inheritdoc ITermMaxMarket
      */
+    function apr() external view override returns (uint apr_) {
+        (, IMintableERC20 xt, , , ) = _tokenPair.tokens();
+        uint daysToMaturity = _daysToMaturity(_config.maturity);
+        uint oriXtReserve = xt.balanceOf(address(this));
+
+        uint cutId = TermMaxCurve.calcCutId(_config.curveCuts, oriXtReserve);
+        (, uint vXtReserve, uint vFtReserve) = TermMaxCurve.calcIntervalProps(
+            daysToMaturity,
+            _config.curveCuts[cutId],
+            oriXtReserve
+        );
+        apr_ = ((vFtReserve * Constants.DECIMAL_BASE * Constants.DAYS_IN_YEAR) / vXtReserve) * daysToMaturity;
+    }
+
+    /**
+     * @inheritdoc ITermMaxMarket
+     */
     function updateMarketConfig(
         MarketConfig calldata newConfig,
         uint newFtReserve,
