@@ -59,10 +59,7 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
     }
 
     /// @notice Transfer ownable contract's ownership
-    function transferOwnership(
-        address entity,
-        address to
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function transferOwnership(address entity, address to) external onlyRole(DEFAULT_ADMIN_ROLE) {
         IOwnable(entity).transferOwnership(to);
     }
 
@@ -75,7 +72,7 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
         proxy.upgradeToAndCall(newImplementation, data);
     }
 
-        /// @notice Set the market whitelist for router
+    /// @notice Set the market whitelist for router
     function setMarketWhitelist(
         ITermMaxRouter router,
         address market,
@@ -94,7 +91,11 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
     }
 
     /// @notice Set the oracle
-    function setOracle(IOracle aggregator, address asset, IOracle.Oracle memory oracle) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setOracle(
+        IOracle aggregator,
+        address asset,
+        IOracle.Oracle memory oracle
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         aggregator.setOracle(asset, oracle);
     }
 
@@ -106,9 +107,11 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
     /// @notice Update the market configuration
     function updateMarketConfig(
         ITermMaxMarket market,
-        MarketConfig calldata newConfig
+        MarketConfig calldata newConfig,
+        uint newFtReserve,
+        uint newXtReserve
     ) external onlyRole(CURATOR_ROLE) {
-        market.updateMarketConfig(newConfig);
+        market.updateMarketConfig(newConfig, newFtReserve, newXtReserve);
     }
 
     /// @notice Set the provider's white list
@@ -122,10 +125,7 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
     // }
 
     /// @notice Set the switch for this market
-    function setSwitchOfMarket(
-        ITermMaxMarket market,
-        bool state
-    ) external onlyRole(PAUSER_ROLE) {
+    function setSwitchOfMarket(ITermMaxMarket market, bool state) external onlyRole(PAUSER_ROLE) {
         if (state) {
             market.unpause();
         } else {
@@ -134,14 +134,9 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
     }
 
     /// @notice Set the switch for Router
-    function setSwitchOfRouter(
-        ITermMaxRouter router,
-        bool state
-    ) external onlyRole(PAUSER_ROLE) {
+    function setSwitchOfRouter(ITermMaxRouter router, bool state) external onlyRole(PAUSER_ROLE) {
         router.togglePause(state);
     }
 
-    function _authorizeUpgrade(
-        address newImplementation
-    ) internal virtual override onlyRole(DEFAULT_ADMIN_ROLE) {}
+    function _authorizeUpgrade(address newImplementation) internal virtual override onlyRole(DEFAULT_ADMIN_ROLE) {}
 }
