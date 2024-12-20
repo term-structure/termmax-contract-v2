@@ -13,7 +13,7 @@ interface IGearingToken is IERC721Enumerable {
     /// @notice Data of Gearing Token's configuturation
     struct GtConfig {
         /// @notice The token pair's address
-        address token;
+        address tokenPair;
         /// @notice The address of collateral token
         address collateral;
         /// @notice The underlying(debt) token
@@ -153,8 +153,8 @@ interface IGearingToken is IERC721Enumerable {
     /// @notice Return the flag to indicate debt is liquidatable or not
     function liquidatable() external view returns (bool);
 
-    /// @notice Return the market's address
-    function marketAddr() external view returns (address);
+    /// @notice Return the token pair's address
+    function tokenPairAddr() external view returns (address);
 
     /// @notice Mint this token to an address
     /// @param  collateralProvider Who provide collateral token

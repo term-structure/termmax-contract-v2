@@ -69,11 +69,11 @@ contract TermMaxRouter is
     }
     /// @notice Check the GT is whitelisted
     modifier ensureGtWhitelist(address gt) {
-        address market = IGearingToken(gt).marketAddr();
-        if (!marketWhitelist[market]) {
-            revert MarketNotWhitelisted(market);
+        address tokenPair = IGearingToken(gt).tokenPairAddr();
+        if (!tokenPairWhitelist[tokenPair]) {
+            revert MarketNotWhitelisted(tokenPair);
         }
-        (, , IGearingToken gt_, , ) = ITermMaxMarket(market).tokens();
+        (, , IGearingToken gt_, , ) = ITermMaxMarket(tokenPair).tokens();
         if (address(gt_) != gt) {
             revert GtNotWhitelisted(gt);
         }

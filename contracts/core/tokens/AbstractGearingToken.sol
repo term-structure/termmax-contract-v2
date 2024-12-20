@@ -74,10 +74,10 @@ abstract contract AbstractGearingToken is
         GtConfig memory config_
     ) internal onlyInitializing {
         __ERC721_init(name, symbol);
-        __Ownable_init(config_.market);
+        __Ownable_init(config_.tokenPair);
         _config = config_;
         // Market will burn those tokens after maturity
-        config_.ft.approve(config_.market, type(uint256).max);
+        config_.ft.approve(config_.tokenPair, type(uint256).max);
     }
 
     function __GearingToken_Implement_init(
@@ -111,8 +111,8 @@ abstract contract AbstractGearingToken is
     /**
      * @inheritdoc IGearingToken
      */
-    function marketAddr() public view override returns (address) {
-        return _config.market;
+    function tokenPairAddr() public view override returns (address) {
+        return _config.tokenPair;
     }
 
     /**
@@ -249,7 +249,7 @@ abstract contract AbstractGearingToken is
         }
 
         if (byUnderlying) {
-            config.underlying.safeTransferFrom(msg.sender, config.market, repayAmt);
+            config.underlying.safeTransferFrom(msg.sender, config.tokenPair, repayAmt);
         } else {
             // Those ft tokens have been approved to market and will be burn after maturity
             config.ft.safeTransferFrom(msg.sender, address(this), repayAmt);
@@ -282,7 +282,7 @@ abstract contract AbstractGearingToken is
             loan.collateralData,
             callbackData
         );
-        repayToken.safeTransferFrom(msg.sender, config.market, loan.debtAmt);
+        repayToken.safeTransferFrom(msg.sender, config.tokenPair, loan.debtAmt);
         _burnInternal(id);
         emit Repay(id, loan.debtAmt, byUnderlying);
     }
@@ -457,7 +457,7 @@ abstract contract AbstractGearingToken is
             revert RepayAmtExceedsMaxRepayAmt(id, repayAmt, maxRepayAmt);
         }
         // Transfer token
-        config.underlying.safeTransferFrom(msg.sender, config.market, repayAmt);
+        config.underlying.safeTransferFrom(msg.sender, config.tokenPair, repayAmt);
         // Do liquidate
 
         (
