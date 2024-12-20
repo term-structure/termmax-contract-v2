@@ -12,8 +12,8 @@ import {IOracle} from "../oracle/IOracle.sol";
 interface IGearingToken is IERC721Enumerable {
     /// @notice Data of Gearing Token's configuturation
     struct GtConfig {
-        /// @notice The market's address
-        address market;
+        /// @notice The token pair's address
+        address token;
         /// @notice The address of collateral token
         address collateral;
         /// @notice The underlying(debt) token
