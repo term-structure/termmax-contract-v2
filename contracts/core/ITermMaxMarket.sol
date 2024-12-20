@@ -95,46 +95,42 @@ interface ITermMaxMarket {
 
     /// @notice Emitted when buy FT/XT using underlying token
     /// @param caller Who call the function
-    /// @param token  The token want to buy
-    /// @param underlyingAmt The amount of underlying tokens traded
-    /// @param expectedAmt Expected number of tokens to be obtained
-    /// @param actualAmt The number of FT/XT tokens received
+    /// @param tokenOut  The token want to buy
+    /// @param underlyingAmtIn The amount of underlying tokens traded
+    /// @param minTokenAmtOut The minimum number of tokens to be obtained
+    /// @param tokenAmtOut The number of tokens received
     /// @param feeAmt Transaction Fees
-    /// @param newApr New apr value with BASE_DECIMALS after do this action
     /// @param ftReserve The new FT reserve amount
     /// @param xtReserve The new XT reserve amount
     event BuyToken(
         address indexed caller,
-        IMintableERC20 indexed token,
-        uint128 underlyingAmt,
-        uint128 expectedAmt,
-        uint128 actualAmt,
-        uint128 feeAmt,
-        int64 newApr,
-        uint128 ftReserve,
-        uint128 xtReserve
+        IMintableERC20 indexed tokenOut,
+        uint underlyingAmtIn,
+        uint minTokenAmtOut,
+        uint tokenAmtOut,
+        uint feeAmt,
+        uint ftReserve,
+        uint xtReserve
     );
 
     /// @notice Emitted when sell FT/XT
     /// @param caller Who call the function
-    /// @param token  The token want to sell
-    /// @param tokenAmt The amount of token traded
-    /// @param expectedAmt Expected number of underlying tokens to be obtained
-    /// @param actualAmt The number of underluing tokens received
+    /// @param tokenIn The token want to sell
+    /// @param tokenAmtIn The amount of tokens traded
+    /// @param minUnderlyingOut The minimum number of underlying tokens to be obtained
+    /// @param underlyingAmtOut The number of underlying tokens received
     /// @param feeAmt Transaction Fees
-    /// @param newApr New apr value with BASE_DECIMALS after do this action
     /// @param ftReserve The new FT reserve amount
     /// @param xtReserve The new XT reserve amount
     event SellToken(
         address indexed caller,
-        IMintableERC20 indexed token,
-        uint128 tokenAmt,
-        uint128 expectedAmt,
-        uint128 actualAmt,
-        uint128 feeAmt,
-        int64 newApr,
-        uint128 ftReserve,
-        uint128 xtReserve
+        IMintableERC20 indexed tokenIn,
+        uint tokenAmtIn,
+        uint minUnderlyingOut,
+        uint underlyingAmtOut,
+        uint feeAmt,
+        uint ftReserve,
+        uint xtReserve
     );
 
     /// @notice Emitted when removing liquidity from market

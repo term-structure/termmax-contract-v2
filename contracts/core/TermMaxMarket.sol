@@ -218,6 +218,16 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         underlying.safeTransferFrom(msg.sender, _config.treasurer, feeAmt);
         _tokenPair.mintFtAndXt(msg.sender, address(this), underlyingAmtIn - feeAmt);
         tokenOut.safeTransfer(msg.sender, netOut);
+        emit BuyToken(
+            msg.sender,
+            tokenOut,
+            underlyingAmtIn,
+            minTokenOut,
+            tokenAmtOut,
+            feeAmt,
+            xt.balanceOf(address(this)),
+            ft.balanceOf(address(this))
+        );
     }
 
     function _buyFt(
@@ -263,6 +273,16 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         tokenIn.safeTransferFrom(msg.sender, address(this), tokenAmtIn);
         _tokenPair.redeemFtAndXtToUnderlying(address(this), address(this), underlyingAmtOut);
         underlying.safeTransfer(msg.sender, netOut);
+        emit SellToken(
+            msg.sender,
+            tokenIn,
+            tokenAmtIn,
+            minUnderlyingOut,
+            underlyingAmtOut,
+            feeAmt,
+            xt.balanceOf(address(this)),
+            ft.balanceOf(address(this))
+        );
     }
 
     function _sellFt(
