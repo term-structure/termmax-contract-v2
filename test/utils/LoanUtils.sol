@@ -93,6 +93,6 @@ library LoanUtils {
         res.collateral.approve(address(res.gt), collateralAmt);
         bytes memory collateralData = abi.encode(collateralAmt);
 
-        (gtId, ftOutAmt) = res.market.issueFt(debtAmt, collateralData);
+        (gtId, ftOutAmt) = res.tokenPair.issueFt(debtAmt, collateralData);
     }
 }

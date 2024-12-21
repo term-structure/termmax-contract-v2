@@ -14,43 +14,58 @@ library JSONLoader {
         string memory testdataJSON,
         string memory key
     ) internal pure returns (StateChecker.MarketState memory state) {
-        state.apr = vm.parseInt(
-            vm.parseJsonString(testdataJSON, string.concat(key, ".apr"))
-        );
         state.ftReserve = vm.parseUint(
             vm.parseJsonString(testdataJSON, string.concat(key, ".ftReserve"))
         );
         state.xtReserve = vm.parseUint(
             vm.parseJsonString(testdataJSON, string.concat(key, ".xtReserve"))
         );
-        state.lpFtReserve = vm.parseUint(
-            vm.parseJsonString(testdataJSON, string.concat(key, ".lpFtReserve"))
-        );
-        state.lpXtReserve = vm.parseUint(
-            vm.parseJsonString(testdataJSON, string.concat(key, ".lpXtReserve"))
-        );
-        state.underlyingReserve = vm.parseUint(
-            vm.parseJsonString(
-                testdataJSON,
-                string.concat(key, ".underlyingReserve")
+    }
+
+    function getTokenPairConfigFromJson(
+        address treasurer,
+        string memory testdataJSON,
+        string memory key
+    ) internal pure returns (TokenPairConfig memory tokenPairConfig) {
+        tokenPairConfig.treasurer = treasurer;
+        tokenPairConfig.openTime = uint64(
+            vm.parseUint(
+                vm.parseJsonString(
+                    testdataJSON,
+                    string.concat(key, ".openTime")
+                )
             )
         );
-        state.collateralReserve = vm.parseUint(
-            vm.parseJsonString(
-                testdataJSON,
-                string.concat(key, ".collateralReserve")
+        tokenPairConfig.maturity = uint64(
+            vm.parseUint(
+                vm.parseJsonString(
+                    testdataJSON,
+                    string.concat(key, ".maturity")
+                )
             )
         );
-        state.lpFtTotalSupply = vm.parseUint(
-            vm.parseJsonString(
-                testdataJSON,
-                string.concat(key, ".lpFtTotalSupply")
+        tokenPairConfig.redeemFeeRatio = uint32(
+            vm.parseUint(
+                vm.parseJsonString(
+                    testdataJSON,
+                    string.concat(key, ".redeemFeeRatio")
+                )
             )
         );
-        state.lpXtTotalSupply = vm.parseUint(
-            vm.parseJsonString(
-                testdataJSON,
-                string.concat(key, ".lpXtTotalSupply")
+        tokenPairConfig.issueFtFeeRatio = uint32(
+            vm.parseUint(
+                vm.parseJsonString(
+                    testdataJSON,
+                    string.concat(key, ".issueFtFeeRatio")
+                )
+            )
+        );
+        tokenPairConfig.protocolFeeRatio = uint32(
+            vm.parseUint(
+                vm.parseJsonString(
+                    testdataJSON,
+                    string.concat(key, ".protocolFeeRatio")
+                )
             )
         );
     }
@@ -60,40 +75,6 @@ library JSONLoader {
         string memory testdataJSON,
         string memory key
     ) internal pure returns (MarketConfig memory marketConfig) {
-        marketConfig.openTime = uint64(
-            vm.parseUint(
-                vm.parseJsonString(
-                    testdataJSON,
-                    string.concat(key, ".openTime")
-                )
-            )
-        );
-        marketConfig.maturity = uint64(
-            vm.parseUint(
-                vm.parseJsonString(
-                    testdataJSON,
-                    string.concat(key, ".maturity")
-                )
-            )
-        );
-        marketConfig.initialLtv = uint32(
-            vm.parseUint(
-                vm.parseJsonString(
-                    testdataJSON,
-                    string.concat(key, ".initialLtv")
-                )
-            )
-        );
-        marketConfig.apr = int64(
-            vm.parseInt(
-                vm.parseJsonString(testdataJSON, string.concat(key, ".apr"))
-            )
-        );
-        marketConfig.lsf = uint32(
-            vm.parseUint(
-                vm.parseJsonString(testdataJSON, string.concat(key, ".lsf"))
-            )
-        );
         marketConfig.lendFeeRatio = uint32(
             vm.parseUint(
                 vm.parseJsonString(
@@ -107,22 +88,6 @@ library JSONLoader {
                 vm.parseJsonString(
                     testdataJSON,
                     string.concat(key, ".borrowFeeRatio")
-                )
-            )
-        );
-        marketConfig.lockingPercentage = uint32(
-            vm.parseUint(
-                vm.parseJsonString(
-                    testdataJSON,
-                    string.concat(key, ".lockingPercentage")
-                )
-            )
-        );
-        marketConfig.issueFtFeeRatio = uint32(
-            vm.parseUint(
-                vm.parseJsonString(
-                    testdataJSON,
-                    string.concat(key, ".issueFtFeeRatio")
                 )
             )
         );
@@ -142,16 +107,45 @@ library JSONLoader {
                 )
             )
         );
-        marketConfig.protocolFeeRatio = uint32(
-            vm.parseUint(
-                vm.parseJsonString(
-                    testdataJSON,
-                    string.concat(key, ".protocolFeeRatio")
-                )
+        marketConfig.treasurer = treasurer;
+        marketConfig.maker = treasurer;
+
+        string memory curveCutsPath = string.concat(key, ".curveCuts");
+
+        uint length = vm.parseUint(
+            vm.parseJsonString(
+                testdataJSON,
+                string.concat(key, ".curveCuts.length")
             )
         );
-        marketConfig.treasurer = treasurer;
-        marketConfig.rewardIsDistributed = true;
+
+        marketConfig.curveCuts = new CurveCut[](length);
+
+        for (uint256 i = 0; i < length; i++) {
+            string memory indexPath = string.concat(
+                curveCutsPath,
+                ".",
+                vm.toString(i)
+            );
+            marketConfig.curveCuts[i].xtReserve = vm.parseUint(
+                vm.parseJsonString(
+                    testdataJSON,
+                    string.concat(indexPath, ".xtReserve")
+                )
+            );
+            marketConfig.curveCuts[i].liqSquare = vm.parseUint(
+                vm.parseJsonString(
+                    testdataJSON,
+                    string.concat(indexPath, ".liqSquare")
+                )
+            );
+            marketConfig.curveCuts[i].offset = vm.parseUint(
+                vm.parseJsonString(
+                    testdataJSON,
+                    string.concat(indexPath, ".offset")
+                )
+            );
+        }
     }
 
     function getRoundDataFromJson(
