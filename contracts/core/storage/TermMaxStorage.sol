@@ -41,11 +41,6 @@ struct MarketConfig {
     /// @notice The maker's address
     address maker;
     /// @notice The unix time of maturity date
-    uint64 maturity;
-    /// @notice The unix time when the market starts trading
-    uint64 openTime;
-    /// @notice The lending fee ratio
-    ///         i.e. 0.01e8 means 1%
     uint32 lendFeeRatio;
     /// @notice The minmally notional lending fee ratio
     ///         i.e. 0.01e8 means 1%

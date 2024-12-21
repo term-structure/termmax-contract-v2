@@ -34,7 +34,7 @@ interface ITermMaxMarket {
     /// @notice Error for apr is less than min apr
     error AprLessThanMinApr(int64 apr, int64 minApr);
     /// @notice Error for the actual output value does not match the expected value
-    error UnexpectedAmount(uint128 expectedAmt, uint128 actualAmt);
+    error UnexpectedAmount(uint expectedAmt, uint actualAmt);
     /// @notice Error for redeeming before the liquidation window
     error CanNotRedeemBeforeFinalLiquidationDeadline(uint256 liquidationDeadline);
     /// @notice Error for evacuation mode is not actived
@@ -46,9 +46,7 @@ interface ITermMaxMarket {
 
     /// @notice Emitted when market initialized
     /// @param tokenPair Underlying token
-    /// @param openTime The unix time when the market starts trading
-    /// @param maturity The unix time of maturity date
-    event MarketInitialized(ITermMaxTokenPair indexed tokenPair, uint64 openTime, uint64 maturity);
+    event MarketInitialized(ITermMaxTokenPair indexed tokenPair);
 
     /// @notice Emitted when market config is updated
     event UpdateMarketConfig(MarketConfig config);
@@ -202,10 +200,10 @@ interface ITermMaxMarket {
 
     /// @notice Initialize the token and configuration of the market
     /// @param admin Administrator address for configuring parameters such as transaction fees
-    /// @param tokenPair The token pair of the market
+    /// @param tokenPair_ The token pair of the market
     /// @param config_ Configuration of market
     /// @dev Only factory will call this function once when deploying new market
-    function initialize(address admin, ITermMaxTokenPair tokenPair, MarketConfig memory config_) external;
+    function initialize(address admin, ITermMaxTokenPair tokenPair_, MarketConfig memory config_) external;
 
     /// @notice Return the configuration
     function config() external view returns (MarketConfig memory);

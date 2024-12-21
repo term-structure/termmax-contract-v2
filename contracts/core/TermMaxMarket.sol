@@ -6,6 +6,7 @@ import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ITermMaxMarket, MarketConfig, IMintableERC20, IERC20} from "./ITermMaxMarket.sol";
+import {TokenPairConfig} from "./storage/TermMaxStorage.sol";
 import {ITermMaxTokenPair} from "./ITermMaxTokenPair.sol";
 import {IGearingToken} from "./tokens/IGearingToken.sol";
 import {IFlashLoanReceiver} from "./IFlashLoanReceiver.sol";
@@ -30,7 +31,8 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
     /// @notice Check if the market is tradable
     modifier isOpen() {
         _requireNotPaused();
-        if (block.timestamp < _config.openTime || block.timestamp >= _config.maturity) {
+        TokenPairConfig memory config_ = _tokenPair.config();
+        if (block.timestamp < config_.openTime || block.timestamp >= config_.maturity) {
             revert MarketIsNotOpen();
         }
         _;
@@ -41,12 +43,9 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
      */
     function initialize(address admin, ITermMaxTokenPair tokenPair_, MarketConfig memory config_) external override {
         __initializeOwner(admin);
-        if (config_.openTime < block.timestamp || config_.maturity < config_.openTime)
-            revert InvalidTime(config_.openTime, config_.maturity);
-
+        _tokenPair = tokenPair_;
         _config = config_;
-
-        emit MarketInitialized(tokenPair_, _config.openTime, _config.maturity);
+        emit MarketInitialized(tokenPair_);
     }
 
     /**
@@ -85,7 +84,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
      */
     function apr() external view override returns (uint apr_) {
         (, IMintableERC20 xt, , , ) = _tokenPair.tokens();
-        uint daysToMaturity = _daysToMaturity(_config.maturity);
+        uint daysToMaturity = _daysToMaturity(_tokenPair.config().maturity);
         uint oriXtReserve = xt.balanceOf(address(this));
 
         uint cutId = TermMaxCurve.calcCutId(_config.curveCuts, oriXtReserve);
@@ -106,8 +105,6 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         uint newXtReserve
     ) external override onlyOwner {
         (IMintableERC20 ft, IMintableERC20 xt, , , ) = _tokenPair.tokens();
-        if (newConfig.openTime != _config.openTime) revert TOBEDEFINED();
-        if (newConfig.maturity != _config.maturity) revert TOBEDEFINED();
         if (newConfig.maker != _config.maker) revert TOBEDEFINED();
         if (newConfig.treasurer != _config.treasurer) revert TOBEDEFINED();
         if (newConfig.curveCuts.length == 0) revert TOBEDEFINED();
@@ -206,27 +203,29 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         function(uint, uint, uint) internal view returns (uint, uint, bool) func
     ) internal returns (uint256 netOut) {
         (IMintableERC20 ft, IMintableERC20 xt, , , IERC20 underlying) = _tokenPair.tokens();
-        uint daysToMaturity = _daysToMaturity(_config.maturity);
+        uint daysToMaturity = _daysToMaturity(_tokenPair.config().maturity);
         uint oriXtReserve = xt.balanceOf(address(this));
 
         (uint tokenAmtOut, uint feeAmt, bool isXtOut) = func(daysToMaturity, oriXtReserve, underlyingAmtIn);
         IMintableERC20 tokenOut = isXtOut ? xt : ft;
 
         netOut = tokenAmtOut + underlyingAmtIn - feeAmt;
-        if (netOut < minTokenOut) revert TOBEDEFINED();
+        if (netOut < minTokenOut) revert UnexpectedAmount(minTokenOut, netOut);
 
-        underlying.safeTransferFrom(msg.sender, _config.treasurer, feeAmt);
-        _tokenPair.mintFtAndXt(msg.sender, address(this), underlyingAmtIn - feeAmt);
+        underlying.safeTransferFrom(msg.sender, address(this), underlyingAmtIn);
+        underlying.safeTransfer(_config.treasurer, feeAmt);
+        underlying.approve(address(_tokenPair), underlyingAmtIn);
+        _tokenPair.mintFtAndXt(address(this), address(this), underlyingAmtIn - feeAmt);
         tokenOut.safeTransfer(msg.sender, netOut);
         emit BuyToken(
             msg.sender,
             tokenOut,
             underlyingAmtIn,
             minTokenOut,
-            tokenAmtOut,
+            netOut,
             feeAmt,
-            xt.balanceOf(address(this)),
-            ft.balanceOf(address(this))
+            ft.balanceOf(address(this)),
+            xt.balanceOf(address(this))
         );
     }
 
@@ -261,16 +260,18 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         function(uint, uint, uint) internal view returns (uint, uint, bool) func
     ) internal returns (uint256 netOut) {
         (IMintableERC20 ft, IMintableERC20 xt, , , IERC20 underlying) = _tokenPair.tokens();
-        uint daysToMaturity = _daysToMaturity(_config.maturity);
+        uint daysToMaturity = _daysToMaturity(_tokenPair.config().maturity);
         uint oriXtReserve = xt.balanceOf(address(this));
 
         (uint underlyingAmtOut, uint feeAmt, bool isXtIn) = func(daysToMaturity, oriXtReserve, tokenAmtIn);
         IMintableERC20 tokenIn = isXtIn ? xt : ft;
 
         netOut = underlyingAmtOut - feeAmt;
-        if (netOut < minUnderlyingOut) revert TOBEDEFINED();
+        if (netOut < minUnderlyingOut) revert UnexpectedAmount(minUnderlyingOut, netOut);
 
         tokenIn.safeTransferFrom(msg.sender, address(this), tokenAmtIn);
+        ft.approve(address(_tokenPair), underlyingAmtOut);
+        xt.approve(address(_tokenPair), underlyingAmtOut);
         _tokenPair.redeemFtAndXtToUnderlying(address(this), address(this), underlyingAmtOut);
         underlying.safeTransfer(msg.sender, netOut);
         emit SellToken(
@@ -278,10 +279,10 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
             tokenIn,
             tokenAmtIn,
             minUnderlyingOut,
-            underlyingAmtOut,
+            netOut,
             feeAmt,
-            xt.balanceOf(address(this)),
-            ft.balanceOf(address(this))
+            ft.balanceOf(address(this)),
+            xt.balanceOf(address(this))
         );
     }
 

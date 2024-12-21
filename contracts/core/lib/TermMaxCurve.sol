@@ -5,6 +5,8 @@ import {Constants} from "./Constants.sol";
 import {MathLib, SafeCast} from "./MathLib.sol";
 import "../storage/TermMaxStorage.sol";
 
+import {console} from "forge-std/Script.sol";
+
 /**
  * @title The TermMax curve library
  * @author Term Structure Labs
@@ -19,9 +21,9 @@ library TermMaxCurve {
     /// @param xtReserve XT reserve
     /// @return cutId Curve cut id
     function calcCutId(CurveCut[] memory cuts, uint xtReserve) internal pure returns (uint cutId) {
-        cutId = 0;
-        for (; cutId < cuts.length; cutId++) {
-            if (xtReserve < cuts[cutId].offset) break;
+        cutId = cuts.length - 1;
+        for (; cutId >= 0; cutId--) {
+            if (xtReserve > cuts[cutId].xtReserve) break;
         }
     }
 
@@ -37,7 +39,7 @@ library TermMaxCurve {
         CurveCut memory cut,
         uint xtReserve
     ) internal pure returns (uint liqSquare, uint vXtReserve, uint vFtReserve) {
-        liqSquare = (cut.liqSquare * Constants.DAYS_IN_YEAR) / daysToMaturity;
+        liqSquare = (cut.liqSquare * daysToMaturity) / Constants.DAYS_IN_YEAR;
         vXtReserve = xtReserve + cut.offset;
         vFtReserve = liqSquare / vXtReserve;
     }
@@ -67,7 +69,7 @@ library TermMaxCurve {
             if (i < cuts.length - 1) {
                 if (oriXtReserve + deltaXt > cuts[i + 1].xtReserve) {
                     deltaXt = cuts[i + 1].xtReserve - oriXtReserve;
-                    negDeltaFt = oriNegDeltaFt + vFtReserve - liqSquare / cuts[i + 1].xtReserve;
+                    negDeltaFt = oriNegDeltaFt + vFtReserve - liqSquare / (vXtReserve + deltaXt);
                     continue;
                 } else break;
             }
@@ -91,15 +93,19 @@ library TermMaxCurve {
     ) internal pure returns (uint negDeltaXt, uint deltaFt) {
         uint cutId = calcCutId(cuts, oriXtReserve);
         (negDeltaXt, deltaFt) = (0, 0);
-        for (uint i = cutId; i >= 0; --i) {
+        for (uint i = cutId + 1; i > 0; i--) {
+            uint idx = i - 1;
             uint xtReserve = oriXtReserve - negDeltaXt;
-            (uint liqSquare, uint vXtReserve, uint vFtReserve) = calcIntervalProps(daysToMaturity, cuts[i], xtReserve);
+            (uint liqSquare, uint vXtReserve, uint vFtReserve) = calcIntervalProps(
+                daysToMaturity,
+                cuts[idx],
+                xtReserve
+            );
             uint oriDeltaFt = deltaFt;
             (negDeltaXt, deltaFt) = func(liqSquare, vXtReserve, vFtReserve, negDeltaXt, deltaFt, inputAmount);
-            if (oriXtReserve < negDeltaXt + cuts[i].xtReserve) {
-                negDeltaXt = oriXtReserve - cuts[i].xtReserve;
-                deltaFt = oriDeltaFt + liqSquare / cuts[i + 1].xtReserve - vFtReserve;
-                continue;
+            if (oriXtReserve < negDeltaXt + cuts[idx].xtReserve) {
+                negDeltaXt = oriXtReserve - cuts[idx].xtReserve;
+                deltaFt = oriDeltaFt + liqSquare / (vXtReserve - negDeltaXt) - vFtReserve;
             } else break;
         }
     }
@@ -197,10 +203,10 @@ library TermMaxCurve {
         uint inputAmount
     ) internal pure returns (uint deltaXt, uint negDeltaFt) {
         uint negAcc = inputAmount - (oriDeltaXt + oriNegDeltaFt);
-        uint negB = vXtReserve + vFtReserve - negAcc;
+        uint b = vXtReserve + vFtReserve - negAcc;
         uint negC = vXtReserve * negAcc;
 
-        uint segDeltaXt = (negB + MathLib.sqrt(negB * negB + 4 * negC)) / 2;
+        uint segDeltaXt = (MathLib.sqrt(b * b + 4 * negC) - b) / 2;
         deltaXt = oriDeltaXt + segDeltaXt;
         negDeltaFt = oriNegDeltaFt + negAcc - segDeltaXt;
     }
@@ -238,10 +244,10 @@ library TermMaxCurve {
         uint inputAmount
     ) internal pure returns (uint negDeltaXt, uint deltaFt) {
         uint negAcc = inputAmount - (oriDeltaFt + oriNegDeltaXt);
-        uint negB = vFtReserve + vXtReserve - negAcc;
+        uint b = vFtReserve + vXtReserve - negAcc;
         uint negC = vFtReserve * negAcc;
 
-        uint segDeltaFt = (negB + MathLib.sqrt(negB * negB + 4 * negC)) / 2;
+        uint segDeltaFt = (MathLib.sqrt(b * b + 4 * negC) - b) / 2;
         deltaFt = oriDeltaFt + segDeltaFt;
         negDeltaXt = oriNegDeltaXt + negAcc - segDeltaFt;
     }
