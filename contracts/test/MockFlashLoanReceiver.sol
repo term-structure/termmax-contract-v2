@@ -41,9 +41,8 @@ contract MockFlashLoanReceiver is IFlashLoanReceiver {
         bytes calldata callbackData
     ) external returns (uint256 gtId) {
         xt.transferFrom(msg.sender, address(this), xtAmt);
-        xt.approve(address(market), xtAmt);
         ITermMaxTokenPair tokenPair = ITermMaxMarket(market).tokenPair();
-        
+        xt.approve(address(tokenPair), xtAmt);
         gtId = tokenPair.leverageByXt(msg.sender, xtAmt, callbackData);
     }
 }
