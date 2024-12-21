@@ -45,12 +45,12 @@ contract TermMaxFactory is ITermMaxFactory, Ownable {
     }
 
     /// @notice Initialize the implementation of TermMax Token Pair contract
-    function initTokenPairImplement(address marketImplement_) external onlyOwner {
-        if (marketImplement != address(0)) {
+    function initTokenPairImplement(address tokenPairImplement_) external onlyOwner {
+        if (tokenPairImplement != address(0)) {
             revert TokenPairImplementInitialized();
         }
-        marketImplement = marketImplement_;
-        emit InitializeTokenPairImplement(marketImplement_);
+        tokenPairImplement = tokenPairImplement_;
+        emit InitializeTokenPairImplement(tokenPairImplement_);
     }
 
     /// @notice Initialize the implementation of TermMax Market contract
