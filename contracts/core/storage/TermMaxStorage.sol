@@ -54,7 +54,7 @@ struct MarketConfig {
     /// @notice show if the market is borrow only
     bool isBorrowOnly;
     /// @notice show if the market is lend only
-    bool isLendOly;
+    bool isLendOnly;
     /// @notice The curve cuts of the market
     CurveCut[] curveCuts;
 }

@@ -38,6 +38,22 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         _;
     }
 
+    /// @notice Check if the market is borrowing allowed
+    modifier isBorrowingAllowed() {
+        if (_config.isLendOnly) {
+            revert TOBEDEFINED();
+        }
+        _;
+    }
+
+    /// @notice Check if the market is lending allowed
+    modifier isLendingAllowed() {
+        if (_config.isBorrowOnly) {
+            revert TOBEDEFINED();
+        }
+        _;
+    }
+
     /**
      * @inheritdoc ITermMaxMarket
      */
@@ -112,7 +128,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         for (uint i = 1; i < newConfig.curveCuts.length; i++) {
             if (newConfig.curveCuts[i].xtReserve <= newConfig.curveCuts[i - 1].xtReserve) revert TOBEDEFINED();
         }
-        if (newConfig.isBorrowOnly && newConfig.isLendOly) revert TOBEDEFINED();
+        if (newConfig.isBorrowOnly && newConfig.isLendOnly) revert TOBEDEFINED();
         _config = newConfig;
 
         (uint xtReserve, uint ftReserve) = ftXtReserves();
@@ -149,7 +165,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
     function buyFt(
         uint128 underlyingAmtIn,
         uint128 minTokenOut
-    ) external override nonReentrant isOpen returns (uint256 netOut) {
+    ) external override nonReentrant isOpen isLendingAllowed returns (uint256 netOut) {
         return _buyToken(underlyingAmtIn, minTokenOut, _buyFt);
     }
 
@@ -159,7 +175,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
     function buyXt(
         uint128 underlyingAmtIn,
         uint128 minTokenOut
-    ) external override nonReentrant isOpen returns (uint256 netOut) {
+    ) external override nonReentrant isOpen isBorrowingAllowed returns (uint256 netOut) {
         return _buyToken(underlyingAmtIn, minTokenOut, _buyXt);
     }
 
@@ -169,7 +185,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
     function sellFt(
         uint128 ftAmtIn,
         uint128 minUnderlyingOut
-    ) external override nonReentrant isOpen returns (uint256 netOut) {
+    ) external override nonReentrant isOpen isBorrowingAllowed returns (uint256 netOut) {
         return _sellToken(ftAmtIn, minUnderlyingOut, _sellFt);
     }
 
@@ -179,7 +195,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
     function sellXt(
         uint128 xtAmtIn,
         uint128 minUnderlyingOut
-    ) external override nonReentrant isOpen returns (uint256 netOut) {
+    ) external override nonReentrant isOpen isLendingAllowed returns (uint256 netOut) {
         return _sellToken(xtAmtIn, minUnderlyingOut, _sellXt);
     }
 
