@@ -786,11 +786,52 @@ contract AccessManagerTest is Test {
         vm.stopPrank();
     }
 
-    function testCannotRevokeDefaultAdminRole() public {
+    function testRevokeRole() public {
+        bytes32 curatorRole = manager.CURATOR_ROLE();
+        address user = vm.randomAddress();
+
+        // Grant role first
+        vm.prank(deployer);
+        manager.grantRole(curatorRole, user);
+
+        // Revoke role
+        vm.prank(deployer);
+        manager.revokeRole(curatorRole, user);
+
+        assertFalse(manager.hasRole(curatorRole, user));
+    }
+
+    function testCannotRevokeSelfRole() public {
+        bytes32 curatorRole = manager.CURATOR_ROLE();
+
+        // Try to revoke own role
+        vm.prank(deployer);
+        vm.expectRevert(
+            abi.encodeWithSignature("AccessControlBadConfirmation()")
+        );
+        manager.revokeRole(curatorRole, deployer);
+    }
+
+    function testRenounceRole() public {
+        bytes32 curatorRole = manager.CURATOR_ROLE();
+        address user = vm.randomAddress();
+
+        // Grant role first
+        vm.prank(deployer);
+        manager.grantRole(curatorRole, user);
+
+        // Renounce role
+        vm.prank(user);
+        manager.renounceRole(curatorRole, user);
+
+        assertFalse(manager.hasRole(curatorRole, user));
+    }
+
+    function testCannotRenounceDefaultAdminRole() public {
         bytes32 defaultAdminRole = 0x00;
 
         vm.prank(deployer);
         vm.expectRevert(AccessManager.CannotRevokeDefaultAdminRole.selector);
-        manager.revokeRole(defaultAdminRole, deployer);
+        manager.renounceRole(defaultAdminRole, deployer);
     }
 }

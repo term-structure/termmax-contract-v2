@@ -200,14 +200,29 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
         router.togglePause(state);
     }
 
+    /// @notice Revoke role
+    /// @dev Can't revoke your own role
     function revokeRole(
         bytes32 role,
         address account
     ) public override onlyRole(getRoleAdmin(role)) {
+        if (msg.sender == account) {
+            revert AccessControlBadConfirmation();
+        }
+
+        _revokeRole(role, account);
+    }
+
+    /// @notice Revoke role
+    /// @dev Can't revoke default admin role
+    function renounceRole(
+        bytes32 role,
+        address callerConfirmation
+    ) public override {
         if (role == DEFAULT_ADMIN_ROLE) {
             revert CannotRevokeDefaultAdminRole();
         }
-        _revokeRole(role, account);
+        _revokeRole(role, callerConfirmation);
     }
 
     function _authorizeUpgrade(
