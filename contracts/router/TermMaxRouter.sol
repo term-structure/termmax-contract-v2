@@ -658,7 +658,7 @@ contract TermMaxRouter is
             callbackData
         );
         (, , uint128 ltv, bytes memory collateralData) = gt.loanInfo(gtId);
-        if (ltv > maxLtv) {
+        if (ltv >= maxLtv) {
             revert LtvBiggerThanExpected(maxLtv.toUint128(), ltv);
         }
         gt.safeTransferFrom(address(this), receiver, gtId);
@@ -719,7 +719,7 @@ contract TermMaxRouter is
         gt.safeTransferFrom(address(this), receiver, gtId);
 
         (, , uint128 ltv, bytes memory collateralData) = gt.loanInfo(gtId);
-        if (ltv > maxLtv) {
+        if (ltv >= maxLtv) {
             revert LtvBiggerThanExpected(maxLtv.toUint128(), ltv);
         }
 
