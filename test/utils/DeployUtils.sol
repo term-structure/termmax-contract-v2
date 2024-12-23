@@ -46,8 +46,14 @@ library DeployUtils {
         res.collateralOracle = new MockPriceFeed(deployer);
         res.oracle = deployOracle(deployer);
 
-        res.oracle.setOracle(address(res.underlying), IOracle.Oracle(res.underlyingOracle,res.underlyingOracle, 365 days));
-        res.oracle.setOracle(address(res.collateral), IOracle.Oracle(res.collateralOracle, res.collateralOracle, 365 days));
+        res.oracle.setOracle(
+            address(res.underlying),
+            IOracle.Oracle(res.underlyingOracle, res.underlyingOracle, 365 days)
+        );
+        res.oracle.setOracle(
+            address(res.collateral),
+            IOracle.Oracle(res.collateralOracle, res.collateralOracle, 365 days)
+        );
 
         MockPriceFeed.RoundData memory roundData = MockPriceFeed.RoundData({
             roundId: 1,
@@ -73,6 +79,7 @@ library DeployUtils {
             });
         res.marketConfig = marketConfig;
         res.market = ITermMaxMarket(res.factory.createMarket(params));
+        res.market.setProviderWhitelist(address(0), true);
         (res.ft, res.xt, res.lpFt, res.lpXt, res.gt, , ) = res.market.tokens();
     }
 
@@ -97,8 +104,14 @@ library DeployUtils {
         res.collateralOracle = new MockPriceFeed(deployer);
 
         res.oracle = deployOracle(deployer);
-        res.oracle.setOracle(address(res.underlying), IOracle.Oracle(res.underlyingOracle, res.underlyingOracle, 7 days));
-        res.oracle.setOracle(address(res.collateral), IOracle.Oracle(res.collateralOracle, res.collateralOracle, 7 days));
+        res.oracle.setOracle(
+            address(res.underlying),
+            IOracle.Oracle(res.underlyingOracle, res.underlyingOracle, 7 days)
+        );
+        res.oracle.setOracle(
+            address(res.collateral),
+            IOracle.Oracle(res.collateralOracle, res.collateralOracle, 7 days)
+        );
 
         MockPriceFeed.RoundData memory roundData = MockPriceFeed.RoundData({
             roundId: 1,
@@ -124,6 +137,7 @@ library DeployUtils {
             });
 
         res.market = ITermMaxMarket(res.factory.createMarket(params));
+        res.market.setProviderWhitelist(address(0), true);
         (res.ft, res.xt, res.lpFt, res.lpXt, res.gt, , ) = res.market.tokens();
     }
 
@@ -145,8 +159,14 @@ library DeployUtils {
         res.collateralOracle = new MockPriceFeed(deployer);
 
         res.oracle = deployOracle(deployer);
-        res.oracle.setOracle(address(res.underlying), IOracle.Oracle(res.underlyingOracle,res.underlyingOracle, 7 days));
-        res.oracle.setOracle(address(res.collateral), IOracle.Oracle(res.collateralOracle,res.collateralOracle, 7 days));
+        res.oracle.setOracle(
+            address(res.underlying),
+            IOracle.Oracle(res.underlyingOracle, res.underlyingOracle, 7 days)
+        );
+        res.oracle.setOracle(
+            address(res.collateral),
+            IOracle.Oracle(res.collateralOracle, res.collateralOracle, 7 days)
+        );
 
         MockPriceFeed.RoundData memory roundData = MockPriceFeed.RoundData({
             roundId: 1,
@@ -172,33 +192,39 @@ library DeployUtils {
             });
 
         res.market = ITermMaxMarket(res.factory.createMarket(params));
+        res.market.setProviderWhitelist(address(0), true);
         (res.ft, res.xt, res.lpFt, res.lpXt, res.gt, , ) = res.market.tokens();
     }
 
-    function deployFactory(address admin) internal returns (TermMaxFactory factory) {
+    function deployFactory(
+        address admin
+    ) internal returns (TermMaxFactory factory) {
         factory = new TermMaxFactory(admin);
         TermMaxMarket m = new TermMaxMarket();
         factory.initMarketImplement(address(m));
     }
 
-    function deployOracle(address admin) internal returns (OracleAggregator oracle) {
+    function deployOracle(
+        address admin
+    ) internal returns (OracleAggregator oracle) {
         OracleAggregator implementation = new OracleAggregator();
         bytes memory data = abi.encodeCall(OracleAggregator.initialize, admin);
-        ERC1967Proxy proxy = new ERC1967Proxy(
-            address(implementation),
-            data
-        );
+        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), data);
         oracle = OracleAggregator(address(proxy));
     }
 
-    function deployRouter(address admin) internal returns (TermMaxRouter router) {
+    function deployRouter(
+        address admin
+    ) internal returns (TermMaxRouter router) {
         TermMaxRouter implementation = new TermMaxRouter();
         bytes memory data = abi.encodeCall(TermMaxRouter.initialize, admin);
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), data);
         router = TermMaxRouter(address(proxy));
     }
 
-    function deployAccessManager(address admin) internal returns (AccessManager accessManager) {
+    function deployAccessManager(
+        address admin
+    ) internal returns (AccessManager accessManager) {
         AccessManager implementation = new AccessManager();
         bytes memory data = abi.encodeCall(AccessManager.initialize, admin);
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), data);
