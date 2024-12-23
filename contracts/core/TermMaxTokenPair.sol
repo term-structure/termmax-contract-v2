@@ -50,15 +50,11 @@ contract TermMaxTokenPair is ITermMaxTokenPair, ReentrancyGuard, Ownable, Pausab
         TokenPairConfig memory config_
     ) external override {
         __initializeOwner(admin);
-        if (address(collateral_) == address(underlying_)) 
-            revert CollateralCanNotEqualUnderlyinng();
-        
-        if (
-            config_.openTime < block.timestamp ||
-            config_.maturity < config_.openTime
-        ) 
+        if (address(collateral_) == address(underlying_)) revert CollateralCanNotEqualUnderlyinng();
+
+        if (config_.openTime < block.timestamp || config_.maturity < config_.openTime)
             revert InvalidTime(config_.openTime, config_.maturity);
-        
+
         underlying = underlying_;
         collateral = collateral_;
         _config = config_;
@@ -66,15 +62,7 @@ contract TermMaxTokenPair is ITermMaxTokenPair, ReentrancyGuard, Ownable, Pausab
         xt = xt_;
         gt = gt_;
 
-        emit TokenPairInitialized(
-            collateral,
-            underlying,
-            _config.openTime,
-            _config.maturity,
-            ft_,
-            xt_,
-            gt_
-        );
+        emit TokenPairInitialized(collateral, underlying, _config.openTime, _config.maturity, ft_, xt_, gt_);
     }
 
     /**
@@ -87,46 +75,29 @@ contract TermMaxTokenPair is ITermMaxTokenPair, ReentrancyGuard, Ownable, Pausab
     /**
      * @inheritdoc ITermMaxTokenPair
      */
-    function tokens()
-        external
-        view
-        override
-        returns (
-            IMintableERC20,
-            IMintableERC20,
-            IGearingToken,
-            address,
-            IERC20
-        )
-    {
+    function tokens() external view override returns (IMintableERC20, IMintableERC20, IGearingToken, address, IERC20) {
         return (ft, xt, gt, collateral, underlying);
     }
 
     /**
      * @inheritdoc ITermMaxTokenPair
      */
-    function updateTokenPairConfig(
-        TokenPairConfig calldata newConfig
-    ) external override onlyOwner {
+    function updateTokenPairConfig(TokenPairConfig calldata newConfig) external override onlyOwner {
         TokenPairConfig memory mConfig = _config;
-        if(newConfig.treasurer != mConfig.treasurer){
+        if (newConfig.treasurer != mConfig.treasurer) {
             mConfig.treasurer = newConfig.treasurer;
             gt.setTreasurer(newConfig.treasurer);
         }
         mConfig.redeemFeeRatio = newConfig.redeemFeeRatio;
         mConfig.issueFtFeeRatio = newConfig.issueFtFeeRatio;
-        
+
         _config = mConfig;
         emit UpdateTokenPairConfig(mConfig);
     }
 
     /// @notice Calculate how many days until expiration
-    function _daysToMaturity(
-        uint maturity
-    ) internal view returns (uint256 daysToMaturity) {
-        daysToMaturity =
-            (maturity - block.timestamp + Constants.SECONDS_IN_DAY - 1) /
-            Constants.SECONDS_IN_DAY;
+    function _daysToMaturity(uint maturity) internal view returns (uint256 daysToMaturity) {
+        daysToMaturity = (maturity - block.timestamp + Constants.SECONDS_IN_DAY - 1) / Constants.SECONDS_IN_DAY;
     }
 
     function mintFtAndXt(
@@ -137,17 +108,12 @@ contract TermMaxTokenPair is ITermMaxTokenPair, ReentrancyGuard, Ownable, Pausab
         _mintFtAndXt(caller, receiver, underlyingAmt);
     }
 
-    function _mintFtAndXt(
-        address caller,
-        address receiver,
-        uint256 underlyingAmt
-    ) internal {
+    function _mintFtAndXt(address caller, address receiver, uint256 underlyingAmt) internal {
         underlying.safeTransferFrom(caller, address(this), underlyingAmt);
-        
+
         ft.mint(receiver, underlyingAmt);
         xt.mint(receiver, underlyingAmt);
     }
-
 
     function redeemFtAndXtToUnderlying(
         address caller,
@@ -157,14 +123,10 @@ contract TermMaxTokenPair is ITermMaxTokenPair, ReentrancyGuard, Ownable, Pausab
         _redeemFtAndXtToUnderlying(caller, receiver, underlyingAmt);
     }
 
-    function _redeemFtAndXtToUnderlying(
-        address caller,
-        address receiver,
-        uint256 underlyingAmt
-    ) internal {
+    function _redeemFtAndXtToUnderlying(address caller, address receiver, uint256 underlyingAmt) internal {
         ft.safeTransferFrom(caller, address(this), underlyingAmt);
         xt.safeTransferFrom(caller, address(this), underlyingAmt);
-        
+
         ft.burn(underlyingAmt);
         xt.burn(underlyingAmt);
 
@@ -196,8 +158,12 @@ contract TermMaxTokenPair is ITermMaxTokenPair, ReentrancyGuard, Ownable, Pausab
         // Send debt to borrower
         underlying.safeTransfer(loanReceiver, xtAmt);
         // Callback function
-        bytes memory collateralData = IFlashLoanReceiver(loanReceiver)
-            .executeOperation(gtReceiver, underlying, xtAmt, callbackData);
+        bytes memory collateralData = IFlashLoanReceiver(loanReceiver).executeOperation(
+            gtReceiver,
+            underlying,
+            xtAmt,
+            callbackData
+        );
 
         // Mint GT
         gtId = gt.mint(loanReceiver, gtReceiver, debt, collateralData);
@@ -212,13 +178,7 @@ contract TermMaxTokenPair is ITermMaxTokenPair, ReentrancyGuard, Ownable, Pausab
     function issueFt(
         uint128 debt,
         bytes calldata collateralData
-    )
-        external
-        override
-        nonReentrant
-        isOpen
-        returns (uint256 gtId, uint128 ftOutAmt)
-    {
+    ) external override nonReentrant isOpen returns (uint256 gtId, uint128 ftOutAmt) {
         return _issueFt(msg.sender, debt, collateralData);
     }
 
@@ -231,29 +191,19 @@ contract TermMaxTokenPair is ITermMaxTokenPair, ReentrancyGuard, Ownable, Pausab
         gtId = gt.mint(caller, caller, debt, collateralData);
 
         TokenPairConfig memory mConfig = _config;
-        uint128 issueFee = ((debt * mConfig.issueFtFeeRatio) /
-            Constants.DECIMAL_BASE).toUint128();
+        uint128 issueFee = ((debt * mConfig.issueFtFeeRatio) / Constants.DECIMAL_BASE).toUint128();
         // Mint ft amount = debt amount, send issueFee to treasurer and other to caller
         ft.mint(mConfig.treasurer, issueFee);
         ftOutAmt = debt - issueFee;
         ft.mint(caller, ftOutAmt);
 
-        emit IssueFt(
-            caller,
-            gtId,
-            debt,
-            ftOutAmt,
-            issueFee,
-            collateralData
-        );
+        emit IssueFt(caller, gtId, debt, ftOutAmt, issueFee, collateralData);
     }
 
     /**
      * @inheritdoc ITermMaxTokenPair
      */
-    function redeem(
-        uint256 ftAmount
-    ) external virtual override nonReentrant {
+    function redeem(uint256 ftAmount) external virtual override nonReentrant {
         _redeem(msg.sender, ftAmount);
     }
 
@@ -264,52 +214,37 @@ contract TermMaxTokenPair is ITermMaxTokenPair, ReentrancyGuard, Ownable, Pausab
                 ? mConfig.maturity + Constants.LIQUIDATION_WINDOW
                 : mConfig.maturity;
             if (block.timestamp < liquidationDeadline) {
-                revert CanNotRedeemBeforeFinalLiquidationDeadline(
-                    liquidationDeadline
-                );
+                revert CanNotRedeemBeforeFinalLiquidationDeadline(liquidationDeadline);
             }
         }
         uint underlyingAmt;
-        uint totalXtAsUnderlying;
 
         // The proportion that user will get how many underlying and collateral should be deliveried
-        uint proportion;
-        {
-            if (ftAmount > 0) {
-                ft.safeTransferFrom(caller, address(this), ftAmount);
-                ft.burn(ftAmount);
-            }
-            proportion = (ftAmount * Constants.DECIMAL_BASE_SQ) / ft.totalSupply();
+        uint proportion = (ftAmount * Constants.DECIMAL_BASE_SQ) / ft.totalSupply();
+        if (ftAmount > 0) {
+            ft.safeTransferFrom(caller, address(this), ftAmount);
+            ft.burn(ftAmount);
         }
 
         bytes memory deliveryData = gt.delivery(proportion, caller);
         // Transfer underlying output
         underlyingAmt +=
-            ((underlying.balanceOf(address(this)) - totalXtAsUnderlying) *
-                proportion) /
+            ((underlying.balanceOf(address(this))) * proportion) /
             Constants.DECIMAL_BASE_SQ;
         uint feeAmt;
         if (mConfig.redeemFeeRatio > 0) {
-            feeAmt =
-                (underlyingAmt * mConfig.redeemFeeRatio) /
-                Constants.DECIMAL_BASE;
+            feeAmt = (underlyingAmt * mConfig.redeemFeeRatio) / Constants.DECIMAL_BASE;
             underlying.safeTransfer(mConfig.treasurer, feeAmt);
             underlyingAmt -= feeAmt;
         }
         underlying.safeTransfer(caller, underlyingAmt);
-        emit Redeem(
-            caller,
-            proportion.toUint128(),
-            underlyingAmt.toUint128(),
-            feeAmt.toUint128(),
-            deliveryData
-        );
+        emit Redeem(caller, proportion.toUint128(), underlyingAmt.toUint128(), feeAmt.toUint128(), deliveryData);
     }
 
     /**
      * @inheritdoc ITermMaxTokenPair
      */
-    function updateGtConfig(bytes memory configData) external override onlyOwner{
+    function updateGtConfig(bytes memory configData) external override onlyOwner {
         gt.updateConfig(configData);
     }
 }
