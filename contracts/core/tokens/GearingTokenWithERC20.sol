@@ -24,26 +24,28 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
     /// @notice The max capacity of collateral token
     uint256 public collateralCapacity;
 
+    uint8 collateralDecimals;
+
     function __GearingToken_Implement_init(
         bytes memory initalParams
     ) internal override onlyInitializing {
-        collateralCapacity = abi.decode(
-            initalParams,
-            (uint256)
-        );
+        collateralCapacity = abi.decode(initalParams, (uint256));
+        collateralDecimals = IERC20Metadata(_config.collateral).decimals();
     }
 
     function _updateConfig(bytes memory configData) internal virtual override {
-        collateralCapacity = abi.decode(
-            configData,
-            (uint256)
-        );
+        collateralCapacity = abi.decode(configData, (uint256));
     }
 
-    function _checkBeforeMint(uint128 ,
-        bytes memory collateralData) internal virtual override {
-
-        if(IERC20(_config.collateral).balanceOf(address(this)) + _decodeAmount(collateralData) > collateralCapacity) {
+    function _checkBeforeMint(
+        uint128,
+        bytes memory collateralData
+    ) internal virtual override {
+        if (
+            IERC20(_config.collateral).balanceOf(address(this)) +
+                _decodeAmount(collateralData) >
+            collateralCapacity
+        ) {
             revert CollateralCapacityExceeded();
         }
     }
@@ -120,19 +122,16 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
     /**
      * @inheritdoc AbstractGearingToken
      */
-    function _getCollateralPriceData(GtConfig memory config)
-        internal
-        view
-        virtual
-        override
-        returns (bytes memory priceData)
-    {
-        (uint256 price, uint8 decimals) = config.oracle.getPrice(config.collateral);
-        uint priceDecimals = 10 ** decimals;
+    function _getCollateralPriceData(
+        GtConfig memory config
+    ) internal view virtual override returns (bytes memory priceData) {
+        (uint256 price, uint8 decimals) = config.oracle.getPrice(
+            config.collateral
+        );
+        uint priceDenominator = 10 ** decimals;
 
-        uint cTokenDecimals = 10 **
-            IERC20Metadata(config.collateral).decimals();
-        priceData = abi.encode(price, priceDecimals, cTokenDecimals);
+        uint cTokenDecimals = 10 ** collateralDecimals;
+        priceData = abi.encode(price, priceDenominator, cTokenDecimals);
     }
 
     /// @notice Encode amount to collateral data
@@ -207,7 +206,7 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
         // )
 
         /* DP := debt token price (valueAndPrice.underlyingPrice)
-         * DPD := debt token price decimal (valueAndPrice.priceDecimals)
+         * DPD := debt token price decimal (valueAndPrice.priceDenominator)
          * CP := collateral token price (collateralPrice)
          * CPD := collateral token price decimal (collateralPriceDecimals)
          * The value of 1(decimal) debt token / The value of 1(decimal) collateral token
@@ -216,19 +215,20 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
         uint ddPriceToCdPrice = (valueAndPrice.underlyingPrice *
             collateralPriceDecimals *
             Constants.DECIMAL_BASE) /
-            (collateralPrice * valueAndPrice.priceDecimals);
+            (collateralPrice * valueAndPrice.priceDenominator);
 
         // calculate the amount of collateral that is equivalent to repayAmt
         // with debt to collateral price
         uint cEqualRepayAmt = (repayAmt *
             ddPriceToCdPrice *
             collateralDecimals) /
-            (valueAndPrice.underlyingDecimals * Constants.DECIMAL_BASE);
+            (valueAndPrice.underlyingDenominator * Constants.DECIMAL_BASE);
 
-        uint rewardToLiquidator = (cEqualRepayAmt * GearingTokenConstants.REWARD_TO_LIQUIDATOR) /
+        uint rewardToLiquidator = (cEqualRepayAmt *
+            GearingTokenConstants.REWARD_TO_LIQUIDATOR) /
             Constants.DECIMAL_BASE;
-        uint rewardToProtocol = (cEqualRepayAmt * GearingTokenConstants.REWARD_TO_PROTOCOL) /
-            Constants.DECIMAL_BASE;
+        uint rewardToProtocol = (cEqualRepayAmt *
+            GearingTokenConstants.REWARD_TO_PROTOCOL) / Constants.DECIMAL_BASE;
 
         uint removedCollateralAmt = cEqualRepayAmt +
             rewardToLiquidator +
