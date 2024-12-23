@@ -1099,7 +1099,8 @@ contract TermMaxRouter is
         outData = inputData;
     }
 
-    function _checkAdaper(address adapter) internal {
+    /// @notice Check the adapter is whitelisted
+    function _checkAdaper(address adapter) internal view {
         if (!adapterWhitelist[adapter]) {
             revert AdapterNotWhitelisted(adapter);
         }
