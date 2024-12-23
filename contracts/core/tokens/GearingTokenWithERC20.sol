@@ -130,8 +130,8 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
         );
         uint priceDenominator = 10 ** decimals;
 
-        uint cTokenDecimals = 10 ** collateralDecimals;
-        priceData = abi.encode(price, priceDenominator, cTokenDecimals);
+        uint cTokenDenominator = 10 ** collateralDecimals;
+        priceData = abi.encode(price, priceDenominator, cTokenDenominator);
     }
 
     /// @notice Encode amount to collateral data
@@ -196,8 +196,8 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
 
         (
             uint collateralPrice,
-            uint collateralPriceDecimals,
-            uint collateralDecimals
+            uint cPriceDenominator,
+            uint cTokenDenominator
         ) = abi.decode(valueAndPrice.collateralPriceData, (uint, uint, uint));
 
         // maxRomvedCollateral = min(
@@ -208,12 +208,12 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
         /* DP := debt token price (valueAndPrice.underlyingPrice)
          * DPD := debt token price decimal (valueAndPrice.priceDenominator)
          * CP := collateral token price (collateralPrice)
-         * CPD := collateral token price decimal (collateralPriceDecimals)
+         * CPD := collateral token price decimal (cPriceDenominator)
          * The value of 1(decimal) debt token / The value of 1(decimal) collateral token
          *     ddPriceToCdPrice = (DP/DPD) / (CP/CPD) = (DP*CPD) / (CP*DPD)
          */
         uint ddPriceToCdPrice = (valueAndPrice.underlyingPrice *
-            collateralPriceDecimals *
+            cPriceDenominator *
             Constants.DECIMAL_BASE) /
             (collateralPrice * valueAndPrice.priceDenominator);
 
@@ -221,7 +221,7 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
         // with debt to collateral price
         uint cEqualRepayAmt = (repayAmt *
             ddPriceToCdPrice *
-            collateralDecimals) /
+            cTokenDenominator) /
             (valueAndPrice.underlyingDenominator * Constants.DECIMAL_BASE);
 
         uint rewardToLiquidator = (cEqualRepayAmt *
