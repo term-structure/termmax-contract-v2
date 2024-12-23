@@ -78,6 +78,9 @@ contract AccessManagerTest is Test {
         res.underlying.approve(address(res.market), amount);
         res.market.provideLiquidity(uint128(amount));
 
+        manager.grantRole(manager.CURATOR_ROLE(), deployer);
+        manager.grantRole(manager.PAUSER_ROLE(), deployer);
+
         vm.stopPrank();
 
         res.underlying.mint(sender, amount);

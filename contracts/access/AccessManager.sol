@@ -55,8 +55,6 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
         __UUPSUpgradeable_init();
         __AccessControl_init();
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
-        _grantRole(CURATOR_ROLE, admin);
-        _grantRole(PAUSER_ROLE, admin);
     }
 
     /// @notice Set GT implementation to the factory
