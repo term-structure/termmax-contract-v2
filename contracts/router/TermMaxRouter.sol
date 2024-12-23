@@ -335,7 +335,9 @@ contract TermMaxRouter is
             underlyingAmt
         );
 
-        (lpFtOutAmt, lpXtOutAmt) = market.provideLiquidity(uint128(underlyingAmt));
+        (lpFtOutAmt, lpXtOutAmt) = market.provideLiquidity(
+            underlyingAmt.toUint128()
+        );
         lpFt.safeTransfer(receiver, lpFtOutAmt);
         lpXt.safeTransfer(receiver, lpXtOutAmt);
 
@@ -520,7 +522,6 @@ contract TermMaxRouter is
         redeemXtAmt = xtOutAmt < requiredXtAmt ? xtOutAmt : requiredXtAmt;
     }
 
-
     /**
      * @inheritdoc ITermMaxRouter
      */
@@ -658,7 +659,7 @@ contract TermMaxRouter is
         );
         (, , uint128 ltv, bytes memory collateralData) = gt.loanInfo(gtId);
         if (ltv > maxLtv) {
-            revert LtvBiggerThanExpected(uint128(maxLtv), ltv);
+            revert LtvBiggerThanExpected(maxLtv.toUint128(), ltv);
         }
         gt.safeTransferFrom(address(this), receiver, gtId);
 
@@ -719,7 +720,7 @@ contract TermMaxRouter is
 
         (, , uint128 ltv, bytes memory collateralData) = gt.loanInfo(gtId);
         if (ltv > maxLtv) {
-            revert LtvBiggerThanExpected(uint128(maxLtv), ltv);
+            revert LtvBiggerThanExpected(maxLtv.toUint128(), ltv);
         }
 
         emit IssueGt(
@@ -804,7 +805,11 @@ contract TermMaxRouter is
         );
 
         ft.safeIncreaseAllowance(address(market), netFtOut);
-        uint256 netTokenOut = market.sellFt(netFtOut, borrowAmt.toUint128(), lsf);
+        uint256 netTokenOut = market.sellFt(
+            netFtOut,
+            borrowAmt.toUint128(),
+            lsf
+        );
         // NOTE: if netTokenOut > borrowAmt, repay
         uint256 repayAmt = netTokenOut - borrowAmt;
         if (repayAmt > 0) {
@@ -861,18 +866,26 @@ contract TermMaxRouter is
         whenNotPaused
         returns (uint256 netTokenOut)
     {
-        (IMintableERC20 ft, , , , IGearingToken gt, , IERC20 underlying) = market.tokens();
+        (
+            IMintableERC20 ft,
+            ,
+            ,
+            ,
+            IGearingToken gt,
+            ,
+            IERC20 underlying
+        ) = market.tokens();
         gt.safeTransferFrom(msg.sender, address(this), gtId, "");
-        gt.flashRepay(gtId, byUnderlying, abi.encode(market, ft ,units, lsf));
-        if(byUnderlying){
+        gt.flashRepay(gtId, byUnderlying, abi.encode(market, ft, units, lsf));
+        if (byUnderlying) {
             // SafeTransfer remainning underlying token
             netTokenOut = underlying.balanceOf(address(this));
             underlying.safeTransfer(receiver, netTokenOut);
-        }else{
+        } else {
             // Swap remainning ft to underlying token
             netTokenOut = ft.balanceOf(address(this));
             ft.safeIncreaseAllowance(address(market), netTokenOut);
-            netTokenOut = market.sellFt(uint128(netTokenOut), 0, lsf);
+            netTokenOut = market.sellFt(netTokenOut.toUint128(), 0, lsf);
             underlying.safeTransfer(receiver, netTokenOut);
         }
     }
@@ -933,14 +946,18 @@ contract TermMaxRouter is
         if (netFtOut > debtAmt) {
             uint remainningFt = netFtOut - debtAmt;
             ft.safeIncreaseAllowance(address(market), remainningFt);
-            uint underlyingOut = market.sellFt(uint128(remainningFt), 0, lsf);
+            uint underlyingOut = market.sellFt(
+                remainningFt.toUint128(),
+                0,
+                lsf
+            );
             underlying.safeTransfer(receiver, underlyingOut);
 
             ft.safeIncreaseAllowance(address(gt), debtAmt);
             gt.repay(gtId, debtAmt, false);
-        }else{
+        } else {
             ft.safeIncreaseAllowance(address(gt), netFtOut);
-            gt.repay(gtId, uint128(netFtOut), false);
+            gt.repay(gtId, netFtOut.toUint128(), false);
         }
         emit Repay(market, false, address(underlying), gtId, tokenInAmt);
     }
@@ -1031,16 +1048,23 @@ contract TermMaxRouter is
         bytes memory collateralData,
         bytes calldata callbackData
     ) external override ensureGtWhitelist(msg.sender) {
-        (ITermMaxMarket market, address ft, SwapUnit[] memory units, uint32 lsf) = 
-            abi.decode(callbackData, (ITermMaxMarket, address, SwapUnit[], uint32));
+        (
+            ITermMaxMarket market,
+            address ft,
+            SwapUnit[] memory units,
+            uint32 lsf
+        ) = abi.decode(
+                callbackData,
+                (ITermMaxMarket, address, SwapUnit[], uint32)
+            );
         // do swap
         bytes memory outData = _doSwap(collateralData, units);
 
-        if(address(repayToken) == ft){
-            IERC20 underlying = IERC20(units[units.length -1].tokenOut);
+        if (address(repayToken) == ft) {
+            IERC20 underlying = IERC20(units[units.length - 1].tokenOut);
             uint amount = abi.decode(outData, (uint));
             underlying.safeIncreaseAllowance(address(market), amount);
-            market.buyFt(uint128(amount), debtAmt, lsf);
+            market.buyFt(amount.toUint128(), debtAmt, lsf);
         }
         repayToken.safeIncreaseAllowance(msg.sender, debtAmt);
     }
@@ -1056,7 +1080,12 @@ contract TermMaxRouter is
             // encode datas
             bytes memory dataToSwap = abi.encodeCall(
                 ISwapAdapter.swap,
-                (units[i].tokenIn, units[i].tokenOut, inputData, units[i].swapData)
+                (
+                    units[i].tokenIn,
+                    units[i].tokenOut,
+                    inputData,
+                    units[i].swapData
+                )
             );
 
             // delegatecall

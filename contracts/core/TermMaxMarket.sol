@@ -1012,7 +1012,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
                 caller,
                 lpFtAmt,
                 lpXtAmt,
-                uint128(ftAmt - sameProportionFt),
+                (ftAmt - sameProportionFt).toUint128(),
                 0,
                 xtAmt
             );
@@ -1028,7 +1028,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
                 lpFtAmt,
                 lpXtAmt,
                 0,
-                uint128(xtAmt - xtToBurn),
+                (xtAmt - xtToBurn).toUint128(),
                 xtToBurn
             );
         }
