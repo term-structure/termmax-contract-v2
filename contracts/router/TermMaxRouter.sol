@@ -56,7 +56,7 @@ contract TermMaxRouter is
     /// @notice Check the token pair is whitelisted
     modifier ensureTokenPairWhitelist(address tokenPair) {
         if (!tokenPairWhitelist[tokenPair]) {
-            revert MarketNotWhitelisted(tokenPair);
+            revert TokenPairNotWhitelisted(tokenPair);
         }
         _;
     }
@@ -71,7 +71,7 @@ contract TermMaxRouter is
     modifier ensureGtWhitelist(address gt) {
         address tokenPair = IGearingToken(gt).tokenPairAddr();
         if (!tokenPairWhitelist[tokenPair]) {
-            revert MarketNotWhitelisted(tokenPair);
+            revert TokenPairNotWhitelisted(tokenPair);
         }
         (, , IGearingToken gt_, , ) = ITermMaxMarket(tokenPair).tokens();
         if (address(gt_) != gt) {
@@ -168,9 +168,9 @@ contract TermMaxRouter is
         ) = market.tokens();
         tokens[0] = ft;
         tokens[1] = xt;
-        tokens[4] = IERC20(collateral);
-        tokens[5] = underlying;
-        for (uint i = 0; i < 6; ++i) {
+        tokens[2] = IERC20(collateral);
+        tokens[3] = underlying;
+        for (uint i = 0; i < 4; ++i) {
             balances[i] = tokens[i].balanceOf(owner);
         }
         gtAddr = address(gt);
@@ -336,9 +336,7 @@ contract TermMaxRouter is
     function redeem(
         address receiver,
         ITermMaxTokenPair tokenPair,
-        uint256 ftAmt,
-        uint256 minCollOut,
-        uint256 minTokenOut
+        uint256 ftAmt
     )
         external
         ensureTokenPairWhitelist(address(tokenPair))
@@ -365,23 +363,8 @@ contract TermMaxRouter is
 
         IERC20 collateral = IERC20(collateralAddr);
         netCollOut = _balanceOf(collateral, address(this));
-        if (netCollOut < minCollOut) {
-            revert InsufficientTokenOut(
-                address(collateral),
-                minCollOut,
-                netCollOut
-            );
-        }
         collateral.safeTransfer(receiver, netCollOut);
-
         netTokenOut = _balanceOf(underlying, address(this));
-        if (netTokenOut < minTokenOut) {
-            revert InsufficientTokenOut(
-                address(underlying),
-                minTokenOut,
-                netTokenOut
-            );
-        }
         underlying.safeTransfer(receiver, netTokenOut);
 
         emit Redeem(
@@ -429,6 +412,7 @@ contract TermMaxRouter is
             tokenToBuyXtAmt.toUint128(),
             minXtAmt.toUint128()
         );
+        xt.approve(address(tokenPair), netXtOut);
         bytes memory callbackData = abi.encode(address(gt), tokenInAmt, units);
         xt.safeIncreaseAllowance(address(market), netXtOut);
         gtId = tokenPair.leverageByXt(
@@ -488,6 +472,7 @@ contract TermMaxRouter is
 
         underlying.safeTransferFrom(msg.sender, address(this), tokenInAmt);
 
+        xt.approve(address(tokenPair), xtInAmt);
         bytes memory callbackData = abi.encode(address(gt), tokenInAmt, units);
         gtId = tokenPair.leverageByXt(
             address(this),
@@ -741,7 +726,7 @@ contract TermMaxRouter is
         bytes calldata data
     )
         external
-        ensureMarketWhitelist(msg.sender)
+        ensureTokenPairWhitelist(msg.sender)
         returns (bytes memory collateralData)
     {
         (address gt, uint256 tokenInAmt, SwapUnit[] memory units) = abi.decode(

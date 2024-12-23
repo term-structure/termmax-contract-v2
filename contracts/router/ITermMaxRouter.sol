@@ -11,6 +11,8 @@ import {SwapUnit} from "./ISwapAdapter.sol";
  */
 interface ITermMaxRouter {
     error TOBEDEFINED();
+    /// @notice Error for calling the token pair is not whitelisted
+    error TokenPairNotWhitelisted(address tokenPair);
     /// @notice Error for calling the market is not whitelisted
     error MarketNotWhitelisted(address market);
     /// @notice Error for calling the gt is not whitelisted
@@ -282,17 +284,13 @@ interface ITermMaxRouter {
     /// @param receiver Who receive output tokens
     /// @param tokenPair The token pair's address
     /// @param ftAmt The FT token input amount
-    /// @param minCollOut Expected collateral output
-    /// @param minTokenOut  Expected underlying output
 
     /// @return netCollOut Final collateral output
     /// @return netTokenOut Final underlying output
     function redeem(
         address receiver,
         ITermMaxTokenPair tokenPair,
-        uint256 ftAmt,
-        uint256 minCollOut,
-        uint256 minTokenOut
+        uint256 ftAmt
     ) external returns (uint256 netCollOut, uint256 netTokenOut);
 
     /// @notice Do leverage by underlying token
