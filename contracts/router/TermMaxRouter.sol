@@ -1003,6 +1003,7 @@ contract TermMaxRouter is
             ISwapAdapter.approveOutputToken,
             (lastUnit.tokenOut, gt, collateralData)
         );
+        _checkAdaper(lastUnit.adapter);
         (bool success, bytes memory returnData) = lastUnit.adapter.delegatecall(
             approvalData
         );
@@ -1074,9 +1075,7 @@ contract TermMaxRouter is
         SwapUnit[] memory units
     ) internal returns (bytes memory outData) {
         for (uint i = 0; i < units.length; ++i) {
-            if (!adapterWhitelist[units[i].adapter]) {
-                revert AdapterNotWhitelisted(units[i].adapter);
-            }
+            _checkAdaper(units[i].adapter);
             // encode datas
             bytes memory dataToSwap = abi.encodeCall(
                 ISwapAdapter.swap,
@@ -1098,6 +1097,12 @@ contract TermMaxRouter is
             inputData = abi.decode(returnData, (bytes));
         }
         outData = inputData;
+    }
+
+    function _checkAdaper(address adapter) internal {
+        if (!adapterWhitelist[adapter]) {
+            revert AdapterNotWhitelisted(adapter);
+        }
     }
 
     function onERC721Received(
