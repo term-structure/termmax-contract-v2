@@ -110,13 +110,11 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
         bytes memory priceData
     ) internal view virtual override returns (uint256) {
         uint collateralAmt = _decodeAmount(collateralData);
-        (uint price, uint decimals, uint collateralDecimals) = abi.decode(
-            priceData,
-            (uint, uint, uint)
-        );
+        (uint price, uint priceDenominator, uint collateralDemonimator) = abi
+            .decode(priceData, (uint, uint, uint));
         return
             (collateralAmt * price * Constants.DECIMAL_BASE) /
-            (decimals * collateralDecimals);
+            (priceDenominator * collateralDemonimator);
     }
 
     /**
