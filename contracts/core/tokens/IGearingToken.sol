@@ -89,6 +89,11 @@ interface IGearingToken is IERC721Enumerable {
     /// @notice Emitted when updating the configuration
     event UpdateConfig(bytes configData);
 
+    /// @notice Emitted when Debt is augmented
+    /// @param id The id of Gearing Token
+    /// @param ftAmt The amount of debt augmented
+    event AugmentDebt(uint256 indexed id, uint ftAmt);
+
     /// @notice Emitted when merging multiple Gearing Tokens into one
     /// @param owner The owner of those tokens
     /// @param newId The id of new Gearing Token
@@ -169,6 +174,14 @@ interface IGearingToken is IERC721Enumerable {
         uint128 debtAmt,
         bytes memory collateralData
     ) external returns (uint256 id);
+
+    /// @notice Augment the debt of Gearing Token
+    /// @param  id The id of Gearing Token
+    /// @param  ftAmt The amount of debt, unit by underlying token
+    function augmentDebt(
+        uint256 id,
+        uint ftAmt
+    ) external;
 
     /// @notice Return the loan information of Gearing Token
     /// @param  id The id of Gearing Token

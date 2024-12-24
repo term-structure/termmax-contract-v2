@@ -174,6 +174,29 @@ abstract contract AbstractGearingToken is
     /**
      * @inheritdoc IGearingToken
      */
+    function augmentDebt(uint256 id, uint ftAmt) external override nonReentrant onlyOwner {
+        GtConfig memory config = _config;
+        if (config.maturity <= block.timestamp) {
+            revert GtIsExpired(id);
+        }
+
+        LoanInfo memory loan = loanMapping[id];
+        loan.debtAmt += ftAmt.toUint128();
+
+        ValueAndPrice memory valueAndPrice = _getValueAndPrice(config, loan);
+        _checkDebtValue(valueAndPrice);
+        uint128 ltv = _calculateLtv(valueAndPrice);
+        if (ltv >= config.maxLtv) {
+            revert GtIsNotHealthy(id, msg.sender, ltv);
+        }
+        loanMapping[id] = loan;
+
+        emit AugmentDebt(id, ftAmt);
+    }
+
+    /**
+     * @inheritdoc IGearingToken
+     */
     function loanInfo(
         uint256 id
     )
