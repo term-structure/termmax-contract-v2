@@ -203,6 +203,36 @@ contract TermMaxTokenPair is ITermMaxTokenPair, ReentrancyGuard, Ownable, Pausab
     /**
      * @inheritdoc ITermMaxTokenPair
      */
+    function issueFtByExistedGt(
+        address receiver,
+        uint128 debt,
+        uint gtId
+    ) external override nonReentrant isOpen returns (uint128 ftOutAmt) {
+        return _issueFtByExistedGt(msg.sender, receiver, debt, gtId);
+    }
+
+    function _issueFtByExistedGt(
+        address caller,
+        address receiver,
+        uint128 debt,
+        uint gtId
+    ) internal returns (uint128 ftOutAmt) {
+        if (gt.ownerOf(gtId) != caller) revert TOBEDEFINED();
+        gt.augmentDebt(gtId, debt);
+
+        TokenPairConfig memory mConfig = _config;
+        uint128 issueFee = ((debt * mConfig.issueFtFeeRatio) / Constants.DECIMAL_BASE).toUint128();
+        // Mint ft amount = debt amount, send issueFee to treasurer and other to caller
+        ft.mint(mConfig.treasurer, issueFee);
+        ftOutAmt = debt - issueFee;
+        ft.mint(receiver, ftOutAmt);
+
+        emit IssueFtByExistedGt(caller, gtId, debt, ftOutAmt, issueFee);
+    }
+
+    /**
+     * @inheritdoc ITermMaxTokenPair
+     */
     function redeem(uint256 ftAmount) external virtual override nonReentrant {
         _redeem(msg.sender, ftAmount);
     }

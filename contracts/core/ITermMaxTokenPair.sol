@@ -10,6 +10,7 @@ import {TokenPairConfig} from "./storage/TermMaxStorage.sol";
  * @author Term Structure Labs
  */
 interface ITermMaxTokenPair {
+    error TOBEDEFINED();
     /// @notice Error for invalid unix time parameters
     error InvalidTime(uint64 openTime, uint64 maturity);
     /// @notice Error for the collateral and underlying are the same token
@@ -72,6 +73,20 @@ interface ITermMaxTokenPair {
         uint128 ftAmt,
         uint128 issueFee,
         bytes collateralData
+    );
+
+    /// @notice Emitted when issuing FT by existed Gearing Token
+    /// @param caller Who call the function
+    /// @param gtId The id of Gearing Token
+    /// @param debtAmt The amount of debt, unit by underlying token
+    /// @param ftAmt The amount of FT issued
+    /// @param issueFee The amount of issuing fee, unit by FT token
+    event IssueFtByExistedGt(
+        address indexed caller,
+        uint256 indexed gtId,
+        uint128 debtAmt,
+        uint128 ftAmt,
+        uint128 issueFee
     );
 
     /// @notice Emitted when redeeming tokens
@@ -151,6 +166,19 @@ interface ITermMaxTokenPair {
         uint128 debt,
         bytes calldata collateralData
     ) external returns (uint256 gtId, uint128 ftOutAmt);
+
+    /// @notice Using collateral to issue FT tokens.
+    ///         Caller will get FT(bond) tokens equal to the debt amount subtract issue fee
+    /// @param receiver Who will receive Gearing Token
+    /// @param debt The amount of debt, unit by underlying token
+    /// @param gtId The id of Gearing Token
+    /// @return ftOutAmt The amount of FT issued
+    ///
+    function issueFtByExistedGt(
+        address receiver,
+        uint128 debt,
+        uint gtId
+    ) external returns (uint128 ftOutAmt);
 
     /// @notice Flash loan underlying token for leverage
     /// @param receiver Who will receive Gearing Token
