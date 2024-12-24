@@ -212,7 +212,13 @@ interface ITermMaxMarket {
     /// @param newConfig New configuration
     /// @param newFtReserve New FT reserve amount
     /// @param newXtReserve New XT reserve amount
-    function updateMarketConfig(MarketConfig calldata newConfig, uint newFtReserve, uint newXtReserve) external;
+    /// @param gtId The id of Gearing Token
+    function updateMarketConfig(
+        MarketConfig calldata newConfig,
+        uint newFtReserve,
+        uint newXtReserve,
+        uint gtId
+    ) external;
 
     /// @notice Set the provider's whitelist
     function setProvider(address provider) external;

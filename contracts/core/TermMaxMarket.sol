@@ -26,6 +26,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
 
     MarketConfig private _config;
     ITermMaxTokenPair private _tokenPair;
+    uint gtId = type(uint256).max;
     address provider;
 
     /// @notice Check if the market is tradable
@@ -118,9 +119,10 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
     function updateMarketConfig(
         MarketConfig calldata newConfig,
         uint newFtReserve,
-        uint newXtReserve
+        uint newXtReserve,
+        uint gtId_
     ) external override onlyOwner {
-        (IMintableERC20 ft, IMintableERC20 xt, , , ) = _tokenPair.tokens();
+        (IMintableERC20 ft, IMintableERC20 xt, IGearingToken gt, , ) = _tokenPair.tokens();
         if (newConfig.maker != _config.maker) revert TOBEDEFINED();
         if (newConfig.treasurer != _config.treasurer) revert TOBEDEFINED();
         if (newConfig.curveCuts.length == 0) revert TOBEDEFINED();
@@ -141,6 +143,11 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
             xt.safeTransferFrom(_config.maker, address(this), newXtReserve - xtReserve);
         } else if (newXtReserve < xtReserve) {
             xt.safeTransfer(_config.maker, xtReserve - newXtReserve);
+        }
+        if (gtId != gtId_) {
+            if(gtId != type(uint256).max) gt.safeTransferFrom(address(this), _config.maker, gtId);
+            gt.safeTransferFrom(_config.maker, address(this), gtId_);
+            gtId = gtId_;
         }
 
         emit UpdateMarketConfig(_config);
@@ -232,7 +239,14 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         underlying.safeTransfer(_config.treasurer, feeAmt);
         underlying.approve(address(_tokenPair), underlyingAmtIn);
         _tokenPair.mintFtAndXt(address(this), address(this), underlyingAmtIn - feeAmt);
-        tokenOut.safeTransfer(msg.sender, netOut);
+        
+        uint ftReserve = ft.balanceOf(address(this));
+        if (tokenOut == ft && ftReserve < netOut) {
+            _issueFt(msg.sender, ftReserve, netOut);
+            tokenOut.safeTransfer(msg.sender, ftReserve);
+        } else {
+            tokenOut.safeTransfer(msg.sender, netOut);
+        }
         emit BuyToken(
             msg.sender,
             tokenOut,
@@ -286,6 +300,10 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         if (netOut < minUnderlyingOut) revert UnexpectedAmount(minUnderlyingOut, netOut);
 
         tokenIn.safeTransferFrom(msg.sender, address(this), tokenAmtIn);
+        if (tokenIn == xt) {
+            uint ftReserve = ft.balanceOf(address(this));
+            if (ftReserve < underlyingAmtOut) _issueFt(address(this), ftReserve, underlyingAmtOut);
+        }
         ft.approve(address(_tokenPair), underlyingAmtOut);
         xt.approve(address(_tokenPair), underlyingAmtOut);
         _tokenPair.redeemFtAndXtToUnderlying(address(this), address(this), underlyingAmtOut);
@@ -325,5 +343,12 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         uint minFeeAmt = (underlyingAmtOut * _config.minNLendFeeR) / Constants.DECIMAL_BASE;
         feeAmt = feeAmt < minFeeAmt ? minFeeAmt : feeAmt;
         isXtIn = true;
+    }
+
+    function _issueFt(address receiver, uint ftReserve, uint targetFtReserve) internal {
+        if (gtId == type(uint256).max) revert TOBEDEFINED();
+        TokenPairConfig memory config_ = _tokenPair.config();
+        uint ftAmtToIssue = ((targetFtReserve - ftReserve) * Constants.DECIMAL_BASE) / config_.issueFtFeeRatio;
+        _tokenPair.issueFtByExistedGt(receiver, (ftAmtToIssue).toUint128(), gtId);
     }
 }

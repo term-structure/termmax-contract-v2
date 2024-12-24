@@ -109,9 +109,10 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
         ITermMaxMarket market,
         MarketConfig calldata newConfig,
         uint newFtReserve,
-        uint newXtReserve
+        uint newXtReserve,
+        uint gtId
     ) external onlyRole(CURATOR_ROLE) {
-        market.updateMarketConfig(newConfig, newFtReserve, newXtReserve);
+        market.updateMarketConfig(newConfig, newFtReserve, newXtReserve, gtId);
     }
 
     /// @notice Set the provider's white list
