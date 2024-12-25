@@ -41,7 +41,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
 
     /// @notice Check if the market is borrowing allowed
     modifier isBorrowingAllowed() {
-        if (_config.isLendOnly) {
+        if (_config.borrowCurveCuts.length == 0) {
             revert TOBEDEFINED();
         }
         _;
@@ -49,7 +49,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
 
     /// @notice Check if the market is lending allowed
     modifier isLendingAllowed() {
-        if (_config.isBorrowOnly) {
+        if (_config.lendCurveCuts.length == 0) {
             revert TOBEDEFINED();
         }
         _;
@@ -99,18 +99,26 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
     /**
      * @inheritdoc ITermMaxMarket
      */
-    function apr() external view override returns (uint apr_) {
+    function apr() external view override returns (uint lendApr_, uint borrowApr_) {
         (, IMintableERC20 xt, , , ) = _tokenPair.tokens();
         uint daysToMaturity = _daysToMaturity(_tokenPair.config().maturity);
         uint oriXtReserve = xt.balanceOf(address(this));
 
-        uint cutId = TermMaxCurve.calcCutId(_config.curveCuts, oriXtReserve);
-        (, uint vXtReserve, uint vFtReserve) = TermMaxCurve.calcIntervalProps(
+        uint lendCutId = TermMaxCurve.calcCutId(_config.lendCurveCuts, oriXtReserve);
+        (, uint lendVXtReserve, uint lendVFtReserve) = TermMaxCurve.calcIntervalProps(
             daysToMaturity,
-            _config.curveCuts[cutId],
+            _config.lendCurveCuts[lendCutId],
             oriXtReserve
         );
-        apr_ = ((vFtReserve * Constants.DECIMAL_BASE * Constants.DAYS_IN_YEAR) / vXtReserve) * daysToMaturity;
+        lendApr_ = ((lendVFtReserve * Constants.DECIMAL_BASE * Constants.DAYS_IN_YEAR) / lendVXtReserve) * daysToMaturity;
+
+        uint borrowCutId = TermMaxCurve.calcCutId(_config.borrowCurveCuts, oriXtReserve);
+        (, uint borrowVXtReserve, uint borrowVFtReserve) = TermMaxCurve.calcIntervalProps(
+            daysToMaturity,
+            _config.borrowCurveCuts[borrowCutId],
+            oriXtReserve
+        );
+        borrowApr_ = ((borrowVFtReserve * Constants.DECIMAL_BASE * Constants.DAYS_IN_YEAR) / borrowVXtReserve) * daysToMaturity;
     }
 
     /**
@@ -125,12 +133,19 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         (IMintableERC20 ft, IMintableERC20 xt, IGearingToken gt, , ) = _tokenPair.tokens();
         if (newConfig.maker != _config.maker) revert TOBEDEFINED();
         if (newConfig.treasurer != _config.treasurer) revert TOBEDEFINED();
-        if (newConfig.curveCuts.length == 0) revert TOBEDEFINED();
-        if (newConfig.curveCuts[0].xtReserve != 0) revert TOBEDEFINED();
-        for (uint i = 1; i < newConfig.curveCuts.length; i++) {
-            if (newConfig.curveCuts[i].xtReserve <= newConfig.curveCuts[i - 1].xtReserve) revert TOBEDEFINED();
+        if (newConfig.lendCurveCuts.length > 0) {
+            if (newConfig.lendCurveCuts[0].xtReserve != 0) revert TOBEDEFINED();
         }
-        if (newConfig.isBorrowOnly && newConfig.isLendOnly) revert TOBEDEFINED();
+        for (uint i = 1; i < newConfig.lendCurveCuts.length; i++) {
+            if (newConfig.lendCurveCuts[i].xtReserve <= newConfig.lendCurveCuts[i - 1].xtReserve) revert TOBEDEFINED();
+        }
+        if (newConfig.borrowCurveCuts.length > 0) {
+            if (newConfig.borrowCurveCuts[0].xtReserve != 0) revert TOBEDEFINED();
+        }
+        for (uint i = 1; i < newConfig.borrowCurveCuts.length; i++) {
+            if (newConfig.borrowCurveCuts[i].xtReserve <= newConfig.borrowCurveCuts[i - 1].xtReserve)
+                revert TOBEDEFINED();
+        }
         _config = newConfig;
 
         (uint xtReserve, uint ftReserve) = ftXtReserves();
@@ -145,7 +160,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
             xt.safeTransfer(_config.maker, xtReserve - newXtReserve);
         }
         if (gtId != gtId_) {
-            if(gtId != type(uint256).max) gt.safeTransferFrom(address(this), _config.maker, gtId);
+            if (gtId != type(uint256).max) gt.safeTransferFrom(address(this), _config.maker, gtId);
             gt.safeTransferFrom(_config.maker, address(this), gtId_);
             gtId = gtId_;
         }
@@ -239,7 +254,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         underlying.safeTransfer(_config.treasurer, feeAmt);
         underlying.approve(address(_tokenPair), underlyingAmtIn);
         _tokenPair.mintFtAndXt(address(this), address(this), underlyingAmtIn - feeAmt);
-        
+
         uint ftReserve = ft.balanceOf(address(this));
         if (tokenOut == ft && ftReserve < netOut) {
             _issueFt(msg.sender, ftReserve, netOut);
@@ -264,11 +279,11 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         uint oriXtReserve,
         uint underlyingAmtIn
     ) internal view returns (uint tokenAmtOut, uint feeAmt, bool isXtOut) {
-        (, uint negDeltaFt) = TermMaxCurve.buyFt(daysToMaturity, _config.curveCuts, oriXtReserve, underlyingAmtIn);
+        (, uint negDeltaFt) = TermMaxCurve.buyFt(daysToMaturity, _config.borrowCurveCuts, oriXtReserve, underlyingAmtIn);
         feeAmt = (negDeltaFt * _config.lendFeeRatio) / Constants.DECIMAL_BASE;
         uint minFeeAmt = (underlyingAmtIn * _config.minNLendFeeR) / Constants.DECIMAL_BASE;
         feeAmt = feeAmt < minFeeAmt ? minFeeAmt : feeAmt;
-        (, tokenAmtOut) = TermMaxCurve.buyFt(daysToMaturity, _config.curveCuts, oriXtReserve, underlyingAmtIn - feeAmt);
+        (, tokenAmtOut) = TermMaxCurve.buyFt(daysToMaturity, _config.borrowCurveCuts, oriXtReserve, underlyingAmtIn - feeAmt);
         isXtOut = false;
     }
 
@@ -280,7 +295,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         feeAmt = (underlyingAmtIn * _config.borrowFeeRatio) / Constants.DECIMAL_BASE;
         uint minFeeAmt = (underlyingAmtIn * _config.minNBorrowFeeR) / Constants.DECIMAL_BASE;
         feeAmt = feeAmt < minFeeAmt ? minFeeAmt : feeAmt;
-        (tokenAmtOut, ) = TermMaxCurve.buyXt(daysToMaturity, _config.curveCuts, oriXtReserve, underlyingAmtIn - feeAmt);
+        (tokenAmtOut, ) = TermMaxCurve.buyXt(daysToMaturity, _config.lendCurveCuts, oriXtReserve, underlyingAmtIn - feeAmt);
         isXtOut = true;
     }
 
@@ -326,7 +341,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         uint tokenAmtIn
     ) internal view returns (uint underlyingAmtOut, uint feeAmt, bool isXtIn) {
         uint deltaFt;
-        (underlyingAmtOut, deltaFt) = TermMaxCurve.sellFt(daysToMaturity, _config.curveCuts, oriXtReserve, tokenAmtIn);
+        (underlyingAmtOut, deltaFt) = TermMaxCurve.sellFt(daysToMaturity, _config.lendCurveCuts, oriXtReserve, tokenAmtIn);
         feeAmt = (deltaFt * _config.borrowFeeRatio) / Constants.DECIMAL_BASE;
         uint minFeeAmt = (underlyingAmtOut * _config.minNBorrowFeeR) / Constants.DECIMAL_BASE;
         feeAmt = feeAmt < minFeeAmt ? minFeeAmt : feeAmt;
@@ -338,7 +353,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         uint oriXtReserve,
         uint tokenAmtIn
     ) internal view returns (uint underlyingAmtOut, uint feeAmt, bool isXtIn) {
-        (, underlyingAmtOut) = TermMaxCurve.sellXt(daysToMaturity, _config.curveCuts, oriXtReserve, tokenAmtIn);
+        (, underlyingAmtOut) = TermMaxCurve.sellXt(daysToMaturity, _config.borrowCurveCuts, oriXtReserve, tokenAmtIn);
         feeAmt = (underlyingAmtOut * _config.lendFeeRatio) / Constants.DECIMAL_BASE;
         uint minFeeAmt = (underlyingAmtOut * _config.minNLendFeeR) / Constants.DECIMAL_BASE;
         feeAmt = feeAmt < minFeeAmt ? minFeeAmt : feeAmt;
