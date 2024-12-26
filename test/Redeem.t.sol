@@ -59,7 +59,7 @@ contract RedeemTest is Test {
         uint amount = 150e8;
         res.underlying.mint(deployer, amount);
         res.underlying.approve(address(res.tokenPair), amount);
-        res.tokenPair.mintFtAndXt(deployer, deployer, amount);
+        res.tokenPair.mintFtAndXt(deployer, amount);
         res.ft.transfer(address(res.market), amount);
         res.xt.transfer(address(res.market), amount);
 

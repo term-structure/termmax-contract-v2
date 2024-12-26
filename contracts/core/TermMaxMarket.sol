@@ -28,6 +28,10 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
     ITermMaxTokenPair private _tokenPair;
     address provider;
 
+    IMintableERC20 private ft;
+    IMintableERC20 private xt;
+    IERC20 private underlying;
+
     /// @notice Check if the market is tradable
     modifier isOpen() {
         _requireNotPaused();
@@ -61,6 +65,12 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         __initializeOwner(admin);
         _tokenPair = tokenPair_;
         _config = config_;
+        (IMintableERC20 ft_, IMintableERC20 xt_, , , IERC20 underlying_) = _tokenPair.tokens();
+
+        ft = ft_;
+        xt = xt_;
+        underlying = underlying_;
+
         emit MarketInitialized(tokenPair_);
     }
 
@@ -75,7 +85,6 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
      * @inheritdoc ITermMaxMarket
      */
     function ftXtReserves() public view override returns (uint256, uint256) {
-        (IMintableERC20 ft, IMintableERC20 xt, , , ) = _tokenPair.tokens();
         uint256 ftReserve = ft.balanceOf(address(this));
         uint256 xtReserve = xt.balanceOf(address(this));
         return (ftReserve, xtReserve);
@@ -99,7 +108,6 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
      * @inheritdoc ITermMaxMarket
      */
     function apr() external view override returns (uint apr_) {
-        (, IMintableERC20 xt, , , ) = _tokenPair.tokens();
         uint daysToMaturity = _daysToMaturity(_tokenPair.config().maturity);
         uint oriXtReserve = xt.balanceOf(address(this));
 
@@ -120,7 +128,6 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         uint newFtReserve,
         uint newXtReserve
     ) external override onlyOwner {
-        (IMintableERC20 ft, IMintableERC20 xt, , , ) = _tokenPair.tokens();
         if (newConfig.maker != _config.maker) revert TOBEDEFINED();
         if (newConfig.treasurer != _config.treasurer) revert TOBEDEFINED();
         if (newConfig.curveCuts.length == 0) revert TOBEDEFINED();
@@ -216,14 +223,12 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
     function _buyToken(
         uint128 underlyingAmtIn,
         uint128 minTokenOut,
-        function(uint, uint, uint) internal view returns (uint, uint, bool) func
+        function(uint, uint, uint) internal view returns (uint, uint, IMintableERC20) func
     ) internal returns (uint256 netOut) {
-        (IMintableERC20 ft, IMintableERC20 xt, , , IERC20 underlying) = _tokenPair.tokens();
         uint daysToMaturity = _daysToMaturity(_tokenPair.config().maturity);
         uint oriXtReserve = xt.balanceOf(address(this));
 
-        (uint tokenAmtOut, uint feeAmt, bool isXtOut) = func(daysToMaturity, oriXtReserve, underlyingAmtIn);
-        IMintableERC20 tokenOut = isXtOut ? xt : ft;
+        (uint tokenAmtOut, uint feeAmt, IMintableERC20 tokenOut) = func(daysToMaturity, oriXtReserve, underlyingAmtIn);
 
         netOut = tokenAmtOut + underlyingAmtIn - feeAmt;
         if (netOut < minTokenOut) revert UnexpectedAmount(minTokenOut, netOut);
@@ -231,7 +236,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         underlying.safeTransferFrom(msg.sender, address(this), underlyingAmtIn);
         underlying.safeTransfer(_config.treasurer, feeAmt);
         underlying.approve(address(_tokenPair), underlyingAmtIn);
-        _tokenPair.mintFtAndXt(address(this), address(this), underlyingAmtIn - feeAmt);
+        _tokenPair.mintFtAndXt(address(this), underlyingAmtIn - feeAmt);
         tokenOut.safeTransfer(msg.sender, netOut);
         emit BuyToken(
             msg.sender,
@@ -249,38 +254,36 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         uint daysToMaturity,
         uint oriXtReserve,
         uint underlyingAmtIn
-    ) internal view returns (uint tokenAmtOut, uint feeAmt, bool isXtOut) {
+    ) internal view returns (uint tokenAmtOut, uint feeAmt, IMintableERC20 tokenOut) {
         (, uint negDeltaFt) = TermMaxCurve.buyFt(daysToMaturity, _config.curveCuts, oriXtReserve, underlyingAmtIn);
         feeAmt = (negDeltaFt * _config.lendFeeRatio) / Constants.DECIMAL_BASE;
         uint minFeeAmt = (underlyingAmtIn * _config.minNLendFeeR) / Constants.DECIMAL_BASE;
         feeAmt = feeAmt < minFeeAmt ? minFeeAmt : feeAmt;
         (, tokenAmtOut) = TermMaxCurve.buyFt(daysToMaturity, _config.curveCuts, oriXtReserve, underlyingAmtIn - feeAmt);
-        isXtOut = false;
+        tokenOut = ft;
     }
 
     function _buyXt(
         uint daysToMaturity,
         uint oriXtReserve,
         uint underlyingAmtIn
-    ) internal view returns (uint tokenAmtOut, uint feeAmt, bool isXtOut) {
+    ) internal view returns (uint tokenAmtOut, uint feeAmt, IMintableERC20 tokenOut) {
         feeAmt = (underlyingAmtIn * _config.borrowFeeRatio) / Constants.DECIMAL_BASE;
         uint minFeeAmt = (underlyingAmtIn * _config.minNBorrowFeeR) / Constants.DECIMAL_BASE;
         feeAmt = feeAmt < minFeeAmt ? minFeeAmt : feeAmt;
         (tokenAmtOut, ) = TermMaxCurve.buyXt(daysToMaturity, _config.curveCuts, oriXtReserve, underlyingAmtIn - feeAmt);
-        isXtOut = true;
+        tokenOut = xt;
     }
 
     function _sellToken(
         uint128 tokenAmtIn,
         uint128 minUnderlyingOut,
-        function(uint, uint, uint) internal view returns (uint, uint, bool) func
+        function(uint, uint, uint) internal view returns (uint, uint, IMintableERC20) func
     ) internal returns (uint256 netOut) {
-        (IMintableERC20 ft, IMintableERC20 xt, , , IERC20 underlying) = _tokenPair.tokens();
         uint daysToMaturity = _daysToMaturity(_tokenPair.config().maturity);
         uint oriXtReserve = xt.balanceOf(address(this));
 
-        (uint underlyingAmtOut, uint feeAmt, bool isXtIn) = func(daysToMaturity, oriXtReserve, tokenAmtIn);
-        IMintableERC20 tokenIn = isXtIn ? xt : ft;
+        (uint underlyingAmtOut, uint feeAmt, IMintableERC20 tokenIn) = func(daysToMaturity, oriXtReserve, tokenAmtIn);
 
         netOut = underlyingAmtOut - feeAmt;
         if (netOut < minUnderlyingOut) revert UnexpectedAmount(minUnderlyingOut, netOut);
@@ -288,7 +291,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         tokenIn.safeTransferFrom(msg.sender, address(this), tokenAmtIn);
         ft.approve(address(_tokenPair), underlyingAmtOut);
         xt.approve(address(_tokenPair), underlyingAmtOut);
-        _tokenPair.redeemFtAndXtToUnderlying(address(this), address(this), underlyingAmtOut);
+        _tokenPair.redeemFtAndXtToUnderlying(address(this), underlyingAmtOut);
         underlying.safeTransfer(msg.sender, netOut);
         emit SellToken(
             msg.sender,
@@ -306,24 +309,24 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         uint daysToMaturity,
         uint oriXtReserve,
         uint tokenAmtIn
-    ) internal view returns (uint underlyingAmtOut, uint feeAmt, bool isXtIn) {
+    ) internal view returns (uint underlyingAmtOut, uint feeAmt, IMintableERC20 tokenIn) {
         uint deltaFt;
         (underlyingAmtOut, deltaFt) = TermMaxCurve.sellFt(daysToMaturity, _config.curveCuts, oriXtReserve, tokenAmtIn);
         feeAmt = (deltaFt * _config.borrowFeeRatio) / Constants.DECIMAL_BASE;
         uint minFeeAmt = (underlyingAmtOut * _config.minNBorrowFeeR) / Constants.DECIMAL_BASE;
         feeAmt = feeAmt < minFeeAmt ? minFeeAmt : feeAmt;
-        isXtIn = false;
+        tokenIn = ft;
     }
 
     function _sellXt(
         uint daysToMaturity,
         uint oriXtReserve,
         uint tokenAmtIn
-    ) internal view returns (uint underlyingAmtOut, uint feeAmt, bool isXtIn) {
+    ) internal view returns (uint underlyingAmtOut, uint feeAmt, IMintableERC20 tokenIn) {
         (, underlyingAmtOut) = TermMaxCurve.sellXt(daysToMaturity, _config.curveCuts, oriXtReserve, tokenAmtIn);
         feeAmt = (underlyingAmtOut * _config.lendFeeRatio) / Constants.DECIMAL_BASE;
         uint minFeeAmt = (underlyingAmtOut * _config.minNLendFeeR) / Constants.DECIMAL_BASE;
         feeAmt = feeAmt < minFeeAmt ? minFeeAmt : feeAmt;
-        isXtIn = true;
+        tokenIn = xt;
     }
 }

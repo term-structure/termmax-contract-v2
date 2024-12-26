@@ -19,9 +19,7 @@ interface ITermMaxTokenPair {
     /// @notice Error for the maturity day has been reached
     error TermWasClosed();
     /// @notice Error for redeeming before the liquidation window
-    error CanNotRedeemBeforeFinalLiquidationDeadline(
-        uint256 liquidationDeadline
-    );
+    error CanNotRedeemBeforeFinalLiquidationDeadline(uint256 liquidationDeadline);
 
     /// @notice Emitted when market initialized
     /// @param collateral Collateral token
@@ -81,13 +79,7 @@ interface ITermMaxTokenPair {
     /// @param underlyingAmt The amount of underlying received
     /// @param feeAmt Redeemming Fees
     /// @param deliveryData The encoded data of collateral received
-    event Redeem(
-        address indexed caller,
-        uint128 proportion,
-        uint128 underlyingAmt,
-        uint128 feeAmt,
-        bytes deliveryData
-    );
+    event Redeem(address indexed caller, uint128 proportion, uint128 underlyingAmt, uint128 feeAmt, bytes deliveryData);
 
     /// @notice Initialize the token and configuration of the market
     /// @param admin Administrator address for configuring parameters such as transaction fees
@@ -123,23 +115,17 @@ interface ITermMaxTokenPair {
     function tokens()
         external
         view
-        returns (
-            IMintableERC20 ft,
-            IMintableERC20 xt,
-            IGearingToken gt,
-            address collateral,
-            IERC20 underlying
-        );
+        returns (IMintableERC20 ft, IMintableERC20 xt, IGearingToken gt, address collateral, IERC20 underlying);
 
     /// @notice Mint FT and XT tokens by underlying token.
     ///         No price slippage or handling fees.
     /// @param underlyingAmt Amount of underlying token want to lock
-    function mintFtAndXt(address caller, address receiver, uint256 underlyingAmt) external;
+    function mintFtAndXt(address receiver, uint256 underlyingAmt) external;
 
     /// @notice redeem FT and XT to underlying token.
     ///         No price slippage or handling fees.
     /// @param underlyingAmt Amount of underlying token want to redeem
-    function redeemFtAndXtToUnderlying(address caller, address receiver, uint256 underlyingAmt) external;
+    function redeemFtAndXtToUnderlying(address receiver, uint256 underlyingAmt) external;
 
     /// @notice Using collateral to issue FT tokens.
     ///         Caller will get FT(bond) tokens equal to the debt amount subtract issue fee
@@ -147,10 +133,7 @@ interface ITermMaxTokenPair {
     /// @param collateralData The encoded data of collateral
     /// @return gtId The id of Gearing Token
     ///
-    function issueFt(
-        uint128 debt,
-        bytes calldata collateralData
-    ) external returns (uint256 gtId, uint128 ftOutAmt);
+    function issueFt(uint128 debt, bytes calldata collateralData) external returns (uint256 gtId, uint128 ftOutAmt);
 
     /// @notice Flash loan underlying token for leverage
     /// @param receiver Who will receive Gearing Token
@@ -159,11 +142,7 @@ interface ITermMaxTokenPair {
     /// @param callbackData The data of flash loan callback
     /// @return gtId The id of Gearing Token
 
-    function leverageByXt(
-        address receiver,
-        uint128 xtAmt,
-        bytes calldata callbackData
-    ) external returns (uint256 gtId);
+    function leverageByXt(address receiver, uint128 xtAmt, bytes calldata callbackData) external returns (uint256 gtId);
 
     /// @notice Redeem underlying tokens after maturity
     /// @param ftAmount The amount of FT want to redeem

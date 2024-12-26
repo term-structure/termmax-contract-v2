@@ -62,7 +62,7 @@ contract TermMaxRouterTest is Test {
         uint amount = 150e8;
         res.underlying.mint(deployer, amount);
         res.underlying.approve(address(res.tokenPair), amount);
-        res.tokenPair.mintFtAndXt(deployer, deployer, amount);
+        res.tokenPair.mintFtAndXt(deployer, amount);
         res.ft.transfer(address(res.market), amount);
         res.xt.transfer(address(res.market), amount);
 
@@ -756,8 +756,7 @@ contract TermMaxRouterTest is Test {
         uint propotion = (ftOutAmt * Constants.DECIMAL_BASE_SQ) / ft.totalSupply();
         uint underlyingAmt = (underlying.balanceOf(address(res.tokenPair)) * propotion) / Constants.DECIMAL_BASE_SQ;
         uint feeAmt = (underlyingAmt * tokenPairConfig.redeemFeeRatio) / Constants.DECIMAL_BASE;
-        uint deliveryAmt = (res.collateral.balanceOf(address(res.gt)) * propotion) /
-            Constants.DECIMAL_BASE_SQ;
+        uint deliveryAmt = (res.collateral.balanceOf(address(res.gt)) * propotion) / Constants.DECIMAL_BASE_SQ;
         bytes memory deliveryData = abi.encode(deliveryAmt);
         res.ft.approve(address(router), ftOutAmt);
 
@@ -795,9 +794,7 @@ contract TermMaxRouterTest is Test {
         vm.warp(tokenPairConfig.maturity);
         vm.expectRevert(
             abi.encodeWithSelector(
-                ITermMaxMarket
-                    .CanNotRedeemBeforeFinalLiquidationDeadline
-                    .selector,
+                ITermMaxMarket.CanNotRedeemBeforeFinalLiquidationDeadline.selector,
                 tokenPairConfig.maturity + Constants.LIQUIDATION_WINDOW
             )
         );
@@ -806,9 +803,7 @@ contract TermMaxRouterTest is Test {
         vm.warp(tokenPairConfig.maturity - Constants.SECONDS_IN_DAY);
         vm.expectRevert(
             abi.encodeWithSelector(
-                ITermMaxMarket
-                    .CanNotRedeemBeforeFinalLiquidationDeadline
-                    .selector,
+                ITermMaxMarket.CanNotRedeemBeforeFinalLiquidationDeadline.selector,
                 tokenPairConfig.maturity + Constants.LIQUIDATION_WINDOW
             )
         );

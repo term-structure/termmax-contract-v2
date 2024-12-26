@@ -100,12 +100,8 @@ contract TermMaxTokenPair is ITermMaxTokenPair, ReentrancyGuard, Ownable, Pausab
         daysToMaturity = (maturity - block.timestamp + Constants.SECONDS_IN_DAY - 1) / Constants.SECONDS_IN_DAY;
     }
 
-    function mintFtAndXt(
-        address caller,
-        address receiver,
-        uint256 underlyingAmt
-    ) external override nonReentrant isOpen {
-        _mintFtAndXt(caller, receiver, underlyingAmt);
+    function mintFtAndXt(address receiver, uint256 underlyingAmt) external override nonReentrant isOpen {
+        _mintFtAndXt(msg.sender, receiver, underlyingAmt);
     }
 
     function _mintFtAndXt(address caller, address receiver, uint256 underlyingAmt) internal {
@@ -115,12 +111,8 @@ contract TermMaxTokenPair is ITermMaxTokenPair, ReentrancyGuard, Ownable, Pausab
         xt.mint(receiver, underlyingAmt);
     }
 
-    function redeemFtAndXtToUnderlying(
-        address caller,
-        address receiver,
-        uint256 underlyingAmt
-    ) external override nonReentrant isOpen {
-        _redeemFtAndXtToUnderlying(caller, receiver, underlyingAmt);
+    function redeemFtAndXtToUnderlying(address receiver, uint256 underlyingAmt) external override nonReentrant isOpen {
+        _redeemFtAndXtToUnderlying(msg.sender, receiver, underlyingAmt);
     }
 
     function _redeemFtAndXtToUnderlying(address caller, address receiver, uint256 underlyingAmt) internal {
@@ -228,9 +220,7 @@ contract TermMaxTokenPair is ITermMaxTokenPair, ReentrancyGuard, Ownable, Pausab
 
         bytes memory deliveryData = gt.delivery(proportion, caller);
         // Transfer underlying output
-        underlyingAmt +=
-            ((underlying.balanceOf(address(this))) * proportion) /
-            Constants.DECIMAL_BASE_SQ;
+        underlyingAmt += ((underlying.balanceOf(address(this))) * proportion) / Constants.DECIMAL_BASE_SQ;
         uint feeAmt;
         if (mConfig.redeemFeeRatio > 0) {
             feeAmt = (underlyingAmt * mConfig.redeemFeeRatio) / Constants.DECIMAL_BASE;
