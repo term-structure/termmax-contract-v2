@@ -49,12 +49,12 @@ interface ITermMaxMarket {
     /// @notice Mint FT and XT tokens by underlying token.
     ///         No price slippage or handling fees.
     /// @param underlyingAmt Amount of underlying token want to lock
-    function mint(address receiver, uint256 underlyingAmt) external;
+    function mint(address recipient, uint256 underlyingAmt) external;
 
     /// @notice Burn FT and XT to get underlying token.
     ///         No price slippage or handling fees.
     /// @param underlyingAmt Amount of underlying token want to get
-    function burn(address receiver, uint256 underlyingAmt) external;
+    function burn(address recipient, uint256 underlyingAmt) external;
 
     /// @notice Using collateral to issue FT tokens.
     ///         Caller will get FT(bond) tokens equal to the debt amount subtract issue fee
@@ -66,21 +66,24 @@ interface ITermMaxMarket {
 
     /// @notice Using collateral to issue FT tokens.
     ///         Caller will get FT(bond) tokens equal to the debt amount subtract issue fee
-    /// @param receiver Who will receive Gearing Token
+    /// @param recipient Who will receive Gearing Token
     /// @param debt The amount of debt, unit by underlying token
     /// @param gtId The id of Gearing Token
     /// @return ftOutAmt The amount of FT issued
     ///
-    function issueFtByExistedGt(address receiver, uint128 debt, uint gtId) external returns (uint128 ftOutAmt);
+    function issueFtByExistedGt(address recipient, uint128 debt, uint gtId) external returns (uint128 ftOutAmt);
 
     /// @notice Flash loan underlying token for leverage
-    /// @param receiver Who will receive Gearing Token
+    /// @param recipient Who will receive Gearing Token
     /// @param xtAmt The amount of XT token.
     ///              The caller will receive an equal amount of underlying token by flash loan.
     /// @param callbackData The data of flash loan callback
     /// @return gtId The id of Gearing Token
-
-    function leverageByXt(address receiver, uint128 xtAmt, bytes calldata callbackData) external returns (uint256 gtId);
+    function leverageByXt(
+        address recipient,
+        uint128 xtAmt,
+        bytes calldata callbackData
+    ) external returns (uint256 gtId);
 
     /// @notice Redeem underlying tokens after maturity
     /// @param ftAmount The amount of FT want to redeem

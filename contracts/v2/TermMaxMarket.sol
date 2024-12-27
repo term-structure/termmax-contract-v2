@@ -25,7 +25,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable, Ma
 
     MarketConfig private _config;
     address private collateral;
-    IERC20 private underlying;
+    IERC20 private debtToken;
     IMintableERC20 private ft;
     IMintableERC20 private xt;
     IGearingToken private gt;
@@ -45,26 +45,26 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable, Ma
     function initialize(
         address admin,
         address collateral_,
-        IERC20 underlying_,
+        IERC20 debtToken_,
         IMintableERC20 ft_,
         IMintableERC20 xt_,
         IGearingToken gt_,
         MarketConfig memory config_
     ) external override {
         __initializeOwner(admin);
-        if (address(collateral_) == address(underlying_)) revert CollateralCanNotEqualUnderlyinng();
+        if (address(collateral_) == address(debtToken_)) revert CollateralCanNotEqualUnderlyinng();
 
         if (config_.openTime < block.timestamp || config_.maturity < config_.openTime)
             revert InvalidTime(config_.openTime, config_.maturity);
 
-        underlying = underlying_;
+        debtToken = debtToken_;
         collateral = collateral_;
         _config = config_;
         ft = ft_;
         xt = xt_;
         gt = gt_;
 
-        emit MarketInitialized(collateral, underlying, _config.openTime, _config.maturity, ft_, xt_, gt_);
+        emit MarketInitialized(collateral, debtToken, _config.openTime, _config.maturity, ft_, xt_, gt_);
     }
 
     /**
@@ -78,7 +78,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable, Ma
      * @inheritdoc ITermMaxMarket
      */
     function tokens() external view override returns (IMintableERC20, IMintableERC20, IGearingToken, address, IERC20) {
-        return (ft, xt, gt, collateral, underlying);
+        return (ft, xt, gt, collateral, debtToken);
     }
 
     /**
@@ -101,40 +101,40 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable, Ma
         daysToMaturity = (maturity - block.timestamp + Constants.SECONDS_IN_DAY - 1) / Constants.SECONDS_IN_DAY;
     }
 
-    function mint(address receiver, uint256 underlyingAmt) external override nonReentrant isOpen {
-        _mint(msg.sender, receiver, underlyingAmt);
+    function mint(address recipient, uint256 debtTokenAmt) external override nonReentrant isOpen {
+        _mint(msg.sender, recipient, debtTokenAmt);
     }
 
-    function _mint(address caller, address receiver, uint256 underlyingAmt) internal {
-        underlying.safeTransferFrom(caller, address(this), underlyingAmt);
+    function _mint(address caller, address recipient, uint256 debtTokenAmt) internal {
+        debtToken.safeTransferFrom(caller, address(this), debtTokenAmt);
 
-        ft.mint(receiver, underlyingAmt);
-        xt.mint(receiver, underlyingAmt);
+        ft.mint(recipient, debtTokenAmt);
+        xt.mint(recipient, debtTokenAmt);
     }
 
-    function burn(address receiver, uint256 underlyingAmt) external override nonReentrant isOpen {
-        _burn(msg.sender, receiver, underlyingAmt);
+    function burn(address recipient, uint256 debtTokenAmt) external override nonReentrant isOpen {
+        _burn(msg.sender, recipient, debtTokenAmt);
     }
 
-    function _burn(address caller, address receiver, uint256 underlyingAmt) internal {
-        ft.safeTransferFrom(caller, address(this), underlyingAmt);
-        xt.safeTransferFrom(caller, address(this), underlyingAmt);
+    function _burn(address caller, address recipient, uint256 debtTokenAmt) internal {
+        ft.safeTransferFrom(caller, address(this), debtTokenAmt);
+        xt.safeTransferFrom(caller, address(this), debtTokenAmt);
 
-        ft.burn(underlyingAmt);
-        xt.burn(underlyingAmt);
+        ft.burn(debtTokenAmt);
+        xt.burn(debtTokenAmt);
 
-        underlying.safeTransfer(receiver, underlyingAmt);
+        debtToken.safeTransfer(recipient, debtTokenAmt);
     }
 
     /**
      * @inheritdoc ITermMaxMarket
      */
     function leverageByXt(
-        address receiver,
+        address recipient,
         uint128 xtAmt,
         bytes calldata callbackData
     ) external override nonReentrant isOpen returns (uint256 gtId) {
-        return _leverageByXt(msg.sender, receiver, xtAmt, callbackData);
+        return _leverageByXt(msg.sender, recipient, xtAmt, callbackData);
     }
 
     function _leverageByXt(
@@ -145,15 +145,15 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable, Ma
     ) internal returns (uint256 gtId) {
         xt.safeTransferFrom(loanReceiver, address(this), xtAmt);
 
-        // 1 xt -> 1 underlying raised
+        // 1 xt -> 1 debtToken raised
         uint128 debt = xtAmt;
 
         // Send debt to borrower
-        underlying.safeTransfer(loanReceiver, xtAmt);
+        debtToken.safeTransfer(loanReceiver, xtAmt);
         // Callback function
         bytes memory collateralData = IFlashLoanReceiver(loanReceiver).executeOperation(
             gtReceiver,
-            underlying,
+            debtToken,
             xtAmt,
             callbackData
         );
@@ -197,28 +197,27 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable, Ma
      * @inheritdoc ITermMaxMarket
      */
     function issueFtByExistedGt(
-        address receiver,
+        address recipient,
         uint128 debt,
         uint gtId
     ) external override nonReentrant isOpen returns (uint128 ftOutAmt) {
-        return _issueFtByExistedGt(msg.sender, receiver, debt, gtId);
+        return _issueFtByExistedGt(msg.sender, recipient, debt, gtId);
     }
 
     function _issueFtByExistedGt(
         address caller,
-        address receiver,
+        address recipient,
         uint128 debt,
         uint gtId
     ) internal returns (uint128 ftOutAmt) {
-        if (gt.ownerOf(gtId) != caller) revert TOBEDEFINED();
-        gt.augmentDebt(gtId, debt);
+        gt.augmentDebt(caller, gtId, debt);
 
         MarketConfig memory mConfig = _config;
         uint128 issueFee = ((debt * mConfig.feeConfig.issueFtFeeRatio) / Constants.DECIMAL_BASE).toUint128();
         // Mint ft amount = debt amount, send issueFee to treasurer and other to caller
         ft.mint(mConfig.treasurer, issueFee);
         ftOutAmt = debt - issueFee;
-        ft.mint(receiver, ftOutAmt);
+        ft.mint(recipient, ftOutAmt);
 
         emit IssueFtByExistedGt(caller, gtId, debt, ftOutAmt, issueFee);
     }
@@ -240,9 +239,9 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable, Ma
                 revert CanNotRedeemBeforeFinalLiquidationDeadline(liquidationDeadline);
             }
         }
-        uint underlyingAmt;
+        uint debtTokenAmt;
 
-        // The proportion that user will get how many underlying and collateral should be deliveried
+        // The proportion that user will get how many debtToken and collateral should be deliveried
         uint proportion = (ftAmount * Constants.DECIMAL_BASE_SQ) / ft.totalSupply();
         if (ftAmount > 0) {
             ft.safeTransferFrom(caller, address(this), ftAmount);
@@ -250,16 +249,16 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable, Ma
         }
 
         bytes memory deliveryData = gt.delivery(proportion, caller);
-        // Transfer underlying output
-        underlyingAmt += ((underlying.balanceOf(address(this))) * proportion) / Constants.DECIMAL_BASE_SQ;
+        // Transfer debtToken output
+        debtTokenAmt += ((debtToken.balanceOf(address(this))) * proportion) / Constants.DECIMAL_BASE_SQ;
         uint feeAmt;
         if (mConfig.feeConfig.redeemFeeRatio > 0) {
-            feeAmt = (underlyingAmt * mConfig.feeConfig.redeemFeeRatio) / Constants.DECIMAL_BASE;
-            underlying.safeTransfer(mConfig.treasurer, feeAmt);
-            underlyingAmt -= feeAmt;
+            feeAmt = (debtTokenAmt * mConfig.feeConfig.redeemFeeRatio) / Constants.DECIMAL_BASE;
+            debtToken.safeTransfer(mConfig.treasurer, feeAmt);
+            debtTokenAmt -= feeAmt;
         }
-        underlying.safeTransfer(caller, underlyingAmt);
-        emit Redeem(caller, proportion.toUint128(), underlyingAmt.toUint128(), feeAmt.toUint128(), deliveryData);
+        debtToken.safeTransfer(caller, debtTokenAmt);
+        emit Redeem(caller, proportion.toUint128(), debtTokenAmt.toUint128(), feeAmt.toUint128(), deliveryData);
     }
 
     /**

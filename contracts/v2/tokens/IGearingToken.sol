@@ -16,8 +16,8 @@ interface IGearingToken is IERC721Enumerable {
         address tokenPair;
         /// @notice The address of collateral token
         address collateral;
-        /// @notice The underlying(debt) token
-        IERC20Metadata underlying;
+        /// @notice The debtToken(debt) token
+        IERC20Metadata debtToken;
         /// @notice The bond token
         IERC20 ft;
         /// @notice The treasurer's address, which will receive protocol reward while liquidation
@@ -60,11 +60,7 @@ interface IGearingToken is IERC721Enumerable {
     /// @param id The id of Gearing Token
     /// @param ltvBefore Loan to value before liquidation
     /// @param ltvAfter Loan to value after liquidation
-    error LtvIncreasedAfterLiquidation(
-        uint256 id,
-        uint128 ltvBefore,
-        uint128 ltvAfter
-    );
+    error LtvIncreasedAfterLiquidation(uint256 id, uint128 ltvBefore, uint128 ltvAfter);
     /// @notice Error for unauthorized operation
     /// @param id The id of Gearing Token
     error CallerIsNotTheOwner(uint256 id);
@@ -72,16 +68,9 @@ interface IGearingToken is IERC721Enumerable {
     /// @param id The id of Gearing Token
     /// @param repayAmt The id of Gearing Token
     /// @param maxRepayAmt The maxium repay amount when liquidating or repaying
-    error RepayAmtExceedsMaxRepayAmt(
-        uint256 id,
-        uint128 repayAmt,
-        uint128 maxRepayAmt
-    );
+    error RepayAmtExceedsMaxRepayAmt(uint256 id, uint128 repayAmt, uint128 maxRepayAmt);
     /// @notice Error for liquidate the loan after liquidation window
-    error CanNotLiquidationAfterFinalDeadline(
-        uint256 id,
-        uint256 liquidationDeadline
-    );
+    error CanNotLiquidationAfterFinalDeadline(uint256 id, uint256 liquidationDeadline);
     /// @notice Error for debt value less than minimal limit
     /// @param debtValue The debtValue is USD, decimals 1e8
     error DebtValueIsTooSmall(uint256 debtValue);
@@ -113,8 +102,8 @@ interface IGearingToken is IERC721Enumerable {
     /// @notice Emitted when repaying the debt of Gearing Token
     /// @param id The id of Gearing Token
     /// @param repayAmt The amount of debt repaid
-    /// @param byUnderlying Repay using underlying token or bonds token
-    event Repay(uint256 indexed id, uint256 repayAmt, bool byUnderlying);
+    /// @param byDebtToken Repay using debtToken token or bonds token
+    event Repay(uint256 indexed id, uint256 repayAmt, bool byDebtToken);
 
     /// @notice Emitted when liquidating Gearing Token
     /// @param id The id of Gearing Token
@@ -164,7 +153,7 @@ interface IGearingToken is IERC721Enumerable {
     /// @notice Mint this token to an address
     /// @param  collateralProvider Who provide collateral token
     /// @param  to The address receiving token
-    /// @param  debtAmt The amount of debt, unit by underlying token
+    /// @param  debtAmt The amount of debt, unit by debtToken token
     /// @param  collateralData The encoded data of collateral
     /// @return id The id of Gearing Token
     /// @dev Only the market can mint Gearing Token
@@ -177,29 +166,18 @@ interface IGearingToken is IERC721Enumerable {
 
     /// @notice Augment the debt of Gearing Token
     /// @param  id The id of Gearing Token
-    /// @param  ftAmt The amount of debt, unit by underlying token
-    function augmentDebt(
-        uint256 id,
-        uint ftAmt
-    ) external;
+    /// @param  ftAmt The amount of debt, unit by debtToken token
+    function augmentDebt(address caller, uint256 id, uint ftAmt) external;
 
     /// @notice Return the loan information of Gearing Token
     /// @param  id The id of Gearing Token
     /// @return owner The owner of Gearing Token
-    /// @return debtAmt The amount of debt, unit by underlying token
+    /// @return debtAmt The amount of debt, unit by debtToken token
     /// @return ltv The loan to collateral
     /// @return collateralData The encoded data of collateral
     function loanInfo(
         uint256 id
-    )
-        external
-        view
-        returns (
-            address owner,
-            uint128 debtAmt,
-            uint128 ltv,
-            bytes memory collateralData
-        );
+    ) external view returns (address owner, uint128 debtAmt, uint128 ltv, bytes memory collateralData);
 
     /// @notice Merge multiple Gearing Tokens into one
     /// @param  ids The array of Gearing Tokens to be merged
@@ -210,14 +188,14 @@ interface IGearingToken is IERC721Enumerable {
     ///         If repay amount equals the debt amount, Gearing Token's owner will get his collateral.
     /// @param id The id of Gearing Token
     /// @param repayAmt The amount of debt you want to repay
-    /// @param byUnderlying Repay using underlying token or bonds token
-    function repay(uint256 id, uint128 repayAmt, bool byUnderlying) external;
+    /// @param byDebtToken Repay using debtToken token or bonds token
+    function repay(uint256 id, uint128 repayAmt, bool byDebtToken) external;
 
     /// @notice Repay the debt of Gearing Token,
     ///         the collateral will send by flashloan first.
     /// @param id The id of Gearing Token
-    /// @param byUnderlying Repay using underlying token or bonds token
-    function flashRepay(uint256 id, bool byUnderlying, bytes calldata callbackData) external;
+    /// @param byDebtToken Repay using debtToken token or bonds token
+    function flashRepay(uint256 id, bool byDebtToken, bytes calldata callbackData) external;
 
     /// @notice Remove collateral from the loan.
     ///         Require the loan to value bigger than maxLtv after this action.
@@ -234,9 +212,7 @@ interface IGearingToken is IERC721Enumerable {
     /// @param  id The id of the G-token
     /// @return isLiquidable Whether the loan is liquidable
     /// @return maxRepayAmt The maximum amount of the debt to be repaid
-    function getLiquidationInfo(
-        uint256 id
-    ) external view returns (bool isLiquidable, uint128 maxRepayAmt);
+    function getLiquidationInfo(uint256 id) external view returns (bool isLiquidable, uint128 maxRepayAmt);
 
     /// @notice Liquidate the loan when its ltv bigger than liquidationLtv or expired.
     ///         The ltv can not inscrease after liquidation.
@@ -251,15 +227,10 @@ interface IGearingToken is IERC721Enumerable {
     /// @param  proportion The proportion of collateral that should be obtained
     /// @param  to The address receiving collateral token
     /// @dev    Only the market can delivery collateral
-    function delivery(
-        uint256 proportion,
-        address to
-    ) external returns (bytes memory deliveryData);
+    function delivery(uint256 proportion, address to) external returns (bytes memory deliveryData);
 
     /// @notice Return the value of collateral in USD with base decimals
     /// @param collateralData encoded collateral data
     /// @return collateralValue collateral's value in USD
-    function getCollateralValue(
-        bytes memory collateralData
-    ) external view returns (uint256 collateralValue);
+    function getCollateralValue(bytes memory collateralData) external view returns (uint256 collateralValue);
 }
