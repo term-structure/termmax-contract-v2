@@ -1,284 +1,77 @@
 {
-  "marketConfig": {
-    "openTime": "1727799942",
-    "maturity": "1735575942",
-    "currentTime": "1730391942",
-    "initialLtv": "88000000",
-    "maxLtv": "89000000",
-    "liquidationLtv": "90000000",
-    "apr": "12000000",
-    "lsf": "80000000",
-    "lendFeeRatio": "3000000",
-    "borrowFeeRatio": "3000000",
+  "currentTime": "1734786167",
+  "tokenPairConfig": {
+    "openTime": "1732194167",
+    "maturity": "1739970167",
     "redeemFeeRatio": "0",
-    "issueFtFeeRatio": "3000000",
-    "lockingPercentage": "50000000",
-    "protocolFeeRatio": "20000000",
-    "minNLendFeeR": "100",
-    "minNBorrowFeeR": "100",
-    "minLeveragedXt": "5000000000",
-    "minLeveredFt": "4000000000",
-    "deliverable": true
+    "issueFtFeeRatio": "0",
+    "protocolFeeRatio": "0"
+  },
+  "marketConfig": {
+    "lendFeeRatio": "3000000",
+    "borrowFeeRatio": "10000000",
+    "minNLendFeeR": "30000",
+    "minNBorrowFeeR": "30000",
+    "isBorrowOnly": false,
+    "isLendOnly": false,
+    "curveCuts": {
+      "0": {
+        "xtReserve": "0",
+        "liqSquare": "461683991532123193344",
+        "offset": "33973665961"
+      },
+      "1": {
+        "xtReserve": "9000000000",
+        "liqSquare": "259820550347600396288",
+        "offset": "23237900077"
+      },
+      "2": {
+        "xtReserve": "21000000000",
+        "liqSquare": "605605556075689803776",
+        "offset": "46538697296"
+      },
+      "length": 3
+    }
   },
   "expected": {
-    "provideLiquidity": {
-      "contractState": {
-        "decimalBase": "100000000",
-        "daysInYear": "365",
-        "openTime": "1727799942",
-        "underlyingReserve": "1010000000000",
-        "collateralReserve": "0",
-        "ftReserve": "888800000000",
-        "xtReserve": "1010000000000",
-        "apr": "12000000",
-        "ltv": "88000000",
-        "lsf": "80000000",
-        "lendFeeRatio": "3000000",
-        "borrowFeeRatio": "3000000",
-        "maturity": "1735575942",
-        "lpFtReserve": "0",
-        "lpXtReserve": "0",
-        "lpFtTotalSupply": "888800000000",
-        "lpXtTotalSupply": "1010000000000",
-        "currentTime": "1730391942"
-      },
-      "output": {
-        "lpFtAmount": "8800000000",
-        "lpXtAmount": "10000000000"
-      }
-    },
-    "provideLiquidityTwice": {
-      "contractState": {
-        "decimalBase": "100000000",
-        "daysInYear": "365",
-        "openTime": "1727799942",
-        "underlyingReserve": "1020000000000",
-        "collateralReserve": "0",
-        "ftReserve": "897600000000",
-        "xtReserve": "1020000000000",
-        "apr": "12000000",
-        "ltv": "88000000",
-        "lsf": "80000000",
-        "lendFeeRatio": "3000000",
-        "borrowFeeRatio": "3000000",
-        "maturity": "1735575942",
-        "lpFtReserve": "0",
-        "lpXtReserve": "0",
-        "lpFtTotalSupply": "897600000000",
-        "lpXtTotalSupply": "1020000000000",
-        "currentTime": "1730391942"
-      },
-      "output": {
-        "lpFtAmount": "8800000000",
-        "lpXtAmount": "10000000000"
-      }
-    },
-    "withdrawLiquidity": {
-      "contractState": {
-        "decimalBase": "100000000",
-        "daysInYear": "365",
-        "openTime": "1727799942",
-        "underlyingReserve": "1010000000000",
-        "collateralReserve": "0",
-        "ftReserve": "880000000000",
-        "xtReserve": "1000000000000",
-        "apr": "12000000",
-        "ltv": "88000000",
-        "lsf": "80000000",
-        "lendFeeRatio": "3000000",
-        "borrowFeeRatio": "3000000",
-        "maturity": "1735575942",
-        "lpFtReserve": "0",
-        "lpXtReserve": "0",
-        "lpFtTotalSupply": "880000000000",
-        "lpXtTotalSupply": "1000000000000",
-        "currentTime": "1730391942"
-      },
-      "output": {
-        "lpFtAmount": "8800000000",
-        "lpXtAmount": "10000000000"
-      }
-    },
-    "withdrawLiquidityWhenFtIsMore": {
-      "contractState": {
-        "decimalBase": "100000000",
-        "daysInYear": "365",
-        "openTime": "1727799942",
-        "underlyingReserve": "1010000000000",
-        "collateralReserve": "0",
-        "ftReserve": "880000000000",
-        "xtReserve": "1005000000000",
-        "apr": "11907815",
-        "ltv": "88000000",
-        "lsf": "80000000",
-        "lendFeeRatio": "3000000",
-        "borrowFeeRatio": "3000000",
-        "maturity": "1735575942",
-        "lpFtReserve": "0",
-        "lpXtReserve": "0",
-        "lpFtTotalSupply": "880000000000",
-        "lpXtTotalSupply": "1005000000000",
-        "currentTime": "1730391942"
-      },
-      "output": {
-        "lpFtAmount": "8800000000",
-        "lpXtAmount": "5000000000"
-      }
-    },
-    "withdrawLiquidityWhenXtIsMore": {
-      "contractState": {
-        "decimalBase": "100000000",
-        "daysInYear": "365",
-        "openTime": "1727799942",
-        "underlyingReserve": "1010000000000",
-        "collateralReserve": "0",
-        "ftReserve": "884400000000",
-        "xtReserve": "1000000000000",
-        "apr": "12092321",
-        "ltv": "88000000",
-        "lsf": "80000000",
-        "lendFeeRatio": "3000000",
-        "borrowFeeRatio": "3000000",
-        "maturity": "1735575942",
-        "lpFtReserve": "0",
-        "lpXtReserve": "0",
-        "lpFtTotalSupply": "884400000000",
-        "lpXtTotalSupply": "1000000000000",
-        "currentTime": "1730391942"
-      },
-      "output": {
-        "lpFtAmount": "4400000000",
-        "lpXtAmount": "10000000000"
-      }
-    },
-    "withdrawLiquidityWhenHasTrade": {
-      "contractState": {
-        "decimalBase": "100000000",
-        "daysInYear": "365",
-        "openTime": "1727799942",
-        "underlyingReserve": "1019998826969",
-        "collateralReserve": "0",
-        "ftReserve": "878623209233",
-        "xtReserve": "1009899828683",
-        "apr": "11882815",
-        "ltv": "88000000",
-        "lsf": "80000000",
-        "lendFeeRatio": "3000000",
-        "borrowFeeRatio": "3000000",
-        "maturity": "1735575942",
-        "lpFtReserve": "2047301",
-        "lpXtReserve": "2300070",
-        "lpFtTotalSupply": "880002047301",
-        "lpXtTotalSupply": "1000002300070",
-        "currentTime": "1735575941"
-      },
-      "output": {
-        "lpFtAmount": "8786232092",
-        "lpXtAmount": "10098998286"
-      }
-    },
     "testBuyFt": {
       "contractState": {
-        "decimalBase": "100000000",
-        "daysInYear": "365",
-        "openTime": "1727799942",
-        "underlyingReserve": "1009998827074",
-        "collateralReserve": "0",
-        "ftReserve": "878609458388",
-        "xtReserve": "1009998827074",
-        "apr": "11784596",
-        "ltv": "88000000",
-        "lsf": "80000000",
-        "lendFeeRatio": "3000000",
-        "borrowFeeRatio": "3000000",
-        "maturity": "1735575942",
-        "lpFtReserve": "2067621",
-        "lpXtReserve": "2322633",
-        "lpFtTotalSupply": "880002067621",
-        "lpXtTotalSupply": "1000002322633",
-        "currentTime": "1730391942"
+        "ftReserve": "14766226239",
+        "xtReserve": "24992982692"
       },
       "output": {
-        "netOut": "10189509437",
-        "fee": "5864630"
+        "netOut": "10226756453",
+        "fee": "7017308"
       }
     },
     "testBuyXt": {
       "contractState": {
-        "decimalBase": "100000000",
-        "daysInYear": "365",
-        "openTime": "1727799942",
-        "underlyingReserve": "1009992185995",
-        "collateralReserve": "0",
-        "ftReserve": "888793123675",
-        "xtReserve": "937792890019",
-        "apr": "13360094",
-        "ltv": "88000000",
-        "lsf": "80000000",
-        "lendFeeRatio": "3000000",
-        "borrowFeeRatio": "3000000",
-        "maturity": "1735575942",
-        "lpFtReserve": "13616801",
-        "lpXtReserve": "16664950",
-        "lpFtTotalSupply": "880013616801",
-        "lpXtTotalSupply": "1000016664950",
-        "currentTime": "1730391942"
+        "ftReserve": "15450000000",
+        "xtReserve": "3818837186"
       },
       "output": {
-        "netOut": "72199295976",
-        "fee": "39070028"
+        "netOut": "11631162814",
+        "fee": "50000000"
       }
     },
     "testSellFt": {
       "contractState": {
-        "decimalBase": "100000000",
-        "daysInYear": "365",
-        "openTime": "1727799942",
-        "underlyingReserve": "1000009381225",
-        "collateralReserve": "0",
-        "ftReserve": "880008255477",
-        "xtReserve": "1000009381225",
-        "apr": "12000066",
-        "ltv": "88000000",
-        "lsf": "80000000",
-        "lendFeeRatio": "3000000",
-        "borrowFeeRatio": "3000000",
-        "maturity": "1735575942",
-        "lpFtReserve": "4130766",
-        "lpXtReserve": "4667116",
-        "lpFtTotalSupply": "880004130766",
-        "lpXtTotalSupply": "1000004667116",
-        "currentTime": "1730391942"
+        "ftReserve": "15000000000",
+        "xtReserve": "15000000000"
       },
       "output": {
-        "netOut": "9988273602",
-        "fee": "5861237"
+        "netOut": "9969605316",
+        "fee": "23377376"
       }
     },
     "testSellXt": {
       "contractState": {
-        "decimalBase": "100000000",
-        "daysInYear": "365",
-        "openTime": "1727799942",
-        "underlyingReserve": "1000062250525",
-        "collateralReserve": "0",
-        "ftReserve": "880054780461",
-        "xtReserve": "1000062250525",
-        "apr": "12002705",
-        "ltv": "88000000",
-        "lsf": "80000000",
-        "lendFeeRatio": "3000000",
-        "borrowFeeRatio": "3000000",
-        "maturity": "1735575942",
-        "lpFtReserve": "27314293",
-        "lpXtReserve": "32230301",
-        "lpFtTotalSupply": "880027314293",
-        "lpXtTotalSupply": "1000032230301",
-        "currentTime": "1730391942"
+        "ftReserve": "15000000000",
+        "xtReserve": "15000000000"
       },
       "output": {
-        "netOut": "9922152561",
-        "fee": "38914547"
+        "netOut": "436500000",
+        "fee": "13500000"
       }
     }
   },
@@ -310,22 +103,6 @@
       "dai": {
         "roundId": "1",
         "answer": "100000000",
-        "startedAt": "1730391800",
-        "updatedAt": "1730391900",
-        "answeredInRound": "0"
-      }
-    },
-    "ETH_2000_PT_WEETH_1800": {
-      "eth": {
-        "roundId": "1",
-        "answer": "200000000000",
-        "startedAt": "1730391800",
-        "updatedAt": "1730391900",
-        "answeredInRound": "0"
-      },
-      "ptWeeth": {
-        "roundId": "1",
-        "answer": "180000000000",
         "startedAt": "1730391800",
         "updatedAt": "1730391900",
         "answeredInRound": "0"

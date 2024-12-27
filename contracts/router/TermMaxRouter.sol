@@ -80,9 +80,7 @@ contract TermMaxRouter is
         _;
     }
 
-    function _authorizeUpgrade(
-        address newImplementation
-    ) internal virtual override onlyOwner {}
+    function _authorizeUpgrade(address newImplementation) internal virtual override onlyOwner {}
 
     function initialize(address defaultAdmin) public initializer {
         __UUPSUpgradeable_init();
@@ -106,10 +104,7 @@ contract TermMaxRouter is
     /**
      * @inheritdoc ITermMaxRouter
      */
-    function setTokenPairWhitelist(
-        address tokenPair,
-        bool isWhitelist
-    ) external onlyOwner {
+    function setTokenPairWhitelist(address tokenPair, bool isWhitelist) external onlyOwner {
         tokenPairWhitelist[tokenPair] = isWhitelist;
         emit UpdateTokenPairWhiteList(tokenPair, isWhitelist);
     }
@@ -117,10 +112,7 @@ contract TermMaxRouter is
     /**
      * @inheritdoc ITermMaxRouter
      */
-    function setMarketWhitelist(
-        address market,
-        bool isWhitelist
-    ) external onlyOwner {
+    function setMarketWhitelist(address market, bool isWhitelist) external onlyOwner {
         ITermMaxTokenPair tokenPair = ITermMaxMarket(market).tokenPair();
 
         if (!tokenPairWhitelist[address(tokenPair)]) {
@@ -134,10 +126,7 @@ contract TermMaxRouter is
     /**
      * @inheritdoc ITermMaxRouter
      */
-    function setAdapterWhitelist(
-        address adapter,
-        bool isWhitelist
-    ) external onlyOwner {
+    function setAdapterWhitelist(address adapter, bool isWhitelist) external onlyOwner {
         adapterWhitelist[adapter] = isWhitelist;
         emit UpdateSwapAdapterWhiteList(adapter, isWhitelist);
     }
@@ -152,20 +141,10 @@ contract TermMaxRouter is
         external
         view
         override
-        returns (
-            IERC20[6] memory tokens,
-            uint256[6] memory balances,
-            address gtAddr,
-            uint256[] memory gtIds
-        )
+        returns (IERC20[6] memory tokens, uint256[6] memory balances, address gtAddr, uint256[] memory gtIds)
     {
-        (
-            IMintableERC20 ft,
-            IMintableERC20 xt,
-            IGearingToken gt,
-            address collateral,
-            IERC20 underlying
-        ) = market.tokens();
+        (IMintableERC20 ft, IMintableERC20 xt, IGearingToken gt, address collateral, IERC20 underlying) = market
+            .tokens();
         tokens[0] = ft;
         tokens[1] = xt;
         tokens[2] = IERC20(collateral);
@@ -189,32 +168,13 @@ contract TermMaxRouter is
         ITermMaxMarket market,
         uint128 tokenInAmt,
         uint128 minFtOut
-    )
-        external
-        ensureMarketWhitelist(address(market))
-        whenNotPaused
-        returns (uint256 netFtOut)
-    {
+    ) external ensureMarketWhitelist(address(market)) whenNotPaused returns (uint256 netFtOut) {
         (IMintableERC20 ft, , , , IERC20 underlying) = market.tokens();
 
-        _transferToSelfAndApproveSpender(
-            underlying,
-            msg.sender,
-            address(market),
-            tokenInAmt
-        );
+        _transferToSelfAndApproveSpender(underlying, msg.sender, address(market), tokenInAmt);
         (netFtOut) = market.buyFt(tokenInAmt, minFtOut);
         ft.safeTransfer(receiver, netFtOut);
-        emit Swap(
-            market,
-            address(underlying),
-            address(ft),
-            msg.sender,
-            receiver,
-            tokenInAmt,
-            netFtOut,
-            minFtOut
-        );
+        emit Swap(market, address(underlying), address(ft), msg.sender, receiver, tokenInAmt, netFtOut, minFtOut);
     }
 
     /**
@@ -225,34 +185,15 @@ contract TermMaxRouter is
         ITermMaxMarket market,
         uint128 ftInAmt,
         uint128 minTokenOut
-    )
-        external
-        ensureMarketWhitelist(address(market))
-        whenNotPaused
-        returns (uint256 netTokenOut)
-    {
+    ) external ensureMarketWhitelist(address(market)) whenNotPaused returns (uint256 netTokenOut) {
         (IMintableERC20 ft, , , , IERC20 underlying) = market.tokens();
 
-        _transferToSelfAndApproveSpender(
-            ft,
-            msg.sender,
-            address(market),
-            ftInAmt
-        );
+        _transferToSelfAndApproveSpender(ft, msg.sender, address(market), ftInAmt);
 
         (netTokenOut) = market.sellFt(ftInAmt, minTokenOut);
         underlying.safeTransfer(receiver, netTokenOut);
 
-        emit Swap(
-            market,
-            address(ft),
-            address(underlying),
-            msg.sender,
-            receiver,
-            ftInAmt,
-            netTokenOut,
-            minTokenOut
-        );
+        emit Swap(market, address(ft), address(underlying), msg.sender, receiver, ftInAmt, netTokenOut, minTokenOut);
     }
 
     /**
@@ -263,12 +204,7 @@ contract TermMaxRouter is
         ITermMaxMarket market,
         uint128 tokenInAmt,
         uint128 minXtOut
-    )
-        external
-        ensureMarketWhitelist(address(market))
-        whenNotPaused
-        returns (uint256 netXtOut)
-    {
+    ) external ensureMarketWhitelist(address(market)) whenNotPaused returns (uint256 netXtOut) {
         (, IMintableERC20 xt, , , IERC20 underlying) = market.tokens();
         underlying.safeTransferFrom(msg.sender, address(this), tokenInAmt);
 
@@ -296,12 +232,7 @@ contract TermMaxRouter is
         ITermMaxMarket market,
         uint128 xtInAmt,
         uint128 minTokenOut
-    )
-        external
-        ensureMarketWhitelist(address(market))
-        whenNotPaused
-        returns (uint256 netTokenOut)
-    {
+    ) external ensureMarketWhitelist(address(market)) whenNotPaused returns (uint256 netTokenOut) {
         (, IMintableERC20 xt, , , IERC20 underlying) = market.tokens();
         xt.safeTransferFrom(msg.sender, address(this), xtInAmt);
 
@@ -309,16 +240,7 @@ contract TermMaxRouter is
         (netTokenOut) = market.sellXt(xtInAmt, minTokenOut);
         underlying.safeTransfer(receiver, netTokenOut);
 
-        emit Swap(
-            market,
-            address(xt),
-            address(underlying),
-            msg.sender,
-            receiver,
-            xtInAmt,
-            netTokenOut,
-            minTokenOut
-        );
+        emit Swap(market, address(xt), address(underlying), msg.sender, receiver, xtInAmt, netTokenOut, minTokenOut);
     }
 
     function _redeemFtAndXtToUnderlying(
@@ -326,7 +248,13 @@ contract TermMaxRouter is
         address receiver,
         uint128 redeemAmt
     ) internal returns (uint256 underlyingAmtOut) {
-        tokenPair.redeemFtAndXtToUnderlying(msg.sender, receiver, redeemAmt);
+        (IMintableERC20 ft, IMintableERC20 xt, , , ) = tokenPair.tokens();
+        ft.safeTransferFrom(_msgSender(), address(this), redeemAmt);
+        ft.safeIncreaseAllowance(address(tokenPair), redeemAmt);
+        xt.safeTransferFrom(_msgSender(), address(this), redeemAmt);
+        xt.safeIncreaseAllowance(address(tokenPair), redeemAmt);
+
+        tokenPair.redeemFtAndXtToUnderlying(receiver, redeemAmt);
         underlyingAmtOut = redeemAmt;
     }
 
@@ -343,20 +271,9 @@ contract TermMaxRouter is
         whenNotPaused
         returns (uint256 netCollOut, uint256 netTokenOut)
     {
-        (
-            IMintableERC20 ft,
-            ,
-            ,
-            address collateralAddr,
-            IERC20 underlying
-        ) = tokenPair.tokens();
+        (IMintableERC20 ft, , , address collateralAddr, IERC20 underlying) = tokenPair.tokens();
         if (ftAmt > 0) {
-            _transferToSelfAndApproveSpender(
-                IERC20(ft),
-                msg.sender,
-                address(tokenPair),
-                ftAmt
-            );
+            _transferToSelfAndApproveSpender(IERC20(ft), msg.sender, address(tokenPair), ftAmt);
         }
 
         tokenPair.redeem(ftAmt);
@@ -367,14 +284,7 @@ contract TermMaxRouter is
         netTokenOut = _balanceOf(underlying, address(this));
         underlying.safeTransfer(receiver, netTokenOut);
 
-        emit Redeem(
-            tokenPair,
-            msg.sender,
-            receiver,
-            ftAmt,
-            netTokenOut,
-            netCollOut
-        );
+        emit Redeem(tokenPair, msg.sender, receiver, ftAmt, netTokenOut, netCollOut);
     }
 
     /**
@@ -388,38 +298,16 @@ contract TermMaxRouter is
         uint256 maxLtv,
         uint256 minXtAmt,
         SwapUnit[] memory units
-    )
-        external
-        ensureMarketWhitelist(address(market))
-        whenNotPaused
-        returns (uint256 gtId, uint256 netXtOut)
-    {
+    ) external ensureMarketWhitelist(address(market)) whenNotPaused returns (uint256 gtId, uint256 netXtOut) {
         ITermMaxTokenPair tokenPair = market.tokenPair();
-        (
-            ,
-            IMintableERC20 xt,
-            IGearingToken gt,
-            ,
-            IERC20 underlying
-        ) = market.tokens();
-        underlying.safeTransferFrom(
-            msg.sender,
-            address(this),
-            tokenToBuyXtAmt + tokenInAmt
-        );
+        (, IMintableERC20 xt, IGearingToken gt, , IERC20 underlying) = market.tokens();
+        underlying.safeTransferFrom(msg.sender, address(this), tokenToBuyXtAmt + tokenInAmt);
         underlying.safeIncreaseAllowance(address(market), tokenToBuyXtAmt);
-        netXtOut = market.buyXt(
-            tokenToBuyXtAmt.toUint128(),
-            minXtAmt.toUint128()
-        );
+        netXtOut = market.buyXt(tokenToBuyXtAmt.toUint128(), minXtAmt.toUint128());
         xt.approve(address(tokenPair), netXtOut);
         bytes memory callbackData = abi.encode(address(gt), tokenInAmt, units);
         xt.safeIncreaseAllowance(address(market), netXtOut);
-        gtId = tokenPair.leverageByXt(
-            address(this),
-            netXtOut.toUint128(),
-            callbackData
-        );
+        gtId = tokenPair.leverageByXt(address(this), netXtOut.toUint128(), callbackData);
         (, , uint128 ltv, bytes memory collateralData) = gt.loanInfo(gtId);
         if (ltv > maxLtv) {
             revert LtvBiggerThanExpected(uint128(maxLtv), ltv);
@@ -449,36 +337,16 @@ contract TermMaxRouter is
         uint256 tokenInAmt, // underlying
         uint256 maxLtv,
         SwapUnit[] memory units
-    )
-        external
-        ensureMarketWhitelist(address(market))
-        whenNotPaused
-        returns (uint256 gtId)
-    {
+    ) external ensureMarketWhitelist(address(market)) whenNotPaused returns (uint256 gtId) {
         ITermMaxTokenPair tokenPair = market.tokenPair();
-        (
-            ,
-            IMintableERC20 xt,
-            IGearingToken gt,
-            ,
-            IERC20 underlying
-        ) = market.tokens();
-        _transferToSelfAndApproveSpender(
-            xt,
-            msg.sender,
-            address(market),
-            xtInAmt
-        );
+        (, IMintableERC20 xt, IGearingToken gt, , IERC20 underlying) = market.tokens();
+        _transferToSelfAndApproveSpender(xt, msg.sender, address(market), xtInAmt);
 
         underlying.safeTransferFrom(msg.sender, address(this), tokenInAmt);
 
         xt.approve(address(tokenPair), xtInAmt);
         bytes memory callbackData = abi.encode(address(gt), tokenInAmt, units);
-        gtId = tokenPair.leverageByXt(
-            address(this),
-            xtInAmt.toUint128(),
-            callbackData
-        );
+        gtId = tokenPair.leverageByXt(address(this), xtInAmt.toUint128(), callbackData);
         gt.safeTransferFrom(address(this), receiver, gtId);
 
         (, , uint128 ltv, bytes memory collateralData) = gt.loanInfo(gtId);
@@ -508,38 +376,12 @@ contract TermMaxRouter is
         uint256 collInAmt,
         uint256 maxDebtAmt,
         uint256 borrowAmt
-    )
-        external
-        ensureMarketWhitelist(address(market))
-        whenNotPaused
-        returns (uint256 gtId)
-    {
-        (
-            IMintableERC20 ft,
-            ,
-            IGearingToken gt,
-            address collateralAddr,
-            IERC20 underlying
-        ) = market.tokens();
+    ) external ensureMarketWhitelist(address(market)) whenNotPaused returns (uint256 gtId) {
+        (IMintableERC20 ft, , IGearingToken gt, address collateralAddr, IERC20 underlying) = market.tokens();
 
-        _transferToSelfAndApproveSpender(
-            IERC20(collateralAddr),
-            msg.sender,
-            address(gt),
-            collInAmt
-        );
+        _transferToSelfAndApproveSpender(IERC20(collateralAddr), msg.sender, address(gt), collInAmt);
 
-        return
-            _borrow(
-                market,
-                ft,
-                gt,
-                underlying,
-                receiver,
-                maxDebtAmt,
-                collInAmt,
-                borrowAmt
-            );
+        return _borrow(market, ft, gt, underlying, receiver, maxDebtAmt, collInAmt, borrowAmt);
     }
 
     function _borrow(
@@ -558,10 +400,7 @@ contract TermMaxRouter is
          * 2. Sell FT to get UnderlyingToken
          * 3. Transfer UnderlyingToken and GT to Receiver
          */
-        (uint256 gtId, uint128 netFtOut) = tokenPair.issueFt(
-            maxDebtAmt.toUint128(),
-            _encodeAmount(collInAmt)
-        );
+        (uint256 gtId, uint128 netFtOut) = tokenPair.issueFt(maxDebtAmt.toUint128(), _encodeAmount(collInAmt));
 
         ft.safeIncreaseAllowance(address(market), netFtOut);
         uint256 netTokenOut = market.sellFt(netFtOut, borrowAmt.toUint128());
@@ -614,20 +453,15 @@ contract TermMaxRouter is
         uint256 gtId,
         bool byUnderlying,
         SwapUnit[] memory units
-    )
-        external
-        ensureMarketWhitelist(address(market))
-        whenNotPaused
-        returns (uint256 netTokenOut)
-    {
+    ) external ensureMarketWhitelist(address(market)) whenNotPaused returns (uint256 netTokenOut) {
         (IMintableERC20 ft, , IGearingToken gt, , IERC20 underlying) = market.tokens();
         gt.safeTransferFrom(msg.sender, address(this), gtId, "");
-        gt.flashRepay(gtId, byUnderlying, abi.encode(market, ft ,units));
-        if(byUnderlying){
+        gt.flashRepay(gtId, byUnderlying, abi.encode(market, ft, units));
+        if (byUnderlying) {
             // SafeTransfer remainning underlying token
             netTokenOut = underlying.balanceOf(address(this));
             underlying.safeTransfer(receiver, netTokenOut);
-        }else{
+        } else {
             // Swap remainning ft to underlying token
             netTokenOut = ft.balanceOf(address(this));
             ft.safeIncreaseAllowance(address(market), netTokenOut);
@@ -662,24 +496,10 @@ contract TermMaxRouter is
         uint256 tokenInAmt,
         uint256 minFtOutToRepay
     ) external ensureMarketWhitelist(address(market)) whenNotPaused {
-        (
-            IMintableERC20 ft,
-            ,
-            IGearingToken gt,
-            ,
-            IERC20 underlying
-        ) = market.tokens();
-        _transferToSelfAndApproveSpender(
-            underlying,
-            msg.sender,
-            address(market),
-            tokenInAmt
-        );
+        (IMintableERC20 ft, , IGearingToken gt, , IERC20 underlying) = market.tokens();
+        _transferToSelfAndApproveSpender(underlying, msg.sender, address(market), tokenInAmt);
 
-        uint256 netFtOut = market.buyFt(
-            tokenInAmt.toUint128(),
-            minFtOutToRepay.toUint128()
-        );
+        uint256 netFtOut = market.buyFt(tokenInAmt.toUint128(), minFtOutToRepay.toUint128());
         if (netFtOut < minFtOutToRepay) {
             revert InsufficientTokenOut(address(ft), minFtOutToRepay, netFtOut);
         }
@@ -693,7 +513,7 @@ contract TermMaxRouter is
 
             ft.safeIncreaseAllowance(address(gt), debtAmt);
             gt.repay(gtId, debtAmt, false);
-        }else{
+        } else {
             ft.safeIncreaseAllowance(address(gt), netFtOut);
             gt.repay(gtId, uint128(netFtOut), false);
         }
@@ -709,12 +529,7 @@ contract TermMaxRouter is
         uint256 addCollateralAmt
     ) external ensureMarketWhitelist(address(market)) whenNotPaused {
         (, , IGearingToken gt, address collateral, ) = market.tokens();
-        _transferToSelfAndApproveSpender(
-            IERC20(collateral),
-            msg.sender,
-            address(gt),
-            addCollateralAmt
-        );
+        _transferToSelfAndApproveSpender(IERC20(collateral), msg.sender, address(gt), addCollateralAmt);
         gt.addCollateral(gtId, _encodeAmount(addCollateralAmt));
     }
 
@@ -724,15 +539,8 @@ contract TermMaxRouter is
         IERC20,
         uint256 amount,
         bytes calldata data
-    )
-        external
-        ensureTokenPairWhitelist(msg.sender)
-        returns (bytes memory collateralData)
-    {
-        (address gt, uint256 tokenInAmt, SwapUnit[] memory units) = abi.decode(
-            data,
-            (address, uint256, SwapUnit[])
-        );
+    ) external ensureTokenPairWhitelist(msg.sender) returns (bytes memory collateralData) {
+        (address gt, uint256 tokenInAmt, SwapUnit[] memory units) = abi.decode(data, (address, uint256, SwapUnit[]));
         uint totalAmount = amount + tokenInAmt;
         collateralData = _doSwap(abi.encode(totalAmount), units);
         SwapUnit memory lastUnit = units[units.length - 1];
@@ -741,40 +549,26 @@ contract TermMaxRouter is
             ISwapAdapter.approveOutputToken,
             (lastUnit.tokenOut, gt, collateralData)
         );
-        (bool success, bytes memory returnData) = lastUnit.adapter.delegatecall(
-            approvalData
-        );
+        (bool success, bytes memory returnData) = lastUnit.adapter.delegatecall(approvalData);
         if (!success) {
             revert ApproveTokenFailWhenSwap(lastUnit.tokenOut, returnData);
         }
     }
 
-    function _balanceOf(
-        IERC20 token,
-        address account
-    ) internal view returns (uint256) {
+    function _balanceOf(IERC20 token, address account) internal view returns (uint256) {
         return token.balanceOf(account);
     }
 
-    function _transferToSelfAndApproveSpender(
-        IERC20 token,
-        address from,
-        address spender,
-        uint256 amount
-    ) internal {
+    function _transferToSelfAndApproveSpender(IERC20 token, address from, address spender, uint256 amount) internal {
         token.safeTransferFrom(from, address(this), amount);
         token.safeIncreaseAllowance(spender, amount);
     }
 
-    function _encodeAmount(
-        uint256 amount
-    ) internal pure returns (bytes memory) {
+    function _encodeAmount(uint256 amount) internal pure returns (bytes memory) {
         return abi.encode(amount);
     }
 
-    function _decodeAmount(
-        bytes memory collateralData
-    ) internal pure returns (uint256) {
+    function _decodeAmount(bytes memory collateralData) internal pure returns (uint256) {
         return abi.decode(collateralData, (uint256));
     }
 
@@ -786,13 +580,15 @@ contract TermMaxRouter is
         bytes memory collateralData,
         bytes calldata callbackData
     ) external override ensureGtWhitelist(msg.sender) {
-        (ITermMaxMarket market, address ft, SwapUnit[] memory units) = 
-            abi.decode(callbackData, (ITermMaxMarket, address, SwapUnit[]));
+        (ITermMaxMarket market, address ft, SwapUnit[] memory units) = abi.decode(
+            callbackData,
+            (ITermMaxMarket, address, SwapUnit[])
+        );
         // do swap
         bytes memory outData = _doSwap(collateralData, units);
 
-        if(address(repayToken) == ft){
-            IERC20 underlying = IERC20(units[units.length -1].tokenOut);
+        if (address(repayToken) == ft) {
+            IERC20 underlying = IERC20(units[units.length - 1].tokenOut);
             uint amount = abi.decode(outData, (uint));
             underlying.safeIncreaseAllowance(address(market), amount);
             market.buyFt(uint128(amount), debtAmt);
@@ -800,10 +596,7 @@ contract TermMaxRouter is
         repayToken.safeIncreaseAllowance(msg.sender, debtAmt);
     }
 
-    function _doSwap(
-        bytes memory inputData,
-        SwapUnit[] memory units
-    ) internal returns (bytes memory outData) {
+    function _doSwap(bytes memory inputData, SwapUnit[] memory units) internal returns (bytes memory outData) {
         for (uint i = 0; i < units.length; ++i) {
             if (!adapterWhitelist[units[i].adapter]) {
                 revert AdapterNotWhitelisted(units[i].adapter);
@@ -815,9 +608,7 @@ contract TermMaxRouter is
             );
 
             // delegatecall
-            (bool success, bytes memory returnData) = units[i]
-                .adapter
-                .delegatecall(dataToSwap);
+            (bool success, bytes memory returnData) = units[i].adapter.delegatecall(dataToSwap);
             if (!success) {
                 revert SwapFailed(units[i].adapter, returnData);
             }
@@ -826,12 +617,7 @@ contract TermMaxRouter is
         outData = inputData;
     }
 
-    function onERC721Received(
-        address,
-        address,
-        uint256,
-        bytes calldata
-    ) external pure override returns (bytes4) {
+    function onERC721Received(address, address, uint256, bytes calldata) external pure override returns (bytes4) {
         return this.onERC721Received.selector;
     }
 }
