@@ -6,7 +6,7 @@ import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ITermMaxOrder, IMintableERC20, IERC20} from "./ITermMaxOrder.sol";
-import {TokenPairConfig} from "./storage/TermMaxStorage.sol";
+import {MarketConfig} from "./storage/TermMaxStorage.sol";
 import {ITermMaxMarket} from "./ITermMaxMarket.sol";
 import {IGearingToken} from "./tokens/IGearingToken.sol";
 import {IFlashLoanReceiver} from "./IFlashLoanReceiver.sol";
@@ -84,7 +84,7 @@ contract TermMaxOrder is ITermMaxOrder, ReentrancyGuard, Ownable, Pausable, Orde
         _curveCuts = curveCuts_;
         (ft, xt, gt, , underlying) = market.tokens();
         curveCutsHash = keccak256(abi.encode(curveCuts_));
-        emit OrderInitialized(market_);
+        emit OrderInitialized(market_, maker_, curveCuts_);
     }
 
     /**
@@ -399,8 +399,7 @@ contract TermMaxOrder is ITermMaxOrder, ReentrancyGuard, Ownable, Pausable, Orde
 
     function _issueFt(address receiver, uint ftReserve, uint targetFtReserve) internal {
         if (gtId == 0) revert CantNotIssueFtWithoutGt();
-        TokenPairConfig memory config_ = market.config();
-        uint ftAmtToIssue = ((targetFtReserve - ftReserve) * Constants.DECIMAL_BASE) / config_.issueFtFeeRatio;
+        uint ftAmtToIssue = ((targetFtReserve - ftReserve) * Constants.DECIMAL_BASE) / _feeConfig.issueFtFeeRatio;
         market.issueFtByExistedGt(receiver, (ftAmtToIssue).toUint128(), gtId);
     }
 }

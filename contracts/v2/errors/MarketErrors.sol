@@ -1,0 +1,16 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.27;
+
+interface MarketErrors {
+    error TOBEDEFINED();
+    /// @notice Error for invalid unix time parameters
+    error InvalidTime(uint64 openTime, uint64 maturity);
+    /// @notice Error for the collateral and underlying are the same token
+    error CollateralCanNotEqualUnderlyinng();
+    /// @notice Error for it is not the opening trading day yet
+    error TermIsNotOpen();
+    /// @notice Error for the maturity day has been reached
+    error TermWasClosed();
+    /// @notice Error for redeeming before the liquidation window
+    error CanNotRedeemBeforeFinalLiquidationDeadline(uint256 liquidationDeadline);
+}

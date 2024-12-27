@@ -5,23 +5,25 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {ITermMaxMarket, TokenPairConfig, IMintableERC20, IERC20} from "./ITermMaxMarket.sol";
+import {ITermMaxMarket, MarketConfig, IMintableERC20, IERC20} from "./ITermMaxMarket.sol";
 import {IGearingToken} from "./tokens/IGearingToken.sol";
 import {IFlashLoanReceiver} from "./IFlashLoanReceiver.sol";
 import {Constants} from "./lib/Constants.sol";
 import {Ownable} from "./access/Ownable.sol";
+import {MarketErrors} from "./errors/MarketErrors.sol";
+import {MarketEvents} from "./events/MarketEvents.sol";
 
 /**
  * @title TermMax Market
  * @author Term Structure Labs
  */
-contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
+contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable, MarketErrors, MarketEvents {
     using SafeCast for uint256;
     using SafeCast for int256;
     using SafeERC20 for IERC20;
     using SafeERC20 for IMintableERC20;
 
-    TokenPairConfig private _config;
+    MarketConfig private _config;
     address private collateral;
     IERC20 private underlying;
     IMintableERC20 private ft;
@@ -47,7 +49,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         IMintableERC20 ft_,
         IMintableERC20 xt_,
         IGearingToken gt_,
-        TokenPairConfig memory config_
+        MarketConfig memory config_
     ) external override {
         __initializeOwner(admin);
         if (address(collateral_) == address(underlying_)) revert CollateralCanNotEqualUnderlyinng();
@@ -68,7 +70,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
     /**
      * @inheritdoc ITermMaxMarket
      */
-    function config() public view override returns (TokenPairConfig memory) {
+    function config() public view override returns (MarketConfig memory) {
         return _config;
     }
 
@@ -82,17 +84,16 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
     /**
      * @inheritdoc ITermMaxMarket
      */
-    function updateTokenPairConfig(TokenPairConfig calldata newConfig) external override onlyOwner {
-        TokenPairConfig memory mConfig = _config;
+    function updateMarketConfig(MarketConfig calldata newConfig) external override onlyOwner {
+        MarketConfig memory mConfig = _config;
         if (newConfig.treasurer != mConfig.treasurer) {
             mConfig.treasurer = newConfig.treasurer;
             gt.setTreasurer(newConfig.treasurer);
         }
-        mConfig.redeemFeeRatio = newConfig.redeemFeeRatio;
-        mConfig.issueFtFeeRatio = newConfig.issueFtFeeRatio;
+        mConfig.feeConfig = newConfig.feeConfig;
 
         _config = mConfig;
-        emit UpdateTokenPairConfig(mConfig);
+        emit UpdateMarketConfig(mConfig);
     }
 
     /// @notice Calculate how many days until expiration
@@ -182,8 +183,8 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         // Mint GT
         gtId = gt.mint(caller, caller, debt, collateralData);
 
-        TokenPairConfig memory mConfig = _config;
-        uint128 issueFee = ((debt * mConfig.issueFtFeeRatio) / Constants.DECIMAL_BASE).toUint128();
+        MarketConfig memory mConfig = _config;
+        uint128 issueFee = ((debt * mConfig.feeConfig.issueFtFeeRatio) / Constants.DECIMAL_BASE).toUint128();
         // Mint ft amount = debt amount, send issueFee to treasurer and other to caller
         ft.mint(mConfig.treasurer, issueFee);
         ftOutAmt = debt - issueFee;
@@ -212,8 +213,8 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         if (gt.ownerOf(gtId) != caller) revert TOBEDEFINED();
         gt.augmentDebt(gtId, debt);
 
-        TokenPairConfig memory mConfig = _config;
-        uint128 issueFee = ((debt * mConfig.issueFtFeeRatio) / Constants.DECIMAL_BASE).toUint128();
+        MarketConfig memory mConfig = _config;
+        uint128 issueFee = ((debt * mConfig.feeConfig.issueFtFeeRatio) / Constants.DECIMAL_BASE).toUint128();
         // Mint ft amount = debt amount, send issueFee to treasurer and other to caller
         ft.mint(mConfig.treasurer, issueFee);
         ftOutAmt = debt - issueFee;
@@ -230,7 +231,7 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
     }
 
     function _redeem(address caller, uint256 ftAmount) internal {
-        TokenPairConfig memory mConfig = _config;
+        MarketConfig memory mConfig = _config;
         {
             uint liquidationDeadline = gt.liquidatable()
                 ? mConfig.maturity + Constants.LIQUIDATION_WINDOW
@@ -252,8 +253,8 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
         // Transfer underlying output
         underlyingAmt += ((underlying.balanceOf(address(this))) * proportion) / Constants.DECIMAL_BASE_SQ;
         uint feeAmt;
-        if (mConfig.redeemFeeRatio > 0) {
-            feeAmt = (underlyingAmt * mConfig.redeemFeeRatio) / Constants.DECIMAL_BASE;
+        if (mConfig.feeConfig.redeemFeeRatio > 0) {
+            feeAmt = (underlyingAmt * mConfig.feeConfig.redeemFeeRatio) / Constants.DECIMAL_BASE;
             underlying.safeTransfer(mConfig.treasurer, feeAmt);
             underlyingAmt -= feeAmt;
         }
