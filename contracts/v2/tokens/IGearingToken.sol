@@ -3,123 +3,13 @@ pragma solidity ^0.8.27;
 
 import {IERC20Metadata, IERC20} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {IERC721Enumerable} from "@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol";
-import {IOracle} from "../oracle/IOracle.sol";
+import {GtConfig} from "../storage/TermMaxStorage.sol";
 
 /**
  * @title TermMax Gearing token interface
  * @author Term Structure Labs
  */
 interface IGearingToken is IERC721Enumerable {
-    /// @notice Data of Gearing Token's configuturation
-    struct GtConfig {
-        /// @notice The token pair's address
-        address tokenPair;
-        /// @notice The address of collateral token
-        address collateral;
-        /// @notice The debtToken(debt) token
-        IERC20Metadata debtToken;
-        /// @notice The bond token
-        IERC20 ft;
-        /// @notice The treasurer's address, which will receive protocol reward while liquidation
-        address treasurer;
-        /// @notice The oracle aggregator
-        IOracle oracle;
-        /// @notice The unix time of maturity date
-        uint64 maturity;
-        /// @notice The debt liquidation threshold
-        ///         If the loan to collateral is greater than or equal to this value,
-        ///         it will be liquidated
-        ///         i.e. 0.9e8 means debt value is the 90% of collateral value
-        uint32 liquidationLtv;
-        /// @notice Maximum loan to collateral when borrowing
-        ///         i.e. 0.85e8 means debt value is the 85% of collateral value
-        uint32 maxLtv;
-        /// @notice The flag to indicate debt is liquidatable or not
-        /// @dev    If liquidatable is false, the collateral can only be delivered after maturity
-        bool liquidatable;
-    }
-
-    /// @notice Error for merge loans have different owners
-    /// @param id The id of Gearing Token has different owner
-    /// @param diffOwner The different owner
-    error CanNotMergeLoanWithDiffOwner(uint256 id, address diffOwner);
-    /// @notice Error for liquidate loan when Gearing Token don't support liquidation
-    error GtDoNotSupportLiquidation();
-    /// @notice Error for repay the loan after maturity day
-    /// @param id The id of Gearing Token
-    error GtIsExpired(uint256 id);
-    /// @notice Error for liquidate loan when its ltv less than liquidation threshhold
-    /// @param id The id of Gearing Token
-    error GtIsSafe(uint256 id);
-    /// @notice Error for the ltv of loan is bigger than maxium ltv
-    /// @param id The id of Gearing Token
-    /// @param owner The owner of Gearing Token
-    /// @param ltv The loan to value
-    error GtIsNotHealthy(uint256 id, address owner, uint128 ltv);
-    /// @notice Error for the ltv increase after liquidation
-    /// @param id The id of Gearing Token
-    /// @param ltvBefore Loan to value before liquidation
-    /// @param ltvAfter Loan to value after liquidation
-    error LtvIncreasedAfterLiquidation(uint256 id, uint128 ltvBefore, uint128 ltvAfter);
-    /// @notice Error for unauthorized operation
-    /// @param id The id of Gearing Token
-    error CallerIsNotTheOwner(uint256 id);
-    /// @notice Error for liquidate the loan with invalid repay amount
-    /// @param id The id of Gearing Token
-    /// @param repayAmt The id of Gearing Token
-    /// @param maxRepayAmt The maxium repay amount when liquidating or repaying
-    error RepayAmtExceedsMaxRepayAmt(uint256 id, uint128 repayAmt, uint128 maxRepayAmt);
-    /// @notice Error for liquidate the loan after liquidation window
-    error CanNotLiquidationAfterFinalDeadline(uint256 id, uint256 liquidationDeadline);
-    /// @notice Error for debt value less than minimal limit
-    /// @param debtValue The debtValue is USD, decimals 1e8
-    error DebtValueIsTooSmall(uint256 debtValue);
-
-    /// @notice Emitted when updating the configuration
-    event UpdateConfig(bytes configData);
-
-    /// @notice Emitted when Debt is augmented
-    /// @param id The id of Gearing Token
-    /// @param ftAmt The amount of debt augmented
-    event AugmentDebt(uint256 indexed id, uint ftAmt);
-
-    /// @notice Emitted when merging multiple Gearing Tokens into one
-    /// @param owner The owner of those tokens
-    /// @param newId The id of new Gearing Token
-    /// @param ids The array of Gearing Tokens id were merged
-    event MergeGts(address indexed owner, uint256 indexed newId, uint256[] ids);
-
-    /// @notice Emitted when removing collateral from the loan
-    /// @param id The id of Gearing Token
-    /// @param newCollateralData Collateral data after removal
-    event RemoveCollateral(uint256 indexed id, bytes newCollateralData);
-
-    /// @notice Emitted when adding collateral to the loan
-    /// @param id The id of Gearing Token
-    /// @param newCollateralData Collateral data after additional
-    event AddCollateral(uint256 indexed id, bytes newCollateralData);
-
-    /// @notice Emitted when repaying the debt of Gearing Token
-    /// @param id The id of Gearing Token
-    /// @param repayAmt The amount of debt repaid
-    /// @param byDebtToken Repay using debtToken token or bonds token
-    event Repay(uint256 indexed id, uint256 repayAmt, bool byDebtToken);
-
-    /// @notice Emitted when liquidating Gearing Token
-    /// @param id The id of Gearing Token
-    /// @param liquidator The liquidator
-    /// @param repayAmt The amount of debt liquidated
-    /// @param cToLiquidator Collateral data assigned to liquidator
-    /// @param cToTreasurer Collateral data assigned to protocol
-    /// @param remainningC Remainning collateral data
-    event Liquidate(
-        uint256 indexed id,
-        address indexed liquidator,
-        uint128 repayAmt,
-        bytes cToLiquidator,
-        bytes cToTreasurer,
-        bytes remainningC
-    );
 
     // @notice Initial function
     /// @param name The token's name

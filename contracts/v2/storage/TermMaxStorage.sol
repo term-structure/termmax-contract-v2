@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IOracle} from "../oracle/IOracle.sol";
+
 /**
  * @title The data struct of token pair
  * @author Term Structure Labs
@@ -48,4 +52,33 @@ struct MarketConfig {
     uint64 openTime;
     /// @notice The fee ratio when tradings with the market and orders
     FeeConfig feeConfig;
+}
+
+/// @notice Data of Gearing Token's configuturation
+struct GtConfig {
+    /// @notice The token pair's address
+    address tokenPair;
+    /// @notice The address of collateral token
+    address collateral;
+    /// @notice The debtToken(debt) token
+    IERC20Metadata debtToken;
+    /// @notice The bond token
+    IERC20 ft;
+    /// @notice The treasurer's address, which will receive protocol reward while liquidation
+    address treasurer;
+    /// @notice The oracle aggregator
+    IOracle oracle;
+    /// @notice The unix time of maturity date
+    uint64 maturity;
+    /// @notice The debt liquidation threshold
+    ///         If the loan to collateral is greater than or equal to this value,
+    ///         it will be liquidated
+    ///         i.e. 0.9e8 means debt value is the 90% of collateral value
+    uint32 liquidationLtv;
+    /// @notice Maximum loan to collateral when borrowing
+    ///         i.e. 0.85e8 means debt value is the 85% of collateral value
+    uint32 maxLtv;
+    /// @notice The flag to indicate debt is liquidatable or not
+    /// @dev    If liquidatable is false, the collateral can only be delivered after maturity
+    bool liquidatable;
 }

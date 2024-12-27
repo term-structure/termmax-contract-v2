@@ -9,7 +9,10 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {Constants} from "../lib/Constants.sol";
 import {GearingTokenConstants} from "../lib/GearingTokenConstants.sol";
 import {IFlashRepayer} from "./IFlashRepayer.sol";
-import {IGearingToken, IOracle, IERC20Metadata, IERC20} from "./IGearingToken.sol";
+import {IGearingToken, IERC20Metadata, IERC20} from "./IGearingToken.sol";
+import {GearingTokenErrors} from "../errors/GearingTokenErrors.sol";
+import {GearingTokenEvents} from "../events/GearingTokenEvents.sol";
+import {GtConfig, IOracle} from "../storage/TermMaxStorage.sol";
 
 /**
  * @title TermMax Gearing Token
@@ -19,7 +22,9 @@ abstract contract AbstractGearingToken is
     OwnableUpgradeable,
     ERC721EnumerableUpgradeable,
     ReentrancyGuardUpgradeable,
-    IGearingToken
+    IGearingToken,
+    GearingTokenErrors,
+    GearingTokenEvents
 {
     using SafeCast for uint256;
     using SafeCast for int256;
