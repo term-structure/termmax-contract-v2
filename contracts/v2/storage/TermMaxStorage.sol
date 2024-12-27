@@ -27,6 +27,8 @@ struct FeeConfig {
     /// @notice The fee ratio when issuing FT tokens by collateral
     ///         i.e. 0.01e8 means 1%
     uint32 issueFtFeeRatio;
+    /// @notice The fee ratio when redeeming collateral
+    ///         i.e. 0.01e8 means 1%
     uint32 redeemFeeRatio;
 }
 

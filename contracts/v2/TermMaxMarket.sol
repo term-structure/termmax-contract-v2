@@ -56,6 +56,12 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable, Ma
 
         if (config_.openTime < block.timestamp || config_.maturity < config_.openTime)
             revert InvalidTime(config_.openTime, config_.maturity);
+        _checkFee(config_.feeConfig.borrowFeeRatio);
+        _checkFee(config_.feeConfig.lendFeeRatio);
+        _checkFee(config_.feeConfig.redeemFeeRatio);
+        _checkFee(config_.feeConfig.issueFtFeeRatio);
+        _checkFee(config_.feeConfig.minNBorrowFeeR);
+        _checkFee(config_.feeConfig.minNLendFeeR);
 
         debtToken = debtToken_;
         collateral = collateral_;
@@ -90,10 +96,21 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable, Ma
             mConfig.treasurer = newConfig.treasurer;
             gt.setTreasurer(newConfig.treasurer);
         }
+        _checkFee(newConfig.feeConfig.borrowFeeRatio);
+        _checkFee(newConfig.feeConfig.lendFeeRatio);
+        _checkFee(newConfig.feeConfig.redeemFeeRatio);
+        _checkFee(newConfig.feeConfig.issueFtFeeRatio);
+        _checkFee(newConfig.feeConfig.minNBorrowFeeR);
+        _checkFee(newConfig.feeConfig.minNLendFeeR);
+
         mConfig.feeConfig = newConfig.feeConfig;
 
         _config = mConfig;
         emit UpdateMarketConfig(mConfig);
+    }
+
+    function _checkFee(uint32 feeRatio) internal pure {
+        if (feeRatio >= Constants.MAX_FEE_RATIO) revert FeeTooHigh();
     }
 
     /// @notice Calculate how many days until expiration

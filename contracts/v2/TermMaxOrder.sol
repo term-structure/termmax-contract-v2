@@ -184,7 +184,17 @@ contract TermMaxOrder is ITermMaxOrder, ReentrancyGuard, Ownable, Pausable, Orde
 
     function updateFeeConfig(FeeConfig memory newFeeConfig) external override onlyOwner {
         _feeConfig = newFeeConfig;
+        _checkFee(newFeeConfig.borrowFeeRatio);
+        _checkFee(newFeeConfig.lendFeeRatio);
+        _checkFee(newFeeConfig.redeemFeeRatio);
+        _checkFee(newFeeConfig.issueFtFeeRatio);
+        _checkFee(newFeeConfig.minNBorrowFeeR);
+        _checkFee(newFeeConfig.minNLendFeeR);
         emit UpdateFeeConfig(newFeeConfig);
+    }
+
+    function _checkFee(uint32 feeRatio) internal pure{
+        if (feeRatio >= Constants.MAX_FEE_RATIO) revert FeeTooHigh();
     }
 
     function feeConfig() external view returns (FeeConfig memory) {

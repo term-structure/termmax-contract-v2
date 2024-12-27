@@ -2,6 +2,7 @@
 pragma solidity ^0.8.27;
 
 interface OrderErrors {
+    error FeeTooHigh();
     error CantNotIssueFtWithoutGt();
     error InvalidCurveCuts();
     error BorrowIsNotAllowed();

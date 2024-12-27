@@ -2,6 +2,7 @@
 pragma solidity ^0.8.27;
 
 interface MarketErrors {
+    error FeeTooHigh();
     /// @notice Error for invalid unix time parameters
     error InvalidTime(uint64 openTime, uint64 maturity);
     /// @notice Error for the collateral and underlying are the same token
