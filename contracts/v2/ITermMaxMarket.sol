@@ -15,7 +15,7 @@ interface ITermMaxMarket {
     /// @param collateral_ Collateral token
     /// @param underlying_ Underlying Token(debt)
     /// @param ft_ TermMax FT
-    /// @param xt_ TermMax XT
+    /// @param xt_ TermMax XT 
     /// @param gt_ TermMax Gearing Token
     /// @param config_ Configuration of market
     /// @dev Only factory will call this function once when deploying new market
