@@ -42,6 +42,7 @@ interface MarketEvents {
 
     /// @notice Emitted when issuing FT by collateral
     /// @param caller Who call the function
+    /// @param recipient Who receive the tokens
     /// @param gtId The id of Gearing Token
     /// @param debtAmt The amount of debt, unit by underlying token
     /// @param ftAmt The amount of FT issued
@@ -49,6 +50,7 @@ interface MarketEvents {
     /// @param collateralData The encoded data of collateral
     event IssueFt(
         address indexed caller,
+        address indexed recipient,
         uint256 indexed gtId,
         uint128 debtAmt,
         uint128 ftAmt,
@@ -58,12 +60,14 @@ interface MarketEvents {
 
     /// @notice Emitted when issuing FT by existed Gearing Token
     /// @param caller Who call the function
+    /// @param recipient Who receive the tokens
     /// @param gtId The id of Gearing Token
     /// @param debtAmt The amount of debt, unit by underlying token
     /// @param ftAmt The amount of FT issued
     /// @param issueFee The amount of issuing fee, unit by FT token
     event IssueFtByExistedGt(
         address indexed caller,
+        address indexed recipient,
         uint256 indexed gtId,
         uint128 debtAmt,
         uint128 ftAmt,
@@ -72,10 +76,18 @@ interface MarketEvents {
 
     /// @notice Emitted when redeeming tokens
     /// @param caller Who call the function
+    /// @param recipient Who receive the tokens
     /// @param proportion The proportion of underlying token and collateral should be deliveried
     ///                   base 1e16 decimals
     /// @param underlyingAmt The amount of underlying received
     /// @param feeAmt Redeemming Fees
     /// @param deliveryData The encoded data of collateral received
-    event Redeem(address indexed caller, uint128 proportion, uint128 underlyingAmt, uint128 feeAmt, bytes deliveryData);
+    event Redeem(
+        address indexed caller,
+        address indexed recipient,
+        uint128 proportion,
+        uint128 underlyingAmt,
+        uint128 feeAmt,
+        bytes deliveryData
+    );
 }

@@ -186,28 +186,30 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable, Ma
      * @inheritdoc ITermMaxMarket
      */
     function issueFt(
+        address recipient,
         uint128 debt,
         bytes calldata collateralData
     ) external override nonReentrant isOpen returns (uint256 gtId, uint128 ftOutAmt) {
-        return _issueFt(msg.sender, debt, collateralData);
+        return _issueFt(msg.sender, recipient, debt, collateralData);
     }
 
     function _issueFt(
         address caller,
+        address recipient,
         uint128 debt,
         bytes calldata collateralData
     ) internal returns (uint256 gtId, uint128 ftOutAmt) {
         // Mint GT
-        gtId = gt.mint(caller, caller, debt, collateralData);
+        gtId = gt.mint(caller, recipient, debt, collateralData);
 
         MarketConfig memory mConfig = _config;
         uint128 issueFee = ((debt * mConfig.feeConfig.issueFtFeeRatio) / Constants.DECIMAL_BASE).toUint128();
         // Mint ft amount = debt amount, send issueFee to treasurer and other to caller
         ft.mint(mConfig.treasurer, issueFee);
         ftOutAmt = debt - issueFee;
-        ft.mint(caller, ftOutAmt);
+        ft.mint(recipient, ftOutAmt);
 
-        emit IssueFt(caller, gtId, debt, ftOutAmt, issueFee, collateralData);
+        emit IssueFt(caller, recipient, gtId, debt, ftOutAmt, issueFee, collateralData);
     }
 
     /**
@@ -236,17 +238,17 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable, Ma
         ftOutAmt = debt - issueFee;
         ft.mint(recipient, ftOutAmt);
 
-        emit IssueFtByExistedGt(caller, gtId, debt, ftOutAmt, issueFee);
+        emit IssueFtByExistedGt(caller, recipient, gtId, debt, ftOutAmt, issueFee);
     }
 
     /**
      * @inheritdoc ITermMaxMarket
      */
-    function redeem(uint256 ftAmount) external virtual override nonReentrant {
-        _redeem(msg.sender, ftAmount);
+    function redeem(uint256 ftAmount, address recipient) external virtual override nonReentrant {
+        _redeem(msg.sender, recipient, ftAmount);
     }
 
-    function _redeem(address caller, uint256 ftAmount) internal {
+    function _redeem(address caller, address recipient, uint256 ftAmount) internal {
         MarketConfig memory mConfig = _config;
         {
             uint liquidationDeadline = gt.liquidatable()
@@ -274,8 +276,15 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable, Ma
             debtToken.safeTransfer(mConfig.treasurer, feeAmt);
             debtTokenAmt -= feeAmt;
         }
-        debtToken.safeTransfer(caller, debtTokenAmt);
-        emit Redeem(caller, proportion.toUint128(), debtTokenAmt.toUint128(), feeAmt.toUint128(), deliveryData);
+        debtToken.safeTransfer(recipient, debtTokenAmt);
+        emit Redeem(
+            caller,
+            recipient,
+            proportion.toUint128(),
+            debtTokenAmt.toUint128(),
+            feeAmt.toUint128(),
+            deliveryData
+        );
     }
 
     /**

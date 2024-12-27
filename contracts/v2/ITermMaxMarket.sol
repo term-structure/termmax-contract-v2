@@ -62,7 +62,11 @@ interface ITermMaxMarket {
     /// @param collateralData The encoded data of collateral
     /// @return gtId The id of Gearing Token
     ///
-    function issueFt(uint128 debt, bytes calldata collateralData) external returns (uint256 gtId, uint128 ftOutAmt);
+    function issueFt(
+        address recipient,
+        uint128 debt,
+        bytes calldata collateralData
+    ) external returns (uint256 gtId, uint128 ftOutAmt);
 
     /// @notice Using collateral to issue FT tokens.
     ///         Caller will get FT(bond) tokens equal to the debt amount subtract issue fee
@@ -87,7 +91,8 @@ interface ITermMaxMarket {
 
     /// @notice Redeem underlying tokens after maturity
     /// @param ftAmount The amount of FT want to redeem
-    function redeem(uint256 ftAmount) external;
+    /// @param recipient Who will receive the underlying tokens
+    function redeem(uint256 ftAmount, address recipient) external;
 
     /// @notice Set the configuration of Gearing Token
     function updateGtConfig(bytes memory configData) external;
