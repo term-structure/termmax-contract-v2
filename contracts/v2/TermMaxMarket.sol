@@ -101,22 +101,22 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable, Ma
         daysToMaturity = (maturity - block.timestamp + Constants.SECONDS_IN_DAY - 1) / Constants.SECONDS_IN_DAY;
     }
 
-    function mintFtAndXt(address receiver, uint256 underlyingAmt) external override nonReentrant isOpen {
-        _mintFtAndXt(msg.sender, receiver, underlyingAmt);
+    function mint(address receiver, uint256 underlyingAmt) external override nonReentrant isOpen {
+        _mint(msg.sender, receiver, underlyingAmt);
     }
 
-    function _mintFtAndXt(address caller, address receiver, uint256 underlyingAmt) internal {
+    function _mint(address caller, address receiver, uint256 underlyingAmt) internal {
         underlying.safeTransferFrom(caller, address(this), underlyingAmt);
 
         ft.mint(receiver, underlyingAmt);
         xt.mint(receiver, underlyingAmt);
     }
 
-    function redeemFtAndXtToUnderlying(address receiver, uint256 underlyingAmt) external override nonReentrant isOpen {
-        _redeemFtAndXtToUnderlying(msg.sender, receiver, underlyingAmt);
+    function burn(address receiver, uint256 underlyingAmt) external override nonReentrant isOpen {
+        _burn(msg.sender, receiver, underlyingAmt);
     }
 
-    function _redeemFtAndXtToUnderlying(address caller, address receiver, uint256 underlyingAmt) internal {
+    function _burn(address caller, address receiver, uint256 underlyingAmt) internal {
         ft.safeTransferFrom(caller, address(this), underlyingAmt);
         xt.safeTransferFrom(caller, address(this), underlyingAmt);
 

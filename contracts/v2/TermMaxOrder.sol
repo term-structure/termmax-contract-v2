@@ -266,7 +266,7 @@ contract TermMaxOrder is ITermMaxOrder, ReentrancyGuard, Ownable, Pausable, Orde
         underlying.safeTransferFrom(msg.sender, address(this), underlyingAmtIn);
         underlying.safeTransfer(market.config().treasurer, feeAmt);
         underlying.approve(address(market), underlyingAmtIn);
-        market.mintFtAndXt(address(this), underlyingAmtIn - feeAmt);
+        market.mint(address(this), underlyingAmtIn - feeAmt);
         uint ftReserve = ft.balanceOf(address(this));
         if (tokenOut == ft && ftReserve < netOut) {
             _issueFt(msg.sender, ftReserve, netOut);
@@ -349,7 +349,7 @@ contract TermMaxOrder is ITermMaxOrder, ReentrancyGuard, Ownable, Pausable, Orde
         }
         ft.approve(address(market), underlyingAmtOut);
         xt.approve(address(market), underlyingAmtOut);
-        market.redeemFtAndXtToUnderlying(address(this), underlyingAmtOut);
+        market.burn(address(this), underlyingAmtOut);
         underlying.safeTransfer(msg.sender, netOut);
         emit SellToken(
             msg.sender,

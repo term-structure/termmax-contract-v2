@@ -15,7 +15,7 @@ interface ITermMaxMarket {
     /// @param collateral_ Collateral token
     /// @param underlying_ Underlying Token(debt)
     /// @param ft_ TermMax FT
-    /// @param xt_ TermMax XT 
+    /// @param xt_ TermMax XT
     /// @param gt_ TermMax Gearing Token
     /// @param config_ Configuration of market
     /// @dev Only factory will call this function once when deploying new market
@@ -49,12 +49,12 @@ interface ITermMaxMarket {
     /// @notice Mint FT and XT tokens by underlying token.
     ///         No price slippage or handling fees.
     /// @param underlyingAmt Amount of underlying token want to lock
-    function mintFtAndXt(address receiver, uint256 underlyingAmt) external;
+    function mint(address receiver, uint256 underlyingAmt) external;
 
-    /// @notice redeem FT and XT to underlying token.
+    /// @notice Burn FT and XT to get underlying token.
     ///         No price slippage or handling fees.
-    /// @param underlyingAmt Amount of underlying token want to redeem
-    function redeemFtAndXtToUnderlying(address receiver, uint256 underlyingAmt) external;
+    /// @param underlyingAmt Amount of underlying token want to get
+    function burn(address receiver, uint256 underlyingAmt) external;
 
     /// @notice Using collateral to issue FT tokens.
     ///         Caller will get FT(bond) tokens equal to the debt amount subtract issue fee
