@@ -54,20 +54,9 @@ struct MarketConfig {
     FeeConfig feeConfig;
 }
 
-/// @notice Data of Gearing Token's configuturation
-struct GtConfig {
-    /// @notice The address of collateral token
-    address collateral;
-    /// @notice The debtToken(debt) token
-    IERC20Metadata debtToken;
-    /// @notice The bond token
-    IERC20 ft;
-    /// @notice The treasurer's address, which will receive protocol reward while liquidation
-    address treasurer;
+struct LoanConfig {
     /// @notice The oracle aggregator
     IOracle oracle;
-    /// @notice The unix time of maturity date
-    uint64 maturity;
     /// @notice The debt liquidation threshold
     ///         If the loan to collateral is greater than or equal to this value,
     ///         it will be liquidated
@@ -81,9 +70,37 @@ struct GtConfig {
     bool liquidatable;
 }
 
-struct InitialParams {
+/// @notice Data of Gearing Token's configuturation
+struct GtConfig {
+    /// @notice The address of collateral token
+    address collateral;
+    /// @notice The debtToken(debt) token
+    IERC20Metadata debtToken;
+    /// @notice The bond token
+    IERC20 ft;
+    /// @notice The treasurer's address, which will receive protocol reward while liquidation
+    address treasurer;
+    /// @notice The unix time of maturity date
+    uint64 maturity;
+    /// @notice The configuration of oracle, ltv and liquidation
+    LoanConfig loanConfig;
+}
+
+struct MarketInitialParams {
+    /// @notice The address of collateral token
+    address collateral;
+    /// @notice The debtToken(debt) token
+    IERC20Metadata debtToken;
+    /// @notice The admin address
+    address admin;
+    /// @notice The implementation of TermMax Gearing Token contract
+    address gtImplementation;
     /// @notice The configuration of market
     MarketConfig marketConfig;
-    address gtImplementation;
+    /// @notice The configuration of loan
+    LoanConfig loanConfig;
+    /// @notice The encoded parameters to initialize GT implementation contract
     bytes gtInitalParams;
+    string tokenName;
+    string tokenSymbol;
 }

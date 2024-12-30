@@ -37,7 +37,7 @@ interface IGearingToken is IERC721Enumerable {
     function liquidatable() external view returns (bool);
 
     /// @notice Return the market address
-    function market() external view returns (address);
+    function marketAddr() external view returns (address);
 
     /// @notice Mint this token to an address
     /// @param  collateralProvider Who provide collateral token

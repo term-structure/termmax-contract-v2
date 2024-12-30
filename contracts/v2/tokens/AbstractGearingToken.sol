@@ -112,7 +112,7 @@ abstract contract AbstractGearingToken is
     /**
      * @inheritdoc IGearingToken
      */
-    function market() public view override returns (address) {
+    function marketAddr() public view override returns (address) {
         return owner();
     }
 
@@ -120,7 +120,7 @@ abstract contract AbstractGearingToken is
      * @inheritdoc IGearingToken
      */
     function liquidatable() external view returns (bool) {
-        return _config.liquidatable;
+        return _config.loanConfig.liquidatable;
     }
 
     /**
@@ -150,7 +150,7 @@ abstract contract AbstractGearingToken is
         ValueAndPrice memory valueAndPrice = _getValueAndPrice(config, loan);
         _checkDebtValue(valueAndPrice);
         uint128 ltv = _calculateLtv(valueAndPrice);
-        if (ltv >= config.maxLtv) {
+        if (ltv >= config.loanConfig.maxLtv) {
             revert GtIsNotHealthy(0, to, ltv);
         }
         id = ++total;
@@ -176,7 +176,7 @@ abstract contract AbstractGearingToken is
         ValueAndPrice memory valueAndPrice = _getValueAndPrice(config, loan);
         _checkDebtValue(valueAndPrice);
         uint128 ltv = _calculateLtv(valueAndPrice);
-        if (ltv >= config.maxLtv) {
+        if (ltv >= config.loanConfig.maxLtv) {
             revert GtIsNotHealthy(id, msg.sender, ltv);
         }
         loanMapping[id] = loan;
@@ -235,10 +235,10 @@ abstract contract AbstractGearingToken is
         }
 
         if (byDebtToken) {
-            config.debtToken.safeTransferFrom(msg.sender, market(), repayAmt);
+            config.debtToken.safeTransferFrom(msg.sender, marketAddr(), repayAmt);
         } else {
             // Those ft tokens have been approved to market and will be burn after maturity
-            config.ft.safeTransferFrom(msg.sender, market(), repayAmt);
+            config.ft.safeTransferFrom(msg.sender, marketAddr(), repayAmt);
         }
         _repay(id, repayAmt);
         emit Repay(id, repayAmt, byDebtToken);
@@ -306,7 +306,7 @@ abstract contract AbstractGearingToken is
         ValueAndPrice memory valueAndPrice = _getValueAndPrice(config, loan);
         _checkDebtValue(valueAndPrice);
         uint128 ltv = _calculateLtv(valueAndPrice);
-        if (ltv >= config.maxLtv) {
+        if (ltv >= config.loanConfig.maxLtv) {
             revert GtIsNotHealthy(id, msg.sender, ltv);
         }
         loanMapping[id] = loan;
@@ -352,7 +352,7 @@ abstract contract AbstractGearingToken is
         valueAndPrice = _getValueAndPrice(config, loan);
         ltv = _calculateLtv(valueAndPrice);
 
-        if (config.liquidatable) {
+        if (config.loanConfig.liquidatable) {
             // Liquidation cases:
             // t >= m + w => F, "No liquidation after maturity plus liquidation window
             // t >= m && t < m + w => T, "Liquidation allowed during liquidation window"
@@ -363,7 +363,7 @@ abstract contract AbstractGearingToken is
             } else if (block.timestamp >= config.maturity) {
                 isLiquidable = true;
                 maxRepayAmt = loan.debtAmt;
-            } else if (ltv >= config.liquidationLtv) {
+            } else if (ltv >= config.loanConfig.liquidationLtv) {
                 isLiquidable = true;
                 // collateralValue(price decimals) and HALF_LIQUIDATION_THRESHOLD(base decimals 1e8)
                 maxRepayAmt = (valueAndPrice.collateralValue * Constants.DECIMAL_BASE) / valueAndPrice.priceDecimals <
@@ -380,7 +380,7 @@ abstract contract AbstractGearingToken is
     function liquidate(uint256 id, uint128 repayAmt) external override nonReentrant {
         LoanInfo memory loan = loanMapping[id];
         GtConfig memory config = _config;
-        if (!config.liquidatable) {
+        if (!config.loanConfig.liquidatable) {
             revert GtDoNotSupportLiquidation();
         }
         (
@@ -401,7 +401,7 @@ abstract contract AbstractGearingToken is
             revert RepayAmtExceedsMaxRepayAmt(id, repayAmt, maxRepayAmt);
         }
         // Transfer token
-        config.debtToken.safeTransferFrom(msg.sender, market(), repayAmt);
+        config.debtToken.safeTransferFrom(msg.sender, marketAddr(), repayAmt);
         // Do liquidate
 
         (bytes memory cToLiquidator, bytes memory cToTreasurer, bytes memory remainningC) = _calcLiquidationResult(
@@ -487,7 +487,7 @@ abstract contract AbstractGearingToken is
         valueAndPrice.collateralValue = _getCollateralValue(loan.collateralData, valueAndPrice.collateralPriceData);
 
         uint8 priceDecimals;
-        (valueAndPrice.debtTokenPrice, priceDecimals) = config.oracle.getPrice(address(config.debtToken));
+        (valueAndPrice.debtTokenPrice, priceDecimals) = config.loanConfig.oracle.getPrice(address(config.debtToken));
         valueAndPrice.priceDecimals = 10 ** priceDecimals;
 
         valueAndPrice.debtTokenDecimals = 10 ** config.debtToken.decimals();

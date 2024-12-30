@@ -3,7 +3,8 @@ pragma solidity ^0.8.27;
 
 import {IMintableERC20, IERC20} from "./tokens/IMintableERC20.sol";
 import {IGearingToken} from "./tokens/IGearingToken.sol";
-import {MarketConfig} from "./storage/TermMaxStorage.sol";
+import {MarketConfig, MarketInitialParams} from "./storage/TermMaxStorage.sol";
+import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 
 /**
  * @title TermMax Market interface
@@ -11,23 +12,7 @@ import {MarketConfig} from "./storage/TermMaxStorage.sol";
  */
 interface ITermMaxMarket {
     /// @notice Initialize the token and configuration of the market
-    /// @param admin Administrator address for configuring parameters such as transaction fees
-    /// @param collateral_ Collateral token
-    /// @param underlying_ Underlying Token(debt)
-    /// @param ft_ TermMax FT
-    /// @param xt_ TermMax XT
-    /// @param gt_ TermMax Gearing Token
-    /// @param config_ Configuration of market
-    /// @dev Only factory will call this function once when deploying new market
-    function initialize(
-        address admin,
-        address collateral_,
-        IERC20 underlying_,
-        IMintableERC20 ft_,
-        IMintableERC20 xt_,
-        IGearingToken gt_,
-        MarketConfig memory config_
-    ) external;
+    function initialize(MarketInitialParams memory params) external;
 
     /// @notice Return the configuration
     function config() external view returns (MarketConfig memory);

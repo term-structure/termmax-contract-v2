@@ -1,27 +1,39 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {ITermMaxMarket, MarketConfig, IMintableERC20, IERC20} from "./ITermMaxMarket.sol";
+import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
+import {ITermMaxMarket, IMintableERC20, IERC20} from "./ITermMaxMarket.sol";
 import {IGearingToken} from "./tokens/IGearingToken.sol";
 import {IFlashLoanReceiver} from "./IFlashLoanReceiver.sol";
 import {Constants} from "./lib/Constants.sol";
-import {Ownable} from "./access/Ownable.sol";
+import {MarketConstants} from "./lib/MarketConstants.sol";
 import {MarketErrors} from "./errors/MarketErrors.sol";
 import {MarketEvents} from "./events/MarketEvents.sol";
+import {StringUtil} from "./lib/StringUtil.sol";
+import {MarketConfig, MarketInitialParams, GtConfig} from "./storage/TermMaxStorage.sol";
 
 /**
  * @title TermMax Market
  * @author Term Structure Labs
  */
-contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable, MarketErrors, MarketEvents {
+contract TermMaxMarket is
+    ITermMaxMarket,
+    ReentrancyGuardUpgradeable,
+    OwnableUpgradeable,
+    PausableUpgradeable,
+    MarketErrors,
+    MarketEvents
+{
     using SafeCast for uint256;
     using SafeCast for int256;
     using SafeERC20 for IERC20;
     using SafeERC20 for IMintableERC20;
+    using StringUtil for string;
 
     address immutable MINTABLE_ERC20_IMPLEMENT;
     address immutable TERMMAX_ORDER_IMPLEMENT;
@@ -42,21 +54,21 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable, Ma
         _;
     }
 
+    constructor(address MINTABLE_ERC20_IMPLEMENT_, address TERMMAX_ORDER_IMPLEMENT_) {
+        MINTABLE_ERC20_IMPLEMENT = MINTABLE_ERC20_IMPLEMENT_;
+        TERMMAX_ORDER_IMPLEMENT = TERMMAX_ORDER_IMPLEMENT_;
+        _disableInitializers();
+    }
+
     /**
      * @inheritdoc ITermMaxMarket
      */
-    function initialize(
-        address admin,
-        address collateral_,
-        IERC20 debtToken_,
-        IMintableERC20 ft_,
-        IMintableERC20 xt_,
-        IGearingToken gt_,
-        MarketConfig memory config_
-    ) external override {
-        __initializeOwner(admin);
-        if (address(collateral_) == address(debtToken_)) revert CollateralCanNotEqualUnderlyinng();
-
+    function initialize(MarketInitialParams memory params) external override initializer {
+        __Ownable_init(params.admin);
+        __ReentrancyGuard_init();
+        __Pausable_init();
+        if (params.collateral == address(params.debtToken)) revert CollateralCanNotEqualUnderlyinng();
+        MarketConfig memory config_ = params.marketConfig;
         if (config_.openTime < block.timestamp || config_.maturity < config_.openTime)
             revert InvalidTime(config_.openTime, config_.maturity);
         _checkFee(config_.feeConfig.borrowFeeRatio);
@@ -66,14 +78,49 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable, Ma
         _checkFee(config_.feeConfig.minNBorrowFeeR);
         _checkFee(config_.feeConfig.minNLendFeeR);
 
-        debtToken = debtToken_;
-        collateral = collateral_;
+        debtToken = params.debtToken;
+        collateral = params.collateral;
         _config = config_;
-        ft = ft_;
-        xt = xt_;
-        gt = gt_;
 
-        emit MarketInitialized(collateral, debtToken, _config.openTime, _config.maturity, ft_, xt_, gt_);
+        (ft, xt, gt) = _deployTokens(params);
+
+        emit MarketInitialized(params.collateral, params.debtToken, _config.openTime, _config.maturity, ft, xt, gt);
+    }
+
+    function _deployTokens(
+        MarketInitialParams memory params
+    ) internal returns (IMintableERC20 ft_, IMintableERC20 xt_, IGearingToken gt_) {
+        ft_ = IMintableERC20(Clones.clone(MINTABLE_ERC20_IMPLEMENT));
+        xt_ = IMintableERC20(Clones.clone(MINTABLE_ERC20_IMPLEMENT));
+        gt_ = IGearingToken(Clones.clone(params.gtImplementation));
+        uint8 decimals = params.debtToken.decimals();
+        ft_.initialize(
+            MarketConstants.PREFIX_FT.contact(params.tokenName),
+            MarketConstants.PREFIX_FT.contact(params.tokenSymbol),
+            decimals
+        );
+        xt.initialize(
+            MarketConstants.PREFIX_XT.contact(params.tokenName),
+            MarketConstants.PREFIX_XT.contact(params.tokenSymbol),
+            decimals
+        );
+        gt.initialize(
+            MarketConstants.PREFIX_GT.contact(params.tokenName),
+            MarketConstants.PREFIX_GT.contact(params.tokenSymbol),
+            GtConfig(
+                params.collateral,
+                params.debtToken,
+                ft_,
+                params.marketConfig.treasurer,
+                params.marketConfig.maturity,
+                params.loanConfig
+            ),
+            params.gtInitalParams
+        );
+    }
+
+    function _contactString(string memory a, string memory b) internal pure returns (string memory) {
+        return string(abi.encodePacked(a, b));
     }
 
     /**

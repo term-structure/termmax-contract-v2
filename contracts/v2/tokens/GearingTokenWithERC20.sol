@@ -95,7 +95,7 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
     function _getCollateralPriceData(
         GtConfig memory config
     ) internal view virtual override returns (bytes memory priceData) {
-        (uint256 price, uint8 decimals) = config.oracle.getPrice(config.collateral);
+        (uint256 price, uint8 decimals) = config.loanConfig.oracle.getPrice(config.collateral);
         uint priceDecimals = 10 ** decimals;
 
         uint cTokenDecimals = 10 ** IERC20Metadata(config.collateral).decimals();
