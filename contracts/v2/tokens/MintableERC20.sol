@@ -13,6 +13,10 @@ contract MintableERC20 is ERC20Upgradeable, OwnableUpgradeable, IMintableERC20 {
     /// @notice The token's decimals
     uint8 _decimals;
 
+    constructor() {
+        _disableInitializers();
+    }
+
     /**
      * @inheritdoc IMintableERC20
      */

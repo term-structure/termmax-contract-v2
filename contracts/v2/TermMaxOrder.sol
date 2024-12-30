@@ -1,36 +1,41 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {ITermMaxOrder, IMintableERC20, IERC20} from "./ITermMaxOrder.sol";
-import {MarketConfig} from "./storage/TermMaxStorage.sol";
+import {ITermMaxOrder, IERC20} from "./ITermMaxOrder.sol";
 import {ITermMaxMarket} from "./ITermMaxMarket.sol";
 import {IGearingToken} from "./tokens/IGearingToken.sol";
 import {IFlashLoanReceiver} from "./IFlashLoanReceiver.sol";
 import {Constants} from "./lib/Constants.sol";
-import {Ownable} from "./access/Ownable.sol";
 import {TermMaxCurve, MathLib} from "./lib/TermMaxCurve.sol";
 import {OrderErrors} from "./errors/OrderErrors.sol";
 import {OrderEvents} from "./events/OrderEvents.sol";
-import {CurveCuts, FeeConfig} from "./storage/TermMaxStorage.sol";
+import {MarketConfig, CurveCuts, FeeConfig} from "./storage/TermMaxStorage.sol";
 
 /**
  * @title TermMax Order
  * @author Term Structure Labs
  */
-contract TermMaxOrder is ITermMaxOrder, ReentrancyGuard, Ownable, Pausable, OrderErrors, OrderEvents {
+contract TermMaxOrder is
+    ITermMaxOrder,
+    ReentrancyGuardUpgradeable,
+    OwnableUpgradeable,
+    PausableUpgradeable,
+    OrderErrors,
+    OrderEvents
+{
     using SafeCast for uint256;
     using SafeCast for int256;
     using SafeERC20 for IERC20;
-    using SafeERC20 for IMintableERC20;
 
     ITermMaxMarket public market;
 
-    IMintableERC20 private ft;
-    IMintableERC20 private xt;
+    IERC20 private ft;
+    IERC20 private xt;
     IERC20 private debtToken;
     IGearingToken private gt;
 
@@ -41,8 +46,6 @@ contract TermMaxOrder is ITermMaxOrder, ReentrancyGuard, Ownable, Pausable, Orde
     FeeConfig private _feeConfig;
 
     address public maker;
-
-    address private treasurer;
 
     uint private gtId;
 
@@ -69,22 +72,35 @@ contract TermMaxOrder is ITermMaxOrder, ReentrancyGuard, Ownable, Pausable, Orde
         _;
     }
 
+    constructor() {
+        _disableInitializers();
+    }
+
     /**
      * @inheritdoc ITermMaxOrder
      */
     function initialize(
         address admin,
-        ITermMaxMarket market_,
         address maker_,
-        CurveCuts memory curveCuts_
+        IERC20[3] memory tokens,
+        IGearingToken gt_,
+        CurveCuts memory curveCuts_,
+        MarketConfig memory marketConfig
     ) external override {
-        __initializeOwner(admin);
-        market = market_;
+        __Ownable_init(admin);
+        __ReentrancyGuard_init();
+        __Pausable_init();
+        market = ITermMaxMarket(_msgSender());
         maker = maker_;
         _curveCuts = curveCuts_;
-        (ft, xt, gt, , debtToken) = market.tokens();
+        maturity = marketConfig.maturity;
+        _feeConfig = marketConfig.feeConfig;
+        ft = tokens[0];
+        xt = tokens[1];
+        debtToken = tokens[2];
+        gt = gt_;
         curveCutsHash = keccak256(abi.encode(curveCuts_));
-        emit OrderInitialized(market_, maker_, curveCuts_);
+        emit OrderInitialized(market, maker_, curveCuts_);
     }
 
     /**
@@ -193,7 +209,7 @@ contract TermMaxOrder is ITermMaxOrder, ReentrancyGuard, Ownable, Pausable, Orde
         emit UpdateFeeConfig(newFeeConfig);
     }
 
-    function _checkFee(uint32 feeRatio) internal pure{
+    function _checkFee(uint32 feeRatio) internal pure {
         if (feeRatio >= Constants.MAX_FEE_RATIO) revert FeeTooHigh();
     }
 
@@ -263,12 +279,12 @@ contract TermMaxOrder is ITermMaxOrder, ReentrancyGuard, Ownable, Pausable, Orde
     function _buyToken(
         uint128 debtTokenAmtIn,
         uint128 minTokenOut,
-        function(uint, uint, uint) internal view returns (uint, uint, IMintableERC20) func
+        function(uint, uint, uint) internal view returns (uint, uint, IERC20) func
     ) internal returns (uint256 netOut) {
         uint daysToMaturity = _daysToMaturity();
         uint oriXtReserve = xt.balanceOf(address(this));
 
-        (uint tokenAmtOut, uint feeAmt, IMintableERC20 tokenOut) = func(daysToMaturity, oriXtReserve, debtTokenAmtIn);
+        (uint tokenAmtOut, uint feeAmt, IERC20 tokenOut) = func(daysToMaturity, oriXtReserve, debtTokenAmtIn);
 
         netOut = tokenAmtOut + debtTokenAmtIn - feeAmt;
         if (netOut < minTokenOut) revert UnexpectedAmount(minTokenOut, netOut);
@@ -298,7 +314,7 @@ contract TermMaxOrder is ITermMaxOrder, ReentrancyGuard, Ownable, Pausable, Orde
         uint daysToMaturity,
         uint oriXtReserve,
         uint debtTokenAmtIn
-    ) internal view returns (uint tokenAmtOut, uint feeAmt, IMintableERC20 tokenOut) {
+    ) internal view returns (uint tokenAmtOut, uint feeAmt, IERC20 tokenOut) {
         (, uint negDeltaFt) = TermMaxCurve.buyFt(
             daysToMaturity,
             _curveCuts.borrowCurveCuts,
@@ -322,7 +338,7 @@ contract TermMaxOrder is ITermMaxOrder, ReentrancyGuard, Ownable, Pausable, Orde
         uint daysToMaturity,
         uint oriXtReserve,
         uint debtTokenAmtIn
-    ) internal view returns (uint tokenAmtOut, uint feeAmt, IMintableERC20 tokenOut) {
+    ) internal view returns (uint tokenAmtOut, uint feeAmt, IERC20 tokenOut) {
         FeeConfig memory __feeConfig = _feeConfig;
         feeAmt = (debtTokenAmtIn * __feeConfig.borrowFeeRatio) / Constants.DECIMAL_BASE;
         uint minFeeAmt = (debtTokenAmtIn * __feeConfig.minNBorrowFeeR) / Constants.DECIMAL_BASE;
@@ -339,12 +355,12 @@ contract TermMaxOrder is ITermMaxOrder, ReentrancyGuard, Ownable, Pausable, Orde
     function _sellToken(
         uint128 tokenAmtIn,
         uint128 minDebtTokenOut,
-        function(uint, uint, uint) internal view returns (uint, uint, IMintableERC20) func
+        function(uint, uint, uint) internal view returns (uint, uint, IERC20) func
     ) internal returns (uint256 netOut) {
         uint daysToMaturity = _daysToMaturity();
         uint oriXtReserve = xt.balanceOf(address(this));
 
-        (uint debtTokenAmtOut, uint feeAmt, IMintableERC20 tokenIn) = func(daysToMaturity, oriXtReserve, tokenAmtIn);
+        (uint debtTokenAmtOut, uint feeAmt, IERC20 tokenIn) = func(daysToMaturity, oriXtReserve, tokenAmtIn);
 
         netOut = debtTokenAmtOut - feeAmt;
         if (netOut < minDebtTokenOut) revert UnexpectedAmount(minDebtTokenOut, netOut);
@@ -377,7 +393,7 @@ contract TermMaxOrder is ITermMaxOrder, ReentrancyGuard, Ownable, Pausable, Orde
         uint daysToMaturity,
         uint oriXtReserve,
         uint tokenAmtIn
-    ) internal view returns (uint debtTokenAmtOut, uint feeAmt, IMintableERC20 tokenIn) {
+    ) internal view returns (uint debtTokenAmtOut, uint feeAmt, IERC20 tokenIn) {
         uint deltaFt;
         (debtTokenAmtOut, deltaFt) = TermMaxCurve.sellFt(
             daysToMaturity,
@@ -396,7 +412,7 @@ contract TermMaxOrder is ITermMaxOrder, ReentrancyGuard, Ownable, Pausable, Orde
         uint daysToMaturity,
         uint oriXtReserve,
         uint tokenAmtIn
-    ) internal view returns (uint debtTokenAmtOut, uint feeAmt, IMintableERC20 tokenIn) {
+    ) internal view returns (uint debtTokenAmtOut, uint feeAmt, IERC20 tokenIn) {
         (, debtTokenAmtOut) = TermMaxCurve.sellXt(daysToMaturity, _curveCuts.borrowCurveCuts, oriXtReserve, tokenAmtIn);
         FeeConfig memory __feeConfig = _feeConfig;
         feeAmt = (debtTokenAmtOut * __feeConfig.lendFeeRatio) / Constants.DECIMAL_BASE;

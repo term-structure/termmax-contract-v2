@@ -3,7 +3,8 @@ pragma solidity ^0.8.27;
 
 import {IMintableERC20, IERC20} from "./tokens/IMintableERC20.sol";
 import {IGearingToken} from "./tokens/IGearingToken.sol";
-import {MarketConfig, MarketInitialParams} from "./storage/TermMaxStorage.sol";
+import {ITermMaxOrder} from "./ITermMaxOrder.sol";
+import {MarketConfig, MarketInitialParams, CurveCuts} from "./storage/TermMaxStorage.sol";
 import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 
 /**
@@ -33,13 +34,13 @@ interface ITermMaxMarket {
 
     /// @notice Mint FT and XT tokens by underlying token.
     ///         No price slippage or handling fees.
-    /// @param underlyingAmt Amount of underlying token want to lock
-    function mint(address recipient, uint256 underlyingAmt) external;
+    /// @param debtTokenAmt Amount of underlying token want to lock
+    function mint(address recipient, uint256 debtTokenAmt) external;
 
     /// @notice Burn FT and XT to get underlying token.
     ///         No price slippage or handling fees.
-    /// @param underlyingAmt Amount of underlying token want to get
-    function burn(address recipient, uint256 underlyingAmt) external;
+    /// @param debtTokenAmt Amount of underlying token want to get
+    function burn(address recipient, uint256 debtTokenAmt) external;
 
     /// @notice Using collateral to issue FT tokens.
     ///         Caller will get FT(bond) tokens equal to the debt amount subtract issue fee
@@ -81,4 +82,7 @@ interface ITermMaxMarket {
 
     /// @notice Set the configuration of Gearing Token
     function updateGtConfig(bytes memory configData) external;
+
+    /// @notice Create a new order
+    function createOrder(address maker, CurveCuts memory curveCuts) external returns (ITermMaxOrder order);
 }

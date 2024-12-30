@@ -4,20 +4,26 @@ pragma solidity ^0.8.27;
 import {IMintableERC20, IERC20} from "./tokens/IMintableERC20.sol";
 import {IGearingToken} from "./tokens/IGearingToken.sol";
 import {ITermMaxMarket} from "./ITermMaxMarket.sol";
-import {CurveCuts, FeeConfig} from "./storage/TermMaxStorage.sol";
+import {MarketConfig, CurveCuts, FeeConfig} from "./storage/TermMaxStorage.sol";
 
 /**
  * @title TermMax Order interface
  * @author Term Structure Labs
  */
 interface ITermMaxOrder {
-    /// @notice Initialize the token and configuration of the market
+    /// @notice Initialize the token and configuration of the order
     /// @param admin Administrator address for configuring parameters such as transaction fees
-    /// @param market The market
     /// @param maker The maker
     /// @param curveCuts The curve cuts
     /// @dev Only factory will call this function once when deploying new market
-    function initialize(address admin, ITermMaxMarket market, address maker, CurveCuts memory curveCuts) external;
+    function initialize(
+        address admin,
+        address maker,
+        IERC20[3] memory tokens,
+        IGearingToken gt,
+        CurveCuts memory curveCuts,
+        MarketConfig memory marketConfig
+    ) external;
 
     /// @notice Return the configuration
     function curveCuts() external view returns (CurveCuts memory);

@@ -24,6 +24,10 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
     /// @notice The max capacity of collateral token
     uint256 public collateralCapacity;
 
+    constructor() {
+        _disableInitializers();
+    }
+
     function __GearingToken_Implement_init(bytes memory initalParams) internal override onlyInitializing {
         collateralCapacity = abi.decode(initalParams, (uint256));
     }

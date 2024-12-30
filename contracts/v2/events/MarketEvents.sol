@@ -2,6 +2,7 @@
 pragma solidity ^0.8.27;
 import {IMintableERC20, IERC20} from "../tokens/IMintableERC20.sol";
 import {IGearingToken} from "../tokens/IGearingToken.sol";
+import {ITermMaxOrder} from "../ITermMaxOrder.sol";
 import {MarketConfig} from "../storage/TermMaxStorage.sol";
 
 interface MarketEvents {
@@ -90,4 +91,9 @@ interface MarketEvents {
         uint128 feeAmt,
         bytes deliveryData
     );
+
+    /// @notice Emitted when creating an order
+    /// @param maker The maker of the order
+    /// @param order The order
+    event CreateOrder(address indexed maker, ITermMaxOrder indexed order);
 }

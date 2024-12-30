@@ -10,12 +10,13 @@ import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 import {ITermMaxMarket, IMintableERC20, IERC20} from "./ITermMaxMarket.sol";
 import {IGearingToken} from "./tokens/IGearingToken.sol";
 import {IFlashLoanReceiver} from "./IFlashLoanReceiver.sol";
+import {ITermMaxOrder} from "./ITermMaxOrder.sol";
 import {Constants} from "./lib/Constants.sol";
 import {MarketConstants} from "./lib/MarketConstants.sol";
 import {MarketErrors} from "./errors/MarketErrors.sol";
 import {MarketEvents} from "./events/MarketEvents.sol";
 import {StringUtil} from "./lib/StringUtil.sol";
-import {MarketConfig, MarketInitialParams, GtConfig} from "./storage/TermMaxStorage.sol";
+import {MarketConfig, MarketInitialParams, GtConfig, CurveCuts} from "./storage/TermMaxStorage.sol";
 
 /**
  * @title TermMax Market
@@ -345,5 +346,11 @@ contract TermMaxMarket is
      */
     function updateGtConfig(bytes memory configData) external override onlyOwner {
         gt.updateConfig(configData);
+    }
+
+    function createOrder(address maker, CurveCuts memory curveCuts) external returns (ITermMaxOrder order) {
+        order = ITermMaxOrder(Clones.clone(TERMMAX_ORDER_IMPLEMENT));
+        order.initialize(owner(), maker, [ft, xt, debtToken], gt, curveCuts, _config);
+        emit CreateOrder(maker, order);
     }
 }
