@@ -14,13 +14,6 @@ library MathLib {
         }
     }
 
-    /// @dev Returns the negative value of `x`.
-    function neg(uint256 x) internal pure returns (int256 z) {
-        assembly {
-            z := sub(0, x)
-        }
-    }
-
     /**
      * @dev Returns the square root of a number. If the number is not a perfect square, the value is rounded
      * towards zero.
