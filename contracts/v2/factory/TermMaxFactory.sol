@@ -18,7 +18,7 @@ contract TermMaxFactory is Ownable2Step, FactoryErrors, FactoryEvents {
     bytes32 constant GT_ERC20 = keccak256("GearingTokenWithERC20");
 
     /// @notice The implementation of TermMax Market contract
-    address public immutable TERMMAX_MARKET_IMPLEMENT;
+    address public immutable TERMMAX_MARKET_IMPLEMENTATION;
 
     /// @notice The implementations of TermMax Gearing Token contract
     /// @dev Based on the abstract GearingToken contract,
@@ -26,11 +26,11 @@ contract TermMaxFactory is Ownable2Step, FactoryErrors, FactoryEvents {
     ///      such as ERC20 tokens and ERC721 tokens.
     mapping(bytes32 => address) public gtImplements;
 
-    constructor(address admin, address TERMMAX_MARKET_IMPLEMENT_) Ownable(admin) {
-        if (TERMMAX_MARKET_IMPLEMENT == address(0)) {
+    constructor(address admin, address TERMMAX_MARKET_IMPLEMENTATION_) Ownable(admin) {
+        if (TERMMAX_MARKET_IMPLEMENTATION == address(0)) {
             revert InvalidMarketImplement();
         }
-        TERMMAX_MARKET_IMPLEMENT = TERMMAX_MARKET_IMPLEMENT_;
+        TERMMAX_MARKET_IMPLEMENTATION = TERMMAX_MARKET_IMPLEMENTATION_;
 
         gtImplements[GT_ERC20] = address(new GearingTokenWithERC20());
     }
@@ -49,7 +49,7 @@ contract TermMaxFactory is Ownable2Step, FactoryErrors, FactoryEvents {
     ) external view returns (address market) {
         return
             Clones.predictDeterministicAddress(
-                TERMMAX_MARKET_IMPLEMENT,
+                TERMMAX_MARKET_IMPLEMENTATION,
                 keccak256(abi.encode(collateral, debtToken, openTime, maturity))
             );
     }
@@ -63,7 +63,7 @@ contract TermMaxFactory is Ownable2Step, FactoryErrors, FactoryEvents {
             revert CantNotFindGtImplementation();
         }
         market = Clones.cloneDeterministic(
-            TERMMAX_MARKET_IMPLEMENT,
+            TERMMAX_MARKET_IMPLEMENTATION,
             keccak256(
                 abi.encode(
                     params.collateral,
