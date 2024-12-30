@@ -56,8 +56,6 @@ struct MarketConfig {
 
 /// @notice Data of Gearing Token's configuturation
 struct GtConfig {
-    /// @notice The token pair's address
-    address tokenPair;
     /// @notice The address of collateral token
     address collateral;
     /// @notice The debtToken(debt) token
@@ -81,4 +79,11 @@ struct GtConfig {
     /// @notice The flag to indicate debt is liquidatable or not
     /// @dev    If liquidatable is false, the collateral can only be delivered after maturity
     bool liquidatable;
+}
+
+struct InitialParams {
+    /// @notice The configuration of market
+    MarketConfig marketConfig;
+    address gtImplementation;
+    bytes gtInitalParams;
 }

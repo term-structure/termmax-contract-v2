@@ -79,10 +79,8 @@ abstract contract AbstractGearingToken is
         GtConfig memory config_
     ) internal onlyInitializing {
         __ERC721_init(name, symbol);
-        __Ownable_init(config_.tokenPair);
+        __Ownable_init(msg.sender);
         _config = config_;
-        // Market will burn those tokens after maturity
-        config_.ft.approve(config_.tokenPair, type(uint256).max);
     }
 
     function __GearingToken_Implement_init(bytes memory initalParams) internal virtual;
@@ -114,8 +112,8 @@ abstract contract AbstractGearingToken is
     /**
      * @inheritdoc IGearingToken
      */
-    function tokenPairAddr() public view override returns (address) {
-        return _config.tokenPair;
+    function market() public view override returns (address) {
+        return owner();
     }
 
     /**
@@ -232,16 +230,15 @@ abstract contract AbstractGearingToken is
      */
     function repay(uint256 id, uint128 repayAmt, bool byDebtToken) external override nonReentrant {
         GtConfig memory config = _config;
-
         if (config.maturity <= block.timestamp) {
             revert GtIsExpired(id);
         }
 
         if (byDebtToken) {
-            config.debtToken.safeTransferFrom(msg.sender, config.tokenPair, repayAmt);
+            config.debtToken.safeTransferFrom(msg.sender, market(), repayAmt);
         } else {
             // Those ft tokens have been approved to market and will be burn after maturity
-            config.ft.safeTransferFrom(msg.sender, address(this), repayAmt);
+            config.ft.safeTransferFrom(msg.sender, market(), repayAmt);
         }
         _repay(id, repayAmt);
         emit Repay(id, repayAmt, byDebtToken);
@@ -267,7 +264,7 @@ abstract contract AbstractGearingToken is
             loan.collateralData,
             callbackData
         );
-        repayToken.safeTransferFrom(msg.sender, config.tokenPair, loan.debtAmt);
+        repayToken.safeTransferFrom(msg.sender, owner(), loan.debtAmt);
         _burnInternal(id);
         emit Repay(id, loan.debtAmt, byDebtToken);
     }
@@ -404,7 +401,7 @@ abstract contract AbstractGearingToken is
             revert RepayAmtExceedsMaxRepayAmt(id, repayAmt, maxRepayAmt);
         }
         // Transfer token
-        config.debtToken.safeTransferFrom(msg.sender, config.tokenPair, repayAmt);
+        config.debtToken.safeTransferFrom(msg.sender, market(), repayAmt);
         // Do liquidate
 
         (bytes memory cToLiquidator, bytes memory cToTreasurer, bytes memory remainningC) = _calcLiquidationResult(

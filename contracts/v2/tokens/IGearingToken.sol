@@ -10,7 +10,6 @@ import {GtConfig} from "../storage/TermMaxStorage.sol";
  * @author Term Structure Labs
  */
 interface IGearingToken is IERC721Enumerable {
-
     // @notice Initial function
     /// @param name The token's name
     /// @param symbol The token's symbol
@@ -37,8 +36,8 @@ interface IGearingToken is IERC721Enumerable {
     /// @notice Return the flag to indicate debt is liquidatable or not
     function liquidatable() external view returns (bool);
 
-    /// @notice Return the token pair's address
-    function tokenPairAddr() external view returns (address);
+    /// @notice Return the market address
+    function market() external view returns (address);
 
     /// @notice Mint this token to an address
     /// @param  collateralProvider Who provide collateral token

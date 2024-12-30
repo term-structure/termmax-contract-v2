@@ -23,6 +23,9 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable, Ma
     using SafeERC20 for IERC20;
     using SafeERC20 for IMintableERC20;
 
+    address immutable MINTABLE_ERC20_IMPLEMENT;
+    address immutable TERMMAX_ORDER_IMPLEMENT;
+
     MarketConfig private _config;
     address private collateral;
     IERC20 private debtToken;
@@ -258,13 +261,16 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable, Ma
                 revert CanNotRedeemBeforeFinalLiquidationDeadline(liquidationDeadline);
             }
         }
+
+        // Burn ft reserves
+        ft.burn(ft.balanceOf(address(this)));
+
         uint debtTokenAmt;
 
         // The proportion that user will get how many debtToken and collateral should be deliveried
         uint proportion = (ftAmount * Constants.DECIMAL_BASE_SQ) / ft.totalSupply();
         if (ftAmount > 0) {
             ft.safeTransferFrom(caller, address(this), ftAmount);
-            ft.burn(ftAmount);
         }
 
         bytes memory deliveryData = gt.delivery(proportion, caller);
