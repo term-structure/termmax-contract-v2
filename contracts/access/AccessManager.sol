@@ -21,25 +21,28 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
     /// @notice Error when msg.sender is not curator
     error MsgSenderIsNotCurator(ITermMaxMarket market);
 
+    /// @notice Error when revoking default admin role
+    error CannotRevokeDefaultAdminRole();
+
     /// @notice Emit when updating market curator
     /// @param market The market's address
     /// @param curator The curator's address
-    event UpdateMarketCurator(
-        ITermMaxMarket market,
-        address curator
-    );
+    event UpdateMarketCurator(ITermMaxMarket market, address curator);
 
     /// @notice Role to manage switch
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
     bytes32 public constant CURATOR_ROLE = keccak256("CURATOR_ROLE");
-    
+
     /// @notice Market curators
     mapping(ITermMaxMarket => address) public marketCurators;
 
     modifier onlyCurator(ITermMaxMarket market) {
-        if(hasRole(CURATOR_ROLE, msg.sender) || marketCurators[market] == msg.sender) {
+        if (
+            hasRole(CURATOR_ROLE, msg.sender) ||
+            marketCurators[market] == msg.sender
+        ) {
             _;
-        }else{
+        } else {
             revert MsgSenderIsNotCurator(market);
         }
     }
@@ -52,8 +55,6 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
         __UUPSUpgradeable_init();
         __AccessControl_init();
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
-        _grantRole(CURATOR_ROLE, admin);
-        _grantRole(PAUSER_ROLE, admin);
     }
 
     /// @notice Set GT implementation to the factory
@@ -119,12 +120,19 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
     }
 
     /// @notice Set the oracle
-    function setOracle(IOracle aggregator, address asset, IOracle.Oracle memory oracle) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setOracle(
+        IOracle aggregator,
+        address asset,
+        IOracle.Oracle memory oracle
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         aggregator.setOracle(asset, oracle);
     }
 
     /// @notice Remove the oracle
-    function removeOracle(IOracle aggregator, address asset) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function removeOracle(
+        IOracle aggregator,
+        address asset
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         aggregator.removeOracle(asset);
     }
 
@@ -139,7 +147,10 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
     }
 
     /// @notice Set the market curator
-    function setMarketCurator(ITermMaxMarket market, address curator) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setMarketCurator(
+        ITermMaxMarket market,
+        address curator
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         marketCurators[market] = curator;
         emit UpdateMarketCurator(market, curator);
     }
@@ -153,12 +164,19 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
     }
 
     /// @notice Set the provider's white list
-    function setProviderWhitelist(ITermMaxMarket market, address provider, bool isWhiteList) external onlyCurator(market) {
+    function setProviderWhitelist(
+        ITermMaxMarket market,
+        address provider,
+        bool isWhiteList
+    ) external onlyCurator(market) {
         market.setProviderWhitelist(provider, isWhiteList);
     }
 
     /// @notice Set the configuration of Gearing Token
-    function updateGtConfig(ITermMaxMarket market, bytes memory configData) external onlyCurator(market){
+    function updateGtConfig(
+        ITermMaxMarket market,
+        bytes memory configData
+    ) external onlyCurator(market) {
         market.updateGtConfig(configData);
     }
 
@@ -180,6 +198,31 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
         bool state
     ) external onlyRole(PAUSER_ROLE) {
         router.togglePause(state);
+    }
+
+    /// @notice Revoke role
+    /// @dev Can't revoke your own role
+    function revokeRole(
+        bytes32 role,
+        address account
+    ) public override onlyRole(getRoleAdmin(role)) {
+        if (msg.sender == account) {
+            revert AccessControlBadConfirmation();
+        }
+
+        _revokeRole(role, account);
+    }
+
+    /// @notice Revoke role
+    /// @dev Can't revoke default admin role
+    function renounceRole(
+        bytes32 role,
+        address callerConfirmation
+    ) public override {
+        if (role == DEFAULT_ADMIN_ROLE) {
+            revert CannotRevokeDefaultAdminRole();
+        }
+        _revokeRole(role, callerConfirmation);
     }
 
     function _authorizeUpgrade(

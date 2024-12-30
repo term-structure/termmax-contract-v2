@@ -6,8 +6,6 @@ pragma solidity ^0.8.27;
  * @author Term Structure Labs
  */
 library Constants {
-    /// @notice The base decimals
-    uint8 constant DECIMAL_NUMBER = 8;
     /// @notice The base decimals of ratio
     uint256 constant DECIMAL_BASE = 1e8;
     /// @notice The square of the base decimals
