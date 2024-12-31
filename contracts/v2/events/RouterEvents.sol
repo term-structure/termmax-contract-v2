@@ -4,6 +4,7 @@ pragma solidity ^0.8.27;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ITermMaxMarket} from "../ITermMaxMarket.sol";
 import {ITermMaxOrder} from "../ITermMaxOrder.sol";
+import {CurveCuts} from "../storage/TermMaxStorage.sol";
 
 interface RouterEvents {
     /// @notice Emitted when setting the market whitelist
@@ -50,5 +51,23 @@ interface RouterEvents {
         address recipient,
         uint256 totalAmtToBuyFt,
         uint256 returnAmt
+    );
+
+    event RedeemAndSwap(
+        ITermMaxMarket indexed market,
+        uint256 ftAmount,
+        address caller,
+        address recipient,
+        uint256 actualTokenOut
+    );
+
+    event CreateOrderAndDeposit(
+        ITermMaxMarket indexed market,
+        ITermMaxOrder indexed order,
+        address maker,
+        uint256 debtTokenToDeposit,
+        uint128 ftToDeposit,
+        uint128 xtToDeposit,
+        CurveCuts curveCuts
     );
 }

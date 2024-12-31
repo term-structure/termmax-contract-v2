@@ -94,4 +94,12 @@ interface ITermMaxRouter {
         uint128 minFtOutToRepay,
         ITermMaxOrder sellFtOrder
     ) external returns (uint256 returnAmt);
+
+    function redeemAndSwap(
+        address recipient,
+        ITermMaxMarket market,
+        uint256 ftAmount,
+        SwapUnit[] memory units,
+        uint256 minTokenOut
+    ) external returns (uint256 netTokenOut);
 }

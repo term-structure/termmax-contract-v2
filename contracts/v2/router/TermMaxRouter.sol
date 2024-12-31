@@ -20,6 +20,7 @@ import {IFlashLoanReceiver} from "../IFlashLoanReceiver.sol";
 import {IFlashRepayer} from "../tokens/IFlashRepayer.sol";
 import {ITermMaxRouter} from "./ITermMaxRouter.sol";
 import {IGearingToken} from "../tokens/IGearingToken.sol";
+import {CurveCuts} from "../storage/TermMaxStorage.sol";
 
 /**
  * @title TermMax Router
@@ -330,6 +331,54 @@ contract TermMaxRouter is
         }
 
         emit RepayByTokenThroughFt(market, gtId, msg.sender, recipient, totalAmtToBuyFt, returnAmt);
+    }
+
+    function redeemAndSwap(
+        address recipient,
+        ITermMaxMarket market,
+        uint256 ftAmount,
+        SwapUnit[] memory units,
+        uint256 minTokenOut
+    ) external ensureMarketWhitelist(address(market)) whenNotPaused returns (uint256 netTokenOut) {
+        (IERC20 ft, , , address collateralAddr, IERC20 debtToken) = market.tokens();
+        ft.safeTransferFrom(msg.sender, address(this), ftAmount);
+        ft.safeIncreaseAllowance(address(market), ftAmount);
+        market.redeem(ftAmount, address(this));
+        uint deliveredAmt = IERC20(collateralAddr).balanceOf(address(this));
+        if (deliveredAmt > 0) {
+            netTokenOut = _decodeAmount(_doSwap(_encodeAmount(deliveredAmt), units));
+        }
+        netTokenOut += debtToken.balanceOf(address(this));
+        if (netTokenOut < minTokenOut) {
+            revert InsufficientTokenOut(address(debtToken), netTokenOut, minTokenOut);
+        }
+        debtToken.safeTransfer(recipient, netTokenOut);
+        emit RedeemAndSwap(market, ftAmount, msg.sender, recipient, netTokenOut);
+    }
+
+    function createOrderAndDeposit(
+        ITermMaxMarket market,
+        address maker,
+        uint256 debtTokenToDeposit,
+        uint128 ftToDeposit,
+        uint128 xtToDeposit,
+        CurveCuts memory curveCuts
+    ) external ensureMarketWhitelist(address(market)) whenNotPaused returns (ITermMaxOrder order) {
+        (IERC20 ft, IERC20 xt, , , IERC20 debtToken) = market.tokens();
+        order = market.createOrder(maker, curveCuts);
+        if (debtTokenToDeposit > 0) {
+            debtToken.safeTransferFrom(msg.sender, address(this), debtTokenToDeposit);
+            debtToken.safeIncreaseAllowance(address(market), debtTokenToDeposit);
+            market.mint(address(order), debtTokenToDeposit);
+        }
+        if (ftToDeposit > 0) {
+            ft.safeTransferFrom(msg.sender, address(order), ftToDeposit);
+        }
+        if (xtToDeposit > 0) {
+            xt.safeTransferFrom(msg.sender, address(order), xtToDeposit);
+        }
+
+        emit CreateOrderAndDeposit(market, order, maker, debtTokenToDeposit, ftToDeposit, xtToDeposit, curveCuts);
     }
 
     /// @dev Market flash leverage flashloan callback
