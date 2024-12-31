@@ -231,57 +231,74 @@ contract TermMaxOrder is
         address recipient,
         uint128 tokenAmtIn,
         uint128 minTokenOut
-    ) external override nonReentrant whenNotPaused returns (uint256) {
+    ) external override nonReentrant whenNotPaused returns (uint256 netTokenOut) {
         if (tokenIn == tokenOut) revert CantSwapSameToken();
+        uint feeAmt;
         if (tokenIn == ft && tokenOut == debtToken) {
-            return sellFt(tokenAmtIn, minTokenOut, recipient);
+            (netTokenOut, feeAmt) = sellFt(tokenAmtIn, minTokenOut, recipient);
         } else if (tokenIn == xt && tokenOut == debtToken) {
-            return sellXt(tokenAmtIn, minTokenOut, recipient);
+            (netTokenOut, feeAmt) = sellXt(tokenAmtIn, minTokenOut, recipient);
         } else if (tokenIn == debtToken && tokenOut == ft) {
-            return buyFt(tokenAmtIn, minTokenOut, recipient);
+            (netTokenOut, feeAmt) = buyFt(tokenAmtIn, minTokenOut, recipient);
         } else if (tokenIn == debtToken && tokenOut == xt) {
-            return buyXt(tokenAmtIn, minTokenOut, recipient);
+            (netTokenOut, feeAmt) = buyXt(tokenAmtIn, minTokenOut, recipient);
         } else if (tokenIn == ft && tokenOut == xt) {
-            uint debtTokenAmtOut = sellFt(tokenAmtIn, 0, address(this));
-            return buyXt(debtTokenAmtOut, minTokenOut, recipient);
+            (uint debtTokenAmtOut, uint feeOneSide) = sellFt(tokenAmtIn, 0, address(this));
+            (netTokenOut, feeAmt) = _buyToken(address(this), recipient, debtTokenAmtOut, minTokenOut, _buyXt);
+            feeAmt += feeOneSide;
         } else if (tokenIn == xt && tokenOut == ft) {
-            uint debtTokenAmtOut = sellXt(tokenAmtIn, 0, address(this));
-            return buyFt(debtTokenAmtOut, minTokenOut, recipient);
+            (uint debtTokenAmtOut, uint feeOneSide) = sellXt(tokenAmtIn, 0, address(this));
+            (netTokenOut, feeAmt) = _buyToken(address(this), recipient, debtTokenAmtOut, minTokenOut, _buyFt);
+            feeAmt += feeOneSide;
+        } else {
+            revert CantNotSwapToken(tokenIn, tokenOut);
         }
-
-        revert CantNotSwapToken(tokenIn, tokenOut);
+        debtToken.safeTransfer(market.config().treasurer, feeAmt);
+        emit SwapExactTokenToToken(
+            msg.sender,
+            recipient,
+            tokenIn,
+            tokenOut,
+            tokenAmtIn,
+            netTokenOut.toUint128(),
+            feeAmt.toUint128()
+        );
     }
 
     function buyFt(
         uint debtTokenAmtIn,
         uint minTokenOut,
+        address caller,
         address recipient
-    ) internal isLendingAllowed returns (uint256 netOut) {
-        return _buyToken(_msgSender(), recipient, debtTokenAmtIn, minTokenOut, _buyFt);
+    ) internal isLendingAllowed returns (uint256 netOut, uint256 feeAmt) {
+        return _buyToken(caller, recipient, debtTokenAmtIn, minTokenOut, _buyFt);
     }
 
     function buyXt(
         uint debtTokenAmtIn,
         uint minTokenOut,
+        address caller,
         address recipient
-    ) internal isBorrowingAllowed returns (uint256 netOut) {
-        return _buyToken(_msgSender(), recipient, debtTokenAmtIn, minTokenOut, _buyXt);
+    ) internal isBorrowingAllowed returns (uint256 netOut, uint256 feeAmt) {
+        return _buyToken(caller, recipient, debtTokenAmtIn, minTokenOut, _buyXt);
     }
 
     function sellFt(
         uint ftAmtIn,
         uint minDebtTokenOut,
+        address caller,
         address recipient
-    ) internal isBorrowingAllowed returns (uint256 netOut) {
-        return _sellToken(_msgSender(), recipient, ftAmtIn, minDebtTokenOut, _sellFt);
+    ) internal isBorrowingAllowed returns (uint256 netOut, uint256 feeAmt) {
+        return _sellToken(caller, recipient, ftAmtIn, minDebtTokenOut, _sellFt);
     }
 
     function sellXt(
         uint xtAmtIn,
         uint minDebtTokenOut,
+        address caller,
         address recipient
-    ) internal isLendingAllowed returns (uint256 netOut) {
-        return _sellToken(_msgSender(), recipient, xtAmtIn, minDebtTokenOut, _sellXt);
+    ) internal isLendingAllowed returns (uint256 netOut, uint256 feeAmt) {
+        return _sellToken(caller, recipient, xtAmtIn, minDebtTokenOut, _sellXt);
     }
 
     /**
@@ -304,17 +321,17 @@ contract TermMaxOrder is
         uint debtTokenAmtIn,
         uint minTokenOut,
         function(uint, uint, uint) internal view returns (uint, uint, IERC20) func
-    ) internal returns (uint256 netOut) {
+    ) internal returns (uint256, uint256) {
         uint daysToMaturity = _daysToMaturity();
         uint oriXtReserve = xt.balanceOf(address(this));
 
         (uint tokenAmtOut, uint feeAmt, IERC20 tokenOut) = func(daysToMaturity, oriXtReserve, debtTokenAmtIn);
 
-        netOut = tokenAmtOut + debtTokenAmtIn - feeAmt;
+        uint256 netOut = tokenAmtOut + debtTokenAmtIn - feeAmt;
         if (netOut < minTokenOut) revert UnexpectedAmount(minTokenOut, netOut);
 
         debtToken.safeTransferFrom(caller, address(this), debtTokenAmtIn);
-        debtToken.safeTransfer(market.config().treasurer, feeAmt);
+
         debtToken.approve(address(market), debtTokenAmtIn);
         market.mint(address(this), debtTokenAmtIn - feeAmt);
         uint ftReserve = ft.balanceOf(address(this));
@@ -323,17 +340,7 @@ contract TermMaxOrder is
         } else {
             tokenOut.safeTransfer(recipient, netOut);
         }
-        emit BuyToken(
-            caller,
-            recipient,
-            tokenOut,
-            debtTokenAmtIn,
-            minTokenOut,
-            netOut,
-            feeAmt,
-            ft.balanceOf(address(this)),
-            xt.balanceOf(address(this))
-        );
+        return (netOut, feeAmt);
     }
 
     function _buyFt(
@@ -384,18 +391,16 @@ contract TermMaxOrder is
         uint tokenAmtIn,
         uint minDebtTokenOut,
         function(uint, uint, uint) internal view returns (uint, uint, IERC20) func
-    ) internal returns (uint256 netOut) {
+    ) internal returns (uint256, uint256) {
         uint daysToMaturity = _daysToMaturity();
         uint oriXtReserve = xt.balanceOf(address(this));
 
         (uint debtTokenAmtOut, uint feeAmt, IERC20 tokenIn) = func(daysToMaturity, oriXtReserve, tokenAmtIn);
 
-        netOut = debtTokenAmtOut - feeAmt;
+        uint netOut = debtTokenAmtOut - feeAmt;
         if (netOut < minDebtTokenOut) revert UnexpectedAmount(minDebtTokenOut, netOut);
 
         tokenIn.safeTransferFrom(caller, address(this), tokenAmtIn);
-
-        debtToken.safeTransfer(market.config().treasurer, feeAmt);
 
         if (tokenIn == xt) {
             uint ftReserve = ft.balanceOf(address(this));
@@ -405,17 +410,7 @@ contract TermMaxOrder is
         xt.approve(address(market), debtTokenAmtOut);
         market.burn(address(this), debtTokenAmtOut);
         debtToken.safeTransfer(recipient, netOut);
-        emit SellToken(
-            caller,
-            recipient,
-            tokenIn,
-            tokenAmtIn,
-            minDebtTokenOut,
-            netOut,
-            feeAmt,
-            ft.balanceOf(address(this)),
-            xt.balanceOf(address(this))
-        );
+        return (netOut, feeAmt);
     }
 
     function _sellFt(

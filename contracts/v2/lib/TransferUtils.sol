@@ -27,4 +27,12 @@ library TransferUtils {
         }
         token.safeTransfer(to, value);
     }
+
+    function safeIncreaseAllowance(IERC20 token, address spender, uint256 value) internal {
+        token.safeIncreaseAllowance(spender, value);
+    }
+
+    function safeDecreaseAllowance(IERC20 token, address spender, uint256 value) internal {
+        token.safeDecreaseAllowance(spender, value);
+    }
 }
