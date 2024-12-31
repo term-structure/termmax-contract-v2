@@ -123,10 +123,11 @@ contract TermMaxRouter is
         ITermMaxOrder[] calldata orders,
         uint128[] calldata tradingAmts,
         uint128 minTokenOut
-    ) external whenNotPaused returns (uint256) {
+    ) external whenNotPaused returns (uint256 netTokenOut) {
         uint totalAmtIn = sum(tradingAmts);
         tokenIn.safeTransferFrom(msg.sender, address(this), totalAmtIn);
-        return _swapExactTokenToToken(tokenIn, tokenOut, recipient, orders, tradingAmts, minTokenOut);
+        netTokenOut = _swapExactTokenToToken(tokenIn, tokenOut, recipient, orders, tradingAmts, minTokenOut);
+        emit SwapExactTokenToToken(tokenIn, tokenOut, msg.sender, recipient, orders, tradingAmts, netTokenOut);
     }
 
     function _swapExactTokenToToken(
@@ -164,7 +165,7 @@ contract TermMaxRouter is
         (, IERC20 xt, IGearingToken gt, , IERC20 debtToken) = market.tokens();
         uint totalAmtToBuyXt = sum(amtsToBuyXt);
         debtToken.safeTransferFrom(msg.sender, address(this), tokenToSwap + totalAmtToBuyXt);
-        _swapExactTokenToToken(debtToken, xt, address(this), orders, amtsToBuyXt, minXtOut);
+        netXtOut = _swapExactTokenToToken(debtToken, xt, address(this), orders, amtsToBuyXt, minXtOut);
 
         bytes memory callbackData = abi.encode(address(gt), tokenToSwap, units);
         xt.safeIncreaseAllowance(address(market), netXtOut);
@@ -174,6 +175,7 @@ contract TermMaxRouter is
         if (ltv > maxLtv) {
             revert LtvBiggerThanExpected(maxLtv, ltv);
         }
+        emit IssueGt(market, gtId, msg.sender, recipient, tokenToSwap, netXtOut.toUint128(), ltv, collateralData);
     }
 
     /**
@@ -182,9 +184,9 @@ contract TermMaxRouter is
     function leverageFromXt(
         address recipient,
         ITermMaxMarket market,
-        uint256 xtInAmt,
-        uint256 tokenInAmt,
-        uint256 maxLtv,
+        uint128 xtInAmt,
+        uint128 tokenInAmt,
+        uint128 maxLtv,
         SwapUnit[] memory units
     ) external ensureMarketWhitelist(address(market)) whenNotPaused returns (uint256 gtId) {
         (, IERC20 xt, IGearingToken gt, , IERC20 debtToken) = market.tokens();
@@ -198,26 +200,27 @@ contract TermMaxRouter is
 
         (, , uint128 ltv, bytes memory collateralData) = gt.loanInfo(gtId);
         if (ltv > maxLtv) {
-            revert LtvBiggerThanExpected(uint128(maxLtv), ltv);
+            revert LtvBiggerThanExpected(maxLtv, ltv);
         }
+        emit IssueGt(market, gtId, msg.sender, recipient, tokenInAmt, xtInAmt, ltv, collateralData);
     }
 
     /**
      * @inheritdoc ITermMaxRouter
      */
     function borrowTokenFromCollateral(
-        address receiver,
+        address recipient,
         ITermMaxMarket market,
         ITermMaxOrder order,
         uint256 collInAmt,
-        uint256 maxDebtAmt,
-        uint256 borrowAmt
+        uint128 maxDebtAmt,
+        uint128 borrowAmt
     ) external ensureMarketWhitelist(address(market)) whenNotPaused returns (uint256 gtId) {
         (IERC20 ft, , IGearingToken gt, address collateralAddr, IERC20 debtToken) = market.tokens();
         IERC20(collateralAddr).safeTransferFrom(msg.sender, address(this), collInAmt);
         IERC20(collateralAddr).safeIncreaseAllowance(address(gt), collInAmt);
 
-        return _borrow(market, order, ft, gt, debtToken, receiver, maxDebtAmt, collInAmt, borrowAmt);
+        return _borrow(market, order, ft, gt, debtToken, recipient, collInAmt, maxDebtAmt, borrowAmt);
     }
 
     function _borrow(
@@ -226,10 +229,10 @@ contract TermMaxRouter is
         IERC20 ft,
         IGearingToken gt,
         IERC20 debtToken,
-        address receiver,
-        uint256 maxDebtAmt,
+        address recipient,
         uint256 collInAmt,
-        uint256 borrowAmt
+        uint128 maxDebtAmt,
+        uint128 borrowAmt
     ) internal returns (uint256) {
         /**
          * 1. MintGT with Collateral, and get GT, FT
@@ -257,19 +260,9 @@ contract TermMaxRouter is
             gt.repay(gtId, repayAmt.toUint128(), true);
         }
 
-        debtToken.safeTransfer(receiver, borrowAmt);
-        gt.safeTransferFrom(address(this), receiver, gtId);
-
-        // emit Borrow(
-        //     market,
-        //     address(debtToken),
-        //     msg.sender,
-        //     receiver,
-        //     gtId,
-        //     collInAmt,
-        //     maxDebtAmt - repayAmt,
-        //     borrowAmt
-        // );
+        debtToken.safeTransfer(recipient, borrowAmt);
+        gt.safeTransferFrom(address(this), recipient, gtId);
+        emit Borrow(market, gtId, msg.sender, recipient, collInAmt, (maxDebtAmt - repayAmt).toUint128(), borrowAmt);
 
         return gtId;
     }

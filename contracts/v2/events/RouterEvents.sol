@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ITermMaxMarket} from "../ITermMaxMarket.sol";
+import {ITermMaxOrder} from "../ITermMaxOrder.sol";
 
 interface RouterEvents {
     /// @notice Emitted when setting the market whitelist
@@ -10,114 +12,48 @@ interface RouterEvents {
     /// @notice Emitted when setting the swap adapter whitelist
     event UpdateSwapAdapterWhiteList(address adapter, bool isWhitelist);
 
-    // /// @notice Emitted when swapping tokens
-    // /// @param market The market's address
-    // /// @param assetIn The token to swap
-    // /// @param assetOut The token want to receive
-    // /// @param caller Who provide input token
-    // /// @param receiver Who receive output token
-    // /// @param inAmt Input amount
-    // /// @param outAmt Final output amount
-    // /// @param minOutAmt Expected output amount
-    // event Swap(
-    //     ITermMaxMarket indexed market,
-    //     address indexed assetIn,
-    //     address indexed assetOut,
-    //     address caller,
-    //     address receiver,
-    //     uint256 inAmt,
-    //     uint256 outAmt,
-    //     uint256 minOutAmt
-    // );
+    event SwapExactTokenToToken(
+        IERC20 indexed tokenIn,
+        IERC20 indexed tokenOut,
+        address caller,
+        address recipient,
+        ITermMaxOrder[] orders,
+        uint128[] tradingAmts,
+        uint256 actualTokenOut
+    );
 
-    // /// @notice Emitted when swapping tokens
-    // /// @param market The market's address
-    // /// @param assetIn The token to provide liquidity
-    // /// @param caller Who provide input token
-    // /// @param receiver Who receive lp tokens
-    // /// @param underlyingInAmt Underlying token input amount
-    // /// @param lpFtOutAmt LpFT token output amount
-    // /// @param lpXtOutAmt LpXT token output amount
-    // event AddLiquidity(
-    //     ITermMaxMarket indexed market,
-    //     address indexed assetIn,
-    //     address caller,
-    //     address receiver,
-    //     uint256 underlyingInAmt,
-    //     uint256 lpFtOutAmt,
-    //     uint256 lpXtOutAmt
-    // );
+    event IssueGt(
+        ITermMaxMarket indexed market,
+        uint256 indexed gtId,
+        address caller,
+        address recipient,
+        uint128 debtTokenAmtIn,
+        uint128 xtAmtIn,
+        uint128 ltv,
+        bytes collData
+    );
 
-    // /// @notice Emitted when withdrawing FT and XT token by lp tokens
-    // /// @param market The market's address
-    // /// @param caller Who provide lp tokens
-    // /// @param receiver Who receive FT and XT token
-    // /// @param lpFtInAmt LpFT token input amount
-    // /// @param lpXtInAmt LpXT token input amount
-    // /// @param ftOutAmt FT token output amount
-    // /// @param xtOutAmt XT token output amount
-    // event WithdrawLiquidityToXtFt(
-    //     ITermMaxMarket indexed market,
-    //     address caller,
-    //     address receiver,
-    //     uint256 lpFtInAmt,
-    //     uint256 lpXtInAmt,
-    //     uint256 ftOutAmt,
-    //     uint256 xtOutAmt
-    // );
-
-    // /// @notice Emitted when withdrawing target token by lp tokens
-    // /// @param market The market's address
-    // /// @param assetOut The token send to receiver
-    // /// @param caller Who provide lp tokens
-    // /// @param receiver Who receive target token
-    // /// @param lpFtInAmt LpFT token input amount
-    // /// @param lpXtInAmt LpXT token input amount
-    // /// @param tokenOutAmt Final target token output
-    // /// @param minTokenOutAmt Expected output amount
-    // event WithdrawLiquidtyToToken(
-    //     ITermMaxMarket indexed market,
-    //     address assetOut,
-    //     address caller,
-    //     address receiver,
-    //     uint256 lpFtInAmt,
-    //     uint256 lpXtInAmt,
-    //     uint256 tokenOutAmt,
-    //     uint256 minTokenOutAmt
-    // );
-
-    // /// @notice Emitted when minting GT by leverage or issueFT
-    // /// @param market The market's address
-    // /// @param assetIn The input token
-    // /// @param caller Who provide input token
-    // /// @param receiver Who receive GT
-    // /// @param inAmt token input amount
-    // /// @param xtInAmt XT token input amount to leverage
-    // /// @param collAmt The collateral token amount in GT
-    // /// @param ltv The loan to collateral of the GT
-    // event IssueGt(
-    //     ITermMaxMarket indexed market,
-    //     address indexed assetIn,
-    //     address caller,
-    //     address receiver,
-    //     uint256 gtId,
-    //     uint256 inAmt,
-    //     uint256 xtInAmt,
-    //     uint256 collAmt,
-    //     uint128 ltv
-    // );
+    event Borrow(
+        ITermMaxMarket indexed market,
+        uint256 indexed gtId,
+        address caller,
+        address recipient,
+        uint256 collInAmt,
+        uint128 actualDebtAmt,
+        uint128 borrowAmt
+    );
 
     // /// @notice Emitted when redeemming assets from market
     // /// @param tokenPair The address of token pair
     // /// @param caller Who provide assets
-    // /// @param receiver Who receive output tokens
+    // /// @param recipient Who receive output tokens
     // /// @param ftAmt The FT token amount
-    // /// @param underlyingOutAmt The underlying token send to receiver
-    // /// @param collOutAmt The collateral token send to receiver
+    // /// @param underlyingOutAmt The underlying token send to recipient
+    // /// @param collOutAmt The collateral token send to recipient
     // event Redeem(
     //     ITermMaxTokenPair indexed tokenPair,
     //     address caller,
-    //     address receiver,
+    //     address recipient,
     //     uint256 ftAmt,
     //     uint256 underlyingOutAmt,
     //     uint256 collOutAmt
@@ -127,16 +63,16 @@ interface RouterEvents {
     // /// @param market The market's address
     // /// @param assetOut The output token
     // /// @param caller Who provide collateral asset
-    // /// @param receiver Who receive output tokens
+    // /// @param recipient Who receive output tokens
     // /// @param gtId The id of loan
     // /// @param collInAmt The collateral token input amount
     // /// @param debtAmt The debt amount of the loan
-    // /// @param borrowAmt The final debt token send to receiver
+    // /// @param borrowAmt The final debt token send to recipient
     // event Borrow(
     //     ITermMaxMarket indexed market,
     //     address indexed assetOut,
     //     address caller,
-    //     address receiver,
+    //     address recipient,
     //     uint256 gtId,
     //     uint256 collInAmt,
     //     uint256 debtAmt,

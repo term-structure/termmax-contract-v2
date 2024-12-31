@@ -60,19 +60,19 @@ interface ITermMaxRouter {
     function leverageFromXt(
         address recipient,
         ITermMaxMarket market,
-        uint256 xtInAmt,
-        uint256 tokenInAmt,
-        uint256 maxLtv,
+        uint128 xtInAmt,
+        uint128 tokenInAmt,
+        uint128 maxLtv,
         SwapUnit[] memory units
     ) external returns (uint256 gtId);
 
     function borrowTokenFromCollateral(
-        address receiver,
+        address recipient,
         ITermMaxMarket market,
         ITermMaxOrder order,
         uint256 collInAmt,
-        uint256 maxDebtAmt,
-        uint256 borrowAmt
+        uint128 maxDebtAmt,
+        uint128 borrowAmt
     ) external returns (uint256 gtId);
 
     function flashRepayFromColl(
