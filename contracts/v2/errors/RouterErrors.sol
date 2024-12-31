@@ -3,8 +3,7 @@ pragma solidity ^0.8.27;
 
 interface RouterErrors {
     error TOBEDEFINED();
-    /// @notice Error for calling the token pair is not whitelisted
-    error TokenPairNotWhitelisted(address tokenPair);
+
     /// @notice Error for calling the market is not whitelisted
     error MarketNotWhitelisted(address market);
     /// @notice Error for calling the gt is not whitelisted
