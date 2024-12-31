@@ -328,6 +328,8 @@ contract TermMaxRouter is
             gt.repay(gtId, uint128(returnAmt), false);
             returnAmt = 0;
         }
+
+        emit RepayByTokenThroughFt(market, gtId, msg.sender, recipient, totalAmtToBuyFt, returnAmt);
     }
 
     /// @dev Market flash leverage flashloan callback

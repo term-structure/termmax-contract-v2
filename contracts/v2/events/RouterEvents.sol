@@ -43,53 +43,12 @@ interface RouterEvents {
         uint128 borrowAmt
     );
 
-    // /// @notice Emitted when redeemming assets from market
-    // /// @param tokenPair The address of token pair
-    // /// @param caller Who provide assets
-    // /// @param recipient Who receive output tokens
-    // /// @param ftAmt The FT token amount
-    // /// @param underlyingOutAmt The underlying token send to recipient
-    // /// @param collOutAmt The collateral token send to recipient
-    // event Redeem(
-    //     ITermMaxTokenPair indexed tokenPair,
-    //     address caller,
-    //     address recipient,
-    //     uint256 ftAmt,
-    //     uint256 underlyingOutAmt,
-    //     uint256 collOutAmt
-    // );
-
-    // /// @notice Emitted when borrowing asset from market
-    // /// @param market The market's address
-    // /// @param assetOut The output token
-    // /// @param caller Who provide collateral asset
-    // /// @param recipient Who receive output tokens
-    // /// @param gtId The id of loan
-    // /// @param collInAmt The collateral token input amount
-    // /// @param debtAmt The debt amount of the loan
-    // /// @param borrowAmt The final debt token send to recipient
-    // event Borrow(
-    //     ITermMaxMarket indexed market,
-    //     address indexed assetOut,
-    //     address caller,
-    //     address recipient,
-    //     uint256 gtId,
-    //     uint256 collInAmt,
-    //     uint256 debtAmt,
-    //     uint256 borrowAmt
-    // );
-
-    // /// @notice Emitted when repaying loan
-    // /// @param market The market's address
-    // /// @param isRepayFt Repay using FT or underlying token
-    // /// @param assetIn The input token to repay loan
-    // /// @param gtId The id of loan
-    // /// @param inAmt The input amount
-    // event Repay(
-    //     ITermMaxMarket indexed market,
-    //     bool indexed isRepayFt,
-    //     address indexed assetIn,
-    //     uint256 gtId,
-    //     uint256 inAmt
-    // );
+    event RepayByTokenThroughFt(
+        ITermMaxMarket indexed market,
+        uint256 indexed gtId,
+        address caller,
+        address recipient,
+        uint256 totalAmtToBuyFt,
+        uint256 returnAmt
+    );
 }
