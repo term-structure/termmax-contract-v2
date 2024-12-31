@@ -225,7 +225,7 @@ contract TermMaxOrder is
     /**
      * @inheritdoc ITermMaxOrder
      */
-    function swapTokenToToken(
+    function swapExactTokenToToken(
         IERC20 tokenIn,
         IERC20 tokenOut,
         address recipient,

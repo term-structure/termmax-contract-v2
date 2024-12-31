@@ -58,14 +58,14 @@ interface ITermMaxOrder {
     /// @return borrowApr Borrow APR
     function apr() external view returns (uint256 lendApr, uint256 borrowApr);
 
-    /// @notice Swap token to token
+    /// @notice Swap exact token to token
     /// @param tokenIn The token want to swap
     /// @param tokenOut The token want to receive
     /// @param recipient Who receive output tokens
     /// @param tokenAmtIn The number of tokenIn tokens input
     /// @param minTokenOut Minimum number of tokenOut token outputs required
     /// @return netOut The actual number of tokenOut tokens received
-    function swapTokenToToken(
+    function swapExactTokenToToken(
         IERC20 tokenIn,
         IERC20 tokenOut,
         address recipient,
