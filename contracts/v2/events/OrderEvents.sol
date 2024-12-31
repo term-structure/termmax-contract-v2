@@ -21,8 +21,8 @@ interface OrderEvents {
     /// @param tokenAmtIn The amount of tokenIn want to swap
     /// @param netTokenOut The amount of tokenOut want to receive
     event SwapExactTokenToToken(
-        address indexed caller,
-        address indexed recipient,
+        address caller,
+        address recipient,
         IERC20 indexed tokenIn,
         IERC20 indexed tokenOut,
         uint128 tokenAmtIn,

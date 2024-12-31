@@ -235,20 +235,20 @@ contract TermMaxOrder is
         if (tokenIn == tokenOut) revert CantSwapSameToken();
         uint feeAmt;
         if (tokenIn == ft && tokenOut == debtToken) {
-            (netTokenOut, feeAmt) = sellFt(tokenAmtIn, minTokenOut, recipient);
+            (netTokenOut, feeAmt) = sellFt(tokenAmtIn, minTokenOut, msg.sender, recipient);
         } else if (tokenIn == xt && tokenOut == debtToken) {
-            (netTokenOut, feeAmt) = sellXt(tokenAmtIn, minTokenOut, recipient);
+            (netTokenOut, feeAmt) = sellXt(tokenAmtIn, minTokenOut, msg.sender, recipient);
         } else if (tokenIn == debtToken && tokenOut == ft) {
-            (netTokenOut, feeAmt) = buyFt(tokenAmtIn, minTokenOut, recipient);
+            (netTokenOut, feeAmt) = buyFt(tokenAmtIn, minTokenOut, msg.sender, recipient);
         } else if (tokenIn == debtToken && tokenOut == xt) {
-            (netTokenOut, feeAmt) = buyXt(tokenAmtIn, minTokenOut, recipient);
+            (netTokenOut, feeAmt) = buyXt(tokenAmtIn, minTokenOut, msg.sender, recipient);
         } else if (tokenIn == ft && tokenOut == xt) {
-            (uint debtTokenAmtOut, uint feeOneSide) = sellFt(tokenAmtIn, 0, address(this));
-            (netTokenOut, feeAmt) = _buyToken(address(this), recipient, debtTokenAmtOut, minTokenOut, _buyXt);
+            (uint debtTokenAmtOut, uint feeOneSide) = sellFt(tokenAmtIn, 0, msg.sender,address(this));
+            (netTokenOut, feeAmt) = buyXt(debtTokenAmtOut, minTokenOut, address(this), recipient);
             feeAmt += feeOneSide;
         } else if (tokenIn == xt && tokenOut == ft) {
-            (uint debtTokenAmtOut, uint feeOneSide) = sellXt(tokenAmtIn, 0, address(this));
-            (netTokenOut, feeAmt) = _buyToken(address(this), recipient, debtTokenAmtOut, minTokenOut, _buyFt);
+            (uint debtTokenAmtOut, uint feeOneSide) = sellXt(tokenAmtIn, 0, msg.sender, address(this));
+            (netTokenOut, feeAmt) = buyFt(debtTokenAmtOut, minTokenOut, address(this), recipient);
             feeAmt += feeOneSide;
         } else {
             revert CantNotSwapToken(tokenIn, tokenOut);
