@@ -58,29 +58,20 @@ interface ITermMaxOrder {
     /// @return borrowApr Borrow APR
     function apr() external view returns (uint256 lendApr, uint256 borrowApr);
 
-    /// @notice Buy FT using debtToken token
-    /// @param debtTokenAmtIn The number of unterlying tokens input
-    /// @param minTokenOut Minimum number of FT token outputs required
-    /// @return netOut The actual number of FT tokens received
-    function buyFt(uint128 debtTokenAmtIn, uint128 minTokenOut) external returns (uint256 netOut);
-
-    /// @notice Buy XT using debtToken token
-    /// @param debtTokenAmtIn The number of unterlying tokens input
-    /// @param minTokenOut Minimum number of XT token outputs required
-    /// @return netOut The actual number of XT tokens received
-    function buyXt(uint128 debtTokenAmtIn, uint128 minTokenOut) external returns (uint256 netOut);
-
-    /// @notice Sell FT to get debtToken token
-    /// @param ftAmtIn The number of FT tokens input
-    /// @param minUnderlyingOut Minimum number of debtToken token outputs required
-    /// @return netOut The actual number of debtToken tokens received
-    function sellFt(uint128 ftAmtIn, uint128 minUnderlyingOut) external returns (uint256 netOut);
-
-    /// @notice Sell XT to get debtToken token
-    /// @param xtAmtIn The number of XT tokens input
-    /// @param minUnderlyingOut Minimum number of debtToken token outputs required
-    /// @return netOut The actual number of debtToken tokens received
-    function sellXt(uint128 xtAmtIn, uint128 minUnderlyingOut) external returns (uint256 netOut);
+    /// @notice Swap token to token
+    /// @param tokenIn The token want to swap
+    /// @param tokenOut The token want to receive
+    /// @param recipient Who receive output tokens
+    /// @param tokenAmtIn The number of tokenIn tokens input
+    /// @param minTokenOut Minimum number of tokenOut token outputs required
+    /// @return netOut The actual number of tokenOut tokens received
+    function swapTokenToToken(
+        IERC20 tokenIn,
+        IERC20 tokenOut,
+        address recipient,
+        uint128 tokenAmtIn,
+        uint128 minTokenOut
+    ) external returns (uint256 netOut);
 
     /// @notice Suspension of market trading
     function pause() external;

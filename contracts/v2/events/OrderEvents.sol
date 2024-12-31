@@ -35,6 +35,7 @@ interface OrderEvents {
 
     /// @notice Emitted when buy FT/XT using underlying token
     /// @param caller Who call the function
+    /// @param recipient Who receive output tokens
     /// @param tokenOut  The token want to buy
     /// @param underlyingAmtIn The amount of underlying tokens traded
     /// @param minTokenAmtOut The minimum number of tokens to be obtained
@@ -44,6 +45,7 @@ interface OrderEvents {
     /// @param xtReserve The new XT reserve amount
     event BuyToken(
         address indexed caller,
+        address indexed recipient,
         IERC20 indexed tokenOut,
         uint underlyingAmtIn,
         uint minTokenAmtOut,
@@ -55,6 +57,7 @@ interface OrderEvents {
 
     /// @notice Emitted when sell FT/XT
     /// @param caller Who call the function
+    /// @param recipient Who receive output tokens
     /// @param tokenIn The token want to sell
     /// @param tokenAmtIn The amount of tokens traded
     /// @param minUnderlyingOut The minimum number of underlying tokens to be obtained
@@ -64,6 +67,7 @@ interface OrderEvents {
     /// @param xtReserve The new XT reserve amount
     event SellToken(
         address indexed caller,
+        address indexed recipient,
         IERC20 indexed tokenIn,
         uint tokenAmtIn,
         uint minUnderlyingOut,
@@ -71,27 +75,6 @@ interface OrderEvents {
         uint feeAmt,
         uint ftReserve,
         uint xtReserve
-    );
-
-    /// @notice Emitted when removing liquidity from market
-    /// @param caller Who call the function
-    /// @param underlyingAmt the amount of underlying removed
-    /// @param ftReserve The new FT reserve amount
-    /// @param xtReserve The new XT reserve amount
-    event RemoveLiquidity(address indexed caller, uint256 underlyingAmt, uint128 ftReserve, uint128 xtReserve);
-
-    /// @notice Emitted when doing leverage
-    /// @param loanReceiver Who call the function
-    /// @param gtReceiver Who receive the Gearing Token
-    /// @param gtId The id of Gearing Token
-    /// @param debtAmt The amount of debt, unit by underlying token
-    /// @param collateralData The encoded data of collateral
-    event MintGt(
-        address indexed loanReceiver,
-        address indexed gtReceiver,
-        uint256 indexed gtId,
-        uint128 debtAmt,
-        bytes collateralData
     );
 
     /// @notice Emitted when issuing FT by collateral
@@ -109,13 +92,4 @@ interface OrderEvents {
         uint128 issueFee,
         bytes collateralData
     );
-
-    /// @notice Emitted when redeeming tokens
-    /// @param caller Who call the function
-    /// @param proportion The proportion of underlying token and collateral should be deliveried
-    ///                   base 1e16 decimals
-    /// @param underlyingAmt The amount of underlying received
-    /// @param feeAmt Redeemming Fees
-    /// @param deliveryData The encoded data of collateral received
-    event Redeem(address indexed caller, uint128 proportion, uint128 underlyingAmt, uint128 feeAmt, bytes deliveryData);
 }

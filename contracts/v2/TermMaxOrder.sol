@@ -5,7 +5,6 @@ import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Own
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ITermMaxOrder, IERC20} from "./ITermMaxOrder.sol";
 import {ITermMaxMarket} from "./ITermMaxMarket.sol";
 import {IGearingToken} from "./tokens/IGearingToken.sol";
@@ -15,6 +14,7 @@ import {TermMaxCurve, MathLib} from "./lib/TermMaxCurve.sol";
 import {OrderErrors} from "./errors/OrderErrors.sol";
 import {OrderEvents} from "./events/OrderEvents.sol";
 import {MarketConfig, CurveCuts, FeeConfig} from "./storage/TermMaxStorage.sol";
+import {TransferUtils} from "./lib/TransferUtils.sol";
 
 /**
  * @title TermMax Order
@@ -30,7 +30,7 @@ contract TermMaxOrder is
 {
     using SafeCast for uint256;
     using SafeCast for int256;
-    using SafeERC20 for IERC20;
+    using TransferUtils for IERC20;
 
     ITermMaxMarket public market;
 
@@ -225,41 +225,63 @@ contract TermMaxOrder is
     /**
      * @inheritdoc ITermMaxOrder
      */
+    function swapTokenToToken(
+        IERC20 tokenIn,
+        IERC20 tokenOut,
+        address recipient,
+        uint128 tokenAmtIn,
+        uint128 minTokenOut
+    ) external override nonReentrant whenNotPaused returns (uint256) {
+        if (tokenIn == tokenOut) revert CantSwapSameToken();
+        if (tokenIn == ft && tokenOut == debtToken) {
+            return sellFt(tokenAmtIn, minTokenOut, recipient);
+        } else if (tokenIn == xt && tokenOut == debtToken) {
+            return sellXt(tokenAmtIn, minTokenOut, recipient);
+        } else if (tokenIn == debtToken && tokenOut == ft) {
+            return buyFt(tokenAmtIn, minTokenOut, recipient);
+        } else if (tokenIn == debtToken && tokenOut == xt) {
+            return buyXt(tokenAmtIn, minTokenOut, recipient);
+        } else if (tokenIn == ft && tokenOut == xt) {
+            uint debtTokenAmtOut = sellFt(tokenAmtIn, 0, address(this));
+            return buyXt(debtTokenAmtOut, minTokenOut, recipient);
+        } else if (tokenIn == xt && tokenOut == ft) {
+            uint debtTokenAmtOut = sellXt(tokenAmtIn, 0, address(this));
+            return buyFt(debtTokenAmtOut, minTokenOut, recipient);
+        }
+
+        revert CantNotSwapToken(tokenIn, tokenOut);
+    }
+
     function buyFt(
-        uint128 debtTokenAmtIn,
-        uint128 minTokenOut
-    ) external override nonReentrant isLendingAllowed whenNotPaused returns (uint256 netOut) {
-        return _buyToken(debtTokenAmtIn, minTokenOut, _buyFt);
+        uint debtTokenAmtIn,
+        uint minTokenOut,
+        address recipient
+    ) internal isLendingAllowed returns (uint256 netOut) {
+        return _buyToken(_msgSender(), recipient, debtTokenAmtIn, minTokenOut, _buyFt);
     }
 
-    /**
-     * @inheritdoc ITermMaxOrder
-     */
     function buyXt(
-        uint128 debtTokenAmtIn,
-        uint128 minTokenOut
-    ) external override nonReentrant isBorrowingAllowed whenNotPaused returns (uint256 netOut) {
-        return _buyToken(debtTokenAmtIn, minTokenOut, _buyXt);
+        uint debtTokenAmtIn,
+        uint minTokenOut,
+        address recipient
+    ) internal isBorrowingAllowed returns (uint256 netOut) {
+        return _buyToken(_msgSender(), recipient, debtTokenAmtIn, minTokenOut, _buyXt);
     }
 
-    /**
-     * @inheritdoc ITermMaxOrder
-     */
     function sellFt(
-        uint128 ftAmtIn,
-        uint128 minDebtTokenOut
-    ) external override nonReentrant isBorrowingAllowed whenNotPaused returns (uint256 netOut) {
-        return _sellToken(ftAmtIn, minDebtTokenOut, _sellFt);
+        uint ftAmtIn,
+        uint minDebtTokenOut,
+        address recipient
+    ) internal isBorrowingAllowed returns (uint256 netOut) {
+        return _sellToken(_msgSender(), recipient, ftAmtIn, minDebtTokenOut, _sellFt);
     }
 
-    /**
-     * @inheritdoc ITermMaxOrder
-     */
     function sellXt(
-        uint128 xtAmtIn,
-        uint128 minDebtTokenOut
-    ) external override nonReentrant isLendingAllowed whenNotPaused returns (uint256 netOut) {
-        return _sellToken(xtAmtIn, minDebtTokenOut, _sellXt);
+        uint xtAmtIn,
+        uint minDebtTokenOut,
+        address recipient
+    ) internal isLendingAllowed returns (uint256 netOut) {
+        return _sellToken(_msgSender(), recipient, xtAmtIn, minDebtTokenOut, _sellXt);
     }
 
     /**
@@ -277,8 +299,10 @@ contract TermMaxOrder is
     }
 
     function _buyToken(
-        uint128 debtTokenAmtIn,
-        uint128 minTokenOut,
+        address caller,
+        address recipient,
+        uint debtTokenAmtIn,
+        uint minTokenOut,
         function(uint, uint, uint) internal view returns (uint, uint, IERC20) func
     ) internal returns (uint256 netOut) {
         uint daysToMaturity = _daysToMaturity();
@@ -289,17 +313,19 @@ contract TermMaxOrder is
         netOut = tokenAmtOut + debtTokenAmtIn - feeAmt;
         if (netOut < minTokenOut) revert UnexpectedAmount(minTokenOut, netOut);
 
-        debtToken.safeTransferFrom(msg.sender, address(this), debtTokenAmtIn);
+        debtToken.safeTransferFrom(caller, address(this), debtTokenAmtIn);
         debtToken.safeTransfer(market.config().treasurer, feeAmt);
         debtToken.approve(address(market), debtTokenAmtIn);
         market.mint(address(this), debtTokenAmtIn - feeAmt);
         uint ftReserve = ft.balanceOf(address(this));
         if (tokenOut == ft && ftReserve < netOut) {
-            _issueFt(msg.sender, ftReserve, netOut);
+            _issueFt(recipient, ftReserve, netOut);
+        } else {
+            tokenOut.safeTransfer(recipient, netOut);
         }
-        tokenOut.safeTransfer(msg.sender, netOut);
         emit BuyToken(
-            msg.sender,
+            caller,
+            recipient,
             tokenOut,
             debtTokenAmtIn,
             minTokenOut,
@@ -353,8 +379,10 @@ contract TermMaxOrder is
     }
 
     function _sellToken(
-        uint128 tokenAmtIn,
-        uint128 minDebtTokenOut,
+        address caller,
+        address recipient,
+        uint tokenAmtIn,
+        uint minDebtTokenOut,
         function(uint, uint, uint) internal view returns (uint, uint, IERC20) func
     ) internal returns (uint256 netOut) {
         uint daysToMaturity = _daysToMaturity();
@@ -365,20 +393,21 @@ contract TermMaxOrder is
         netOut = debtTokenAmtOut - feeAmt;
         if (netOut < minDebtTokenOut) revert UnexpectedAmount(minDebtTokenOut, netOut);
 
-        tokenIn.safeTransferFrom(msg.sender, address(this), tokenAmtIn);
+        tokenIn.safeTransferFrom(caller, address(this), tokenAmtIn);
 
         debtToken.safeTransfer(market.config().treasurer, feeAmt);
 
         if (tokenIn == xt) {
             uint ftReserve = ft.balanceOf(address(this));
-            if (ftReserve < debtTokenAmtOut) _issueFt(address(this), ftReserve, debtTokenAmtOut);
+            if (ftReserve < debtTokenAmtOut) _issueFt(recipient, ftReserve, debtTokenAmtOut);
         }
         ft.approve(address(market), debtTokenAmtOut);
         xt.approve(address(market), debtTokenAmtOut);
         market.burn(address(this), debtTokenAmtOut);
-        debtToken.safeTransfer(msg.sender, netOut);
+        debtToken.safeTransfer(recipient, netOut);
         emit SellToken(
-            msg.sender,
+            caller,
+            recipient,
             tokenIn,
             tokenAmtIn,
             minDebtTokenOut,
@@ -421,9 +450,9 @@ contract TermMaxOrder is
         tokenIn = xt;
     }
 
-    function _issueFt(address receiver, uint ftReserve, uint targetFtReserve) internal {
+    function _issueFt(address recipient, uint ftReserve, uint targetFtReserve) internal {
         if (gtId == 0) revert CantNotIssueFtWithoutGt();
         uint ftAmtToIssue = ((targetFtReserve - ftReserve) * Constants.DECIMAL_BASE) / _feeConfig.issueFtFeeRatio;
-        market.issueFtByExistedGt(receiver, (ftAmtToIssue).toUint128(), gtId);
+        market.issueFtByExistedGt(recipient, (ftAmtToIssue).toUint128(), gtId);
     }
 }
