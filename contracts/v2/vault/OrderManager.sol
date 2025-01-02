@@ -33,18 +33,17 @@ abstract contract OrderManager is VaultErrors {
     modifier afterTimelock(uint256 validAt) {
         if (validAt == 0) revert NoPendingValue();
         if (block.timestamp < validAt) revert TimelockNotElapsed();
-
         _;
     }
 
-    // function createOrder(
-    //     ITermMaxMarket market,
-    //     uint256
-    //     uint16 curveId,
-    //     uint192 capacity
-    // ) external afterTimelock(pendingCurveCuts[curveId].validAt) onlyCurator {
-    //     market.createOrder(curveId, capacity);
-    // }
+    function createOrder(
+        ITermMaxMarket market,
+        uint256 maxXtReserve,
+        uint16 curveId,
+        uint192 capacity
+    ) external afterTimelock(pendingCurveCuts[curveId].validAt) onlyCurator {
+        market.createOrder(address(this), maxXtReserve, pendingCurveCuts[curveId].curveCuts);
+    }
 
     function supplyQueueLength() external view returns (uint256) {
         return supplyQueue.length;
