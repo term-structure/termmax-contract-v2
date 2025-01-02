@@ -17,17 +17,18 @@ struct CurveCut {
 }
 
 struct FeeConfig {
-    /// @notice The unix time of maturity date
-    uint32 lendFeeRatio;
-    /// @notice The minmally notional lending fee ratio
+    /// @notice The lending fee ratio taker
     ///         i.e. 0.01e8 means 1%
-    uint32 minNLendFeeR;
-    /// @notice The borrowing fee ratio
+    uint32 lendTakerFeeRatio;
+    /// @notice The lending fee ratio for maker 
     ///         i.e. 0.01e8 means 1%
-    uint32 borrowFeeRatio;
-    /// @notice The minmally notional borrowing fee ratio
+    uint32 lendMakerFeeRatio;
+    /// @notice The borrowing fee ratio for taker
     ///         i.e. 0.01e8 means 1%
-    uint32 minNBorrowFeeR;
+    uint32 borrowTakerFeeRatio;
+    /// @notice The borrowing fee ratio for maker
+    ///         i.e. 0.01e8 means 1%
+    uint32 borrowMakerFeeRatio;
     /// @notice The fee ratio when issuing FT tokens by collateral
     ///         i.e. 0.01e8 means 1%
     uint32 issueFtFeeRatio;

@@ -35,11 +35,14 @@ library TermMaxCurve {
     /// @return vXtReserve virtual XT reserve
     /// @return vFtReserve virtual FT reserve
     function calcIntervalProps(
+        uint netInterestFactor,
         uint daysToMaturity,
         CurveCut memory cut,
         uint xtReserve
     ) internal pure returns (uint liqSquare, uint vXtReserve, uint vFtReserve) {
-        liqSquare = (cut.liqSquare * daysToMaturity) / Constants.DAYS_IN_YEAR;
+        liqSquare =
+            (cut.liqSquare * daysToMaturity * netInterestFactor) /
+            (Constants.DAYS_IN_YEAR * Constants.DECIMAL_BASE);
         vXtReserve = xtReserve + cut.offset;
         vFtReserve = liqSquare / vXtReserve;
     }
@@ -53,6 +56,7 @@ library TermMaxCurve {
     /// @return deltaXt Delta XT
     /// @return negDeltaFt Negative delta FT
     function cutsForwardIter(
+        uint netInterestFactor,
         uint daysToMaturity,
         CurveCut[] memory cuts,
         uint oriXtReserve,
@@ -62,7 +66,12 @@ library TermMaxCurve {
         uint cutId = calcCutId(cuts, oriXtReserve);
         for (uint i = cutId; i < cuts.length; ++i) {
             uint xtReserve = oriXtReserve + deltaXt;
-            (uint liqSquare, uint vXtReserve, uint vFtReserve) = calcIntervalProps(daysToMaturity, cuts[i], xtReserve);
+            (uint liqSquare, uint vXtReserve, uint vFtReserve) = calcIntervalProps(
+                netInterestFactor,
+                daysToMaturity,
+                cuts[i],
+                xtReserve
+            );
             uint oriNegDeltaFt = negDeltaFt;
             (deltaXt, negDeltaFt) = func(liqSquare, vXtReserve, vFtReserve, deltaXt, negDeltaFt, inputAmount);
             if (i < cuts.length - 1) {
@@ -84,6 +93,7 @@ library TermMaxCurve {
     /// @return negDeltaXt Negative delta XT
     /// @return deltaFt Delta FT
     function cutsReverseIter(
+        uint netInterestFactor,
         uint daysToMaturity,
         CurveCut[] memory cuts,
         uint oriXtReserve,
@@ -96,6 +106,7 @@ library TermMaxCurve {
             uint idx = i - 1;
             uint xtReserve = oriXtReserve - negDeltaXt;
             (uint liqSquare, uint vXtReserve, uint vFtReserve) = calcIntervalProps(
+                netInterestFactor,
                 daysToMaturity,
                 cuts[idx],
                 xtReserve
@@ -139,12 +150,20 @@ library TermMaxCurve {
     /// @return negDeltaXt Negative delta XT
     /// @return deltaFt Delta FT
     function buyXt(
+        uint netInterestFactor,
         uint daysToMaturity,
         CurveCut[] memory cuts,
         uint oriXtReserve,
         uint inputAmount
     ) internal pure returns (uint negDeltaXt, uint deltaFt) {
-        (negDeltaXt, deltaFt) = cutsReverseIter(daysToMaturity, cuts, oriXtReserve, inputAmount, buyXtStep);
+        (negDeltaXt, deltaFt) = cutsReverseIter(
+            netInterestFactor,
+            daysToMaturity,
+            cuts,
+            oriXtReserve,
+            inputAmount,
+            buyXtStep
+        );
     }
 
     /// @notice Calculation for one step of buying FT
@@ -177,12 +196,20 @@ library TermMaxCurve {
     /// @return deltaXt Delta XT
     /// @return negDeltaFt Negative delta FT
     function buyFt(
+        uint netInterestFactor,
         uint daysToMaturity,
         CurveCut[] memory cuts,
         uint oriXtReserve,
         uint inputAmount
     ) internal pure returns (uint deltaXt, uint negDeltaFt) {
-        (deltaXt, negDeltaFt) = cutsForwardIter(daysToMaturity, cuts, oriXtReserve, inputAmount, buyFtStep);
+        (deltaXt, negDeltaFt) = cutsForwardIter(
+            netInterestFactor,
+            daysToMaturity,
+            cuts,
+            oriXtReserve,
+            inputAmount,
+            buyFtStep
+        );
     }
 
     /// @notice Calculation for one step of selling XT
@@ -218,12 +245,20 @@ library TermMaxCurve {
     /// @return deltaXt Delta XT
     /// @return negDeltaFt Negative delta FT
     function sellXt(
+        uint netInterestFactor,
         uint daysToMaturity,
         CurveCut[] memory cuts,
         uint oriXtReserve,
         uint inputAmount
     ) internal pure returns (uint deltaXt, uint negDeltaFt) {
-        (deltaXt, negDeltaFt) = cutsForwardIter(daysToMaturity, cuts, oriXtReserve, inputAmount, sellXtStep);
+        (deltaXt, negDeltaFt) = cutsForwardIter(
+            netInterestFactor,
+            daysToMaturity,
+            cuts,
+            oriXtReserve,
+            inputAmount,
+            sellXtStep
+        );
     }
 
     /// @notice Calculation for one step of selling FT
@@ -259,11 +294,19 @@ library TermMaxCurve {
     /// @return negDeltaXt Negative delta XT
     /// @return deltaFt Delta FT
     function sellFt(
+        uint netInterestFactor,
         uint daysToMaturity,
         CurveCut[] memory cuts,
         uint oriXtReserve,
         uint inputAmount
     ) internal pure returns (uint negDeltaXt, uint deltaFt) {
-        (negDeltaXt, deltaFt) = cutsReverseIter(daysToMaturity, cuts, oriXtReserve, inputAmount, sellFtStep);
+        (negDeltaXt, deltaFt) = cutsReverseIter(
+            netInterestFactor,
+            daysToMaturity,
+            cuts,
+            oriXtReserve,
+            inputAmount,
+            sellFtStep
+        );
     }
 }
