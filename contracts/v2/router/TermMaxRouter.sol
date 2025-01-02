@@ -153,6 +153,29 @@ contract TermMaxRouter is
         }
     }
 
+    function sellTokens(
+        address recipient,
+        ITermMaxMarket market,
+        uint128 ftInAmt,
+        uint128 xtInAmt,
+        ITermMaxOrder[] calldata orders,
+        uint128[] calldata amtsToSellTokens,
+        uint128 minTokenOut
+    ) external whenNotPaused ensureMarketWhitelist(address(market)) returns (uint256 netTokenOut) {
+        (IERC20 ft, IERC20 xt, , , IERC20 debtToken) = market.tokens();
+        (uint maxRedeem, IERC20 toenToSell) = ftInAmt > xtInAmt ? (xtInAmt, ft) : (ftInAmt, xt);
+
+        ft.safeTransferFrom(msg.sender, address(this), ftInAmt);
+        ft.safeIncreaseAllowance(address(market), maxRedeem);
+        xt.safeTransferFrom(msg.sender, address(this), xtInAmt);
+        xt.safeIncreaseAllowance(address(market), maxRedeem);
+        market.redeem(maxRedeem, recipient);
+        netTokenOut = _swapExactTokenToToken(toenToSell, debtToken, recipient, orders, amtsToSellTokens, 0);
+        netTokenOut += maxRedeem;
+        if (netTokenOut < minTokenOut) revert InsufficientTokenOut(address(debtToken), netTokenOut, minTokenOut);
+        emit SellTokens(market, msg.sender, recipient, ftInAmt, xtInAmt, orders, amtsToSellTokens, netTokenOut);
+    }
+
     function leverageFromToken(
         address recipient,
         ITermMaxMarket market,

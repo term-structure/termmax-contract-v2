@@ -23,6 +23,17 @@ interface RouterEvents {
         uint256 actualTokenOut
     );
 
+    event SellTokens(
+        ITermMaxMarket indexed market,
+        address caller,
+        address recipient,
+        uint128 ftInAmt,
+        uint128 xtInAmt,
+        ITermMaxOrder[] orders,
+        uint128[] amtsToSellTokens,
+        uint256 actualTokenOut
+    );
+
     event IssueGt(
         ITermMaxMarket indexed market,
         uint256 indexed gtId,

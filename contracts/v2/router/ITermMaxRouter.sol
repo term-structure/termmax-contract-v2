@@ -47,6 +47,16 @@ interface ITermMaxRouter {
         uint128 minTokenOut
     ) external returns (uint256 netTokenOut);
 
+    function sellTokens(
+        address recipient,
+        ITermMaxMarket market,
+        uint128 ftInAmt,
+        uint128 xtInAmt,
+        ITermMaxOrder[] calldata orders,
+        uint128[] calldata amtsToSellTokens,
+        uint128 minTokenOut
+    ) external returns (uint256 netTokenOut);
+
     function leverageFromToken(
         address recipient,
         ITermMaxMarket market,
