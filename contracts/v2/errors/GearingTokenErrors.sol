@@ -37,4 +37,5 @@ interface GearingTokenErrors {
     /// @notice Error for debt value less than minimal limit
     /// @param debtValue The debtValue is USD, decimals 1e8
     error DebtValueIsTooSmall(uint256 debtValue);
+    error AuthorizationFailed(uint256 id, address caller);
 }

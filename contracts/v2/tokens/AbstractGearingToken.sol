@@ -162,8 +162,8 @@ abstract contract AbstractGearingToken is
      * @inheritdoc IGearingToken
      */
     function augmentDebt(address caller, uint256 id, uint ftAmt) external override nonReentrant onlyOwner {
-        if (caller != ownerOf(id)) {
-            revert CallerIsNotTheOwner(id);
+        if (caller != ownerOf(id) || caller != getApproved(id)) {
+            revert AuthorizationFailed(id, caller);
         }
         GtConfig memory config = _config;
         if (config.maturity <= block.timestamp) {

@@ -465,15 +465,9 @@ contract TermMaxOrder is
         tokenIn = xt;
     }
 
-    function _issueFt(
-        address recipient,
-        uint ftReserve,
-        uint targetFtReserve,
-        OrderConfig memory orderConfig
-    ) internal {
-        if (orderConfig.gtId == 0) revert CantNotIssueFtWithoutGt();
-        uint ftAmtToIssue = ((targetFtReserve - ftReserve) * Constants.DECIMAL_BASE) /
-            orderConfig.feeConfig.issueFtFeeRatio;
-        market.issueFtByExistedGt(recipient, (ftAmtToIssue).toUint128(), orderConfig.gtId);
+    function _issueFt(address recipient, uint ftReserve, uint targetFtReserve, OrderConfig memory config) internal {
+        if (config.gtId == 0) revert CantNotIssueFtWithoutGt();
+        uint ftAmtToIssue = ((targetFtReserve - ftReserve) * Constants.DECIMAL_BASE) / config.feeConfig.issueFtFeeRatio;
+        market.issueFtByExistedGt(recipient, (ftAmtToIssue).toUint128(), config.gtId);
     }
 }
