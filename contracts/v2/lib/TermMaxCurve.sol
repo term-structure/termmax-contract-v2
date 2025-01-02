@@ -20,10 +20,7 @@ library TermMaxCurve {
     /// @param cuts Curve cut array
     /// @param xtReserve XT reserve
     /// @return cutId Curve cut id
-    function calcCutId(
-        CurveCut[] memory cuts,
-        uint xtReserve
-    ) internal pure returns (uint cutId) {
+    function calcCutId(CurveCut[] memory cuts, uint xtReserve) internal pure returns (uint cutId) {
         cutId = cuts.length - 1;
         for (; cutId >= 0; cutId--) {
             if (xtReserve > cuts[cutId].xtReserve) break;
@@ -60,36 +57,18 @@ library TermMaxCurve {
         CurveCut[] memory cuts,
         uint oriXtReserve,
         uint inputAmount,
-        function(uint, uint, uint, uint, uint, uint)
-            internal
-            pure
-            returns (uint, uint) func
+        function(uint, uint, uint, uint, uint, uint) internal pure returns (uint, uint) func
     ) internal pure returns (uint deltaXt, uint negDeltaFt) {
         uint cutId = calcCutId(cuts, oriXtReserve);
         for (uint i = cutId; i < cuts.length; ++i) {
             uint xtReserve = oriXtReserve + deltaXt;
-            (
-                uint liqSquare,
-                uint vXtReserve,
-                uint vFtReserve
-            ) = calcIntervalProps(daysToMaturity, cuts[i], xtReserve);
+            (uint liqSquare, uint vXtReserve, uint vFtReserve) = calcIntervalProps(daysToMaturity, cuts[i], xtReserve);
             uint oriNegDeltaFt = negDeltaFt;
-            (deltaXt, negDeltaFt) = func(
-                liqSquare,
-                vXtReserve,
-                vFtReserve,
-                deltaXt,
-                negDeltaFt,
-                inputAmount
-            );
+            (deltaXt, negDeltaFt) = func(liqSquare, vXtReserve, vFtReserve, deltaXt, negDeltaFt, inputAmount);
             if (i < cuts.length - 1) {
                 if (oriXtReserve + deltaXt > cuts[i + 1].xtReserve) {
                     deltaXt = cuts[i + 1].xtReserve - oriXtReserve;
-                    negDeltaFt =
-                        oriNegDeltaFt +
-                        vFtReserve -
-                        liqSquare /
-                        (vXtReserve + deltaXt);
+                    negDeltaFt = oriNegDeltaFt + vFtReserve - liqSquare / (vXtReserve + deltaXt);
                     continue;
                 } else break;
             }
@@ -109,37 +88,23 @@ library TermMaxCurve {
         CurveCut[] memory cuts,
         uint oriXtReserve,
         uint inputAmount,
-        function(uint, uint, uint, uint, uint, uint)
-            internal
-            pure
-            returns (uint, uint) func
+        function(uint, uint, uint, uint, uint, uint) internal pure returns (uint, uint) func
     ) internal pure returns (uint negDeltaXt, uint deltaFt) {
         uint cutId = calcCutId(cuts, oriXtReserve);
         (negDeltaXt, deltaFt) = (0, 0);
         for (uint i = cutId + 1; i > 0; i--) {
             uint idx = i - 1;
             uint xtReserve = oriXtReserve - negDeltaXt;
-            (
-                uint liqSquare,
-                uint vXtReserve,
-                uint vFtReserve
-            ) = calcIntervalProps(daysToMaturity, cuts[idx], xtReserve);
-            uint oriDeltaFt = deltaFt;
-            (negDeltaXt, deltaFt) = func(
-                liqSquare,
-                vXtReserve,
-                vFtReserve,
-                negDeltaXt,
-                deltaFt,
-                inputAmount
+            (uint liqSquare, uint vXtReserve, uint vFtReserve) = calcIntervalProps(
+                daysToMaturity,
+                cuts[idx],
+                xtReserve
             );
+            uint oriDeltaFt = deltaFt;
+            (negDeltaXt, deltaFt) = func(liqSquare, vXtReserve, vFtReserve, negDeltaXt, deltaFt, inputAmount);
             if (oriXtReserve < negDeltaXt + cuts[idx].xtReserve) {
                 negDeltaXt = oriXtReserve - cuts[idx].xtReserve;
-                deltaFt =
-                    oriDeltaFt +
-                    liqSquare /
-                    (vXtReserve - negDeltaXt) -
-                    vFtReserve;
+                deltaFt = oriDeltaFt + liqSquare / (vXtReserve - negDeltaXt) - vFtReserve;
             } else break;
         }
     }
@@ -162,11 +127,7 @@ library TermMaxCurve {
         uint inputAmount
     ) internal pure returns (uint negDeltaXt, uint deltaFt) {
         uint remainingInputAmt = inputAmount - oriDeltaFt;
-        negDeltaXt =
-            oriNegDeltaXt +
-            vXtReserve -
-            liqSquare /
-            (vFtReserve + remainingInputAmt);
+        negDeltaXt = oriNegDeltaXt + vXtReserve - liqSquare / (vFtReserve + remainingInputAmt);
         deltaFt = inputAmount;
     }
 
@@ -183,13 +144,7 @@ library TermMaxCurve {
         uint oriXtReserve,
         uint inputAmount
     ) internal pure returns (uint negDeltaXt, uint deltaFt) {
-        (negDeltaXt, deltaFt) = cutsReverseIter(
-            daysToMaturity,
-            cuts,
-            oriXtReserve,
-            inputAmount,
-            buyXtStep
-        );
+        (negDeltaXt, deltaFt) = cutsReverseIter(daysToMaturity, cuts, oriXtReserve, inputAmount, buyXtStep);
     }
 
     /// @notice Calculation for one step of buying FT
@@ -210,11 +165,7 @@ library TermMaxCurve {
         uint inputAmount
     ) internal pure returns (uint deltaXt, uint negDeltaFt) {
         uint remainingInputAmt = inputAmount - oriDeltaXt;
-        negDeltaFt =
-            oriNegDeltaFt +
-            vFtReserve -
-            liqSquare /
-            (vXtReserve + remainingInputAmt);
+        negDeltaFt = oriNegDeltaFt + vFtReserve - liqSquare / (vXtReserve + remainingInputAmt);
         deltaXt = inputAmount;
     }
 
@@ -231,13 +182,7 @@ library TermMaxCurve {
         uint oriXtReserve,
         uint inputAmount
     ) internal pure returns (uint deltaXt, uint negDeltaFt) {
-        (deltaXt, negDeltaFt) = cutsForwardIter(
-            daysToMaturity,
-            cuts,
-            oriXtReserve,
-            inputAmount,
-            buyFtStep
-        );
+        (deltaXt, negDeltaFt) = cutsForwardIter(daysToMaturity, cuts, oriXtReserve, inputAmount, buyFtStep);
     }
 
     /// @notice Calculation for one step of selling XT
@@ -278,13 +223,7 @@ library TermMaxCurve {
         uint oriXtReserve,
         uint inputAmount
     ) internal pure returns (uint deltaXt, uint negDeltaFt) {
-        (deltaXt, negDeltaFt) = cutsForwardIter(
-            daysToMaturity,
-            cuts,
-            oriXtReserve,
-            inputAmount,
-            sellXtStep
-        );
+        (deltaXt, negDeltaFt) = cutsForwardIter(daysToMaturity, cuts, oriXtReserve, inputAmount, sellXtStep);
     }
 
     /// @notice Calculation for one step of selling FT
@@ -325,12 +264,6 @@ library TermMaxCurve {
         uint oriXtReserve,
         uint inputAmount
     ) internal pure returns (uint negDeltaXt, uint deltaFt) {
-        (negDeltaXt, deltaFt) = cutsReverseIter(
-            daysToMaturity,
-            cuts,
-            oriXtReserve,
-            inputAmount,
-            sellFtStep
-        );
+        (negDeltaXt, deltaFt) = cutsReverseIter(daysToMaturity, cuts, oriXtReserve, inputAmount, sellFtStep);
     }
 }
