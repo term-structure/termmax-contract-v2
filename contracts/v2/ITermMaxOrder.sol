@@ -4,7 +4,7 @@ pragma solidity ^0.8.27;
 import {IMintableERC20, IERC20} from "./tokens/IMintableERC20.sol";
 import {IGearingToken} from "./tokens/IGearingToken.sol";
 import {ITermMaxMarket} from "./ITermMaxMarket.sol";
-import {MarketConfig, CurveCuts, FeeConfig} from "./storage/TermMaxStorage.sol";
+import {OrderConfig, MarketConfig, CurveCuts, FeeConfig} from "./storage/TermMaxStorage.sol";
 
 /**
  * @title TermMax Order interface
@@ -14,40 +14,37 @@ interface ITermMaxOrder {
     /// @notice Initialize the token and configuration of the order
     /// @param admin Administrator address for configuring parameters such as transaction fees
     /// @param maker The maker
+    /// @param tokens The tokens
+    /// @param gt The Gearing Token
+    /// @param maxXtReserve The maximum reserve of XT token
     /// @param curveCuts The curve cuts
+    /// @param marketConfig The market configuration
     /// @dev Only factory will call this function once when deploying new market
     function initialize(
         address admin,
         address maker,
         IERC20[3] memory tokens,
         IGearingToken gt,
+        uint256 maxXtReserve,
         CurveCuts memory curveCuts,
         MarketConfig memory marketConfig
     ) external;
 
     /// @notice Return the configuration
-    function curveCuts() external view returns (CurveCuts memory);
+    function orderConfig() external view returns (OrderConfig memory);
 
     function maker() external view returns (address);
 
     /// @notice Set the market configuration
-    /// @param newCurveCuts New curve cuts
+    /// @param newOrderConfig New order configuration
     /// @param newFtReserve New FT reserve amount
     /// @param newXtReserve New XT reserve amount
-    /// @param gtId The id of Gearing Token
-    function updateOrder(
-        CurveCuts memory newCurveCuts,
-        uint256 newFtReserve,
-        uint256 newXtReserve,
-        uint256 gtId
-    ) external;
+    function updateOrder(OrderConfig memory newOrderConfig, uint256 newFtReserve, uint256 newXtReserve) external;
 
     function updateFeeConfig(FeeConfig memory newFeeConfig) external;
 
-    function feeConfig() external view returns (FeeConfig memory);
-
     /// @notice Return the token reserves
-    function tokenReserves() external view returns (uint256 ftReserve, uint256 xtReserve, uint256 gtId);
+    function tokenReserves() external view returns (uint256 ftReserve, uint256 xtReserve);
 
     /// @notice Return the tokens in TermMax Market
     /// @return market The market

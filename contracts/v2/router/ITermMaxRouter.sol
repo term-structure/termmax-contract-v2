@@ -4,6 +4,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ITermMaxMarket} from "../ITermMaxMarket.sol";
 import {ITermMaxOrder} from "../ITermMaxOrder.sol";
 import {SwapUnit} from "./ISwapAdapter.sol";
+import {CurveCuts} from "../storage/TermMaxStorage.sol";
 
 /**
  * @title TermMax Router interface
@@ -102,4 +103,14 @@ interface ITermMaxRouter {
         SwapUnit[] memory units,
         uint256 minTokenOut
     ) external returns (uint256 netTokenOut);
+
+    function createOrderAndDeposit(
+        ITermMaxMarket market,
+        address maker,
+        uint256 maxXtReserve,
+        uint256 debtTokenToDeposit,
+        uint128 ftToDeposit,
+        uint128 xtToDeposit,
+        CurveCuts memory curveCuts
+    ) external returns (ITermMaxOrder order);
 }

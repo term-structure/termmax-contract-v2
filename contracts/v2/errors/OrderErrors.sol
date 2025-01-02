@@ -11,6 +11,8 @@ interface OrderErrors {
     error BorrowIsNotAllowed();
     error LendIsNotAllowed();
     error OnlyMaker();
+    error GtNotApproved(uint256 gtId);
+    error XtReserveTooHigh();
 
     /// @notice Error for invalid unix time parameters
     error InvalidTime(uint64 openTime, uint64 maturity);

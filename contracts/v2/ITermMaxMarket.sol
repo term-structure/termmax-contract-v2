@@ -84,5 +84,9 @@ interface ITermMaxMarket {
     function updateGtConfig(bytes memory configData) external;
 
     /// @notice Create a new order
-    function createOrder(address maker, CurveCuts memory curveCuts) external returns (ITermMaxOrder order);
+    function createOrder(
+        address maker,
+        uint256 maxXtReserve,
+        CurveCuts memory curveCuts
+    ) external returns (ITermMaxOrder order);
 }

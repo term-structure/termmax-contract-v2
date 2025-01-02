@@ -86,6 +86,13 @@ struct GtConfig {
     LoanConfig loanConfig;
 }
 
+struct OrderConfig {
+    CurveCuts curveCuts;
+    uint256 gtId;
+    uint256 maxXtReserve;
+    FeeConfig feeConfig;
+}
+
 struct MarketInitialParams {
     /// @notice The address of collateral token
     address collateral;

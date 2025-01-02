@@ -348,9 +348,13 @@ contract TermMaxMarket is
         gt.updateConfig(configData);
     }
 
-    function createOrder(address maker, CurveCuts memory curveCuts) external returns (ITermMaxOrder order) {
+    function createOrder(
+        address maker,
+        uint256 maxXtReserve,
+        CurveCuts memory curveCuts
+    ) external returns (ITermMaxOrder order) {
         order = ITermMaxOrder(Clones.clone(TERMMAX_ORDER_IMPLEMENT));
-        order.initialize(owner(), maker, [ft, xt, debtToken], gt, curveCuts, _config);
+        order.initialize(owner(), maker, [ft, xt, debtToken], gt, maxXtReserve, curveCuts, _config);
         emit CreateOrder(maker, order);
     }
 }

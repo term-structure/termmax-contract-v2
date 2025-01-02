@@ -359,13 +359,14 @@ contract TermMaxRouter is
     function createOrderAndDeposit(
         ITermMaxMarket market,
         address maker,
+        uint256 maxXtReserve,
         uint256 debtTokenToDeposit,
         uint128 ftToDeposit,
         uint128 xtToDeposit,
         CurveCuts memory curveCuts
     ) external ensureMarketWhitelist(address(market)) whenNotPaused returns (ITermMaxOrder order) {
         (IERC20 ft, IERC20 xt, , , IERC20 debtToken) = market.tokens();
-        order = market.createOrder(maker, curveCuts);
+        order = market.createOrder(maker, maxXtReserve, curveCuts);
         if (debtTokenToDeposit > 0) {
             debtToken.safeTransferFrom(msg.sender, address(this), debtTokenToDeposit);
             debtToken.safeIncreaseAllowance(address(market), debtTokenToDeposit);
