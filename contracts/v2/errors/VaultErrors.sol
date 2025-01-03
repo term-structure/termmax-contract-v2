@@ -14,4 +14,7 @@ interface VaultErrors {
     error NotCuratorRole();
     error NotAllocatorRole();
     error NotGuardianRole();
+    error CannotSetToZero(address orderAddress);
+    error CannotSetToLessThanMargin(address orderAddress);
+    error OrderDoesNotExist(address orderAddress);
 }

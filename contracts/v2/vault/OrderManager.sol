@@ -19,13 +19,18 @@ abstract contract OrderManager is VaultErrors, VaultEvents, Ownable2StepUpgradea
     using TransferUtils for IERC20;
     using SafeCast for uint256;
 
+    struct OrderCapacity {
+        uint128 supply;
+        uint128 used;
+    }
+
     address public guardian;
     address public curator;
 
     address[] public supplyQueue;
     address[] public withdrawQueue;
 
-    mapping(address => uint256) public orderCapacity;
+    mapping(address => OrderCapacity) public orderCapacity;
 
     mapping(address => bool) public isAllocator;
 
@@ -38,7 +43,7 @@ abstract contract OrderManager is VaultErrors, VaultEvents, Ownable2StepUpgradea
 
     uint64 public maturity;
 
-    modifier onlyCurator() {
+    modifier onlyCuratorRole() {
         address sender = _msgSender();
         if (sender != curator && sender != owner()) revert NotCuratorRole();
         _;
@@ -76,7 +81,7 @@ abstract contract OrderManager is VaultErrors, VaultEvents, Ownable2StepUpgradea
         uint256 maxXtReserve,
         uint256 capacity,
         CurveCuts memory curveCuts
-    ) external onlyCurator returns (ITermMaxOrder order) {
+    ) external onlyCuratorRole returns (ITermMaxOrder order) {
         if (market.config().maturity > maturity) revert MarketIsLaterThanMaturity();
         if (
             supplyQueue.length >= VaultConstants.MAX_QUEUE_LENGTH ||
@@ -103,7 +108,7 @@ abstract contract OrderManager is VaultErrors, VaultEvents, Ownable2StepUpgradea
 
         supplyQueue.push(address(order));
         withdrawQueue.push(address(order));
-        orderCapacity[address(order)] = capacity - xtToDeposit;
+        orderCapacity[address(order)] = OrderCapacity({supply: capacity.toUint128(), used: xtToDeposit.toUint128()});
     }
 
     function asset() public view virtual returns (address);
@@ -124,7 +129,7 @@ abstract contract OrderManager is VaultErrors, VaultEvents, Ownable2StepUpgradea
         delete pendingTimelock;
     }
 
-    function submitTimelock(uint256 newTimelock) external onlyCurator {
+    function submitTimelock(uint256 newTimelock) external onlyCuratorRole {
         if (newTimelock == timelock) revert AlreadySet();
         if (pendingTimelock.validAt != 0) revert AlreadyPending();
         _checkTimelockBounds(newTimelock);
@@ -175,21 +180,27 @@ abstract contract OrderManager is VaultErrors, VaultEvents, Ownable2StepUpgradea
         _setGuardian(pendingGuardian.value);
     }
 
-    function submitCap(address[] calldata orderAddresses, uint256[] calldata newSupplyCap) external onlyCuratorRole {
-        Id id = marketParams.id();
-        if (marketParams.loanToken != asset()) revert ErrorsLib.InconsistentAsset(id);
-        if (MORPHO.lastUpdate(id) == 0) revert ErrorsLib.MarketNotCreated();
-        if (pendingCap[id].validAt != 0) revert ErrorsLib.AlreadyPending();
-        if (config[id].removableAt != 0) revert ErrorsLib.PendingRemoval();
-        uint256 supplyCap = config[id].cap;
-        if (newSupplyCap == supplyCap) revert ErrorsLib.AlreadySet();
+    function setCap(address[] calldata orderAddresses, uint128[] calldata newSupplyCaps) external onlyCuratorRole {
+        address sender = _msgSender();
+        for (uint256 i = 0; i < orderAddresses.length; i++) {
+            address orderAddress = orderAddresses[i];
+            uint128 newSupplyCap = newSupplyCaps[i];
+            OrderCapacity memory capacity = orderCapacity[orderAddress];
+            if (capacity.supply == 0) {
+                revert OrderDoesNotExist(orderAddress);
+            }
+            if (newSupplyCap == 0) {
+                revert CannotSetToZero(orderAddress);
+            }
 
-        if (newSupplyCap < supplyCap) {
-            _setCap(marketParams, id, newSupplyCap.toUint184());
-        } else {
-            pendingCap[id].update(newSupplyCap.toUint184(), timelock);
+            if (newSupplyCap < capacity.used) {
+                revert CannotSetToLessThanMargin(orderAddress);
+            }
 
-            emit EventsLib.SubmitCap(_msgSender(), id, newSupplyCap);
+            capacity.supply = newSupplyCap;
+            orderCapacity[orderAddress] = capacity;
+
+            emit SetCap(sender, orderAddress, newSupplyCap);
         }
     }
 }
