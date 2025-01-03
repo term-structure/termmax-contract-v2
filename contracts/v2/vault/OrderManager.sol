@@ -205,4 +205,58 @@ abstract contract OrderManager is VaultErrors, VaultEvents, Ownable2StepUpgradea
             emit SetCap(sender, orderAddress, newSupplyCap);
         }
     }
+
+    function updateSupplyQueue(uint256[] calldata indexes) external onlyAllocatorRole {
+        uint length = supplyQueue.length;
+        if (indexes.length != length) {
+            revert SupplyQueueLengthMismatch();
+        }
+        bool[] memory seen = new bool[](length);
+        address[] memory newSupplyQueue = new address[](length);
+
+        for (uint256 i; i < length; ++i) {
+            uint256 prevIndex = indexes[i];
+
+            // If prevIndex >= currLength, it will revert with native "Index out of bounds".
+            address order = supplyQueue[prevIndex];
+            if (seen[prevIndex]) revert DuplicateOrder(order);
+            seen[prevIndex] = true;
+
+            newSupplyQueue[i] = order;
+        }
+        supplyQueue = newSupplyQueue;
+
+        emit UpdateSupplyQueue(_msgSender(), newSupplyQueue);
+    }
+
+    function updateWithdrawQueue(uint256[] calldata indexes) external onlyAllocatorRole {
+        uint length = withdrawQueue.length;
+        if (indexes.length != length) {
+            revert WithdrawQueueLengthMismatch();
+        }
+        bool[] memory seen = new bool[](length);
+        address[] memory newWithdrawQueue = new address[](length);
+
+        for (uint256 i; i < length; ++i) {
+            uint256 prevIndex = indexes[i];
+
+            // If prevIndex >= currLength, it will revert with native "Index out of bounds".
+            address order = withdrawQueue[prevIndex];
+            if (seen[prevIndex]) revert DuplicateOrder(order);
+            seen[prevIndex] = true;
+
+            newWithdrawQueue[i] = order;
+        }
+        withdrawQueue = newWithdrawQueue;
+
+        emit UpdateWithdrawQueue(_msgSender(), newWithdrawQueue);
+    }
+
+    function setIsAllocator(address newAllocator, bool newIsAllocator) external onlyOwner {
+        if (isAllocator[newAllocator] == newIsAllocator) revert AlreadySet();
+
+        isAllocator[newAllocator] = newIsAllocator;
+
+        emit SetIsAllocator(newAllocator, newIsAllocator);
+    }
 }

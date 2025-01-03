@@ -8,4 +8,7 @@ interface VaultEvents {
     event RevokePendingTimelock(address indexed caller);
     event RevokePendingGuardian(address indexed caller);
     event SetCap(address indexed caller, address indexed order, uint256 newCap);
+    event SetIsAllocator(address indexed allocator, bool newIsAllocator);
+    event UpdateSupplyQueue(address indexed caller, address[] newSupplyQueue);
+    event UpdateWithdrawQueue(address indexed caller, address[] newWithdrawQueue);
 }

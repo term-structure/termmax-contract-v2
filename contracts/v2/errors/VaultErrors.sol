@@ -17,4 +17,7 @@ interface VaultErrors {
     error CapacityCannotSetToZero();
     error CapacityCannotLessThanUsed();
     error UnauthorizedOrder(address orderAddress);
+    error SupplyQueueLengthMismatch();
+    error WithdrawQueueLengthMismatch();
+    error DuplicateOrder(address orderAddress);
 }
