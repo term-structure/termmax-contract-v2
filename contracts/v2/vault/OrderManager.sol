@@ -83,6 +83,7 @@ abstract contract OrderManager is VaultErrors, VaultEvents, Ownable2StepUpgradea
         CurveCuts memory curveCuts
     ) external onlyCuratorRole returns (ITermMaxOrder order) {
         if (market.config().maturity > maturity) revert MarketIsLaterThanMaturity();
+        if (capacity == 0) revert CapacityCannotSetToZero();
         if (
             supplyQueue.length >= VaultConstants.MAX_QUEUE_LENGTH ||
             withdrawQueue.length >= VaultConstants.MAX_QUEUE_LENGTH
@@ -187,14 +188,15 @@ abstract contract OrderManager is VaultErrors, VaultEvents, Ownable2StepUpgradea
             uint128 newSupplyCap = newSupplyCaps[i];
             OrderCapacity memory capacity = orderCapacity[orderAddress];
             if (capacity.supply == 0) {
-                revert OrderDoesNotExist(orderAddress);
+                revert UnauthorizedOrder(orderAddress);
             }
+
             if (newSupplyCap == 0) {
-                revert CannotSetToZero(orderAddress);
+                revert CapacityCannotSetToZero();
             }
 
             if (newSupplyCap < capacity.used) {
-                revert CannotSetToLessThanMargin(orderAddress);
+                revert CapacityCannotLessThanUsed();
             }
 
             capacity.supply = newSupplyCap;
