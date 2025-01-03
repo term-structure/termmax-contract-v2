@@ -1,19 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity ^0.8.0;
 
-import {CurveCuts} from "../storage/TermMaxStorage.sol";
+import {SwapUnit} from "../router/ISwapAdapter.sol";
 
-struct OrderCapacity {
-    /// @notice The maximum amount of assets that can be allocated to the order.
-    uint184 cap;
-    /// @notice Whether the order is in the withdraw queue.
-    bool enabled;
-    /// @notice The timestamp at which the order can be instantly removed from the withdraw queue.
-    uint64 removableAt;
-}
-
-struct PendingCurveCuts {
-    CurveCuts curveCuts;
+struct PendingRedeem {
+    SwapUnit[] units;
+    uint256 minTokenOut;
+    /// @notice The timestamp at which the pending value becomes valid.
     uint64 validAt;
 }
 
