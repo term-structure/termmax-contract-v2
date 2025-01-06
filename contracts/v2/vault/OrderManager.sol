@@ -18,8 +18,12 @@ abstract contract OrderManager is VaultErrors, VaultEvents, Ownable2StepUpgradea
     using PendingLib for *;
     using TransferUtils for IERC20;
     using SafeCast for uint256;
+    using SafeCast for int256;
 
-    struct OrderCapacity {
+    struct OrderInfo {
+        ITermMaxMarket market;
+        IERC20 ft;
+        IERC20 xt;
         uint128 supply;
         uint128 used;
     }
@@ -30,7 +34,7 @@ abstract contract OrderManager is VaultErrors, VaultEvents, Ownable2StepUpgradea
     address[] public supplyQueue;
     address[] public withdrawQueue;
 
-    mapping(address => OrderCapacity) public orderCapacity;
+    mapping(address => OrderInfo) public orderCapacity;
 
     mapping(address => bool) public isAllocator;
 
@@ -88,7 +92,7 @@ abstract contract OrderManager is VaultErrors, VaultEvents, Ownable2StepUpgradea
             supplyQueue.length >= VaultConstants.MAX_QUEUE_LENGTH ||
             withdrawQueue.length >= VaultConstants.MAX_QUEUE_LENGTH
         ) revert MaxQueueLengthExceeded();
-        (, IERC20 xt, , , IERC20 debtToken) = market.tokens();
+        (IERC20 ft, IERC20 xt, , , IERC20 debtToken) = market.tokens();
         if (asset() != address(debtToken)) revert InconsistentAsset();
         uint xtToDeposit = xt.balanceOf(address(this));
         if (xtToDeposit > capacity) {
@@ -109,7 +113,13 @@ abstract contract OrderManager is VaultErrors, VaultEvents, Ownable2StepUpgradea
 
         supplyQueue.push(address(order));
         withdrawQueue.push(address(order));
-        orderCapacity[address(order)] = OrderCapacity({supply: capacity.toUint128(), used: xtToDeposit.toUint128()});
+        orderCapacity[address(order)] = OrderInfo({
+            market: market,
+            ft: ft,
+            xt: xt,
+            supply: capacity.toUint128(),
+            used: xtToDeposit.toUint128()
+        });
     }
 
     function asset() public view virtual returns (address);
@@ -183,11 +193,11 @@ abstract contract OrderManager is VaultErrors, VaultEvents, Ownable2StepUpgradea
 
     function setCap(address[] calldata orderAddresses, uint128[] calldata newSupplyCaps) external onlyCuratorRole {
         address sender = _msgSender();
-        for (uint256 i = 0; i < orderAddresses.length; i++) {
+        for (uint256 i = 0; i < orderAddresses.length; ++i) {
             address orderAddress = orderAddresses[i];
             uint128 newSupplyCap = newSupplyCaps[i];
-            OrderCapacity memory capacity = orderCapacity[orderAddress];
-            if (capacity.supply == 0) {
+            OrderInfo memory orderInfo = orderCapacity[orderAddress];
+            if (orderInfo.supply == 0) {
                 revert UnauthorizedOrder(orderAddress);
             }
 
@@ -195,15 +205,55 @@ abstract contract OrderManager is VaultErrors, VaultEvents, Ownable2StepUpgradea
                 revert CapacityCannotSetToZero();
             }
 
-            if (newSupplyCap < capacity.used) {
+            if (newSupplyCap < orderInfo.used) {
                 revert CapacityCannotLessThanUsed();
             }
 
-            capacity.supply = newSupplyCap;
-            orderCapacity[orderAddress] = capacity;
+            orderInfo.supply = newSupplyCap;
+            orderCapacity[orderAddress] = orderInfo;
 
             emit SetCap(sender, orderAddress, newSupplyCap);
         }
+    }
+
+    function allocAssets(address[] calldata orderAddresses, int256[] calldata values) external onlyAllocatorRole {
+        for (uint256 i = 0; i < orderAddresses.length; ++i) {
+            address orderAddress = orderAddresses[i];
+            OrderInfo memory orderInfo = orderCapacity[orderAddress];
+            if (orderInfo.supply == 0) {
+                revert UnauthorizedOrder(orderAddress);
+            }
+            int256 value = values[i];
+            if (value > 0) {
+                orderInfo.xt.safeTransfer(orderAddress, value.toUint256());
+            } else if (value < 0) {
+                ITermMaxOrder(orderAddress).withdrawAssets(orderInfo.xt, address(this), (-value).toUint256());
+            }
+        }
+    }
+
+    function _depositToOrder(uint128 amount) internal {
+        IERC20 debtToken = IERC20(asset());
+        for (uint256 i = 0; i < supplyQueue.length; ++i) {
+            OrderInfo memory orderInfo = orderCapacity[supplyQueue[i]];
+            uint128 avaliable = orderInfo.supply - orderInfo.used;
+            if (avaliable == 0) {
+                continue;
+            } else if (avaliable >= amount) {
+                _depositToMarket(orderInfo.market, debtToken, amount);
+                orderInfo.used += amount;
+                break;
+            } else {
+                _depositToMarket(orderInfo.market, debtToken, avaliable);
+                amount -= avaliable;
+                orderInfo.used = orderInfo.supply;
+            }
+        }
+    }
+
+    function _depositToMarket(ITermMaxMarket market, IERC20 debtToken, uint256 amount) internal {
+        debtToken.safeIncreaseAllowance(address(market), amount);
+        market.mint(address(this), amount);
     }
 
     function updateSupplyQueue(uint256[] calldata indexes) external onlyAllocatorRole {
