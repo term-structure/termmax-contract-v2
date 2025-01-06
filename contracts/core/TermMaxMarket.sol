@@ -786,10 +786,8 @@ contract TermMaxMarket is ITermMaxMarket, ReentrancyGuard, Ownable, Pausable {
             Constants.DECIMAL_BASE).toUint128();
         // Mint ft amount = debt amount, send issueFee to treasurer and other to caller
         ft.mint(mConfig.treasurer, issueFee);
-        ftReserve += issueFee;
         ftOutAmt = debt - issueFee;
         ft.mint(caller, ftOutAmt);
-        ftReserve += ftOutAmt;
 
         emit IssueFt(caller, gtId, debt, ftOutAmt, issueFee, collateralData);
     }
