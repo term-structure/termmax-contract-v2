@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import {IGearingToken, IERC20, IFlashRepayer} from "../core/tokens/AbstractGearingToken.sol";
+import {IGearingToken, IERC20, IFlashRepayer} from "contracts/tokens/AbstractGearingToken.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts/interfaces/IERC721Receiver.sol";
 
 contract MockFlashRepayer is IFlashRepayer, IERC721Receiver {
@@ -26,12 +26,7 @@ contract MockFlashRepayer is IFlashRepayer, IERC721Receiver {
         repayToken.approve(address(gt), debtAmt);
     }
 
-    function onERC721Received(
-        address,
-        address,
-        uint256,
-        bytes calldata
-    ) external pure override returns (bytes4) {
+    function onERC721Received(address, address, uint256, bytes calldata) external pure override returns (bytes4) {
         return this.onERC721Received.selector;
     }
 }

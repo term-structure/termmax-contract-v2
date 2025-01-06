@@ -48,8 +48,14 @@ library DeployUtils {
         res.collateralOracle = new MockPriceFeed(deployer);
         res.oracle = deployOracle(deployer);
 
-        res.oracle.setOracle(address(res.underlying), IOracle.Oracle(res.underlyingOracle,res.underlyingOracle, 365 days));
-        res.oracle.setOracle(address(res.collateral), IOracle.Oracle(res.collateralOracle, res.collateralOracle, 365 days));
+        res.oracle.setOracle(
+            address(res.underlying),
+            IOracle.Oracle(res.underlyingOracle, res.underlyingOracle, 365 days)
+        );
+        res.oracle.setOracle(
+            address(res.collateral),
+            IOracle.Oracle(res.collateralOracle, res.collateralOracle, 365 days)
+        );
 
         MockPriceFeed.RoundData memory roundData = MockPriceFeed.RoundData({
             roundId: 1,
@@ -60,28 +66,26 @@ library DeployUtils {
         });
         res.collateralOracle.updateRoundData(roundData);
 
-        ITermMaxFactory.TokenPairDeployParams memory tokenPairParams = ITermMaxFactory
-            .TokenPairDeployParams({
-                gtKey: GT_ERC20,
-                admin: deployer,
-                collateral: address(res.collateral),
-                underlying: res.underlying,
-                oracle: res.oracle,
-                liquidationLtv: liquidationLtv,
-                maxLtv: maxLtv,
-                liquidatable: true,
-                tokenPairConfig: tokenPairConfig,
-                gtInitalParams: abi.encode(type(uint256).max)
-            });
+        ITermMaxFactory.TokenPairDeployParams memory tokenPairParams = ITermMaxFactory.TokenPairDeployParams({
+            gtKey: GT_ERC20,
+            admin: deployer,
+            collateral: address(res.collateral),
+            underlying: res.underlying,
+            oracle: res.oracle,
+            liquidationLtv: liquidationLtv,
+            maxLtv: maxLtv,
+            liquidatable: true,
+            tokenPairConfig: tokenPairConfig,
+            gtInitalParams: abi.encode(type(uint256).max)
+        });
         res.tokenPairConfig = tokenPairConfig;
         res.tokenPair = ITermMaxTokenPair(res.factory.createTokenPair(tokenPairParams));
 
-        ITermMaxFactory.MarketDeployParams memory marketParams = ITermMaxFactory
-            .MarketDeployParams({
-                admin: deployer,
-                tokenPair: res.tokenPair,
-                marketConfig: marketConfig
-            });
+        ITermMaxFactory.MarketDeployParams memory marketParams = ITermMaxFactory.MarketDeployParams({
+            admin: deployer,
+            tokenPair: res.tokenPair,
+            marketConfig: marketConfig
+        });
         res.marketConfig = marketConfig;
         res.market = ITermMaxMarket(res.factory.createMarket(marketParams));
         (res.ft, res.xt, res.gt, , ) = res.market.tokens();
@@ -109,8 +113,14 @@ library DeployUtils {
         res.collateralOracle = new MockPriceFeed(deployer);
 
         res.oracle = deployOracle(deployer);
-        res.oracle.setOracle(address(res.underlying), IOracle.Oracle(res.underlyingOracle, res.underlyingOracle, 7 days));
-        res.oracle.setOracle(address(res.collateral), IOracle.Oracle(res.collateralOracle, res.collateralOracle, 7 days));
+        res.oracle.setOracle(
+            address(res.underlying),
+            IOracle.Oracle(res.underlyingOracle, res.underlyingOracle, 7 days)
+        );
+        res.oracle.setOracle(
+            address(res.collateral),
+            IOracle.Oracle(res.collateralOracle, res.collateralOracle, 7 days)
+        );
 
         MockPriceFeed.RoundData memory roundData = MockPriceFeed.RoundData({
             roundId: 1,
@@ -121,28 +131,26 @@ library DeployUtils {
         });
         res.collateralOracle.updateRoundData(roundData);
 
-        ITermMaxFactory.TokenPairDeployParams memory tokenPairParams = ITermMaxFactory
-            .TokenPairDeployParams({
-                gtKey: GT_ERC20,
-                admin: deployer,
-                collateral: address(res.collateral),
-                underlying: res.underlying,
-                oracle: res.oracle,
-                liquidationLtv: liquidationLtv,
-                maxLtv: maxLtv,
-                liquidatable: true,
-                tokenPairConfig: tokenPairConfig,
-                gtInitalParams: abi.encode(type(uint256).max)
-            });
+        ITermMaxFactory.TokenPairDeployParams memory tokenPairParams = ITermMaxFactory.TokenPairDeployParams({
+            gtKey: GT_ERC20,
+            admin: deployer,
+            collateral: address(res.collateral),
+            underlying: res.underlying,
+            oracle: res.oracle,
+            liquidationLtv: liquidationLtv,
+            maxLtv: maxLtv,
+            liquidatable: true,
+            tokenPairConfig: tokenPairConfig,
+            gtInitalParams: abi.encode(type(uint256).max)
+        });
         res.tokenPairConfig = tokenPairConfig;
         res.tokenPair = ITermMaxTokenPair(res.factory.createTokenPair(tokenPairParams));
 
-        ITermMaxFactory.MarketDeployParams memory params = ITermMaxFactory
-            .MarketDeployParams({
-                admin: deployer,
-                tokenPair: res.tokenPair,
-                marketConfig: marketConfig
-            });
+        ITermMaxFactory.MarketDeployParams memory params = ITermMaxFactory.MarketDeployParams({
+            admin: deployer,
+            tokenPair: res.tokenPair,
+            marketConfig: marketConfig
+        });
 
         res.market = ITermMaxMarket(res.factory.createMarket(params));
         (res.ft, res.xt, res.gt, , ) = res.market.tokens();
@@ -167,8 +175,14 @@ library DeployUtils {
         res.collateralOracle = new MockPriceFeed(deployer);
 
         res.oracle = deployOracle(deployer);
-        res.oracle.setOracle(address(res.underlying), IOracle.Oracle(res.underlyingOracle,res.underlyingOracle, 7 days));
-        res.oracle.setOracle(address(res.collateral), IOracle.Oracle(res.collateralOracle,res.collateralOracle, 7 days));
+        res.oracle.setOracle(
+            address(res.underlying),
+            IOracle.Oracle(res.underlyingOracle, res.underlyingOracle, 7 days)
+        );
+        res.oracle.setOracle(
+            address(res.collateral),
+            IOracle.Oracle(res.collateralOracle, res.collateralOracle, 7 days)
+        );
 
         MockPriceFeed.RoundData memory roundData = MockPriceFeed.RoundData({
             roundId: 1,
@@ -179,28 +193,26 @@ library DeployUtils {
         });
         MockPriceFeed(address(res.collateralOracle)).updateRoundData(roundData);
 
-        ITermMaxFactory.TokenPairDeployParams memory tokenPairParams = ITermMaxFactory
-            .TokenPairDeployParams({
-                gtKey: gtKey,
-                admin: deployer,
-                collateral: address(res.collateral),
-                underlying: res.underlying,
-                oracle: res.oracle,
-                liquidationLtv: liquidationLtv,
-                maxLtv: maxLtv,
-                liquidatable: liquidatable,
-                tokenPairConfig: tokenPairConfig,
-                gtInitalParams: abi.encode(type(uint256).max)
-            });
+        ITermMaxFactory.TokenPairDeployParams memory tokenPairParams = ITermMaxFactory.TokenPairDeployParams({
+            gtKey: gtKey,
+            admin: deployer,
+            collateral: address(res.collateral),
+            underlying: res.underlying,
+            oracle: res.oracle,
+            liquidationLtv: liquidationLtv,
+            maxLtv: maxLtv,
+            liquidatable: liquidatable,
+            tokenPairConfig: tokenPairConfig,
+            gtInitalParams: abi.encode(type(uint256).max)
+        });
         res.tokenPairConfig = tokenPairConfig;
         res.tokenPair = ITermMaxTokenPair(res.factory.createTokenPair(tokenPairParams));
 
-        ITermMaxFactory.MarketDeployParams memory params = ITermMaxFactory
-            .MarketDeployParams({
-                admin: deployer,
-                tokenPair: res.tokenPair,
-                marketConfig: marketConfig
-            });
+        ITermMaxFactory.MarketDeployParams memory params = ITermMaxFactory.MarketDeployParams({
+            admin: deployer,
+            tokenPair: res.tokenPair,
+            marketConfig: marketConfig
+        });
 
         res.market = ITermMaxMarket(res.factory.createMarket(params));
         (res.ft, res.xt, res.gt, , ) = res.market.tokens();
@@ -217,10 +229,7 @@ library DeployUtils {
     function deployOracle(address admin) internal returns (OracleAggregator oracle) {
         OracleAggregator implementation = new OracleAggregator();
         bytes memory data = abi.encodeCall(OracleAggregator.initialize, admin);
-        ERC1967Proxy proxy = new ERC1967Proxy(
-            address(implementation),
-            data
-        );
+        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), data);
         oracle = OracleAggregator(address(proxy));
     }
 
@@ -231,10 +240,10 @@ library DeployUtils {
         router = TermMaxRouter(address(proxy));
     }
 
-    function deployAccessManager(address admin) internal returns (AccessManager accessManager) {
-        AccessManager implementation = new AccessManager();
-        bytes memory data = abi.encodeCall(AccessManager.initialize, admin);
-        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), data);
-        accessManager = AccessManager(address(proxy));
-    }
+    // function deployAccessManager(address admin) internal returns (AccessManager accessManager) {
+    //     AccessManager implementation = new AccessManager();
+    //     bytes memory data = abi.encodeCall(AccessManager.initialize, admin);
+    //     ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), data);
+    //     accessManager = AccessManager(address(proxy));
+    // }
 }

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import {IMintableERC20, IERC20} from "../core/tokens/IMintableERC20.sol";
-import "../router/swapAdapters/ERC20SwapAdapter.sol";
+import {IMintableERC20, IERC20} from "contracts/tokens/IMintableERC20.sol";
+import "contracts/router/swapAdapters/ERC20SwapAdapter.sol";
 
 contract MockSwapAdapter is ERC20SwapAdapter {
     address public immutable pool;

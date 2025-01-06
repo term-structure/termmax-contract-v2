@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import {ITermMaxMarket, IFlashLoanReceiver, IGearingToken, IERC20} from "../core/TermMaxMarket.sol";
-import {ITermMaxTokenPair} from "../core/ITermMaxTokenPair.sol";
+import {ITermMaxMarket, IFlashLoanReceiver, IGearingToken, IERC20} from "contracts/TermMaxMarket.sol";
 
 contract MockFlashLoanReceiver is IFlashLoanReceiver {
     ITermMaxMarket market;
@@ -23,10 +22,7 @@ contract MockFlashLoanReceiver is IFlashLoanReceiver {
         uint256 amount,
         bytes calldata data
     ) external override returns (bytes memory collateralData) {
-        (address caller, uint256 collateralAmt) = abi.decode(
-            data,
-            (address, uint)
-        );
+        (address caller, uint256 collateralAmt) = abi.decode(data, (address, uint));
         IERC20(collateral).approve(address(gt), collateralAmt);
 
         assert(gtReceiver == caller);
@@ -36,13 +32,9 @@ contract MockFlashLoanReceiver is IFlashLoanReceiver {
         collateralData = abi.encode(collateralAmt);
     }
 
-    function leverageByXt(
-        uint128 xtAmt,
-        bytes calldata callbackData
-    ) external returns (uint256 gtId) {
+    function leverageByXt(uint128 xtAmt, bytes calldata callbackData) external returns (uint256 gtId) {
         xt.transferFrom(msg.sender, address(this), xtAmt);
-        ITermMaxTokenPair tokenPair = ITermMaxMarket(market).tokenPair();
-        xt.approve(address(tokenPair), xtAmt);
-        gtId = tokenPair.leverageByXt(msg.sender, xtAmt, callbackData);
+        xt.approve(address(market), xtAmt);
+        gtId = market.leverageByXt(msg.sender, xtAmt, callbackData);
     }
 }
