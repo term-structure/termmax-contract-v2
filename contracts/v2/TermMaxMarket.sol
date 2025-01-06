@@ -72,12 +72,12 @@ contract TermMaxMarket is
         MarketConfig memory config_ = params.marketConfig;
         if (config_.openTime < block.timestamp || config_.maturity < config_.openTime)
             revert InvalidTime(config_.openTime, config_.maturity);
-        _checkFee(config_.feeConfig.borrowFeeRatio);
-        _checkFee(config_.feeConfig.lendFeeRatio);
+        _checkFee(config_.feeConfig.borrowTakerFeeRatio);
+        _checkFee(config_.feeConfig.borrowMakerFeeRatio);
+        _checkFee(config_.feeConfig.lendTakerFeeRatio);
+        _checkFee(config_.feeConfig.lendMakerFeeRatio);
         _checkFee(config_.feeConfig.redeemFeeRatio);
         _checkFee(config_.feeConfig.issueFtFeeRatio);
-        _checkFee(config_.feeConfig.minNBorrowFeeR);
-        _checkFee(config_.feeConfig.minNLendFeeR);
 
         debtToken = params.debtToken;
         collateral = params.collateral;
@@ -147,12 +147,12 @@ contract TermMaxMarket is
             mConfig.treasurer = newConfig.treasurer;
             gt.setTreasurer(newConfig.treasurer);
         }
-        _checkFee(newConfig.feeConfig.borrowFeeRatio);
-        _checkFee(newConfig.feeConfig.lendFeeRatio);
+        _checkFee(newConfig.feeConfig.borrowTakerFeeRatio);
+        _checkFee(newConfig.feeConfig.borrowMakerFeeRatio);
+        _checkFee(newConfig.feeConfig.lendTakerFeeRatio);
+        _checkFee(newConfig.feeConfig.lendMakerFeeRatio);
         _checkFee(newConfig.feeConfig.redeemFeeRatio);
         _checkFee(newConfig.feeConfig.issueFtFeeRatio);
-        _checkFee(newConfig.feeConfig.minNBorrowFeeR);
-        _checkFee(newConfig.feeConfig.minNLendFeeR);
 
         mConfig.feeConfig = newConfig.feeConfig;
 
