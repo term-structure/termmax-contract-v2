@@ -208,7 +208,7 @@ contract TermMaxOrder is
         _checkFee(newFeeConfig.lendTakerFeeRatio);
         _checkFee(newFeeConfig.lendMakerFeeRatio);
         _checkFee(newFeeConfig.redeemFeeRatio);
-        _checkFee(newFeeConfig.issueFtFeeRatiIII);
+        _checkFee(newFeeConfig.issueFtFeeRatio);
         _checkFee(newFeeConfig.issueFtFeeRef);
         _orderConfig.feeConfig = newFeeConfig;
         emit UpdateFeeConfig(newFeeConfig);

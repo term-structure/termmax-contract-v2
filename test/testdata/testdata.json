@@ -4,7 +4,7 @@
     "openTime": "1732194167",
     "maturity": "1739970167",
     "redeemFeeRatio": "0",
-    "issueFtFeeRatiIII": "0",
+    "issueFtFeeRatio": "0",
     "issueFtFeeRef": "0",
     "lendTakerFeeRatio": "0",
     "borrowTakerFeeRatio": "0",
