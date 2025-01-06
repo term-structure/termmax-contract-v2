@@ -470,4 +470,8 @@ contract TermMaxOrder is
         uint ftAmtToIssue = ((targetFtReserve - ftReserve) * Constants.DECIMAL_BASE) / config.feeConfig.issueFtFeeRatio;
         market.issueFtByExistedGt(recipient, (ftAmtToIssue).toUint128(), config.gtId);
     }
+
+    function withdrawAssets(IERC20 token, address recipient, uint256 amount) external onlyMaker {
+        token.safeTransfer(recipient, amount);
+    }
 }

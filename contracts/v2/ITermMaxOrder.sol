@@ -41,6 +41,8 @@ interface ITermMaxOrder {
     /// @param newXtReserve New XT reserve amount
     function updateOrder(OrderConfig memory newOrderConfig, uint256 newFtReserve, uint256 newXtReserve) external;
 
+    function withdrawAssets(IERC20 token, address recipient, uint256 amount) external;
+
     function updateFeeConfig(FeeConfig memory newFeeConfig) external;
 
     /// @notice Return the token reserves
