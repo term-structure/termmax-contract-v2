@@ -34,4 +34,6 @@ interface OrderEvents {
         uint128 netTokenOut,
         uint128 feeAmt
     );
+
+    event WithdrawAssets(IERC20 indexed token, address indexed caller, address indexed recipient, uint256 amount);
 }

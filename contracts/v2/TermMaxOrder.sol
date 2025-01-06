@@ -473,5 +473,6 @@ contract TermMaxOrder is
 
     function withdrawAssets(IERC20 token, address recipient, uint256 amount) external onlyMaker {
         token.safeTransfer(recipient, amount);
+        emit WithdrawAssets(token, _msgSender(), recipient, amount);
     }
 }
