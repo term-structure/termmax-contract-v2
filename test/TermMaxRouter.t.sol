@@ -158,20 +158,10 @@ contract TermMaxRouterTest is Test {
         uint256 collateralAmt = 0.1e18;
         {
             vm.startPrank(deployer);
-            LoanUtils.fastMintGt(
-                res,
-                deployer,
-                debtAmt,
-                collateralAmt
-            );
-            LoanUtils.fastMintGt(
-                res,
-                deployer,
-                debtAmt,
-                collateralAmt
-            );
+            LoanUtils.fastMintGt(res, deployer, debtAmt, collateralAmt);
+            LoanUtils.fastMintGt(res, deployer, debtAmt, collateralAmt);
             vm.stopPrank();
-            
+
             vm.startPrank(sender);
 
             uint128 amount = 1000e8;
@@ -813,7 +803,7 @@ contract TermMaxRouterTest is Test {
             debtAmt,
             collateralAmt
         );
-        uint repayAmtIn = debtAmt/2;
+        uint repayAmtIn = debtAmt / 2;
         res.underlying.mint(sender, repayAmtIn);
 
         uint collateralBalanceBefore = res.collateral.balanceOf(sender);
@@ -824,7 +814,7 @@ contract TermMaxRouterTest is Test {
 
         bool byUnderlying = false;
         vm.expectEmit();
-        emit IGearingToken.Repay(gtId, 5095188345, byUnderlying);
+        emit IGearingToken.Repay(gtId, 5095183523, byUnderlying);
         router.repayByTokenThroughFt(
             sender,
             res.market,
@@ -839,9 +829,7 @@ contract TermMaxRouterTest is Test {
         uint underlyingBalanceAfter = res.underlying.balanceOf(sender);
 
         assert(underlyingBalanceAfter == underlyingBalanceBefore - repayAmtIn);
-        assert(
-            collateralBalanceAfter  == collateralBalanceBefore
-        );
+        assert(collateralBalanceAfter == collateralBalanceBefore);
 
         assert(ftBalanceAfter == ftBalanceBefore);
 
@@ -945,10 +933,7 @@ contract TermMaxRouterTest is Test {
         uint underlyingBalanceAfter = res.underlying.balanceOf(sender);
 
         assert(collateralBalanceBefore == collateralBalanceAfter);
-        assert(
-            underlyingBalanceAfter >=
-                underlyingBalanceBefore
-        );
+        assert(underlyingBalanceAfter >= underlyingBalanceBefore);
 
         vm.expectRevert(
             abi.encodePacked(
@@ -975,9 +960,7 @@ contract TermMaxRouterTest is Test {
         );
 
         uint256 minUnderlyingAmt = collateralValue;
-        vm.expectRevert(
-            
-        );
+        vm.expectRevert();
         SwapUnit[] memory units = new SwapUnit[](1);
         units[0] = SwapUnit(
             address(adapter),
@@ -1023,7 +1006,13 @@ contract TermMaxRouterTest is Test {
         vm.stopPrank();
         vm.prank(deployer);
         vm.expectRevert(
-            abi.encodeWithSignature("ERC721IncorrectOwner(address,uint256,address)", deployer, gtId, sender));
+            abi.encodeWithSignature(
+                "ERC721IncorrectOwner(address,uint256,address)",
+                deployer,
+                gtId,
+                sender
+            )
+        );
         router.flashRepayFromColl(
             sender,
             res.market,
@@ -1268,7 +1257,6 @@ contract TermMaxRouterTest is Test {
         vm.assume(withdrawAmt > 0 && withdrawAmt < 80e8);
         vm.startPrank(sender);
 
-        
         res.underlying.mint(sender, underlyingAmtIn);
         res.underlying.approve(address(router), underlyingAmtIn);
         (uint128 lpFtOutAmt, uint128 lpXtOutAmt) = router.provideLiquidity(
@@ -1692,7 +1680,14 @@ contract TermMaxRouterTest is Test {
         vm.startPrank(deployer);
         res.lpFt.approve(address(router), res.lpFt.balanceOf(deployer));
         res.lpXt.approve(address(router), res.lpXt.balanceOf(deployer));
-        router.withdrawLiquidityToFtXt(deployer, res.market, res.lpFt.balanceOf(deployer) - 1, res.lpXt.balanceOf(deployer) - 1, 0, 0);
+        router.withdrawLiquidityToFtXt(
+            deployer,
+            res.market,
+            res.lpFt.balanceOf(deployer) - 1,
+            res.lpXt.balanceOf(deployer) - 1,
+            0,
+            0
+        );
         res.ft.transfer(address(res.market), res.ft.balanceOf(deployer));
         res.xt.transfer(address(res.market), res.xt.balanceOf(deployer));
         vm.stopPrank();
@@ -1756,7 +1751,14 @@ contract TermMaxRouterTest is Test {
         res.lpFt.approve(address(router), res.lpFt.balanceOf(sender));
         res.lpXt.approve(address(router), res.lpXt.balanceOf(sender));
 
-        uint tokenOut = router.withdrawLiquidityToToken(sender, res.market, res.lpFt.balanceOf(sender), res.lpXt.balanceOf(sender), 0, res.marketConfig.lsf);
+        uint tokenOut = router.withdrawLiquidityToToken(
+            sender,
+            res.market,
+            res.lpFt.balanceOf(sender),
+            res.lpXt.balanceOf(sender),
+            0,
+            res.marketConfig.lsf
+        );
         console.log("tokenOut", tokenOut);
         assert(tokenOut > providedAmount);
         vm.stopPrank();
