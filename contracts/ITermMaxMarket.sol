@@ -54,6 +54,9 @@ interface ITermMaxMarket {
         bytes calldata collateralData
     ) external returns (uint256 gtId, uint128 ftOutAmt);
 
+    /// @notice Return the issue fee ratio
+    function issueFtFeeRatio() external view returns (uint);
+
     /// @notice Using collateral to issue FT tokens.
     ///         Caller will get FT(bond) tokens equal to the debt amount subtract issue fee
     /// @param recipient Who will receive Gearing Token

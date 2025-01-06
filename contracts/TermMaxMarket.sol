@@ -61,6 +61,13 @@ contract TermMaxMarket is
         _disableInitializers();
     }
 
+    function issueFtFeeRatio() public view override returns (uint) {
+        return
+            (_config.feeConfig.issueFtFeeRatiIII *
+                _config.feeConfig.issueFtFeeRef *
+                _daysToMaturity(_config.maturity)) / Constants.DAYS_IN_YEAR;
+    }
+
     /**
      * @inheritdoc ITermMaxMarket
      */
@@ -77,7 +84,8 @@ contract TermMaxMarket is
         _checkFee(config_.feeConfig.lendTakerFeeRatio);
         _checkFee(config_.feeConfig.lendMakerFeeRatio);
         _checkFee(config_.feeConfig.redeemFeeRatio);
-        _checkFee(config_.feeConfig.issueFtFeeRatio);
+        _checkFee(config_.feeConfig.issueFtFeeRatiIII);
+        _checkFee(config_.feeConfig.issueFtFeeRef);
 
         debtToken = params.debtToken;
         collateral = params.collateral;
@@ -152,7 +160,8 @@ contract TermMaxMarket is
         _checkFee(newConfig.feeConfig.lendTakerFeeRatio);
         _checkFee(newConfig.feeConfig.lendMakerFeeRatio);
         _checkFee(newConfig.feeConfig.redeemFeeRatio);
-        _checkFee(newConfig.feeConfig.issueFtFeeRatio);
+        _checkFee(newConfig.feeConfig.issueFtFeeRatiIII);
+        _checkFee(newConfig.feeConfig.issueFtFeeRef);
 
         mConfig.feeConfig = newConfig.feeConfig;
 
@@ -254,7 +263,7 @@ contract TermMaxMarket is
         gtId = gt.mint(caller, recipient, debt, collateralData);
 
         MarketConfig memory mConfig = _config;
-        uint128 issueFee = ((debt * mConfig.feeConfig.issueFtFeeRatio) / Constants.DECIMAL_BASE).toUint128();
+        uint128 issueFee = ((debt * issueFtFeeRatio()) / Constants.DECIMAL_BASE).toUint128();
         // Mint ft amount = debt amount, send issueFee to treasurer and other to caller
         ft.mint(mConfig.treasurer, issueFee);
         ftOutAmt = debt - issueFee;
@@ -283,7 +292,7 @@ contract TermMaxMarket is
         gt.augmentDebt(caller, gtId, debt);
 
         MarketConfig memory mConfig = _config;
-        uint128 issueFee = ((debt * mConfig.feeConfig.issueFtFeeRatio) / Constants.DECIMAL_BASE).toUint128();
+        uint128 issueFee = ((debt * issueFtFeeRatio()) / Constants.DECIMAL_BASE).toUint128();
         // Mint ft amount = debt amount, send issueFee to treasurer and other to caller
         ft.mint(mConfig.treasurer, issueFee);
         ftOutAmt = debt - issueFee;
