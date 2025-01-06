@@ -208,7 +208,8 @@ contract TermMaxOrder is
         _checkFee(newFeeConfig.lendTakerFeeRatio);
         _checkFee(newFeeConfig.lendMakerFeeRatio);
         _checkFee(newFeeConfig.redeemFeeRatio);
-        _checkFee(newFeeConfig.issueFtFeeRatio);
+        _checkFee(newFeeConfig.issueFtFeeRatiIII);
+        _checkFee(newFeeConfig.issueFtFeeRef);
         _orderConfig.feeConfig = newFeeConfig;
         emit UpdateFeeConfig(newFeeConfig);
     }
@@ -442,7 +443,7 @@ contract TermMaxOrder is
 
     function _issueFt(address recipient, uint ftReserve, uint targetFtReserve, OrderConfig memory config) internal {
         if (config.gtId == 0) revert CantNotIssueFtWithoutGt();
-        uint ftAmtToIssue = ((targetFtReserve - ftReserve) * Constants.DECIMAL_BASE) / config.feeConfig.issueFtFeeRatio;
+        uint ftAmtToIssue = ((targetFtReserve - ftReserve) * Constants.DECIMAL_BASE) / market.issueFtFeeRatio();
         market.issueFtByExistedGt(recipient, (ftAmtToIssue).toUint128(), config.gtId);
     }
 
