@@ -108,12 +108,12 @@ contract TermMaxMarket is
             MarketConstants.PREFIX_FT.contact(params.tokenSymbol),
             decimals
         );
-        xt.initialize(
+        xt_.initialize(
             MarketConstants.PREFIX_XT.contact(params.tokenName),
             MarketConstants.PREFIX_XT.contact(params.tokenSymbol),
             decimals
         );
-        gt.initialize(
+        gt_.initialize(
             MarketConstants.PREFIX_GT.contact(params.tokenName),
             MarketConstants.PREFIX_GT.contact(params.tokenSymbol),
             GtConfig(

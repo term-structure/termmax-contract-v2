@@ -28,7 +28,7 @@ contract TermMaxFactory is Ownable2Step, FactoryErrors, FactoryEvents, ITermMaxF
     mapping(bytes32 => address) public gtImplements;
 
     constructor(address admin, address TERMMAX_MARKET_IMPLEMENTATION_) Ownable(admin) {
-        if (TERMMAX_MARKET_IMPLEMENTATION == address(0)) {
+        if (TERMMAX_MARKET_IMPLEMENTATION_ == address(0)) {
             revert InvalidMarketImplement();
         }
         TERMMAX_MARKET_IMPLEMENTATION = TERMMAX_MARKET_IMPLEMENTATION_;

@@ -1,13 +1,17 @@
 {
   "currentTime": "1734786167",
-  "tokenPairConfig": {
+  "marketConfig": {
     "openTime": "1732194167",
     "maturity": "1739970167",
     "redeemFeeRatio": "0",
-    "issueFtFeeRatio": "0",
-    "protocolFeeRatio": "0"
+    "issueFtFeeRatiIII": "0",
+    "issueFtFeeRef": "0",
+    "lendTakerFeeRatio": "0",
+    "borrowTakerFeeRatio": "0",
+    "lendMakerFeeRatio": "0",
+    "borrowMakerFeeRatio": "0"
   },
-  "marketConfig": {
+  "orderConfig": {
     "lendFeeRatio": "3000000",
     "borrowFeeRatio": "10000000",
     "minNLendFeeR": "30000",

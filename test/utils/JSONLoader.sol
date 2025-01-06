@@ -28,8 +28,11 @@ library JSONLoader {
         marketConfig.feeConfig.redeemFeeRatio = uint32(
             vm.parseUint(vm.parseJsonString(testdataJSON, string.concat(key, ".redeemFeeRatio")))
         );
-        marketConfig.feeConfig.issueFtFeeRatio = uint32(
-            vm.parseUint(vm.parseJsonString(testdataJSON, string.concat(key, ".issueFtFeeRatio")))
+        marketConfig.feeConfig.issueFtFeeRatiIII = uint32(
+            vm.parseUint(vm.parseJsonString(testdataJSON, string.concat(key, ".issueFtFeeRatiIII")))
+        );
+        marketConfig.feeConfig.issueFtFeeRef = uint32(
+            vm.parseUint(vm.parseJsonString(testdataJSON, string.concat(key, ".issueFtFeeRef")))
         );
         marketConfig.feeConfig.lendTakerFeeRatio = uint32(
             vm.parseUint(vm.parseJsonString(testdataJSON, string.concat(key, ".lendTakerFeeRatio")))
