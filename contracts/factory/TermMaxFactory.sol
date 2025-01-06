@@ -9,12 +9,13 @@ import {MarketInitialParams} from "../storage/TermMaxStorage.sol";
 import {FactoryErrors} from "../errors/FactoryErrors.sol";
 import {FactoryEvents} from "../events/FactoryEvents.sol";
 import {ITermMaxMarket} from "../ITermMaxMarket.sol";
+import {ITermMaxFactory} from "./ITermMaxFactory.sol";
 
 /**
  * @title The TermMax factory
  * @author Term Structure Labs
  */
-contract TermMaxFactory is Ownable2Step, FactoryErrors, FactoryEvents {
+contract TermMaxFactory is Ownable2Step, FactoryErrors, FactoryEvents, ITermMaxFactory {
     bytes32 constant GT_ERC20 = keccak256("GearingTokenWithERC20");
 
     /// @notice The implementation of TermMax Market contract
