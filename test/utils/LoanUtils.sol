@@ -3,8 +3,9 @@ pragma solidity ^0.8.27;
 
 import {console} from "forge-std/Script.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import {DeployUtils, Constants} from "./DeployUtils.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {Constants} from "contracts/lib/Constants.sol";
+import {DeployUtils} from "./DeployUtils.sol";
 
 library LoanUtils {
     using SafeCast for uint256;
@@ -16,7 +17,7 @@ library LoanUtils {
         uint cpDecimals = 10 ** res.collateralOracle.decimals();
         uint upDecimals = 10 ** res.underlyingOracle.decimals();
         uint cDecimals = 10 ** res.collateral.decimals();
-        uint uDecimals = 10 ** res.underlying.decimals();
+        uint uDecimals = 10 ** res.debt.decimals();
         uint debtValue = (debtAmt * uPrice.toUint256()) / uDecimals;
         uint collateralValue = (collateralAmt * cPrice.toUint256()) / (cpDecimals * cDecimals);
         if (collateralValue == 0) {
@@ -38,7 +39,7 @@ library LoanUtils {
         uint cpDecimals = 10 ** res.collateralOracle.decimals();
         uint upDecimals = 10 ** res.underlyingOracle.decimals();
         uint cDecimals = 10 ** res.collateral.decimals();
-        uint uDecimals = 10 ** res.underlying.decimals();
+        uint uDecimals = 10 ** res.debt.decimals();
 
         uint udPriceToCdPrice = (uPrice.toUint256() * cpDecimals * Constants.DECIMAL_BASE) /
             (cPrice.toUint256() * upDecimals);
@@ -73,6 +74,6 @@ library LoanUtils {
         res.collateral.approve(address(res.gt), collateralAmt);
         bytes memory collateralData = abi.encode(collateralAmt);
 
-        (gtId, ftOutAmt) = res.tokenPair.issueFt(debtAmt, collateralData);
+        (gtId, ftOutAmt) = res.market.issueFt(to, debtAmt, collateralData);
     }
 }

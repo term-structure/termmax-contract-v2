@@ -31,7 +31,7 @@ library DeployUtils {
         MockPriceFeed collateralOracle;
         OracleAggregator oracle;
         MockERC20 collateral;
-        MockERC20 underlying;
+        MockERC20 debt;
     }
 
     function deployMarket(
@@ -43,16 +43,13 @@ library DeployUtils {
         res.factory = deployFactory(admin);
 
         res.collateral = new MockERC20("ETH", "ETH", 18);
-        res.underlying = new MockERC20("DAI", "DAI", 8);
+        res.debt = new MockERC20("DAI", "DAI", 8);
 
         res.underlyingOracle = new MockPriceFeed(admin);
         res.collateralOracle = new MockPriceFeed(admin);
         res.oracle = deployOracle(admin);
 
-        res.oracle.setOracle(
-            address(res.underlying),
-            IOracle.Oracle(res.underlyingOracle, res.underlyingOracle, 365 days)
-        );
+        res.oracle.setOracle(address(res.debt), IOracle.Oracle(res.underlyingOracle, res.underlyingOracle, 365 days));
         res.oracle.setOracle(
             address(res.collateral),
             IOracle.Oracle(res.collateralOracle, res.collateralOracle, 365 days)
@@ -69,7 +66,7 @@ library DeployUtils {
 
         MarketInitialParams memory initialParams = MarketInitialParams({
             collateral: address(res.collateral),
-            debtToken: res.underlying,
+            debtToken: res.debt,
             admin: admin,
             gtImplementation: address(0),
             marketConfig: marketConfig,
