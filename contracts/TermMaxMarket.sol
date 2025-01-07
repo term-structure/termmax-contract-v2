@@ -186,6 +186,8 @@ contract TermMaxMarket is
 
         ft.mint(recipient, debtTokenAmt);
         xt.mint(recipient, debtTokenAmt);
+
+        emit Mint(caller, recipient, debtTokenAmt);
     }
 
     function burn(address recipient, uint256 debtTokenAmt) external override nonReentrant isOpen {
@@ -200,6 +202,8 @@ contract TermMaxMarket is
         xt.burn(debtTokenAmt);
 
         debtToken.safeTransfer(recipient, debtTokenAmt);
+
+        emit Burn(caller, recipient, debtTokenAmt);
     }
 
     /**

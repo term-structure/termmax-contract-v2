@@ -9,8 +9,6 @@ interface MarketErrors {
     error CollateralCanNotEqualUnderlyinng();
     /// @notice Error for it is not the opening trading day yet
     error TermIsNotOpen();
-    /// @notice Error for the maturity day has been reached
-    error TermWasClosed();
     /// @notice Error for redeeming before the liquidation window
     error CanNotRedeemBeforeFinalLiquidationDeadline(uint256 liquidationDeadline);
 }

@@ -27,6 +27,10 @@ interface MarketEvents {
     /// @notice Emitted when market config is updated
     event UpdateMarketConfig(MarketConfig config);
 
+    event Mint(address indexed caller, address indexed receiver, uint256 amount);
+
+    event Burn(address indexed caller, address indexed receiver, uint256 amount);
+
     /// @notice Emitted when doing leverage
     /// @param loanReceiver Who call the function
     /// @param gtReceiver Who receive the Gearing Token
