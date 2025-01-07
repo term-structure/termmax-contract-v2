@@ -13,9 +13,9 @@ library LoanUtils {
 
     function calcLtv(DeployUtils.Res memory res, uint debtAmt, uint collateralAmt) internal view returns (uint256 ltv) {
         (, int256 cPrice, , , ) = res.collateralOracle.latestRoundData();
-        (, int256 uPrice, , , ) = res.underlyingOracle.latestRoundData();
+        (, int256 uPrice, , , ) = res.debtOracle.latestRoundData();
         uint cpDecimals = 10 ** res.collateralOracle.decimals();
-        uint upDecimals = 10 ** res.underlyingOracle.decimals();
+        uint upDecimals = 10 ** res.debtOracle.decimals();
         uint cDecimals = 10 ** res.collateral.decimals();
         uint uDecimals = 10 ** res.debt.decimals();
         uint debtValue = (debtAmt * uPrice.toUint256()) / uDecimals;
@@ -35,9 +35,9 @@ library LoanUtils {
         uint REWARD_TO_LIQUIDATOR = 0.05e8;
         uint REWARD_TO_PROTOCOL = 0.05e8;
         (, int256 cPrice, , , ) = res.collateralOracle.latestRoundData();
-        (, int256 uPrice, , , ) = res.underlyingOracle.latestRoundData();
+        (, int256 uPrice, , , ) = res.debtOracle.latestRoundData();
         uint cpDecimals = 10 ** res.collateralOracle.decimals();
-        uint upDecimals = 10 ** res.underlyingOracle.decimals();
+        uint upDecimals = 10 ** res.debtOracle.decimals();
         uint cDecimals = 10 ** res.collateral.decimals();
         uint uDecimals = 10 ** res.debt.decimals();
 

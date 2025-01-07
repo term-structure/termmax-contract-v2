@@ -12,6 +12,8 @@
     "borrowMakerFeeRatio": "0"
   },
   "orderConfig": {
+    "maxXtReserve": "1000000000000000000000000000000000000000000000000000000",
+    "gtId": "0",
     "lendFeeRatio": "3000000",
     "borrowFeeRatio": "10000000",
     "minNLendFeeR": "30000",

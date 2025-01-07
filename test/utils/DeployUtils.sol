@@ -27,7 +27,7 @@ library DeployUtils {
         IMintableERC20 ft;
         IMintableERC20 xt;
         IGearingToken gt;
-        MockPriceFeed underlyingOracle;
+        MockPriceFeed debtOracle;
         MockPriceFeed collateralOracle;
         OracleAggregator oracle;
         MockERC20 collateral;
@@ -45,11 +45,11 @@ library DeployUtils {
         res.collateral = new MockERC20("ETH", "ETH", 18);
         res.debt = new MockERC20("DAI", "DAI", 8);
 
-        res.underlyingOracle = new MockPriceFeed(admin);
+        res.debtOracle = new MockPriceFeed(admin);
         res.collateralOracle = new MockPriceFeed(admin);
         res.oracle = deployOracle(admin);
 
-        res.oracle.setOracle(address(res.debt), IOracle.Oracle(res.underlyingOracle, res.underlyingOracle, 365 days));
+        res.oracle.setOracle(address(res.debt), IOracle.Oracle(res.debtOracle, res.debtOracle, 365 days));
         res.oracle.setOracle(
             address(res.collateral),
             IOracle.Oracle(res.collateralOracle, res.collateralOracle, 365 days)
@@ -85,6 +85,15 @@ library DeployUtils {
         res.market = ITermMaxMarket(res.factory.createMarket(GT_ERC20, initialParams));
 
         (res.ft, res.xt, res.gt, , ) = res.market.tokens();
+    }
+
+    function deployOrder(
+        ITermMaxMarket market,
+        address maker,
+        uint256 maxXtReserve,
+        CurveCuts memory curveCuts
+    ) public returns (ITermMaxOrder order) {
+        order = market.createOrder(maker, maxXtReserve, curveCuts);
     }
 
     function deployFactory(address admin) public returns (TermMaxFactory factory) {

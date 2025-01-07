@@ -14,6 +14,7 @@ import {TermMaxCurve, MathLib} from "./lib/TermMaxCurve.sol";
 import {OrderErrors} from "./errors/OrderErrors.sol";
 import {OrderEvents} from "./events/OrderEvents.sol";
 import {OrderConfig, MarketConfig, CurveCuts, CurveCut, FeeConfig} from "./storage/TermMaxStorage.sol";
+import {ITradeCallback} from "./ITradeCallback.sol";
 import {TransferUtils} from "./lib/TransferUtils.sol";
 
 /**
@@ -256,6 +257,10 @@ contract TermMaxOrder is
             revert CantNotSwapToken(tokenIn, tokenOut);
         }
         ft.safeTransfer(market.config().treasurer, feeAmt);
+
+        if (maker.code.length > 0) {
+            ITradeCallback(maker).tradeCallback(ft.balanceOf(address(this)));
+        }
         emit SwapExactTokenToToken(
             tokenIn,
             tokenOut,
