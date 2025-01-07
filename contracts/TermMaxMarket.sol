@@ -16,7 +16,7 @@ import {MarketConstants} from "./lib/MarketConstants.sol";
 import {MarketErrors} from "./errors/MarketErrors.sol";
 import {MarketEvents} from "./events/MarketEvents.sol";
 import {StringUtil} from "./lib/StringUtil.sol";
-import {MarketConfig, MarketInitialParams, GtConfig, CurveCuts} from "./storage/TermMaxStorage.sol";
+import {MarketConfig, MarketInitialParams, GtConfig, CurveCuts, FeeConfig} from "./storage/TermMaxStorage.sol";
 
 /**
  * @title TermMax Market
@@ -81,15 +81,9 @@ contract TermMaxMarket is
         __Pausable_init();
         if (params.collateral == address(params.debtToken)) revert CollateralCanNotEqualUnderlyinng();
         MarketConfig memory config_ = params.marketConfig;
-        if (config_.openTime < block.timestamp || config_.maturity < config_.openTime)
+        if (config_.openTime < block.timestamp || config_.maturity <= config_.openTime)
             revert InvalidTime(config_.openTime, config_.maturity);
-        _checkFee(config_.feeConfig.borrowTakerFeeRatio);
-        _checkFee(config_.feeConfig.borrowMakerFeeRatio);
-        _checkFee(config_.feeConfig.lendTakerFeeRatio);
-        _checkFee(config_.feeConfig.lendMakerFeeRatio);
-        _checkFee(config_.feeConfig.redeemFeeRatio);
-        _checkFee(config_.feeConfig.issueFtFeeRatio);
-        _checkFee(config_.feeConfig.issueFtFeeRef);
+        _checkFee(config_.feeConfig);
 
         debtToken = params.debtToken;
         collateral = params.collateral;
@@ -159,22 +153,23 @@ contract TermMaxMarket is
             mConfig.treasurer = newConfig.treasurer;
             gt.setTreasurer(newConfig.treasurer);
         }
-        _checkFee(newConfig.feeConfig.borrowTakerFeeRatio);
-        _checkFee(newConfig.feeConfig.borrowMakerFeeRatio);
-        _checkFee(newConfig.feeConfig.lendTakerFeeRatio);
-        _checkFee(newConfig.feeConfig.lendMakerFeeRatio);
-        _checkFee(newConfig.feeConfig.redeemFeeRatio);
-        _checkFee(newConfig.feeConfig.issueFtFeeRatio);
-        _checkFee(newConfig.feeConfig.issueFtFeeRef);
-
+        _checkFee(newConfig.feeConfig);
         mConfig.feeConfig = newConfig.feeConfig;
 
         _config = mConfig;
         emit UpdateMarketConfig(mConfig);
     }
 
-    function _checkFee(uint32 feeRatio) internal pure {
-        if (feeRatio >= Constants.MAX_FEE_RATIO) revert FeeTooHigh();
+    function _checkFee(FeeConfig memory fee) internal pure {
+        if (
+            fee.borrowTakerFeeRatio >= Constants.MAX_FEE_RATIO ||
+            fee.borrowMakerFeeRatio >= Constants.MAX_FEE_RATIO ||
+            fee.lendTakerFeeRatio >= Constants.MAX_FEE_RATIO ||
+            fee.lendMakerFeeRatio >= Constants.MAX_FEE_RATIO ||
+            fee.redeemFeeRatio >= Constants.MAX_FEE_RATIO ||
+            fee.issueFtFeeRatio >= Constants.MAX_FEE_RATIO ||
+            fee.issueFtFeeRef > Constants.DECIMAL_BASE
+        ) revert FeeTooHigh();
     }
 
     /// @notice Calculate how many days until expiration
