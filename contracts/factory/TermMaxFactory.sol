@@ -29,7 +29,7 @@ contract TermMaxFactory is Ownable2Step, FactoryErrors, FactoryEvents, ITermMaxF
 
     constructor(address admin, address TERMMAX_MARKET_IMPLEMENTATION_) Ownable(admin) {
         if (TERMMAX_MARKET_IMPLEMENTATION_ == address(0)) {
-            revert InvalidMarketImplement();
+            revert InvalidMarketImplementation();
         }
         TERMMAX_MARKET_IMPLEMENTATION = TERMMAX_MARKET_IMPLEMENTATION_;
 
