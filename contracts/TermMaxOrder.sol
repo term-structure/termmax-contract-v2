@@ -82,7 +82,7 @@ contract TermMaxOrder is
         uint256 maxXtReserve_,
         CurveCuts memory curveCuts_,
         MarketConfig memory marketConfig
-    ) external override {
+    ) external override initializer {
         __Ownable_init(admin);
         __ReentrancyGuard_init();
         __Pausable_init();

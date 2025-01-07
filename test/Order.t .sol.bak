@@ -7,17 +7,16 @@ import {DeployUtils} from "./utils/DeployUtils.sol";
 import {JSONLoader} from "./utils/JSONLoader.sol";
 import {StateChecker} from "./utils/StateChecker.sol";
 import {SwapUtils} from "./utils/SwapUtils.sol";
-
-import {IFlashLoanReceiver} from "../contracts/core/IFlashLoanReceiver.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {ITermMaxMarket, TermMaxMarket, Constants, TermMaxCurve} from "../contracts/core/TermMaxMarket.sol";
-import {MockERC20, ERC20} from "../contracts/test/MockERC20.sol";
-import {MockPriceFeed} from "../contracts/test/MockPriceFeed.sol";
-import {ITermMaxFactory, TermMaxFactory, IMintableERC20, IGearingToken} from "../contracts/core/factory/TermMaxFactory.sol";
-import {IOracle, OracleAggregator, AggregatorV3Interface} from "contracts/core/oracle/OracleAggregator.sol";
-import "../contracts/core/storage/TermMaxStorage.sol";
+import {IFlashLoanReceiver} from "contracts/IFlashLoanReceiver.sol";
+import {ITermMaxMarket, TermMaxMarket, Constants} from "contracts/TermMaxMarket.sol";
+import {ITermMaxOrder, TermMaxOrder} from "contracts/TermMaxOrder.sol";
+import {MockERC20, ERC20} from "contracts/test/MockERC20.sol";
+import {MockPriceFeed} from "contracts/test/MockPriceFeed.sol";
+import {IGearingToken} from "contracts/tokens/IGearingToken.sol";
+import "contracts/storage/TermMaxStorage.sol";
 
-contract SwapTest is Test {
+contract MarketTest is Test {
     using JSONLoader for *;
     DeployUtils.Res res;
 
