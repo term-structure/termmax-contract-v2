@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IOracle} from "../oracle/IOracle.sol";
+import {ISwapCallback} from "../ISwapCallback.sol";
 
 /**
  * @title The data struct of token pair
@@ -94,6 +95,7 @@ struct OrderConfig {
     CurveCuts curveCuts;
     uint256 gtId;
     uint256 maxXtReserve;
+    ISwapCallback swapTrigger;
     FeeConfig feeConfig;
 }
 

@@ -14,7 +14,7 @@ import {TermMaxCurve, MathLib} from "./lib/TermMaxCurve.sol";
 import {OrderErrors} from "./errors/OrderErrors.sol";
 import {OrderEvents} from "./events/OrderEvents.sol";
 import {OrderConfig, MarketConfig, CurveCuts, CurveCut, FeeConfig} from "./storage/TermMaxStorage.sol";
-import {ITradeCallback} from "./ITradeCallback.sol";
+import {ISwapCallback} from "./ISwapCallback.sol";
 import {TransferUtils} from "./lib/TransferUtils.sol";
 
 /**
@@ -80,6 +80,7 @@ contract TermMaxOrder is
         IERC20[3] memory tokens,
         IGearingToken gt_,
         uint256 maxXtReserve_,
+        ISwapCallback swapTrigger,
         CurveCuts memory curveCuts_,
         MarketConfig memory marketConfig
     ) external override initializer {
@@ -91,13 +92,14 @@ contract TermMaxOrder is
         _orderConfig.curveCuts = curveCuts_;
         _orderConfig.feeConfig = marketConfig.feeConfig;
         _orderConfig.maxXtReserve = maxXtReserve_;
+        _orderConfig.swapTrigger = swapTrigger;
         maturity = marketConfig.maturity;
 
         ft = tokens[0];
         xt = tokens[1];
         debtToken = tokens[2];
         gt = gt_;
-        emit OrderInitialized(market, maker_, maxXtReserve_, curveCuts_);
+        emit OrderInitialized(market, maker_, maxXtReserve_, swapTrigger, curveCuts_);
     }
 
     /**
@@ -172,12 +174,14 @@ contract TermMaxOrder is
             revert GtNotApproved(newOrderConfig.gtId);
         }
         _orderConfig.gtId = newOrderConfig.gtId;
+        _orderConfig.swapTrigger = newOrderConfig.swapTrigger;
         emit UpdateOrder(
             newOrderConfig.curveCuts,
             ftReserve,
             xtReserve,
             newOrderConfig.gtId,
-            newOrderConfig.maxXtReserve
+            newOrderConfig.maxXtReserve,
+            newOrderConfig.swapTrigger
         );
     }
 
@@ -258,8 +262,8 @@ contract TermMaxOrder is
         }
         ft.safeTransfer(market.config().treasurer, feeAmt);
 
-        if (maker.code.length > 0) {
-            ITradeCallback(maker).tradeCallback(ft.balanceOf(address(this)));
+        if (address(_orderConfig.swapTrigger) != address(0)) {
+            _orderConfig.swapTrigger.swapCallback(ft.balanceOf(address(this)));
         }
         emit SwapExactTokenToToken(
             tokenIn,
@@ -352,8 +356,11 @@ contract TermMaxOrder is
 
         debtToken.approve(address(market), debtTokenAmtIn);
         market.mint(address(this), debtTokenAmtIn);
-        uint ftReserve = ft.balanceOf(address(this));
-        if (tokenOut == ft && ftReserve < netOut + feeAmt) _issueFt(address(this), ftReserve, netOut + feeAmt, config);
+        if (tokenOut == ft) {
+            uint ftReserve = ft.balanceOf(address(this));
+            if (ftReserve < netOut + feeAmt) _issueFt(address(this), ftReserve, netOut + feeAmt, config);
+        }
+
         tokenOut.safeTransfer(recipient, netOut);
 
         return (netOut, feeAmt);

@@ -6,7 +6,7 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {ITermMaxMarket, TermMaxMarket} from "contracts/TermMaxMarket.sol";
-import {ITermMaxOrder, TermMaxOrder} from "contracts/TermMaxOrder.sol";
+import {ITermMaxOrder, ISwapCallback, TermMaxOrder} from "contracts/TermMaxOrder.sol";
 import {MockERC20, ERC20} from "contracts/test/MockERC20.sol";
 import {MockPriceFeed} from "contracts/test/MockPriceFeed.sol";
 import {IMintableERC20, MintableERC20} from "contracts/tokens/MintableERC20.sol";
@@ -91,9 +91,10 @@ library DeployUtils {
         ITermMaxMarket market,
         address maker,
         uint256 maxXtReserve,
+        ISwapCallback swapTrigger,
         CurveCuts memory curveCuts
     ) public returns (ITermMaxOrder order) {
-        order = market.createOrder(maker, maxXtReserve, curveCuts);
+        order = market.createOrder(maker, maxXtReserve, swapTrigger, curveCuts);
     }
 
     function deployFactory(address admin) public returns (TermMaxFactory factory) {

@@ -5,6 +5,7 @@ import {IMintableERC20, IERC20} from "./tokens/IMintableERC20.sol";
 import {IGearingToken} from "./tokens/IGearingToken.sol";
 import {ITermMaxMarket} from "./ITermMaxMarket.sol";
 import {OrderConfig, MarketConfig, CurveCuts, FeeConfig} from "./storage/TermMaxStorage.sol";
+import {ISwapCallback} from "./ISwapCallback.sol";
 
 /**
  * @title TermMax Order interface
@@ -26,6 +27,7 @@ interface ITermMaxOrder {
         IERC20[3] memory tokens,
         IGearingToken gt,
         uint256 maxXtReserve,
+        ISwapCallback trigger,
         CurveCuts memory curveCuts,
         MarketConfig memory marketConfig
     ) external;

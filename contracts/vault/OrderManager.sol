@@ -13,6 +13,7 @@ import {ITermMaxRouter} from "../router/ITermMaxRouter.sol";
 import {ITermMaxOrder} from "../ITermMaxOrder.sol";
 import {VaultConstants} from "../lib/VaultConstants.sol";
 import {TransferUtils} from "../lib/TransferUtils.sol";
+import {ISwapCallback} from "../ISwapCallback.sol";
 
 abstract contract OrderManager is VaultErrors, VaultEvents, Ownable2StepUpgradeable {
     using PendingLib for *;
@@ -105,6 +106,7 @@ abstract contract OrderManager is VaultErrors, VaultEvents, Ownable2StepUpgradea
             market,
             address(this),
             maxXtReserve,
+            ISwapCallback(address(this)),
             0,
             0,
             xtToDeposit.toUint128(),

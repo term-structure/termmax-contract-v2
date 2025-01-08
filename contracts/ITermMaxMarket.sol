@@ -6,6 +6,7 @@ import {IGearingToken} from "./tokens/IGearingToken.sol";
 import {ITermMaxOrder} from "./ITermMaxOrder.sol";
 import {MarketConfig, MarketInitialParams, CurveCuts} from "./storage/TermMaxStorage.sol";
 import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
+import {ISwapCallback} from "./ISwapCallback.sol";
 
 /**
  * @title TermMax Market interface
@@ -90,6 +91,7 @@ interface ITermMaxMarket {
     function createOrder(
         address maker,
         uint256 maxXtReserve,
+        ISwapCallback swapTrigger,
         CurveCuts memory curveCuts
     ) external returns (ITermMaxOrder order);
 }

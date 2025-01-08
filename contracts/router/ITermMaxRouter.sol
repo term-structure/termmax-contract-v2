@@ -5,6 +5,7 @@ import {ITermMaxMarket} from "../ITermMaxMarket.sol";
 import {ITermMaxOrder} from "../ITermMaxOrder.sol";
 import {SwapUnit} from "./ISwapAdapter.sol";
 import {CurveCuts} from "../storage/TermMaxStorage.sol";
+import {ISwapCallback} from "../ISwapCallback.sol";
 
 /**
  * @title TermMax Router interface
@@ -118,6 +119,7 @@ interface ITermMaxRouter {
         ITermMaxMarket market,
         address maker,
         uint256 maxXtReserve,
+        ISwapCallback swapTrigger,
         uint256 debtTokenToDeposit,
         uint128 ftToDeposit,
         uint128 xtToDeposit,

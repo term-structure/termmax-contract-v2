@@ -3,6 +3,7 @@ pragma solidity ^0.8.27;
 
 import {IERC20, ITermMaxMarket} from "../ITermMaxMarket.sol";
 import {CurveCuts, FeeConfig} from "../storage/TermMaxStorage.sol";
+import {ISwapCallback} from "../ISwapCallback.sol";
 interface OrderEvents {
     /// @notice Emitted when order initialized
     /// @param market The market
@@ -10,13 +11,21 @@ interface OrderEvents {
         ITermMaxMarket indexed market,
         address indexed maker,
         uint256 maxXtReserve,
+        ISwapCallback swapTrigger,
         CurveCuts curveCuts
     );
 
     event UpdateFeeConfig(FeeConfig feeConfig);
 
     /// @notice Emitted when update order
-    event UpdateOrder(CurveCuts curveCuts, uint256 ftReserve, uint256 xtReserve, uint256 gtId, uint256 maxXtReserve);
+    event UpdateOrder(
+        CurveCuts curveCuts,
+        uint256 ftReserve,
+        uint256 xtReserve,
+        uint256 gtId,
+        uint256 maxXtReserve,
+        ISwapCallback swapTrigger
+    );
 
     /// @notice Emitted when swap exact token to token
     /// @param tokenIn The token want to swap

@@ -10,7 +10,7 @@ import {SwapUtils} from "./utils/SwapUtils.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IFlashLoanReceiver} from "contracts/IFlashLoanReceiver.sol";
 import {ITermMaxMarket, TermMaxMarket, Constants, MarketEvents, MarketErrors} from "contracts/TermMaxMarket.sol";
-import {ITermMaxOrder, TermMaxOrder} from "contracts/TermMaxOrder.sol";
+import {ITermMaxOrder, TermMaxOrder, ISwapCallback} from "contracts/TermMaxOrder.sol";
 import {MockERC20, ERC20} from "contracts/test/MockERC20.sol";
 import {MockPriceFeed} from "contracts/test/MockPriceFeed.sol";
 import {IGearingToken} from "contracts/tokens/IGearingToken.sol";
@@ -41,7 +41,7 @@ contract MarketTest is Test {
         vm.warp(marketConfig.openTime);
         res = DeployUtils.deployMarket(deployer, marketConfig, maxLtv, liquidationLtv);
 
-        res.order = res.market.createOrder(maker, orderConfig.maxXtReserve, orderConfig.curveCuts);
+        res.order = res.market.createOrder(maker, orderConfig.maxXtReserve, ISwapCallback(address(0)), orderConfig.curveCuts);
 
         vm.warp(vm.parseUint(vm.parseJsonString(testdata, ".currentTime")));
 

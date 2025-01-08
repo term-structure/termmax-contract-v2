@@ -17,6 +17,7 @@ import {MarketErrors} from "./errors/MarketErrors.sol";
 import {MarketEvents} from "./events/MarketEvents.sol";
 import {StringUtil} from "./lib/StringUtil.sol";
 import {MarketConfig, MarketInitialParams, GtConfig, CurveCuts, FeeConfig} from "./storage/TermMaxStorage.sol";
+import {ISwapCallback} from "./ISwapCallback.sol";
 
 /**
  * @title TermMax Market
@@ -363,10 +364,11 @@ contract TermMaxMarket is
     function createOrder(
         address maker,
         uint256 maxXtReserve,
+        ISwapCallback swapTrigger,
         CurveCuts memory curveCuts
     ) external returns (ITermMaxOrder order) {
         order = ITermMaxOrder(Clones.clone(TERMMAX_ORDER_IMPLEMENT));
-        order.initialize(owner(), maker, [ft, xt, debtToken], gt, maxXtReserve, curveCuts, _config);
+        order.initialize(owner(), maker, [ft, xt, debtToken], gt, maxXtReserve, swapTrigger, curveCuts, _config);
         emit CreateOrder(maker, order);
     }
 }

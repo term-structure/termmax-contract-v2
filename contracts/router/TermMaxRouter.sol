@@ -21,6 +21,7 @@ import {IFlashRepayer} from "../tokens/IFlashRepayer.sol";
 import {ITermMaxRouter} from "./ITermMaxRouter.sol";
 import {IGearingToken} from "../tokens/IGearingToken.sol";
 import {CurveCuts} from "../storage/TermMaxStorage.sol";
+import {ISwapCallback} from "../ISwapCallback.sol";
 
 /**
  * @title TermMax Router
@@ -383,13 +384,14 @@ contract TermMaxRouter is
         ITermMaxMarket market,
         address maker,
         uint256 maxXtReserve,
+        ISwapCallback swapTrigger,
         uint256 debtTokenToDeposit,
         uint128 ftToDeposit,
         uint128 xtToDeposit,
         CurveCuts memory curveCuts
     ) external ensureMarketWhitelist(address(market)) whenNotPaused returns (ITermMaxOrder order) {
         (IERC20 ft, IERC20 xt, , , IERC20 debtToken) = market.tokens();
-        order = market.createOrder(maker, maxXtReserve, curveCuts);
+        order = market.createOrder(maker, maxXtReserve, swapTrigger, curveCuts);
         if (debtTokenToDeposit > 0) {
             debtToken.safeTransferFrom(msg.sender, address(this), debtTokenToDeposit);
             debtToken.safeIncreaseAllowance(address(market), debtTokenToDeposit);
