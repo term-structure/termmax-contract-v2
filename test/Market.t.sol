@@ -76,6 +76,7 @@ contract MarketTest is Test {
         res.market.updateMarketConfig(marketConfig);
 
         assertEq(res.market.config().treasurer, marketConfig.treasurer);
+        assertEq(res.gt.getGtConfig().treasurer, marketConfig.treasurer);
         assertEq(res.market.config().feeConfig.redeemFeeRatio, marketConfig.feeConfig.redeemFeeRatio);
         assertEq(res.market.config().feeConfig.issueFtFeeRatio, marketConfig.feeConfig.issueFtFeeRatio);
         assertEq(res.market.config().feeConfig.borrowTakerFeeRatio, marketConfig.feeConfig.borrowTakerFeeRatio);
@@ -83,6 +84,29 @@ contract MarketTest is Test {
         assertEq(res.market.config().feeConfig.lendTakerFeeRatio, marketConfig.feeConfig.lendTakerFeeRatio);
         assertEq(res.market.config().feeConfig.lendMakerFeeRatio, marketConfig.feeConfig.lendMakerFeeRatio);
 
+        vm.stopPrank();
+    }
+
+    function testUpdateMarketConfigWhenNotOwner() public {
+        vm.startPrank(sender);
+        marketConfig.treasurer = vm.randomAddress();
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, address(sender)));
+        res.market.updateMarketConfig(marketConfig);
+        vm.stopPrank();
+    }
+
+    function testUpdateOrderConfigInvalidParams() public {
+        vm.startPrank(deployer);
+
+        MarketConfig memory newConfig = res.market.config();
+        newConfig.feeConfig.issueFtFeeRef = uint32(Constants.DECIMAL_BASE + 1);
+        vm.expectRevert(abi.encodeWithSelector(MarketErrors.FeeTooHigh.selector));
+        res.market.updateMarketConfig(newConfig);
+
+        newConfig.feeConfig.issueFtFeeRef = 0;
+        newConfig.feeConfig.borrowMakerFeeRatio = uint32(Constants.MAX_FEE_RATIO);
+        vm.expectRevert(abi.encodeWithSelector(MarketErrors.FeeTooHigh.selector));
+        res.market.updateMarketConfig(newConfig);
         vm.stopPrank();
     }
 
@@ -188,6 +212,42 @@ contract MarketTest is Test {
 
         assertEq(abi.decode(collateralData, (uint256)), collateralAmt);
 
+        vm.stopPrank();
+    }
+
+    function testIssueFtByExistGt() public {
+        vm.startPrank(sender);
+        uint128 debtAmt = 1000e8;
+
+        uint collateralAmt = 1e18;
+        res.collateral.mint(sender, collateralAmt);
+        res.collateral.approve(address(res.gt), collateralAmt);
+        (uint gtId, uint128 ftOutAmt) = res.market.issueFt(sender, debtAmt, abi.encode(collateralAmt));
+
+        uint128 debtAmt2 = debtAmt / 2;
+        uint fee = (res.market.issueFtFeeRatio() * debtAmt2) / Constants.DECIMAL_BASE;
+        vm.expectEmit();
+        emit MarketEvents.IssueFtByExistedGt(sender, sender, gtId, debtAmt2, uint128(debtAmt2 - fee), uint128(fee));
+        uint ftOutAmt2 = res.market.issueFtByExistedGt(sender, debtAmt2, gtId);
+
+        assertEq(res.ft.balanceOf(sender), ftOutAmt + ftOutAmt2);
+        (address owner, uint128 dAmt, , bytes memory collateralData) = res.gt.loanInfo(gtId);
+        assertEq(owner, sender);
+        assertEq(dAmt, debtAmt + debtAmt2);
+        assertEq(abi.decode(collateralData, (uint256)), collateralAmt);
+        vm.stopPrank();
+    }
+
+    function testIssueFtByExistedGtWhenTermIsNotOpen() public {
+        vm.startPrank(sender);
+        uint128 debtAmt = 1000e8;
+        vm.warp(marketConfig.openTime - 1);
+        vm.expectRevert(abi.encodeWithSelector(MarketErrors.TermIsNotOpen.selector));
+        res.market.issueFtByExistedGt(sender, debtAmt, 1);
+
+        vm.warp(marketConfig.maturity);
+        vm.expectRevert(abi.encodeWithSelector(MarketErrors.TermIsNotOpen.selector));
+        res.market.issueFtByExistedGt(sender, debtAmt, 1);
         vm.stopPrank();
     }
 
