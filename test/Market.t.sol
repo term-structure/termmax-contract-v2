@@ -8,9 +8,10 @@ import {JSONLoader} from "./utils/JSONLoader.sol";
 import {StateChecker} from "./utils/StateChecker.sol";
 import {SwapUtils} from "./utils/SwapUtils.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IFlashLoanReceiver} from "contracts/IFlashLoanReceiver.sol";
 import {ITermMaxMarket, TermMaxMarket, Constants, MarketEvents, MarketErrors} from "contracts/TermMaxMarket.sol";
-import {ITermMaxOrder, TermMaxOrder, ISwapCallback} from "contracts/TermMaxOrder.sol";
+import {ITermMaxOrder, TermMaxOrder, ISwapCallback, OrderEvents} from "contracts/TermMaxOrder.sol";
 import {MockERC20, ERC20} from "contracts/test/MockERC20.sol";
 import {MockPriceFeed} from "contracts/test/MockPriceFeed.sol";
 import {IGearingToken} from "contracts/tokens/IGearingToken.sol";
@@ -41,7 +42,12 @@ contract MarketTest is Test {
         vm.warp(marketConfig.openTime);
         res = DeployUtils.deployMarket(deployer, marketConfig, maxLtv, liquidationLtv);
 
-        res.order = res.market.createOrder(maker, orderConfig.maxXtReserve, ISwapCallback(address(0)), orderConfig.curveCuts);
+        res.order = res.market.createOrder(
+            maker,
+            orderConfig.maxXtReserve,
+            ISwapCallback(address(0)),
+            orderConfig.curveCuts
+        );
 
         vm.warp(vm.parseUint(vm.parseJsonString(testdata, ".currentTime")));
 
@@ -142,6 +148,83 @@ contract MarketTest is Test {
         vm.warp(marketConfig.maturity);
         vm.expectRevert(abi.encodeWithSelector(MarketErrors.TermIsNotOpen.selector));
         res.market.burn(sender, amount);
+        vm.stopPrank();
+    }
+
+    function testIssueFt() public {
+        vm.startPrank(sender);
+        uint128 debtAmt = 1000e8;
+        res.debt.mint(sender, debtAmt);
+        res.debt.approve(address(res.market), debtAmt);
+        res.market.mint(sender, debtAmt);
+
+        uint fee = (res.market.issueFtFeeRatio() * debtAmt) / Constants.DECIMAL_BASE;
+        uint collateralAmt = 1e18;
+        res.collateral.mint(sender, collateralAmt);
+        res.collateral.approve(address(res.gt), collateralAmt);
+        vm.expectEmit();
+        emit MarketEvents.IssueFt(
+            sender,
+            sender,
+            1,
+            debtAmt,
+            uint128(debtAmt - fee),
+            uint128(fee),
+            abi.encode(collateralAmt)
+        );
+        (uint gtId, uint128 ftOutAmt) = res.market.issueFt(sender, debtAmt, abi.encode(collateralAmt));
+
+        assertEq(gtId, 1);
+        assertEq(res.debt.balanceOf(sender), 0);
+        assertEq(debtAmt - fee, ftOutAmt);
+        assertEq(res.ft.balanceOf(sender), ftOutAmt + debtAmt);
+        assertEq(res.collateral.balanceOf(address(res.gt)), collateralAmt);
+        assertEq(res.debt.balanceOf(address(res.market)), debtAmt);
+
+        (address owner, uint128 dAmt, , bytes memory collateralData) = res.gt.loanInfo(gtId);
+        assertEq(owner, sender);
+        assertEq(dAmt, debtAmt);
+
+        assertEq(abi.decode(collateralData, (uint256)), collateralAmt);
+
+        vm.stopPrank();
+    }
+
+    function testIssueFtWhenTermIsNotOpen() public {
+        vm.startPrank(sender);
+        uint128 debtAmt = 1000e8;
+        vm.warp(marketConfig.openTime - 1);
+        vm.expectRevert(abi.encodeWithSelector(MarketErrors.TermIsNotOpen.selector));
+        res.market.issueFt(sender, debtAmt, abi.encode(1e18));
+
+        vm.warp(marketConfig.maturity);
+        vm.expectRevert(abi.encodeWithSelector(MarketErrors.TermIsNotOpen.selector));
+        res.market.issueFt(sender, debtAmt, abi.encode(1e18));
+        vm.stopPrank();
+    }
+
+    function testCreateOrder() public {
+        vm.startPrank(sender);
+
+        vm.expectEmit();
+        emit OrderEvents.OrderInitialized(
+            res.market,
+            sender,
+            orderConfig.maxXtReserve,
+            ISwapCallback(address(0)),
+            orderConfig.curveCuts
+        );
+        ITermMaxOrder order = res.market.createOrder(
+            sender,
+            orderConfig.maxXtReserve,
+            ISwapCallback(address(0)),
+            orderConfig.curveCuts
+        );
+        assertEq(address(order.market()), address(res.market));
+        assertEq(Ownable(address(order)).owner(), Ownable(address(res.market)).owner());
+        assertEq(order.orderConfig().maxXtReserve, orderConfig.maxXtReserve);
+        assertEq(order.maker(), sender);
+
         vm.stopPrank();
     }
 }
