@@ -8,7 +8,7 @@ import "contracts/storage/TermMaxStorage.sol";
 library StateChecker {
     struct MarketState {
         uint collateralReserve;
-        uint underlyingReserve;
+        uint debtReserve;
     }
 
     struct OrderState {
@@ -18,12 +18,12 @@ library StateChecker {
 
     function checkMarketState(DeployUtils.Res memory res, MarketState memory expect) internal view {
         require(res.collateral.balanceOf(address(res.gt)) == expect.collateralReserve, "collateralReserve unexpect");
-        require(res.debt.balanceOf(address(res.market)) == expect.underlyingReserve, "underlyingReserve unexpect");
+        require(res.debt.balanceOf(address(res.market)) == expect.debtReserve, "debtReserve unexpect");
     }
 
     function getMarketState(DeployUtils.Res memory res) internal view returns (MarketState memory state) {
         state.collateralReserve = res.collateral.balanceOf(address(res.gt));
-        state.underlyingReserve = res.debt.balanceOf(address(res.market));
+        state.debtReserve = res.debt.balanceOf(address(res.market));
     }
 
     function checkOrderState(DeployUtils.Res memory res, OrderState memory expect) internal view {
