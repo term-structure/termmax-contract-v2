@@ -11,8 +11,8 @@ import "./AbstractGearingToken.sol";
 contract GearingTokenWithERC20 is AbstractGearingToken {
     using SafeCast for uint256;
     using SafeCast for int256;
-    using SafeERC20 for IERC20;
-    using SafeERC20 for IERC20Metadata;
+    using TransferUtils for IERC20;
+    using TransferUtils for IERC20Metadata;
     using MathLib for *;
 
     /// @notice The operation failed because the collateral capacity is exceeded
@@ -24,12 +24,15 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
     /// @notice The max capacity of collateral token
     uint256 public collateralCapacity;
 
+    uint8 collateralDecimals;
+
     constructor() {
         _disableInitializers();
     }
 
     function __GearingToken_Implement_init(bytes memory initalParams) internal override onlyInitializing {
         collateralCapacity = abi.decode(initalParams, (uint256));
+        collateralDecimals = IERC20Metadata(_config.collateral).decimals();
     }
 
     function _updateConfig(bytes memory configData) internal virtual override {
@@ -89,8 +92,8 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
         bytes memory priceData
     ) internal view virtual override returns (uint256) {
         uint collateralAmt = _decodeAmount(collateralData);
-        (uint price, uint decimals, uint collateralDecimals) = abi.decode(priceData, (uint, uint, uint));
-        return (collateralAmt * price * Constants.DECIMAL_BASE) / (decimals * collateralDecimals);
+        (uint price, uint priceDenominator, uint collateralDemonimator) = abi.decode(priceData, (uint, uint, uint));
+        return (collateralAmt * price * Constants.DECIMAL_BASE) / (priceDenominator * collateralDemonimator);
     }
 
     /**
@@ -100,10 +103,10 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
         GtConfig memory config
     ) internal view virtual override returns (bytes memory priceData) {
         (uint256 price, uint8 decimals) = config.loanConfig.oracle.getPrice(config.collateral);
-        uint priceDecimals = 10 ** decimals;
+        uint priceDenominator = 10 ** decimals;
 
-        uint cTokenDecimals = 10 ** IERC20Metadata(config.collateral).decimals();
-        priceData = abi.encode(price, priceDecimals, cTokenDecimals);
+        uint cTokenDenominator = 10 ** collateralDecimals;
+        priceData = abi.encode(price, priceDenominator, cTokenDenominator);
     }
 
     /// @notice Encode amount to collateral data
@@ -156,7 +159,7 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
     {
         uint collateralAmt = _decodeAmount(loan.collateralData);
 
-        (uint collateralPrice, uint collateralPriceDecimals, uint collateralDecimals) = abi.decode(
+        (uint collateralPrice, uint cPriceDenominator, uint cTokenDenominator) = abi.decode(
             valueAndPrice.collateralPriceData,
             (uint, uint, uint)
         );
@@ -166,20 +169,20 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
         // collateralAmt *(repayAmt / debtAmt)
         // )
 
-        /* DP := debt token price (valueAndPrice.debtTokenPrice)
-         * DPD := debt token price decimal (valueAndPrice.priceDecimals)
+        /* DP := debt token price (valueAndPrice.debtPrice)
+         * DPD := debt token price decimal (valueAndPrice.priceDenominator)
          * CP := collateral token price (collateralPrice)
-         * CPD := collateral token price decimal (collateralPriceDecimals)
+         * CPD := collateral token price decimal (cPriceDenominator)
          * The value of 1(decimal) debt token / The value of 1(decimal) collateral token
          *     ddPriceToCdPrice = (DP/DPD) / (CP/CPD) = (DP*CPD) / (CP*DPD)
          */
-        uint ddPriceToCdPrice = (valueAndPrice.debtTokenPrice * collateralPriceDecimals * Constants.DECIMAL_BASE) /
-            (collateralPrice * valueAndPrice.priceDecimals);
+        uint ddPriceToCdPrice = (valueAndPrice.debtPrice * cPriceDenominator * Constants.DECIMAL_BASE) /
+            (collateralPrice * valueAndPrice.priceDenominator);
 
         // calculate the amount of collateral that is equivalent to repayAmt
         // with debt to collateral price
-        uint cEqualRepayAmt = (repayAmt * ddPriceToCdPrice * collateralDecimals) /
-            (valueAndPrice.debtTokenDecimals * Constants.DECIMAL_BASE);
+        uint cEqualRepayAmt = (repayAmt * ddPriceToCdPrice * cTokenDenominator) /
+            (valueAndPrice.debtDenominator * Constants.DECIMAL_BASE);
 
         uint rewardToLiquidator = (cEqualRepayAmt * GearingTokenConstants.REWARD_TO_LIQUIDATOR) /
             Constants.DECIMAL_BASE;

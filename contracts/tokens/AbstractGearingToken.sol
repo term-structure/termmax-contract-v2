@@ -5,9 +5,9 @@ import {ERC721EnumerableUpgradeable} from "@openzeppelin/contracts-upgradeable/t
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Constants} from "../lib/Constants.sol";
 import {GearingTokenConstants} from "../lib/GearingTokenConstants.sol";
+import {TransferUtils} from "../lib/TransferUtils.sol";
 import {IFlashRepayer} from "./IFlashRepayer.sol";
 import {IGearingToken, IERC20Metadata, IERC20} from "./IGearingToken.sol";
 import {GearingTokenErrors} from "../errors/GearingTokenErrors.sol";
@@ -28,8 +28,8 @@ abstract contract AbstractGearingToken is
 {
     using SafeCast for uint256;
     using SafeCast for int256;
-    using SafeERC20 for IERC20;
-    using SafeERC20 for IERC20Metadata;
+    using TransferUtils for IERC20;
+    using TransferUtils for IERC20Metadata;
 
     struct LoanInfo {
         /// @notice Debt amount in debtToken token
@@ -43,12 +43,12 @@ abstract contract AbstractGearingToken is
         uint256 collateralValue;
         /// @notice USD value of debt with price and token decimals
         uint256 debtValueWithDecimals;
-        /// @notice USD price of debtToken token
-        uint256 debtTokenPrice;
-        /// @notice Decimals of USD price
-        uint256 priceDecimals;
-        /// @notice Decimals of debtToken token
-        uint256 debtTokenDecimals;
+        /// @notice USD price of debt token
+        uint256 debtPrice;
+        /// @notice Denominator of USD price
+        uint256 priceDenominator;
+        /// @notice Denominator of debt token
+        uint256 debtDenominator;
         /// @notice Encoded USD price of collateral token
         bytes collateralPriceData;
     }
@@ -59,6 +59,8 @@ abstract contract AbstractGearingToken is
     uint256 total;
     /// @notice Mapping relationship between Gearing Token id and loan
     mapping(uint256 => LoanInfo) loanMapping;
+
+    uint8 debtDecimals;
 
     /**
      * @inheritdoc IGearingToken
@@ -81,6 +83,7 @@ abstract contract AbstractGearingToken is
         __ERC721_init(name, symbol);
         __Ownable_init(msg.sender);
         _config = config_;
+        debtDecimals = _config.debtToken.decimals();
     }
 
     function __GearingToken_Implement_init(bytes memory initalParams) internal virtual;
@@ -366,7 +369,8 @@ abstract contract AbstractGearingToken is
             } else if (ltv >= config.loanConfig.liquidationLtv) {
                 isLiquidable = true;
                 // collateralValue(price decimals) and HALF_LIQUIDATION_THRESHOLD(base decimals 1e8)
-                maxRepayAmt = (valueAndPrice.collateralValue * Constants.DECIMAL_BASE) / valueAndPrice.priceDecimals <
+                maxRepayAmt = (valueAndPrice.collateralValue * Constants.DECIMAL_BASE) /
+                    valueAndPrice.priceDenominator <
                     GearingTokenConstants.HALF_LIQUIDATION_THRESHOLD
                     ? loan.debtAmt
                     : loan.debtAmt / 2;
@@ -401,7 +405,7 @@ abstract contract AbstractGearingToken is
             revert RepayAmtExceedsMaxRepayAmt(id, repayAmt, maxRepayAmt);
         }
         // Transfer token
-        config.debtToken.safeTransferFrom(msg.sender, marketAddr(), repayAmt);
+        config.debtToken.safeTransferFrom(msg.sender, owner(), repayAmt);
         // Do liquidate
 
         (bytes memory cToLiquidator, bytes memory cToTreasurer, bytes memory remainningC) = _calcLiquidationResult(
@@ -424,8 +428,8 @@ abstract contract AbstractGearingToken is
             {
                 valueAndPrice.collateralValue = _getCollateralValue(remainningC, valueAndPrice.collateralPriceData);
                 valueAndPrice.debtValueWithDecimals =
-                    (loan.debtAmt * valueAndPrice.debtTokenPrice) /
-                    valueAndPrice.debtTokenDecimals;
+                    (loan.debtAmt * valueAndPrice.debtPrice) /
+                    valueAndPrice.debtDenominator;
                 _checkDebtValue(valueAndPrice);
                 uint128 ltvAfter = _calculateLtv(valueAndPrice);
                 if (ltvBefore < ltvAfter) {
@@ -487,14 +491,12 @@ abstract contract AbstractGearingToken is
         valueAndPrice.collateralValue = _getCollateralValue(loan.collateralData, valueAndPrice.collateralPriceData);
 
         uint8 priceDecimals;
-        (valueAndPrice.debtTokenPrice, priceDecimals) = config.loanConfig.oracle.getPrice(address(config.debtToken));
-        valueAndPrice.priceDecimals = 10 ** priceDecimals;
+        (valueAndPrice.debtPrice, priceDecimals) = config.loanConfig.oracle.getPrice(address(config.debtToken));
+        valueAndPrice.priceDenominator = 10 ** priceDecimals;
 
-        valueAndPrice.debtTokenDecimals = 10 ** config.debtToken.decimals();
+        valueAndPrice.debtDenominator = 10 ** debtDecimals;
 
-        valueAndPrice.debtValueWithDecimals =
-            (loan.debtAmt * valueAndPrice.debtTokenPrice) /
-            valueAndPrice.debtTokenDecimals;
+        valueAndPrice.debtValueWithDecimals = (loan.debtAmt * valueAndPrice.debtPrice) / valueAndPrice.debtDenominator;
     }
 
     /// @notice Return the loan to value of this loan
@@ -506,7 +508,7 @@ abstract contract AbstractGearingToken is
         }
         // debtValueWithDecimals(price decimals) collateralValue(base decimals)
         ltv = ((valueAndPrice.debtValueWithDecimals * Constants.DECIMAL_BASE_SQ) /
-            (valueAndPrice.collateralValue * valueAndPrice.priceDecimals)).toUint128();
+            (valueAndPrice.collateralValue * valueAndPrice.priceDenominator)).toUint128();
     }
 
     /// @notice Merge collateral data
@@ -534,7 +536,8 @@ abstract contract AbstractGearingToken is
     function _getCollateralPriceData(GtConfig memory config) internal view virtual returns (bytes memory priceData);
 
     function _checkDebtValue(ValueAndPrice memory valueAndPrice) internal pure {
-        uint debtValue = (valueAndPrice.debtValueWithDecimals * Constants.DECIMAL_BASE) / valueAndPrice.priceDecimals;
+        uint debtValue = (valueAndPrice.debtValueWithDecimals * Constants.DECIMAL_BASE) /
+            valueAndPrice.priceDenominator;
         if (debtValue < GearingTokenConstants.MINIMAL_DEBT_VALUE) {
             revert DebtValueIsTooSmall(debtValue);
         }
