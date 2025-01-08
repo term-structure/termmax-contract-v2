@@ -14,6 +14,7 @@ import {ITermMaxMarket, TermMaxMarket, Constants, MarketEvents, MarketErrors} fr
 import {ITermMaxOrder, TermMaxOrder, ISwapCallback, OrderEvents} from "contracts/TermMaxOrder.sol";
 import {MockERC20, ERC20} from "contracts/test/MockERC20.sol";
 import {MockPriceFeed} from "contracts/test/MockPriceFeed.sol";
+import {MockFlashLoanReceiver} from "contracts/test/MockFlashLoanReceiver.sol";
 import {IGearingToken} from "contracts/tokens/IGearingToken.sol";
 import "contracts/storage/TermMaxStorage.sol";
 
@@ -203,6 +204,63 @@ contract MarketTest is Test {
         vm.stopPrank();
     }
 
+    function testLeverage() public {
+        uint128 debtAmt = 1000e8;
+        uint256 collateralAmt = 1e18;
+        vm.startPrank(deployer);
+        res.debt.mint(deployer, debtAmt);
+        res.debt.approve(address(res.market), debtAmt);
+        res.market.mint(deployer, debtAmt);
+        res.xt.transfer(sender, debtAmt);
+        vm.stopPrank();
+
+        vm.startPrank(sender);
+        MockFlashLoanReceiver receiver = new MockFlashLoanReceiver(res.market);
+        res.xt.approve(address(receiver), debtAmt);
+
+        res.collateral.mint(address(receiver), collateralAmt);
+
+        vm.expectEmit();
+        emit MarketEvents.MintGt(address(receiver), sender, 1, debtAmt, abi.encode(collateralAmt));
+        receiver.leverageByXt(debtAmt, abi.encode(sender, collateralAmt));
+
+        assertEq(res.debt.balanceOf(sender), 0);
+        assertEq(res.debt.balanceOf(address(res.market)), 0);
+        assertEq(res.debt.balanceOf(address(receiver)), debtAmt);
+        assertEq(res.xt.balanceOf(sender), 0);
+
+        (address owner, uint128 dAmt, , bytes memory collateralData) = res.gt.loanInfo(1);
+        assertEq(owner, sender);
+        assertEq(dAmt, debtAmt);
+
+        assertEq(abi.decode(collateralData, (uint256)), collateralAmt);
+
+        vm.stopPrank();
+    }
+
+    function testLeverageWhenTermIsNotOpen() public {
+        uint128 debtAmt = 1000e8;
+        uint256 collateralAmt = 1e18;
+        vm.startPrank(deployer);
+        res.debt.mint(deployer, debtAmt);
+        res.debt.approve(address(res.market), debtAmt);
+        res.market.mint(deployer, debtAmt);
+        res.xt.transfer(sender, debtAmt);
+        vm.stopPrank();
+
+        vm.startPrank(sender);
+        MockFlashLoanReceiver receiver = new MockFlashLoanReceiver(res.market);
+        res.xt.approve(address(receiver), debtAmt);
+        vm.warp(marketConfig.openTime - 1);
+        vm.expectRevert(abi.encodeWithSelector(MarketErrors.TermIsNotOpen.selector));
+        receiver.leverageByXt(debtAmt, abi.encode(sender, collateralAmt));
+
+        vm.warp(marketConfig.maturity);
+        vm.expectRevert(abi.encodeWithSelector(MarketErrors.TermIsNotOpen.selector));
+        receiver.leverageByXt(debtAmt, abi.encode(sender, collateralAmt));
+        vm.stopPrank();
+    }
+
     function testCreateOrder() public {
         vm.startPrank(sender);
 
@@ -225,6 +283,18 @@ contract MarketTest is Test {
         assertEq(order.orderConfig().maxXtReserve, orderConfig.maxXtReserve);
         assertEq(order.maker(), sender);
 
+        vm.stopPrank();
+    }
+
+    function testCreateOrderWhenTermIsNotOpen() public {
+        vm.startPrank(sender);
+        vm.warp(marketConfig.openTime - 1);
+        vm.expectRevert(abi.encodeWithSelector(MarketErrors.TermIsNotOpen.selector));
+        res.market.createOrder(sender, orderConfig.maxXtReserve, ISwapCallback(address(0)), orderConfig.curveCuts);
+
+        vm.warp(marketConfig.maturity);
+        vm.expectRevert(abi.encodeWithSelector(MarketErrors.TermIsNotOpen.selector));
+        res.market.createOrder(sender, orderConfig.maxXtReserve, ISwapCallback(address(0)), orderConfig.curveCuts);
         vm.stopPrank();
     }
 }

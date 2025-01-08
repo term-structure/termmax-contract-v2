@@ -366,7 +366,7 @@ contract TermMaxMarket is
         uint256 maxXtReserve,
         ISwapCallback swapTrigger,
         CurveCuts memory curveCuts
-    ) external returns (ITermMaxOrder order) {
+    ) external nonReentrant isOpen returns (ITermMaxOrder order) {
         order = ITermMaxOrder(Clones.clone(TERMMAX_ORDER_IMPLEMENT));
         order.initialize(owner(), maker, [ft, xt, debtToken], gt, maxXtReserve, swapTrigger, curveCuts, _config);
         emit CreateOrder(maker, order);
