@@ -357,4 +357,82 @@ contract MarketTest is Test {
         res.market.createOrder(sender, orderConfig.maxXtReserve, ISwapCallback(address(0)), orderConfig.curveCuts);
         vm.stopPrank();
     }
+
+    function testRedeem() public {
+        marketConfig.feeConfig.redeemFeeRatio = 0.01e8;
+        vm.prank(deployer);
+        res.market.updateMarketConfig(marketConfig);
+
+        address bob = vm.randomAddress();
+        address alice = vm.randomAddress();
+
+        uint128 depositAmt = 1000e8;
+        uint128 debtAmt = 100e8;
+        uint256 collateralAmt = 1e18;
+
+        vm.startPrank(bob);
+        res.debt.mint(bob, depositAmt);
+        res.debt.approve(address(res.market), depositAmt);
+        res.market.mint(bob, depositAmt);
+
+        res.xt.transfer(alice, debtAmt);
+        vm.stopPrank();
+
+        vm.startPrank(alice);
+
+        MockFlashLoanReceiver receiver = new MockFlashLoanReceiver(res.market);
+        res.collateral.mint(address(receiver), collateralAmt);
+
+        res.xt.approve(address(receiver), debtAmt);
+        receiver.leverageByXt(debtAmt, abi.encode(alice, collateralAmt));
+        vm.stopPrank();
+
+        vm.warp(marketConfig.maturity + Constants.LIQUIDATION_WINDOW);
+
+        vm.startPrank(bob);
+        res.ft.approve(address(res.market), depositAmt);
+
+        uint redeemFee = (marketConfig.feeConfig.redeemFeeRatio * (depositAmt - debtAmt)) / Constants.DECIMAL_BASE;
+        vm.expectEmit();
+        emit MarketEvents.Redeem(
+            bob,
+            bob,
+            uint128(Constants.DECIMAL_BASE_SQ),
+            uint128(depositAmt - debtAmt - redeemFee),
+            uint128(redeemFee),
+            abi.encode(collateralAmt)
+        );
+        res.market.redeem(depositAmt, bob);
+
+        assertEq(res.debt.balanceOf(bob), depositAmt - debtAmt - redeemFee);
+        assertEq(res.collateral.balanceOf(bob), collateralAmt);
+        assertEq(res.debt.balanceOf(address(res.market)), 0);
+        assertEq(res.ft.balanceOf(bob), 0);
+        vm.stopPrank();
+    }
+
+    function testRedeemBeforeDeadline() public {
+        uint128 depositAmt = 1000e8;
+
+        vm.startPrank(sender);
+        res.debt.mint(sender, depositAmt);
+        res.debt.approve(address(res.market), depositAmt);
+        res.market.mint(sender, depositAmt);
+
+        res.ft.approve(address(res.market), depositAmt);
+        uint deadline = marketConfig.maturity + Constants.LIQUIDATION_WINDOW;
+        vm.warp(deadline - 1);
+        vm.expectRevert(
+            abi.encodeWithSelector(MarketErrors.CanNotRedeemBeforeFinalLiquidationDeadline.selector, deadline)
+        );
+        res.market.redeem(depositAmt, sender);
+
+        vm.warp(marketConfig.maturity - 1);
+        vm.expectRevert(
+            abi.encodeWithSelector(MarketErrors.CanNotRedeemBeforeFinalLiquidationDeadline.selector, deadline)
+        );
+        res.market.redeem(depositAmt, sender);
+
+        vm.stopPrank();
+    }
 }
