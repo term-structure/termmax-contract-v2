@@ -46,6 +46,9 @@ abstract contract OrderManager is VaultErrors, VaultEvents, Ownable2StepUpgradea
 
     ITermMaxRouter public router;
 
+    uint256 lockedFt;
+    uint256 totalFt;
+
     uint64 public maturity;
 
     modifier onlyCuratorRole() {
