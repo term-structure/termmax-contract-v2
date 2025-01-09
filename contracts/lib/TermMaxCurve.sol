@@ -5,8 +5,6 @@ import {Constants} from "./Constants.sol";
 import {MathLib, SafeCast} from "./MathLib.sol";
 import "../storage/TermMaxStorage.sol";
 
-import {console} from "forge-std/Script.sol";
-
 /**
  * @title The TermMax curve library
  * @author Term Structure Labs
@@ -51,7 +49,7 @@ library TermMaxCurve {
     /// @param daysToMaturity Days to maturity
     /// @param cuts Curve cut array
     /// @param oriXtReserve Original XT reserve
-    /// @param inputAmount Input amount
+    /// @param acc Input amount
     /// @param func Function to calculate delta values
     /// @return deltaXt Delta XT
     /// @return negDeltaFt Negative delta FT
@@ -60,7 +58,7 @@ library TermMaxCurve {
         uint daysToMaturity,
         CurveCut[] memory cuts,
         uint oriXtReserve,
-        uint inputAmount,
+        uint acc,
         function(uint, uint, uint, uint, uint, uint) internal pure returns (uint, uint) func
     ) internal pure returns (uint deltaXt, uint negDeltaFt) {
         uint cutId = calcCutId(cuts, oriXtReserve);
@@ -73,7 +71,7 @@ library TermMaxCurve {
                 xtReserve
             );
             uint oriNegDeltaFt = negDeltaFt;
-            (deltaXt, negDeltaFt) = func(liqSquare, vXtReserve, vFtReserve, deltaXt, negDeltaFt, inputAmount);
+            (deltaXt, negDeltaFt) = func(liqSquare, vXtReserve, vFtReserve, deltaXt, negDeltaFt, acc);
             if (i < cuts.length - 1) {
                 if (oriXtReserve + deltaXt > cuts[i + 1].xtReserve) {
                     deltaXt = cuts[i + 1].xtReserve - oriXtReserve;
@@ -88,7 +86,7 @@ library TermMaxCurve {
     /// @param daysToMaturity Days to maturity
     /// @param cuts Curve cut array
     /// @param oriXtReserve Original XT reserve
-    /// @param inputAmount Input amount
+    /// @param acc Input amount
     /// @param func Function to calculate delta values
     /// @return negDeltaXt Negative delta XT
     /// @return deltaFt Delta FT
@@ -97,7 +95,7 @@ library TermMaxCurve {
         uint daysToMaturity,
         CurveCut[] memory cuts,
         uint oriXtReserve,
-        uint inputAmount,
+        uint acc,
         function(uint, uint, uint, uint, uint, uint) internal pure returns (uint, uint) func
     ) internal pure returns (uint negDeltaXt, uint deltaFt) {
         uint cutId = calcCutId(cuts, oriXtReserve);
@@ -112,12 +110,69 @@ library TermMaxCurve {
                 xtReserve
             );
             uint oriDeltaFt = deltaFt;
-            (negDeltaXt, deltaFt) = func(liqSquare, vXtReserve, vFtReserve, negDeltaXt, deltaFt, inputAmount);
+            (negDeltaXt, deltaFt) = func(liqSquare, vXtReserve, vFtReserve, negDeltaXt, deltaFt, acc);
             if (oriXtReserve < negDeltaXt + cuts[idx].xtReserve) {
                 negDeltaXt = oriXtReserve - cuts[idx].xtReserve;
                 deltaFt = oriDeltaFt + liqSquare / (vXtReserve - negDeltaXt) - vFtReserve;
             } else break;
         }
+    }
+
+    function buyExactXtStep(
+        uint liqSquare,
+        uint vXtReserve,
+        uint vFtReserve,
+        uint,
+        uint oriDeltaFt,
+        uint outputAmount
+    ) internal pure returns (uint negDeltaXt, uint deltaFt) {
+        uint remainingOutputAmt = outputAmount - negDeltaXt;
+        negDeltaXt = outputAmount;
+        deltaFt = oriDeltaFt + vFtReserve - liqSquare / (vXtReserve - remainingOutputAmt);
+    }
+    function buyExactXt(
+        uint netInterestFactor,
+        uint daysToMaturity,
+        CurveCut[] memory cuts,
+        uint oriXtReserve,
+        uint outputAmount
+    ) internal pure returns (uint deltaFt) {
+        (, deltaFt) = cutsReverseIter(
+            netInterestFactor,
+            daysToMaturity,
+            cuts,
+            oriXtReserve,
+            outputAmount,
+            buyExactXtStep
+        );
+    }
+    function buyExactFtStep(
+        uint liqSquare,
+        uint vXtReserve,
+        uint vFtReserve,
+        uint oriDeltaXt,
+        uint,
+        uint outputAmount
+    ) internal pure returns (uint deltaXt, uint negDeltaFt) {
+        uint remainingOutputAmt = outputAmount - negDeltaFt;
+        negDeltaFt = outputAmount;
+        deltaXt = oriDeltaXt + vXtReserve - liqSquare / (vFtReserve - remainingOutputAmt);
+    }
+    function buyExactFt(
+        uint netInterestFactor,
+        uint daysToMaturity,
+        CurveCut[] memory cuts,
+        uint oriXtReserve,
+        uint outputAmount
+    ) internal pure returns (uint deltaXt) {
+        (deltaXt, ) = cutsForwardIter(
+            netInterestFactor,
+            daysToMaturity,
+            cuts,
+            oriXtReserve,
+            outputAmount,
+            buyExactFtStep
+        );
     }
 
     /// @notice Calculation for one step of buying FT

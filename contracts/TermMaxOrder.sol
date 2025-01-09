@@ -62,6 +62,15 @@ contract TermMaxOrder is
         _;
     }
 
+    /// @notice Check if the order is tradable
+    modifier isOpen() {
+        _requireNotPaused();
+        if (block.timestamp >= maturity) {
+            revert TermIsNotOpen();
+        }
+        _;
+    }
+
     modifier onlyMaker() {
         if (msg.sender != maker) revert OnlyMaker();
         _;
@@ -237,7 +246,7 @@ contract TermMaxOrder is
         address recipient,
         uint128 tokenAmtIn,
         uint128 minTokenOut
-    ) external override nonReentrant whenNotPaused returns (uint256 netTokenOut) {
+    ) external override nonReentrant isOpen returns (uint256 netTokenOut) {
         if (tokenIn == tokenOut) revert CantSwapSameToken();
         OrderConfig memory config = _orderConfig;
         uint feeAmt;
@@ -320,20 +329,6 @@ contract TermMaxOrder is
         if (xt.balanceOf(address(this)) > config.maxXtReserve) {
             revert XtReserveTooHigh();
         }
-    }
-
-    /**
-     * @inheritdoc ITermMaxOrder
-     */
-    function pause() external override onlyMaker {
-        _pause();
-    }
-
-    /**
-     * @inheritdoc ITermMaxOrder
-     */
-    function unpause() external override onlyMaker {
-        _unpause();
     }
 
     function _buyToken(
@@ -453,6 +448,72 @@ contract TermMaxOrder is
         tokenIn = ft;
     }
 
+    function swapTokenToExactToken(
+        IERC20 tokenIn,
+        IERC20 tokenOut,
+        address recipient,
+        uint128 tokenAmtOut,
+        uint128 maxTokenIn
+    ) external nonReentrant isOpen returns (uint256 netIn) {}
+
+    function _buyExactToken(
+        address caller,
+        address recipient,
+        uint tokenAmtOut,
+        uint maxTokenIn,
+        OrderConfig memory config,
+        function(uint, uint, uint, OrderConfig memory) internal view returns (uint, uint, IERC20) func
+    ) internal returns (uint256, uint256) {
+        uint daysToMaturity = _daysToMaturity();
+        uint oriXtReserve = xt.balanceOf(address(this));
+
+        (uint netTokenInAmt, uint feeAmt, IERC20 tokenOut) = func(daysToMaturity, oriXtReserve, tokenAmtOut, config);
+
+        uint256 netTokenIn = netTokenInAmt + feeAmt;
+        if (netTokenIn > maxTokenIn) revert UnexpectedAmount(maxTokenIn, netTokenIn);
+
+        debtToken.safeTransferFrom(caller, address(this), netTokenIn);
+
+        debtToken.approve(address(market), netTokenIn);
+        market.mint(address(this), netTokenIn);
+        if (tokenOut == ft) {
+            uint ftReserve = ft.balanceOf(address(this));
+            if (ftReserve < tokenAmtOut + feeAmt) _issueFt(address(this), ftReserve, tokenAmtOut + feeAmt, config);
+        }
+
+        tokenOut.safeTransfer(recipient, tokenAmtOut);
+
+        return (tokenAmtOut, feeAmt);
+    }
+
+    function _buyExactFt(
+        uint daysToMaturity,
+        uint oriXtReserve,
+        uint ftAmtOut,
+        OrderConfig memory config
+    ) internal returns (uint debtTokenAmtIn, uint feeAmt, IERC20 tokenOut) {
+        FeeConfig memory feeConfig = config.feeConfig;
+        CurveCut[] memory cuts = config.curveCuts.borrowCurveCuts;
+        uint nif = Constants.DECIMAL_BASE - feeConfig.lendTakerFeeRatio;
+        debtTokenAmtIn = TermMaxCurve.buyExactFt(nif, daysToMaturity, cuts, oriXtReserve, ftAmtOut);
+        feeAmt = (ftAmtOut * (Constants.DECIMAL_BASE + feeConfig.borrowMakerFeeRatio)) / nif - ftAmtOut;
+        tokenOut = ft;
+    }
+
+    function _buyExactXt(
+        uint daysToMaturity,
+        uint oriXtReserve,
+        uint xtAmtOut,
+        OrderConfig memory config
+    ) internal returns (uint debtTokenAmtIn, uint feeAmt, IERC20 tokenOut) {
+        FeeConfig memory feeConfig = config.feeConfig;
+        CurveCut[] memory cuts = config.curveCuts.lendCurveCuts;
+        uint nif = Constants.DECIMAL_BASE + feeConfig.borrowTakerFeeRatio;
+        debtTokenAmtIn = TermMaxCurve.buyExactXt(nif, daysToMaturity, cuts, oriXtReserve, xtAmtOut);
+        feeAmt = debtTokenAmtIn - (debtTokenAmtIn * (Constants.DECIMAL_BASE - feeConfig.lendMakerFeeRatio)) / nif;
+        tokenOut = xt;
+    }
+
     function _issueFt(address recipient, uint ftReserve, uint targetFtReserve, OrderConfig memory config) internal {
         if (config.gtId == 0) revert CantNotIssueFtWithoutGt();
         uint ftAmtToIssue = ((targetFtReserve - ftReserve) * Constants.DECIMAL_BASE) / market.issueFtFeeRatio();
@@ -462,5 +523,19 @@ contract TermMaxOrder is
     function withdrawAssets(IERC20 token, address recipient, uint256 amount) external onlyMaker {
         token.safeTransfer(recipient, amount);
         emit WithdrawAssets(token, _msgSender(), recipient, amount);
+    }
+
+    /**
+     * @inheritdoc ITermMaxOrder
+     */
+    function pause() external override onlyMaker {
+        _pause();
+    }
+
+    /**
+     * @inheritdoc ITermMaxOrder
+     */
+    function unpause() external override onlyMaker {
+        _unpause();
     }
 }

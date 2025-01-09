@@ -74,6 +74,21 @@ interface ITermMaxOrder {
         uint128 minTokenOut
     ) external returns (uint256 netOut);
 
+    /// @notice Swap token to exact token
+    /// @param tokenIn The token want to swap
+    /// @param tokenOut The token want to receive
+    /// @param recipient Who receive output tokens
+    /// @param tokenAmtOut The number of tokenOut tokens output
+    /// @param maxTokenIn Maximum number of tokenIn token inputs required
+    /// @return netIn The actual number of tokenIn tokens input
+    function swapTokenToExactToken(
+        IERC20 tokenIn,
+        IERC20 tokenOut,
+        address recipient,
+        uint128 tokenAmtOut,
+        uint128 maxTokenIn
+    ) external returns (uint256 netIn);
+
     /// @notice Suspension of market trading
     function pause() external;
 
