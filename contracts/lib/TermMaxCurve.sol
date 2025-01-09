@@ -99,7 +99,6 @@ library TermMaxCurve {
         function(uint, uint, uint, uint, uint, uint) internal pure returns (uint, uint) func
     ) internal pure returns (uint negDeltaXt, uint deltaFt) {
         uint cutId = calcCutId(cuts, oriXtReserve);
-        (negDeltaXt, deltaFt) = (0, 0);
         for (uint i = cutId + 1; i > 0; i--) {
             uint idx = i - 1;
             uint xtReserve = oriXtReserve - negDeltaXt;
@@ -109,27 +108,14 @@ library TermMaxCurve {
                 cuts[idx],
                 xtReserve
             );
-            uint oriDeltaFt = deltaFt;
             (negDeltaXt, deltaFt) = func(liqSquare, vXtReserve, vFtReserve, negDeltaXt, deltaFt, acc);
             if (oriXtReserve < negDeltaXt + cuts[idx].xtReserve) {
                 negDeltaXt = oriXtReserve - cuts[idx].xtReserve;
-                deltaFt = oriDeltaFt + liqSquare / (vXtReserve - negDeltaXt) - vFtReserve;
+                deltaFt = liqSquare / (vXtReserve - negDeltaXt) - vFtReserve;
             } else break;
         }
     }
 
-    function buyExactXtStep(
-        uint liqSquare,
-        uint vXtReserve,
-        uint vFtReserve,
-        uint,
-        uint oriDeltaFt,
-        uint outputAmount
-    ) internal pure returns (uint negDeltaXt, uint deltaFt) {
-        uint remainingOutputAmt = outputAmount - negDeltaXt;
-        negDeltaXt = outputAmount;
-        deltaFt = oriDeltaFt + vFtReserve - liqSquare / (vXtReserve - remainingOutputAmt);
-    }
     function buyExactXt(
         uint netInterestFactor,
         uint daysToMaturity,
@@ -146,18 +132,7 @@ library TermMaxCurve {
             buyExactXtStep
         );
     }
-    function buyExactFtStep(
-        uint liqSquare,
-        uint vXtReserve,
-        uint vFtReserve,
-        uint oriDeltaXt,
-        uint,
-        uint outputAmount
-    ) internal pure returns (uint deltaXt, uint negDeltaFt) {
-        uint remainingOutputAmt = outputAmount - negDeltaFt;
-        negDeltaFt = outputAmount;
-        deltaXt = oriDeltaXt + vXtReserve - liqSquare / (vFtReserve - remainingOutputAmt);
-    }
+
     function buyExactFt(
         uint netInterestFactor,
         uint daysToMaturity,
@@ -173,6 +148,32 @@ library TermMaxCurve {
             outputAmount,
             buyExactFtStep
         );
+    }
+
+    function buyExactXtStep(
+        uint liqSquare,
+        uint vXtReserve,
+        uint vFtReserve,
+        uint,
+        uint oriDeltaFt,
+        uint outputAmount
+    ) internal pure returns (uint negDeltaXt, uint deltaFt) {
+        uint remainingOutputAmt = outputAmount - negDeltaXt;
+        negDeltaXt = outputAmount;
+        deltaFt = oriDeltaFt + liqSquare / (vXtReserve - remainingOutputAmt) - vFtReserve;
+    }
+
+    function buyExactFtStep(
+        uint liqSquare,
+        uint vXtReserve,
+        uint vFtReserve,
+        uint oriDeltaXt,
+        uint,
+        uint outputAmount
+    ) internal pure returns (uint deltaXt, uint negDeltaFt) {
+        uint remainingOutputAmt = outputAmount - negDeltaFt;
+        negDeltaFt = outputAmount;
+        deltaXt = oriDeltaXt + liqSquare / (vFtReserve - remainingOutputAmt) - vXtReserve;
     }
 
     /// @notice Calculation for one step of buying FT

@@ -527,7 +527,7 @@ contract TermMaxOrder is
 
         tokenOut.safeTransfer(recipient, tokenAmtOut);
 
-        return (tokenAmtOut, feeAmt);
+        return (netTokenIn, feeAmt);
     }
 
     function _buyExactFt(

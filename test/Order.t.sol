@@ -315,6 +315,84 @@ contract OrderTest is Test {
         vm.stopPrank();
     }
 
+    function testBuyExactFt() public {
+        vm.startPrank(sender);
+        uint128 ftOutAmt = 100e8;
+        uint128 maxTokenIn = 100e8;
+        res.debt.mint(sender, maxTokenIn);
+        res.debt.approve(address(res.order), maxTokenIn);
+
+        // uint actualOut = vm.parseUint(vm.parseJsonString(testdata, ".expected.testBuyFt.output.netOut"));
+        // uint fee = vm.parseUint(vm.parseJsonString(testdata, ".expected.testBuyFt.output.fee"));
+        // StateChecker.OrderState memory expectedState = JSONLoader.getOrderStateFromJson(
+        //     testdata,
+        //     ".expected.testBuyFt.contractState"
+        // );
+        // vm.expectEmit();
+        // emit OrderEvents.SwapTokenToExactToken(
+        //     res.debt,
+        //     res.ft,
+        //     sender,
+        //     sender,
+        //     maxTokenIn,
+        //     ftOutAmt,
+        //     0
+        // );
+        uint256 netIn = res.order.swapTokenToExactToken(res.debt, res.ft, sender, ftOutAmt, maxTokenIn);
+
+        // StateChecker.checkOrderState(res, expectedState);
+
+        assert(netIn < maxTokenIn);
+        assert(res.ft.balanceOf(sender) == ftOutAmt);
+        assert(res.debt.balanceOf(sender) == maxTokenIn - netIn);
+
+        vm.stopPrank();
+    }
+
+    function testBuyExactXt() public {
+        vm.startPrank(sender);
+        uint128 xtOutAmt = 100e8;
+        uint128 maxTokenIn = 100e8;
+        res.debt.mint(sender, maxTokenIn);
+        res.debt.approve(address(res.order), maxTokenIn);
+
+        // uint actualOut = vm.parseUint(vm.parseJsonString(testdata, ".expected.testBuyFt.output.netOut"));
+        // uint fee = vm.parseUint(vm.parseJsonString(testdata, ".expected.testBuyFt.output.fee"));
+        // StateChecker.OrderState memory expectedState = JSONLoader.getOrderStateFromJson(
+        //     testdata,
+        //     ".expected.testBuyFt.contractState"
+        // );
+        // vm.expectEmit();
+        // emit OrderEvents.SwapTokenToExactToken(
+        //     res.debt,
+        //     res.ft,
+        //     sender,
+        //     sender,
+        //     maxTokenIn,
+        //     ftOutAmt,
+        //     0
+        // );
+        uint256 netIn = res.order.swapTokenToExactToken(res.debt, res.xt, sender, xtOutAmt, maxTokenIn);
+
+        // StateChecker.checkOrderState(res, expectedState);
+
+        assert(netIn < maxTokenIn);
+        assert(res.xt.balanceOf(sender) == xtOutAmt);
+        assert(res.debt.balanceOf(sender) == maxTokenIn - netIn);
+        vm.stopPrank();
+    }
+
+    function testByExactFtWhenTermIsNotOpen() public {
+        uint128 ftInAmt = 100e8;
+        uint128 maxTokenOut = 100e8;
+        res.debt.mint(sender, ftInAmt);
+        res.debt.approve(address(res.market), ftInAmt);
+
+        vm.warp(res.market.config().maturity);
+        vm.expectRevert(abi.encodeWithSelector(OrderErrors.TermIsNotOpen.selector));
+        res.order.swapTokenToExactToken(res.debt, res.ft, sender, maxTokenOut, ftInAmt);
+    }
+
     function testUpdateOrderConfig() public {
         vm.startPrank(maker);
 
