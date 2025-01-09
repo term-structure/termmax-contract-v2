@@ -17,6 +17,8 @@ import {OrderConfig, MarketConfig, CurveCuts, CurveCut, FeeConfig} from "./stora
 import {ISwapCallback} from "./ISwapCallback.sol";
 import {TransferUtils} from "./lib/TransferUtils.sol";
 
+import {console} from "forge-std/console.sol";
+
 /**
  * @title TermMax Order
  * @author Term Structure Labs
@@ -401,12 +403,10 @@ contract TermMaxOrder is
         uint oriXtReserve = xt.balanceOf(address(this));
 
         (uint debtTokenAmtOut, uint feeAmt, IERC20 tokenIn) = func(daysToMaturity, oriXtReserve, tokenAmtIn, config);
-
         uint netOut = debtTokenAmtOut;
         if (netOut < minDebtTokenOut) revert UnexpectedAmount(minDebtTokenOut, netOut);
 
         tokenIn.safeTransferFrom(caller, address(this), tokenAmtIn);
-
         if (tokenIn == xt) {
             uint ftReserve = ft.balanceOf(address(this));
             if (ftReserve < debtTokenAmtOut) _issueFt(recipient, ftReserve, debtTokenAmtOut + feeAmt, config);
@@ -444,7 +444,7 @@ contract TermMaxOrder is
         uint nif = Constants.DECIMAL_BASE - feeConfig.lendTakerFeeRatio;
         (, debtTokenAmtOut) = TermMaxCurve.sellXt(nif, daysToMaturity, cuts, oriXtReserve, tokenAmtIn);
         feeAmt = (debtTokenAmtOut * (Constants.DECIMAL_BASE + feeConfig.borrowMakerFeeRatio)) / nif - debtTokenAmtOut;
-        tokenIn = ft;
+        tokenIn = xt;
     }
 
     function swapTokenToExactToken(

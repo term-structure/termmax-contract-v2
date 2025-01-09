@@ -127,7 +127,7 @@ contract OrderTest is Test {
 
         res.debt.mint(sender, underlyingAmtIn);
         res.debt.approve(address(res.order), underlyingAmtIn);
-        vm.warp(res.market.config().maturity - 1);
+        vm.warp(res.market.config().openTime - 1);
         vm.expectRevert(abi.encodeWithSelector(OrderErrors.TermIsNotOpen.selector));
         res.order.swapExactTokenToToken(res.debt, res.ft, sender, underlyingAmtIn, minTokenOut);
 

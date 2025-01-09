@@ -5,7 +5,6 @@ import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Own
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 import {ITermMaxMarket, IMintableERC20, IERC20} from "./ITermMaxMarket.sol";
 import {IGearingToken} from "./tokens/IGearingToken.sol";
@@ -18,6 +17,7 @@ import {MarketEvents} from "./events/MarketEvents.sol";
 import {StringUtil} from "./lib/StringUtil.sol";
 import {MarketConfig, MarketInitialParams, GtConfig, CurveCuts, FeeConfig} from "./storage/TermMaxStorage.sol";
 import {ISwapCallback} from "./ISwapCallback.sol";
+import {TransferUtils} from "./lib/TransferUtils.sol";
 
 /**
  * @title TermMax Market
@@ -33,8 +33,8 @@ contract TermMaxMarket is
 {
     using SafeCast for uint256;
     using SafeCast for int256;
-    using SafeERC20 for IERC20;
-    using SafeERC20 for IMintableERC20;
+    using TransferUtils for IERC20;
+    using TransferUtils for IMintableERC20;
     using StringUtil for string;
 
     address immutable MINTABLE_ERC20_IMPLEMENT;
