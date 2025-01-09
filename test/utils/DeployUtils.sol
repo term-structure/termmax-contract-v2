@@ -21,6 +21,7 @@ library DeployUtils {
     struct Res {
         TermMaxFactory factory;
         ITermMaxOrder order;
+        TermMaxRouter router;
         MarketConfig marketConfig;
         OrderConfig orderConfig;
         ITermMaxMarket market;

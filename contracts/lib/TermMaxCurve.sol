@@ -5,8 +5,6 @@ import {Constants} from "./Constants.sol";
 import {MathLib, SafeCast} from "./MathLib.sol";
 import "../storage/TermMaxStorage.sol";
 
-import {console} from "forge-std/console.sol";
-
 /**
  * @title The TermMax curve library
  * @author Term Structure Labs
@@ -153,33 +151,36 @@ library TermMaxCurve {
     }
 
     function buyExactXtStep(
-        uint liqSquare,
+        uint,
         uint vXtReserve,
         uint vFtReserve,
-        uint,
+        uint oriNegDeltaXt,
         uint oriDeltaFt,
         uint outputAmount
     ) internal pure returns (uint negDeltaXt, uint deltaFt) {
-        uint remainingOutputAmt = outputAmount - negDeltaXt;
-        negDeltaXt = outputAmount;
-        deltaFt = oriDeltaFt + liqSquare / (vXtReserve - remainingOutputAmt) - vFtReserve;
-    }
+        uint acc = outputAmount - (oriNegDeltaXt + oriDeltaFt);
+        uint b = vXtReserve + vFtReserve + acc;
+        uint c = vXtReserve * acc;
 
+        uint segNegDeltaXt = (b - MathLib.sqrt(b * b - 4 * c)) / 2;
+        negDeltaXt = oriNegDeltaXt + segNegDeltaXt;
+        deltaFt = oriDeltaFt + acc - segNegDeltaXt;
+    }
     function buyExactFtStep(
-        uint liqSquare,
+        uint,
         uint vXtReserve,
         uint vFtReserve,
         uint oriDeltaXt,
-        uint,
+        uint oriNegDeltaFt,
         uint outputAmount
     ) internal pure returns (uint deltaXt, uint negDeltaFt) {
-        console.log("buyExactFtStep");
-        uint remainingOutputAmt = outputAmount - negDeltaFt;
-        console.log("remainingOutputAmt", remainingOutputAmt);
-        negDeltaFt = outputAmount;
-        console.log("vFtReserve - remainingOutputAmt", vFtReserve - remainingOutputAmt);
-        deltaXt = oriDeltaXt + liqSquare / (vFtReserve - remainingOutputAmt) - vXtReserve;
-        console.log("buyExactFtStep end");
+        uint acc = outputAmount - (oriNegDeltaFt + oriDeltaXt);
+        uint b = vFtReserve + vXtReserve + acc;
+        uint c = vFtReserve * acc;
+
+        uint segNegDeltaFt = (b - MathLib.sqrt(b * b - 4 * c)) / 2;
+        negDeltaFt = oriNegDeltaFt + segNegDeltaFt;
+        deltaXt = oriDeltaXt + acc - segNegDeltaFt;
     }
 
     /// @notice Calculation for one step of buying FT
