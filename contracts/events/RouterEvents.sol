@@ -23,6 +23,16 @@ interface RouterEvents {
         uint256 actualTokenOut
     );
 
+    event SwapTokenToExactToken(
+        IERC20 indexed tokenIn,
+        IERC20 indexed tokenOut,
+        address caller,
+        address recipient,
+        ITermMaxOrder[] orders,
+        uint128[] tradingAmts,
+        uint256 actualTokenIn
+    );
+
     event SellTokens(
         ITermMaxMarket indexed market,
         address caller,
@@ -60,7 +70,7 @@ interface RouterEvents {
         uint256 indexed gtId,
         address caller,
         address recipient,
-        uint256 totalAmtToBuyFt,
+        uint256 repayAmt,
         uint256 returnAmt
     );
 

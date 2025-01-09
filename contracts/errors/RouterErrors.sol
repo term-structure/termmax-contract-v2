@@ -16,4 +16,6 @@ interface RouterErrors {
     error SwapFailed(address adapter, bytes revertData);
     /// @notice Error for the token output is less than expected
     error InsufficientTokenOut(address token, uint256 expectedTokenOut, uint256 actualTokenOut);
+    /// @notice Error for the token input is less than expected
+    error InsufficientTokenIn(address token, uint256 expectedTokenIn, uint256 actualTokenIn);
 }

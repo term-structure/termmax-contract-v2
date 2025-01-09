@@ -122,8 +122,8 @@ contract TermMaxRouter is
         IERC20 tokenIn,
         IERC20 tokenOut,
         address recipient,
-        ITermMaxOrder[] calldata orders,
-        uint128[] calldata tradingAmts,
+        ITermMaxOrder[] memory orders,
+        uint128[] memory tradingAmts,
         uint128 minTokenOut
     ) external whenNotPaused returns (uint256 netTokenOut) {
         uint totalAmtIn = sum(tradingAmts);
@@ -136,8 +136,8 @@ contract TermMaxRouter is
         IERC20 tokenIn,
         IERC20 tokenOut,
         address recipient,
-        ITermMaxOrder[] calldata orders,
-        uint128[] calldata tradingAmts,
+        ITermMaxOrder[] memory orders,
+        uint128[] memory tradingAmts,
         uint128 minTokenOut
     ) internal returns (uint256 netTokenOut) {
         for (uint256 i = 0; i < orders.length; ++i) {
@@ -146,6 +146,35 @@ contract TermMaxRouter is
             netTokenOut += order.swapExactTokenToToken(tokenIn, tokenOut, recipient, tradingAmts[i], 0);
         }
         if (netTokenOut < minTokenOut) revert InsufficientTokenOut(address(tokenOut), netTokenOut, minTokenOut);
+    }
+
+    function swapTokenToExactToken(
+        IERC20 tokenIn,
+        IERC20 tokenOut,
+        address recipient,
+        ITermMaxOrder[] memory orders,
+        uint128[] memory tradingAmts,
+        uint128 maxTokenIn
+    ) external whenNotPaused returns (uint256 netTokenIn) {
+        tokenIn.safeTransferFrom(msg.sender, address(this), maxTokenIn);
+        netTokenIn = _swapTokenToExactToken(tokenIn, tokenOut, recipient, orders, tradingAmts, maxTokenIn);
+        emit SwapTokenToExactToken(tokenIn, tokenOut, msg.sender, recipient, orders, tradingAmts, netTokenIn);
+    }
+
+    function _swapTokenToExactToken(
+        IERC20 tokenIn,
+        IERC20 tokenOut,
+        address recipient,
+        ITermMaxOrder[] memory orders,
+        uint128[] memory tradingAmts,
+        uint128 maxTokenIn
+    ) internal returns (uint256 netTokenIn) {
+        for (uint256 i = 0; i < orders.length; ++i) {
+            ITermMaxOrder order = orders[i];
+            tokenOut.safeIncreaseAllowance(address(order), maxTokenIn);
+            netTokenIn += order.swapTokenToExactToken(tokenIn, tokenOut, recipient, tradingAmts[i], maxTokenIn);
+        }
+        if (netTokenIn > maxTokenIn) revert InsufficientTokenIn(address(tokenIn), netTokenIn, maxTokenIn);
     }
 
     function sum(uint128[] memory values) internal pure returns (uint total) {
@@ -298,25 +327,19 @@ contract TermMaxRouter is
     function flashRepayFromColl(
         address recipient,
         ITermMaxMarket market,
-        ITermMaxOrder buyFtOrder,
         uint256 gtId,
+        ITermMaxOrder[] calldata orders,
+        uint128[] calldata amtsToBuyFt,
         bool byUnderlying,
         SwapUnit[] memory units,
         ITermMaxOrder sellFtOrder
     ) external ensureMarketWhitelist(address(market)) whenNotPaused returns (uint256 netTokenOut) {
         (IERC20 ft, , IGearingToken gt, , IERC20 debtToken) = market.tokens();
         gt.safeTransferFrom(msg.sender, address(this), gtId, "");
-        gt.flashRepay(gtId, byUnderlying, abi.encode(buyFtOrder, ft, units));
-        if (byUnderlying) {
-            // SafeTransfer remainning debtToken token
-            netTokenOut = debtToken.balanceOf(address(this));
-            debtToken.safeTransfer(recipient, netTokenOut);
-        } else {
-            // Swap remainning ft to debtToken token
-            netTokenOut = ft.balanceOf(address(this));
-            ft.safeIncreaseAllowance(address(market), netTokenOut);
-            netTokenOut = sellFtOrder.swapExactTokenToToken(debtToken, ft, recipient, netTokenOut.toUint128(), 0);
-        }
+        gt.flashRepay(gtId, byUnderlying, abi.encode(orders, amtsToBuyFt, ft, units));
+        // SafeTransfer remainning debtToken token
+        netTokenOut = debtToken.balanceOf(address(this));
+        debtToken.safeTransfer(recipient, netTokenOut);
     }
 
     /**
@@ -327,34 +350,28 @@ contract TermMaxRouter is
         ITermMaxMarket market,
         uint256 gtId,
         ITermMaxOrder[] calldata orders,
-        uint128[] calldata amtsToBuyFt,
-        uint128 minFtOutToRepay,
-        ITermMaxOrder sellFtOrder
+        uint128[] calldata ftAmtsWantBuy,
+        uint128 maxTokenIn
     ) external ensureMarketWhitelist(address(market)) whenNotPaused returns (uint256 returnAmt) {
         (IERC20 ft, , IGearingToken gt, , IERC20 debtToken) = market.tokens();
 
-        uint totalAmtToBuyFt = sum(amtsToBuyFt);
-        debtToken.safeTransferFrom(msg.sender, address(this), totalAmtToBuyFt);
-        returnAmt = _swapExactTokenToToken(debtToken, ft, address(this), orders, amtsToBuyFt, minFtOutToRepay);
-        if (returnAmt < minFtOutToRepay) {
-            revert InsufficientTokenOut(address(ft), minFtOutToRepay, returnAmt);
+        debtToken.safeTransferFrom(msg.sender, address(this), maxTokenIn);
+        uint256 netCost = _swapExactTokenToToken(debtToken, ft, address(this), orders, ftAmtsWantBuy, maxTokenIn);
+        uint totalFtAmt = sum(ftAmtsWantBuy);
+        (, uint128 repayAmt, , ) = gt.loanInfo(gtId);
+
+        if (totalFtAmt < repayAmt) {
+            repayAmt = totalFtAmt.toUint128();
         }
-        (, uint128 debtAmt, , ) = gt.loanInfo(gtId);
-        if (returnAmt > debtAmt) {
-            returnAmt = sellFtOrder.swapExactTokenToToken(
-                ft,
-                debtToken,
-                recipient,
-                (returnAmt - debtAmt).toUint128(),
-                0
-            );
-            gt.repay(gtId, debtAmt, false);
-        } else {
-            gt.repay(gtId, uint128(returnAmt), false);
-            returnAmt = 0;
+        gt.repay(gtId, repayAmt, false);
+
+        returnAmt = maxTokenIn - netCost;
+        debtToken.safeTransfer(recipient, returnAmt);
+        if (totalFtAmt > repayAmt) {
+            ft.safeTransfer(recipient, totalFtAmt - repayAmt);
         }
 
-        emit RepayByTokenThroughFt(market, gtId, msg.sender, recipient, totalAmtToBuyFt, returnAmt);
+        emit RepayByTokenThroughFt(market, gtId, msg.sender, recipient, repayAmt, returnAmt);
     }
 
     function redeemAndSwap(
@@ -452,9 +469,9 @@ contract TermMaxRouter is
         bytes memory collateralData,
         bytes calldata callbackData
     ) external override ensureGtWhitelist(msg.sender) {
-        (ITermMaxOrder buyFtOrder, IERC20 ft, SwapUnit[] memory units) = abi.decode(
+        (ITermMaxOrder[] memory orders, uint128[] memory amtsToBuyFt, IERC20 ft, SwapUnit[] memory units) = abi.decode(
             callbackData,
-            (ITermMaxOrder, IERC20, SwapUnit[])
+            (ITermMaxOrder[], uint128[], IERC20, SwapUnit[])
         );
         // do swap
         bytes memory outData = _doSwap(collateralData, units);
@@ -462,8 +479,7 @@ contract TermMaxRouter is
         if (address(repayToken) == address(ft)) {
             IERC20 debtToken = IERC20(units[units.length - 1].tokenOut);
             uint amount = abi.decode(outData, (uint));
-            debtToken.safeIncreaseAllowance(address(buyFtOrder), amount);
-            buyFtOrder.swapExactTokenToToken(debtToken, ft, address(this), amount.toUint128(), debtAmt);
+            _swapTokenToExactToken(ft, debtToken, address(this), orders, amtsToBuyFt, amount.toUint128());
         }
         repayToken.safeIncreaseAllowance(msg.sender, debtAmt);
     }

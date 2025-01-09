@@ -5,6 +5,8 @@ import {Constants} from "./Constants.sol";
 import {MathLib, SafeCast} from "./MathLib.sol";
 import "../storage/TermMaxStorage.sol";
 
+import {console} from "forge-std/console.sol";
+
 /**
  * @title The TermMax curve library
  * @author Term Structure Labs
@@ -171,9 +173,13 @@ library TermMaxCurve {
         uint,
         uint outputAmount
     ) internal pure returns (uint deltaXt, uint negDeltaFt) {
+        console.log("buyExactFtStep");
         uint remainingOutputAmt = outputAmount - negDeltaFt;
+        console.log("remainingOutputAmt", remainingOutputAmt);
         negDeltaFt = outputAmount;
+        console.log("vFtReserve - remainingOutputAmt", vFtReserve - remainingOutputAmt);
         deltaXt = oriDeltaXt + liqSquare / (vFtReserve - remainingOutputAmt) - vXtReserve;
+        console.log("buyExactFtStep end");
     }
 
     /// @notice Calculation for one step of buying FT

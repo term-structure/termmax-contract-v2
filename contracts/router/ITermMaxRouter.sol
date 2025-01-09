@@ -48,6 +48,16 @@ interface ITermMaxRouter {
         uint128 minTokenOut
     ) external returns (uint256 netTokenOut);
 
+    /// @notice Swap token to exact token
+    function swapTokenToExactToken(
+        IERC20 tokenIn,
+        IERC20 tokenOut,
+        address recipient,
+        ITermMaxOrder[] calldata orders,
+        uint128[] calldata tradingAmts,
+        uint128 maxTokenIn
+    ) external returns (uint256 netTokenIn);
+
     function sellTokens(
         address recipient,
         ITermMaxMarket market,
@@ -90,8 +100,9 @@ interface ITermMaxRouter {
     function flashRepayFromColl(
         address recipient,
         ITermMaxMarket market,
-        ITermMaxOrder buyFtOrder,
         uint256 gtId,
+        ITermMaxOrder[] calldata orders,
+        uint128[] calldata amtsToBuyFt,
         bool byUnderlying,
         SwapUnit[] memory units,
         ITermMaxOrder sellFtOrder
@@ -102,9 +113,8 @@ interface ITermMaxRouter {
         ITermMaxMarket market,
         uint256 gtId,
         ITermMaxOrder[] calldata orders,
-        uint128[] calldata amtsToBuyFt,
-        uint128 minFtOutToRepay,
-        ITermMaxOrder sellFtOrder
+        uint128[] calldata ftAmtsWantBuy,
+        uint128 maxTokenIn
     ) external returns (uint256 returnAmt);
 
     function redeemAndSwap(
