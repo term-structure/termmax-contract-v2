@@ -9,6 +9,7 @@ import {StateChecker} from "./utils/StateChecker.sol";
 import {SwapUtils} from "./utils/SwapUtils.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {IFlashLoanReceiver} from "contracts/IFlashLoanReceiver.sol";
 import {ITermMaxMarket, TermMaxMarket, Constants, MarketEvents, MarketErrors} from "contracts/TermMaxMarket.sol";
 import {ITermMaxOrder, TermMaxOrder, ISwapCallback, OrderEvents, OrderErrors} from "contracts/TermMaxOrder.sol";
@@ -20,6 +21,7 @@ import "contracts/storage/TermMaxStorage.sol";
 
 contract OrderTest is Test {
     using JSONLoader for *;
+    using SafeCast for *;
     DeployUtils.Res res;
 
     OrderConfig orderConfig;
@@ -311,5 +313,118 @@ contract OrderTest is Test {
         res.order.swapExactTokenToToken(res.xt, res.debt, sender, xtAmtIn, minTokenOut);
 
         vm.stopPrank();
+    }
+
+    function testUpdateOrderConfig() public {
+        vm.startPrank(maker);
+
+        // Prepare new curve cuts
+        orderConfig.curveCuts.lendCurveCuts[0].liqSquare++;
+        int ftChangeAmt = 1e8;
+        int xtChangeAmt = -1e8;
+
+        deal(address(res.ft), maker, ftChangeAmt.toUint256());
+        res.ft.approve(address(res.order), ftChangeAmt.toUint256());
+
+        vm.expectEmit();
+        emit OrderEvents.UpdateOrder(
+            orderConfig.curveCuts,
+            ftChangeAmt,
+            xtChangeAmt,
+            orderConfig.gtId,
+            orderConfig.maxXtReserve,
+            ISwapCallback(address(0))
+        );
+        res.order.updateOrder(orderConfig, ftChangeAmt, xtChangeAmt);
+
+        // Verify curve was updated
+        OrderConfig memory updatedConfig = res.order.orderConfig();
+        assertEq(updatedConfig.curveCuts.lendCurveCuts[0].liqSquare, orderConfig.curveCuts.lendCurveCuts[0].liqSquare);
+        assertEq(res.xt.balanceOf(maker), (-xtChangeAmt).toUint256());
+        assertEq(res.ft.balanceOf(maker), 0);
+
+        vm.stopPrank();
+    }
+
+    function testOnlyMakerCanUpdateOrder() public {
+        vm.startPrank(sender);
+
+        vm.expectRevert(OrderErrors.OnlyMaker.selector);
+        res.order.updateOrder(orderConfig, 0, 0);
+
+        vm.stopPrank();
+    }
+
+    function testPauseAndUnpause() public {
+        vm.startPrank(maker);
+
+        // Test pause
+        res.order.pause();
+        assertTrue(TermMaxOrder(address(res.order)).paused());
+
+        // Verify swaps are blocked when paused
+        vm.expectRevert(abi.encodeWithSignature("EnforcedPause()"));
+        res.order.swapExactTokenToToken(res.ft, res.debt, sender, 1e8, 0);
+
+        // Test unpause
+        res.order.unpause();
+        assertFalse(TermMaxOrder(address(res.order)).paused());
+
+        vm.stopPrank();
+    }
+
+    function testOnlyMakerCanPause() public {
+        vm.startPrank(sender);
+
+        vm.expectRevert(OrderErrors.OnlyMaker.selector);
+        res.order.pause();
+
+        vm.stopPrank();
+    }
+
+    function testSwapReverts() public {
+        vm.startPrank(sender);
+
+        // Test same token swap
+        vm.expectRevert(OrderErrors.CantSwapSameToken.selector);
+        res.order.swapExactTokenToToken(res.ft, res.ft, sender, 1e8, 0);
+
+        IERC20 token0 = IERC20(vm.randomAddress());
+        IERC20 token1 = IERC20(vm.randomAddress());
+        // Test invalid token combination
+        vm.expectRevert(abi.encodeWithSelector(OrderErrors.CantNotSwapToken.selector, token0, token1));
+        res.order.swapExactTokenToToken(token0, token1, sender, 1e8, 0);
+
+        vm.stopPrank();
+    }
+
+    function testSwapWithCallback() public {
+        // Deploy mock callback contract
+        MockSwapCallback callback = new MockSwapCallback();
+
+        orderConfig.swapTrigger = callback;
+        vm.prank(maker);
+        res.order.updateOrder(orderConfig, 0, 0);
+
+        vm.startPrank(sender);
+
+        uint128 amountIn = 1e8;
+        res.debt.mint(sender, amountIn);
+        res.debt.approve(address(res.order), amountIn);
+        res.order.swapExactTokenToToken(res.debt, res.ft, sender, amountIn, 0);
+
+        uint expectedFtReserve = res.ft.balanceOf(address(res.order));
+        assertEq(expectedFtReserve, callback.ftReserve());
+
+        vm.stopPrank();
+    }
+}
+
+// Mock contracts for testing
+contract MockSwapCallback is ISwapCallback {
+    uint256 public ftReserve;
+
+    function swapCallback(uint256 ftReserve_) external override {
+        ftReserve = ftReserve_;
     }
 }

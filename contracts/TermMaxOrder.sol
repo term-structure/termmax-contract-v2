@@ -17,8 +17,6 @@ import {OrderConfig, MarketConfig, CurveCuts, CurveCut, FeeConfig} from "./stora
 import {ISwapCallback} from "./ISwapCallback.sol";
 import {TransferUtils} from "./lib/TransferUtils.sol";
 
-import {console} from "forge-std/console.sol";
-
 /**
  * @title TermMax Order
  * @author Term Structure Labs
