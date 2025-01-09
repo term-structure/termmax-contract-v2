@@ -162,20 +162,19 @@ contract TermMaxOrder is
      */
     function updateOrder(
         OrderConfig memory newOrderConfig,
-        uint newFtReserve,
-        uint newXtReserve
+        int256 ftChangeAmt,
+        int256 xtChangeAmt
     ) external override onlyMaker {
         _updateCurve(newOrderConfig.curveCuts);
-        (uint xtReserve, uint ftReserve) = tokenReserves();
-        if (newFtReserve > ftReserve) {
-            ft.safeTransferFrom(maker, address(this), newFtReserve - ftReserve);
-        } else if (newFtReserve < ftReserve) {
-            ft.safeTransfer(maker, ftReserve - newFtReserve);
+        if (ftChangeAmt > 0) {
+            ft.safeTransferFrom(msg.sender, address(this), ftChangeAmt.toUint256());
+        } else if (ftChangeAmt < 0) {
+            ft.safeTransfer(msg.sender, (-ftChangeAmt).toUint256());
         }
-        if (newXtReserve > xtReserve) {
-            xt.safeTransferFrom(maker, address(this), newXtReserve - xtReserve);
-        } else if (newXtReserve < xtReserve) {
-            xt.safeTransfer(maker, xtReserve - newXtReserve);
+        if (xtChangeAmt > 0) {
+            xt.safeTransferFrom(msg.sender, address(this), xtChangeAmt.toUint256());
+        } else if (xtChangeAmt < 0) {
+            xt.safeTransfer(msg.sender, (-xtChangeAmt).toUint256());
         }
         _orderConfig.maxXtReserve = newOrderConfig.maxXtReserve;
         // check gtId
@@ -186,8 +185,8 @@ contract TermMaxOrder is
         _orderConfig.swapTrigger = newOrderConfig.swapTrigger;
         emit UpdateOrder(
             newOrderConfig.curveCuts,
-            ftReserve,
-            xtReserve,
+            ftChangeAmt,
+            xtChangeAmt,
             newOrderConfig.gtId,
             newOrderConfig.maxXtReserve,
             newOrderConfig.swapTrigger
@@ -515,9 +514,8 @@ contract TermMaxOrder is
         uint daysToMaturity = _daysToMaturity();
         uint oriXtReserve = xt.balanceOf(address(this));
 
-        (uint netTokenInAmt, uint feeAmt, IERC20 tokenOut) = func(daysToMaturity, oriXtReserve, tokenAmtOut, config);
+        (uint netTokenIn, uint feeAmt, IERC20 tokenOut) = func(daysToMaturity, oriXtReserve, tokenAmtOut, config);
 
-        uint256 netTokenIn = netTokenInAmt + feeAmt;
         if (netTokenIn > maxTokenIn) revert UnexpectedAmount(maxTokenIn, netTokenIn);
 
         debtToken.safeTransferFrom(caller, address(this), netTokenIn);

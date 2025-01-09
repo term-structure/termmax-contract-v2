@@ -39,9 +39,9 @@ interface ITermMaxOrder {
 
     /// @notice Set the market configuration
     /// @param newOrderConfig New order configuration
-    /// @param newFtReserve New FT reserve amount
-    /// @param newXtReserve New XT reserve amount
-    function updateOrder(OrderConfig memory newOrderConfig, uint256 newFtReserve, uint256 newXtReserve) external;
+    /// @param ftChangeAmt Change amount of FT reserve
+    /// @param xtChangeAmt Change amount of XT reserve
+    function updateOrder(OrderConfig memory newOrderConfig, int256 ftChangeAmt, int256 xtChangeAmt) external;
 
     function withdrawAssets(IERC20 token, address recipient, uint256 amount) external;
 

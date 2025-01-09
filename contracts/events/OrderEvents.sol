@@ -20,8 +20,8 @@ interface OrderEvents {
     /// @notice Emitted when update order
     event UpdateOrder(
         CurveCuts curveCuts,
-        uint256 ftReserve,
-        uint256 xtReserve,
+        int256 ftChangeAmt,
+        int256 xtChangeAmt,
         uint256 gtId,
         uint256 maxXtReserve,
         ISwapCallback swapTrigger
