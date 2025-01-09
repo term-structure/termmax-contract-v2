@@ -454,7 +454,55 @@ contract TermMaxOrder is
         address recipient,
         uint128 tokenAmtOut,
         uint128 maxTokenIn
-    ) external nonReentrant isOpen returns (uint256 netIn) {}
+    ) external nonReentrant isOpen returns (uint256 netTokenIn) {
+        if (tokenIn == tokenOut) revert CantSwapSameToken();
+        OrderConfig memory config = _orderConfig;
+        uint feeAmt;
+        if (tokenIn == debtToken && tokenOut == ft) {
+            (netTokenIn, feeAmt) = buyExactFt(tokenAmtOut, maxTokenIn, msg.sender, recipient, config);
+        } else if (tokenIn == debtToken && tokenOut == xt) {
+            (netTokenIn, feeAmt) = buyExactXt(tokenAmtOut, maxTokenIn, msg.sender, recipient, config);
+        } else {
+            revert CantNotSwapToken(tokenIn, tokenOut);
+        }
+        ft.safeTransfer(market.config().treasurer, feeAmt);
+
+        if (address(_orderConfig.swapTrigger) != address(0)) {
+            _orderConfig.swapTrigger.swapCallback(ft.balanceOf(address(this)));
+        }
+        emit SwapTokenToExactToken(
+            tokenIn,
+            tokenOut,
+            msg.sender,
+            recipient,
+            tokenAmtOut,
+            netTokenIn.toUint128(),
+            feeAmt.toUint128()
+        );
+    }
+
+    function buyExactFt(
+        uint tokenAmtOut,
+        uint maxTokenIn,
+        address caller,
+        address recipient,
+        OrderConfig memory config
+    ) internal isLendingAllowed(config) returns (uint256 netOut, uint256 feeAmt) {
+        (netOut, feeAmt) = _buyExactToken(caller, recipient, tokenAmtOut, maxTokenIn, config, _buyExactFt);
+        if (xt.balanceOf(address(this)) > config.maxXtReserve) {
+            revert XtReserveTooHigh();
+        }
+    }
+
+    function buyExactXt(
+        uint tokenAmtOut,
+        uint maxTokenIn,
+        address caller,
+        address recipient,
+        OrderConfig memory config
+    ) internal isBorrowingAllowed(config) returns (uint256 netOut, uint256 feeAmt) {
+        return _buyExactToken(caller, recipient, tokenAmtOut, maxTokenIn, config, _buyExactXt);
+    }
 
     function _buyExactToken(
         address caller,
@@ -491,7 +539,7 @@ contract TermMaxOrder is
         uint oriXtReserve,
         uint ftAmtOut,
         OrderConfig memory config
-    ) internal returns (uint debtTokenAmtIn, uint feeAmt, IERC20 tokenOut) {
+    ) internal view returns (uint debtTokenAmtIn, uint feeAmt, IERC20 tokenOut) {
         FeeConfig memory feeConfig = config.feeConfig;
         CurveCut[] memory cuts = config.curveCuts.borrowCurveCuts;
         uint nif = Constants.DECIMAL_BASE - feeConfig.lendTakerFeeRatio;
@@ -505,7 +553,7 @@ contract TermMaxOrder is
         uint oriXtReserve,
         uint xtAmtOut,
         OrderConfig memory config
-    ) internal returns (uint debtTokenAmtIn, uint feeAmt, IERC20 tokenOut) {
+    ) internal view returns (uint debtTokenAmtIn, uint feeAmt, IERC20 tokenOut) {
         FeeConfig memory feeConfig = config.feeConfig;
         CurveCut[] memory cuts = config.curveCuts.lendCurveCuts;
         uint nif = Constants.DECIMAL_BASE + feeConfig.borrowTakerFeeRatio;
