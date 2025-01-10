@@ -158,6 +158,7 @@ contract TermMaxRouter is
     ) external whenNotPaused returns (uint256 netTokenIn) {
         tokenIn.safeTransferFrom(msg.sender, address(this), maxTokenIn);
         netTokenIn = _swapTokenToExactToken(tokenIn, tokenOut, recipient, orders, tradingAmts, maxTokenIn);
+        tokenIn.safeTransfer(recipient, maxTokenIn - netTokenIn);
         emit SwapTokenToExactToken(tokenIn, tokenOut, msg.sender, recipient, orders, tradingAmts, netTokenIn);
     }
 
@@ -171,7 +172,7 @@ contract TermMaxRouter is
     ) internal returns (uint256 netTokenIn) {
         for (uint256 i = 0; i < orders.length; ++i) {
             ITermMaxOrder order = orders[i];
-            tokenOut.safeIncreaseAllowance(address(order), maxTokenIn);
+            tokenIn.safeIncreaseAllowance(address(order), maxTokenIn);
             netTokenIn += order.swapTokenToExactToken(tokenIn, tokenOut, recipient, tradingAmts[i], maxTokenIn);
         }
         if (netTokenIn > maxTokenIn) revert InsufficientTokenIn(address(tokenIn), netTokenIn, maxTokenIn);

@@ -96,7 +96,7 @@ contract RouterTest is Test {
         vm.startPrank(sender);
 
         address market = vm.randomAddress();
-        vm.expectRevert("Ownable: caller is not the owner");
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, address(sender)));
         res.router.setMarketWhitelist(market, true);
 
         vm.stopPrank();
@@ -119,7 +119,7 @@ contract RouterTest is Test {
         vm.startPrank(sender);
 
         address adapter = vm.randomAddress();
-        vm.expectRevert("Ownable: caller is not the owner");
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, address(sender)));
         res.router.setAdapterWhitelist(adapter, true);
 
         vm.stopPrank();
@@ -140,30 +140,69 @@ contract RouterTest is Test {
     function testPauseUnauthorized() public {
         vm.startPrank(sender);
 
-        vm.expectRevert(Ownable.OwnableUnauthorizedAccount.selector);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, address(sender)));
         res.router.pause();
 
         vm.stopPrank();
     }
 
-    // function testSwapExactTokenToToken() public {
-    //     vm.startPrank(sender);
+    function testSwapExactTokenToToken() public {
+        //TODO check output
+        vm.startPrank(sender);
 
-    //     uint128 amountIn = 100e8;
-    //     uint128 minAmountOut = 90e8;
+        uint128 amountIn = 100e8;
+        uint128[] memory tradingAmts = new uint128[](2);
+        tradingAmts[0] = 50e8;
+        tradingAmts[1] = 50e8;
+        uint128 mintTokenOut = 80e8;
 
-    //     res.debt.mint(sender, amountIn);
-    //     res.debt.approve(address(res.router), amountIn);
+        ITermMaxOrder[] memory orders = new ITermMaxOrder[](2);
+        orders[0] = res.order;
+        orders[1] = res.order;
 
-    //     uint256 balanceBefore = res.ft.balanceOf(sender);
-    //     uint256 netOut = res.router.swapExactTokenToToken(res.debt, res.ft, sender, amountIn, minAmountOut);
-    //     uint256 balanceAfter = res.ft.balanceOf(sender);
+        res.debt.mint(sender, amountIn);
+        res.debt.approve(address(res.router), amountIn);
+        uint256 netOut = res.router.swapExactTokenToToken(res.debt, res.ft, sender, orders, tradingAmts, mintTokenOut);
+        assertEq(netOut, res.ft.balanceOf(sender));
 
-    //     assertEq(balanceAfter - balanceBefore, netOut);
-    //     assertGe(netOut, minAmountOut);
+        assertEq(res.debt.balanceOf(sender), 0);
 
-    //     vm.stopPrank();
-    // }
+        vm.stopPrank();
+    }
+
+    function testSwapTokenToExactToken() public {
+        //TODO check output
+        vm.startPrank(sender);
+
+        uint128 amountOut = 90e8;
+        uint128[] memory tradingAmts = new uint128[](2);
+        tradingAmts[0] = 45e8;
+        tradingAmts[1] = 45e8;
+        uint128 maxAmountIn = 100e8;
+
+        ITermMaxOrder[] memory orders = new ITermMaxOrder[](2);
+        orders[0] = res.order;
+        orders[1] = res.order;
+
+        res.debt.mint(sender, maxAmountIn);
+        res.debt.approve(address(res.router), maxAmountIn);
+
+        uint256 balanceBefore = res.ft.balanceOf(sender);
+        uint256 amountIn = res.router.swapTokenToExactToken(
+            res.debt,
+            res.ft,
+            sender,
+            orders,
+            tradingAmts,
+            maxAmountIn
+        );
+        uint256 balanceAfter = res.ft.balanceOf(sender);
+
+        assertEq(maxAmountIn - amountIn, res.debt.balanceOf(sender));
+        assertEq(res.ft.balanceOf(sender) - balanceBefore, amountOut);
+
+        vm.stopPrank();
+    }
 
     // function testSwapTokenToExactToken() public {
     //     vm.startPrank(sender);
