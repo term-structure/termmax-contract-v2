@@ -331,13 +331,14 @@ contract TermMaxRouter is
         (IERC20 ft, , IGearingToken gt, , IERC20 debtToken) = market.tokens();
 
         debtToken.safeTransferFrom(msg.sender, address(this), maxTokenIn);
-        uint256 netCost = _swapExactTokenToToken(debtToken, ft, address(this), orders, ftAmtsWantBuy, maxTokenIn);
+        uint256 netCost = _swapTokenToExactToken(debtToken, ft, address(this), orders, ftAmtsWantBuy, maxTokenIn);
         uint totalFtAmt = sum(ftAmtsWantBuy);
         (, uint128 repayAmt, , ) = gt.loanInfo(gtId);
 
         if (totalFtAmt < repayAmt) {
             repayAmt = totalFtAmt.toUint128();
         }
+        ft.safeIncreaseAllowance(address(gt), repayAmt);
         gt.repay(gtId, repayAmt, false);
 
         returnAmt = maxTokenIn - netCost;

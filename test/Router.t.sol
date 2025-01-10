@@ -425,6 +425,58 @@ contract RouterTest is Test {
         vm.stopPrank();
     }
 
+    function testRepayByTokenThroughFt() public {
+        vm.startPrank(sender);
+        uint128 debtAmt = 100e8;
+        uint collateralAmt = 1e18;
+        (uint gtId, ) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
+
+        ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
+        orders[0] = res.order;
+        uint128[] memory amtsToBuyFt = new uint128[](1);
+        amtsToBuyFt[0] = debtAmt;
+        uint128 maxTokenIn = debtAmt;
+
+        res.debt.mint(sender, maxTokenIn);
+        res.debt.approve(address(res.router), maxTokenIn);
+
+        uint returnAmt = res.router.repayByTokenThroughFt(sender, res.market, gtId, orders, amtsToBuyFt, maxTokenIn);
+
+        assertEq(res.debt.balanceOf(sender), returnAmt);
+        assertEq(res.collateral.balanceOf(sender), collateralAmt);
+
+        vm.expectRevert(abi.encodePacked(bytes4(keccak256("ERC721NonexistentToken(uint256)")), gtId));
+        res.gt.loanInfo(gtId);
+
+        vm.stopPrank();
+    }
+
+    function testPartialRepayByTokenThroughFt() public {
+        vm.startPrank(sender);
+        uint128 debtAmt = 100e8;
+        uint collateralAmt = 1e18;
+        (uint gtId, ) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
+
+        ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
+        orders[0] = res.order;
+        uint128[] memory amtsToBuyFt = new uint128[](1);
+        amtsToBuyFt[0] = debtAmt;
+        uint128 maxTokenIn = debtAmt;
+
+        res.debt.mint(sender, maxTokenIn);
+        res.debt.approve(address(res.router), maxTokenIn);
+
+        uint returnAmt = res.router.repayByTokenThroughFt(sender, res.market, gtId, orders, amtsToBuyFt, maxTokenIn);
+
+        assertEq(res.debt.balanceOf(sender), returnAmt);
+        assertEq(res.collateral.balanceOf(sender), collateralAmt);
+
+        vm.expectRevert(abi.encodePacked(bytes4(keccak256("ERC721NonexistentToken(uint256)")), gtId));
+        res.gt.loanInfo(gtId);
+
+        vm.stopPrank();
+    }
+
     // function testSwapTokenToExactToken() public {
     //     vm.startPrank(sender);
 
