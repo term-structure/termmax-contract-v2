@@ -43,8 +43,8 @@ interface ITermMaxRouter {
         IERC20 tokenIn,
         IERC20 tokenOut,
         address recipient,
-        ITermMaxOrder[] calldata orders,
-        uint128[] calldata tradingAmts,
+        ITermMaxOrder[] memory orders,
+        uint128[] memory tradingAmts,
         uint128 minTokenOut
     ) external returns (uint256 netTokenOut);
 
@@ -53,8 +53,8 @@ interface ITermMaxRouter {
         IERC20 tokenIn,
         IERC20 tokenOut,
         address recipient,
-        ITermMaxOrder[] calldata orders,
-        uint128[] calldata tradingAmts,
+        ITermMaxOrder[] memory orders,
+        uint128[] memory tradingAmts,
         uint128 maxTokenIn
     ) external returns (uint256 netTokenIn);
 
@@ -63,16 +63,16 @@ interface ITermMaxRouter {
         ITermMaxMarket market,
         uint128 ftInAmt,
         uint128 xtInAmt,
-        ITermMaxOrder[] calldata orders,
-        uint128[] calldata amtsToSellTokens,
+        ITermMaxOrder[] memory orders,
+        uint128[] memory amtsToSellTokens,
         uint128 minTokenOut
     ) external returns (uint256 netTokenOut);
 
     function leverageFromToken(
         address recipient,
         ITermMaxMarket market,
-        ITermMaxOrder[] calldata orders,
-        uint128[] calldata amtsToBuyXt,
+        ITermMaxOrder[] memory orders,
+        uint128[] memory amtsToBuyXt,
         uint128 minXtOut,
         uint128 tokenToSwap,
         uint128 maxLtv,
@@ -91,8 +91,9 @@ interface ITermMaxRouter {
     function borrowTokenFromCollateral(
         address recipient,
         ITermMaxMarket market,
-        ITermMaxOrder order,
         uint256 collInAmt,
+        ITermMaxOrder[] memory orders,
+        uint128[] memory ftAmtsToSell,
         uint128 maxDebtAmt,
         uint128 borrowAmt
     ) external returns (uint256 gtId);
@@ -101,19 +102,18 @@ interface ITermMaxRouter {
         address recipient,
         ITermMaxMarket market,
         uint256 gtId,
-        ITermMaxOrder[] calldata orders,
-        uint128[] calldata amtsToBuyFt,
-        bool byUnderlying,
-        SwapUnit[] memory units,
-        ITermMaxOrder sellFtOrder
+        ITermMaxOrder[] memory orders,
+        uint128[] memory amtsToBuyFt,
+        bool byDebtToken,
+        SwapUnit[] memory units
     ) external returns (uint256 netTokenOut);
 
     function repayByTokenThroughFt(
         address recipient,
         ITermMaxMarket market,
         uint256 gtId,
-        ITermMaxOrder[] calldata orders,
-        uint128[] calldata ftAmtsWantBuy,
+        ITermMaxOrder[] memory orders,
+        uint128[] memory ftAmtsWantBuy,
         uint128 maxTokenIn
     ) external returns (uint256 returnAmt);
 

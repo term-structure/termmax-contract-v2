@@ -7,6 +7,7 @@ import {DeployUtils} from "./utils/DeployUtils.sol";
 import {JSONLoader} from "./utils/JSONLoader.sol";
 import {StateChecker} from "./utils/StateChecker.sol";
 import {SwapUtils} from "./utils/SwapUtils.sol";
+import {LoanUtils} from "./utils/LoanUtils.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
@@ -18,6 +19,8 @@ import {MockPriceFeed} from "contracts/test/MockPriceFeed.sol";
 import {MockFlashLoanReceiver} from "contracts/test/MockFlashLoanReceiver.sol";
 import {IGearingToken} from "contracts/tokens/IGearingToken.sol";
 import {MockSwapAdapter} from "contracts/test/MockSwapAdapter.sol";
+import {SwapUnit, ISwapAdapter} from "contracts/router/ISwapAdapter.sol";
+import {RouterErrors, RouterEvents, TermMaxRouter} from "contracts/router/TermMaxRouter.sol";
 import "contracts/storage/TermMaxStorage.sol";
 
 contract RouterTest is Test {
@@ -35,6 +38,8 @@ contract RouterTest is Test {
     string testdata;
 
     address pool = vm.randomAddress();
+
+    MockSwapAdapter adapter;
 
     function setUp() public {
         vm.startPrank(deployer);
@@ -72,7 +77,7 @@ contract RouterTest is Test {
 
         res.router = DeployUtils.deployRouter(deployer);
         res.router.setMarketWhitelist(address(res.market), true);
-        MockSwapAdapter adapter = new MockSwapAdapter(pool);
+        adapter = new MockSwapAdapter(pool);
 
         res.router.setAdapterWhitelist(address(adapter), true);
 
@@ -198,6 +203,7 @@ contract RouterTest is Test {
     }
 
     function testSellTokens(uint128 ftAmount, uint128 xtAmount) public {
+        //TODO check output
         vm.assume(ftAmount <= 150e8 && xtAmount <= 150e8);
         vm.startPrank(sender);
         deal(address(res.ft), sender, ftAmount);
@@ -207,9 +213,9 @@ contract RouterTest is Test {
         orders[0] = res.order;
         orders[1] = res.order;
 
-        (uint128 maxBurn, uint128 sellAmt, IERC20 tokenToSell) = ftAmount > xtAmount
-            ? (xtAmount, ftAmount - xtAmount, res.ft)
-            : (ftAmount, xtAmount - ftAmount, res.xt);
+        (uint128 maxBurn, uint128 sellAmt) = ftAmount > xtAmount
+            ? (xtAmount, ftAmount - xtAmount)
+            : (ftAmount, xtAmount - ftAmount);
         uint128[] memory tradingAmts = new uint128[](2);
         tradingAmts[0] = sellAmt / 2;
         tradingAmts[1] = sellAmt / 2;
@@ -217,6 +223,9 @@ contract RouterTest is Test {
 
         res.ft.approve(address(res.router), ftAmount);
         res.xt.approve(address(res.router), xtAmount);
+
+        // vm.expectEmit();
+        // emit ITermMaxRouter.SellTokens(res.market, tokenToSell, sender, orders, tradingAmts, mintTokenOut);
         uint256 netOut = res.router.sellTokens(
             sender,
             res.market,
@@ -230,6 +239,188 @@ contract RouterTest is Test {
         assertEq(res.ft.balanceOf(sender), 0);
         assertEq(res.xt.balanceOf(sender), 0);
         assert(maxBurn <= netOut);
+
+        vm.stopPrank();
+    }
+
+    function testLeaveFromToken() public {
+        vm.startPrank(sender);
+
+        uint128 minXtOut = 0;
+        uint128 tokenToSwap = 100e8;
+        uint128 maxLtv = 0.8e8;
+        uint256 minCollAmt = 1e18;
+        res.debt.mint(sender, tokenToSwap + 2e8 * 2);
+
+        ITermMaxOrder[] memory orders = new ITermMaxOrder[](2);
+        orders[0] = res.order;
+        orders[1] = res.order;
+
+        uint128[] memory amtsToBuyXt = new uint128[](2);
+        amtsToBuyXt[0] = 2e8;
+        amtsToBuyXt[1] = 2e8;
+
+        SwapUnit[] memory units = new SwapUnit[](1);
+        units[0] = SwapUnit(address(adapter), address(res.debt), address(res.collateral), abi.encode(minCollAmt));
+
+        res.debt.approve(address(res.router), tokenToSwap + 2e8 * 2);
+        (uint256 gtId, uint256 netXtOut) = res.router.leverageFromToken(
+            sender,
+            res.market,
+            orders,
+            amtsToBuyXt,
+            minXtOut,
+            tokenToSwap,
+            maxLtv,
+            units
+        );
+        (address owner, uint128 debtAmt, , bytes memory collateralData) = res.gt.loanInfo(gtId);
+        assertEq(owner, sender);
+        assertEq(minCollAmt, abi.decode(collateralData, (uint256)));
+        assertEq(netXtOut, debtAmt);
+        vm.stopPrank();
+    }
+
+    function testLeverageFromXt() public {
+        vm.startPrank(sender);
+
+        uint128 xtAmt = 10e8;
+        uint128 tokenToSwap = 100e8;
+        uint128 maxLtv = 0.8e8;
+        uint256 minCollAmt = 1e18;
+
+        deal(address(res.xt), sender, xtAmt);
+
+        SwapUnit[] memory units = new SwapUnit[](1);
+        units[0] = SwapUnit(address(adapter), address(res.debt), address(res.collateral), abi.encode(minCollAmt));
+
+        res.xt.approve(address(res.router), xtAmt);
+        res.debt.mint(sender, tokenToSwap);
+        res.debt.approve(address(res.router), tokenToSwap);
+
+        uint256 gtId = res.router.leverageFromXt(sender, res.market, xtAmt, tokenToSwap, maxLtv, units);
+        (address owner, uint128 debtAmt, , bytes memory collateralData) = res.gt.loanInfo(gtId);
+        assertEq(owner, sender);
+        assertEq(minCollAmt, abi.decode(collateralData, (uint256)));
+        assertEq(xtAmt, debtAmt);
+        vm.stopPrank();
+    }
+
+    function testLeverage_LtvTooBigger() public {
+        vm.startPrank(sender);
+
+        uint128 xtAmt = 100e8;
+        uint128 tokenToSwap = 100e8;
+        uint128 maxLtv = 0.1e2;
+        uint256 minCollAmt = 1e18;
+
+        uint ltv = xtAmt / 2000;
+
+        deal(address(res.xt), sender, xtAmt);
+
+        SwapUnit[] memory units = new SwapUnit[](1);
+        units[0] = SwapUnit(address(adapter), address(res.debt), address(res.collateral), abi.encode(minCollAmt));
+
+        res.xt.approve(address(res.router), xtAmt);
+        res.debt.mint(sender, tokenToSwap);
+        res.debt.approve(address(res.router), tokenToSwap);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(RouterErrors.LtvBiggerThanExpected.selector, uint128(maxLtv), uint128(ltv))
+        );
+        res.router.leverageFromXt(sender, res.market, xtAmt, tokenToSwap, maxLtv, units);
+
+        vm.stopPrank();
+    }
+
+    function testBorrowTokenFromCollateral() public {
+        //TODO check output
+        vm.startPrank(sender);
+
+        uint256 collInAmt = 1e18;
+        uint128 borrowAmt = 80e8;
+        uint128 maxDebtAmt = 100e8;
+
+        uint fee = (res.market.issueFtFeeRatio() * maxDebtAmt) / Constants.DECIMAL_BASE;
+        uint ftAmt = maxDebtAmt - fee;
+
+        ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
+        orders[0] = res.order;
+        uint128[] memory ftAmtsToSell = new uint128[](1);
+        ftAmtsToSell[0] = uint128(ftAmt);
+
+        res.collateral.mint(sender, collInAmt);
+        res.collateral.approve(address(res.router), collInAmt);
+
+        // vm.expectEmit();
+        // emit RouterEvents.Borrow(res.market, gtId, sender, sender, collInAmt, maxDebtAmt.toUint128(), borrowAmt);
+        uint256 gtId = res.router.borrowTokenFromCollateral(
+            sender,
+            res.market,
+            collInAmt,
+            orders,
+            ftAmtsToSell,
+            maxDebtAmt,
+            borrowAmt
+        );
+        (address owner, uint128 debtAmt, , bytes memory collateralData) = res.gt.loanInfo(gtId);
+        assertEq(owner, sender);
+        assertEq(collInAmt, abi.decode(collateralData, (uint256)));
+        assert(debtAmt <= maxDebtAmt);
+        assertEq(res.debt.balanceOf(sender), borrowAmt);
+
+        vm.stopPrank();
+    }
+
+    function testFlashRepayFromCollateral() public {
+        vm.startPrank(sender);
+        uint128 debtAmt = 100e8;
+        (uint gtId, ) = LoanUtils.fastMintGt(res, sender, debtAmt, 1e18);
+
+        ITermMaxOrder[] memory orders = new ITermMaxOrder[](0);
+        uint128[] memory amtsToBuyFt = new uint128[](0);
+        bool byDebtToken = true;
+
+        uint mintTokenOut = 2000e8;
+        SwapUnit[] memory units = new SwapUnit[](1);
+        units[0] = SwapUnit(address(adapter), address(res.collateral), address(res.debt), abi.encode(mintTokenOut));
+
+        res.gt.approve(address(res.router), gtId);
+        res.router.flashRepayFromColl(sender, res.market, gtId, orders, amtsToBuyFt, byDebtToken, units);
+
+        assertEq(res.collateral.balanceOf(sender), 0);
+        assertEq(res.debt.balanceOf(sender), mintTokenOut - debtAmt);
+
+        vm.expectRevert(abi.encodePacked(bytes4(keccak256("ERC721NonexistentToken(uint256)")), gtId));
+        res.gt.loanInfo(gtId);
+
+        vm.stopPrank();
+    }
+
+    function testFlashRepayFromCollateral_ByFt() public {
+        vm.startPrank(sender);
+        uint128 debtAmt = 100e8;
+        (uint gtId, ) = LoanUtils.fastMintGt(res, sender, debtAmt, 1e18);
+
+        ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
+        orders[0] = res.order;
+        uint128[] memory amtsToBuyFt = new uint128[](1);
+        amtsToBuyFt[0] = debtAmt;
+
+        bool byDebtToken = false;
+
+        uint mintTokenOut = 2000e8;
+        SwapUnit[] memory units = new SwapUnit[](1);
+        units[0] = SwapUnit(address(adapter), address(res.collateral), address(res.debt), abi.encode(mintTokenOut));
+
+        res.gt.approve(address(res.router), gtId);
+        res.router.flashRepayFromColl(sender, res.market, gtId, orders, amtsToBuyFt, byDebtToken, units);
+
+        assertEq(res.collateral.balanceOf(sender), 0);
+        assert(res.debt.balanceOf(sender) > mintTokenOut - debtAmt);
+
+        vm.expectRevert(abi.encodePacked(bytes4(keccak256("ERC721NonexistentToken(uint256)")), gtId));
+        res.gt.loanInfo(gtId);
 
         vm.stopPrank();
     }
