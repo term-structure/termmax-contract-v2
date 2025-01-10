@@ -7,7 +7,7 @@ import {IERC721Receiver} from "@openzeppelin/contracts/interfaces/IERC721Receive
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 import {ITermMaxMarket} from "../ITermMaxMarket.sol";
@@ -29,7 +29,7 @@ import {ISwapCallback} from "../ISwapCallback.sol";
  */
 contract TermMaxRouter is
     UUPSUpgradeable,
-    OwnableUpgradeable,
+    Ownable2StepUpgradeable,
     PausableUpgradeable,
     IFlashLoanReceiver,
     IFlashRepayer,
@@ -194,15 +194,15 @@ contract TermMaxRouter is
         uint128 minTokenOut
     ) external whenNotPaused ensureMarketWhitelist(address(market)) returns (uint256 netTokenOut) {
         (IERC20 ft, IERC20 xt, , , IERC20 debtToken) = market.tokens();
-        (uint maxRedeem, IERC20 toenToSell) = ftInAmt > xtInAmt ? (xtInAmt, ft) : (ftInAmt, xt);
+        (uint maxBurn, IERC20 toenToSell) = ftInAmt > xtInAmt ? (xtInAmt, ft) : (ftInAmt, xt);
 
         ft.safeTransferFrom(msg.sender, address(this), ftInAmt);
-        ft.safeIncreaseAllowance(address(market), maxRedeem);
+        ft.safeIncreaseAllowance(address(market), maxBurn);
         xt.safeTransferFrom(msg.sender, address(this), xtInAmt);
-        xt.safeIncreaseAllowance(address(market), maxRedeem);
-        market.redeem(maxRedeem, recipient);
+        xt.safeIncreaseAllowance(address(market), maxBurn);
+        market.burn(recipient, maxBurn);
         netTokenOut = _swapExactTokenToToken(toenToSell, debtToken, recipient, orders, amtsToSellTokens, 0);
-        netTokenOut += maxRedeem;
+        netTokenOut += maxBurn;
         if (netTokenOut < minTokenOut) revert InsufficientTokenOut(address(debtToken), netTokenOut, minTokenOut);
         emit SellTokens(market, msg.sender, recipient, ftInAmt, xtInAmt, orders, amtsToSellTokens, netTokenOut);
     }

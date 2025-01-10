@@ -188,18 +188,48 @@ contract RouterTest is Test {
         res.debt.approve(address(res.router), maxAmountIn);
 
         uint256 balanceBefore = res.ft.balanceOf(sender);
-        uint256 amountIn = res.router.swapTokenToExactToken(
-            res.debt,
-            res.ft,
-            sender,
-            orders,
-            tradingAmts,
-            maxAmountIn
-        );
+        uint256 amountIn = res.router.swapTokenToExactToken(res.debt, res.ft, sender, orders, tradingAmts, maxAmountIn);
         uint256 balanceAfter = res.ft.balanceOf(sender);
 
         assertEq(maxAmountIn - amountIn, res.debt.balanceOf(sender));
         assertEq(res.ft.balanceOf(sender) - balanceBefore, amountOut);
+
+        vm.stopPrank();
+    }
+
+    function testSellTokens(uint128 ftAmount, uint128 xtAmount) public {
+        vm.assume(ftAmount <= 150e8 && xtAmount <= 150e8);
+        vm.startPrank(sender);
+        deal(address(res.ft), sender, ftAmount);
+        deal(address(res.xt), sender, xtAmount);
+
+        ITermMaxOrder[] memory orders = new ITermMaxOrder[](2);
+        orders[0] = res.order;
+        orders[1] = res.order;
+
+        (uint128 maxBurn, uint128 sellAmt, IERC20 tokenToSell) = ftAmount > xtAmount
+            ? (xtAmount, ftAmount - xtAmount, res.ft)
+            : (ftAmount, xtAmount - ftAmount, res.xt);
+        uint128[] memory tradingAmts = new uint128[](2);
+        tradingAmts[0] = sellAmt / 2;
+        tradingAmts[1] = sellAmt / 2;
+        uint128 mintTokenOut = 0;
+
+        res.ft.approve(address(res.router), ftAmount);
+        res.xt.approve(address(res.router), xtAmount);
+        uint256 netOut = res.router.sellTokens(
+            sender,
+            res.market,
+            ftAmount,
+            xtAmount,
+            orders,
+            tradingAmts,
+            mintTokenOut
+        );
+        assertEq(netOut, res.debt.balanceOf(sender));
+        assertEq(res.ft.balanceOf(sender), 0);
+        assertEq(res.xt.balanceOf(sender), 0);
+        assert(maxBurn <= netOut);
 
         vm.stopPrank();
     }
