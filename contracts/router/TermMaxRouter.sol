@@ -363,9 +363,9 @@ contract TermMaxRouter is
         market.redeem(ftAmount, address(this));
         uint deliveredAmt = IERC20(collateralAddr).balanceOf(address(this));
         if (deliveredAmt > 0) {
-            netTokenOut = _decodeAmount(_doSwap(_encodeAmount(deliveredAmt), units));
+            _doSwap(_encodeAmount(deliveredAmt), units);
         }
-        netTokenOut += debtToken.balanceOf(address(this));
+        netTokenOut = debtToken.balanceOf(address(this));
         if (netTokenOut < minTokenOut) {
             revert InsufficientTokenOut(address(debtToken), netTokenOut, minTokenOut);
         }

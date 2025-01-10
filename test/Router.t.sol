@@ -460,7 +460,7 @@ contract RouterTest is Test {
         ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
         orders[0] = res.order;
         uint128[] memory amtsToBuyFt = new uint128[](1);
-        amtsToBuyFt[0] = debtAmt;
+        amtsToBuyFt[0] = debtAmt / 2;
         uint128 maxTokenIn = debtAmt;
 
         res.debt.mint(sender, maxTokenIn);
@@ -469,12 +469,103 @@ contract RouterTest is Test {
         uint returnAmt = res.router.repayByTokenThroughFt(sender, res.market, gtId, orders, amtsToBuyFt, maxTokenIn);
 
         assertEq(res.debt.balanceOf(sender), returnAmt);
-        assertEq(res.collateral.balanceOf(sender), collateralAmt);
+        assertEq(res.collateral.balanceOf(sender), 0);
 
-        vm.expectRevert(abi.encodePacked(bytes4(keccak256("ERC721NonexistentToken(uint256)")), gtId));
-        res.gt.loanInfo(gtId);
+        (address owner, uint128 dAmt, , bytes memory collateralData) = res.gt.loanInfo(gtId);
+        assertEq(owner, sender);
+        assertEq(collateralAmt, abi.decode(collateralData, (uint256)));
+        assertEq(dAmt, debtAmt / 2);
 
         vm.stopPrank();
+    }
+
+    function testRedeemAndSwap() public {
+        marketConfig.feeConfig.redeemFeeRatio = 0.01e8;
+        vm.prank(deployer);
+        res.market.updateMarketConfig(marketConfig);
+
+        address bob = vm.randomAddress();
+        address alice = vm.randomAddress();
+
+        uint128 depositAmt = 1000e8;
+        uint128 debtAmt = 100e8;
+        uint256 collateralAmt = 1e18;
+
+        vm.startPrank(bob);
+        res.debt.mint(bob, depositAmt);
+        res.debt.approve(address(res.market), depositAmt);
+        res.market.mint(bob, depositAmt);
+
+        res.xt.transfer(alice, debtAmt);
+        vm.stopPrank();
+
+        vm.startPrank(alice);
+
+        MockFlashLoanReceiver receiver = new MockFlashLoanReceiver(res.market);
+        res.collateral.mint(address(receiver), collateralAmt);
+
+        res.xt.approve(address(receiver), debtAmt);
+        receiver.leverageByXt(debtAmt, abi.encode(alice, collateralAmt));
+        vm.stopPrank();
+
+        vm.warp(marketConfig.maturity + Constants.LIQUIDATION_WINDOW);
+
+        vm.startPrank(bob);
+
+        uint minDebtOutAmt = 1000e8;
+        SwapUnit[] memory units = new SwapUnit[](1);
+        units[0] = SwapUnit(address(adapter), address(res.collateral), address(res.debt), abi.encode(minDebtOutAmt));
+
+        res.ft.approve(address(res.router), depositAmt);
+        uint ftTotalSupply = res.ft.totalSupply();
+        uint redeemedDebtToken = (res.debt.balanceOf(address(res.market)) * depositAmt) / ftTotalSupply;
+        redeemedDebtToken =
+            redeemedDebtToken -
+            (marketConfig.feeConfig.redeemFeeRatio * redeemedDebtToken) /
+            Constants.DECIMAL_BASE;
+
+        uint expectedOutput = redeemedDebtToken + minDebtOutAmt;
+
+        vm.expectEmit();
+        emit RouterEvents.RedeemAndSwap(res.market, depositAmt, bob, bob, expectedOutput);
+        uint netOutput = res.router.redeemAndSwap(bob, res.market, depositAmt, units, expectedOutput);
+
+        assertEq(netOutput, expectedOutput);
+        assertEq(res.debt.balanceOf(bob), netOutput);
+
+        vm.stopPrank();
+    }
+
+    function testCreateOrderAndDeposit() public {
+        vm.startPrank(sender);
+
+        uint256 maxXtReserve = 1000e8;
+
+        ISwapCallback swapTrigger = ISwapCallback(address(0));
+        uint256 debtTokenToDeposit = 1e8;
+        uint128 ftToDeposit = 2e8;
+        uint128 xtToDeposit = 10e8;
+        CurveCuts memory curveCuts = orderConfig.curveCuts;
+        deal(address(res.ft), sender, ftToDeposit);
+        deal(address(res.xt), sender, xtToDeposit);
+        res.debt.mint(sender, debtTokenToDeposit);
+        res.debt.approve(address(res.router), debtTokenToDeposit);
+        res.ft.approve(address(res.router), ftToDeposit);
+        res.xt.approve(address(res.router), xtToDeposit);
+        ITermMaxOrder order = res.router.createOrderAndDeposit(
+            res.market,
+            maker,
+            maxXtReserve,
+            swapTrigger,
+            debtTokenToDeposit,
+            ftToDeposit,
+            xtToDeposit,
+            curveCuts
+        );
+
+        assertEq(order.maker(), maker);
+        assertEq(res.ft.balanceOf(address(order)), ftToDeposit + debtTokenToDeposit);
+        assertEq(res.xt.balanceOf(address(order)), xtToDeposit + debtTokenToDeposit);
     }
 
     // function testSwapTokenToExactToken() public {
