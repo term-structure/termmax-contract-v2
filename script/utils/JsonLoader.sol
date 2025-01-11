@@ -3,29 +3,10 @@ pragma solidity ^0.8.27;
 
 import "forge-std/Test.sol";
 import {stdJson} from "forge-std/StdJson.sol";
+import {MarketConfig, FeeConfig, LoanConfig} from "../../contracts/storage/TermMaxStorage.sol";
 
 library JsonLoader {
     using stdJson for string;
-
-    struct MarketConfig {
-        uint64 openTime;
-        uint64 maturity;
-        uint32 initialLtv;
-        int64 apr;
-        uint32 lsf;
-        uint32 lendFeeRatio;
-        uint32 borrowFeeRatio;
-        uint32 issueFtFeeRatio;
-        uint32 lockingPercentage;
-        uint32 protocolFeeRatio;
-        uint32 minNLendFeeR;
-        uint32 minNBorrowFeeR;
-        uint32 redeemFeeRatio;
-        uint32 maxLtv;
-        uint32 liquidationLtv;
-        bool liquidatable;
-        address treasurer;
-    }
 
     struct UnderlyingConfig {
         string name;
@@ -45,20 +26,18 @@ library JsonLoader {
     }
 
     struct Config {
+        string marketName;
+        string marketSymbol;
         MarketConfig marketConfig;
+        LoanConfig loanConfig;
         UnderlyingConfig underlyingConfig;
         CollateralConfig collateralConfig;
     }
 
-    Vm constant vm =
-        Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
+    Vm constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
 
-    function getConfigsFromJson(
-        string memory jsonData
-    ) internal pure returns (Config[] memory configs) {
-        uint256 configNum = uint256(
-            vm.parseUint(vm.parseJsonString(jsonData, ".configNum"))
-        );
+    function getConfigsFromJson(string memory jsonData) internal pure returns (Config[] memory configs) {
+        uint256 configNum = uint256(vm.parseUint(vm.parseJsonString(jsonData, ".configNum")));
         configs = new Config[](configNum);
         for (uint256 i; i < configNum; i++) {
             Config memory config = getConfigFromJson(jsonData, i);
@@ -66,204 +45,90 @@ library JsonLoader {
         }
     }
 
-    function getConfigFromJson(
-        string memory jsonData,
-        uint256 index
-    ) internal pure returns (Config memory config) {
+    function getConfigFromJson(string memory jsonData, uint256 index) internal pure returns (Config memory config) {
         MarketConfig memory marketConfig;
+        LoanConfig memory loanConfig;
         UnderlyingConfig memory underlyingConfig;
         CollateralConfig memory collateralConfig;
-        string memory configPrefix = string.concat(
-            ".configs",
-            ".configs_",
-            vm.toString(index)
-        );
-        string memory marketConfigPrefix = string.concat(
-            configPrefix,
-            ".marketConfig"
-        );
-        marketConfig.openTime = uint64(
-            vm.parseUint(
-                jsonData.readString(
-                    string.concat(marketConfigPrefix, ".openTime")
-                )
-            )
-        );
+
+        string memory configPrefix = string.concat(".configs", ".configs_", vm.toString(index));
+
+        // read market config
+        string memory marketConfigPrefix = string.concat(configPrefix, ".marketConfig");
+        marketConfig.treasurer = vm.parseAddress(jsonData.readString(string.concat(marketConfigPrefix, ".treasurer")));
         marketConfig.maturity = uint64(
-            vm.parseUint(
-                jsonData.readString(
-                    string.concat(marketConfigPrefix, ".maturity")
-                )
-            )
+            vm.parseUint(jsonData.readString(string.concat(marketConfigPrefix, ".maturity")))
         );
-        marketConfig.initialLtv = uint32(
-            vm.parseUint(
-                jsonData.readString(
-                    string.concat(marketConfigPrefix, ".initialLtv")
-                )
-            )
+        marketConfig.feeConfig.lendTakerFeeRatio = uint32(
+            vm.parseUint(jsonData.readString(string.concat(marketConfigPrefix, ".lendTakerFeeRatio")))
         );
-        marketConfig.apr = int64(
-            vm.parseInt(
-                jsonData.readString(string.concat(marketConfigPrefix, ".apr"))
-            )
+        marketConfig.feeConfig.lendMakerFeeRatio = uint32(
+            vm.parseUint(jsonData.readString(string.concat(marketConfigPrefix, ".lendMakerFeeRatio")))
         );
-        marketConfig.lsf = uint32(
-            vm.parseUint(
-                jsonData.readString(string.concat(marketConfigPrefix, ".lsf"))
-            )
+        marketConfig.feeConfig.borrowTakerFeeRatio = uint32(
+            vm.parseUint(jsonData.readString(string.concat(marketConfigPrefix, ".borrowTakerFeeRatio")))
         );
-        marketConfig.lendFeeRatio = uint32(
-            vm.parseUint(
-                jsonData.readString(
-                    string.concat(marketConfigPrefix, ".lendFeeRatio")
-                )
-            )
+        marketConfig.feeConfig.borrowMakerFeeRatio = uint32(
+            vm.parseUint(jsonData.readString(string.concat(marketConfigPrefix, ".borrowMakerFeeRatio")))
         );
-        marketConfig.borrowFeeRatio = uint32(
-            vm.parseUint(
-                jsonData.readString(
-                    string.concat(marketConfigPrefix, ".borrowFeeRatio")
-                )
-            )
+        marketConfig.feeConfig.issueFtFeeRatio = uint32(
+            vm.parseUint(jsonData.readString(string.concat(marketConfigPrefix, ".issueFtFeeRatio")))
         );
-        marketConfig.issueFtFeeRatio = uint32(
-            vm.parseUint(
-                jsonData.readString(
-                    string.concat(marketConfigPrefix, ".issueFtFeeRatio")
-                )
-            )
+        marketConfig.feeConfig.issueFtFeeRef = uint32(
+            vm.parseUint(jsonData.readString(string.concat(marketConfigPrefix, ".issueFtFeeRef")))
         );
-        marketConfig.lockingPercentage = uint32(
-            vm.parseUint(
-                jsonData.readString(
-                    string.concat(marketConfigPrefix, ".lockingPercentage")
-                )
-            )
-        );
-        marketConfig.protocolFeeRatio = uint32(
-            vm.parseUint(
-                jsonData.readString(
-                    string.concat(marketConfigPrefix, ".protocolFeeRatio")
-                )
-            )
-        );
-        marketConfig.minNLendFeeR = uint32(
-            vm.parseUint(
-                jsonData.readString(
-                    string.concat(marketConfigPrefix, ".minNLendFeeR")
-                )
-            )
-        );
-        marketConfig.minNBorrowFeeR = uint32(
-            vm.parseUint(
-                jsonData.readString(
-                    string.concat(marketConfigPrefix, ".minNBorrowFeeR")
-                )
-            )
-        );
-        marketConfig.redeemFeeRatio = uint32(
-            vm.parseUint(
-                jsonData.readString(
-                    string.concat(marketConfigPrefix, ".redeemFeeRatio")
-                )
-            )
-        );
-        marketConfig.maxLtv = uint32(
-            vm.parseUint(
-                jsonData.readString(
-                    string.concat(marketConfigPrefix, ".maxLtv")
-                )
-            )
-        );
-        marketConfig.liquidationLtv = uint32(
-            vm.parseUint(
-                jsonData.readString(
-                    string.concat(marketConfigPrefix, ".liquidationLtv")
-                )
-            )
-        );
-        marketConfig.liquidatable = bool(
-            vm.parseBool(
-                jsonData.readString(
-                    string.concat(marketConfigPrefix, ".liquidatable")
-                )
-            )
-        );
-        marketConfig.treasurer = vm.parseAddress(
-            jsonData.readString(string.concat(marketConfigPrefix, ".treasurer"))
+        marketConfig.feeConfig.redeemFeeRatio = uint32(
+            vm.parseUint(jsonData.readString(string.concat(marketConfigPrefix, ".redeemFeeRatio")))
         );
 
-        string memory underlyingConfigPrefix = string.concat(
-            configPrefix,
-            ".underlyingConfig"
+        // read loan config
+        string memory loanConfigPrefix = string.concat(configPrefix, ".loanConfig");
+        loanConfig.liquidationLtv = uint32(
+            vm.parseUint(jsonData.readString(string.concat(loanConfigPrefix, ".liquidationLtv")))
         );
-        underlyingConfig.name = jsonData.readString(
-            string.concat(underlyingConfigPrefix, ".name")
-        );
-        underlyingConfig.symbol = jsonData.readString(
-            string.concat(underlyingConfigPrefix, ".symbol")
-        );
+        loanConfig.maxLtv = uint32(vm.parseUint(jsonData.readString(string.concat(loanConfigPrefix, ".maxLtv"))));
+        loanConfig.liquidatable = vm.parseBool(jsonData.readString(string.concat(loanConfigPrefix, ".liquidatable")));
+
+        // read underlying config
+        string memory underlyingConfigPrefix = string.concat(configPrefix, ".underlyingConfig");
+        underlyingConfig.name = jsonData.readString(string.concat(underlyingConfigPrefix, ".name"));
+        underlyingConfig.symbol = jsonData.readString(string.concat(underlyingConfigPrefix, ".symbol"));
         underlyingConfig.decimals = uint8(
-            vm.parseUint(
-                jsonData.readString(
-                    string.concat(underlyingConfigPrefix, ".decimals")
-                )
-            )
-        );
-        underlyingConfig.mintAmt = vm.parseUint(
-            jsonData.readString(
-                string.concat(underlyingConfigPrefix, ".mintAmt")
-            )
+            vm.parseUint(jsonData.readString(string.concat(underlyingConfigPrefix, ".decimals")))
         );
         underlyingConfig.initialPrice = vm.parseInt(
-            jsonData.readString(
-                string.concat(underlyingConfigPrefix, ".initialPrice")
-            )
+            jsonData.readString(string.concat(underlyingConfigPrefix, ".initialPrice"))
         );
 
-        string memory collateralConfigPrefix = string.concat(
-            configPrefix,
-            ".collateralConfig"
-        );
-        collateralConfig.name = jsonData.readString(
-            string.concat(collateralConfigPrefix, ".name")
-        );
-        collateralConfig.symbol = jsonData.readString(
-            string.concat(collateralConfigPrefix, ".symbol")
+        // read collateral config
+        string memory collateralConfigPrefix = string.concat(configPrefix, ".collateralConfig");
+        collateralConfig.name = jsonData.readString(string.concat(collateralConfigPrefix, ".name"));
+        collateralConfig.symbol = jsonData.readString(string.concat(collateralConfigPrefix, ".symbol"));
+        collateralConfig.decimals = uint8(
+            vm.parseUint(jsonData.readString(string.concat(collateralConfigPrefix, ".decimals")))
         );
         collateralConfig.decimals = uint8(
-            vm.parseUint(
-                jsonData.readString(
-                    string.concat(collateralConfigPrefix, ".decimals")
-                )
-            )
-        );
-        collateralConfig.decimals = uint8(
-            vm.parseUint(
-                jsonData.readString(
-                    string.concat(collateralConfigPrefix, ".decimals")
-                )
-            )
-        );
-        collateralConfig.mintAmt = vm.parseUint(
-            jsonData.readString(
-                string.concat(collateralConfigPrefix, ".mintAmt")
-            )
+            vm.parseUint(jsonData.readString(string.concat(collateralConfigPrefix, ".decimals")))
         );
         collateralConfig.initialPrice = vm.parseInt(
-            jsonData.readString(
-                string.concat(collateralConfigPrefix, ".initialPrice")
-            )
+            jsonData.readString(string.concat(collateralConfigPrefix, ".initialPrice"))
         );
         collateralConfig.gtKeyIdentifier = jsonData.readString(
             string.concat(collateralConfigPrefix, ".gtKeyIdentifier")
         );
 
-        config = Config({
-            marketConfig: marketConfig,
-            underlyingConfig: underlyingConfig,
-            collateralConfig: collateralConfig
-        });
+        config.marketName = string.concat(
+            collateralConfig.symbol,
+            "/",
+            underlyingConfig.symbol,
+            "-",
+            vm.toString(marketConfig.maturity)
+        );
+        config.marketSymbol = config.marketName;
+
+        config.marketConfig = marketConfig;
+        config.loanConfig = loanConfig;
+        config.underlyingConfig = underlyingConfig;
+        config.collateralConfig = collateralConfig;
     }
 }

@@ -30,7 +30,7 @@ contract DeployCoreHolesky is DeployBase {
         vm.startBroadcast(deployerPrivateKey);
         (
             ITermMaxFactory factory,
-            IOracle oracle,
+            IOracle oracleAggregator,
             ITermMaxRouter router,
             SwapAdapter swapAdapter,
             Faucet faucet
@@ -47,7 +47,7 @@ contract DeployCoreHolesky is DeployBase {
         console.log("Deplyer:", deployerAddr);
         console.log("Admin:", adminAddr);
         console.log("Factory deployed at:", address(factory));
-        console.log("Oracle deployed at:", address(oracle));
+        console.log("Oracle Aggregator deployed at:", address(oracleAggregator));
         console.log("Router deployed at:", address(router));
         console.log("SwapAdapter deployed at:", address(swapAdapter));
         console.log("Faucet deployed at:", address(faucet));

@@ -13,7 +13,6 @@ contract Faucet is Ownable {
     struct TokenConfig {
         address tokenAddr;
         address priceFeedAddr;
-        uint256 mintAmt;
     }
     uint256 public tokenNum;
     mapping(address => uint256) public getTokenId;
@@ -21,45 +20,35 @@ contract Faucet is Ownable {
     mapping(address => bool) public isMinted;
     mapping(bytes32 => uint256) public getTokenIdByKey;
     bool public canOnlyMintOnce;
+    uint256 public mintUsdValue;
 
     constructor(address adminAddr) Ownable(adminAddr) {}
 
-    function getTokenConfig(
-        uint256 index
-    ) public view returns (TokenConfig memory) {
+    function getTokenConfig(uint256 index) public view returns (TokenConfig memory) {
         return tokenConfigs[index];
     }
 
     function addToken(
         string memory name,
         string memory symbol,
-        uint8 decimals,
-        uint256 mintAmt
+        uint8 decimals
     ) public onlyOwner returns (FaucetERC20 token, MockPriceFeed priceFeed) {
-        if (getTokenIdByKey[calcTokenKey(name, symbol, decimals)] != 0)
-            revert TokenExisted(name, symbol, decimals);
+        if (getTokenIdByKey[calcTokenKey(name, symbol, decimals)] != 0) revert TokenExisted(name, symbol, decimals);
         else {
             token = new FaucetERC20(address(this), name, symbol, decimals);
             priceFeed = new MockPriceFeed(owner());
             tokenNum++;
-            tokenConfigs[tokenNum] = TokenConfig(
-                address(token),
-                address(priceFeed),
-                mintAmt
-            );
+            tokenConfigs[tokenNum] = TokenConfig(address(token), address(priceFeed));
             getTokenId[address(token)] = tokenNum;
             getTokenIdByKey[calcTokenKey(name, symbol, decimals)] = tokenNum;
         }
     }
 
-    function setMintAmt(uint256 index, uint256 mintAmt) public onlyOwner {
-        tokenConfigs[index].mintAmt = mintAmt;
+    function setMintUsdValue(uint256 _mintUsdValue) public onlyOwner {
+        mintUsdValue = _mintUsdValue;
     }
 
-    function setPriceFeed(
-        uint256 index,
-        address priceFeedAddr
-    ) public onlyOwner {
+    function setPriceFeed(uint256 index, address priceFeedAddr) public onlyOwner {
         tokenConfigs[index].priceFeedAddr = priceFeedAddr;
     }
 
@@ -72,33 +61,30 @@ contract Faucet is Ownable {
         isMinted[msg.sender] = true;
         for (uint256 i = 1; i < tokenNum + 1; i++) {
             TokenConfig memory tokenConfig = tokenConfigs[i];
-            FaucetERC20(tokenConfig.tokenAddr).mint(
-                msg.sender,
-                tokenConfig.mintAmt
-            );
+            MockPriceFeed priceFeed = MockPriceFeed(tokenConfig.priceFeedAddr);
+            (, int256 answer, , , ) = priceFeed.latestRoundData();
+            uint8 decimals = priceFeed.decimals();
+            uint256 mintAmt = (mintUsdValue * 10 ** (decimals)) / uint256(answer);
+            FaucetERC20(tokenConfig.tokenAddr).mint(msg.sender, mintAmt);
         }
     }
 
     function devBatchMint(address to) public onlyOwner {
         for (uint256 i = 1; i < tokenNum + 1; i++) {
             TokenConfig memory tokenConfig = tokenConfigs[i];
-            FaucetERC20(tokenConfig.tokenAddr).mint(to, tokenConfig.mintAmt);
+            MockPriceFeed priceFeed = MockPriceFeed(tokenConfig.priceFeedAddr);
+            (, int256 answer, , , ) = priceFeed.latestRoundData();
+            uint8 decimals = priceFeed.decimals();
+            uint256 mintAmt = (mintUsdValue * 10 ** (decimals)) / uint256(answer);
+            FaucetERC20(tokenConfig.tokenAddr).mint(to, mintAmt);
         }
     }
 
-    function devMint(
-        address to,
-        address tokenAddr,
-        uint256 mintAmt
-    ) public onlyOwner {
+    function devMint(address to, address tokenAddr, uint256 mintAmt) public onlyOwner {
         FaucetERC20(tokenAddr).mint(to, mintAmt);
     }
 
-    function calcTokenKey(
-        string memory name,
-        string memory symbol,
-        uint8 decimals
-    ) public pure returns (bytes32) {
+    function calcTokenKey(string memory name, string memory symbol, uint8 decimals) public pure returns (bytes32) {
         return keccak256(abi.encodePacked(name, symbol, decimals));
     }
 }
