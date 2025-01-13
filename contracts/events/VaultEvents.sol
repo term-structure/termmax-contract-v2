@@ -2,6 +2,8 @@
 pragma solidity ^0.8.0;
 
 interface VaultEvents {
+    event RedeemOrder(address indexed caller, address indexed order, uint128 ftAmt, uint128 redeemedAmt);
+
     event SubmitTimelock(uint256 newTimelock);
     event SetTimelock(address indexed caller, uint256 newTimelock);
     event SetGuardian(address indexed caller, address newGuardian);

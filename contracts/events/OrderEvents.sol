@@ -34,6 +34,7 @@ interface OrderEvents {
     /// @param recipient Who receive output tokens
     /// @param tokenAmtIn The amount of tokenIn want to swap
     /// @param netTokenOut The amount of tokenOut want to receive
+    /// @param feeAmt The amount of fee
     event SwapExactTokenToToken(
         IERC20 indexed tokenIn,
         IERC20 indexed tokenOut,

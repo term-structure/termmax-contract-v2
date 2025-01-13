@@ -2,7 +2,10 @@
 pragma solidity ^0.8.0;
 
 interface VaultErrors {
-    error MarketIsLaterThanMaturity();
+    error InsufficientFunds(uint256 maxWithdraw, uint256 expectedWithdraw);
+    error MarketIsLaterThanMaxTerm();
+    error LockedFtGreaterThanTotalFt();
+
     error InconsistentAsset();
     error NoPendingValue();
     error TimelockNotElapsed();

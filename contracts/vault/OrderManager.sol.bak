@@ -15,7 +15,7 @@ import {VaultConstants} from "../lib/VaultConstants.sol";
 import {TransferUtils} from "../lib/TransferUtils.sol";
 import {ISwapCallback} from "../ISwapCallback.sol";
 
-abstract contract OrderManager is VaultErrors, VaultEvents, Ownable2StepUpgradeable {
+abstract contract OrderManager is VaultErrors, VaultEvents, Ownable2StepUpgradeable, ISwapCallback {
     using PendingLib for *;
     using TransferUtils for IERC20;
     using SafeCast for uint256;
@@ -25,8 +25,8 @@ abstract contract OrderManager is VaultErrors, VaultEvents, Ownable2StepUpgradea
         ITermMaxMarket market;
         IERC20 ft;
         IERC20 xt;
-        uint128 supply;
-        uint128 used;
+        uint128 maxSupply;
+        uint128 ftReserve;
     }
 
     address public guardian;
@@ -313,5 +313,17 @@ abstract contract OrderManager is VaultErrors, VaultEvents, Ownable2StepUpgradea
         isAllocator[newAllocator] = newIsAllocator;
 
         emit SetIsAllocator(newAllocator, newIsAllocator);
+    }
+
+    function _checkOrder(address orderAddress) internal view {
+        if (orderCapacity[orderAddress].market == address(0)) {
+            revert UnauthorizedOrder(orderAddress);
+        }
+    }
+
+    function swapCallback(uint128 ftReserve, uint128 xtReserve) external override {
+        address orderAddress = msg.sender;
+        _checkOrder(orderAddress);
+        OrderInfo memory orderInfo = orderCapacity[orderAddress];
     }
 }
