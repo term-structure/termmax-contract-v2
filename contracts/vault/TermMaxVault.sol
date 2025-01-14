@@ -9,7 +9,7 @@ import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {PendingLib, PendingAddress, PendingUint192} from "../lib/PendingLib.sol";
 import {ITermMaxMarket} from "../ITermMaxMarket.sol";
-import {CurveCuts} from "../storage/TermMaxStorage.sol";
+import {CurveCuts, VaultInitialParams} from "../storage/TermMaxStorage.sol";
 import {ITermMaxRouter} from "../router/ITermMaxRouter.sol";
 import {ITermMaxOrder} from "../ITermMaxOrder.sol";
 import {VaultConstants} from "../lib/VaultConstants.sol";
@@ -79,13 +79,17 @@ contract TermMaxVault is Ownable2Step, ReentrancyGuard, OrderManager, ERC4626 {
     }
 
     constructor(
-        address admin,
-        IERC20 aseet_,
-        string memory name_,
-        string memory symbol_,
-        uint64 maxTerm_,
-        uint64 curatorPercentage_
-    ) Ownable(admin) ERC4626(aseet_) ERC20(name_, symbol_) OrderManager(maxTerm_, curatorPercentage_) {}
+        VaultInitialParams memory params
+    )
+        Ownable(params.admin)
+        ERC4626(params.asset)
+        ERC20(params.name, params.symbol)
+        OrderManager(params.maxTerm, params.curatorPercentage)
+    {
+        _checkTimelockBounds(params.timelock);
+        timelock = params.timelock;
+        maxCapacity = params.maxCapacity;
+    }
 
     function asset() public view override(ERC4626, OrderManager) returns (address) {
         return ERC4626.asset();
@@ -205,6 +209,12 @@ contract TermMaxVault is Ownable2Step, ReentrancyGuard, OrderManager, ERC4626 {
 
             emit SubmitTimelock(newTimelock);
         }
+    }
+
+    function setCapacity(uint256 newCapacity) external onlyCuratorRole {
+        if (newCapacity == maxCapacity) revert AlreadySet();
+        maxCapacity = newCapacity;
+        emit SetCapacity(_msgSender(), newCapacity);
     }
 
     function _checkTimelockBounds(uint256 newTimelock) internal pure {

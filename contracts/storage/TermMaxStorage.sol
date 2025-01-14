@@ -117,3 +117,15 @@ struct MarketInitialParams {
     string tokenName;
     string tokenSymbol;
 }
+
+struct VaultInitialParams {
+    address admin;
+    address curator;
+    uint256 timelock;
+    IERC20 asset;
+    uint256 maxCapacity;
+    string name;
+    string symbol;
+    uint64 maxTerm;
+    uint64 curatorPercentage;
+}
