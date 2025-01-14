@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.27;
+pragma solidity ^0.8.0;
 
 import {IERC20, ITermMaxMarket} from "../ITermMaxMarket.sol";
 import {CurveCuts, FeeConfig} from "../storage/TermMaxStorage.sol";

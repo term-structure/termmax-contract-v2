@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.27;
+pragma solidity ^0.8.0;
 
 interface GearingTokenEvents {
     /// @notice Emitted when updating the configuration
