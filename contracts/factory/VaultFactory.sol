@@ -6,8 +6,8 @@ import {VaultInitialParams} from "contracts/storage/TermMaxStorage.sol";
 import {FactoryEvents} from "contracts/events/FactoryEvents.sol";
 
 contract VaultFactory is FactoryEvents {
-    function createVault(VaultInitialParams memory initialParams) public returns (TermMaxVault vault) {
-        vault = new TermMaxVault(initialParams);
-        emit VaultCreated(address(vault), msg.sender, initialParams);
+    function createVault(VaultInitialParams memory initialParams) public returns (address vault) {
+        vault = address(new TermMaxVault(initialParams));
+        emit VaultCreated(vault, msg.sender, initialParams);
     }
 }
