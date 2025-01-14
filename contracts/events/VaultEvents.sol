@@ -24,6 +24,8 @@ interface VaultEvents {
     event DealBadDebt(address indexed recipient, address indexed collaretal, uint256 amount, uint256 collateralOut);
     event RedeemOrder(address indexed caller, address indexed order, uint128 ftAmt, uint128 redeemedAmt);
 
+    event WithdrawIncentive(address indexed caller, address indexed recipient, uint256 amount);
+
     event SubmitTimelock(uint256 newTimelock);
     event SetTimelock(address indexed caller, uint256 newTimelock);
     event SetGuardian(address indexed caller, address newGuardian);

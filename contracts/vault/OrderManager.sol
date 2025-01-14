@@ -56,6 +56,30 @@ abstract contract OrderManager is VaultErrors, VaultEvents, ISwapCallback {
 
     function asset() public view virtual returns (address);
 
+    function createOrder(
+        ITermMaxMarket market,
+        uint256 maxXtReserve,
+        uint256 maxSupply,
+        uint256 initialReserve,
+        CurveCuts memory curveCuts
+    ) external virtual returns (ITermMaxOrder order);
+
+    function updateOrders(
+        ITermMaxOrder[] memory orders,
+        int256[] memory changes,
+        uint256[] memory maxSupplies,
+        uint256[] memory maxXtReserves,
+        CurveCuts[] memory curveCuts
+    ) external virtual;
+
+    function updateSupplyQueue(uint256[] memory indexes) external virtual;
+
+    function updateWithdrawQueue(uint256[] memory indexes) external virtual;
+
+    function redeemOrder(ITermMaxOrder order) external virtual;
+
+    function withdrawIncentive(address recipient, uint256 amount) external virtual;
+
     function _createOrder(
         ITermMaxMarket market,
         uint256 maxXtReserve,
@@ -113,6 +137,7 @@ abstract contract OrderManager is VaultErrors, VaultEvents, ISwapCallback {
         uint256 maxXtReserve,
         CurveCuts memory curveCuts
     ) internal {
+        _checkOrder(address(order));
         OrderInfo memory orderInfo = orderMapping[address(order)];
         orderInfo.maxSupply = maxSupply.toUint128();
         OrderConfig memory newOrderConfig;
@@ -234,6 +259,8 @@ abstract contract OrderManager is VaultErrors, VaultEvents, ISwapCallback {
         IERC20(asset()).safeTransfer(recipient, amount);
         curatorIncentive -= amount;
         totalFt -= amount;
+
+        emit WithdrawIncentive(msg.sender, recipient, amount);
     }
 
     function _dealBadDebt(address recipient, address collaretal, uint256 amount) internal {
@@ -287,7 +314,7 @@ abstract contract OrderManager is VaultErrors, VaultEvents, ISwapCallback {
         emit UpdateWithdrawQueue(msg.sender, newWithdrawQueue);
     }
 
-    function _updateSupplyQueue(uint256[] calldata indexes) internal {
+    function _updateSupplyQueue(uint256[] memory indexes) internal {
         uint length = supplyQueue.length;
         if (indexes.length != length) {
             revert SupplyQueueLengthMismatch();

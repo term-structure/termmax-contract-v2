@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 interface VaultErrors {
+    error MarketNotWhitelisted();
     error NoBadDebt(address collateral);
     error InsufficientFunds(uint256 maxWithdraw, uint256 expectedWithdraw);
     error MarketIsLaterThanMaxTerm();
