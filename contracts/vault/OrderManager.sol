@@ -169,7 +169,7 @@ abstract contract OrderManager is VaultErrors, VaultEvents, ISwapCallback {
         emit UpdateOrder(msg.sender, address(order), changes, maxSupply, maxXtReserve, curveCuts);
     }
 
-    function _deposit(uint256 amount) internal {
+    function _depositAssets(uint256 amount) internal {
         uint amountLeft = amount;
         for (uint i = 0; i < supplyQueue.length; ++i) {
             address order = supplyQueue[i];
@@ -197,7 +197,7 @@ abstract contract OrderManager is VaultErrors, VaultEvents, ISwapCallback {
         lpersFt += amount;
     }
 
-    function _withdraw(address recipient, uint256 amount) internal {
+    function _withdrawAssets(address recipient, uint256 amount) internal {
         uint amountLeft = amount;
         uint assetBalance = IERC20(asset()).balanceOf(address(this));
         if (assetBalance >= amount) {

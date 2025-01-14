@@ -33,6 +33,7 @@ contract TermMaxVault is Ownable2Step, ReentrancyGuard, OrderManager, ERC4626 {
     PendingAddress public pendingGuardian;
 
     uint256 public timelock;
+    uint256 private maxCapacity;
 
     modifier onlyCuratorRole() {
         address sender = _msgSender();
@@ -118,7 +119,7 @@ contract TermMaxVault is Ownable2Step, ReentrancyGuard, OrderManager, ERC4626 {
         _updateWithdrawQueue(indexes);
     }
 
-    function redeemOrder(ITermMaxOrder order) external override {
+    function redeemOrder(ITermMaxOrder order) external override onlyCuratorRole {
         _redeemFromMarket(address(order), orderMapping[address(order)]);
     }
 
@@ -128,6 +129,55 @@ contract TermMaxVault is Ownable2Step, ReentrancyGuard, OrderManager, ERC4626 {
     }
 
     // ERC4626 functions
+
+    /** @dev See {IERC4626-maxDeposit}. */
+    function maxDeposit(address) public view override returns (uint256) {
+        return maxCapacity - totalAssets();
+    }
+
+    /** @dev See {IERC4626-maxMint}. */
+    function maxMint(address) public view override returns (uint256) {
+        return convertToShares(maxDeposit(address(0)));
+    }
+
+    /**
+     * @dev Get total assets, falling back to real assets if virtual assets exceed limit
+     */
+    function totalAssets() public view override returns (uint256) {
+        return lpersFt + curatorIncentive;
+    }
+
+    /**
+     * @dev Deposit/mint common workflow.
+     */
+    function _deposit(address caller, address receiver, uint256 assets, uint256 shares) internal override nonReentrant {
+        IERC20(asset()).safeTransferFrom(caller, address(this), assets);
+        _accruedInterest();
+        _mint(receiver, shares);
+        _depositAssets(assets);
+        emit Deposit(caller, receiver, assets, shares);
+    }
+
+    /**
+     * @dev Withdraw/redeem common workflow.
+     */
+    function _withdraw(
+        address caller,
+        address receiver,
+        address owner,
+        uint256 assets,
+        uint256 shares
+    ) internal override nonReentrant {
+        if (caller != owner) {
+            _spendAllowance(owner, caller, shares);
+        }
+        _accruedInterest();
+
+        _burn(owner, shares);
+        _withdrawAssets(receiver, assets);
+
+        emit Withdraw(caller, receiver, owner, assets, shares);
+    }
 
     // Guardian functions
 }
