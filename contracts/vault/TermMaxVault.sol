@@ -19,6 +19,7 @@ import {OrderManager} from "./OrderManager.sol";
 contract TermMaxVault is Ownable2Step, ReentrancyGuard, OrderManager, ERC4626 {
     using SafeCast for uint256;
     using TransferUtils for IERC20;
+    using PendingLib for *;
 
     address public guardian;
     address public curator;
@@ -27,9 +28,10 @@ contract TermMaxVault is Ownable2Step, ReentrancyGuard, OrderManager, ERC4626 {
 
     mapping(address => bool) public marketWhitelist;
 
-    mapping(address => PendingAddress) public pendingMarkets;
+    mapping(address => PendingUint192) public pendingMarkets;
 
     PendingUint192 public pendingTimelock;
+    PendingUint192 public pendingCuratorPercentage;
     PendingAddress public pendingGuardian;
 
     uint256 public timelock;
@@ -80,8 +82,10 @@ contract TermMaxVault is Ownable2Step, ReentrancyGuard, OrderManager, ERC4626 {
         address admin,
         IERC20 aseet_,
         string memory name_,
-        string memory symbol_
-    ) Ownable(admin) ERC4626(aseet_) ERC20(name_, symbol_) {}
+        string memory symbol_,
+        uint64 maxTerm_,
+        uint64 curatorPercentage_
+    ) Ownable(admin) ERC4626(aseet_) ERC20(name_, symbol_) OrderManager(maxTerm_, curatorPercentage_) {}
 
     function asset() public view override(ERC4626, OrderManager) returns (address) {
         return ERC4626.asset();
@@ -180,4 +184,123 @@ contract TermMaxVault is Ownable2Step, ReentrancyGuard, OrderManager, ERC4626 {
     }
 
     // Guardian functions
+    function _setTimelock(uint256 newTimelock) internal {
+        timelock = newTimelock;
+
+        emit SetTimelock(msg.sender, newTimelock);
+
+        delete pendingTimelock;
+    }
+
+    function submitTimelock(uint256 newTimelock) external onlyCuratorRole {
+        if (newTimelock == timelock) revert AlreadySet();
+        if (pendingTimelock.validAt != 0) revert AlreadyPending();
+        _checkTimelockBounds(newTimelock);
+
+        if (newTimelock > timelock) {
+            _setTimelock(newTimelock);
+        } else {
+            // Safe "unchecked" cast because newTimelock <= MAX_TIMELOCK.
+            pendingTimelock.update(uint184(newTimelock), timelock);
+
+            emit SubmitTimelock(newTimelock);
+        }
+    }
+
+    function _checkTimelockBounds(uint256 newTimelock) internal pure {
+        if (newTimelock > VaultConstants.MAX_TIMELOCK) revert AboveMaxTimelock();
+        if (newTimelock < VaultConstants.POST_INITIALIZATION_MIN_TIMELOCK) revert BelowMinTimelock();
+    }
+
+    function submitCuratorPercentage(uint184 newCuratorPercentage) external onlyCuratorRole {
+        if (newCuratorPercentage == curatorPercentage) revert AlreadySet();
+        if (pendingCuratorPercentage.validAt != 0) revert AlreadyPending();
+        if (newCuratorPercentage < curatorPercentage) {
+            _setCuratorPercentage(uint(newCuratorPercentage).toUint64());
+            emit SetCuratorPercentage(_msgSender(), newCuratorPercentage);
+            return;
+        } else {
+            pendingCuratorPercentage.update(newCuratorPercentage, block.timestamp + timelock);
+            emit SubmitCuratorPercentage(newCuratorPercentage);
+        }
+    }
+
+    /// @dev Sets `guardian` to `newGuardian`.
+    function _setGuardian(address newGuardian) internal {
+        guardian = newGuardian;
+
+        emit SetGuardian(_msgSender(), newGuardian);
+
+        delete pendingGuardian;
+    }
+
+    function submitMarket(address market, bool isWhitelisted) external onlyCuratorRole {
+        if (marketWhitelist[market] && isWhitelisted) revert AlreadySet();
+        if (pendingMarkets[market].validAt != 0) revert AlreadyPending();
+        if (!isWhitelisted) {
+            _setMarketWhitelist(market, isWhitelisted);
+        } else {
+            pendingMarkets[market].update(uint184(block.timestamp + timelock), 0);
+            emit SubmitMarket(market, isWhitelisted);
+        }
+    }
+
+    function _setMarketWhitelist(address market, bool isWhitelisted) internal {
+        marketWhitelist[market] = isWhitelisted;
+        emit SetMarketWhitelist(_msgSender(), market, isWhitelisted);
+        delete pendingMarkets[market];
+    }
+
+    function setIsAllocator(address newAllocator, bool newIsAllocator) external onlyOwner {
+        if (isAllocator[newAllocator] == newIsAllocator) revert AlreadySet();
+
+        isAllocator[newAllocator] = newIsAllocator;
+
+        emit SetIsAllocator(newAllocator, newIsAllocator);
+    }
+
+    function setCurator(address newCurator) external onlyOwner {
+        if (newCurator == curator) revert AlreadySet();
+
+        curator = newCurator;
+
+        emit SetCurator(newCurator);
+    }
+
+    /** Revoke functions */
+    function revokePendingTimelock() external onlyGuardianRole {
+        delete pendingTimelock;
+
+        emit RevokePendingTimelock(_msgSender());
+    }
+
+    function revokePendingGuardian() external onlyGuardianRole {
+        delete pendingGuardian;
+
+        emit RevokePendingGuardian(_msgSender());
+    }
+
+    function revokePendingMarket(address market) external onlyGuardianRole {
+        delete pendingMarkets[market];
+
+        emit RevokePendingMarket(_msgSender(), market);
+    }
+
+    function acceptTimelock() external afterTimelock(pendingTimelock.validAt) {
+        _setTimelock(pendingTimelock.value);
+    }
+
+    function acceptGuardian() external afterTimelock(pendingGuardian.validAt) {
+        _setGuardian(pendingGuardian.value);
+    }
+
+    function acceptMarket(address market) external afterTimelock(pendingMarkets[market].validAt) {
+        _setMarketWhitelist(market, true);
+    }
+
+    function acceptCuratorPercentage() external afterTimelock(pendingCuratorPercentage.validAt) {
+        _setCuratorPercentage(uint(pendingCuratorPercentage.value).toUint64());
+        delete pendingCuratorPercentage;
+        emit SetCuratorPercentage(_msgSender(), curatorPercentage);
+    }
 }

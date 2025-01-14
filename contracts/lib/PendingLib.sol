@@ -3,13 +3,6 @@ pragma solidity ^0.8.0;
 
 import {SwapUnit} from "../router/ISwapAdapter.sol";
 
-struct PendingRedeem {
-    SwapUnit[] units;
-    uint256 minTokenOut;
-    /// @notice The timestamp at which the pending value becomes valid.
-    uint64 validAt;
-}
-
 struct PendingUint192 {
     /// @notice The pending value to set.
     uint192 value;

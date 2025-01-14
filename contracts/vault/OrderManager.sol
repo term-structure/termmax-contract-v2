@@ -39,8 +39,7 @@ abstract contract OrderManager is VaultErrors, VaultEvents, ISwapCallback {
     uint256 public lpersFt;
     uint256 public curatorIncentive;
     uint64 private lastUpdateTime;
-    uint64 term;
-    uint64 maxTerm = 90;
+    uint64 maxTerm;
     uint64 curatorPercentage;
 
     address[] public supplyQueue;
@@ -48,6 +47,18 @@ abstract contract OrderManager is VaultErrors, VaultEvents, ISwapCallback {
     mapping(address => uint256) public badDebtMapping;
 
     address[] public withdrawQueue;
+
+    constructor(uint64 maxTerm_, uint64 curatorPercentage_) {
+        if (maxTerm_ > VaultConstants.MAX_TERM) revert MaxTermExceeded();
+        _setCuratorPercentage(curatorPercentage_);
+        maxTerm = maxTerm_;
+    }
+
+    function _setCuratorPercentage(uint64 newCuratorPercentage) internal {
+        if (newCuratorPercentage > VaultConstants.MAX_CURATOR_INCENTIVE_PERCENTAGE)
+            revert CuratorIncentivePercentageExceeded();
+        curatorPercentage = newCuratorPercentage;
+    }
 
     /// @notice Calculate how many days until expiration
     function _daysToMaturity() internal view returns (uint256) {
@@ -359,7 +370,12 @@ abstract contract OrderManager is VaultErrors, VaultEvents, ISwapCallback {
     }
     /// @notice Calculate and distribute accrued interest
     function _accruedInterest() internal {
+        if (totalFt == 0) {
+            lastUpdateTime = block.timestamp.toUint64();
+            return;
+        }
         uint256 interest = totalFt - lpersFt - curatorIncentive;
+        if (interest == 0) return;
         uint256 deltaTime = block.timestamp - lastUpdateTime;
         interest = (interest * deltaTime) / _daysToMaturity();
         uint incentiveToCurator = (interest * curatorPercentage) / Constants.DECIMAL_BASE;

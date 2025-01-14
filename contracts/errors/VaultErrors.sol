@@ -8,6 +8,8 @@ interface VaultErrors {
     error MarketIsLaterThanMaxTerm();
     error LockedFtGreaterThanTotalFt();
 
+    error MaxTermExceeded();
+    error CuratorIncentivePercentageExceeded();
     error InconsistentAsset();
     error NoPendingValue();
     error TimelockNotElapsed();

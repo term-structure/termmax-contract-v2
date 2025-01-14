@@ -4,6 +4,16 @@ pragma solidity ^0.8.0;
 import {CurveCuts} from "../storage/TermMaxStorage.sol";
 
 interface VaultEvents {
+    event SetCurator(address newCurator);
+    event SubmitMarket(address indexed market, bool isWhitelisted);
+    event RevokePendingMarket(address indexed caller, address indexed market);
+
+    event SetCuratorPercentage(address indexed caller, uint256 newCuratorPercentage);
+
+    event SubmitCuratorPercentage(uint256 newCuratorPercentage);
+
+    event SetMarketWhitelist(address indexed caller, address indexed market, bool isWhitelisted);
+
     event CreateOrder(
         address indexed caller,
         address indexed market,
