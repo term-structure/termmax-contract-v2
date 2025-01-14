@@ -34,11 +34,11 @@ abstract contract OrderManager is VaultErrors, VaultEvents, ISwapCallback {
         uint64 maturity;
     }
 
-    uint256 totalFt;
+    uint256 public totalFt;
     // locked ft = lpersFt + curatorIncentive;
-    uint256 lpersFt;
-    uint256 curatorIncentive;
-    uint64 lastUpdateTime;
+    uint256 public lpersFt;
+    uint256 public curatorIncentive;
+    uint64 private lastUpdateTime;
     uint64 term;
     uint64 maxTerm = 90;
     uint64 curatorPercentage;
@@ -89,6 +89,16 @@ abstract contract OrderManager is VaultErrors, VaultEvents, ISwapCallback {
             ftReserve: initialReserve.toUint128(),
             maturity: orderMaturity
         });
+
+        emit CreateOrder(
+            msg.sender,
+            address(market),
+            address(order),
+            maxXtReserve,
+            maxSupply,
+            initialReserve,
+            curveCuts
+        );
     }
 
     function _setOrderMaxSupply(address order, uint256 maxSupply) internal {
@@ -131,11 +141,10 @@ abstract contract OrderManager is VaultErrors, VaultEvents, ISwapCallback {
         }
         orderMapping[address(order)] = orderInfo;
 
-        // emit UpdateOrder(msg.sender, order, amount);
+        emit UpdateOrder(msg.sender, address(order), changes, maxSupply, maxXtReserve, curveCuts);
     }
 
     function _deposit(uint256 amount) internal {
-        _accruedInterest();
         uint amountLeft = amount;
         for (uint i = 0; i < supplyQueue.length; ++i) {
             address order = supplyQueue[i];
@@ -163,28 +172,30 @@ abstract contract OrderManager is VaultErrors, VaultEvents, ISwapCallback {
         lpersFt += amount;
     }
 
-    function _withdraw(uint256 amount) internal {
-        _accruedInterest();
+    function _withdraw(address recipient, uint256 amount) internal {
         uint amountLeft = amount;
         uint assetBalance = IERC20(asset()).balanceOf(address(this));
         if (assetBalance >= amount) {
-            IERC20(asset()).safeTransfer(address(msg.sender), amount);
+            IERC20(asset()).safeTransfer(recipient, amount);
             totalFt -= amount;
             lpersFt -= amount;
         } else {
             amountLeft -= assetBalance;
+            uint length = withdrawQueue.length;
             // withdraw from orders
-            for (uint i = 0; i < withdrawQueue.length; ++i) {
+            for (uint i = 0; i < length; ++i) {
                 address order = withdrawQueue[i];
                 OrderInfo memory orderInfo = orderMapping[order];
                 if (block.timestamp > orderInfo.maturity + Constants.LIQUIDATION_WINDOW) {
                     // redeem assets from expired order
                     uint256 totalRedeem = _redeemFromMarket(order, orderInfo);
+                    length--;
+                    i--;
                     if (totalRedeem < amountLeft) {
                         amountLeft -= totalRedeem;
                         continue;
                     } else {
-                        IERC20(asset()).safeTransfer(address(msg.sender), amountLeft);
+                        IERC20(asset()).safeTransfer(recipient, amountLeft);
                         break;
                     }
                 } else if (block.timestamp < orderInfo.maturity) {
@@ -200,7 +211,7 @@ abstract contract OrderManager is VaultErrors, VaultEvents, ISwapCallback {
                         _burnFromOrder(ITermMaxOrder(order), orderInfo, amountLeft);
                         orderInfo.ftReserve -= amountLeft.toUint128();
                         orderMapping[order] = orderInfo;
-                        IERC20(asset()).safeTransfer(address(msg.sender), amount);
+                        IERC20(asset()).safeTransfer(recipient, amount);
                         break;
                     }
                 } else {
@@ -223,6 +234,16 @@ abstract contract OrderManager is VaultErrors, VaultEvents, ISwapCallback {
         IERC20(asset()).safeTransfer(recipient, amount);
         curatorIncentive -= amount;
         totalFt -= amount;
+    }
+
+    function _dealBadDebt(address recipient, address collaretal, uint256 amount) internal {
+        uint badDebtAmt = badDebtMapping[collaretal];
+        if (badDebtAmt == 0) revert NoBadDebt(collaretal);
+        if (amount > badDebtAmt) revert InsufficientFunds(badDebtAmt, amount);
+        uint collateralBalance = IERC20(collaretal).balanceOf(address(this));
+        uint collateralOut = (amount * collateralBalance) / badDebtAmt;
+        IERC20(collaretal).safeTransfer(recipient, collateralOut);
+        badDebtMapping[collaretal] -= amount;
     }
 
     function _burnFromOrder(ITermMaxOrder order, OrderInfo memory orderInfo, uint256 amount) internal {
@@ -333,11 +354,12 @@ abstract contract OrderManager is VaultErrors, VaultEvents, ISwapCallback {
     function swapCallback(uint256 ftReserve) external override {
         address orderAddress = msg.sender;
         _checkOrder(orderAddress);
-        // OrderInfo memory orderInfo = orderCapacity[orderAddress];
+        OrderInfo memory orderInfo = orderMapping[orderAddress];
         _accruedInterest();
 
-        totalFt = totalFt - orderMapping[orderAddress].ftReserve + ftReserve;
+        totalFt = totalFt - orderInfo.ftReserve + ftReserve;
         _checkLockedFt();
-        orderMapping[orderAddress].ftReserve = ftReserve.toUint128();
+        orderInfo.ftReserve = ftReserve.toUint128();
+        orderMapping[orderAddress] = orderInfo;
     }
 }
