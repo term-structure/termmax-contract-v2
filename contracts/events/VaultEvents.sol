@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import {CurveCuts} from "../storage/TermMaxStorage.sol";
 
 interface VaultEvents {
+    event SubmitGuardian(address newGuardian);
     event SetCapacity(address indexed caller, uint256 newCapacity);
 
     event SetCurator(address newCurator);

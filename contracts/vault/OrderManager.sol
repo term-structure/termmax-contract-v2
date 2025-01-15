@@ -17,8 +17,9 @@ import {Constants} from "../lib/Constants.sol";
 import {ArrayUtils} from "../lib/ArrayUtils.sol";
 import {OrderConfig, CurveCuts} from "../storage/TermMaxStorage.sol";
 import {MathLib} from "../lib/MathLib.sol";
+import {ITermMaxVault} from "./ITermMaxVault.sol";
 
-abstract contract OrderManager is VaultErrors, VaultEvents, ISwapCallback {
+abstract contract OrderManager is VaultErrors, VaultEvents, ISwapCallback, ITermMaxVault {
     using SafeCast for uint256;
     using SafeCast for int256;
     using TransferUtils for IERC20;

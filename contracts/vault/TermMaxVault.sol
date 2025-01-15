@@ -4,7 +4,7 @@ pragma solidity ^0.8.27;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
-import {ERC4626, ERC20} from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
+import {IERC4626, ERC4626, ERC20} from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
 import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {PendingLib, PendingAddress, PendingUint192} from "../lib/PendingLib.sol";
@@ -15,6 +15,7 @@ import {ITermMaxOrder} from "../ITermMaxOrder.sol";
 import {VaultConstants} from "../lib/VaultConstants.sol";
 import {TransferUtils} from "../lib/TransferUtils.sol";
 import {OrderManager} from "./OrderManager.sol";
+// import {ITermMaxVault} from "./ITermMaxVault.sol";
 
 contract TermMaxVault is Ownable2Step, ReentrancyGuard, OrderManager, ERC4626 {
     using SafeCast for uint256;
@@ -139,19 +140,19 @@ contract TermMaxVault is Ownable2Step, ReentrancyGuard, OrderManager, ERC4626 {
     // ERC4626 functions
 
     /** @dev See {IERC4626-maxDeposit}. */
-    function maxDeposit(address) public view override returns (uint256) {
+    function maxDeposit(address) public view override(IERC4626, ERC4626) returns (uint256) {
         return maxCapacity - totalAssets();
     }
 
     /** @dev See {IERC4626-maxMint}. */
-    function maxMint(address) public view override returns (uint256) {
+    function maxMint(address) public view override(IERC4626, ERC4626) returns (uint256) {
         return convertToShares(maxDeposit(address(0)));
     }
 
     /**
      * @dev Get total assets, falling back to real assets if virtual assets exceed limit
      */
-    function totalAssets() public view override returns (uint256) {
+    function totalAssets() public view override(IERC4626, ERC4626) returns (uint256) {
         return lpersFt + curatorIncentive;
     }
 
@@ -232,6 +233,19 @@ contract TermMaxVault is Ownable2Step, ReentrancyGuard, OrderManager, ERC4626 {
         } else {
             pendingCuratorPercentage.update(newCuratorPercentage, block.timestamp + timelock);
             emit SubmitCuratorPercentage(newCuratorPercentage);
+        }
+    }
+
+    function submitGuardian(address newGuardian) external onlyOwner {
+        if (newGuardian == guardian) revert AlreadySet();
+        if (pendingGuardian.validAt != 0) revert AlreadyPending();
+
+        if (guardian == address(0)) {
+            _setGuardian(newGuardian);
+        } else {
+            pendingGuardian.update(newGuardian, timelock);
+
+            emit SubmitGuardian(newGuardian);
         }
     }
 
