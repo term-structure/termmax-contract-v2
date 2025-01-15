@@ -14,10 +14,10 @@ import {ITermMaxRouter} from "../router/ITermMaxRouter.sol";
 import {ITermMaxOrder} from "../ITermMaxOrder.sol";
 import {VaultConstants} from "../lib/VaultConstants.sol";
 import {TransferUtils} from "../lib/TransferUtils.sol";
-import {OrderManager} from "./OrderManager.sol";
+import {BaseVault} from "./BaseVault.sol";
 // import {ITermMaxVault} from "./ITermMaxVault.sol";
 
-contract TermMaxVault is Ownable2Step, ReentrancyGuard, OrderManager, ERC4626 {
+contract TermMaxVault is Ownable2Step, ReentrancyGuard, BaseVault, ERC4626 {
     using SafeCast for uint256;
     using TransferUtils for IERC20;
     using PendingLib for *;
@@ -85,18 +85,18 @@ contract TermMaxVault is Ownable2Step, ReentrancyGuard, OrderManager, ERC4626 {
         Ownable(params.admin)
         ERC4626(params.asset)
         ERC20(params.name, params.symbol)
-        OrderManager(params.maxTerm, params.curatorPercentage)
+        BaseVault(params.maxTerm, params.curatorPercentage)
     {
         _checkTimelockBounds(params.timelock);
         timelock = params.timelock;
         maxCapacity = params.maxCapacity;
     }
 
-    function asset() public view override(ERC4626, OrderManager) returns (address) {
+    function asset() public view override(ERC4626, BaseVault) returns (address) {
         return ERC4626.asset();
     }
 
-    // OrderManager functions
+    // BaseVault functions
     function createOrder(
         ITermMaxMarket market,
         uint256 maxXtReserve,

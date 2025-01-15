@@ -19,6 +19,8 @@ interface ITermMaxVault is IERC4626 {
     function pendingTimelock() external view returns (uint192 value, uint64 validAt);
     function pendingCuratorPercentage() external view returns (uint192 value, uint64 validAt);
     function pendingGuardian() external view returns (address value, uint64 validAt);
+    function maxTerm() external view returns (uint64);
+    function curatorPercentage() external view returns (uint64);
 
     // OrderManager View Functions
     function totalFt() external view returns (uint256);

@@ -19,7 +19,7 @@ import {OrderConfig, CurveCuts} from "../storage/TermMaxStorage.sol";
 import {MathLib} from "../lib/MathLib.sol";
 import {ITermMaxVault} from "./ITermMaxVault.sol";
 
-abstract contract OrderManager is VaultErrors, VaultEvents, ISwapCallback, ITermMaxVault {
+abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMaxVault {
     using SafeCast for uint256;
     using SafeCast for int256;
     using TransferUtils for IERC20;
@@ -39,15 +39,17 @@ abstract contract OrderManager is VaultErrors, VaultEvents, ISwapCallback, ITerm
     // locked ft = lpersFt + curatorIncentive;
     uint256 public lpersFt;
     uint256 public curatorIncentive;
-    uint64 private lastUpdateTime;
-    uint64 maxTerm;
-    uint64 curatorPercentage;
+    
+    uint64 public maxTerm;
+    uint64 public curatorPercentage;
 
     address[] public supplyQueue;
     mapping(address => OrderInfo) public orderMapping;
     mapping(address => uint256) public badDebtMapping;
 
     address[] public withdrawQueue;
+
+    uint64 private lastUpdateTime;
 
     constructor(uint64 maxTerm_, uint64 curatorPercentage_) {
         if (maxTerm_ > VaultConstants.MAX_TERM) revert MaxTermExceeded();
