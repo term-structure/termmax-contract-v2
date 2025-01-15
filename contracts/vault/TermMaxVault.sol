@@ -15,7 +15,8 @@ import {ITermMaxOrder} from "../ITermMaxOrder.sol";
 import {VaultConstants} from "../lib/VaultConstants.sol";
 import {TransferUtils} from "../lib/TransferUtils.sol";
 import {BaseVault} from "./BaseVault.sol";
-// import {ITermMaxVault} from "./ITermMaxVault.sol";
+
+import {console} from "forge-std/console.sol";
 
 contract TermMaxVault is Ownable2Step, ReentrancyGuard, BaseVault, ERC4626 {
     using SafeCast for uint256;
@@ -90,6 +91,7 @@ contract TermMaxVault is Ownable2Step, ReentrancyGuard, BaseVault, ERC4626 {
         _checkTimelockBounds(params.timelock);
         timelock = params.timelock;
         maxCapacity = params.maxCapacity;
+        curator = params.curator;
     }
 
     function asset() public view override(ERC4626, BaseVault) returns (address) {
@@ -252,7 +254,6 @@ contract TermMaxVault is Ownable2Step, ReentrancyGuard, BaseVault, ERC4626 {
     /// @dev Sets `guardian` to `newGuardian`.
     function _setGuardian(address newGuardian) internal {
         guardian = newGuardian;
-
         emit SetGuardian(_msgSender(), newGuardian);
 
         delete pendingGuardian;

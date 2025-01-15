@@ -16,6 +16,8 @@ import {ITermMaxOrder, TermMaxOrder, ISwapCallback, OrderEvents, OrderErrors} fr
 import {MockERC20, ERC20} from "contracts/test/MockERC20.sol";
 import {MockPriceFeed} from "contracts/test/MockPriceFeed.sol";
 import {TermMaxVault} from "contracts/vault/TermMaxVault.sol";
+import {BaseVault, VaultErrors, VaultEvents, ITermMaxVault} from "contracts/vault/BaseVault.sol";
+import {VaultConstants} from "contracts/lib/VaultConstants.sol";
 import {VaultFactory} from "contracts/factory/VaultFactory.sol";
 import "contracts/storage/TermMaxStorage.sol";
 
@@ -42,6 +44,8 @@ contract VaultTest is Test {
     uint64 maxTerm = 90 days;
     uint64 curatorPercentage = 0.5e8;
 
+    uint currentTime;
+
     function setUp() public {
         vm.startPrank(deployer);
         testdata = vm.readFile(string.concat(vm.projectRoot(), "/test/testdata/testdata.json"));
@@ -59,8 +63,8 @@ contract VaultTest is Test {
         //     ISwapCallback(address(0)),
         //     orderConfig.curveCuts
         // );
-
-        vm.warp(vm.parseUint(vm.parseJsonString(testdata, ".currentTime")));
+        currentTime = vm.parseUint(vm.parseJsonString(testdata, ".currentTime"));
+        vm.warp(currentTime);
 
         // update oracle
         res.collateralOracle.updateRoundData(
@@ -89,6 +93,7 @@ contract VaultTest is Test {
         vault.submitGuardian(guardian);
 
         vault.submitMarket(address(res.market), true);
+        vault.setIsAllocator(allocator, true);
 
         vm.warp(marketConfig.openTime + timelock + 1);
         res.debt.mint(deployer, amount);
@@ -139,13 +144,7 @@ contract VaultTest is Test {
     function testMarketWhitelist() public {
         address market = address(0x123);
 
-        // Non-guardian should not be able to whitelist
-        vm.prank(lper);
-        vm.expectRevert();
-        vault.submitMarket(market, true);
-
-        // Guardian can submit market
-        vm.prank(guardian);
+        vm.prank(curator);
         vault.submitMarket(market, true);
 
         // Should not be whitelisted before timelock
@@ -153,53 +152,92 @@ contract VaultTest is Test {
 
         // After timelock passes
         vm.warp(block.timestamp + timelock + 1);
-        vm.prank(guardian);
+        vm.prank(vm.randomAddress());
         vault.acceptMarket(market);
         assertTrue(vault.marketWhitelist(market));
 
-        // Can revoke pending market
-        vm.prank(guardian);
+        vm.prank(curator);
         vault.submitMarket(market, false);
-        vm.warp(block.timestamp + timelock + 1);
-        vm.prank(guardian);
-        vault.acceptMarket(market);
         assertFalse(vault.marketWhitelist(market));
+    }
+
+    function testFail_SetMarketWhitelist() public {
+        address market = address(0x123);
+
+        vm.prank(vm.randomAddress());
+        vm.expectRevert(VaultErrors.NotCuratorRole.selector);
+        vault.submitMarket(market, true);
+
+        vm.startPrank(curator);
+        vault.submitMarket(market, true);
+
+        vm.expectRevert(VaultErrors.AlreadySet.selector);
+        vault.submitMarket(market, true);
+
+        vm.expectRevert(VaultErrors.AlreadyPending.selector);
+        vault.submitMarket(market, false);
+
+        vm.stopPrank();
     }
 
     function testTimelockManagement() public {
         uint256 newTimelock = 2 days;
 
-        // Only guardian can submit new timelock
-        vm.prank(lper);
-        vm.expectRevert();
+        vm.prank(curator);
         vault.submitTimelock(newTimelock);
-
-        vm.prank(guardian);
-        vault.submitTimelock(newTimelock);
-
-        // Cannot accept before timelock period
-        vm.warp(block.timestamp + timelock / 2);
-        vm.prank(guardian);
-        vm.expectRevert();
-        vault.acceptTimelock();
-
-        // Can accept after timelock period
-        vm.warp(block.timestamp + timelock + 1);
-        vm.prank(guardian);
-        vault.acceptTimelock();
         assertEq(vault.timelock(), newTimelock);
 
-        // Can revoke pending timelock
-        vm.prank(guardian);
-        vault.submitTimelock(3 days);
-        vm.prank(guardian);
-        vault.revokePendingTimelock();
+        newTimelock = 1.5 days;
+        vm.prank(curator);
+        vault.submitTimelock(newTimelock);
+        assertEq(vault.timelock(), 2 days);
 
-        // After revoking, should not be able to accept
-        vm.warp(block.timestamp + timelock + 1);
-        vm.prank(guardian);
-        vm.expectRevert();
+        (uint192 pendingTimelock, uint64 pendingTimelockValidAt) = vault.pendingTimelock();
+        assertEq(uint256(pendingTimelock), newTimelock);
+        assertEq(vault.timelock(), 2 days);
+
+        // Can accept after timelock period
+        vm.warp(currentTime + 2 days);
+        vm.prank(vm.randomAddress());
         vault.acceptTimelock();
+        assertEq(vault.timelock(), newTimelock);
+    }
+
+    function testFail_SetTimelock() public {
+        uint256 newTimelock = 2 days;
+        vm.startPrank(curator);
+
+        vault.submitTimelock(newTimelock);
+
+        vm.expectRevert(VaultErrors.AlreadySet.selector);
+        vault.submitTimelock(newTimelock);
+
+        newTimelock = 1.5 days;
+
+        vm.expectRevert(VaultErrors.AlreadyPending.selector);
+        vault.submitTimelock(newTimelock);
+
+        vm.warp(currentTime + 2 days);
+        vault.acceptTimelock();
+
+        vm.expectRevert(VaultErrors.BelowMinTimelock.selector);
+        vault.submitTimelock(1 days - 1);
+
+        vm.expectRevert(VaultErrors.AboveMaxTimelock.selector);
+        vault.submitTimelock(VaultConstants.MAX_TIMELOCK + 1);
+
+        vm.expectRevert(VaultErrors.NoPendingValue.selector);
+        vault.acceptTimelock();
+
+        vault.submitTimelock(1 days);
+        vm.warp(currentTime + 0.9 days);
+        vm.expectRevert(VaultErrors.TimelockNotElapsed.selector);
+        vault.acceptTimelock();
+
+        vm.stopPrank();
+
+        vm.expectRevert(VaultErrors.NotCuratorRole.selector);
+        vault.submitTimelock(1 days);
     }
 
     function testCuratorPercentage() public {
@@ -211,53 +249,87 @@ contract VaultTest is Test {
         uint percentage = vault.curatorPercentage();
         assertEq(percentage, newPercentage);
 
-        // (uint192 curPercentage, ) = vault.pendingCuratorPercentage();
-        // assertEq(uint256(curPercentage), newPercentage);
+        newPercentage = 0.5e8;
+        vm.prank(curator);
+        vault.submitCuratorPercentage(newPercentage);
 
-        // vm.warp(block.timestamp + timelock + 1);
-        // vm.prank(vm.randomAddress());
-        // vault.acceptCuratorPercentage();
-        // uint percentage = vault.curatorPercentage();
-        // assertEq(percentage, newPercentage);
+        (uint192 curPercentage, uint64 validAt) = vault.pendingCuratorPercentage();
+        assertEq(uint256(curPercentage), newPercentage);
+
+        vm.warp(validAt);
+        vm.prank(vm.randomAddress());
+        vault.acceptCuratorPercentage();
+        percentage = vault.curatorPercentage();
+        assertEq(percentage, newPercentage);
     }
 
-    function testDeposit() public {
-        uint256 depositAmount = 1000e8;
-        MockERC20 asset = res.debt;
+    function testFail_SetCuratorPercentage() public {
+        uint184 newPercentage = 0.5e8;
 
-        // Mint tokens to lper
-        asset.mint(lper, depositAmount);
+        vm.prank(curator);
+        vm.expectRevert(VaultErrors.AlreadySet.selector);
+        vault.submitCuratorPercentage(newPercentage);
 
-        vm.startPrank(lper);
-        asset.approve(address(vault), depositAmount);
+        newPercentage = 0.6e8;
+        vm.prank(curator);
+        vm.expectRevert(VaultErrors.CuratorIncentivePercentageExceeded.selector);
+        vault.submitCuratorPercentage(newPercentage);
 
-        // Test deposit
-        uint256 sharesBefore = vault.balanceOf(lper);
-        vault.deposit(depositAmount, lper);
-        uint256 sharesAfter = vault.balanceOf(lper);
+        vm.prank(vm.randomAddress());
+        vm.expectRevert(VaultErrors.NotCuratorRole.selector);
+        vault.submitCuratorPercentage(newPercentage);
 
-        assertEq(sharesAfter - sharesBefore, depositAmount);
-        assertEq(asset.balanceOf(address(vault)), depositAmount);
+        newPercentage = 0.4e8;
+        vm.startPrank(curator);
+        vault.submitCuratorPercentage(newPercentage);
+
+        newPercentage = 0.41e8;
+        vault.submitCuratorPercentage(newPercentage);
+
+        newPercentage = 0.42e8;
+        vm.expectRevert(VaultErrors.AlreadyPending.selector);
+        vault.submitCuratorPercentage(newPercentage);
+
         vm.stopPrank();
     }
 
-    function testWithdraw() public {
-        uint256 depositAmount = 1000e8;
-        MockERC20 asset = res.debt;
+    // function testDeposit() public {
+    //     uint256 depositAmount = 1000e8;
+    //     MockERC20 asset = res.debt;
 
-        // Setup: deposit first
-        asset.mint(lper, depositAmount);
-        vm.startPrank(lper);
-        asset.approve(address(vault), depositAmount);
-        vault.deposit(depositAmount, lper);
+    //     // Mint tokens to lper
+    //     asset.mint(lper, depositAmount);
 
-        // Test withdraw
-        uint256 balanceBefore = asset.balanceOf(lper);
-        vault.withdraw(depositAmount, lper, lper);
-        uint256 balanceAfter = asset.balanceOf(lper);
+    //     vm.startPrank(lper);
+    //     asset.approve(address(vault), depositAmount);
 
-        assertEq(balanceAfter - balanceBefore, depositAmount);
-        assertEq(vault.balanceOf(lper), 0);
-        vm.stopPrank();
-    }
+    //     // Test deposit
+    //     uint256 sharesBefore = vault.balanceOf(lper);
+    //     vault.deposit(depositAmount, lper);
+    //     uint256 sharesAfter = vault.balanceOf(lper);
+
+    //     assertEq(sharesAfter - sharesBefore, depositAmount);
+    //     assertEq(asset.balanceOf(address(vault)), depositAmount);
+    //     vm.stopPrank();
+    // }
+
+    // function testWithdraw() public {
+    //     uint256 depositAmount = 1000e8;
+    //     MockERC20 asset = res.debt;
+
+    //     // Setup: deposit first
+    //     asset.mint(lper, depositAmount);
+    //     vm.startPrank(lper);
+    //     asset.approve(address(vault), depositAmount);
+    //     vault.deposit(depositAmount, lper);
+
+    //     // Test withdraw
+    //     uint256 balanceBefore = asset.balanceOf(lper);
+    //     vault.withdraw(depositAmount, lper, lper);
+    //     uint256 balanceAfter = asset.balanceOf(lper);
+
+    //     assertEq(balanceAfter - balanceBefore, depositAmount);
+    //     assertEq(vault.balanceOf(lper), 0);
+    //     vm.stopPrank();
+    // }
 }

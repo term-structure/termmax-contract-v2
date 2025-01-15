@@ -281,7 +281,7 @@ contract TermMaxRouter is
          * 2. Sell FT to get UnderlyingToken
          * 3. Transfer UnderlyingToken and GT to Receiver
          */
-        (uint256 gtId, uint128 netFtOut) = market.issueFt(address(this), maxDebtAmt, _encodeAmount(collInAmt));
+        (uint256 gtId, ) = market.issueFt(address(this), maxDebtAmt, _encodeAmount(collInAmt));
         uint netTokenOut = _swapExactTokenToToken(ft, debtToken, address(this), orders, ftAmtsToSell, borrowAmt);
         // NOTE: if netTokenOut > borrowAmt, repay
         uint256 repayAmt = netTokenOut - borrowAmt;
