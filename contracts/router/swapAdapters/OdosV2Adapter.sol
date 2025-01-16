@@ -49,6 +49,7 @@ contract OdosV2Adapter is ERC20SwapAdapter {
         ) = abi.decode(swapData, (IOdosRouterV2.swapTokenInfo, bytes, address, uint32));
 
         require(tokenInfo.outputToken == address(tokenOut), "INVALID_OUTPUT_TOKEN");
+        /** Note: Scaling Input/Output amount */
         tokenInfo.outputQuote = (tokenInfo.outputQuote * amountIn) / tokenInfo.inputAmount;
         tokenInfo.outputMin = (tokenInfo.outputMin * amountIn) / tokenInfo.inputAmount;
         tokenInfo.inputAmount = amountIn;
@@ -61,33 +62,4 @@ contract OdosV2Adapter is ERC20SwapAdapter {
             referralCode
         );
     }
-    // function _swap(
-    //     IERC20 tokenIn,
-    //     IERC20 tokenOut,
-    //     uint256 amount,
-    //     bytes memory swapData
-    // ) internal virtual override returns (uint256 tokenOutAmt) {
-    //     IERC20(tokenIn).approve(address(router), amount);
-    //     (address outputToken,uint256 outputQuote, uint256 amountOutMinimum, bytes memory pathDefinition, address executor, uint32 referralCode) = abi.decode(
-    //         swapData,
-    //         (address, uint256, uint256, bytes, address, uint32)
-    //     );
-    //     require(outputToken == address(tokenOut), "OdosAdapterV2Adapter: outputToken must match tokenOut");
-    //     IOdosRouterV2.swapTokenInfo memory swapTokenInfoParam = IOdosRouterV2.swapTokenInfo(
-    //         address(tokenIn),
-    //         amount,
-    //         address(this),
-    //         outputToken,
-    //         outputQuote,
-    //         amountOutMinimum,
-    //         address(this)
-    //     );
-    //     tokenOutAmt = router.swap(
-    //         swapTokenInfoParam,
-    //         pathDefinition,
-    //         executor,
-    //         referralCode
-    //     );
-    // }
-
 }
