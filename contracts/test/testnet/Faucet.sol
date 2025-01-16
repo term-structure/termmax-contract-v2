@@ -22,7 +22,9 @@ contract Faucet is Ownable {
     bool public canOnlyMintOnce;
     uint256 public mintUsdValue;
 
-    constructor(address adminAddr) Ownable(adminAddr) {}
+    constructor(address adminAddr) Ownable(adminAddr) {
+        mintUsdValue = 10000;
+    }
 
     function getTokenConfig(uint256 index) public view returns (TokenConfig memory) {
         return tokenConfigs[index];
