@@ -33,7 +33,7 @@ contract TermMaxVault is Ownable2Step, ReentrancyGuard, BaseVault, ERC4626 {
     mapping(address => PendingUint192) public pendingMarkets;
 
     PendingUint192 public pendingTimelock;
-    PendingUint192 public pendingCuratorPercentage;
+    PendingUint192 public pendingPerformanceFeeRate;
     PendingAddress public pendingGuardian;
 
     uint256 public timelock;
@@ -86,7 +86,7 @@ contract TermMaxVault is Ownable2Step, ReentrancyGuard, BaseVault, ERC4626 {
         Ownable(params.admin)
         ERC4626(params.asset)
         ERC20(params.name, params.symbol)
-        BaseVault(params.maxTerm, params.curatorPercentage)
+        BaseVault(params.maxTerm, params.performanceFeeRate)
     {
         _checkTimelockBounds(params.timelock);
         timelock = params.timelock;
@@ -155,7 +155,7 @@ contract TermMaxVault is Ownable2Step, ReentrancyGuard, BaseVault, ERC4626 {
      * @dev Get total assets, falling back to real assets if virtual assets exceed limit
      */
     function totalAssets() public view override(IERC4626, ERC4626) returns (uint256) {
-        return lpersFt + curatorIncentive;
+        return accruedPrincipal + performanceFee;
     }
 
     /**
@@ -225,16 +225,16 @@ contract TermMaxVault is Ownable2Step, ReentrancyGuard, BaseVault, ERC4626 {
         if (newTimelock < VaultConstants.POST_INITIALIZATION_MIN_TIMELOCK) revert BelowMinTimelock();
     }
 
-    function submitCuratorPercentage(uint184 newCuratorPercentage) external onlyCuratorRole {
-        if (newCuratorPercentage == curatorPercentage) revert AlreadySet();
-        if (pendingCuratorPercentage.validAt != 0) revert AlreadyPending();
-        if (newCuratorPercentage < curatorPercentage) {
-            _setCuratorPercentage(uint(newCuratorPercentage).toUint64());
-            emit SetCuratorPercentage(_msgSender(), newCuratorPercentage);
+    function submitPerformanceFeeRate(uint184 newPerformanceFeeRate) external onlyCuratorRole {
+        if (newPerformanceFeeRate == performanceFeeRate) revert AlreadySet();
+        if (pendingPerformanceFeeRate.validAt != 0) revert AlreadyPending();
+        if (newPerformanceFeeRate < performanceFeeRate) {
+            _setPerformanceFeeRate(uint(newPerformanceFeeRate).toUint64());
+            emit SetPerformanceFeeRate(_msgSender(), newPerformanceFeeRate);
             return;
         } else {
-            pendingCuratorPercentage.update(newCuratorPercentage, block.timestamp + timelock);
-            emit SubmitCuratorPercentage(newCuratorPercentage);
+            pendingPerformanceFeeRate.update(newPerformanceFeeRate, block.timestamp + timelock);
+            emit SubmitPerformanceFeeRate(newPerformanceFeeRate);
         }
     }
 
@@ -323,9 +323,9 @@ contract TermMaxVault is Ownable2Step, ReentrancyGuard, BaseVault, ERC4626 {
         _setMarketWhitelist(market, true);
     }
 
-    function acceptCuratorPercentage() external afterTimelock(pendingCuratorPercentage.validAt) {
-        _setCuratorPercentage(uint(pendingCuratorPercentage.value).toUint64());
-        delete pendingCuratorPercentage;
-        emit SetCuratorPercentage(_msgSender(), curatorPercentage);
+    function acceptPerformanceFeeRate() external afterTimelock(pendingPerformanceFeeRate.validAt) {
+        _setPerformanceFeeRate(uint(pendingPerformanceFeeRate.value).toUint64());
+        delete pendingPerformanceFeeRate;
+        emit SetPerformanceFeeRate(_msgSender(), performanceFeeRate);
     }
 }

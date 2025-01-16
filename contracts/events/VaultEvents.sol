@@ -11,9 +11,9 @@ interface VaultEvents {
     event SubmitMarket(address indexed market, bool isWhitelisted);
     event RevokePendingMarket(address indexed caller, address indexed market);
 
-    event SetCuratorPercentage(address indexed caller, uint256 newCuratorPercentage);
+    event SetPerformanceFeeRate(address indexed caller, uint256 newPerformanceFeeRate);
 
-    event SubmitCuratorPercentage(uint256 newCuratorPercentage);
+    event SubmitPerformanceFeeRate(uint256 newPerformanceFeeRate);
 
     event SetMarketWhitelist(address indexed caller, address indexed market, bool isWhitelisted);
 

@@ -36,12 +36,12 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
     }
 
     uint256 public totalFt;
-    // locked ft = lpersFt + curatorIncentive;
-    uint256 public lpersFt;
-    uint256 public curatorIncentive;
-    
+    // locked ft = accruedPrincipal + performanceFee;
+    uint256 public accruedPrincipal;
+    uint256 public performanceFee;
+
     uint64 public maxTerm;
-    uint64 public curatorPercentage;
+    uint64 public performanceFeeRate;
 
     address[] public supplyQueue;
     mapping(address => OrderInfo) public orderMapping;
@@ -51,16 +51,15 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
 
     uint64 private lastUpdateTime;
 
-    constructor(uint64 maxTerm_, uint64 curatorPercentage_) {
+    constructor(uint64 maxTerm_, uint64 performanceFeeRate_) {
         if (maxTerm_ > VaultConstants.MAX_TERM) revert MaxTermExceeded();
-        _setCuratorPercentage(curatorPercentage_);
+        _setPerformanceFeeRate(performanceFeeRate_);
         maxTerm = maxTerm_;
     }
 
-    function _setCuratorPercentage(uint64 newCuratorPercentage) internal {
-        if (newCuratorPercentage > VaultConstants.MAX_CURATOR_INCENTIVE_PERCENTAGE)
-            revert CuratorIncentivePercentageExceeded();
-        curatorPercentage = newCuratorPercentage;
+    function _setPerformanceFeeRate(uint64 newPerformanceFeeRate) internal {
+        if (newPerformanceFeeRate > VaultConstants.MAX_PERFORMANCE_FEE_RATE) revert PerformanceFeeRateExceeded();
+        performanceFeeRate = newPerformanceFeeRate;
     }
 
     /// @notice Calculate how many days until expiration
@@ -208,7 +207,7 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
         }
         // deposit to lpers
         totalFt += amount;
-        lpersFt += amount;
+        accruedPrincipal += amount;
     }
 
     function _withdrawAssets(address recipient, uint256 amount) internal {
@@ -217,7 +216,7 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
         if (assetBalance >= amount) {
             IERC20(asset()).safeTransfer(recipient, amount);
             totalFt -= amount;
-            lpersFt -= amount;
+            accruedPrincipal -= amount;
         } else {
             amountLeft -= assetBalance;
             uint length = withdrawQueue.length;
@@ -265,13 +264,13 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
         }
 
         totalFt -= amount;
-        lpersFt -= amount;
+        accruedPrincipal -= amount;
     }
 
     function _withdrawIncentive(address recipient, uint256 amount) internal {
-        if (amount > curatorIncentive) revert InsufficientFunds(curatorIncentive, amount);
+        if (amount > performanceFee) revert InsufficientFunds(performanceFee, amount);
         IERC20(asset()).safeTransfer(recipient, amount);
-        curatorIncentive -= amount;
+        performanceFee -= amount;
         totalFt -= amount;
 
         emit WithdrawIncentive(msg.sender, recipient, amount);
@@ -377,18 +376,18 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
             lastUpdateTime = block.timestamp.toUint64();
             return;
         }
-        uint256 interest = totalFt - lpersFt - curatorIncentive;
+        uint256 interest = totalFt - accruedPrincipal - performanceFee;
         if (interest == 0) return;
         uint256 deltaTime = block.timestamp - lastUpdateTime;
         interest = (interest * deltaTime) / _daysToMaturity();
-        uint incentiveToCurator = (interest * curatorPercentage) / Constants.DECIMAL_BASE;
-        curatorIncentive += incentiveToCurator;
-        lpersFt += (interest - incentiveToCurator);
+        uint incentiveToCurator = (interest * performanceFeeRate) / Constants.DECIMAL_BASE;
+        performanceFee += incentiveToCurator;
+        accruedPrincipal += (interest - incentiveToCurator);
         lastUpdateTime = block.timestamp.toUint64();
     }
 
     function _checkLockedFt() internal view {
-        if (lpersFt + curatorIncentive > totalFt) revert LockedFtGreaterThanTotalFt();
+        if (accruedPrincipal + performanceFee > totalFt) revert LockedFtGreaterThanTotalFt();
     }
 
     function _checkOrder(address orderAddress) internal view {

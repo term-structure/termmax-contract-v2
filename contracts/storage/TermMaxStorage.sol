@@ -127,5 +127,5 @@ struct VaultInitialParams {
     string name;
     string symbol;
     uint64 maxTerm;
-    uint64 curatorPercentage;
+    uint64 performanceFeeRate;
 }

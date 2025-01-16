@@ -9,7 +9,7 @@ interface VaultErrors {
     error LockedFtGreaterThanTotalFt();
 
     error MaxTermExceeded();
-    error CuratorIncentivePercentageExceeded();
+    error PerformanceFeeRateExceeded();
     error InconsistentAsset();
     error NoPendingValue();
     error TimelockNotElapsed();

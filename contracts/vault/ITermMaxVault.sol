@@ -17,15 +17,15 @@ interface ITermMaxVault is IERC4626 {
     function timelock() external view returns (uint256);
     function pendingMarkets(address) external view returns (uint192 value, uint64 validAt);
     function pendingTimelock() external view returns (uint192 value, uint64 validAt);
-    function pendingCuratorPercentage() external view returns (uint192 value, uint64 validAt);
+    function pendingPerformanceFeeRate() external view returns (uint192 value, uint64 validAt);
     function pendingGuardian() external view returns (address value, uint64 validAt);
     function maxTerm() external view returns (uint64);
-    function curatorPercentage() external view returns (uint64);
+    function performanceFeeRate() external view returns (uint64);
 
     // OrderManager View Functions
     function totalFt() external view returns (uint256);
-    function lpersFt() external view returns (uint256);
-    function curatorIncentive() external view returns (uint256);
+    function accruedPrincipal() external view returns (uint256);
+    function performanceFee() external view returns (uint256);
     function supplyQueue(uint256) external view returns (address);
     function withdrawQueue(uint256) external view returns (address);
     function orderMapping(
@@ -63,7 +63,7 @@ interface ITermMaxVault is IERC4626 {
     function submitTimelock(uint256 newTimelock) external;
     function setCapacity(uint256 newCapacity) external;
     function setIsAllocator(address newAllocator, bool newIsAllocator) external;
-    function submitCuratorPercentage(uint184 newCuratorPercentage) external;
+    function submitPerformanceFeeRate(uint184 newPerformanceFeeRate) external;
     function submitMarket(address market, bool isWhitelisted) external;
 
     function revokePendingTimelock() external;
@@ -73,5 +73,5 @@ interface ITermMaxVault is IERC4626 {
     function acceptTimelock() external;
     function acceptGuardian() external;
     function acceptMarket(address market) external;
-    function acceptCuratorPercentage() external;
+    function acceptPerformanceFeeRate() external;
 }

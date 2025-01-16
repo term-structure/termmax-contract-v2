@@ -42,7 +42,7 @@ contract VaultTest is Test {
     uint timelock = 86400;
     uint maxCapacity = 10000e8;
     uint64 maxTerm = 90 days;
-    uint64 curatorPercentage = 0.5e8;
+    uint64 performanceFeeRate = 0.5e8;
 
     uint currentTime;
 
@@ -86,7 +86,7 @@ contract VaultTest is Test {
                     "Vault-DAI",
                     "Vault-DAI",
                     maxTerm,
-                    curatorPercentage
+                    performanceFeeRate
                 )
             )
         );
@@ -256,55 +256,55 @@ contract VaultTest is Test {
         vault.submitTimelock(1 days);
     }
 
-    function testCuratorPercentage() public {
+    function testPerformanceFeeRate() public {
         uint184 newPercentage = 0.4e8;
 
         vm.prank(curator);
-        vault.submitCuratorPercentage(newPercentage);
+        vault.submitPerformanceFeeRate(newPercentage);
 
-        uint percentage = vault.curatorPercentage();
+        uint percentage = vault.performanceFeeRate();
         assertEq(percentage, newPercentage);
 
         newPercentage = 0.5e8;
         vm.prank(curator);
-        vault.submitCuratorPercentage(newPercentage);
+        vault.submitPerformanceFeeRate(newPercentage);
 
-        (uint192 curPercentage, uint64 validAt) = vault.pendingCuratorPercentage();
+        (uint192 curPercentage, uint64 validAt) = vault.pendingPerformanceFeeRate();
         assertEq(uint256(curPercentage), newPercentage);
 
         vm.warp(validAt);
         vm.prank(vm.randomAddress());
-        vault.acceptCuratorPercentage();
-        percentage = vault.curatorPercentage();
+        vault.acceptPerformanceFeeRate();
+        percentage = vault.performanceFeeRate();
         assertEq(percentage, newPercentage);
     }
 
-    function testFail_SetCuratorPercentage() public {
+    function testFail_SetPerformanceFeeRate() public {
         uint184 newPercentage = 0.5e8;
 
         vm.prank(curator);
-        vm.expectRevert(VaultErrors.AlreadySet.selector);
-        vault.submitCuratorPercentage(newPercentage);
+        vm.expectRevert(VaultErrors.PerformanceFeeRateExceeded.selector);
+        vault.submitPerformanceFeeRate(newPercentage);
 
         newPercentage = 0.6e8;
         vm.prank(curator);
-        vm.expectRevert(VaultErrors.CuratorIncentivePercentageExceeded.selector);
-        vault.submitCuratorPercentage(newPercentage);
+        vm.expectRevert(VaultErrors.PerformanceFeeRateExceeded.selector);
+        vault.submitPerformanceFeeRate(newPercentage);
 
         vm.prank(vm.randomAddress());
         vm.expectRevert(VaultErrors.NotCuratorRole.selector);
-        vault.submitCuratorPercentage(newPercentage);
+        vault.submitPerformanceFeeRate(newPercentage);
 
         newPercentage = 0.4e8;
         vm.startPrank(curator);
-        vault.submitCuratorPercentage(newPercentage);
+        vault.submitPerformanceFeeRate(newPercentage);
 
         newPercentage = 0.41e8;
-        vault.submitCuratorPercentage(newPercentage);
+        vault.submitPerformanceFeeRate(newPercentage);
 
         newPercentage = 0.42e8;
         vm.expectRevert(VaultErrors.AlreadyPending.selector);
-        vault.submitCuratorPercentage(newPercentage);
+        vault.submitPerformanceFeeRate(newPercentage);
 
         vm.stopPrank();
     }

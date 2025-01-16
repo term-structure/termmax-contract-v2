@@ -17,6 +17,6 @@ library VaultConstants {
     /// @dev The maximum term the vault can have.
     uint256 internal constant MAX_TERM = 365 days;
 
-    /// @dev The maximum curator incentive percentage the vault can have.
-    uint256 internal constant MAX_CURATOR_INCENTIVE_PERCENTAGE = 0.5e8;
+    /// @dev The maximum performance fee rate the vault can have.
+    uint256 internal constant MAX_PERFORMANCE_FEE_RATE = 0.5e8;
 }
