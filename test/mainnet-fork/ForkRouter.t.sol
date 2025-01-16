@@ -253,20 +253,26 @@ contract ForkRouterTest is Test {
         res.underlying.approve(address(router), tokenAmtIn);
 
         SwapUnit[] memory units = new SwapUnit[](2);
+
+        // Note: reference Odos docs: https://docs.odos.xyz/build/api-docs
+        address odosInputReceiver = address(0xDB74dfDD3BB46bE8Ce6C33dC9D82777BCFc3dEd5); // Curve pool weETH/WETH
+        uint256 outputQuote = 9455438286641436672;
+        uint256 outputMin = 9360883903775023104;
         IOdosRouterV2.swapTokenInfo memory swapTokenInfoParam = IOdosRouterV2.swapTokenInfo(
             address(weth9Addr),
             tokenAmtIn,
-            address(0xDB74dfDD3BB46bE8Ce6C33dC9D82777BCFc3dEd5),
+            address(odosInputReceiver),
             address(weethAddr),
-            9455438286641436672,
-            9360883903775023104,
+            outputQuote,
+            outputMin,
             address(router)
         );
         address odosExecutor = 0xB28Ca7e465C452cE4252598e0Bc96Aeba553CF82;
+        bytes memory odosPath = hex"010203000a01010001020001ff00000000000000000000000000000000000000db74dfdd3bb46be8ce6c33dc9d82777bcfc3ded5c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2";
         uint32 odosReferralCode = 0;
         bytes memory odosSwapData = abi.encode(
             swapTokenInfoParam,
-            hex"010203000a01010001020001ff00000000000000000000000000000000000000db74dfdd3bb46be8ce6c33dc9d82777bcfc3ded5c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+            odosPath,
             odosExecutor,
             odosReferralCode
         );
