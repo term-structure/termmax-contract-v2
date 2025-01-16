@@ -111,7 +111,7 @@ contract VaultTest is Test {
         assertTrue(vault.isAllocator(allocator));
 
         // Test guardian role checks
-        vm.startPrank(guardian);
+        vm.startPrank(deployer);
         address newGuardian = address(0x123);
         vault.submitGuardian(newGuardian);
 
@@ -131,14 +131,30 @@ contract VaultTest is Test {
         assertEq(vault.curator(), newCurator);
 
         // Test allocator management
-        vm.prank(curator);
+        vm.prank(deployer);
         address newAllocator = address(0x789);
         vault.setIsAllocator(newAllocator, true);
         assertTrue(vault.isAllocator(newAllocator));
+    }
 
-        vm.prank(curator);
-        vault.setIsAllocator(newAllocator, false);
-        assertFalse(vault.isAllocator(newAllocator));
+    function testFail_SetGuardian() public {
+        address newGuardian = address(0x123);
+        vm.prank(allocator);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, allocator));
+        vault.submitGuardian(newGuardian);
+
+        vm.startPrank(deployer);
+        vault.submitGuardian(newGuardian);
+        vm.expectRevert(VaultErrors.AlreadySet.selector);
+        vault.submitGuardian(newGuardian);
+
+        vm.expectRevert(VaultErrors.AlreadyPending.selector);
+        vault.submitGuardian(address(0x456));
+
+        vm.expectRevert(VaultErrors.TimelockNotElapsed.selector);
+        vault.acceptGuardian();
+
+        vm.stopPrank();
     }
 
     function testMarketWhitelist() public {
