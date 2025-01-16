@@ -253,10 +253,6 @@ contract ForkRouterTest is Test {
         res.underlying.approve(address(router), tokenAmtIn);
 
         SwapUnit[] memory units = new SwapUnit[](2);
-        uint24 poolFee = 100;
-        console.log("sender", sender);
-        console.log("sender", sender);
-
         IOdosRouterV2.swapTokenInfo memory swapTokenInfoParam = IOdosRouterV2.swapTokenInfo(
             address(weth9Addr),
             tokenAmtIn,
@@ -269,12 +265,10 @@ contract ForkRouterTest is Test {
         address odosExecutor = 0xB28Ca7e465C452cE4252598e0Bc96Aeba553CF82;
         uint32 odosReferralCode = 0;
         bytes memory odosSwapData = abi.encode(
-            abi.encode(
-                swapTokenInfoParam,
-                hex"010203000a01010001020001ff00000000000000000000000000000000000000db74dfdd3bb46be8ce6c33dc9d82777bcfc3ded5c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
-                odosExecutor,
-                odosReferralCode
-            )
+            swapTokenInfoParam,
+            hex"010203000a01010001020001ff00000000000000000000000000000000000000db74dfdd3bb46be8ce6c33dc9d82777bcfc3ded5c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+            odosExecutor,
+            odosReferralCode
         );
         units[0] = SwapUnit(
             address(odosAdapter),
