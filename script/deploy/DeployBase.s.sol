@@ -3,47 +3,70 @@ pragma solidity ^0.8.27;
 
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
-import {TermMaxFactory} from "../../contracts/core/factory/TermMaxFactory.sol";
-import {ITermMaxFactory} from "../../contracts/core/factory/ITermMaxFactory.sol";
-import {TermMaxRouter} from "../../contracts/router/TermMaxRouter.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {TermMaxMarket} from "../../contracts/core/TermMaxMarket.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {TermMaxFactory} from "../../contracts/factory/TermMaxFactory.sol";
+import {ITermMaxFactory} from "../../contracts/factory/ITermMaxFactory.sol";
+import {TermMaxRouter} from "../../contracts/router/TermMaxRouter.sol";
+import {ITermMaxRouter} from "../../contracts/router/ITermMaxRouter.sol";
+import {TermMaxMarket} from "../../contracts/TermMaxMarket.sol";
+import {TermMaxOrder} from "../../contracts/TermMaxOrder.sol";
 import {MockERC20} from "../../contracts/test/MockERC20.sol";
 import {MockPriceFeed} from "../../contracts/test/MockPriceFeed.sol";
 import {MockPriceFeed} from "../../contracts/test/MockPriceFeed.sol";
-import {MarketConfig} from "../../contracts/core/storage/TermMaxStorage.sol";
-import {IMintableERC20} from "../../contracts/core/tokens/IMintableERC20.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {IMintableERC20, MintableERC20} from "../../contracts/tokens/MintableERC20.sol";
 import {SwapAdapter} from "../../contracts/test/testnet/SwapAdapter.sol";
 import {Faucet} from "../../contracts/test/testnet/Faucet.sol";
 import {JsonLoader} from "../utils/JsonLoader.sol";
 import {FaucetERC20} from "../../contracts/test/testnet/FaucetERC20.sol";
-import {IOracle} from "../../contracts/core/oracle/IOracle.sol";
+import {IOracle, OracleAggregator} from "../../contracts/oracle/OracleAggregator.sol";
+import {MarketConfig, FeeConfig, MarketInitialParams, LoanConfig} from "../../contracts/storage/TermMaxStorage.sol";
 
 contract DeployBase is Script {
+    bytes32 constant GT_ERC20 = keccak256("GearingTokenWithERC20");
+
+    function deployFactory(address admin) public returns (TermMaxFactory factory) {
+        address tokenImplementation = address(new MintableERC20());
+        address orderImplementation = address(new TermMaxOrder());
+        TermMaxMarket m = new TermMaxMarket(tokenImplementation, orderImplementation);
+        factory = new TermMaxFactory(admin, address(m));
+    }
+
+    function deployOracleAggregator(address admin) public returns (OracleAggregator oracle) {
+        OracleAggregator implementation = new OracleAggregator();
+        bytes memory data = abi.encodeCall(OracleAggregator.initialize, admin);
+        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), data);
+        oracle = OracleAggregator(address(proxy));
+    }
+
+    function deployRouter(address admin) public returns (TermMaxRouter router) {
+        TermMaxRouter implementation = new TermMaxRouter();
+        bytes memory data = abi.encodeCall(TermMaxRouter.initialize, admin);
+        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), data);
+        router = TermMaxRouter(address(proxy));
+    }
+
     function deployCore(
         address adminAddr
     )
         public
         returns (
-            Faucet faucet,
             TermMaxFactory factory,
+            OracleAggregator oracleAggregator,
             TermMaxRouter router,
-            SwapAdapter swapAdapter
+            SwapAdapter swapAdapter,
+            Faucet faucet
         )
     {
         // deploy factory
-        factory = new TermMaxFactory(adminAddr);
-        TermMaxMarket marketImpl = new TermMaxMarket();
-        factory.initMarketImplement(address(marketImpl));
+        factory = deployFactory(adminAddr);
+
+        // deploy oracle aggregator
+        oracleAggregator = deployOracleAggregator(adminAddr);
 
         // deploy router
-        address routerImpl = address(new TermMaxRouter());
-        bytes memory data = abi.encodeCall(TermMaxRouter.initialize, adminAddr);
-        address proxy = address(new ERC1967Proxy(routerImpl, data));
-        router = TermMaxRouter(proxy);
-        router.togglePause(false);
+        router = deployRouter(adminAddr);
 
         // deploy swap adapter
         swapAdapter = new SwapAdapter(adminAddr);
@@ -55,6 +78,7 @@ contract DeployBase is Script {
 
     function deployMarkets(
         address factoryAddr,
+        address oracleAddr,
         address routerAddr,
         address faucetAddr,
         string memory deployDataPath,
@@ -62,15 +86,14 @@ contract DeployBase is Script {
         address priceFeedOperatorAddr,
         uint64 openTimeDelay
     ) public returns (TermMaxMarket[] memory markets) {
-        TermMaxFactory factory = TermMaxFactory(factoryAddr);
-        TermMaxRouter router = TermMaxRouter(routerAddr);
+        ITermMaxFactory factory = ITermMaxFactory(factoryAddr);
+        IOracle oracle = IOracle(oracleAddr);
+        ITermMaxRouter router = ITermMaxRouter(routerAddr);
         Faucet faucet = Faucet(faucetAddr);
 
         string memory deployData = vm.readFile(deployDataPath);
 
-        JsonLoader.Config[] memory configs = JsonLoader.getConfigsFromJson(
-            deployData
-        );
+        JsonLoader.Config[] memory configs = JsonLoader.getConfigsFromJson(deployData);
 
         markets = new TermMaxMarket[](configs.length);
 
@@ -92,8 +115,7 @@ contract DeployBase is Script {
                 (collateral, collateralPriceFeed) = faucet.addToken(
                     config.collateralConfig.name,
                     config.collateralConfig.symbol,
-                    config.collateralConfig.decimals,
-                    config.collateralConfig.mintAmt
+                    config.collateralConfig.decimals
                 );
 
                 collateralPriceFeed.updateRoundData(
@@ -107,12 +129,8 @@ contract DeployBase is Script {
                 );
                 collateralPriceFeed.transferOwnership(priceFeedOperatorAddr);
             } else {
-                collateral = FaucetERC20(
-                    faucet.getTokenConfig(tokenId).tokenAddr
-                );
-                collateralPriceFeed = MockPriceFeed(
-                    faucet.getTokenConfig(tokenId).priceFeedAddr
-                );
+                collateral = FaucetERC20(faucet.getTokenConfig(tokenId).tokenAddr);
+                collateralPriceFeed = MockPriceFeed(faucet.getTokenConfig(tokenId).priceFeedAddr);
             }
 
             tokenKey = faucet.calcTokenKey(
@@ -125,8 +143,7 @@ contract DeployBase is Script {
                 (underlying, underlyingPriceFeed) = faucet.addToken(
                     config.underlyingConfig.name,
                     config.underlyingConfig.symbol,
-                    config.underlyingConfig.decimals,
-                    config.underlyingConfig.mintAmt
+                    config.underlyingConfig.decimals
                 );
 
                 underlyingPriceFeed.updateRoundData(
@@ -140,50 +157,44 @@ contract DeployBase is Script {
                 );
                 underlyingPriceFeed.transferOwnership(priceFeedOperatorAddr);
             } else {
-                underlying = FaucetERC20(
-                    faucet.getTokenConfig(tokenId).tokenAddr
-                );
-                underlyingPriceFeed = MockPriceFeed(
-                    faucet.getTokenConfig(tokenId).priceFeedAddr
-                );
+                underlying = FaucetERC20(faucet.getTokenConfig(tokenId).tokenAddr);
+                underlyingPriceFeed = MockPriceFeed(faucet.getTokenConfig(tokenId).priceFeedAddr);
             }
 
             MarketConfig memory marketConfig = MarketConfig({
                 treasurer: config.marketConfig.treasurer,
                 maturity: config.marketConfig.maturity,
                 openTime: uint64(vm.getBlockTimestamp() + openTimeDelay),
-                apr: config.marketConfig.apr,
-                minApr: 0,
-                lsf: config.marketConfig.lsf,
-                lendFeeRatio: config.marketConfig.lendFeeRatio,
-                minNLendFeeR: config.marketConfig.minNLendFeeR,
-                borrowFeeRatio: config.marketConfig.borrowFeeRatio,
-                minNBorrowFeeR: config.marketConfig.minNBorrowFeeR,
-                redeemFeeRatio: config.marketConfig.redeemFeeRatio,
-                issueFtFeeRatio: config.marketConfig.issueFtFeeRatio,
-                lockingPercentage: config.marketConfig.lockingPercentage,
-                initialLtv: config.marketConfig.initialLtv,
-                protocolFeeRatio: config.marketConfig.protocolFeeRatio,
-                rewardIsDistributed: false
+                feeConfig: FeeConfig({
+                    lendTakerFeeRatio: config.marketConfig.feeConfig.lendTakerFeeRatio,
+                    lendMakerFeeRatio: config.marketConfig.feeConfig.lendMakerFeeRatio,
+                    borrowTakerFeeRatio: config.marketConfig.feeConfig.borrowTakerFeeRatio,
+                    borrowMakerFeeRatio: config.marketConfig.feeConfig.borrowMakerFeeRatio,
+                    issueFtFeeRatio: config.marketConfig.feeConfig.issueFtFeeRatio,
+                    issueFtFeeRef: config.marketConfig.feeConfig.issueFtFeeRef,
+                    redeemFeeRatio: config.marketConfig.feeConfig.redeemFeeRatio
+                })
             });
 
             // deploy market
-            ITermMaxFactory.DeployParams memory params = ITermMaxFactory
-                .DeployParams({
-                    gtKey: keccak256(
-                        bytes(config.collateralConfig.gtKeyIdentifier)
-                    ),
-                    admin: adminAddr,
-                    collateral: address(collateral),
-                    underlying: IERC20Metadata(address(underlying)),
-                    oracle: IOracle(address(underlyingPriceFeed)),
-                    liquidationLtv: config.marketConfig.liquidationLtv,
-                    maxLtv: config.marketConfig.maxLtv,
-                    liquidatable: config.marketConfig.liquidatable,
-                    marketConfig: marketConfig,
-                    gtInitalParams: abi.encode(address(collateralPriceFeed))
-                });
-            TermMaxMarket market = TermMaxMarket(factory.createMarket(params));
+            MarketInitialParams memory initialParams = MarketInitialParams({
+                collateral: address(collateral),
+                debtToken: IERC20Metadata(address(underlying)),
+                admin: adminAddr,
+                gtImplementation: address(0),
+                marketConfig: marketConfig,
+                loanConfig: LoanConfig({
+                    oracle: oracle,
+                    liquidationLtv: config.loanConfig.liquidationLtv,
+                    maxLtv: config.loanConfig.maxLtv,
+                    liquidatable: config.loanConfig.liquidatable
+                }),
+                gtInitalParams: abi.encode(type(uint256).max),
+                tokenName: config.marketName,
+                tokenSymbol: config.marketSymbol
+            });
+
+            TermMaxMarket market = TermMaxMarket(factory.createMarket(GT_ERC20, initialParams));
             markets[i] = market;
             router.setMarketWhitelist(address(market), true);
         }
