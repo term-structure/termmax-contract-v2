@@ -35,14 +35,14 @@ contract OdosV2AdapterMock is OdosV2Adapter {
   }
 }
 
-contract ForkOdosTest is Test {
-    address deployer = 0x451F52446EBD4376d4a05f4267eF1a03Acf1aAf4; // vm.randomAddress();
+contract ForkAdapterTest is Test {
+    address deployer = vm.randomAddress();
 
     DeployUtils.Res res;
 
     MarketConfig marketConfig;
 
-    address sender = 0x451F52446EBD4376d4a05f4267eF1a03Acf1aAf4; // vm.randomAddress();
+    address sender = vm.randomAddress();
     address receiver = sender;
 
     address treasurer = vm.randomAddress();
@@ -78,36 +78,48 @@ contract ForkOdosTest is Test {
     }
 
 
-    function testLeverageFromXtWithOdos() public {
-        vm.startPrank(sender);
-        console.log("sender", sender);
-        // deal(weth9Addr, sender, 1000e18);
+    function testOdosAdapter() public {
+        
         uint256 tokenAmtIn = 51869222;
         address inputToken = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48; // usdc
         address outputToken = weth9Addr;
+        // sender = address(odosAdapter);
+        vm.startPrank(sender);
+        deal(inputToken, sender, 1000e18);
+        console.log("sender", sender);
 
+        uint256 outputQuote = 15615669300592542;
+        uint256 outputMin = 15459512607586616;
+        receiver = address(odosAdapter);
         IOdosRouterV2.swapTokenInfo memory swapTokenInfoParam = IOdosRouterV2.swapTokenInfo(
             address(inputToken),
             tokenAmtIn,
             address(0xc19C5B63705807079DbF6d54071F9113233283F5),
             address(outputToken),
-            15615669300592542,
-            15459512607586616,
+            outputQuote,
+            outputMin,
             address(receiver)
         );
         address odosExecutor = 0xB28Ca7e465C452cE4252598e0Bc96Aeba553CF82;
         uint32 odosReferralCode = 0;
+        bytes memory pathDefinition = hex"01020500030102000203000a02030001000104010aff000000000000000000002a79a0e0c226a58eeb99c5704d72d49177cc7516c19c5b63705807079dbf6d54071f9113233283f5a0b86991c6218b36c1d19d4a2e9eb0ce3606eb487a5d3a9dcd33cb8d527f7b5f96eb4fef43d55636";
         bytes memory odosSwapData = abi.encode(
-            abi.encode(
-                swapTokenInfoParam,
-                hex"01020500030102000203000a02030001000104010aff000000000000000000002a79a0e0c226a58eeb99c5704d72d49177cc7516c19c5b63705807079dbf6d54071f9113233283f5a0b86991c6218b36c1d19d4a2e9eb0ce3606eb487a5d3a9dcd33cb8d527f7b5f96eb4fef43d55636",
-                odosExecutor,
-                odosReferralCode
-            )
+          swapTokenInfoParam,
+          pathDefinition,
+          odosExecutor,
+          odosReferralCode
         );
+        uint256 beforeInTokenBalance = IERC20(inputToken).balanceOf(sender);
+        uint256 beforeOutTokenBalance = IERC20(outputToken).balanceOf(receiver);
         IERC20(inputToken).approve(address(odosAdapter), tokenAmtIn);
-        odosAdapter.swap(IERC20(inputToken), IERC20(outputToken), tokenAmtIn, odosSwapData);
+        uint256 tokenOutAmt = odosAdapter.swap(IERC20(inputToken), IERC20(outputToken), tokenAmtIn, odosSwapData);
 
+        uint256 afterInTokenBalance = IERC20(inputToken).balanceOf(sender);
+        uint256 afterOutTokenBalance = IERC20(outputToken).balanceOf(receiver);
+
+        assert(beforeInTokenBalance - afterInTokenBalance == tokenAmtIn);
+        assert(afterOutTokenBalance - beforeOutTokenBalance >= outputMin);
+        assert(afterOutTokenBalance - beforeOutTokenBalance == tokenOutAmt);
         vm.stopPrank();
     }
 

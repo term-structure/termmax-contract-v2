@@ -47,7 +47,6 @@ contract OdosV2Adapter is ERC20SwapAdapter {
             address executor,
             uint32 referralCode
         ) = abi.decode(swapData, (IOdosRouterV2.swapTokenInfo, bytes, address, uint32));
-        IERC20(tokenIn).approve(address(tokenInfo.inputReceiver), amountIn);
 
         require(tokenInfo.outputToken == address(tokenOut), "INVALID_OUTPUT_TOKEN");
         tokenInfo.outputQuote = (tokenInfo.outputQuote * amountIn) / tokenInfo.inputAmount;
