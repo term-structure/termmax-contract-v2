@@ -21,7 +21,6 @@ interface VaultEvents {
         address indexed caller,
         address indexed market,
         address indexed order,
-        uint256 maxXtReserve,
         uint256 maxSupply,
         uint256 initialReserve,
         CurveCuts curveCuts
@@ -31,7 +30,6 @@ interface VaultEvents {
         address indexed order,
         int256 changes,
         uint256 maxSupply,
-        uint256 maxXtReserve,
         CurveCuts curveCuts
     );
     event DealBadDebt(address indexed recipient, address indexed collaretal, uint256 amount, uint256 collateralOut);

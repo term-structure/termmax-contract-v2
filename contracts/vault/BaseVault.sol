@@ -31,14 +31,14 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
         IERC20 ft;
         IERC20 xt;
         uint128 maxSupply;
-        uint128 ftReserve;
         uint64 maturity;
     }
 
     uint256 public totalFt;
-    // locked ft = accruedPrincipal + performanceFee;
-    uint256 public accruedPrincipal;
+    // locked ft = accretingPrincipal + performanceFee;
+    uint256 public accretingPrincipal;
     uint256 public performanceFee;
+    uint256 private annualizedInterest;
 
     uint64 public maxTerm;
     uint64 public performanceFeeRate;
@@ -50,6 +50,11 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
     address[] public withdrawQueue;
 
     uint64 private lastUpdateTime;
+
+    uint64 private recentestMaturity;
+    mapping(uint64 => uint64) private maturityMapping;
+    mapping(uint64 => address[]) private maturityToOrders;
+    mapping(uint64 => uint128) private maturityToInterest;
 
     constructor(uint64 maxTerm_, uint64 performanceFeeRate_) {
         if (maxTerm_ > VaultConstants.MAX_TERM) revert MaxTermExceeded();
@@ -71,7 +76,6 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
 
     function createOrder(
         ITermMaxMarket market,
-        uint256 maxXtReserve,
         uint256 maxSupply,
         uint256 initialReserve,
         CurveCuts memory curveCuts
@@ -81,7 +85,6 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
         ITermMaxOrder[] memory orders,
         int256[] memory changes,
         uint256[] memory maxSupplies,
-        uint256[] memory maxXtReserves,
         CurveCuts[] memory curveCuts
     ) external virtual;
 
@@ -95,7 +98,6 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
 
     function _createOrder(
         ITermMaxMarket market,
-        uint256 maxXtReserve,
         uint256 maxSupply,
         uint256 initialReserve,
         CurveCuts memory curveCuts
@@ -111,7 +113,7 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
         (IERC20 ft, IERC20 xt, , , IERC20 debtToken) = market.tokens();
         if (assetAddress != address(debtToken)) revert InconsistentAsset();
 
-        order = market.createOrder(address(this), maxXtReserve, ISwapCallback(address(this)), curveCuts);
+        order = market.createOrder(address(this), maxSupply, ISwapCallback(address(this)), curveCuts);
         if (initialReserve > 0) {
             IERC20(assetAddress).safeIncreaseAllowance(address(market), initialReserve);
             market.mint(address(order), initialReserve);
@@ -123,39 +125,20 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
             ft: ft,
             xt: xt,
             maxSupply: maxSupply.toUint128(),
-            ftReserve: initialReserve.toUint128(),
             maturity: orderMaturity
         });
 
-        emit CreateOrder(
-            msg.sender,
-            address(market),
-            address(order),
-            maxXtReserve,
-            maxSupply,
-            initialReserve,
-            curveCuts
-        );
-    }
-
-    function _setOrderMaxSupply(address order, uint256 maxSupply) internal {
-        orderMapping[order].maxSupply = maxSupply.toUint128();
+        emit CreateOrder(msg.sender, address(market), address(order), maxSupply, initialReserve, curveCuts);
     }
 
     /// @notice Update order curve cuts and reserves
-    function _updateOrder(
-        ITermMaxOrder order,
-        int256 changes,
-        uint256 maxSupply,
-        uint256 maxXtReserve,
-        CurveCuts memory curveCuts
-    ) internal {
+    function _updateOrder(ITermMaxOrder order, int256 changes, uint256 maxSupply, CurveCuts memory curveCuts) internal {
         _checkOrder(address(order));
         OrderInfo memory orderInfo = orderMapping[address(order)];
         orderInfo.maxSupply = maxSupply.toUint128();
         OrderConfig memory newOrderConfig;
         newOrderConfig.curveCuts = curveCuts;
-        newOrderConfig.maxXtReserve = maxXtReserve.toUint128();
+        newOrderConfig.maxXtReserve = maxSupply;
         newOrderConfig.swapTrigger = ISwapCallback(address(this));
         if (changes < 0) {
             // withdraw assets from order and burn to assets
@@ -164,22 +147,18 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
             orderInfo.ft.safeIncreaseAllowance(address(orderInfo.market), withdrawChanges);
             orderInfo.xt.safeIncreaseAllowance(address(orderInfo.market), withdrawChanges);
             orderInfo.market.burn(address(this), withdrawChanges);
-
-            orderInfo.ftReserve -= withdrawChanges.toUint128();
         } else {
             // deposit assets to order
             uint depositChanges = changes.toUint256();
             IERC20(asset()).safeIncreaseAllowance(address(orderInfo.market), depositChanges);
             orderInfo.market.mint(address(order), depositChanges);
-
-            orderInfo.ftReserve += depositChanges.toUint128();
             changes = 0;
 
             order.updateOrder(newOrderConfig, changes, changes);
         }
         orderMapping[address(order)] = orderInfo;
 
-        emit UpdateOrder(msg.sender, address(order), changes, maxSupply, maxXtReserve, curveCuts);
+        emit UpdateOrder(msg.sender, address(order), changes, maxSupply, curveCuts);
     }
 
     function _depositAssets(uint256 amount) internal {
@@ -201,13 +180,10 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
             orderInfo.market.mint(order, depositAmt);
             amountLeft -= depositAmt;
             if (amountLeft == 0) break;
-            // update order ft reserve
-            orderInfo.ftReserve += depositAmt.toUint128();
-            orderMapping[order] = orderInfo;
         }
         // deposit to lpers
         totalFt += amount;
-        accruedPrincipal += amount;
+        accretingPrincipal += amount;
     }
 
     function _withdrawAssets(address recipient, uint256 amount) internal {
@@ -216,19 +192,19 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
         if (assetBalance >= amount) {
             IERC20(asset()).safeTransfer(recipient, amount);
             totalFt -= amount;
-            accruedPrincipal -= amount;
+            accretingPrincipal -= amount;
         } else {
             amountLeft -= assetBalance;
             uint length = withdrawQueue.length;
             // withdraw from orders
-            for (uint i = 0; i < length; ++i) {
+            uint i;
+            while (length > 0) {
                 address order = withdrawQueue[i];
                 OrderInfo memory orderInfo = orderMapping[order];
                 if (block.timestamp > orderInfo.maturity + Constants.LIQUIDATION_WINDOW) {
                     // redeem assets from expired order
                     uint256 totalRedeem = _redeemFromMarket(order, orderInfo);
                     length--;
-                    i--;
                     if (totalRedeem < amountLeft) {
                         amountLeft -= totalRedeem;
                         continue;
@@ -238,23 +214,19 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
                     }
                 } else if (block.timestamp < orderInfo.maturity) {
                     // withraw ft and xt from order to burn
-                    uint maxWithdraw = orderInfo.xt.balanceOf(order).min(orderInfo.ftReserve);
+                    uint maxWithdraw = orderInfo.xt.balanceOf(order).min(orderInfo.ft.balanceOf(order));
                     if (maxWithdraw < amountLeft) {
                         amountLeft -= maxWithdraw;
                         _burnFromOrder(ITermMaxOrder(order), orderInfo, maxWithdraw);
-                        orderInfo.ftReserve -= maxWithdraw.toUint128();
-                        orderMapping[order] = orderInfo;
-                        continue;
+                        ++i;
                     } else {
                         _burnFromOrder(ITermMaxOrder(order), orderInfo, amountLeft);
-                        orderInfo.ftReserve -= amountLeft.toUint128();
-                        orderMapping[order] = orderInfo;
                         IERC20(asset()).safeTransfer(recipient, amount);
                         break;
                     }
                 } else {
                     // ignore orders that are in liquidation window
-                    continue;
+                    ++i;
                 }
             }
             if (amountLeft > 0) {
@@ -264,7 +236,7 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
         }
 
         totalFt -= amount;
-        accruedPrincipal -= amount;
+        accretingPrincipal -= amount;
     }
 
     function _withdrawIncentive(address recipient, uint256 amount) internal {
@@ -351,43 +323,114 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
     }
 
     function _redeemFromMarket(address order, OrderInfo memory orderInfo) internal returns (uint256 totalRedeem) {
-        ITermMaxOrder(order).withdrawAssets(orderInfo.ft, address(this), orderInfo.ftReserve);
-        orderInfo.ft.safeIncreaseAllowance(address(orderInfo.market), orderInfo.ftReserve);
+        uint ftReserve = orderInfo.ft.balanceOf(order);
+        ITermMaxOrder(order).withdrawAssets(orderInfo.ft, address(this), ftReserve);
+        orderInfo.ft.safeIncreaseAllowance(address(orderInfo.market), ftReserve);
 
         IERC20 assetToken = IERC20(asset());
         uint totalAsset = assetToken.balanceOf(address(this));
-        orderInfo.market.redeem(orderInfo.ftReserve, address(this));
+        orderInfo.market.redeem(ftReserve, address(this));
         totalRedeem = assetToken.balanceOf(address(this)) - totalAsset;
 
-        if (totalRedeem < orderInfo.ftReserve) {
+        if (totalRedeem < ftReserve) {
             // storage bad debt
             (, , , address collateral, ) = orderInfo.market.tokens();
-            badDebtMapping[collateral] = orderInfo.ftReserve - totalRedeem;
+            badDebtMapping[collateral] = ftReserve - totalRedeem;
         }
-        emit RedeemOrder(msg.sender, order, orderInfo.ftReserve, totalRedeem.toUint128());
+        emit RedeemOrder(msg.sender, order, ftReserve.toUint128(), totalRedeem.toUint128());
 
         delete orderMapping[order];
         supplyQueue.remove(supplyQueue.indexOf(order));
         withdrawQueue.remove(withdrawQueue.indexOf(order));
     }
+
     /// @notice Calculate and distribute accrued interest
-    function _accruedInterest() internal {
-        if (totalFt == 0) {
-            lastUpdateTime = block.timestamp.toUint64();
-            return;
+    function _accruedPeriodInterest(uint startTime, uint endTime) internal {
+        uint interest = (annualizedInterest * (endTime - startTime)) / 365 days;
+        uint performanceFeeToCurator = (interest * performanceFeeRate) / Constants.DECIMAL_BASE;
+        // accrue interest
+        performanceFee += performanceFeeToCurator;
+        accretingPrincipal += (interest - performanceFeeToCurator);
+    }
+
+    function _accruedInterest() internal returns (uint256) {
+        uint64 now = block.timestamp.toUint64();
+
+        uint lastTime = lastUpdateTime;
+        uint64 recentMaturity = recentestMaturity;
+
+        while (now >= recentMaturity) {
+            _accruedPeriodInterest(lastTime, recentMaturity);
+            lastTime = recentMaturity;
+            uint64 nextMaturity = maturityMapping[recentMaturity];
+            delete maturityMapping[recentMaturity];
+            // update anualized interest
+            annualizedInterest -= maturityToInterest[recentMaturity];
+            delete maturityToInterest[recentMaturity];
+
+            recentMaturity = nextMaturity;
+            if (nextMaturity == 0) break;
         }
-        uint256 interest = totalFt - accruedPrincipal - performanceFee;
-        if (interest == 0) return;
-        uint256 deltaTime = block.timestamp - lastUpdateTime;
-        interest = (interest * deltaTime) / _daysToMaturity();
-        uint incentiveToCurator = (interest * performanceFeeRate) / Constants.DECIMAL_BASE;
-        performanceFee += incentiveToCurator;
-        accruedPrincipal += (interest - incentiveToCurator);
-        lastUpdateTime = block.timestamp.toUint64();
+        if (recentMaturity > 0) {
+            _accruedPeriodInterest(lastTime, now);
+            recentestMaturity = recentMaturity;
+        } else {
+            // all orders are expired
+            recentestMaturity = 0;
+            annualizedInterest = 0;
+        }
+        lastUpdateTime = now;
+    }
+
+    function _previewAccruedInterest() internal view returns (uint256 previewPrincipal, uint256 previewPerformanceFee) {
+        uint64 now = block.timestamp.toUint64();
+
+        uint lastTime = lastUpdateTime;
+        uint64 recentMaturity = recentestMaturity;
+        uint previewAnualizedInterest = annualizedInterest;
+        previewPrincipal = accretingPrincipal;
+        previewPerformanceFee = performanceFee;
+
+        while (now >= recentMaturity) {
+            (uint256 previewInterest, uint256 previewPerformanceFeeToCurator) = _previewAccruedPeriodInterest(
+                lastTime,
+                recentMaturity,
+                previewAnualizedInterest
+            );
+            lastTime = recentMaturity;
+            uint64 nextMaturity = maturityMapping[recentMaturity];
+            // update anualized interest
+            previewAnualizedInterest -= maturityToInterest[recentMaturity];
+
+            previewPerformanceFee += previewPerformanceFeeToCurator;
+            previewPrincipal += previewInterest;
+
+            recentMaturity = nextMaturity;
+            if (nextMaturity == 0) break;
+        }
+        if (recentMaturity > 0) {
+            (uint256 previewInterest, uint256 previewPerformanceFeeToCurator) = _previewAccruedPeriodInterest(
+                lastTime,
+                now,
+                previewAnualizedInterest
+            );
+            previewPerformanceFee += previewPerformanceFeeToCurator;
+            previewPrincipal += previewInterest;
+        }
+    }
+
+    function _previewAccruedPeriodInterest(
+        uint startTime,
+        uint endTime,
+        uint previewAnualizedInterest
+    ) internal view returns (uint256, uint256) {
+        uint interest = (previewAnualizedInterest * (endTime - startTime)) / 365 days;
+        uint performanceFeeToCurator = (interest * performanceFeeRate) / Constants.DECIMAL_BASE;
+        return (interest - performanceFeeToCurator, performanceFeeToCurator);
     }
 
     function _checkLockedFt() internal view {
-        if (accruedPrincipal + performanceFee > totalFt) revert LockedFtGreaterThanTotalFt();
+        if (accretingPrincipal + performanceFee > totalFt) revert LockedFtGreaterThanTotalFt();
     }
 
     function _checkOrder(address orderAddress) internal view {
@@ -396,15 +439,27 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
         }
     }
 
-    function swapCallback(uint256 ftReserve) external override {
+    function swapCallback(int256 deltaFt, int256) external override {
         address orderAddress = msg.sender;
         _checkOrder(orderAddress);
-        OrderInfo memory orderInfo = orderMapping[orderAddress];
+        uint64 maturity = orderMapping[orderAddress].maturity;
         _accruedInterest();
+        uint ftChanges;
+        if (deltaFt > 0) {
+            ftChanges = deltaFt.toUint256();
+            totalFt += ftChanges;
+            uint deltaAnualizedInterest = (ftChanges * (maturity - block.timestamp)) / 365 days;
+            maturityToInterest[maturity] += deltaAnualizedInterest.toUint128();
 
-        totalFt = totalFt - orderInfo.ftReserve + ftReserve;
+            annualizedInterest += deltaAnualizedInterest;
+        } else {
+            ftChanges = (-deltaFt).toUint256();
+            totalFt -= ftChanges;
+            uint deltaAnualizedInterest = (ftChanges * (maturity - block.timestamp)) / 365 days;
+            maturityToInterest[maturity] -= deltaAnualizedInterest.toUint128();
+            annualizedInterest -= deltaAnualizedInterest;
+        }
+
         _checkLockedFt();
-        orderInfo.ftReserve = ftReserve.toUint128();
-        orderMapping[orderAddress] = orderInfo;
     }
 }

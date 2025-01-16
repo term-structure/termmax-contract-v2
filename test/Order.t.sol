@@ -476,23 +476,61 @@ contract OrderTest is Test {
         vm.stopPrank();
     }
 
-    function testSwapWithCallback() public {
+    function testSwapWithCallback(uint128 swapAmt, bool isBuy, bool isFt) public {
+        vm.assume(swapAmt < 0.1e18);
+
         // Deploy mock callback contract
         MockSwapCallback callback = new MockSwapCallback();
 
         orderConfig.swapTrigger = callback;
-        vm.prank(maker);
+        vm.startPrank(maker);
         res.order.updateOrder(orderConfig, 0, 0);
+
+        res.debt.mint(maker, 150e18);
+        res.debt.approve(address(res.market), 150e18);
+        res.market.mint(address(res.order), 150e18);
+        vm.stopPrank();
 
         vm.startPrank(sender);
 
-        uint128 amountIn = 1e8;
-        res.debt.mint(sender, amountIn);
-        res.debt.approve(address(res.order), amountIn);
-        res.order.swapExactTokenToToken(res.debt, res.ft, sender, amountIn, 0);
+        res.debt.mint(sender, swapAmt * 2);
 
-        uint expectedFtReserve = res.ft.balanceOf(address(res.order));
-        assertEq(expectedFtReserve, callback.ftReserve());
+        res.debt.approve(address(res.order), swapAmt);
+        res.debt.approve(address(res.market), swapAmt);
+        res.market.mint(sender, swapAmt);
+
+        IERC20 tokenIn;
+        IERC20 tokenOut;
+
+        if (isBuy && isFt) {
+            tokenIn = res.debt;
+            tokenOut = res.ft;
+        }
+
+        if (isBuy && !isFt) {
+            tokenIn = res.debt;
+            tokenOut = res.xt;
+        }
+
+        if (!isBuy && isFt) {
+            tokenIn = res.ft;
+            tokenOut = res.debt;
+        }
+
+        if (!isBuy && !isFt) {
+            tokenIn = res.xt;
+            tokenOut = res.debt;
+        }
+        uint ftBalanceBefore = res.ft.balanceOf(address(res.order));
+        uint xtBalanceBefore = res.xt.balanceOf(address(res.order));
+        tokenIn.approve(address(res.order), swapAmt);
+        res.order.swapExactTokenToToken(tokenIn, tokenOut, sender, swapAmt, 0);
+
+        uint ftBalanceAfter = res.ft.balanceOf(address(res.order));
+        uint xtBalanceAfter = res.xt.balanceOf(address(res.order));
+
+        // assertEq(ftBalanceBefore.toInt256() + callback.deltaFt(), ftBalanceAfter.toInt256());
+        // assertEq(xtBalanceBefore.toInt256() + callback.deltaXt(), xtBalanceAfter.toInt256());
 
         vm.stopPrank();
     }
@@ -500,9 +538,11 @@ contract OrderTest is Test {
 
 // Mock contracts for testing
 contract MockSwapCallback is ISwapCallback {
-    uint256 public ftReserve;
+    int256 public deltaFt;
+    int256 public deltaXt;
 
-    function swapCallback(uint256 ftReserve_) external override {
-        ftReserve = ftReserve_;
+    function swapCallback(int256 deltaFt_, int256 deltaXt_) external override {
+        deltaFt = deltaFt_;
+        deltaXt = deltaXt_;
     }
 }

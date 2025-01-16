@@ -99,7 +99,7 @@ contract VaultTest is Test {
         res.debt.mint(deployer, amount);
         res.debt.approve(address(vault), amount);
         vault.deposit(amount, deployer);
-        res.order = vault.createOrder(res.market, orderConfig.maxXtReserve, maxCapacity, amount, orderConfig.curveCuts);
+        res.order = vault.createOrder(res.market, maxCapacity, amount, orderConfig.curveCuts);
 
         vm.stopPrank();
     }

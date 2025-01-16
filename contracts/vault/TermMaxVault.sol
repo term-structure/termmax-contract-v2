@@ -101,24 +101,22 @@ contract TermMaxVault is Ownable2Step, ReentrancyGuard, BaseVault, ERC4626 {
     // BaseVault functions
     function createOrder(
         ITermMaxMarket market,
-        uint256 maxXtReserve,
         uint256 maxSupply,
         uint256 initialReserve,
         CurveCuts memory curveCuts
     ) external override onlyCuratorRole returns (ITermMaxOrder order) {
-        return _createOrder(ITermMaxMarket(market), maxXtReserve, maxSupply, initialReserve, curveCuts);
+        return _createOrder(ITermMaxMarket(market), maxSupply, initialReserve, curveCuts);
     }
 
     function updateOrders(
         ITermMaxOrder[] memory orders,
         int256[] memory changes,
         uint256[] memory maxSupplies,
-        uint256[] memory maxXtReserves,
         CurveCuts[] memory curveCuts
     ) external override onlyCuratorRole {
         _accruedInterest();
         for (uint256 i = 0; i < orders.length; ++i) {
-            _updateOrder(ITermMaxOrder(orders[i]), changes[i], maxSupplies[i], maxXtReserves[i], curveCuts[i]);
+            _updateOrder(ITermMaxOrder(orders[i]), changes[i], maxSupplies[i], curveCuts[i]);
         }
     }
 
@@ -155,7 +153,8 @@ contract TermMaxVault is Ownable2Step, ReentrancyGuard, BaseVault, ERC4626 {
      * @dev Get total assets, falling back to real assets if virtual assets exceed limit
      */
     function totalAssets() public view override(IERC4626, ERC4626) returns (uint256) {
-        return accruedPrincipal + performanceFee;
+        (uint256 previewPrincipal, uint256 previewPerformanceFee) = _previewAccruedInterest();
+        return previewPrincipal + previewPerformanceFee;
     }
 
     /**

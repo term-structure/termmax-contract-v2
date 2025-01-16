@@ -249,29 +249,35 @@ contract TermMaxOrder is
         if (tokenIn == tokenOut) revert CantSwapSameToken();
         OrderConfig memory config = _orderConfig;
         uint feeAmt;
+        int deltaFt;
+        int deltaXt;
         if (tokenIn == ft && tokenOut == debtToken) {
-            (netTokenOut, feeAmt) = sellFt(tokenAmtIn, minTokenOut, msg.sender, recipient, config);
+            (netTokenOut, feeAmt, deltaFt, deltaXt) = sellFt(tokenAmtIn, minTokenOut, msg.sender, recipient, config);
         } else if (tokenIn == xt && tokenOut == debtToken) {
-            (netTokenOut, feeAmt) = sellXt(tokenAmtIn, minTokenOut, msg.sender, recipient, config);
+            (netTokenOut, feeAmt, deltaFt, deltaXt) = sellXt(tokenAmtIn, minTokenOut, msg.sender, recipient, config);
         } else if (tokenIn == debtToken && tokenOut == ft) {
-            (netTokenOut, feeAmt) = buyFt(tokenAmtIn, minTokenOut, msg.sender, recipient, config);
+            (netTokenOut, feeAmt, deltaFt, deltaXt) = buyFt(tokenAmtIn, minTokenOut, msg.sender, recipient, config);
         } else if (tokenIn == debtToken && tokenOut == xt) {
-            (netTokenOut, feeAmt) = buyXt(tokenAmtIn, minTokenOut, msg.sender, recipient, config);
+            (netTokenOut, feeAmt, deltaFt, deltaXt) = buyXt(tokenAmtIn, minTokenOut, msg.sender, recipient, config);
         } else if (tokenIn == ft && tokenOut == xt) {
-            (uint debtTokenAmtOut, uint feeOneSide) = sellFt(tokenAmtIn, 0, msg.sender, address(this), config);
-            (netTokenOut, feeAmt) = buyXt(debtTokenAmtOut, minTokenOut, address(this), recipient, config);
+            (uint debtTokenAmtOut, uint feeOneSide, , ) = sellFt(tokenAmtIn, 0, msg.sender, address(this), config);
+            (netTokenOut, feeAmt, , ) = buyXt(debtTokenAmtOut, minTokenOut, address(this), recipient, config);
             feeAmt += feeOneSide;
+            deltaFt = (tokenAmtIn - feeAmt).toInt256();
+            deltaXt = -((netTokenOut).toInt256());
         } else if (tokenIn == xt && tokenOut == ft) {
-            (uint debtTokenAmtOut, uint feeOneSide) = sellXt(tokenAmtIn, 0, msg.sender, address(this), config);
-            (netTokenOut, feeAmt) = buyFt(debtTokenAmtOut, minTokenOut, address(this), recipient, config);
+            (uint debtTokenAmtOut, uint feeOneSide, , ) = sellXt(tokenAmtIn, 0, msg.sender, address(this), config);
+            (netTokenOut, feeAmt, , ) = buyFt(debtTokenAmtOut, minTokenOut, address(this), recipient, config);
             feeAmt += feeOneSide;
+            deltaFt = -((netTokenOut + feeAmt).toInt256());
+            deltaXt = uint(tokenAmtIn).toInt256();
         } else {
             revert CantNotSwapToken(tokenIn, tokenOut);
         }
         ft.safeTransfer(market.config().treasurer, feeAmt);
 
         if (address(_orderConfig.swapTrigger) != address(0)) {
-            _orderConfig.swapTrigger.swapCallback(ft.balanceOf(address(this)));
+            _orderConfig.swapTrigger.swapCallback(deltaFt, deltaXt);
         }
         emit SwapExactTokenToToken(
             tokenIn,
@@ -290,11 +296,13 @@ contract TermMaxOrder is
         address caller,
         address recipient,
         OrderConfig memory config
-    ) internal isLendingAllowed(config) returns (uint256 netOut, uint256 feeAmt) {
+    ) internal isLendingAllowed(config) returns (uint256 netOut, uint256 feeAmt, int256 deltaFt, int256 deltaXt) {
         (netOut, feeAmt) = _buyToken(caller, recipient, debtTokenAmtIn, minTokenOut, config, _buyFt);
         if (xt.balanceOf(address(this)) > config.maxXtReserve) {
             revert XtReserveTooHigh();
         }
+        // deltaFt = -((netOut + feeAmt - debtTokenAmtIn).toInt256());
+        // deltaXt = debtTokenAmtIn.toInt256();
     }
 
     function buyXt(
@@ -303,8 +311,10 @@ contract TermMaxOrder is
         address caller,
         address recipient,
         OrderConfig memory config
-    ) internal isBorrowingAllowed(config) returns (uint256 netOut, uint256 feeAmt) {
-        return _buyToken(caller, recipient, debtTokenAmtIn, minTokenOut, config, _buyXt);
+    ) internal isBorrowingAllowed(config) returns (uint256 netOut, uint256 feeAmt, int256 deltaFt, int256 deltaXt) {
+        (netOut, feeAmt) = _buyToken(caller, recipient, debtTokenAmtIn, minTokenOut, config, _buyXt);
+        // deltaFt = (debtTokenAmtIn - feeAmt).toInt256();
+        // deltaXt = -((netOut - debtTokenAmtIn).toInt256());
     }
 
     function sellFt(
@@ -313,8 +323,10 @@ contract TermMaxOrder is
         address caller,
         address recipient,
         OrderConfig memory config
-    ) internal isBorrowingAllowed(config) returns (uint256 netOut, uint256 feeAmt) {
-        return _sellToken(caller, recipient, ftAmtIn, minDebtTokenOut, config, _sellFt);
+    ) internal isBorrowingAllowed(config) returns (uint256 netOut, uint256 feeAmt, int256 deltaFt, int256 deltaXt) {
+        (netOut, feeAmt) = _sellToken(caller, recipient, ftAmtIn, minDebtTokenOut, config, _sellFt);
+        // deltaFt = (ftAmtIn - netOut - feeAmt).toInt256();
+        // deltaXt = -((netOut).toInt256());
     }
 
     function sellXt(
@@ -323,11 +335,13 @@ contract TermMaxOrder is
         address caller,
         address recipient,
         OrderConfig memory config
-    ) internal isLendingAllowed(config) returns (uint256 netOut, uint256 feeAmt) {
+    ) internal isLendingAllowed(config) returns (uint256 netOut, uint256 feeAmt, int256 deltaFt, int256 deltaXt) {
         (netOut, feeAmt) = _sellToken(caller, recipient, xtAmtIn, minDebtTokenOut, config, _sellXt);
         if (xt.balanceOf(address(this)) > config.maxXtReserve) {
             revert XtReserveTooHigh();
         }
+        // deltaFt = -((netOut + feeAmt).toInt256());
+        // deltaXt = (xtAmtIn - netOut).toInt256();
     }
 
     function _buyToken(
@@ -455,17 +469,19 @@ contract TermMaxOrder is
         if (tokenIn == tokenOut) revert CantSwapSameToken();
         OrderConfig memory config = _orderConfig;
         uint feeAmt;
+        int256 deltaFt;
+        int256 deltaXt;
         if (tokenIn == debtToken && tokenOut == ft) {
-            (netTokenIn, feeAmt) = buyExactFt(tokenAmtOut, maxTokenIn, msg.sender, recipient, config);
+            (netTokenIn, feeAmt, deltaFt, deltaXt) = buyExactFt(tokenAmtOut, maxTokenIn, msg.sender, recipient, config);
         } else if (tokenIn == debtToken && tokenOut == xt) {
-            (netTokenIn, feeAmt) = buyExactXt(tokenAmtOut, maxTokenIn, msg.sender, recipient, config);
+            (netTokenIn, feeAmt, deltaFt, deltaXt) = buyExactXt(tokenAmtOut, maxTokenIn, msg.sender, recipient, config);
         } else {
             revert CantNotSwapToken(tokenIn, tokenOut);
         }
         ft.safeTransfer(market.config().treasurer, feeAmt);
 
         if (address(_orderConfig.swapTrigger) != address(0)) {
-            _orderConfig.swapTrigger.swapCallback(ft.balanceOf(address(this)));
+            _orderConfig.swapTrigger.swapCallback(deltaFt, deltaXt);
         }
         emit SwapTokenToExactToken(
             tokenIn,
@@ -484,11 +500,13 @@ contract TermMaxOrder is
         address caller,
         address recipient,
         OrderConfig memory config
-    ) internal isLendingAllowed(config) returns (uint256 netOut, uint256 feeAmt) {
-        (netOut, feeAmt) = _buyExactToken(caller, recipient, tokenAmtOut, maxTokenIn, config, _buyExactFt);
+    ) internal isLendingAllowed(config) returns (uint256 netTokenIn, uint256 feeAmt, int256 deltaFt, int256 deltaXt) {
+        (netTokenIn, feeAmt) = _buyExactToken(caller, recipient, tokenAmtOut, maxTokenIn, config, _buyExactFt);
         if (xt.balanceOf(address(this)) > config.maxXtReserve) {
             revert XtReserveTooHigh();
         }
+        deltaFt = -((tokenAmtOut + feeAmt - netTokenIn).toInt256());
+        deltaXt = netTokenIn.toInt256();
     }
 
     function buyExactXt(
@@ -497,8 +515,10 @@ contract TermMaxOrder is
         address caller,
         address recipient,
         OrderConfig memory config
-    ) internal isBorrowingAllowed(config) returns (uint256 netOut, uint256 feeAmt) {
-        return _buyExactToken(caller, recipient, tokenAmtOut, maxTokenIn, config, _buyExactXt);
+    ) internal isBorrowingAllowed(config) returns (uint256 netTokenIn, uint256 feeAmt, int256 deltaFt, int256 deltaXt) {
+        (netTokenIn, feeAmt) = _buyExactToken(caller, recipient, tokenAmtOut, maxTokenIn, config, _buyExactXt);
+        deltaFt = (netTokenIn - feeAmt).toInt256();
+        deltaXt = -(tokenAmtOut.toInt256());
     }
 
     function _buyExactToken(

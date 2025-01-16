@@ -24,22 +24,18 @@ interface ITermMaxVault is IERC4626 {
 
     // OrderManager View Functions
     function totalFt() external view returns (uint256);
-    function accruedPrincipal() external view returns (uint256);
+    function accretingPrincipal() external view returns (uint256);
     function performanceFee() external view returns (uint256);
     function supplyQueue(uint256) external view returns (address);
     function withdrawQueue(uint256) external view returns (address);
     function orderMapping(
         address
-    )
-        external
-        view
-        returns (ITermMaxMarket market, IERC20 ft, IERC20 xt, uint128 maxSupply, uint128 ftReserve, uint64 maturity);
+    ) external view returns (ITermMaxMarket market, IERC20 ft, IERC20 xt, uint128 maxSupply, uint64 maturity);
     function badDebtMapping(address) external view returns (uint256);
 
     // State-Changing Functions
     function createOrder(
         ITermMaxMarket market,
-        uint256 maxXtReserve,
         uint256 maxSupply,
         uint256 initialReserve,
         CurveCuts calldata curveCuts
@@ -49,7 +45,6 @@ interface ITermMaxVault is IERC4626 {
         ITermMaxOrder[] calldata orders,
         int256[] calldata changes,
         uint256[] calldata maxSupplies,
-        uint256[] calldata maxXtReserves,
         CurveCuts[] calldata curveCuts
     ) external;
 
