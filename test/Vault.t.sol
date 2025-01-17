@@ -208,7 +208,7 @@ contract VaultTest is Test {
         vault.submitTimelock(newTimelock);
         assertEq(vault.timelock(), 2 days);
 
-        (uint192 pendingTimelock, uint64 pendingTimelockValidAt) = vault.pendingTimelock();
+        (uint192 pendingTimelock, ) = vault.pendingTimelock();
         assertEq(uint256(pendingTimelock), newTimelock);
         assertEq(vault.timelock(), 2 days);
 
@@ -309,43 +309,105 @@ contract VaultTest is Test {
         vm.stopPrank();
     }
 
-    // function testDeposit() public {
-    //     uint256 depositAmount = 1000e8;
-    //     MockERC20 asset = res.debt;
+    function testSupplyQueue(uint orderCount, uint seed) public {
+        vm.assume(orderCount < VaultConstants.MAX_QUEUE_LENGTH && orderCount > 0);
+        address[] memory supplyQueue = new address[](orderCount);
+        supplyQueue[0] = vault.supplyQueue(0);
+        vm.startPrank(curator);
+        for (uint i = 1; i < orderCount; i++) {
+            address order = address(vault.createOrder(res.market, maxCapacity, 0, orderConfig.curveCuts));
+            supplyQueue[i] = order;
+            assertEq(vault.supplyQueue(i), order);
+        }
 
-    //     // Mint tokens to lper
-    //     asset.mint(lper, depositAmount);
+        uint256[] memory indexes = new uint256[](orderCount);
+        for (uint i = 0; i < orderCount; i++) {
+            indexes[i] = i;
+        }
+        indexes = shuffle(indexes, seed);
+        vault.updateSupplyQueue(indexes);
 
-    //     vm.startPrank(lper);
-    //     asset.approve(address(vault), depositAmount);
+        for (uint i = 0; i < orderCount; i++) {
+            assertEq(vault.supplyQueue(i), supplyQueue[indexes[i]]);
+        }
 
-    //     // Test deposit
-    //     uint256 sharesBefore = vault.balanceOf(lper);
-    //     vault.deposit(depositAmount, lper);
-    //     uint256 sharesAfter = vault.balanceOf(lper);
+        vm.stopPrank();
+    }
 
-    //     assertEq(sharesAfter - sharesBefore, depositAmount);
-    //     assertEq(asset.balanceOf(address(vault)), depositAmount);
-    //     vm.stopPrank();
-    // }
+    function testWithdrawQueue(uint orderCount, uint seed) public {
+        vm.assume(orderCount < VaultConstants.MAX_QUEUE_LENGTH && orderCount > 0);
+        address[] memory withdrawQueue = new address[](orderCount);
+        withdrawQueue[0] = vault.withdrawQueue(0);
+        vm.startPrank(curator);
+        for (uint i = 1; i < orderCount; i++) {
+            address order = address(vault.createOrder(res.market, maxCapacity, 0, orderConfig.curveCuts));
+            withdrawQueue[i] = order;
+            assertEq(vault.withdrawQueue(i), order);
+        }
 
-    // function testWithdraw() public {
-    //     uint256 depositAmount = 1000e8;
-    //     MockERC20 asset = res.debt;
+        uint256[] memory indexes = new uint256[](orderCount);
+        for (uint i = 0; i < orderCount; i++) {
+            indexes[i] = i;
+        }
+        indexes = shuffle(indexes, seed);
+        vault.updateWithdrawQueue(indexes);
 
-    //     // Setup: deposit first
-    //     asset.mint(lper, depositAmount);
-    //     vm.startPrank(lper);
-    //     asset.approve(address(vault), depositAmount);
-    //     vault.deposit(depositAmount, lper);
+        for (uint i = 0; i < orderCount; i++) {
+            assertEq(vault.withdrawQueue(i), withdrawQueue[indexes[i]]);
+        }
 
-    //     // Test withdraw
-    //     uint256 balanceBefore = asset.balanceOf(lper);
-    //     vault.withdraw(depositAmount, lper, lper);
-    //     uint256 balanceAfter = asset.balanceOf(lper);
+        vm.stopPrank();
+    }
 
-    //     assertEq(balanceAfter - balanceBefore, depositAmount);
-    //     assertEq(vault.balanceOf(lper), 0);
-    //     vm.stopPrank();
-    // }
+    function shuffle(uint256[] memory arr, uint seed) public pure returns (uint256[] memory) {
+        uint256 length = arr.length;
+
+        for (uint256 i = length - 1; i > 0; i--) {
+            uint256 j = seed % (i + 1);
+
+            uint256 temp = arr[i];
+            arr[i] = arr[j];
+            arr[j] = temp;
+        }
+
+        return arr;
+    }
+
+    function testFail_SupplyQueue() public {
+        vm.prank(lper);
+        vm.expectRevert(VaultErrors.NotCuratorRole.selector);
+        vault.updateSupplyQueue(new uint256[](0));
+
+        vm.startPrank(curator);
+        vm.expectRevert(VaultErrors.SupplyQueueLengthMismatch.selector);
+        vault.updateSupplyQueue(new uint256[](0));
+
+        address order2 = address(vault.createOrder(res.market, maxCapacity, 0, orderConfig.curveCuts));
+        uint[] memory indexes = new uint[](2);
+        indexes[0] = 1;
+        indexes[1] = 1;
+        vm.expectRevert(abi.encodeWithSelector(VaultErrors.DuplicateOrder.selector, order2));
+        vault.updateSupplyQueue(indexes);
+
+        vm.stopPrank();
+    }
+
+    function testFail_WithdrawQueue() public {
+        vm.prank(lper);
+        vm.expectRevert(VaultErrors.NotCuratorRole.selector);
+        vault.updateWithdrawQueue(new uint256[](0));
+
+        vm.startPrank(curator);
+        vm.expectRevert(VaultErrors.WithdrawQueueLengthMismatch.selector);
+        vault.updateWithdrawQueue(new uint256[](0));
+
+        address order2 = address(vault.createOrder(res.market, maxCapacity, 0, orderConfig.curveCuts));
+        uint[] memory indexes = new uint[](2);
+        indexes[0] = 1;
+        indexes[1] = 1;
+        vm.expectRevert(abi.encodeWithSelector(VaultErrors.DuplicateOrder.selector, order2));
+        vault.updateWithdrawQueue(indexes);
+
+        vm.stopPrank();
+    }
 }
