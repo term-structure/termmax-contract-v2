@@ -19,6 +19,8 @@ import {OrderConfig, CurveCuts} from "../storage/TermMaxStorage.sol";
 import {MathLib} from "../lib/MathLib.sol";
 import {ITermMaxVault} from "./ITermMaxVault.sol";
 
+import {console} from "forge-std/console.sol";
+
 abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMaxVault {
     using SafeCast for uint256;
     using SafeCast for int256;
@@ -157,7 +159,6 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
             order.updateOrder(newOrderConfig, changes, changes);
         }
         orderMapping[address(order)] = orderInfo;
-
         emit UpdateOrder(msg.sender, address(order), changes, maxSupply, curveCuts);
     }
 
@@ -353,13 +354,16 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
         accretingPrincipal += (interest - performanceFeeToCurator);
     }
 
-    function _accruedInterest() internal returns (uint256) {
+    function _accruedInterest() internal {
         uint64 now = block.timestamp.toUint64();
 
         uint lastTime = lastUpdateTime;
         uint64 recentMaturity = recentestMaturity;
+        if (lastTime == 0 || recentMaturity == 0) {
+            return;
+        }
 
-        while (now >= recentMaturity) {
+        while (now >= recentMaturity && recentMaturity != 0) {
             _accruedPeriodInterest(lastTime, recentMaturity);
             lastTime = recentMaturity;
             uint64 nextMaturity = maturityMapping[recentMaturity];
@@ -369,7 +373,6 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
             delete maturityToInterest[recentMaturity];
 
             recentMaturity = nextMaturity;
-            if (nextMaturity == 0) break;
         }
         if (recentMaturity > 0) {
             _accruedPeriodInterest(lastTime, now);
@@ -386,12 +389,15 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
         uint64 now = block.timestamp.toUint64();
 
         uint lastTime = lastUpdateTime;
+        if (lastTime == 0) {
+            return (0, 0);
+        }
         uint64 recentMaturity = recentestMaturity;
         uint previewAnualizedInterest = annualizedInterest;
         previewPrincipal = accretingPrincipal;
         previewPerformanceFee = performanceFee;
 
-        while (now >= recentMaturity) {
+        while (now >= recentMaturity && recentMaturity != 0) {
             (uint256 previewInterest, uint256 previewPerformanceFeeToCurator) = _previewAccruedPeriodInterest(
                 lastTime,
                 recentMaturity,
@@ -406,7 +412,6 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
             previewPrincipal += previewInterest;
 
             recentMaturity = nextMaturity;
-            if (nextMaturity == 0) break;
         }
         if (recentMaturity > 0) {
             (uint256 previewInterest, uint256 previewPerformanceFeeToCurator) = _previewAccruedPeriodInterest(

@@ -410,4 +410,52 @@ contract VaultTest is Test {
 
         vm.stopPrank();
     }
+
+    function testUpdateOrder() public {
+        vm.startPrank(curator);
+        ITermMaxOrder[] memory orders = new ITermMaxOrder[](3);
+        orders[0] = res.order;
+        orders[1] = vault.createOrder(res.market, maxCapacity, 0, orderConfig.curveCuts);
+        orders[2] = vault.createOrder(res.market, maxCapacity, 0, orderConfig.curveCuts);
+
+        int256[] memory changes = new int256[](3);
+        changes[0] = -3000;
+        changes[1] = 2000;
+        changes[2] = 1000;
+
+        uint256[] memory maxSupplies = new uint256[](3);
+        maxSupplies[0] = maxCapacity - 1;
+        maxSupplies[1] = maxCapacity + 1;
+        maxSupplies[2] = maxCapacity;
+
+        CurveCuts[] memory curveCuts = new CurveCuts[](3);
+        CurveCuts memory newCurveCuts = orderConfig.curveCuts;
+        newCurveCuts.lendCurveCuts[0].liqSquare++;
+        curveCuts[0] = newCurveCuts;
+        newCurveCuts.lendCurveCuts[0].liqSquare++;
+        curveCuts[1] = newCurveCuts;
+        newCurveCuts.lendCurveCuts[0].liqSquare++;
+        curveCuts[2] = newCurveCuts;
+
+        uint[] memory balancesBefore = new uint[](3);
+        balancesBefore[0] = res.ft.balanceOf(address(orders[0]));
+        balancesBefore[1] = res.ft.balanceOf(address(orders[1]));
+        balancesBefore[2] = res.ft.balanceOf(address(orders[2]));
+        vault.updateOrders(orders, changes, maxSupplies, curveCuts);
+
+        for (uint i = 0; i < orders.length; i++) {
+            assertEq(orders[i].orderConfig().maxXtReserve, maxSupplies[i]);
+            if (changes[i] < 0) {
+                assertEq(res.ft.balanceOf(address(orders[i])), balancesBefore[i] - (-changes[i]).toUint256());
+            } else {
+                assertEq(res.ft.balanceOf(address(orders[i])), balancesBefore[i] + changes[i].toUint256());
+            }
+            assertEq(
+                orders[i].orderConfig().curveCuts.lendCurveCuts[0].liqSquare,
+                curveCuts[i].lendCurveCuts[0].liqSquare
+            );
+        }
+
+        vm.stopPrank();
+    }
 }
