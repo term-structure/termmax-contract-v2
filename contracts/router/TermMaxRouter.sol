@@ -268,7 +268,7 @@ contract TermMaxRouter is
         ITermMaxMarket market,
         uint256 collInAmt,
         ITermMaxOrder[] memory orders,
-        uint128[] memory ftAmtsToSell,
+        uint128[] memory tokenAmtsWantBuy,
         uint128 maxDebtAmt,
         uint128 borrowAmt
     ) external ensureMarketWhitelist(address(market)) whenNotPaused returns (uint256) {
@@ -281,16 +281,15 @@ contract TermMaxRouter is
          * 2. Sell FT to get UnderlyingToken
          * 3. Transfer UnderlyingToken and GT to Receiver
          */
-        (uint256 gtId, ) = market.issueFt(address(this), maxDebtAmt, _encodeAmount(collInAmt));
-        uint netTokenOut = _swapExactTokenToToken(ft, debtToken, address(this), orders, ftAmtsToSell, borrowAmt);
-        // NOTE: if netTokenOut > borrowAmt, repay
-        uint256 repayAmt = netTokenOut - borrowAmt;
+        (uint256 gtId, uint128 ftOutAmt) = market.issueFt(address(this), maxDebtAmt, _encodeAmount(collInAmt));
+        uint netTokenIn = _swapTokenToExactToken(ft, debtToken, recipient, orders, tokenAmtsWantBuy, ftOutAmt);
+        // NOTE: if netTokenIn < ftOutAmt, repay
+        uint256 repayAmt = ftOutAmt - netTokenIn;
         if (repayAmt > 0) {
-            debtToken.safeIncreaseAllowance(address(gt), repayAmt);
-            gt.repay(gtId, repayAmt.toUint128(), true);
+            ft.safeIncreaseAllowance(address(gt), repayAmt);
+            gt.repay(gtId, repayAmt.toUint128(), false);
         }
 
-        debtToken.safeTransfer(recipient, borrowAmt);
         gt.safeTransferFrom(address(this), recipient, gtId);
         emit Borrow(market, gtId, msg.sender, recipient, collInAmt, (maxDebtAmt - repayAmt).toUint128(), borrowAmt);
 

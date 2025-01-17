@@ -372,4 +372,61 @@ library TermMaxCurve {
             sellFtStep
         );
     }
+
+    function sellFtForExactDebtToken(
+        uint netInterestFactor,
+        uint daysToMaturity,
+        CurveCut[] memory cuts,
+        uint oriXtReserve,
+        uint outputAmount
+    ) internal pure returns (uint deltaFt) {
+        (, deltaFt) = cutsReverseIter(
+            netInterestFactor,
+            daysToMaturity,
+            cuts,
+            oriXtReserve,
+            outputAmount,
+            sellFtForExactDebtTokenStep
+        );
+    }
+    function sellXtForExactDebtToken(
+        uint netInterestFactor,
+        uint daysToMaturity,
+        CurveCut[] memory cuts,
+        uint oriXtReserve,
+        uint outputAmount
+    ) internal pure returns (uint deltaXt) {
+        (deltaXt, ) = cutsForwardIter(
+            netInterestFactor,
+            daysToMaturity,
+            cuts,
+            oriXtReserve,
+            outputAmount,
+            sellXtForExactDebtTokenStep
+        );
+    }
+    function sellFtForExactDebtTokenStep(
+        uint liqSquare,
+        uint vXtReserve,
+        uint vFtReserve,
+        uint oriNegDeltaXt,
+        uint oriDeltaFt,
+        uint outputAmount
+    ) internal pure returns (uint negDeltaXt, uint deltaFt) {
+        uint remainingOutputAmt = outputAmount - oriNegDeltaXt;
+        deltaFt = oriDeltaFt + liqSquare / (vXtReserve - remainingOutputAmt) - vFtReserve;
+        negDeltaXt = outputAmount;
+    }
+    function sellXtForExactDebtTokenStep(
+        uint liqSquare,
+        uint vXtReserve,
+        uint vFtReserve,
+        uint oriDeltaXt,
+        uint oriNegDeltaFt,
+        uint outputAmount
+    ) internal pure returns (uint deltaXt, uint negDeltaFt) {
+        uint remainingOutputAmt = outputAmount - oriNegDeltaFt;
+        deltaXt = oriDeltaXt + liqSquare / (vFtReserve - remainingOutputAmt) - vXtReserve;
+        negDeltaFt = outputAmount;
+    }
 }

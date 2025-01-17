@@ -341,13 +341,13 @@ contract RouterTest is Test {
         uint128 borrowAmt = 80e8;
         uint128 maxDebtAmt = 100e8;
 
-        uint fee = (res.market.issueFtFeeRatio() * maxDebtAmt) / Constants.DECIMAL_BASE;
-        uint ftAmt = maxDebtAmt - fee;
+        // uint fee = (res.market.issueFtFeeRatio() * maxDebtAmt) / Constants.DECIMAL_BASE;
+        // uint ftAmt = maxDebtAmt - fee;
 
         ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
         orders[0] = res.order;
-        uint128[] memory ftAmtsToSell = new uint128[](1);
-        ftAmtsToSell[0] = uint128(ftAmt);
+        uint128[] memory tokenAmtsWantBuy = new uint128[](1);
+        tokenAmtsWantBuy[0] = borrowAmt;
 
         res.collateral.mint(sender, collInAmt);
         res.collateral.approve(address(res.router), collInAmt);
@@ -359,7 +359,7 @@ contract RouterTest is Test {
             res.market,
             collInAmt,
             orders,
-            ftAmtsToSell,
+            tokenAmtsWantBuy,
             maxDebtAmt,
             borrowAmt
         );

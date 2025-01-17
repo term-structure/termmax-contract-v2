@@ -93,7 +93,7 @@ interface ITermMaxRouter {
         ITermMaxMarket market,
         uint256 collInAmt,
         ITermMaxOrder[] memory orders,
-        uint128[] memory ftAmtsToSell,
+        uint128[] memory tokenAmtsWantBuy,
         uint128 maxDebtAmt,
         uint128 borrowAmt
     ) external returns (uint256 gtId);

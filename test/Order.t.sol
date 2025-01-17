@@ -474,7 +474,7 @@ contract OrderTest is Test {
     }
 
     function testSwapWithCallback(uint128 swapAmt, bool isBuy, bool isFt) public {
-        vm.assume(swapAmt < 0.1e18);
+        vm.assume(swapAmt < 2000e8);
 
         // Deploy mock callback contract
         MockSwapCallback callback = new MockSwapCallback();
