@@ -50,7 +50,7 @@ contract TermMaxMarket is
     /// @notice Check if the market is tradable
     modifier isOpen() {
         _requireNotPaused();
-        if (block.timestamp < _config.openTime || block.timestamp >= _config.maturity) {
+        if (block.timestamp >= _config.maturity) {
             revert TermIsNotOpen();
         }
         _;
@@ -66,11 +66,7 @@ contract TermMaxMarket is
         uint daysToMaturity = _daysToMaturity(_config.maturity);
         return
             (_config.feeConfig.issueFtFeeRatio * _config.feeConfig.issueFtFeeRef * daysToMaturity) /
-            (Constants.DAYS_IN_YEAR *
-                Constants.DECIMAL_BASE_SQ +
-                _config.feeConfig.issueFtFeeRef *
-                daysToMaturity *
-                Constants.DECIMAL_BASE);
+            (Constants.DAYS_IN_YEAR * Constants.DECIMAL_BASE + _config.feeConfig.issueFtFeeRef * daysToMaturity);
     }
 
     /**
@@ -82,8 +78,7 @@ contract TermMaxMarket is
         __Pausable_init();
         if (params.collateral == address(params.debtToken)) revert CollateralCanNotEqualUnderlyinng();
         MarketConfig memory config_ = params.marketConfig;
-        if (config_.openTime < block.timestamp || config_.maturity <= config_.openTime)
-            revert InvalidTime(config_.openTime, config_.maturity);
+        if (config_.maturity <= block.timestamp) revert InvalidMaturity();
         _checkFee(config_.feeConfig);
 
         debtToken = params.debtToken;
@@ -92,7 +87,7 @@ contract TermMaxMarket is
 
         (ft, xt, gt) = _deployTokens(params);
 
-        emit MarketInitialized(params.collateral, params.debtToken, _config.openTime, _config.maturity, ft, xt, gt);
+        emit MarketInitialized(params.collateral, params.debtToken, _config.maturity, ft, xt, gt);
     }
 
     function _deployTokens(

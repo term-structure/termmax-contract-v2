@@ -53,8 +53,6 @@ struct MarketConfig {
     address treasurer;
     /// @notice The unix time of maturity date
     uint64 maturity;
-    /// @notice The unix time when the market starts trading
-    uint64 openTime;
     /// @notice The fee ratio when tradings with the market and orders
     FeeConfig feeConfig;
 }
@@ -116,4 +114,16 @@ struct MarketInitialParams {
     bytes gtInitalParams;
     string tokenName;
     string tokenSymbol;
+}
+
+struct VaultInitialParams {
+    address admin;
+    address curator;
+    uint256 timelock;
+    IERC20 asset;
+    uint256 maxCapacity;
+    string name;
+    string symbol;
+    uint64 maxTerm;
+    uint64 performanceFeeRate;
 }

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.27;
+pragma solidity ^0.8.0;
 import {IMintableERC20, IERC20} from "../tokens/IMintableERC20.sol";
 import {IGearingToken} from "../tokens/IGearingToken.sol";
 import {ITermMaxOrder} from "../ITermMaxOrder.sol";
@@ -9,7 +9,6 @@ interface MarketEvents {
     /// @notice Emitted when market initialized
     /// @param collateral Collateral token
     /// @param underlying Underlying token
-    /// @param openTime The unix time when the market starts trading
     /// @param maturity The unix time of maturity date
     /// @param ft TermMax Market FT
     /// @param xt TermMax Market XT
@@ -17,7 +16,6 @@ interface MarketEvents {
     event MarketInitialized(
         address indexed collateral,
         IERC20 indexed underlying,
-        uint64 openTime,
         uint64 maturity,
         IMintableERC20 ft,
         IMintableERC20 xt,

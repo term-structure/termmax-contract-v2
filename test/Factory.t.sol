@@ -29,8 +29,6 @@ contract FactoryTest is Test {
         string memory testdata = vm.readFile(string.concat(vm.projectRoot(), "/test/testdata/testdata.json"));
 
         marketConfig = JSONLoader.getMarketConfigFromJson(treasurer, testdata, ".marketConfig");
-
-        vm.warp(marketConfig.openTime - 1 days);
     }
 
     function testDeploy() public {
@@ -40,8 +38,8 @@ contract FactoryTest is Test {
         address predictedMarketAddress = res.factory.predictMarketAddress(
             address(res.collateral),
             address(res.debt),
-            marketConfig.openTime,
-            marketConfig.maturity
+            marketConfig.maturity,
+            0
         );
         assert(address(res.market) == predictedMarketAddress);
 
@@ -76,7 +74,8 @@ contract FactoryTest is Test {
                 gtInitalParams: abi.encode(type(uint256).max),
                 tokenName: "test",
                 tokenSymbol: "test"
-            })
+            }),
+            0
         );
         vm.stopPrank();
     }
@@ -104,29 +103,23 @@ contract FactoryTest is Test {
             tokenName: "test",
             tokenSymbol: "test"
         });
-        uint64 openTime = marketConfig.openTime;
         uint64 maturity = marketConfig.maturity;
-        vm.warp(openTime + 1 days);
-        vm.expectRevert(abi.encodeWithSelector(MarketErrors.InvalidTime.selector, openTime, maturity));
-        factory.createMarket(DeployUtils.GT_ERC20, params);
+        vm.warp(maturity + 1 days);
+        vm.expectRevert(abi.encodeWithSelector(MarketErrors.InvalidMaturity.selector));
+        factory.createMarket(DeployUtils.GT_ERC20, params, 0);
 
-        params.marketConfig.openTime = maturity;
-        vm.expectRevert(abi.encodeWithSelector(MarketErrors.InvalidTime.selector, maturity, maturity));
-        factory.createMarket(DeployUtils.GT_ERC20, params);
-
-        vm.warp(openTime - 1 days);
-        params.marketConfig.openTime = openTime;
+        vm.warp(maturity - 1 days);
         params.marketConfig.feeConfig.borrowTakerFeeRatio = Constants.MAX_FEE_RATIO;
         vm.expectRevert(abi.encodeWithSelector(MarketErrors.FeeTooHigh.selector));
-        factory.createMarket(DeployUtils.GT_ERC20, params);
+        factory.createMarket(DeployUtils.GT_ERC20, params, 0);
 
         params.marketConfig.feeConfig.borrowTakerFeeRatio = 0;
         params.marketConfig.feeConfig.issueFtFeeRef = uint32(Constants.DECIMAL_BASE + 1);
         vm.expectRevert(abi.encodeWithSelector(MarketErrors.FeeTooHigh.selector));
-        factory.createMarket(DeployUtils.GT_ERC20, params);
+        factory.createMarket(DeployUtils.GT_ERC20, params, 0);
 
         params.marketConfig.feeConfig.issueFtFeeRef = 0;
-        factory.createMarket(DeployUtils.GT_ERC20, params);
+        factory.createMarket(DeployUtils.GT_ERC20, params, 0);
         vm.stopPrank();
     }
 
@@ -155,7 +148,8 @@ contract FactoryTest is Test {
                 gtInitalParams: abi.encode(type(uint256).max),
                 tokenName: "test",
                 tokenSymbol: "test"
-            })
+            }),
+            0
         );
         vm.stopPrank();
     }

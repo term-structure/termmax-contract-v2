@@ -23,7 +23,6 @@ library JSONLoader {
         string memory key
     ) internal pure returns (MarketConfig memory marketConfig) {
         marketConfig.treasurer = treasurer;
-        marketConfig.openTime = uint64(vm.parseUint(vm.parseJsonString(testdataJSON, string.concat(key, ".openTime"))));
         marketConfig.maturity = uint64(vm.parseUint(vm.parseJsonString(testdataJSON, string.concat(key, ".maturity"))));
         marketConfig.feeConfig.redeemFeeRatio = uint32(
             vm.parseUint(vm.parseJsonString(testdataJSON, string.concat(key, ".redeemFeeRatio")))

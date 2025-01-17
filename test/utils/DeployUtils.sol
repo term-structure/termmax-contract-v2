@@ -83,7 +83,7 @@ library DeployUtils {
         });
 
         res.marketConfig = marketConfig;
-        res.market = ITermMaxMarket(res.factory.createMarket(GT_ERC20, initialParams));
+        res.market = ITermMaxMarket(res.factory.createMarket(GT_ERC20, initialParams, 0));
 
         (res.ft, res.xt, res.gt, , ) = res.market.tokens();
     }

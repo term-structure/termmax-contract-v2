@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.27;
+pragma solidity ^0.8.0;
 import {MarketInitialParams} from "../storage/TermMaxStorage.sol";
 
 /**
@@ -18,10 +18,14 @@ interface ITermMaxFactory {
     function predictMarketAddress(
         address collateral,
         address underlying,
-        uint64 openTime,
-        uint64 maturity
+        uint64 maturity,
+        uint256 salt
     ) external view returns (address market);
 
     /// @notice Deploy a new market
-    function createMarket(bytes32 gtKey, MarketInitialParams memory params) external returns (address market);
+    function createMarket(
+        bytes32 gtKey,
+        MarketInitialParams memory params,
+        uint256 salt
+    ) external returns (address market);
 }
