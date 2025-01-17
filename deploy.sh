@@ -15,6 +15,9 @@ if [ "$1" == "ArbSepolia" ]; then
 elif [ "$1" == "EthSepolia" ]; then
   RPC_URL=$ETH_SEPOLIA_RPC_URL
   EXPLORER_KEY=$ETHERSCAN_KEY
+elif [ "$1" == "Holesky" ]; then
+  RPC_URL=$HOLESKY_RPC_URL
+  EXPLORER_KEY=$ETHERSCAN_KEY
 else
   echo "Invalid network"
   exit 1

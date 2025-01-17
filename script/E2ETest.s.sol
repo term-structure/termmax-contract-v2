@@ -3,18 +3,18 @@ pragma solidity ^0.8.27;
 
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
-import {TermMaxFactory} from "../contracts/core/factory/TermMaxFactory.sol";
-import {ITermMaxFactory} from "../contracts/core/factory/ITermMaxFactory.sol";
+import {TermMaxFactory} from "../contracts/factory/TermMaxFactory.sol";
+import {ITermMaxFactory} from "../contracts/factory/ITermMaxFactory.sol";
 import {TermMaxRouter} from "../contracts/router/TermMaxRouter.sol";
 import {ITermMaxRouter} from "../contracts/router/ITermMaxRouter.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {TermMaxMarket} from "../contracts/core/TermMaxMarket.sol";
-import {ITermMaxMarket} from "../contracts/core/TermMaxMarket.sol";
+import {TermMaxMarket} from "../contracts/TermMaxMarket.sol";
+import {ITermMaxMarket} from "../contracts/TermMaxMarket.sol";
 import {MockERC20} from "../contracts/test/MockERC20.sol";
-import {MarketConfig} from "../contracts/core/storage/TermMaxStorage.sol";
-import {IMintableERC20} from "../contracts/core/tokens/IMintableERC20.sol";
-import {IGearingToken} from "../contracts/core/tokens/IGearingToken.sol";
-import {IOracle, OracleAggregator, AggregatorV3Interface} from "contracts/core/oracle/OracleAggregator.sol";
+import {MarketConfig} from "../contracts/storage/TermMaxStorage.sol";
+import {IMintableERC20} from "../contracts/tokens/IMintableERC20.sol";
+import {IGearingToken} from "../contracts/tokens/IGearingToken.sol";
+import {IOracle, OracleAggregator, AggregatorV3Interface} from "contracts/oracle/OracleAggregator.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {MockSwapAdapter} from "../contracts/test/MockSwapAdapter.sol";
@@ -22,7 +22,7 @@ import {Faucet} from "../contracts/test/testnet/Faucet.sol";
 import {FaucetERC20} from "../contracts/test/testnet/FaucetERC20.sol";
 import {MockPriceFeed} from "../contracts/test/MockPriceFeed.sol";
 import {SwapUnit} from "../contracts/router/ISwapAdapter.sol";
-import {MarketConfig} from "../contracts/core/storage/TermMaxStorage.sol";
+import {MarketConfig} from "../contracts/storage/TermMaxStorage.sol";
 
 contract E2ETest is Script {
     // deployer config
@@ -62,54 +62,45 @@ contract E2ETest is Script {
 
         vm.startBroadcast(userPrivateKey);
         // provide liquidity
-        for (uint i = 0; i < markets.length; i++) {
-            address marketAddr = markets[i];
-            market = TermMaxMarket(marketAddr);
-            config = market.config();
-            console.log("current timestamp:", vm.getBlockTimestamp());
-            console.log("market open time:", config.openTime);
-            (ft, xt, lpFt, lpXt, gt, collateralAddr, underlyingERC20) = market
-                .tokens();
-            console.log("Market address", marketAddr);
-            console.log("ft address", address(ft));
-            console.log("xt address", address(xt));
-            console.log("lpFt address", address(lpFt));
-            console.log("lpXt address", address(lpXt));
-            console.log("gt address", address(gt));
-            console.log("collateral address", collateralAddr);
-            console.log("underlying address", address(underlyingERC20));
-            underlying = FaucetERC20(address(underlyingERC20));
-            collateral = FaucetERC20(collateralAddr);
+        // for (uint i = 0; i < markets.length; i++) {
+        //     address marketAddr = markets[i];
+        //     market = TermMaxMarket(marketAddr);
+        //     config = market.config();
+        //     console.log("current timestamp:", vm.getBlockTimestamp());
+        //     console.log("market open time:", config.openTime);
+        //     (ft, xt, lpFt, lpXt, gt, collateralAddr, underlyingERC20) = market.tokens();
+        //     console.log("Market address", marketAddr);
+        //     console.log("ft address", address(ft));
+        //     console.log("xt address", address(xt));
+        //     console.log("lpFt address", address(lpFt));
+        //     console.log("lpXt address", address(lpXt));
+        //     console.log("gt address", address(gt));
+        //     console.log("collateral address", collateralAddr);
+        //     console.log("underlying address", address(underlyingERC20));
+        //     underlying = FaucetERC20(address(underlyingERC20));
+        //     collateral = FaucetERC20(collateralAddr);
 
-            underlyingPriceFeed = MockPriceFeed(
-                faucet
-                    .getTokenConfig(faucet.getTokenId(address(underlying)))
-                    .priceFeedAddr
-            );
+        //     underlyingPriceFeed = MockPriceFeed(
+        //         faucet.getTokenConfig(faucet.getTokenId(address(underlying))).priceFeedAddr
+        //     );
 
-            collateralPriceFeed = MockPriceFeed(
-                faucet
-                    .getTokenConfig(faucet.getTokenId(collateralAddr))
-                    .priceFeedAddr
-            );
-            (, int256 ans, , , ) = underlyingPriceFeed.latestRoundData();
-            uint256 underlyingPrice = uint256(ans);
-            uint256 priceDecimalBase = 10 ** underlyingPriceFeed.decimals();
-            console.log("price decimal base:", priceDecimalBase);
-            console.log("underlying price:", underlyingPrice);
-            uint256 amount = ((2000000 *
-                priceDecimalBase *
-                10 ** underlying.decimals()) / underlyingPrice);
-            console.log(amount);
-            faucet.devMint(userAddr, address(underlying), amount);
-            console.log("Underlying balance: ", underlying.balanceOf(userAddr));
-            underlying.approve(routerAddr, amount);
-            router.provideLiquidity(userAddr, market, amount);
-            console.log("FT Reserve: ", ft.balanceOf(address(market)));
-            console.log("XT Reserve: ", xt.balanceOf(address(market)));
-            console.log("LPFT Reserve: ", lpFt.balanceOf(userAddr));
-            console.log("LPXT Reserve: ", lpXt.balanceOf(userAddr));
-        }
+        //     collateralPriceFeed = MockPriceFeed(faucet.getTokenConfig(faucet.getTokenId(collateralAddr)).priceFeedAddr);
+        //     (, int256 ans, , , ) = underlyingPriceFeed.latestRoundData();
+        //     uint256 underlyingPrice = uint256(ans);
+        //     uint256 priceDecimalBase = 10 ** underlyingPriceFeed.decimals();
+        //     console.log("price decimal base:", priceDecimalBase);
+        //     console.log("underlying price:", underlyingPrice);
+        //     uint256 amount = ((2000000 * priceDecimalBase * 10 ** underlying.decimals()) / underlyingPrice);
+        //     console.log(amount);
+        //     faucet.devMint(userAddr, address(underlying), amount);
+        //     console.log("Underlying balance: ", underlying.balanceOf(userAddr));
+        //     underlying.approve(routerAddr, amount);
+        //     router.provideLiquidity(userAddr, market, amount);
+        //     console.log("FT Reserve: ", ft.balanceOf(address(market)));
+        //     console.log("XT Reserve: ", xt.balanceOf(address(market)));
+        //     console.log("LPFT Reserve: ", lpFt.balanceOf(userAddr));
+        //     console.log("LPXT Reserve: ", lpXt.balanceOf(userAddr));
+        // }
 
         // // deploy router
         // address routerImpl = address(new TermMaxRouter());
