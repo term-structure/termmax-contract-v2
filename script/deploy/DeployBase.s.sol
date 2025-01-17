@@ -164,7 +164,6 @@ contract DeployBase is Script {
             MarketConfig memory marketConfig = MarketConfig({
                 treasurer: config.marketConfig.treasurer,
                 maturity: config.marketConfig.maturity,
-                openTime: uint64(vm.getBlockTimestamp() + openTimeDelay),
                 feeConfig: FeeConfig({
                     lendTakerFeeRatio: config.marketConfig.feeConfig.lendTakerFeeRatio,
                     lendMakerFeeRatio: config.marketConfig.feeConfig.lendMakerFeeRatio,
@@ -194,7 +193,7 @@ contract DeployBase is Script {
                 tokenSymbol: config.marketSymbol
             });
 
-            TermMaxMarket market = TermMaxMarket(factory.createMarket(GT_ERC20, initialParams));
+            TermMaxMarket market = TermMaxMarket(factory.createMarket(GT_ERC20, initialParams, 0));
             markets[i] = market;
             router.setMarketWhitelist(address(market), true);
         }

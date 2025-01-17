@@ -118,7 +118,6 @@ contract DeloyMarketHolesky is DeployBase {
 
         console.log("Treasurer:", marketConfig.treasurer);
         console.log("Maturity:", marketConfig.maturity);
-        console.log("Open Time:", marketConfig.openTime);
         console.log("Lend Taker Fee Ratio:", marketConfig.feeConfig.lendTakerFeeRatio);
         console.log("Lend Maker Fee Ratio:", marketConfig.feeConfig.lendMakerFeeRatio);
         console.log("Borrow Taker Fee Ratio:", marketConfig.feeConfig.borrowTakerFeeRatio);
