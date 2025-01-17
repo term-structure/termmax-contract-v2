@@ -53,8 +53,6 @@ struct MarketConfig {
     address treasurer;
     /// @notice The unix time of maturity date
     uint64 maturity;
-    /// @notice The unix time when the market starts trading
-    uint64 openTime;
     /// @notice The fee ratio when tradings with the market and orders
     FeeConfig feeConfig;
 }

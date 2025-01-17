@@ -54,7 +54,7 @@ contract VaultTest is Test {
 
         marketConfig = JSONLoader.getMarketConfigFromJson(treasurer, testdata, ".marketConfig");
         orderConfig = JSONLoader.getOrderConfigFromJson(testdata, ".orderConfig");
-        vm.warp(marketConfig.openTime);
+
         res = DeployUtils.deployMarket(deployer, marketConfig, maxLtv, liquidationLtv);
 
         // res.order = res.market.createOrder(
@@ -95,7 +95,6 @@ contract VaultTest is Test {
         vault.submitMarket(address(res.market), true);
         vault.setIsAllocator(allocator, true);
 
-        vm.warp(marketConfig.openTime + timelock + 1);
         res.debt.mint(deployer, amount);
         res.debt.approve(address(vault), amount);
         vault.deposit(amount, deployer);

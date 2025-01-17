@@ -40,7 +40,6 @@ contract MarketTest is Test {
 
         marketConfig = JSONLoader.getMarketConfigFromJson(treasurer, testdata, ".marketConfig");
         orderConfig = JSONLoader.getOrderConfigFromJson(testdata, ".orderConfig");
-        vm.warp(marketConfig.openTime);
         res = DeployUtils.deployMarket(deployer, marketConfig, maxLtv, liquidationLtv);
 
         res.order = res.market.createOrder(
@@ -132,9 +131,6 @@ contract MarketTest is Test {
         uint amount = 150e8;
         res.debt.mint(sender, amount);
         res.debt.approve(address(res.market), amount);
-        vm.warp(marketConfig.openTime - 1);
-        vm.expectRevert(abi.encodeWithSelector(MarketErrors.TermIsNotOpen.selector));
-        res.market.mint(sender, amount);
 
         vm.warp(marketConfig.maturity);
         vm.expectRevert(abi.encodeWithSelector(MarketErrors.TermIsNotOpen.selector));
@@ -166,10 +162,6 @@ contract MarketTest is Test {
         uint amount = 150e8;
         res.debt.mint(sender, amount);
         res.debt.approve(address(res.market), amount);
-        vm.warp(marketConfig.openTime - 1);
-        vm.expectRevert(abi.encodeWithSelector(MarketErrors.TermIsNotOpen.selector));
-        res.market.burn(sender, amount);
-
         vm.warp(marketConfig.maturity);
         vm.expectRevert(abi.encodeWithSelector(MarketErrors.TermIsNotOpen.selector));
         res.market.burn(sender, amount);
@@ -241,9 +233,6 @@ contract MarketTest is Test {
     function testIssueFtByExistedGtWhenTermIsNotOpen() public {
         vm.startPrank(sender);
         uint128 debtAmt = 1000e8;
-        vm.warp(marketConfig.openTime - 1);
-        vm.expectRevert(abi.encodeWithSelector(MarketErrors.TermIsNotOpen.selector));
-        res.market.issueFtByExistedGt(sender, debtAmt, 1);
 
         vm.warp(marketConfig.maturity);
         vm.expectRevert(abi.encodeWithSelector(MarketErrors.TermIsNotOpen.selector));
@@ -254,9 +243,6 @@ contract MarketTest is Test {
     function testIssueFtWhenTermIsNotOpen() public {
         vm.startPrank(sender);
         uint128 debtAmt = 1000e8;
-        vm.warp(marketConfig.openTime - 1);
-        vm.expectRevert(abi.encodeWithSelector(MarketErrors.TermIsNotOpen.selector));
-        res.market.issueFt(sender, debtAmt, abi.encode(1e18));
 
         vm.warp(marketConfig.maturity);
         vm.expectRevert(abi.encodeWithSelector(MarketErrors.TermIsNotOpen.selector));
@@ -311,9 +297,6 @@ contract MarketTest is Test {
         vm.startPrank(sender);
         MockFlashLoanReceiver receiver = new MockFlashLoanReceiver(res.market);
         res.xt.approve(address(receiver), debtAmt);
-        vm.warp(marketConfig.openTime - 1);
-        vm.expectRevert(abi.encodeWithSelector(MarketErrors.TermIsNotOpen.selector));
-        receiver.leverageByXt(debtAmt, abi.encode(sender, collateralAmt));
 
         vm.warp(marketConfig.maturity);
         vm.expectRevert(abi.encodeWithSelector(MarketErrors.TermIsNotOpen.selector));
@@ -348,10 +331,6 @@ contract MarketTest is Test {
 
     function testCreateOrderWhenTermIsNotOpen() public {
         vm.startPrank(sender);
-        vm.warp(marketConfig.openTime - 1);
-        vm.expectRevert(abi.encodeWithSelector(MarketErrors.TermIsNotOpen.selector));
-        res.market.createOrder(sender, orderConfig.maxXtReserve, ISwapCallback(address(0)), orderConfig.curveCuts);
-
         vm.warp(marketConfig.maturity);
         vm.expectRevert(abi.encodeWithSelector(MarketErrors.TermIsNotOpen.selector));
         res.market.createOrder(sender, orderConfig.maxXtReserve, ISwapCallback(address(0)), orderConfig.curveCuts);

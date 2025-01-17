@@ -42,7 +42,7 @@ contract OrderTest is Test {
 
         marketConfig = JSONLoader.getMarketConfigFromJson(treasurer, testdata, ".marketConfig");
         orderConfig = JSONLoader.getOrderConfigFromJson(testdata, ".orderConfig");
-        vm.warp(marketConfig.openTime);
+
         res = DeployUtils.deployMarket(deployer, marketConfig, maxLtv, liquidationLtv);
 
         res.order = res.market.createOrder(
@@ -129,9 +129,6 @@ contract OrderTest is Test {
 
         res.debt.mint(sender, underlyingAmtIn);
         res.debt.approve(address(res.order), underlyingAmtIn);
-        vm.warp(res.market.config().openTime - 1);
-        vm.expectRevert(abi.encodeWithSelector(OrderErrors.TermIsNotOpen.selector));
-        res.order.swapExactTokenToToken(res.debt, res.ft, sender, underlyingAmtIn, minTokenOut);
 
         vm.warp(res.market.config().maturity);
         vm.expectRevert(abi.encodeWithSelector(OrderErrors.TermIsNotOpen.selector));

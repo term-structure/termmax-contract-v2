@@ -580,7 +580,7 @@ contract TermMaxOrder is
 
     function _issueFt(address recipient, uint ftReserve, uint targetFtReserve, OrderConfig memory config) internal {
         if (config.gtId == 0) revert CantNotIssueFtWithoutGt();
-        uint ftAmtToIssue = ((targetFtReserve - ftReserve) * Constants.DECIMAL_BASE) / market.issueFtFeeRatio();
+        uint ftAmtToIssue = ((targetFtReserve - ftReserve) * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - market.issueFtFeeRatio());
         market.issueFtByExistedGt(recipient, (ftAmtToIssue).toUint128(), config.gtId);
     }
 

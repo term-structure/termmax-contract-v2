@@ -51,7 +51,6 @@ contract GtTest is Test {
 
         marketConfig = JSONLoader.getMarketConfigFromJson(treasurer, testdata, ".marketConfig");
         orderConfig = JSONLoader.getOrderConfigFromJson(testdata, ".orderConfig");
-        vm.warp(marketConfig.openTime);
         res = DeployUtils.deployMarket(deployer, marketConfig, maxLtv, liquidationLtv);
 
         res.order = res.market.createOrder(
