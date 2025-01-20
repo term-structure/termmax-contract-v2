@@ -14,6 +14,7 @@ import {IGearingToken} from "contracts/tokens/IGearingToken.sol";
 import {ITermMaxFactory, TermMaxFactory} from "contracts/factory/TermMaxFactory.sol";
 import {TermMaxRouter} from "contracts/router/TermMaxRouter.sol";
 import {IOracle, OracleAggregator, AggregatorV3Interface} from "contracts/oracle/OracleAggregator.sol";
+import {MockOrder} from "contracts/test/MockOrder.sol";
 import "contracts/storage/TermMaxStorage.sol";
 
 library DeployUtils {
@@ -88,6 +89,59 @@ library DeployUtils {
         (res.ft, res.xt, res.gt, , ) = res.market.tokens();
     }
 
+    function deployMockMarket(
+        address admin,
+        MarketConfig memory marketConfig,
+        uint32 maxLtv,
+        uint32 liquidationLtv
+    ) internal returns (Res memory res) {
+        res.factory = deployFactoryWithMockOrder(admin);
+
+        res.collateral = new MockERC20("ETH", "ETH", 18);
+        res.debt = new MockERC20("DAI", "DAI", 8);
+
+        res.debtOracle = new MockPriceFeed(admin);
+        res.collateralOracle = new MockPriceFeed(admin);
+        res.oracle = deployOracle(admin);
+
+        res.oracle.setOracle(address(res.debt), IOracle.Oracle(res.debtOracle, res.debtOracle, 365 days));
+        res.oracle.setOracle(
+            address(res.collateral),
+            IOracle.Oracle(res.collateralOracle, res.collateralOracle, 365 days)
+        );
+
+        MockPriceFeed.RoundData memory roundData = MockPriceFeed.RoundData({
+            roundId: 1,
+            answer: int(1e1 ** res.collateralOracle.decimals()),
+            startedAt: 0,
+            updatedAt: 0,
+            answeredInRound: 0
+        });
+        res.collateralOracle.updateRoundData(roundData);
+
+        MarketInitialParams memory initialParams = MarketInitialParams({
+            collateral: address(res.collateral),
+            debtToken: res.debt,
+            admin: admin,
+            gtImplementation: address(0),
+            marketConfig: marketConfig,
+            loanConfig: LoanConfig({
+                oracle: res.oracle,
+                liquidationLtv: liquidationLtv,
+                maxLtv: maxLtv,
+                liquidatable: true
+            }),
+            gtInitalParams: abi.encode(type(uint256).max),
+            tokenName: "DAI-ETH",
+            tokenSymbol: "DAI-ETH"
+        });
+
+        res.marketConfig = marketConfig;
+        res.market = ITermMaxMarket(res.factory.createMarket(GT_ERC20, initialParams, 0));
+
+        (res.ft, res.xt, res.gt, , ) = res.market.tokens();
+    }
+
     function deployOrder(
         ITermMaxMarket market,
         address maker,
@@ -101,6 +155,13 @@ library DeployUtils {
     function deployFactory(address admin) public returns (TermMaxFactory factory) {
         address tokenImplementation = address(new MintableERC20());
         address orderImplementation = address(new TermMaxOrder());
+        TermMaxMarket m = new TermMaxMarket(tokenImplementation, orderImplementation);
+        factory = new TermMaxFactory(admin, address(m));
+    }
+
+    function deployFactoryWithMockOrder(address admin) public returns (TermMaxFactory factory) {
+        address tokenImplementation = address(new MintableERC20());
+        address orderImplementation = address(new MockOrder());
         TermMaxMarket m = new TermMaxMarket(tokenImplementation, orderImplementation);
         factory = new TermMaxFactory(admin, address(m));
     }

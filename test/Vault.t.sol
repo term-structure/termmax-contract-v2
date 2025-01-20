@@ -40,7 +40,7 @@ contract VaultTest is Test {
     TermMaxVault vault;
 
     uint timelock = 86400;
-    uint maxCapacity = 10000e8;
+    uint maxCapacity = type(uint256).max;
     uint64 maxTerm = 90 days;
     uint64 performanceFeeRate = 0.5e8;
 
@@ -52,19 +52,13 @@ contract VaultTest is Test {
         uint32 maxLtv = 0.89e8;
         uint32 liquidationLtv = 0.9e8;
 
-        marketConfig = JSONLoader.getMarketConfigFromJson(treasurer, testdata, ".marketConfig");
-        orderConfig = JSONLoader.getOrderConfigFromJson(testdata, ".orderConfig");
-
-        res = DeployUtils.deployMarket(deployer, marketConfig, maxLtv, liquidationLtv);
-
-        // res.order = res.market.createOrder(
-        //     maker,
-        //     orderConfig.maxXtReserve,
-        //     ISwapCallback(address(0)),
-        //     orderConfig.curveCuts
-        // );
         currentTime = vm.parseUint(vm.parseJsonString(testdata, ".currentTime"));
         vm.warp(currentTime);
+
+        marketConfig = JSONLoader.getMarketConfigFromJson(treasurer, testdata, ".marketConfig");
+        orderConfig = JSONLoader.getOrderConfigFromJson(testdata, ".orderConfig");
+        marketConfig.maturity = currentTime + 90 days;
+        res.market = DeployUtils.deployMockMarket(deployer, marketConfig, maxLtv, liquidationLtv);
 
         // update oracle
         res.collateralOracle.updateRoundData(
@@ -486,12 +480,12 @@ contract VaultTest is Test {
         vm.stopPrank();
     }
 
-    function buyFt(uint128 tokenAmtIn) internal {
+    function buyFt(uint128 tokenAmtIn, uint128 ftAmtOut) internal {
         address taker = vm.randomAddress();
         res.debt.mint(taker, tokenAmtIn);
         vm.startPrank(taker);
         res.debt.approve(address(res.order), tokenAmtIn);
-        res.order.swapExactTokenToToken(res.debt, res.ft, taker, tokenAmtIn, 0);
+        res.order.swapExactTokenToToken(res.debt, res.ft, taker, tokenAmtIn, ftAmtOut);
         vm.stopPrank();
     }
 

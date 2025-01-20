@@ -460,6 +460,9 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
             ftChanges = (-deltaFt).toUint256();
             totalFt -= ftChanges;
             uint deltaAnualizedInterest = (ftChanges * (uint(maturity) - block.timestamp)) / 365 days;
+            if (maturityToInterest[maturity] < deltaAnualizedInterest || annualizedInterest < deltaAnualizedInterest) {
+                revert LockedFtGreaterThanTotalFt();
+            }
             maturityToInterest[maturity] -= deltaAnualizedInterest.toUint128();
             annualizedInterest -= deltaAnualizedInterest;
         }
