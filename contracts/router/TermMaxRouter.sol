@@ -269,8 +269,7 @@ contract TermMaxRouter is
         uint256 collInAmt,
         ITermMaxOrder[] memory orders,
         uint128[] memory tokenAmtsWantBuy,
-        uint128 maxDebtAmt,
-        uint128 borrowAmt
+        uint128 maxDebtAmt
     ) external ensureMarketWhitelist(address(market)) whenNotPaused returns (uint256) {
         (IERC20 ft, , IGearingToken gt, address collateralAddr, IERC20 debtToken) = market.tokens();
         IERC20(collateralAddr).safeTransferFrom(msg.sender, address(this), collInAmt);
@@ -291,7 +290,15 @@ contract TermMaxRouter is
         }
 
         gt.safeTransferFrom(address(this), recipient, gtId);
-        emit Borrow(market, gtId, msg.sender, recipient, collInAmt, (maxDebtAmt - repayAmt).toUint128(), borrowAmt);
+        emit Borrow(
+            market,
+            gtId,
+            msg.sender,
+            recipient,
+            collInAmt,
+            (maxDebtAmt - repayAmt).toUint128(),
+            sum(tokenAmtsWantBuy).toUint128()
+        );
 
         return gtId;
     }

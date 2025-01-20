@@ -7,6 +7,7 @@ import {DeployUtils} from "./utils/DeployUtils.sol";
 import {JSONLoader} from "./utils/JSONLoader.sol";
 import {StateChecker} from "./utils/StateChecker.sol";
 import {SwapUtils} from "./utils/SwapUtils.sol";
+import {LoanUtils} from "./utils/LoanUtils.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
@@ -472,6 +473,27 @@ contract VaultTest is Test {
         vm.stopPrank();
     }
 
+    function testRedeem() public {
+        vm.warp(currentTime + 2 days);
+        buyXt(48.219178e8, 1000e8);
+        uint apr = vault.apr();
+        vm.warp(currentTime + 4 days);
+        address lper2 = vm.randomAddress();
+        uint256 amount2 = 10000e8;
+        res.debt.mint(lper2, amount2);
+        vm.startPrank(lper2);
+        res.debt.approve(address(vault), amount2);
+        vault.deposit(amount2, lper2);
+        vm.stopPrank();
+
+        vm.startPrank(deployer);
+        uint share = vault.balanceOf(deployer);
+        uint redeem = vault.previewRedeem(share);
+        assertEq(redeem, vault.redeem(share, deployer, deployer));
+        assert(redeem > 10000e8);
+        vm.stopPrank();
+    }
+
     function testActions() public {
         console.log("----day 2----");
         vm.warp(currentTime + 2 days);
@@ -485,7 +507,6 @@ contract VaultTest is Test {
         address lper2 = vm.randomAddress();
         uint256 amount2 = 10000e8;
         res.debt.mint(lper2, amount2);
-
         vm.startPrank(lper2);
         res.debt.approve(address(vault), amount2);
         vault.deposit(amount2, lper2);
@@ -536,6 +557,71 @@ contract VaultTest is Test {
         console.log("anulizedInterest:", vault.annualizedInterest());
         console.log("apr:", vault.apr());
         vm.stopPrank();
+    }
+
+    function testFail_AnulizedInterestLessThanZero() public {
+        uint128 tokenAmtIn = 100e8;
+        uint128 ftAmtOut = 100e8;
+        address taker = vm.randomAddress();
+        res.debt.mint(taker, tokenAmtIn);
+        vm.startPrank(taker);
+        res.debt.approve(address(res.order), tokenAmtIn);
+        vm.expectRevert(VaultErrors.LockedFtGreaterThanTotalFt.selector);
+        res.order.swapExactTokenToToken(res.debt, res.ft, taker, tokenAmtIn, ftAmtOut);
+        vm.stopPrank();
+    }
+
+    function testFail_LockedFtGreaterThanTotalFt() public {
+        vm.warp(currentTime + 2 days);
+        buyXt(48.219178e8, 1000e8);
+        vm.warp(currentTime + 4 days);
+        buyXt(48.219178e8, 1000e8);
+        uint128 tokenAmtIn = 100e8;
+        uint128 ftAmtOut = 100e8;
+        address taker = vm.randomAddress();
+        res.debt.mint(taker, tokenAmtIn);
+        vm.startPrank(taker);
+        res.debt.approve(address(res.order), tokenAmtIn);
+        vm.expectRevert(VaultErrors.LockedFtGreaterThanTotalFt.selector);
+        res.order.swapExactTokenToToken(res.debt, res.ft, taker, tokenAmtIn, ftAmtOut);
+        vm.stopPrank();
+    }
+
+    function testBadDebt() public {
+        vm.warp(currentTime + 2 days);
+        buyXt(48.219178e8, 1000e8);
+
+        vm.warp(currentTime + 3 days);
+        address lper2 = vm.randomAddress();
+        uint256 amount2 = 10000e8;
+        res.debt.mint(lper2, amount2);
+        vm.startPrank(lper2);
+        res.debt.approve(address(vault), amount2);
+        vault.deposit(amount2, lper2);
+        vm.stopPrank();
+
+        address borrower = vm.randomAddress();
+        vm.startPrank(borrower);
+        LoanUtils.fastMintGt(res, borrower, 1000e8, 1e18);
+        vm.stopPrank();
+
+        vm.warp(currentTime + 92 days);
+
+        uint totalAssets = vault.totalAssets();
+        uint propotion = (res.ft.balanceOf(address(res.order)) * Constants.DECIMAL_BASE_SQ) /
+            (res.ft.totalSupply() - res.ft.balanceOf(address(res.market)));
+        console.log(res.ft.balanceOf(address(res.order)));
+        console.log(res.ft.totalSupply() - res.ft.balanceOf(address(res.market)));
+        console.log("propotion:", propotion);
+        uint badDebt = (res.ft.balanceOf(address(res.order)) * propotion) / Constants.DECIMAL_BASE_SQ;
+        uint delivered = (propotion * 1e18) / Constants.DECIMAL_BASE_SQ;
+
+        vm.startPrank(lper2);
+        vault.redeem(1000e8, lper2, lper2);
+        vm.stopPrank();
+
+        assertEq(vault.badDebtMapping(address(res.collateral)), badDebt);
+        assertEq(res.collateral.balanceOf(address(vault)), delivered);
     }
 
     function buyFt(uint128 tokenAmtIn, uint128 ftAmtOut) internal {

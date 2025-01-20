@@ -94,8 +94,7 @@ interface ITermMaxRouter {
         uint256 collInAmt,
         ITermMaxOrder[] memory orders,
         uint128[] memory tokenAmtsWantBuy,
-        uint128 maxDebtAmt,
-        uint128 borrowAmt
+        uint128 maxDebtAmt
     ) external returns (uint256 gtId);
 
     function flashRepayFromColl(

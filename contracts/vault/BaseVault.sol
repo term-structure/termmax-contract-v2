@@ -263,12 +263,10 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
 
     function _burnFromOrder(ITermMaxOrder order, OrderInfo memory orderInfo, uint256 amount) internal {
         order.withdrawAssets(orderInfo.ft, address(this), amount);
-        console.log("withdraw ft", amount);
         order.withdrawAssets(orderInfo.xt, address(this), amount);
-        console.log("withdraw xt", amount);
         orderInfo.ft.safeIncreaseAllowance(address(orderInfo.market), amount);
         orderInfo.xt.safeIncreaseAllowance(address(orderInfo.market), amount);
-        console.log("burn", amount);
+
         orderInfo.market.burn(address(this), amount);
     }
 

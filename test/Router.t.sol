@@ -360,8 +360,7 @@ contract RouterTest is Test {
             collInAmt,
             orders,
             tokenAmtsWantBuy,
-            maxDebtAmt,
-            borrowAmt
+            maxDebtAmt
         );
         (address owner, uint128 debtAmt, , bytes memory collateralData) = res.gt.loanInfo(gtId);
         assertEq(owner, sender);
