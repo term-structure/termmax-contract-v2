@@ -40,7 +40,7 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
     // locked ft = accretingPrincipal + performanceFee;
     uint256 public accretingPrincipal;
     uint256 public performanceFee;
-    uint256 annualizedInterest;
+    uint256 public annualizedInterest;
 
     uint64 public maxTerm;
     uint64 public performanceFeeRate;
@@ -128,7 +128,7 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
             maxSupply: maxSupply.toUint128(),
             maturity: orderMaturity
         });
-
+        if (recentestMaturity == 0 || orderMaturity < recentestMaturity) recentestMaturity = orderMaturity;
         emit CreateOrder(msg.sender, address(market), address(order), maxSupply, initialReserve, curveCuts);
     }
 
@@ -209,17 +209,26 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
                         amountLeft -= totalRedeem;
                         continue;
                     } else {
+                        amountLeft = 0;
                         IERC20(asset()).safeTransfer(recipient, amountLeft);
                         break;
                     }
                 } else if (block.timestamp < orderInfo.maturity) {
+                    console.log("_burnFromOrder");
                     // withraw ft and xt from order to burn
                     uint maxWithdraw = orderInfo.xt.balanceOf(order).min(orderInfo.ft.balanceOf(order));
+
+                    console.log("xt", orderInfo.xt.balanceOf(order));
+                    console.log("ft", orderInfo.ft.balanceOf(order));
+
                     if (maxWithdraw < amountLeft) {
+                        console.log("maxWithdraw < amountLeft");
                         amountLeft -= maxWithdraw;
                         _burnFromOrder(ITermMaxOrder(order), orderInfo, maxWithdraw);
                         ++i;
                     } else {
+                        console.log("maxWithdraw >= amountLeft");
+                        amountLeft = 0;
                         _burnFromOrder(ITermMaxOrder(order), orderInfo, amountLeft);
                         IERC20(asset()).safeTransfer(recipient, amount);
                         break;
@@ -229,6 +238,7 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
                     ++i;
                 }
             }
+            console.log("amountLeft", amountLeft);
             if (amountLeft > 0) {
                 uint maxWithdraw = amount - amountLeft;
                 revert InsufficientFunds(maxWithdraw, amount);
@@ -260,9 +270,12 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
 
     function _burnFromOrder(ITermMaxOrder order, OrderInfo memory orderInfo, uint256 amount) internal {
         order.withdrawAssets(orderInfo.ft, address(this), amount);
+        console.log("withdraw ft", amount);
         order.withdrawAssets(orderInfo.xt, address(this), amount);
+        console.log("withdraw xt", amount);
         orderInfo.ft.safeIncreaseAllowance(address(orderInfo.market), amount);
         orderInfo.xt.safeIncreaseAllowance(address(orderInfo.market), amount);
+        console.log("burn", amount);
         orderInfo.market.burn(address(this), amount);
     }
 
@@ -358,8 +371,8 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
 
         uint lastTime = lastUpdateTime;
         uint64 recentMaturity = recentestMaturity;
-        if (lastTime == 0 || recentMaturity == 0) {
-            return;
+        if (lastTime == 0) {
+            lastTime = now;
         }
 
         while (now >= recentMaturity && recentMaturity != 0) {
@@ -412,6 +425,7 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
 
             recentMaturity = nextMaturity;
         }
+        // console.log("recentMaturity", recentMaturity);
         if (recentMaturity > 0) {
             (uint256 previewInterest, uint256 previewPerformanceFeeToCurator) = _previewAccruedPeriodInterest(
                 lastTime,
@@ -421,6 +435,9 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
             previewPerformanceFee += previewPerformanceFeeToCurator;
             previewPrincipal += previewInterest;
         }
+
+        // console.log("previewPrincipal", previewPrincipal);
+        // console.log("previewPerformanceFee", previewPerformanceFee);
     }
 
     function _previewAccruedPeriodInterest(
@@ -449,17 +466,19 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
         uint64 maturity = orderMapping[orderAddress].maturity;
         _accruedInterest();
         uint ftChanges;
+
         if (deltaFt > 0) {
             ftChanges = deltaFt.toUint256();
             totalFt += ftChanges;
-            uint deltaAnualizedInterest = (ftChanges * (uint(maturity) - block.timestamp)) / 365 days;
+            uint deltaAnualizedInterest = (ftChanges * Constants.DAYS_IN_YEAR) / _daysToMaturity(maturity);
+
             maturityToInterest[maturity] += deltaAnualizedInterest.toUint128();
 
             annualizedInterest += deltaAnualizedInterest;
         } else {
             ftChanges = (-deltaFt).toUint256();
             totalFt -= ftChanges;
-            uint deltaAnualizedInterest = (ftChanges * (uint(maturity) - block.timestamp)) / 365 days;
+            uint deltaAnualizedInterest = (ftChanges * Constants.DAYS_IN_YEAR) / _daysToMaturity(maturity);
             if (maturityToInterest[maturity] < deltaAnualizedInterest || annualizedInterest < deltaAnualizedInterest) {
                 revert LockedFtGreaterThanTotalFt();
             }
@@ -468,5 +487,10 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
         }
 
         _checkLockedFt();
+    }
+
+    /// @notice Calculate how many days until expiration
+    function _daysToMaturity(uint256 maturity) internal view returns (uint256 daysToMaturity) {
+        daysToMaturity = (maturity - block.timestamp + Constants.SECONDS_IN_DAY - 1) / Constants.SECONDS_IN_DAY;
     }
 }

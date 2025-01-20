@@ -40,7 +40,7 @@ contract VaultTest is Test {
     TermMaxVault vault;
 
     uint timelock = 86400;
-    uint maxCapacity = type(uint256).max;
+    uint maxCapacity = 1000000e18;
     uint64 maxTerm = 90 days;
     uint64 performanceFeeRate = 0.5e8;
 
@@ -57,8 +57,8 @@ contract VaultTest is Test {
 
         marketConfig = JSONLoader.getMarketConfigFromJson(treasurer, testdata, ".marketConfig");
         orderConfig = JSONLoader.getOrderConfigFromJson(testdata, ".orderConfig");
-        marketConfig.maturity = currentTime + 90 days;
-        res.market = DeployUtils.deployMockMarket(deployer, marketConfig, maxLtv, liquidationLtv);
+        marketConfig.maturity = uint64(currentTime + 90 days);
+        res = DeployUtils.deployMockMarket(deployer, marketConfig, maxLtv, liquidationLtv);
 
         // update oracle
         res.collateralOracle.updateRoundData(
@@ -66,7 +66,7 @@ contract VaultTest is Test {
         );
         res.debtOracle.updateRoundData(JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_2000_DAI_1.dai"));
 
-        uint amount = 150e8;
+        uint amount = 10000e8;
 
         VaultFactory vaultFactory = new VaultFactory();
         vault = TermMaxVault(
@@ -94,6 +94,9 @@ contract VaultTest is Test {
         vault.deposit(amount, deployer);
         res.order = vault.createOrder(res.market, maxCapacity, amount, orderConfig.curveCuts);
 
+        res.debt.mint(deployer, 10000e18);
+        res.debt.approve(address(res.market), 10000e18);
+        res.market.mint(deployer, 10000e18);
         vm.stopPrank();
     }
 
@@ -453,30 +456,67 @@ contract VaultTest is Test {
     }
 
     function testDeposit() public {
-        uint256 amount = 10000e8;
-        vm.warp(currentTime);
-        res.debt.mint(lper, amount);
-        vm.startPrank(lper);
-        res.debt.approve(address(vault), amount);
-        uint share = vault.previewDeposit(amount);
-        vault.deposit(amount, lper);
-        assertEq(vault.balanceOf(lper), share);
-        vm.stopPrank();
-
-        vm.warp(currentTime + 1 days);
-        buyXt(50e8);
+        vm.warp(currentTime + 2 days);
+        buyXt(48.219178e8, 1000e8);
         uint apr = vault.apr();
-        console.log("apr:", apr);
-
+        vm.warp(currentTime + 2 days);
         address lper2 = vm.randomAddress();
         uint256 amount2 = 20000e8;
         res.debt.mint(lper2, amount2);
         vm.startPrank(lper2);
         res.debt.approve(address(vault), amount2);
-        share = vault.previewDeposit(amount2);
+        uint share = vault.previewDeposit(amount2);
         vault.deposit(amount2, lper2);
         assertEq(vault.balanceOf(lper2), share);
 
+        vm.stopPrank();
+    }
+
+    function testActions() public {
+        console.log("----day 2----");
+        vm.warp(currentTime + 2 days);
+        buyXt(48.219178e8, 1000e8);
+        console.log("anulizedInterest:", vault.annualizedInterest());
+        console.log("apr:", vault.apr());
+
+        console.log("----day 3----");
+        vm.warp(currentTime + 3 days);
+        console.log("new principal:", vault.totalAssets());
+        address lper2 = vm.randomAddress();
+        uint256 amount2 = 10000e8;
+        res.debt.mint(lper2, amount2);
+
+        vm.startPrank(lper2);
+        res.debt.approve(address(vault), amount2);
+        vault.deposit(amount2, lper2);
+        vm.stopPrank();
+        console.log("principal after deposit:", vault.totalAssets());
+        console.log("total supply:", vault.totalSupply());
+        console.log("anulizedInterest:", vault.annualizedInterest());
+        console.log("apr:", vault.apr());
+
+        console.log("----day 4----");
+        vm.warp(currentTime + 4 days);
+        swapFtToXt(94.247e8, 2000e8);
+        console.log("1-principal after swap:", vault.totalAssets());
+        console.log("1-anulizedInterest:", vault.annualizedInterest());
+        console.log("1-apr:", vault.apr());
+        swapFtToXt(94.247e8, 2000e8);
+        console.log("2-principal after swap:", vault.totalAssets());
+        console.log("2-anulizedInterest:", vault.annualizedInterest());
+        console.log("2-apr:", vault.apr());
+
+        console.log("----day 6----");
+        vm.warp(currentTime + 6 days);
+        console.log("new principal:", vault.totalAssets());
+        vm.startPrank(lper2);
+        vault.approve(address(vault), 1000e8);
+        console.log("previewRedeem: ", vault.previewRedeem(1000e8));
+        assertEq(vault.previewRedeem(1000e8), vault.redeem(1000e8, lper2, lper2));
+        console.log("principal after redeem:", vault.totalAssets());
+        console.log("total supply:", vault.totalSupply());
+        console.log("anulizedInterest:", vault.annualizedInterest());
+        console.log("apr:", vault.apr());
         vm.stopPrank();
     }
 
@@ -489,12 +529,58 @@ contract VaultTest is Test {
         vm.stopPrank();
     }
 
-    function buyXt(uint128 tokenAmtIn) internal {
+    function buyXt(uint128 tokenAmtIn, uint128 xtAmtOut) internal {
         address taker = vm.randomAddress();
         res.debt.mint(taker, tokenAmtIn);
         vm.startPrank(taker);
         res.debt.approve(address(res.order), tokenAmtIn);
-        res.order.swapExactTokenToToken(res.debt, res.xt, taker, tokenAmtIn, 0);
+        res.order.swapExactTokenToToken(res.debt, res.xt, taker, tokenAmtIn, xtAmtOut);
         vm.stopPrank();
+    }
+
+    function sellFt(uint128 ftAmtIn, uint128 tokenAmtOut) internal {
+        address taker = vm.randomAddress();
+        vm.prank(deployer);
+        res.ft.transfer(taker, ftAmtIn);
+        vm.startPrank(taker);
+        res.ft.approve(address(res.order), ftAmtIn);
+        res.order.swapExactTokenToToken(res.ft, res.debt, taker, ftAmtIn, tokenAmtOut);
+        vm.stopPrank();
+    }
+
+    function sellXt(uint128 xtAmtIn, uint128 tokenAmtOut) internal {
+        address taker = vm.randomAddress();
+        vm.prank(deployer);
+        res.xt.transfer(taker, xtAmtIn);
+        vm.startPrank(taker);
+        res.xt.approve(address(res.order), xtAmtIn);
+        res.order.swapExactTokenToToken(res.xt, res.debt, taker, xtAmtIn, tokenAmtOut);
+        vm.stopPrank();
+    }
+
+    function swapFtToXt(uint128 ftAmtIn, uint128 xtAmtOut) internal {
+        address taker = vm.randomAddress();
+        vm.prank(deployer);
+        res.ft.transfer(taker, ftAmtIn);
+        vm.startPrank(taker);
+        res.ft.approve(address(res.order), ftAmtIn);
+        res.order.swapExactTokenToToken(res.ft, res.xt, taker, ftAmtIn, xtAmtOut);
+        vm.stopPrank();
+    }
+
+    function swapXtToFt(uint128 xtAmtIn, uint128 ftAmtOut) internal {
+        address taker = vm.randomAddress();
+        vm.prank(deployer);
+        res.xt.transfer(taker, xtAmtIn);
+        vm.startPrank(taker);
+        res.xt.approve(address(res.order), xtAmtIn);
+        res.order.swapExactTokenToToken(res.xt, res.ft, taker, xtAmtIn, ftAmtOut);
+        vm.stopPrank();
+    }
+
+    function _daysToMaturity(uint256 _now) internal view returns (uint256 daysToMaturity) {
+        daysToMaturity =
+            (res.market.config().maturity - _now + Constants.SECONDS_IN_DAY - 1) /
+            Constants.SECONDS_IN_DAY;
     }
 }
