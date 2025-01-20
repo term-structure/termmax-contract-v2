@@ -40,7 +40,7 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
     // locked ft = accretingPrincipal + performanceFee;
     uint256 public accretingPrincipal;
     uint256 public performanceFee;
-    uint256 private annualizedInterest;
+    uint256 annualizedInterest;
 
     uint64 public maxTerm;
     uint64 public performanceFeeRate;
@@ -51,9 +51,9 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
 
     address[] public withdrawQueue;
 
-    uint64 private lastUpdateTime;
+    uint64 lastUpdateTime;
 
-    uint64 private recentestMaturity;
+    uint64 recentestMaturity;
     mapping(uint64 => uint64) private maturityMapping;
     mapping(uint64 => address[]) private maturityToOrders;
     mapping(uint64 => uint128) private maturityToInterest;
@@ -69,12 +69,11 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
         performanceFeeRate = newPerformanceFeeRate;
     }
 
-    /// @notice Calculate how many days until expiration
-    function _daysToMaturity() internal view returns (uint256) {
-        return maxTerm;
-    }
-
     function asset() public view virtual returns (address);
+
+    function apr() public view override returns (uint256) {
+        return (annualizedInterest * Constants.DECIMAL_BASE) / (accretingPrincipal + performanceFee);
+    }
 
     function createOrder(
         ITermMaxMarket market,
@@ -453,14 +452,14 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
         if (deltaFt > 0) {
             ftChanges = deltaFt.toUint256();
             totalFt += ftChanges;
-            uint deltaAnualizedInterest = (ftChanges * (maturity - block.timestamp)) / 365 days;
+            uint deltaAnualizedInterest = (ftChanges * (uint(maturity) - block.timestamp)) / 365 days;
             maturityToInterest[maturity] += deltaAnualizedInterest.toUint128();
 
             annualizedInterest += deltaAnualizedInterest;
         } else {
             ftChanges = (-deltaFt).toUint256();
             totalFt -= ftChanges;
-            uint deltaAnualizedInterest = (ftChanges * (maturity - block.timestamp)) / 365 days;
+            uint deltaAnualizedInterest = (ftChanges * (uint(maturity) - block.timestamp)) / 365 days;
             maturityToInterest[maturity] -= deltaAnualizedInterest.toUint128();
             annualizedInterest -= deltaAnualizedInterest;
         }

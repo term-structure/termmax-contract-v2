@@ -408,9 +408,9 @@ contract TermMaxOrder is
     ) internal view returns (uint tokenAmtOut, uint feeAmt, IERC20 tokenOut) {
         FeeConfig memory feeConfig = config.feeConfig;
         CurveCut[] memory cuts = config.curveCuts.borrowCurveCuts;
-        uint nif = Constants.DECIMAL_BASE - feeConfig.lendTakerFeeRatio;
+        uint nif = Constants.DECIMAL_BASE - uint(feeConfig.lendTakerFeeRatio);
         (, tokenAmtOut) = TermMaxCurve.buyFt(nif, daysToMaturity, cuts, oriXtReserve, debtTokenAmtIn);
-        feeAmt = (tokenAmtOut * (Constants.DECIMAL_BASE + feeConfig.borrowMakerFeeRatio)) / nif - tokenAmtOut;
+        feeAmt = (tokenAmtOut * (Constants.DECIMAL_BASE + uint(feeConfig.borrowMakerFeeRatio))) / nif - tokenAmtOut;
         tokenOut = ft;
     }
 
@@ -422,10 +422,10 @@ contract TermMaxOrder is
     ) internal view returns (uint tokenAmtOut, uint feeAmt, IERC20 tokenOut) {
         FeeConfig memory feeConfig = config.feeConfig;
         CurveCut[] memory cuts = config.curveCuts.lendCurveCuts;
-        uint nif = Constants.DECIMAL_BASE + feeConfig.borrowTakerFeeRatio;
+        uint nif = Constants.DECIMAL_BASE + uint(feeConfig.borrowTakerFeeRatio);
         uint deltaFt;
         (tokenAmtOut, deltaFt) = TermMaxCurve.buyXt(nif, daysToMaturity, cuts, oriXtReserve, debtTokenAmtIn);
-        feeAmt = deltaFt - (deltaFt * (Constants.DECIMAL_BASE - feeConfig.lendMakerFeeRatio)) / nif;
+        feeAmt = deltaFt - (deltaFt * (Constants.DECIMAL_BASE - uint(feeConfig.lendMakerFeeRatio))) / nif;
         tokenOut = xt;
     }
 
@@ -462,10 +462,10 @@ contract TermMaxOrder is
     ) internal view returns (uint debtTokenAmtOut, uint feeAmt, IERC20 tokenIn) {
         FeeConfig memory feeConfig = config.feeConfig;
         CurveCut[] memory cuts = config.curveCuts.lendCurveCuts;
-        uint nif = Constants.DECIMAL_BASE + feeConfig.borrowTakerFeeRatio;
+        uint nif = Constants.DECIMAL_BASE + uint(feeConfig.borrowTakerFeeRatio);
         uint deltaFt;
         (debtTokenAmtOut, deltaFt) = TermMaxCurve.sellFt(nif, daysToMaturity, cuts, oriXtReserve, tokenAmtIn);
-        feeAmt = deltaFt - (deltaFt * (Constants.DECIMAL_BASE - feeConfig.lendMakerFeeRatio)) / nif;
+        feeAmt = deltaFt - (deltaFt * (Constants.DECIMAL_BASE - uint(feeConfig.lendMakerFeeRatio))) / nif;
         tokenIn = ft;
     }
 
@@ -477,9 +477,12 @@ contract TermMaxOrder is
     ) internal view returns (uint debtTokenAmtOut, uint feeAmt, IERC20 tokenIn) {
         FeeConfig memory feeConfig = config.feeConfig;
         CurveCut[] memory cuts = config.curveCuts.borrowCurveCuts;
-        uint nif = Constants.DECIMAL_BASE - feeConfig.lendTakerFeeRatio;
+        uint nif = Constants.DECIMAL_BASE - uint(feeConfig.lendTakerFeeRatio);
         (, debtTokenAmtOut) = TermMaxCurve.sellXt(nif, daysToMaturity, cuts, oriXtReserve, tokenAmtIn);
-        feeAmt = (debtTokenAmtOut * (Constants.DECIMAL_BASE + feeConfig.borrowMakerFeeRatio)) / nif - debtTokenAmtOut;
+        feeAmt =
+            (debtTokenAmtOut * (Constants.DECIMAL_BASE + uint(feeConfig.borrowMakerFeeRatio))) /
+            nif -
+            debtTokenAmtOut;
         tokenIn = xt;
     }
 
@@ -584,9 +587,9 @@ contract TermMaxOrder is
     ) internal view returns (uint debtTokenAmtIn, uint feeAmt, IERC20 tokenOut) {
         FeeConfig memory feeConfig = config.feeConfig;
         CurveCut[] memory cuts = config.curveCuts.borrowCurveCuts;
-        uint nif = Constants.DECIMAL_BASE - feeConfig.lendTakerFeeRatio;
+        uint nif = Constants.DECIMAL_BASE - uint(feeConfig.lendTakerFeeRatio);
         debtTokenAmtIn = TermMaxCurve.buyExactFt(nif, daysToMaturity, cuts, oriXtReserve, ftAmtOut);
-        feeAmt = (ftAmtOut * (Constants.DECIMAL_BASE + feeConfig.borrowMakerFeeRatio)) / nif - ftAmtOut;
+        feeAmt = (ftAmtOut * (Constants.DECIMAL_BASE + uint(feeConfig.borrowMakerFeeRatio))) / nif - ftAmtOut;
         tokenOut = ft;
     }
 
@@ -598,9 +601,9 @@ contract TermMaxOrder is
     ) internal view returns (uint debtTokenAmtIn, uint feeAmt, IERC20 tokenOut) {
         FeeConfig memory feeConfig = config.feeConfig;
         CurveCut[] memory cuts = config.curveCuts.lendCurveCuts;
-        uint nif = Constants.DECIMAL_BASE + feeConfig.borrowTakerFeeRatio;
+        uint nif = Constants.DECIMAL_BASE + uint(feeConfig.borrowTakerFeeRatio);
         debtTokenAmtIn = TermMaxCurve.buyExactXt(nif, daysToMaturity, cuts, oriXtReserve, xtAmtOut);
-        feeAmt = debtTokenAmtIn - (debtTokenAmtIn * (Constants.DECIMAL_BASE - feeConfig.lendMakerFeeRatio)) / nif;
+        feeAmt = debtTokenAmtIn - (debtTokenAmtIn * (Constants.DECIMAL_BASE - uint(feeConfig.lendMakerFeeRatio))) / nif;
         tokenOut = xt;
     }
 
@@ -675,11 +678,11 @@ contract TermMaxOrder is
     ) internal view returns (uint ftAmtIn, uint feeAmt, IERC20 tokenIn) {
         FeeConfig memory feeConfig = config.feeConfig;
         CurveCut[] memory cuts = config.curveCuts.lendCurveCuts;
-        uint nif = Constants.DECIMAL_BASE + feeConfig.borrowTakerFeeRatio;
+        uint nif = Constants.DECIMAL_BASE + uint(feeConfig.borrowTakerFeeRatio);
 
         ftAmtIn = TermMaxCurve.sellFtForExactDebtToken(nif, daysToMaturity, cuts, oriXtReserve, debtTokenOut);
 
-        feeAmt = ftAmtIn - (ftAmtIn * (Constants.DECIMAL_BASE - feeConfig.lendMakerFeeRatio)) / nif;
+        feeAmt = ftAmtIn - (ftAmtIn * (Constants.DECIMAL_BASE - uint(feeConfig.lendMakerFeeRatio))) / nif;
         tokenIn = ft;
     }
 
@@ -691,10 +694,10 @@ contract TermMaxOrder is
     ) internal view returns (uint xtAmtIn, uint feeAmt, IERC20 tokenIn) {
         FeeConfig memory feeConfig = config.feeConfig;
         CurveCut[] memory cuts = config.curveCuts.borrowCurveCuts;
-        uint nif = Constants.DECIMAL_BASE - feeConfig.lendTakerFeeRatio;
+        uint nif = Constants.DECIMAL_BASE - uint(feeConfig.lendTakerFeeRatio);
         xtAmtIn = TermMaxCurve.sellXtForExactDebtToken(nif, daysToMaturity, cuts, oriXtReserve, debtTokenOut);
 
-        feeAmt = (debtTokenOut * (Constants.DECIMAL_BASE + feeConfig.borrowMakerFeeRatio)) / nif - debtTokenOut;
+        feeAmt = (debtTokenOut * (Constants.DECIMAL_BASE + uint(feeConfig.borrowMakerFeeRatio))) / nif - debtTokenOut;
         tokenIn = xt;
     }
 

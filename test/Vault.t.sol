@@ -457,4 +457,50 @@ contract VaultTest is Test {
 
         vm.stopPrank();
     }
+
+    function testDeposit() public {
+        uint256 amount = 10000e8;
+        vm.warp(currentTime);
+        res.debt.mint(lper, amount);
+        vm.startPrank(lper);
+        res.debt.approve(address(vault), amount);
+        uint share = vault.previewDeposit(amount);
+        vault.deposit(amount, lper);
+        assertEq(vault.balanceOf(lper), share);
+        vm.stopPrank();
+
+        vm.warp(currentTime + 1 days);
+        buyXt(50e8);
+        uint apr = vault.apr();
+        console.log("apr:", apr);
+
+        address lper2 = vm.randomAddress();
+        uint256 amount2 = 20000e8;
+        res.debt.mint(lper2, amount2);
+        vm.startPrank(lper2);
+        res.debt.approve(address(vault), amount2);
+        share = vault.previewDeposit(amount2);
+        vault.deposit(amount2, lper2);
+        assertEq(vault.balanceOf(lper2), share);
+
+        vm.stopPrank();
+    }
+
+    function buyFt(uint128 tokenAmtIn) internal {
+        address taker = vm.randomAddress();
+        res.debt.mint(taker, tokenAmtIn);
+        vm.startPrank(taker);
+        res.debt.approve(address(res.order), tokenAmtIn);
+        res.order.swapExactTokenToToken(res.debt, res.ft, taker, tokenAmtIn, 0);
+        vm.stopPrank();
+    }
+
+    function buyXt(uint128 tokenAmtIn) internal {
+        address taker = vm.randomAddress();
+        res.debt.mint(taker, tokenAmtIn);
+        vm.startPrank(taker);
+        res.debt.approve(address(res.order), tokenAmtIn);
+        res.order.swapExactTokenToToken(res.debt, res.xt, taker, tokenAmtIn, 0);
+        vm.stopPrank();
+    }
 }

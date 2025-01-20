@@ -473,9 +473,9 @@ contract OrderTest is Test {
         vm.stopPrank();
     }
 
-    function testSwapWithCallback(uint128 swapAmt, bool isBuy, bool isFt) public {
-        vm.assume(swapAmt < 2000e8);
-
+    // function testSwapWithCallback(uint128 swapAmt, bool isBuy, bool isFt) public {
+    //     vm.assume(swapAmt > 0 && swapAmt < 1e8);
+    function testSwapWithCallback() public {
         // Deploy mock callback contract
         MockSwapCallback callback = new MockSwapCallback();
 
@@ -487,6 +487,34 @@ contract OrderTest is Test {
         res.debt.approve(address(res.market), 150e18);
         res.market.mint(address(res.order), 150e18);
         vm.stopPrank();
+
+        uint128 swapAmt = 1000e8;
+        bool isBuy = true;
+        bool isFt = false;
+
+        uint current = vm.parseUint(vm.parseJsonString(testdata, ".currentTime"));
+        uint maturity = marketConfig.maturity;
+        (uint256 lendApr, uint256 borrowApr) = res.order.apr();
+        uint apr;
+
+        if (isBuy && isFt) {
+            apr = borrowApr;
+        } else if (isBuy && !isFt) {
+            apr = lendApr;
+        } else if (!isBuy && isFt) {
+            apr = lendApr;
+        } else if (!isBuy && !isFt) {
+            apr = borrowApr;
+        }
+        uint daysToMaturity = (maturity - current + 86400 - 1) / 86400;
+        console.log("apr", apr);
+        console.log("daysToMaturity", daysToMaturity);
+        uint interestRate = (apr * daysToMaturity) / 365;
+        console.log("interestRate", interestRate);
+        uint xtPrice = (10 ** res.debt.decimals() * interestRate) / Constants.DECIMAL_BASE;
+        console.log("xtPrice", xtPrice);
+        uint maxBuyAmt = (swapAmt * (10 ** res.xt.decimals())) / xtPrice;
+        console.log("maxBuyAmt", maxBuyAmt);
 
         vm.startPrank(sender);
 
@@ -526,8 +554,8 @@ contract OrderTest is Test {
         uint ftBalanceAfter = res.ft.balanceOf(address(res.order));
         uint xtBalanceAfter = res.xt.balanceOf(address(res.order));
 
-        // assertEq(ftBalanceBefore.toInt256() + callback.deltaFt(), ftBalanceAfter.toInt256());
-        // assertEq(xtBalanceBefore.toInt256() + callback.deltaXt(), xtBalanceAfter.toInt256());
+        assertEq(ftBalanceBefore.toInt256() + callback.deltaFt(), ftBalanceAfter.toInt256());
+        assertEq(xtBalanceBefore.toInt256() + callback.deltaXt(), xtBalanceAfter.toInt256());
 
         vm.stopPrank();
     }

@@ -9,6 +9,7 @@ import {ITermMaxOrder} from "../ITermMaxOrder.sol";
 import {PendingAddress, PendingUint192} from "../lib/PendingLib.sol";
 
 interface ITermMaxVault is IERC4626 {
+    function apr() external view returns (uint256);
     // View Functions
     function guardian() external view returns (address);
     function curator() external view returns (address);

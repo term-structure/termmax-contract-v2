@@ -65,8 +65,8 @@ contract TermMaxMarket is
     function issueFtFeeRatio() public view override returns (uint) {
         uint daysToMaturity = _daysToMaturity(_config.maturity);
         return
-            (_config.feeConfig.issueFtFeeRatio * _config.feeConfig.issueFtFeeRef * daysToMaturity) /
-            (Constants.DAYS_IN_YEAR * Constants.DECIMAL_BASE + _config.feeConfig.issueFtFeeRef * daysToMaturity);
+            (daysToMaturity * uint(_config.feeConfig.issueFtFeeRatio) * uint(_config.feeConfig.issueFtFeeRef)) /
+            (Constants.DAYS_IN_YEAR * Constants.DECIMAL_BASE + uint(_config.feeConfig.issueFtFeeRef) * daysToMaturity);
     }
 
     /**
