@@ -93,7 +93,7 @@ contract GtTest is Test {
 
         StateChecker.MarketState memory state = StateChecker.getMarketState(res);
 
-        uint issueFee = (debtAmt * marketConfig.feeConfig.issueFtFeeRatio) / Constants.DECIMAL_BASE;
+        uint issueFee = (debtAmt * res.market.issueFtFeeRatio()) / Constants.DECIMAL_BASE;
         vm.expectEmit();
         emit MarketEvents.IssueFt(
             sender,
