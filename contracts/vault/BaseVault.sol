@@ -198,7 +198,7 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
             uint length = withdrawQueue.length;
             // withdraw from orders
             uint i;
-            while (length > 0) {
+            while (length > 0 && i < length) {
                 address order = withdrawQueue[i];
                 OrderInfo memory orderInfo = orderMapping[order];
                 if (block.timestamp > orderInfo.maturity + Constants.LIQUIDATION_WINDOW) {
@@ -209,28 +209,22 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
                         amountLeft -= totalRedeem;
                         continue;
                     } else {
-                        amountLeft = 0;
                         IERC20(asset()).safeTransfer(recipient, amountLeft);
+                        amountLeft = 0;
                         break;
                     }
                 } else if (block.timestamp < orderInfo.maturity) {
-                    console.log("_burnFromOrder");
                     // withraw ft and xt from order to burn
                     uint maxWithdraw = orderInfo.xt.balanceOf(order).min(orderInfo.ft.balanceOf(order));
 
-                    console.log("xt", orderInfo.xt.balanceOf(order));
-                    console.log("ft", orderInfo.ft.balanceOf(order));
-
                     if (maxWithdraw < amountLeft) {
-                        console.log("maxWithdraw < amountLeft");
                         amountLeft -= maxWithdraw;
                         _burnFromOrder(ITermMaxOrder(order), orderInfo, maxWithdraw);
                         ++i;
                     } else {
-                        console.log("maxWithdraw >= amountLeft");
-                        amountLeft = 0;
                         _burnFromOrder(ITermMaxOrder(order), orderInfo, amountLeft);
                         IERC20(asset()).safeTransfer(recipient, amount);
+                        amountLeft = 0;
                         break;
                     }
                 } else {
@@ -238,7 +232,6 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
                     ++i;
                 }
             }
-            console.log("amountLeft", amountLeft);
             if (amountLeft > 0) {
                 uint maxWithdraw = amount - amountLeft;
                 revert InsufficientFunds(maxWithdraw, amount);
@@ -425,7 +418,6 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
 
             recentMaturity = nextMaturity;
         }
-        // console.log("recentMaturity", recentMaturity);
         if (recentMaturity > 0) {
             (uint256 previewInterest, uint256 previewPerformanceFeeToCurator) = _previewAccruedPeriodInterest(
                 lastTime,
@@ -435,9 +427,6 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
             previewPerformanceFee += previewPerformanceFeeToCurator;
             previewPrincipal += previewInterest;
         }
-
-        // console.log("previewPrincipal", previewPrincipal);
-        // console.log("previewPerformanceFee", previewPerformanceFee);
     }
 
     function _previewAccruedPeriodInterest(

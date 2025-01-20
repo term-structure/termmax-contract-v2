@@ -518,6 +518,24 @@ contract VaultTest is Test {
         console.log("anulizedInterest:", vault.annualizedInterest());
         console.log("apr:", vault.apr());
         vm.stopPrank();
+
+        console.log("----day 91----");
+        vm.warp(currentTime + 91 days);
+        console.log("new principal:", vault.totalAssets());
+        console.log("previewRedeem: ", vault.previewRedeem(1000e8));
+
+        console.log("----day 92----");
+        vm.warp(currentTime + 92 days);
+        console.log("new principal:", vault.totalAssets());
+        vm.startPrank(lper2);
+        vault.approve(address(vault), 1000e8);
+        console.log("previewRedeem: ", vault.previewRedeem(1000e8));
+        assertEq(vault.previewRedeem(1000e8), vault.redeem(1000e8, lper2, lper2));
+        console.log("principal after redeem:", vault.totalAssets());
+        console.log("total supply:", vault.totalSupply());
+        console.log("anulizedInterest:", vault.annualizedInterest());
+        console.log("apr:", vault.apr());
+        vm.stopPrank();
     }
 
     function buyFt(uint128 tokenAmtIn, uint128 ftAmtOut) internal {
