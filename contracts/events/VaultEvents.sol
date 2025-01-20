@@ -32,7 +32,14 @@ interface VaultEvents {
         uint256 maxSupply,
         CurveCuts curveCuts
     );
-    event DealBadDebt(address indexed recipient, address indexed collaretal, uint256 amount, uint256 collateralOut);
+    event DealBadDebt(
+        address indexed caller,
+        address indexed recipient,
+        address indexed collaretal,
+        uint256 badDebt,
+        uint256 shares,
+        uint256 collateralOut
+    );
     event RedeemOrder(address indexed caller, address indexed order, uint128 ftAmt, uint128 redeemedAmt);
 
     event WithdrawIncentive(address indexed caller, address indexed recipient, uint256 amount);

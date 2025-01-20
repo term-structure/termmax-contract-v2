@@ -9,6 +9,12 @@ import {ITermMaxOrder} from "../ITermMaxOrder.sol";
 import {PendingAddress, PendingUint192} from "../lib/PendingLib.sol";
 
 interface ITermMaxVault is IERC4626 {
+    function dealBadDebt(
+        address collaretal,
+        uint256 badDebtAmt,
+        address recipient,
+        address owner
+    ) external returns (uint256 shares, uint256 collaretalOut);
     function apr() external view returns (uint256);
     // View Functions
     function guardian() external view returns (address);

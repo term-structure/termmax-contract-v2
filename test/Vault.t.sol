@@ -544,6 +544,7 @@ contract VaultTest is Test {
         vm.warp(currentTime + 91 days);
         console.log("new principal:", vault.totalAssets());
         console.log("previewRedeem: ", vault.previewRedeem(1000e8));
+        console.log("redeem fee ratio:", res.market.config().feeConfig.redeemFeeRatio);
 
         console.log("----day 92----");
         vm.warp(currentTime + 92 days);
@@ -610,10 +611,9 @@ contract VaultTest is Test {
         uint totalAssets = vault.totalAssets();
         uint propotion = (res.ft.balanceOf(address(res.order)) * Constants.DECIMAL_BASE_SQ) /
             (res.ft.totalSupply() - res.ft.balanceOf(address(res.market)));
-        console.log(res.ft.balanceOf(address(res.order)));
-        console.log(res.ft.totalSupply() - res.ft.balanceOf(address(res.market)));
-        console.log("propotion:", propotion);
-        uint badDebt = (res.ft.balanceOf(address(res.order)) * propotion) / Constants.DECIMAL_BASE_SQ;
+
+        uint tokenOut = (res.debt.balanceOf(address(res.market)) * propotion) / Constants.DECIMAL_BASE_SQ;
+        uint badDebt = res.ft.balanceOf(address(res.order)) - tokenOut;
         uint delivered = (propotion * 1e18) / Constants.DECIMAL_BASE_SQ;
 
         vm.startPrank(lper2);
@@ -622,6 +622,27 @@ contract VaultTest is Test {
 
         assertEq(vault.badDebtMapping(address(res.collateral)), badDebt);
         assertEq(res.collateral.balanceOf(address(vault)), delivered);
+
+        uint shareToDealBadDebt = vault.previewWithdraw(badDebt / 2);
+        vm.startPrank(lper2);
+        vault.approve(address(vault), shareToDealBadDebt);
+        (uint shares, uint collateralOut) = vault.dealBadDebt(address(res.collateral), badDebt / 2, lper2, lper2);
+        assertEq(shares, shareToDealBadDebt);
+        assertEq(collateralOut, ((badDebt / 2) * delivered) / badDebt);
+        assertEq(vault.badDebtMapping(address(res.collateral)), badDebt - badDebt / 2);
+        assertEq(res.collateral.balanceOf(address(vault)), delivered - collateralOut);
+        vm.stopPrank();
+
+        vm.startPrank(lper2);
+        shareToDealBadDebt = vault.previewWithdraw(badDebt - badDebt / 2);
+        uint remainningCollateral = res.collateral.balanceOf(address(vault));
+        vault.approve(address(vault), shareToDealBadDebt);
+        (shares, collateralOut) = vault.dealBadDebt(address(res.collateral), badDebt - badDebt / 2, lper2, lper2);
+        assertEq(shares, shareToDealBadDebt);
+        assertEq(collateralOut, remainningCollateral);
+        assertEq(vault.badDebtMapping(address(res.collateral)), 0);
+        assertEq(res.collateral.balanceOf(address(vault)), 0);
+        vm.stopPrank();
     }
 
     function buyFt(uint128 tokenAmtIn, uint128 ftAmtOut) internal {

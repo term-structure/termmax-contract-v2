@@ -251,14 +251,20 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
         emit WithdrawIncentive(msg.sender, recipient, amount);
     }
 
-    function _dealBadDebt(address recipient, address collaretal, uint256 amount) internal {
+    function _dealBadDebt(
+        address recipient,
+        address collaretal,
+        uint256 amount
+    ) internal returns (uint256 collateralOut) {
         uint badDebtAmt = badDebtMapping[collaretal];
         if (badDebtAmt == 0) revert NoBadDebt(collaretal);
         if (amount > badDebtAmt) revert InsufficientFunds(badDebtAmt, amount);
         uint collateralBalance = IERC20(collaretal).balanceOf(address(this));
-        uint collateralOut = (amount * collateralBalance) / badDebtAmt;
+        collateralOut = (amount * collateralBalance) / badDebtAmt;
         IERC20(collaretal).safeTransfer(recipient, collateralOut);
         badDebtMapping[collaretal] -= amount;
+        accretingPrincipal -= amount;
+        totalFt -= amount;
     }
 
     function _burnFromOrder(ITermMaxOrder order, OrderInfo memory orderInfo, uint256 amount) internal {
@@ -330,12 +336,7 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
         uint ftReserve = orderInfo.ft.balanceOf(order);
         ITermMaxOrder(order).withdrawAssets(orderInfo.ft, address(this), ftReserve);
         orderInfo.ft.safeIncreaseAllowance(address(orderInfo.market), ftReserve);
-
-        IERC20 assetToken = IERC20(asset());
-        uint totalAsset = assetToken.balanceOf(address(this));
-        orderInfo.market.redeem(ftReserve, address(this));
-        totalRedeem = assetToken.balanceOf(address(this)) - totalAsset;
-
+        totalRedeem = orderInfo.market.redeem(ftReserve, address(this));
         if (totalRedeem < ftReserve) {
             // storage bad debt
             (, , , address collateral, ) = orderInfo.market.tokens();
