@@ -28,6 +28,7 @@ library JsonLoader {
     struct Config {
         string marketName;
         string marketSymbol;
+        uint256 salt;
         MarketConfig marketConfig;
         LoanConfig loanConfig;
         UnderlyingConfig underlyingConfig;
@@ -50,8 +51,12 @@ library JsonLoader {
         LoanConfig memory loanConfig;
         UnderlyingConfig memory underlyingConfig;
         CollateralConfig memory collateralConfig;
+        uint256 salt;
 
         string memory configPrefix = string.concat(".configs", ".configs_", vm.toString(index));
+
+        // read salt
+        salt = uint256(vm.parseUint(jsonData.readString(string.concat(configPrefix, ".salt"))));
 
         // read market config
         string memory marketConfigPrefix = string.concat(configPrefix, ".marketConfig");
@@ -125,6 +130,7 @@ library JsonLoader {
             vm.toString(marketConfig.maturity)
         );
         config.marketSymbol = config.marketName;
+        config.salt = salt;
 
         config.marketConfig = marketConfig;
         config.loanConfig = loanConfig;
