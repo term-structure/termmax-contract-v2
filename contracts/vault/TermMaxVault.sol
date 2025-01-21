@@ -103,7 +103,7 @@ contract TermMaxVault is Ownable2Step, ReentrancyGuard, BaseVault, ERC4626 {
         uint256 maxSupply,
         uint256 initialReserve,
         CurveCuts memory curveCuts
-    ) external override onlyCuratorRole returns (ITermMaxOrder order) {
+    ) external override onlyCuratorRole marketIsWhitelisted(address(market)) returns (ITermMaxOrder order) {
         return _createOrder(ITermMaxMarket(market), maxSupply, initialReserve, curveCuts);
     }
 
