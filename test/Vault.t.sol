@@ -721,6 +721,86 @@ contract VaultTest is Test {
         assertEq(vault.withdrawQueueLength(), 0);
     }
 
+    function testRedeemFromMarket2() public {
+        vm.warp(currentTime + 2 days);
+        buyXt(48.219178e8, 1000e8);
+
+        vm.warp(currentTime + 3 days);
+        address lper2 = vm.randomAddress();
+        uint256 amount2 = 10000e8;
+        res.debt.mint(lper2, amount2);
+        vm.startPrank(lper2);
+        res.debt.approve(address(vault), amount2);
+        vault.deposit(amount2, lper2);
+        vm.stopPrank();
+
+        vm.startPrank(curator);
+        address order2 = address(vault.createOrder(market2, maxCapacity, 0, orderConfig.curveCuts));
+        uint[] memory indexes = new uint[](2);
+        indexes[0] = 1;
+        indexes[1] = 0;
+        vault.updateSupplyQueue(indexes);
+
+        res.debt.mint(curator, 10000e8);
+        res.debt.approve(address(vault), 10000e8);
+        vault.deposit(10000e8, curator);
+
+        vm.stopPrank();
+
+        (IERC20 ft, IERC20 xt, , , ) = market2.tokens();
+
+        vm.warp(currentTime + 4 days);
+        {
+            address taker = vm.randomAddress();
+            uint128 tokenAmtIn = 50e8;
+            res.debt.mint(taker, tokenAmtIn);
+            vm.startPrank(taker);
+            res.debt.approve(address(order2), tokenAmtIn);
+            ITermMaxOrder(order2).swapExactTokenToToken(res.debt, xt, taker, tokenAmtIn, 1000e8);
+            vm.stopPrank();
+        }
+
+        vm.warp(currentTime + 92 days);
+
+        {
+            address taker = vm.randomAddress();
+            uint128 tokenAmtIn = 50e8;
+            res.debt.mint(taker, tokenAmtIn);
+            vm.startPrank(taker);
+            res.debt.approve(address(order2), tokenAmtIn);
+            ITermMaxOrder(order2).swapExactTokenToToken(res.debt, xt, taker, tokenAmtIn, 1000e8);
+            vm.stopPrank();
+        }
+
+        vm.prank(lper2);
+        vault.redeem(100e8, lper2, lper2);
+
+        uint performanceFee = vault.performanceFee();
+        vm.prank(curator);
+        vault.withdrawPerformanceFee(curator, performanceFee);
+
+        assertEq(vault.performanceFee(), 0);
+        assertEq(vault.recentestMaturity(), market2.config().maturity);
+        assertGt(vault.annualizedInterest(), 0);
+        assertEq(vault.supplyQueueLength(), 1);
+        assertEq(vault.supplyQueue(0), order2);
+        assertEq(vault.withdrawQueueLength(), 1);
+        assertEq(vault.withdrawQueue(0), order2);
+
+        vm.warp(currentTime + 182 days);
+        vm.prank(lper2);
+        vault.redeem(100e8, lper2, lper2);
+
+        vm.prank(curator);
+        vault.redeemOrder(ITermMaxOrder(order2));
+
+        assertGt(vault.performanceFee(), 0);
+        assertEq(vault.recentestMaturity(), 0);
+        assertEq(vault.annualizedInterest(), 0);
+        assertEq(vault.supplyQueueLength(), 0);
+        assertEq(vault.withdrawQueueLength(), 0);
+    }
+
     function testBadDebt() public {
         vm.warp(currentTime + 2 days);
         buyXt(48.219178e8, 1000e8);
