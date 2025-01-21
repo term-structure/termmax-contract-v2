@@ -17,6 +17,8 @@ import {TransferUtils} from "../lib/TransferUtils.sol";
 import {BaseVault} from "./BaseVault.sol";
 import {Constants} from "../lib/Constants.sol";
 
+import {console} from "forge-std/console.sol";
+
 contract TermMaxVault is Ownable2Step, ReentrancyGuard, BaseVault, ERC4626 {
     using SafeCast for uint256;
     using TransferUtils for IERC20;
@@ -131,9 +133,9 @@ contract TermMaxVault is Ownable2Step, ReentrancyGuard, BaseVault, ERC4626 {
         _redeemFromMarket(address(order), orderMapping[address(order)]);
     }
 
-    function withdrawIncentive(address recipient, uint256 amount) external override onlyCuratorRole {
+    function withdrawPerformanceFee(address recipient, uint256 amount) external override onlyCuratorRole {
         _accruedInterest();
-        _withdrawIncentive(recipient, amount);
+        _withdrawPerformanceFee(recipient, amount);
     }
 
     // ERC4626 functions

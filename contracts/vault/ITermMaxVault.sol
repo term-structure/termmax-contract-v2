@@ -58,7 +58,7 @@ interface ITermMaxVault is IERC4626 {
     function updateSupplyQueue(uint256[] calldata indexes) external;
     function updateWithdrawQueue(uint256[] calldata indexes) external;
     function redeemOrder(ITermMaxOrder order) external;
-    function withdrawIncentive(address recipient, uint256 amount) external;
+    function withdrawPerformanceFee(address recipient, uint256 amount) external;
 
     function submitGuardian(address newGuardian) external;
     function setCurator(address newCurator) external;
