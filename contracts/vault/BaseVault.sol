@@ -53,7 +53,7 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
 
     uint64 lastUpdateTime;
 
-    uint64 public recentestMaturity;
+    uint64 recentestMaturity;
     mapping(uint64 => uint64) private maturityMapping;
     mapping(uint64 => address[]) private maturityToOrders;
     mapping(uint64 => uint128) private maturityToInterest;

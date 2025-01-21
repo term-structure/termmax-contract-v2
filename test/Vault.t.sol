@@ -700,7 +700,6 @@ contract VaultTest is Test {
         vault.withdrawPerformanceFee(curator, performanceFee);
 
         assertEq(vault.performanceFee(), 0);
-        assertEq(vault.recentestMaturity(), market2.config().maturity);
         assertEq(vault.annualizedInterest(), 0);
         assertEq(vault.supplyQueueLength(), 1);
         assertEq(vault.supplyQueue(0), order2);
@@ -715,7 +714,6 @@ contract VaultTest is Test {
         vault.redeemOrder(ITermMaxOrder(order2));
 
         assertEq(vault.performanceFee(), 0);
-        assertEq(vault.recentestMaturity(), 0);
         assertEq(vault.annualizedInterest(), 0);
         assertEq(vault.supplyQueueLength(), 0);
         assertEq(vault.withdrawQueueLength(), 0);
@@ -780,7 +778,6 @@ contract VaultTest is Test {
         vault.withdrawPerformanceFee(curator, performanceFee);
 
         assertEq(vault.performanceFee(), 0);
-        assertEq(vault.recentestMaturity(), market2.config().maturity);
         assertGt(vault.annualizedInterest(), 0);
         assertEq(vault.supplyQueueLength(), 1);
         assertEq(vault.supplyQueue(0), order2);
@@ -795,7 +792,6 @@ contract VaultTest is Test {
         vault.redeemOrder(ITermMaxOrder(order2));
 
         assertGt(vault.performanceFee(), 0);
-        assertEq(vault.recentestMaturity(), 0);
         assertEq(vault.annualizedInterest(), 0);
         assertEq(vault.supplyQueueLength(), 0);
         assertEq(vault.withdrawQueueLength(), 0);

@@ -353,6 +353,9 @@ contract TermMaxMarket is
         gt.updateConfig(configData);
     }
 
+    /**
+     * @inheritdoc ITermMaxMarket
+     */
     function createOrder(
         address maker,
         uint256 maxXtReserve,
