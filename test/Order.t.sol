@@ -379,6 +379,44 @@ contract OrderTest is Test {
         vm.stopPrank();
     }
 
+    function testSellFtForExactToken() public {
+        vm.startPrank(sender);
+        uint128 debtTokenOutAmt = 80e8;
+        uint128 maxFtIn = 100e8;
+        res.debt.mint(sender, maxFtIn);
+        res.debt.approve(address(res.market), maxFtIn);
+        res.market.mint(sender, maxFtIn);
+
+        res.ft.approve(address(res.order), maxFtIn);
+
+        uint256 netIn = res.order.swapTokenToExactToken(res.ft, res.debt, sender, debtTokenOutAmt, maxFtIn);
+
+        assert(netIn < maxFtIn);
+        assert(res.debt.balanceOf(sender) == debtTokenOutAmt);
+        assert(res.ft.balanceOf(sender) == maxFtIn - netIn);
+
+        vm.stopPrank();
+    }
+
+    function testSellXtForExactToken() public {
+        vm.startPrank(sender);
+        uint128 debtTokenOutAmt = 5e8;
+        uint128 maxXtIn = 2000e8;
+        res.debt.mint(sender, maxXtIn);
+        res.debt.approve(address(res.market), maxXtIn);
+        res.market.mint(sender, maxXtIn);
+
+        res.xt.approve(address(res.order), maxXtIn);
+
+        uint256 netIn = res.order.swapTokenToExactToken(res.xt, res.debt, sender, debtTokenOutAmt, maxXtIn);
+
+        assert(netIn < maxXtIn);
+        assert(res.debt.balanceOf(sender) == debtTokenOutAmt);
+        assert(res.xt.balanceOf(sender) == maxXtIn - netIn);
+
+        vm.stopPrank();
+    }
+
     function testByExactFtWhenTermIsNotOpen() public {
         uint128 ftInAmt = 100e8;
         uint128 maxTokenOut = 100e8;
@@ -473,9 +511,9 @@ contract OrderTest is Test {
         vm.stopPrank();
     }
 
-    // function testSwapWithCallback(uint128 swapAmt, bool isBuy, bool isFt) public {
-    //     vm.assume(swapAmt > 0 && swapAmt < 1e8);
-    function testSwapWithCallback() public {
+    function testSwapWithCallback(uint128 swapAmt, bool isBuy, bool isFt) public {
+        vm.assume(swapAmt > 0 && swapAmt < 0.1e8);
+
         // Deploy mock callback contract
         MockSwapCallback callback = new MockSwapCallback();
 
@@ -483,12 +521,11 @@ contract OrderTest is Test {
         vm.startPrank(maker);
         res.order.updateOrder(orderConfig, 0, 0);
 
-        res.debt.mint(maker, 150e18);
-        res.debt.approve(address(res.market), 150e18);
-        res.market.mint(address(res.order), 150e18);
+        res.debt.mint(maker, 150e8);
+        res.debt.approve(address(res.market), 150e8);
+        res.market.mint(address(res.order), 150e8);
         vm.stopPrank();
 
-        uint128 swapAmt = 1000e8;
         bool isBuy = true;
         bool isFt = false;
 
@@ -506,15 +543,6 @@ contract OrderTest is Test {
         } else if (!isBuy && !isFt) {
             apr = borrowApr;
         }
-        uint daysToMaturity = (maturity - current + 86400 - 1) / 86400;
-        console.log("apr", apr);
-        console.log("daysToMaturity", daysToMaturity);
-        uint interestRate = (apr * daysToMaturity) / 365;
-        console.log("interestRate", interestRate);
-        uint xtPrice = (10 ** res.debt.decimals() * interestRate) / Constants.DECIMAL_BASE;
-        console.log("xtPrice", xtPrice);
-        uint maxBuyAmt = (swapAmt * (10 ** res.xt.decimals())) / xtPrice;
-        console.log("maxBuyAmt", maxBuyAmt);
 
         vm.startPrank(sender);
 
