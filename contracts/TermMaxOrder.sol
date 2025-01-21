@@ -588,8 +588,9 @@ contract TermMaxOrder is
         FeeConfig memory feeConfig = config.feeConfig;
         CurveCut[] memory cuts = config.curveCuts.borrowCurveCuts;
         uint nif = Constants.DECIMAL_BASE - uint(feeConfig.lendTakerFeeRatio);
-        debtTokenAmtIn = TermMaxCurve.buyExactFt(nif, daysToMaturity, cuts, oriXtReserve, ftAmtOut);
-        feeAmt = (ftAmtOut * (Constants.DECIMAL_BASE + uint(feeConfig.borrowMakerFeeRatio))) / nif - ftAmtOut;
+        (uint deltaXt, uint negDeltaFt) = TermMaxCurve.buyExactFt(nif, daysToMaturity, cuts, oriXtReserve, ftAmtOut);
+        debtTokenAmtIn = deltaXt;
+        feeAmt = (negDeltaFt * (Constants.DECIMAL_BASE + uint(feeConfig.borrowMakerFeeRatio))) / nif - negDeltaFt;
         tokenOut = ft;
     }
 
@@ -602,8 +603,9 @@ contract TermMaxOrder is
         FeeConfig memory feeConfig = config.feeConfig;
         CurveCut[] memory cuts = config.curveCuts.lendCurveCuts;
         uint nif = Constants.DECIMAL_BASE + uint(feeConfig.borrowTakerFeeRatio);
-        debtTokenAmtIn = TermMaxCurve.buyExactXt(nif, daysToMaturity, cuts, oriXtReserve, xtAmtOut);
-        feeAmt = debtTokenAmtIn - (debtTokenAmtIn * (Constants.DECIMAL_BASE - uint(feeConfig.lendMakerFeeRatio))) / nif;
+        (, uint deltaFt) = TermMaxCurve.buyExactXt(nif, daysToMaturity, cuts, oriXtReserve, xtAmtOut);
+        debtTokenAmtIn = deltaFt;
+        feeAmt = deltaFt - (deltaFt * (Constants.DECIMAL_BASE - uint(feeConfig.lendMakerFeeRatio))) / nif;
         tokenOut = xt;
     }
 
@@ -680,9 +682,10 @@ contract TermMaxOrder is
         CurveCut[] memory cuts = config.curveCuts.lendCurveCuts;
         uint nif = Constants.DECIMAL_BASE + uint(feeConfig.borrowTakerFeeRatio);
 
-        ftAmtIn = TermMaxCurve.sellFtForExactDebtToken(nif, daysToMaturity, cuts, oriXtReserve, debtTokenOut);
+        (, uint deltaFt) = TermMaxCurve.sellFtForExactDebtToken(nif, daysToMaturity, cuts, oriXtReserve, debtTokenOut);
+        ftAmtIn = deltaFt;
 
-        feeAmt = ftAmtIn - (ftAmtIn * (Constants.DECIMAL_BASE - uint(feeConfig.lendMakerFeeRatio))) / nif;
+        feeAmt = deltaFt - (deltaFt * (Constants.DECIMAL_BASE - uint(feeConfig.lendMakerFeeRatio))) / nif;
         tokenIn = ft;
     }
 
@@ -695,9 +698,16 @@ contract TermMaxOrder is
         FeeConfig memory feeConfig = config.feeConfig;
         CurveCut[] memory cuts = config.curveCuts.borrowCurveCuts;
         uint nif = Constants.DECIMAL_BASE - uint(feeConfig.lendTakerFeeRatio);
-        xtAmtIn = TermMaxCurve.sellXtForExactDebtToken(nif, daysToMaturity, cuts, oriXtReserve, debtTokenOut);
+        (uint deltaXt, uint negDeltaFt) = TermMaxCurve.sellXtForExactDebtToken(
+            nif,
+            daysToMaturity,
+            cuts,
+            oriXtReserve,
+            debtTokenOut
+        );
+        xtAmtIn = deltaXt;
 
-        feeAmt = (debtTokenOut * (Constants.DECIMAL_BASE + uint(feeConfig.borrowMakerFeeRatio))) / nif - debtTokenOut;
+        feeAmt = (negDeltaFt * (Constants.DECIMAL_BASE + uint(feeConfig.borrowMakerFeeRatio))) / nif - negDeltaFt;
         tokenIn = xt;
     }
 
