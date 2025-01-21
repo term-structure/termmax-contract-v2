@@ -71,9 +71,19 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
 
     function asset() public view virtual returns (address);
 
+    /**
+     * @inheritdoc ITermMaxVault
+     */
     function apr() public view override returns (uint256) {
         return (annualizedInterest * Constants.DECIMAL_BASE) / (accretingPrincipal + performanceFee);
     }
+
+    function dealBadDebt(
+        address collaretal,
+        uint256 badDebtAmt,
+        address recipient,
+        address owner
+    ) external virtual returns (uint256 shares, uint256 collaretalOut);
 
     function createOrder(
         ITermMaxMarket market,

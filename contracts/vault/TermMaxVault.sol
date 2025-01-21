@@ -14,7 +14,7 @@ import {ITermMaxRouter} from "../router/ITermMaxRouter.sol";
 import {ITermMaxOrder} from "../ITermMaxOrder.sol";
 import {VaultConstants} from "../lib/VaultConstants.sol";
 import {TransferUtils} from "../lib/TransferUtils.sol";
-import {BaseVault} from "./BaseVault.sol";
+import {ITermMaxVault, BaseVault} from "./BaseVault.sol";
 import {Constants} from "../lib/Constants.sol";
 
 import {console} from "forge-std/console.sol";
@@ -100,6 +100,9 @@ contract TermMaxVault is Ownable2Step, ReentrancyGuard, BaseVault, ERC4626 {
     }
 
     // BaseVault functions
+    /**
+     * @inheritdoc ITermMaxVault
+     */
     function createOrder(
         ITermMaxMarket market,
         uint256 maxSupply,
@@ -109,6 +112,9 @@ contract TermMaxVault is Ownable2Step, ReentrancyGuard, BaseVault, ERC4626 {
         return _createOrder(ITermMaxMarket(market), maxSupply, initialReserve, curveCuts);
     }
 
+    /**
+     * @inheritdoc ITermMaxVault
+     */
     function updateOrders(
         ITermMaxOrder[] memory orders,
         int256[] memory changes,
@@ -129,10 +135,16 @@ contract TermMaxVault is Ownable2Step, ReentrancyGuard, BaseVault, ERC4626 {
         _updateWithdrawQueue(indexes);
     }
 
+    /**
+     * @inheritdoc ITermMaxVault
+     */
     function redeemOrder(ITermMaxOrder order) external override onlyCuratorRole {
         _redeemFromMarket(address(order), orderMapping[address(order)]);
     }
 
+    /**
+     * @inheritdoc ITermMaxVault
+     */
     function withdrawPerformanceFee(address recipient, uint256 amount) external override onlyCuratorRole {
         _accruedInterest();
         _withdrawPerformanceFee(recipient, amount);
