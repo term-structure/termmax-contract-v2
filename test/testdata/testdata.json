@@ -91,6 +91,46 @@
         "netOut": "447827444",
         "fee": "13570528"
       }
+    },
+    "testBuyExactFt": {
+      "contractState": {
+        "ftReserve": "14764361439",
+        "xtReserve": "24771291984"
+      },
+      "output": {
+        "netOut": "9771291984",
+        "fee": "6930545"
+      }
+    },
+    "testBuyExactXt": {
+      "contractState": {
+        "ftReserve": "15373687658",
+        "xtReserve": "5385011527"
+      },
+      "output": {
+        "netOut": "385011527",
+        "fee": "11323869"
+      }
+    },
+    "testSellFtForExactToken": {
+      "contractState": {
+        "ftReserve": "14958424150",
+        "xtReserve": "17000000000"
+      },
+      "output": {
+        "netOut": "8204833321",
+        "fee": "6024510"
+      }
+    },
+    "testSellXtForExactToken": {
+      "contractState": {
+        "ftReserve": "15176203208",
+        "xtReserve": "10312687810"
+      },
+      "output": {
+        "netOut": "7401656942",
+        "fee": "9090909"
+      }
     }
   },
   "priceData": {

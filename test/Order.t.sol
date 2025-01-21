@@ -319,25 +319,25 @@ contract OrderTest is Test {
         res.debt.mint(sender, maxTokenIn);
         res.debt.approve(address(res.order), maxTokenIn);
 
-        // uint actualOut = vm.parseUint(vm.parseJsonString(testdata, ".expected.testBuyFt.output.netOut"));
-        // uint fee = vm.parseUint(vm.parseJsonString(testdata, ".expected.testBuyFt.output.fee"));
-        // StateChecker.OrderState memory expectedState = JSONLoader.getOrderStateFromJson(
-        //     testdata,
-        //     ".expected.testBuyFt.contractState"
-        // );
-        // vm.expectEmit();
-        // emit OrderEvents.SwapTokenToExactToken(
-        //     res.debt,
-        //     res.ft,
-        //     sender,
-        //     sender,
-        //     maxTokenIn,
-        //     ftOutAmt,
-        //     0
-        // );
+        uint actualIn = vm.parseUint(vm.parseJsonString(testdata, ".expected.testBuyExactFt.output.netOut"));
+        uint fee = vm.parseUint(vm.parseJsonString(testdata, ".expected.testBuyExactFt.output.fee"));
+        StateChecker.OrderState memory expectedState = JSONLoader.getOrderStateFromJson(
+            testdata,
+            ".expected.testBuyExactFt.contractState"
+        );
+        vm.expectEmit();
+        emit OrderEvents.SwapTokenToExactToken(
+            res.debt,
+            res.ft,
+            sender,
+            sender,
+            ftOutAmt,
+            uint128(actualIn),
+            uint128(fee)
+        );
         uint256 netIn = res.order.swapTokenToExactToken(res.debt, res.ft, sender, ftOutAmt, maxTokenIn);
 
-        // StateChecker.checkOrderState(res, expectedState);
+        StateChecker.checkOrderState(res, expectedState);
 
         assert(netIn < maxTokenIn);
         assert(res.ft.balanceOf(sender) == ftOutAmt);
@@ -353,25 +353,25 @@ contract OrderTest is Test {
         res.debt.mint(sender, maxTokenIn);
         res.debt.approve(address(res.order), maxTokenIn);
 
-        // uint actualOut = vm.parseUint(vm.parseJsonString(testdata, ".expected.testBuyFt.output.netOut"));
-        // uint fee = vm.parseUint(vm.parseJsonString(testdata, ".expected.testBuyFt.output.fee"));
-        // StateChecker.OrderState memory expectedState = JSONLoader.getOrderStateFromJson(
-        //     testdata,
-        //     ".expected.testBuyFt.contractState"
-        // );
-        // vm.expectEmit();
-        // emit OrderEvents.SwapTokenToExactToken(
-        //     res.debt,
-        //     res.ft,
-        //     sender,
-        //     sender,
-        //     maxTokenIn,
-        //     ftOutAmt,
-        //     0
-        // );
+        uint actualIn = vm.parseUint(vm.parseJsonString(testdata, ".expected.testBuyExactXt.output.netOut"));
+        uint fee = vm.parseUint(vm.parseJsonString(testdata, ".expected.testBuyExactXt.output.fee"));
+        StateChecker.OrderState memory expectedState = JSONLoader.getOrderStateFromJson(
+            testdata,
+            ".expected.testBuyExactXt.contractState"
+        );
+        vm.expectEmit();
+        emit OrderEvents.SwapTokenToExactToken(
+            res.debt,
+            res.xt,
+            sender,
+            sender,
+            xtOutAmt,
+            uint128(actualIn),
+            uint128(fee)
+        );
         uint256 netIn = res.order.swapTokenToExactToken(res.debt, res.xt, sender, xtOutAmt, maxTokenIn);
 
-        // StateChecker.checkOrderState(res, expectedState);
+        StateChecker.checkOrderState(res, expectedState);
 
         assert(netIn < maxTokenIn);
         assert(res.xt.balanceOf(sender) == xtOutAmt);
@@ -381,38 +381,80 @@ contract OrderTest is Test {
 
     function testSellFtForExactToken() public {
         vm.startPrank(sender);
-        uint128 debtTokenOutAmt = 80e8;
-        uint128 maxFtIn = 100e8;
-        res.debt.mint(sender, maxFtIn);
-        res.debt.approve(address(res.market), maxFtIn);
-        res.market.mint(sender, maxFtIn);
 
-        res.ft.approve(address(res.order), maxFtIn);
+        uint128 underlyingAmtInForBuyFt = 100e8;
+        uint128 minFtOut = 0e8;
+        res.debt.mint(sender, underlyingAmtInForBuyFt);
+        res.debt.approve(address(res.order), underlyingAmtInForBuyFt);
+        uint128 maxTokenIn = uint128(
+            res.order.swapExactTokenToToken(res.debt, res.ft, sender, underlyingAmtInForBuyFt, minFtOut)
+        );
+        uint128 debtOutAmt = 80e8;
+        res.ft.approve(address(res.order), maxTokenIn);
 
-        uint256 netIn = res.order.swapTokenToExactToken(res.ft, res.debt, sender, debtTokenOutAmt, maxFtIn);
+        uint actualIn = vm.parseUint(vm.parseJsonString(testdata, ".expected.testSellFtForExactToken.output.netOut"));
+        uint fee = vm.parseUint(vm.parseJsonString(testdata, ".expected.testSellFtForExactToken.output.fee"));
+        StateChecker.OrderState memory expectedState = JSONLoader.getOrderStateFromJson(
+            testdata,
+            ".expected.testSellFtForExactToken.contractState"
+        );
+        vm.expectEmit();
+        emit OrderEvents.SwapTokenToExactToken(
+            res.ft,
+            res.debt,
+            sender,
+            sender,
+            debtOutAmt,
+            uint128(actualIn),
+            uint128(fee)
+        );
+        uint256 netIn = res.order.swapTokenToExactToken(res.ft, res.debt, sender, debtOutAmt, maxTokenIn);
 
-        assert(netIn < maxFtIn);
-        assert(res.debt.balanceOf(sender) == debtTokenOutAmt);
-        assert(res.ft.balanceOf(sender) == maxFtIn - netIn);
+        StateChecker.checkOrderState(res, expectedState);
+
+        assert(netIn < maxTokenIn);
+        assert(res.debt.balanceOf(sender) == debtOutAmt);
+        assert(res.ft.balanceOf(sender) == maxTokenIn - netIn);
 
         vm.stopPrank();
     }
 
     function testSellXtForExactToken() public {
         vm.startPrank(sender);
-        uint128 debtTokenOutAmt = 5e8;
-        uint128 maxXtIn = 2000e8;
-        res.debt.mint(sender, maxXtIn);
-        res.debt.approve(address(res.market), maxXtIn);
-        res.market.mint(sender, maxXtIn);
 
-        res.xt.approve(address(res.order), maxXtIn);
+        uint128 underlyingAmtInForBuyXt = 5e8;
+        uint128 minFtOut = 0e8;
+        res.debt.mint(sender, underlyingAmtInForBuyXt);
+        res.debt.approve(address(res.order), underlyingAmtInForBuyXt);
+        uint128 maxTokenIn = uint128(
+            res.order.swapExactTokenToToken(res.debt, res.xt, sender, underlyingAmtInForBuyXt, minFtOut)
+        );
+        uint128 debtOutAmt = 3e8;
+        res.xt.approve(address(res.order), maxTokenIn);
 
-        uint256 netIn = res.order.swapTokenToExactToken(res.xt, res.debt, sender, debtTokenOutAmt, maxXtIn);
+        uint actualIn = vm.parseUint(vm.parseJsonString(testdata, ".expected.testSellXtForExactToken.output.netOut"));
+        uint fee = vm.parseUint(vm.parseJsonString(testdata, ".expected.testSellXtForExactToken.output.fee"));
+        StateChecker.OrderState memory expectedState = JSONLoader.getOrderStateFromJson(
+            testdata,
+            ".expected.testSellXtForExactToken.contractState"
+        );
+        vm.expectEmit();
+        emit OrderEvents.SwapTokenToExactToken(
+            res.xt,
+            res.debt,
+            sender,
+            sender,
+            debtOutAmt,
+            uint128(actualIn),
+            uint128(fee)
+        );
+        uint256 netIn = res.order.swapTokenToExactToken(res.xt, res.debt, sender, debtOutAmt, maxTokenIn);
 
-        assert(netIn < maxXtIn);
-        assert(res.debt.balanceOf(sender) == debtTokenOutAmt);
-        assert(res.xt.balanceOf(sender) == maxXtIn - netIn);
+        StateChecker.checkOrderState(res, expectedState);
+
+        assert(netIn < maxTokenIn);
+        assert(res.debt.balanceOf(sender) == debtOutAmt);
+        assert(res.xt.balanceOf(sender) == maxTokenIn - netIn);
 
         vm.stopPrank();
     }

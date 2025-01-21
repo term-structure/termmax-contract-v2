@@ -122,8 +122,8 @@ library TermMaxCurve {
         CurveCut[] memory cuts,
         uint oriXtReserve,
         uint outputAmount
-    ) internal pure returns (uint deltaFt) {
-        (, deltaFt) = cutsReverseIter(
+    ) internal pure returns (uint negDeltaXt, uint deltaFt) {
+        (negDeltaXt, deltaFt) = cutsReverseIter(
             netInterestFactor,
             daysToMaturity,
             cuts,
@@ -139,8 +139,8 @@ library TermMaxCurve {
         CurveCut[] memory cuts,
         uint oriXtReserve,
         uint outputAmount
-    ) internal pure returns (uint deltaXt) {
-        (deltaXt, ) = cutsForwardIter(
+    ) internal pure returns (uint deltaXt, uint negDeltaFt) {
+        (deltaXt, negDeltaFt) = cutsForwardIter(
             netInterestFactor,
             daysToMaturity,
             cuts,
@@ -379,8 +379,8 @@ library TermMaxCurve {
         CurveCut[] memory cuts,
         uint oriXtReserve,
         uint outputAmount
-    ) internal pure returns (uint deltaFt) {
-        (, deltaFt) = cutsReverseIter(
+    ) internal pure returns (uint negDeltaXt, uint deltaFt) {
+        (negDeltaXt, deltaFt) = cutsReverseIter(
             netInterestFactor,
             daysToMaturity,
             cuts,
@@ -395,8 +395,8 @@ library TermMaxCurve {
         CurveCut[] memory cuts,
         uint oriXtReserve,
         uint outputAmount
-    ) internal pure returns (uint deltaXt) {
-        (deltaXt, ) = cutsForwardIter(
+    ) internal pure returns (uint deltaXt, uint negDeltaFt) {
+        (deltaXt, negDeltaFt) = cutsForwardIter(
             netInterestFactor,
             daysToMaturity,
             cuts,
