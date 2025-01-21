@@ -54,33 +54,41 @@ library JSONLoader {
         orderConfig.maxXtReserve = vm.parseUint(vm.parseJsonString(testdataJSON, string.concat(key, ".maxXtReserve")));
         orderConfig.gtId = vm.parseUint(vm.parseJsonString(testdataJSON, string.concat(key, ".gtId")));
 
-        string memory curveCutsPath = string.concat(key, ".curveCuts");
+        {
+            string memory curveCutsPath = string.concat(key, ".borrowCurveCuts");
+            uint length = vm.parseUint(vm.parseJsonString(testdataJSON, string.concat(key, ".borrowCurveCuts.length")));
+            orderConfig.curveCuts.borrowCurveCuts = new CurveCut[](length);
 
-        uint length = vm.parseUint(vm.parseJsonString(testdataJSON, string.concat(key, ".curveCuts.length")));
-        orderConfig.curveCuts.borrowCurveCuts = new CurveCut[](length);
-        orderConfig.curveCuts.lendCurveCuts = new CurveCut[](length);
+            for (uint256 i = 0; i < length; i++) {
+                string memory indexPath = string.concat(curveCutsPath, ".", vm.toString(i));
+                orderConfig.curveCuts.borrowCurveCuts[i].xtReserve = vm.parseUint(
+                    vm.parseJsonString(testdataJSON, string.concat(indexPath, ".xtReserve"))
+                );
+                orderConfig.curveCuts.borrowCurveCuts[i].liqSquare = vm.parseUint(
+                    vm.parseJsonString(testdataJSON, string.concat(indexPath, ".liqSquare"))
+                );
+                orderConfig.curveCuts.borrowCurveCuts[i].offset = vm.parseUint(
+                    vm.parseJsonString(testdataJSON, string.concat(indexPath, ".offset"))
+                );
+            }
+        }
+        {
+            string memory curveCutsPath = string.concat(key, ".lendCurveCuts");
+            uint length = vm.parseUint(vm.parseJsonString(testdataJSON, string.concat(key, ".lendCurveCuts.length")));
+            orderConfig.curveCuts.lendCurveCuts = new CurveCut[](length);
 
-        for (uint256 i = 0; i < length; i++) {
-            string memory indexPath = string.concat(curveCutsPath, ".", vm.toString(i));
-            orderConfig.curveCuts.borrowCurveCuts[i].xtReserve = vm.parseUint(
-                vm.parseJsonString(testdataJSON, string.concat(indexPath, ".xtReserve"))
-            );
-            orderConfig.curveCuts.borrowCurveCuts[i].liqSquare = vm.parseUint(
-                vm.parseJsonString(testdataJSON, string.concat(indexPath, ".liqSquare"))
-            );
-            orderConfig.curveCuts.borrowCurveCuts[i].offset = vm.parseUint(
-                vm.parseJsonString(testdataJSON, string.concat(indexPath, ".offset"))
-            );
-
-            orderConfig.curveCuts.lendCurveCuts[i].xtReserve = vm.parseUint(
-                vm.parseJsonString(testdataJSON, string.concat(indexPath, ".xtReserve"))
-            );
-            orderConfig.curveCuts.lendCurveCuts[i].liqSquare = vm.parseUint(
-                vm.parseJsonString(testdataJSON, string.concat(indexPath, ".liqSquare"))
-            );
-            orderConfig.curveCuts.lendCurveCuts[i].offset = vm.parseUint(
-                vm.parseJsonString(testdataJSON, string.concat(indexPath, ".offset"))
-            );
+            for (uint256 i = 0; i < length; i++) {
+                string memory indexPath = string.concat(curveCutsPath, ".", vm.toString(i));
+                orderConfig.curveCuts.lendCurveCuts[i].xtReserve = vm.parseUint(
+                    vm.parseJsonString(testdataJSON, string.concat(indexPath, ".xtReserve"))
+                );
+                orderConfig.curveCuts.lendCurveCuts[i].liqSquare = vm.parseUint(
+                    vm.parseJsonString(testdataJSON, string.concat(indexPath, ".liqSquare"))
+                );
+                orderConfig.curveCuts.lendCurveCuts[i].offset = vm.parseUint(
+                    vm.parseJsonString(testdataJSON, string.concat(indexPath, ".offset"))
+                );
+            }
         }
     }
 

@@ -76,7 +76,7 @@ contract OrderTest is Test {
         uint128 underlyingAmtIn = 100e8;
         uint128 minTokenOut = 0e8;
         res.debt.mint(sender, underlyingAmtIn);
-        res.debt.approve(address(res.market), underlyingAmtIn);
+        res.debt.approve(address(res.order), underlyingAmtIn);
 
         uint actualOut = vm.parseUint(vm.parseJsonString(testdata, ".expected.testBuyFt.output.netOut"));
         uint fee = vm.parseUint(vm.parseJsonString(testdata, ".expected.testBuyFt.output.fee"));
