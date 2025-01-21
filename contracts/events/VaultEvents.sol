@@ -42,7 +42,7 @@ interface VaultEvents {
     );
     event RedeemOrder(address indexed caller, address indexed order, uint128 ftAmt, uint128 redeemedAmt);
 
-    event WithdrawIncentive(address indexed caller, address indexed recipient, uint256 amount);
+    event WithdrawPerformanceFee(address indexed caller, address indexed recipient, uint256 amount);
 
     event SubmitTimelock(uint256 newTimelock);
     event SetTimelock(address indexed caller, uint256 newTimelock);
