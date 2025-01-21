@@ -683,7 +683,7 @@ contract TermMaxOrder is
         uint nif = Constants.DECIMAL_BASE + uint(feeConfig.borrowTakerFeeRatio);
 
         (, uint deltaFt) = TermMaxCurve.sellFtForExactDebtToken(nif, daysToMaturity, cuts, oriXtReserve, debtTokenOut);
-        ftAmtIn = deltaFt;
+        ftAmtIn = deltaFt + debtTokenOut;
 
         feeAmt = deltaFt - (deltaFt * (Constants.DECIMAL_BASE - uint(feeConfig.lendMakerFeeRatio))) / nif;
         tokenIn = ft;
@@ -705,7 +705,7 @@ contract TermMaxOrder is
             oriXtReserve,
             debtTokenOut
         );
-        xtAmtIn = deltaXt;
+        xtAmtIn = deltaXt + debtTokenOut;
 
         feeAmt = (negDeltaFt * (Constants.DECIMAL_BASE + uint(feeConfig.borrowMakerFeeRatio))) / nif - negDeltaFt;
         tokenIn = xt;
