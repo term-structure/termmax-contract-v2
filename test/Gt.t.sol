@@ -51,6 +51,7 @@ contract GtTest is Test {
 
         marketConfig = JSONLoader.getMarketConfigFromJson(treasurer, testdata, ".marketConfig");
         orderConfig = JSONLoader.getOrderConfigFromJson(testdata, ".orderConfig");
+        orderConfig.maxXtReserve = type(uint128).max;
         res = DeployUtils.deployMarket(deployer, marketConfig, maxLtv, liquidationLtv);
 
         res.order = res.market.createOrder(
@@ -93,7 +94,7 @@ contract GtTest is Test {
 
         StateChecker.MarketState memory state = StateChecker.getMarketState(res);
 
-        uint issueFee = (debtAmt * marketConfig.feeConfig.issueFtFeeRatio) / Constants.DECIMAL_BASE;
+        uint issueFee = (debtAmt * res.market.issueFtFeeRatio()) / Constants.DECIMAL_BASE;
         vm.expectEmit();
         emit MarketEvents.IssueFt(
             sender,
@@ -806,12 +807,13 @@ contract GtTest is Test {
             gtId,
             liquidator,
             debtAmt,
+            true,
             abi.encode(cToLiquidator),
             abi.encode(cToTreasurer),
             abi.encode(remainningC)
         );
 
-        res.gt.liquidate(gtId, debtAmt);
+        res.gt.liquidate(gtId, debtAmt, true);
         state.collateralReserve -= collateralAmt;
         state.debtReserve += debtAmt;
         StateChecker.checkMarketState(res, state);
@@ -861,12 +863,13 @@ contract GtTest is Test {
             gtId,
             liquidator,
             debtAmt,
+            true,
             abi.encode(cToLiquidator),
             abi.encode(cToTreasurer),
             abi.encode(remainningC)
         );
 
-        res.gt.liquidate(gtId, debtAmt);
+        res.gt.liquidate(gtId, debtAmt, true);
         state.collateralReserve -= collateralAmt;
         state.debtReserve += debtAmt;
         StateChecker.checkMarketState(res, state);
@@ -916,16 +919,68 @@ contract GtTest is Test {
             gtId,
             liquidator,
             debtAmt,
+            true,
             abi.encode(cToLiquidator),
             abi.encode(cToTreasurer),
             abi.encode(remainningC)
         );
 
-        res.gt.liquidate(gtId, debtAmt);
+        res.gt.liquidate(gtId, debtAmt, true);
         state.collateralReserve -= collateralAmt;
         state.debtReserve += debtAmt;
         StateChecker.checkMarketState(res, state);
 
+        assert(res.collateral.balanceOf(marketConfig.treasurer) == cToTreasurer);
+        assert(res.collateral.balanceOf(liquidator) == cToLiquidator);
+        assert(res.collateral.balanceOf(sender) == remainningC + senderCBalanceBefore);
+        vm.stopPrank();
+    }
+
+    function testLiquidateByFt() public {
+        uint128 debtAmt = 1000e8;
+        uint256 collateralAmt = 1e18;
+
+        vm.startPrank(sender);
+
+        (uint256 gtId, ) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
+        vm.stopPrank();
+        vm.startPrank(deployer);
+        // update oracle
+        res.collateralOracle.updateRoundData(
+            JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_1000_DAI_1.eth")
+        );
+        res.debtOracle.updateRoundData(JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_1000_DAI_1.dai"));
+        vm.stopPrank();
+        address liquidator = vm.randomAddress();
+        vm.startPrank(liquidator);
+
+        res.debt.mint(liquidator, debtAmt);
+        res.debt.approve(address(res.market), debtAmt);
+        res.market.mint(liquidator, debtAmt);
+        res.ft.approve(address(res.gt), debtAmt);
+
+        uint senderCBalanceBefore = res.collateral.balanceOf(sender);
+        StateChecker.MarketState memory state = StateChecker.getMarketState(res);
+
+        vm.expectEmit();
+        uint cToLiquidator = collateralAmt;
+        uint cToTreasurer = 0;
+        uint remainningC = 0;
+        emit GearingTokenEvents.Liquidate(
+            gtId,
+            liquidator,
+            debtAmt,
+            false,
+            abi.encode(cToLiquidator),
+            abi.encode(cToTreasurer),
+            abi.encode(remainningC)
+        );
+
+        res.gt.liquidate(gtId, debtAmt, false);
+        state.collateralReserve -= collateralAmt;
+        StateChecker.checkMarketState(res, state);
+
+        assert(res.ft.balanceOf(address(res.market)) == debtAmt);
         assert(res.collateral.balanceOf(marketConfig.treasurer) == cToTreasurer);
         assert(res.collateral.balanceOf(liquidator) == cToLiquidator);
         assert(res.collateral.balanceOf(sender) == remainningC + senderCBalanceBefore);
@@ -970,12 +1025,13 @@ contract GtTest is Test {
             gtId,
             liquidator,
             repayAmt,
+            true,
             abi.encode(cToLiquidator),
             abi.encode(cToTreasurer),
             abi.encode(remainningC)
         );
 
-        res.gt.liquidate(gtId, repayAmt);
+        res.gt.liquidate(gtId, repayAmt, true);
         state.collateralReserve -= (cToLiquidator + cToTreasurer);
         state.debtReserve += repayAmt;
         StateChecker.checkMarketState(res, state);
@@ -1027,12 +1083,13 @@ contract GtTest is Test {
             gtId,
             liquidator,
             maxRepayAmt,
+            true,
             abi.encode(cToLiquidator),
             abi.encode(cToTreasurer),
             abi.encode(remainningC)
         );
 
-        res.gt.liquidate(gtId, maxRepayAmt);
+        res.gt.liquidate(gtId, maxRepayAmt, true);
         state.collateralReserve -= (cToLiquidator + cToTreasurer);
         state.debtReserve += maxRepayAmt;
         StateChecker.checkMarketState(res, state);
@@ -1088,12 +1145,13 @@ contract GtTest is Test {
             gtId,
             liquidator,
             debtAmt,
+            true,
             abi.encode(cToLiquidator),
             abi.encode(cToTreasurer),
             abi.encode(remainningC)
         );
 
-        res.gt.liquidate(gtId, debtAmt);
+        res.gt.liquidate(gtId, debtAmt, true);
         state.collateralReserve -= collateralAmt;
         state.debtReserve += debtAmt;
         StateChecker.checkMarketState(res, state);
@@ -1171,12 +1229,12 @@ contract GtTest is Test {
         res.debt.approve(address(res.gt), debtAmt);
 
         vm.expectRevert(abi.encodeWithSelector(IOracle.OracleIsNotWorking.selector, address(res.collateral)));
-        res.gt.liquidate(gtId, debtAmt);
+        res.gt.liquidate(gtId, debtAmt, true);
 
         vm.stopPrank();
         vm.warp(block.timestamp - 1);
         vm.prank(liquidator);
-        res.gt.liquidate(gtId, debtAmt);
+        res.gt.liquidate(gtId, debtAmt, true);
     }
 
     function testRevertByGtIsSafeWhenLiquidate() public {
@@ -1195,7 +1253,7 @@ contract GtTest is Test {
         res.debt.approve(address(res.gt), debtAmt);
 
         vm.expectRevert(abi.encodeWithSelector(GearingTokenErrors.GtIsSafe.selector, gtId));
-        res.gt.liquidate(gtId, debtAmt);
+        res.gt.liquidate(gtId, debtAmt, true);
 
         vm.stopPrank();
     }
@@ -1231,7 +1289,7 @@ contract GtTest is Test {
                 marketConfig.maturity + Constants.LIQUIDATION_WINDOW
             )
         );
-        res.gt.liquidate(gtId, debtAmt);
+        res.gt.liquidate(gtId, debtAmt, true);
     }
 
     function testRevertByRepayAmtExceedsMaxRepayAmt() public {
@@ -1262,7 +1320,7 @@ contract GtTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(GearingTokenErrors.RepayAmtExceedsMaxRepayAmt.selector, gtId, repayAmt, maxRepayAmt)
         );
-        res.gt.liquidate(gtId, repayAmt);
+        res.gt.liquidate(gtId, repayAmt, true);
 
         vm.stopPrank();
     }
@@ -1299,11 +1357,12 @@ contract GtTest is Test {
             gtId,
             liquidator,
             repayAmt,
+            true,
             abi.encode(cToLiquidator),
             abi.encode(cToTreasurer),
             abi.encode(remainningC)
         );
-        res.gt.liquidate(gtId, repayAmt);
+        res.gt.liquidate(gtId, repayAmt, true);
         if (repayAmt < debtAmt) {
             state.collateralReserve -= (cToLiquidator + cToTreasurer);
         } else {
@@ -1343,7 +1402,7 @@ contract GtTest is Test {
         res.debt.approve(address(res.gt), repayAmt);
 
         vm.expectRevert(abi.encodeWithSelector(GearingTokenErrors.DebtValueIsTooSmall.selector, debtAmt - repayAmt));
-        res.gt.liquidate(gtId, repayAmt);
+        res.gt.liquidate(gtId, repayAmt, true);
 
         vm.stopPrank();
     }

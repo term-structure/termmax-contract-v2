@@ -43,6 +43,7 @@ interface GearingTokenEvents {
         uint256 indexed id,
         address indexed liquidator,
         uint128 repayAmt,
+        bool byDebtToken,
         bytes cToLiquidator,
         bytes cToTreasurer,
         bytes remainningC

@@ -71,9 +71,19 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
 
     function asset() public view virtual returns (address);
 
+    /**
+     * @inheritdoc ITermMaxVault
+     */
     function apr() public view override returns (uint256) {
         return (annualizedInterest * Constants.DECIMAL_BASE) / (accretingPrincipal + performanceFee);
     }
+
+    function dealBadDebt(
+        address collaretal,
+        uint256 badDebtAmt,
+        address recipient,
+        address owner
+    ) external virtual returns (uint256 shares, uint256 collaretalOut);
 
     function createOrder(
         ITermMaxMarket market,
@@ -95,7 +105,7 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
 
     function redeemOrder(ITermMaxOrder order) external virtual;
 
-    function withdrawIncentive(address recipient, uint256 amount) external virtual;
+    function withdrawPerformanceFee(address recipient, uint256 amount) external virtual;
 
     function _createOrder(
         ITermMaxMarket market,
@@ -128,8 +138,36 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
             maxSupply: maxSupply.toUint128(),
             maturity: orderMaturity
         });
-        if (recentestMaturity == 0 || orderMaturity < recentestMaturity) recentestMaturity = orderMaturity;
+        _insertMaturity(orderMaturity);
+
         emit CreateOrder(msg.sender, address(market), address(order), maxSupply, initialReserve, curveCuts);
+    }
+
+    function _insertMaturity(uint64 maturity) internal {
+        uint64 priorMaturity = recentestMaturity;
+        if (recentestMaturity == 0) {
+            recentestMaturity = maturity;
+            return;
+        } else if (maturity < priorMaturity) {
+            recentestMaturity = maturity;
+            maturityMapping[maturity] = priorMaturity;
+            return;
+        }
+
+        uint64 nextMaturity = maturityMapping[priorMaturity];
+        while (nextMaturity > 0) {
+            if (maturity < nextMaturity) {
+                maturityMapping[maturity] = nextMaturity;
+                if (priorMaturity > 0) maturityMapping[priorMaturity] = maturity;
+                return;
+            } else if (maturity == nextMaturity) {
+                break;
+            } else {
+                priorMaturity = nextMaturity;
+                nextMaturity = maturityMapping[priorMaturity];
+            }
+        }
+        maturityMapping[priorMaturity] = maturity;
     }
 
     /// @notice Update order curve cuts and reserves
@@ -242,23 +280,29 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
         accretingPrincipal -= amount;
     }
 
-    function _withdrawIncentive(address recipient, uint256 amount) internal {
+    function _withdrawPerformanceFee(address recipient, uint256 amount) internal {
         if (amount > performanceFee) revert InsufficientFunds(performanceFee, amount);
         IERC20(asset()).safeTransfer(recipient, amount);
         performanceFee -= amount;
         totalFt -= amount;
 
-        emit WithdrawIncentive(msg.sender, recipient, amount);
+        emit WithdrawPerformanceFee(msg.sender, recipient, amount);
     }
 
-    function _dealBadDebt(address recipient, address collaretal, uint256 amount) internal {
+    function _dealBadDebt(
+        address recipient,
+        address collaretal,
+        uint256 amount
+    ) internal returns (uint256 collateralOut) {
         uint badDebtAmt = badDebtMapping[collaretal];
         if (badDebtAmt == 0) revert NoBadDebt(collaretal);
         if (amount > badDebtAmt) revert InsufficientFunds(badDebtAmt, amount);
         uint collateralBalance = IERC20(collaretal).balanceOf(address(this));
-        uint collateralOut = (amount * collateralBalance) / badDebtAmt;
+        collateralOut = (amount * collateralBalance) / badDebtAmt;
         IERC20(collaretal).safeTransfer(recipient, collateralOut);
         badDebtMapping[collaretal] -= amount;
+        accretingPrincipal -= amount;
+        totalFt -= amount;
     }
 
     function _burnFromOrder(ITermMaxOrder order, OrderInfo memory orderInfo, uint256 amount) internal {
@@ -330,12 +374,7 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
         uint ftReserve = orderInfo.ft.balanceOf(order);
         ITermMaxOrder(order).withdrawAssets(orderInfo.ft, address(this), ftReserve);
         orderInfo.ft.safeIncreaseAllowance(address(orderInfo.market), ftReserve);
-
-        IERC20 assetToken = IERC20(asset());
-        uint totalAsset = assetToken.balanceOf(address(this));
-        orderInfo.market.redeem(ftReserve, address(this));
-        totalRedeem = assetToken.balanceOf(address(this)) - totalAsset;
-
+        totalRedeem = orderInfo.market.redeem(ftReserve, address(this));
         if (totalRedeem < ftReserve) {
             // storage bad debt
             (, , , address collateral, ) = orderInfo.market.tokens();
@@ -365,7 +404,6 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
         if (lastTime == 0) {
             lastTime = now;
         }
-
         while (now >= recentMaturity && recentMaturity != 0) {
             _accruedPeriodInterest(lastTime, recentMaturity);
             lastTime = recentMaturity;
@@ -374,7 +412,6 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
             // update anualized interest
             annualizedInterest -= maturityToInterest[recentMaturity];
             delete maturityToInterest[recentMaturity];
-
             recentMaturity = nextMaturity;
         }
         if (recentMaturity > 0) {

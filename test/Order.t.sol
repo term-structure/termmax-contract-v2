@@ -553,9 +553,9 @@ contract OrderTest is Test {
         vm.stopPrank();
     }
 
-    // function testSwapWithCallback(uint128 swapAmt, bool isBuy, bool isFt) public {
-    //     vm.assume(swapAmt > 0 && swapAmt < 1e8);
-    function testSwapWithCallback() public {
+    function testSwapWithCallback(uint128 swapAmt, bool isBuy, bool isFt) public {
+        vm.assume(swapAmt > 0 && swapAmt < 0.1e8);
+
         // Deploy mock callback contract
         MockSwapCallback callback = new MockSwapCallback();
 
@@ -563,12 +563,11 @@ contract OrderTest is Test {
         vm.startPrank(maker);
         res.order.updateOrder(orderConfig, 0, 0);
 
-        res.debt.mint(maker, 150e18);
-        res.debt.approve(address(res.market), 150e18);
-        res.market.mint(address(res.order), 150e18);
+        res.debt.mint(maker, 150e8);
+        res.debt.approve(address(res.market), 150e8);
+        res.market.mint(address(res.order), 150e8);
         vm.stopPrank();
 
-        uint128 swapAmt = 1000e8;
         bool isBuy = true;
         bool isFt = false;
 
@@ -586,15 +585,6 @@ contract OrderTest is Test {
         } else if (!isBuy && !isFt) {
             apr = borrowApr;
         }
-        uint daysToMaturity = (maturity - current + 86400 - 1) / 86400;
-        console.log("apr", apr);
-        console.log("daysToMaturity", daysToMaturity);
-        uint interestRate = (apr * daysToMaturity) / 365;
-        console.log("interestRate", interestRate);
-        uint xtPrice = (10 ** res.debt.decimals() * interestRate) / Constants.DECIMAL_BASE;
-        console.log("xtPrice", xtPrice);
-        uint maxBuyAmt = (swapAmt * (10 ** res.xt.decimals())) / xtPrice;
-        console.log("maxBuyAmt", maxBuyAmt);
 
         vm.startPrank(sender);
 

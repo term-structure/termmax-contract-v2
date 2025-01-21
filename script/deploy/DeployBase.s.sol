@@ -83,9 +83,8 @@ contract DeployBase is Script {
         address faucetAddr,
         string memory deployDataPath,
         address adminAddr,
-        address priceFeedOperatorAddr,
-        uint64 openTimeDelay
-    ) public returns (TermMaxMarket[] memory markets) {
+        address priceFeedOperatorAddr
+    ) public returns (TermMaxMarket[] memory markets, JsonLoader.Config[] memory configs) {
         ITermMaxFactory factory = ITermMaxFactory(factoryAddr);
         IOracle oracle = IOracle(oracleAddr);
         ITermMaxRouter router = ITermMaxRouter(routerAddr);
@@ -93,7 +92,7 @@ contract DeployBase is Script {
 
         string memory deployData = vm.readFile(deployDataPath);
 
-        JsonLoader.Config[] memory configs = JsonLoader.getConfigsFromJson(deployData);
+        configs = JsonLoader.getConfigsFromJson(deployData);
 
         markets = new TermMaxMarket[](configs.length);
 
@@ -128,6 +127,10 @@ contract DeployBase is Script {
                     })
                 );
                 collateralPriceFeed.transferOwnership(priceFeedOperatorAddr);
+                oracle.setOracle(
+                    address(collateral),
+                    IOracle.Oracle(collateralPriceFeed, collateralPriceFeed, 365 days)
+                );
             } else {
                 collateral = FaucetERC20(faucet.getTokenConfig(tokenId).tokenAddr);
                 collateralPriceFeed = MockPriceFeed(faucet.getTokenConfig(tokenId).priceFeedAddr);
@@ -156,6 +159,10 @@ contract DeployBase is Script {
                     })
                 );
                 underlyingPriceFeed.transferOwnership(priceFeedOperatorAddr);
+                oracle.setOracle(
+                    address(underlying),
+                    IOracle.Oracle(underlyingPriceFeed, underlyingPriceFeed, 365 days)
+                );
             } else {
                 underlying = FaucetERC20(faucet.getTokenConfig(tokenId).tokenAddr);
                 underlyingPriceFeed = MockPriceFeed(faucet.getTokenConfig(tokenId).priceFeedAddr);
@@ -193,7 +200,7 @@ contract DeployBase is Script {
                 tokenSymbol: config.marketSymbol
             });
 
-            TermMaxMarket market = TermMaxMarket(factory.createMarket(GT_ERC20, initialParams, 0));
+            TermMaxMarket market = TermMaxMarket(factory.createMarket(GT_ERC20, initialParams, config.salt));
             markets[i] = market;
             router.setMarketWhitelist(address(market), true);
         }

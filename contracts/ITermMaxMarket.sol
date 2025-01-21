@@ -82,7 +82,7 @@ interface ITermMaxMarket {
     /// @notice Redeem underlying tokens after maturity
     /// @param ftAmount The amount of FT want to redeem
     /// @param recipient Who will receive the underlying tokens
-    function redeem(uint256 ftAmount, address recipient) external;
+    function redeem(uint256 ftAmount, address recipient) external returns (uint256 debtTokenAmt);
 
     /// @notice Set the configuration of Gearing Token
     function updateGtConfig(bytes memory configData) external;

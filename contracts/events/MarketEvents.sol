@@ -5,14 +5,20 @@ import {IGearingToken} from "../tokens/IGearingToken.sol";
 import {ITermMaxOrder} from "../ITermMaxOrder.sol";
 import {MarketConfig} from "../storage/TermMaxStorage.sol";
 
+/**
+ * @title Market Events Interface
+ * @notice Events emitted by the TermMax market operations
+ */
 interface MarketEvents {
-    /// @notice Emitted when market initialized
-    /// @param collateral Collateral token
-    /// @param underlying Underlying token
-    /// @param maturity The unix time of maturity date
-    /// @param ft TermMax Market FT
-    /// @param xt TermMax Market XT
-    /// @param gt Gearing token
+    /**
+     * @notice Emitted when a market is initialized
+     * @param collateral The collateral token address
+     * @param underlying The underlying token address
+     * @param maturity The unix timestamp of the maturity date
+     * @param ft The TermMax Market FT token
+     * @param xt The TermMax Market XT token
+     * @param gt The Gearing token
+     */
     event MarketInitialized(
         address indexed collateral,
         IERC20 indexed underlying,
@@ -22,19 +28,36 @@ interface MarketEvents {
         IGearingToken gt
     );
 
-    /// @notice Emitted when market config is updated
+    /**
+     * @notice Emitted when the market configuration is updated
+     * @param config The new market configuration
+     */
     event UpdateMarketConfig(MarketConfig config);
 
+    /**
+     * @notice Emitted when tokens are minted
+     * @param caller The address initiating the mint
+     * @param receiver The address receiving the minted tokens
+     * @param amount The amount of tokens minted
+     */
     event Mint(address indexed caller, address indexed receiver, uint256 amount);
 
+    /**
+     * @notice Emitted when tokens are burned
+     * @param caller The address initiating the burn
+     * @param receiver The address whose tokens are burned
+     * @param amount The amount of tokens burned
+     */
     event Burn(address indexed caller, address indexed receiver, uint256 amount);
 
-    /// @notice Emitted when doing leverage
-    /// @param loanReceiver Who call the function
-    /// @param gtReceiver Who receive the Gearing Token
-    /// @param gtId The id of Gearing Token
-    /// @param debtAmt The amount of debt, unit by underlying token
-    /// @param collateralData The encoded data of collateral
+    /**
+     * @notice Emitted when a leveraged position is created
+     * @param loanReceiver The address receiving the loan
+     * @param gtReceiver The address receiving the Gearing Token
+     * @param gtId The ID of the Gearing Token
+     * @param debtAmt The amount of debt in underlying token
+     * @param collateralData The encoded collateral data
+     */
     event MintGt(
         address indexed loanReceiver,
         address indexed gtReceiver,
@@ -43,14 +66,16 @@ interface MarketEvents {
         bytes collateralData
     );
 
-    /// @notice Emitted when issuing FT by collateral
-    /// @param caller Who call the function
-    /// @param recipient Who receive the tokens
-    /// @param gtId The id of Gearing Token
-    /// @param debtAmt The amount of debt, unit by underlying token
-    /// @param ftAmt The amount of FT issued
-    /// @param issueFee The amount of issuing fee, unit by FT token
-    /// @param collateralData The encoded data of collateral
+    /**
+     * @notice Emitted when FT is issued using collateral
+     * @param caller The address initiating the issuance
+     * @param recipient The address receiving the FT
+     * @param gtId The ID of the Gearing Token
+     * @param debtAmt The amount of debt in underlying token
+     * @param ftAmt The amount of FT issued
+     * @param issueFee The amount of issuing fee, unit by FT token
+     * @param collateralData The encoded collateral data
+     */
     event IssueFt(
         address indexed caller,
         address indexed recipient,
@@ -61,13 +86,15 @@ interface MarketEvents {
         bytes collateralData
     );
 
-    /// @notice Emitted when issuing FT by existed Gearing Token
-    /// @param caller Who call the function
-    /// @param recipient Who receive the tokens
-    /// @param gtId The id of Gearing Token
-    /// @param debtAmt The amount of debt, unit by underlying token
-    /// @param ftAmt The amount of FT issued
-    /// @param issueFee The amount of issuing fee, unit by FT token
+    /**
+     * @notice Emitted when FT is issued using existed Gearing Token
+     * @param caller The address initiating the issuance
+     * @param recipient The address receiving the FT
+     * @param gtId The ID of the Gearing Token
+     * @param debtAmt The amount of debt in underlying token
+     * @param ftAmt The amount of FT issued
+     * @param issueFee The amount of issuing fee, unit by FT token
+     */
     event IssueFtByExistedGt(
         address indexed caller,
         address indexed recipient,
@@ -77,14 +104,16 @@ interface MarketEvents {
         uint128 issueFee
     );
 
-    /// @notice Emitted when redeeming tokens
-    /// @param caller Who call the function
-    /// @param recipient Who receive the tokens
-    /// @param proportion The proportion of underlying token and collateral should be deliveried
-    ///                   base 1e16 decimals
-    /// @param underlyingAmt The amount of underlying received
-    /// @param feeAmt Redeemming Fees
-    /// @param deliveryData The encoded data of collateral received
+    /**
+     * @notice Emitted when tokens are redeemed
+     * @param caller The address initiating the redemption
+     * @param recipient The address receiving the redeemed tokens
+     * @param proportion The proportion of underlying token and collateral should be deliveried
+     *                   base 1e16 decimals
+     * @param underlyingAmt The amount of underlying received
+     * @param feeAmt Redeemming Fees
+     * @param deliveryData The encoded data of collateral received
+     */
     event Redeem(
         address indexed caller,
         address indexed recipient,
@@ -94,8 +123,10 @@ interface MarketEvents {
         bytes deliveryData
     );
 
-    /// @notice Emitted when creating an order
-    /// @param maker The maker of the order
-    /// @param order The order
+    /**
+     * @notice Emitted when an order is created
+     * @param maker The maker of the order
+     * @param order The order
+     */
     event CreateOrder(address indexed maker, ITermMaxOrder indexed order);
 }

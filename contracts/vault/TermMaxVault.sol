@@ -14,8 +14,10 @@ import {ITermMaxRouter} from "../router/ITermMaxRouter.sol";
 import {ITermMaxOrder} from "../ITermMaxOrder.sol";
 import {VaultConstants} from "../lib/VaultConstants.sol";
 import {TransferUtils} from "../lib/TransferUtils.sol";
-import {BaseVault} from "./BaseVault.sol";
+import {ITermMaxVault, BaseVault} from "./BaseVault.sol";
 import {Constants} from "../lib/Constants.sol";
+
+import {console} from "forge-std/console.sol";
 
 contract TermMaxVault is Ownable2Step, ReentrancyGuard, BaseVault, ERC4626 {
     using SafeCast for uint256;
@@ -98,15 +100,21 @@ contract TermMaxVault is Ownable2Step, ReentrancyGuard, BaseVault, ERC4626 {
     }
 
     // BaseVault functions
+    /**
+     * @inheritdoc ITermMaxVault
+     */
     function createOrder(
         ITermMaxMarket market,
         uint256 maxSupply,
         uint256 initialReserve,
         CurveCuts memory curveCuts
-    ) external override onlyCuratorRole returns (ITermMaxOrder order) {
+    ) external override onlyCuratorRole marketIsWhitelisted(address(market)) returns (ITermMaxOrder order) {
         return _createOrder(ITermMaxMarket(market), maxSupply, initialReserve, curveCuts);
     }
 
+    /**
+     * @inheritdoc ITermMaxVault
+     */
     function updateOrders(
         ITermMaxOrder[] memory orders,
         int256[] memory changes,
@@ -127,13 +135,19 @@ contract TermMaxVault is Ownable2Step, ReentrancyGuard, BaseVault, ERC4626 {
         _updateWithdrawQueue(indexes);
     }
 
+    /**
+     * @inheritdoc ITermMaxVault
+     */
     function redeemOrder(ITermMaxOrder order) external override onlyCuratorRole {
         _redeemFromMarket(address(order), orderMapping[address(order)]);
     }
 
-    function withdrawIncentive(address recipient, uint256 amount) external override onlyCuratorRole {
+    /**
+     * @inheritdoc ITermMaxVault
+     */
+    function withdrawPerformanceFee(address recipient, uint256 amount) external override onlyCuratorRole {
         _accruedInterest();
-        _withdrawIncentive(recipient, amount);
+        _withdrawPerformanceFee(recipient, amount);
     }
 
     // ERC4626 functions
@@ -159,12 +173,17 @@ contract TermMaxVault is Ownable2Step, ReentrancyGuard, BaseVault, ERC4626 {
     /**
      * @dev Deposit/mint common workflow.
      */
-    function _deposit(address caller, address receiver, uint256 assets, uint256 shares) internal override nonReentrant {
+    function _deposit(
+        address caller,
+        address recipient,
+        uint256 assets,
+        uint256 shares
+    ) internal override nonReentrant {
         IERC20(asset()).safeTransferFrom(caller, address(this), assets);
         _accruedInterest();
-        _mint(receiver, shares);
+        _mint(recipient, shares);
         _depositAssets(assets);
-        emit Deposit(caller, receiver, assets, shares);
+        emit Deposit(caller, recipient, assets, shares);
     }
 
     /**
@@ -186,6 +205,31 @@ contract TermMaxVault is Ownable2Step, ReentrancyGuard, BaseVault, ERC4626 {
         _withdrawAssets(receiver, assets);
 
         emit Withdraw(caller, receiver, owner, assets, shares);
+    }
+
+    function dealBadDebt(
+        address collaretal,
+        uint256 badDebtAmt,
+        address recipient,
+        address owner
+    ) external override nonReentrant returns (uint256 shares, uint256 collaretalOut) {
+        address caller = msg.sender;
+        shares = previewWithdraw(badDebtAmt);
+        uint256 maxShares = maxRedeem(owner);
+        if (shares > maxShares) {
+            revert ERC4626ExceededMaxMint(recipient, shares, maxShares);
+        }
+
+        if (caller != owner) {
+            _spendAllowance(owner, caller, shares);
+        }
+
+        _accruedInterest();
+        _burn(owner, shares);
+
+        collaretalOut = _dealBadDebt(recipient, collaretal, badDebtAmt);
+
+        emit DealBadDebt(caller, recipient, collaretal, badDebtAmt, shares, collaretalOut);
     }
 
     // Guardian functions

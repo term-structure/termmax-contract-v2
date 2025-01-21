@@ -42,16 +42,18 @@ contract VaultTest is Test {
 
     uint timelock = 86400;
     uint maxCapacity = 1000000e18;
-    uint64 maxTerm = 90 days;
+    uint64 maxTerm = 180 days;
     uint64 performanceFeeRate = 0.5e8;
 
+    ITermMaxMarket market2;
+
     uint currentTime;
+    uint32 maxLtv = 0.89e8;
+    uint32 liquidationLtv = 0.9e8;
 
     function setUp() public {
         vm.startPrank(deployer);
         testdata = vm.readFile(string.concat(vm.projectRoot(), "/test/testdata/testdata.json"));
-        uint32 maxLtv = 0.89e8;
-        uint32 liquidationLtv = 0.9e8;
 
         currentTime = vm.parseUint(vm.parseJsonString(testdata, ".currentTime"));
         vm.warp(currentTime);
@@ -60,6 +62,30 @@ contract VaultTest is Test {
         orderConfig = JSONLoader.getOrderConfigFromJson(testdata, ".orderConfig");
         marketConfig.maturity = uint64(currentTime + 90 days);
         res = DeployUtils.deployMockMarket(deployer, marketConfig, maxLtv, liquidationLtv);
+        MarketConfig memory marketConfig2 = JSONLoader.getMarketConfigFromJson(treasurer, testdata, ".marketConfig");
+        marketConfig2.maturity = uint64(currentTime + 180 days);
+        market2 = ITermMaxMarket(
+            res.factory.createMarket(
+                DeployUtils.GT_ERC20,
+                MarketInitialParams({
+                    collateral: address(res.collateral),
+                    debtToken: res.debt,
+                    admin: deployer,
+                    gtImplementation: address(0),
+                    marketConfig: marketConfig2,
+                    loanConfig: LoanConfig({
+                        maxLtv: maxLtv,
+                        liquidationLtv: liquidationLtv,
+                        liquidatable: true,
+                        oracle: res.oracle
+                    }),
+                    gtInitalParams: abi.encode(type(uint256).max),
+                    tokenName: "test",
+                    tokenSymbol: "test"
+                }),
+                0
+            )
+        );
 
         // update oracle
         res.collateralOracle.updateRoundData(
@@ -86,9 +112,14 @@ contract VaultTest is Test {
             )
         );
         vault.submitGuardian(guardian);
+        vault.setIsAllocator(allocator, true);
 
         vault.submitMarket(address(res.market), true);
-        vault.setIsAllocator(allocator, true);
+        vault.submitMarket(address(market2), true);
+        vm.warp(currentTime + timelock + 1);
+        vault.acceptMarket(address(res.market));
+        vault.acceptMarket(address(market2));
+        vm.warp(currentTime);
 
         res.debt.mint(deployer, amount);
         res.debt.approve(address(vault), amount);
@@ -190,6 +221,51 @@ contract VaultTest is Test {
         vm.expectRevert(VaultErrors.AlreadyPending.selector);
         vault.submitMarket(market, false);
 
+        vm.stopPrank();
+    }
+
+    function testFail_CreateOrder() public {
+        ITermMaxMarket market = ITermMaxMarket(address(0x123));
+        address bob = lper;
+        vm.startPrank(bob);
+
+        vm.expectRevert(VaultErrors.NotCuratorRole.selector);
+        vault.createOrder(market, maxCapacity, 0, orderConfig.curveCuts);
+
+        vm.stopPrank();
+
+        vm.startPrank(curator);
+        vm.expectRevert(VaultErrors.MarketNotWhitelisted.selector);
+        vault.createOrder(market, maxCapacity, 0, orderConfig.curveCuts);
+        marketConfig.maturity = uint64(currentTime + 360 days);
+        ITermMaxMarket market3 = ITermMaxMarket(
+            res.factory.createMarket(
+                DeployUtils.GT_ERC20,
+                MarketInitialParams({
+                    collateral: address(res.collateral),
+                    debtToken: res.debt,
+                    admin: deployer,
+                    gtImplementation: address(0),
+                    marketConfig: marketConfig,
+                    loanConfig: LoanConfig({
+                        maxLtv: maxLtv,
+                        liquidationLtv: liquidationLtv,
+                        liquidatable: true,
+                        oracle: res.oracle
+                    }),
+                    gtInitalParams: abi.encode(type(uint256).max),
+                    tokenName: "test",
+                    tokenSymbol: "test"
+                }),
+                0
+            )
+        );
+        vault.submitMarket(address(market3), true);
+        vm.warp(currentTime + timelock + 1);
+        vault.acceptMarket(address(market3));
+
+        vm.expectRevert(VaultErrors.MarketIsLaterThanMaxTerm.selector);
+        vault.createOrder(market3, maxCapacity, 0, orderConfig.curveCuts);
         vm.stopPrank();
     }
 
@@ -531,7 +607,6 @@ contract VaultTest is Test {
         vm.warp(currentTime + 6 days);
         console.log("new principal:", vault.totalAssets());
         vm.startPrank(lper2);
-        vault.approve(address(vault), 1000e8);
         console.log("previewRedeem: ", vault.previewRedeem(1000e8));
         assertEq(vault.previewRedeem(1000e8), vault.redeem(1000e8, lper2, lper2));
         console.log("principal after redeem:", vault.totalAssets());
@@ -544,12 +619,12 @@ contract VaultTest is Test {
         vm.warp(currentTime + 91 days);
         console.log("new principal:", vault.totalAssets());
         console.log("previewRedeem: ", vault.previewRedeem(1000e8));
+        console.log("redeem fee ratio:", res.market.config().feeConfig.redeemFeeRatio);
 
         console.log("----day 92----");
         vm.warp(currentTime + 92 days);
         console.log("new principal:", vault.totalAssets());
         vm.startPrank(lper2);
-        vault.approve(address(vault), 1000e8);
         console.log("previewRedeem: ", vault.previewRedeem(1000e8));
         assertEq(vault.previewRedeem(1000e8), vault.redeem(1000e8, lper2, lper2));
         console.log("principal after redeem:", vault.totalAssets());
@@ -587,6 +662,141 @@ contract VaultTest is Test {
         vm.stopPrank();
     }
 
+    function testRedeemFromMarket() public {
+        vm.warp(currentTime + 2 days);
+        buyXt(48.219178e8, 1000e8);
+
+        vm.warp(currentTime + 3 days);
+        address lper2 = vm.randomAddress();
+        uint256 amount2 = 10000e8;
+        res.debt.mint(lper2, amount2);
+        vm.startPrank(lper2);
+        res.debt.approve(address(vault), amount2);
+        vault.deposit(amount2, lper2);
+        vm.stopPrank();
+
+        vm.startPrank(curator);
+        address order2 = address(vault.createOrder(market2, maxCapacity, 0, orderConfig.curveCuts));
+        uint[] memory indexes = new uint[](2);
+        indexes[0] = 1;
+        indexes[1] = 0;
+        vault.updateSupplyQueue(indexes);
+
+        res.debt.mint(curator, 10000e8);
+        res.debt.approve(address(vault), 10000e8);
+        vault.deposit(10000e8, curator);
+
+        vm.stopPrank();
+
+        vm.warp(currentTime + 92 days);
+
+        vm.startPrank(lper2);
+
+        vault.redeem(1000e8, lper2, lper2);
+        vm.stopPrank();
+
+        uint performanceFee = vault.performanceFee();
+        vm.prank(curator);
+        vault.withdrawPerformanceFee(curator, performanceFee);
+
+        assertEq(vault.performanceFee(), 0);
+        assertEq(vault.annualizedInterest(), 0);
+        assertEq(vault.supplyQueueLength(), 1);
+        assertEq(vault.supplyQueue(0), order2);
+        assertEq(vault.withdrawQueueLength(), 1);
+        assertEq(vault.withdrawQueue(0), order2);
+
+        vm.warp(currentTime + 182 days);
+        vm.prank(lper2);
+        vault.redeem(1000e8, lper2, lper2);
+
+        vm.prank(curator);
+        vault.redeemOrder(ITermMaxOrder(order2));
+
+        assertEq(vault.performanceFee(), 0);
+        assertEq(vault.annualizedInterest(), 0);
+        assertEq(vault.supplyQueueLength(), 0);
+        assertEq(vault.withdrawQueueLength(), 0);
+    }
+
+    function testRedeemFromMarket2() public {
+        vm.warp(currentTime + 2 days);
+        buyXt(48.219178e8, 1000e8);
+
+        vm.warp(currentTime + 3 days);
+        address lper2 = vm.randomAddress();
+        uint256 amount2 = 10000e8;
+        res.debt.mint(lper2, amount2);
+        vm.startPrank(lper2);
+        res.debt.approve(address(vault), amount2);
+        vault.deposit(amount2, lper2);
+        vm.stopPrank();
+
+        vm.startPrank(curator);
+        address order2 = address(vault.createOrder(market2, maxCapacity, 0, orderConfig.curveCuts));
+        uint[] memory indexes = new uint[](2);
+        indexes[0] = 1;
+        indexes[1] = 0;
+        vault.updateSupplyQueue(indexes);
+
+        res.debt.mint(curator, 10000e8);
+        res.debt.approve(address(vault), 10000e8);
+        vault.deposit(10000e8, curator);
+
+        vm.stopPrank();
+
+        (IERC20 ft, IERC20 xt, , , ) = market2.tokens();
+
+        vm.warp(currentTime + 4 days);
+        {
+            address taker = vm.randomAddress();
+            uint128 tokenAmtIn = 50e8;
+            res.debt.mint(taker, tokenAmtIn);
+            vm.startPrank(taker);
+            res.debt.approve(address(order2), tokenAmtIn);
+            ITermMaxOrder(order2).swapExactTokenToToken(res.debt, xt, taker, tokenAmtIn, 1000e8);
+            vm.stopPrank();
+        }
+
+        vm.warp(currentTime + 92 days);
+
+        {
+            address taker = vm.randomAddress();
+            uint128 tokenAmtIn = 50e8;
+            res.debt.mint(taker, tokenAmtIn);
+            vm.startPrank(taker);
+            res.debt.approve(address(order2), tokenAmtIn);
+            ITermMaxOrder(order2).swapExactTokenToToken(res.debt, xt, taker, tokenAmtIn, 1000e8);
+            vm.stopPrank();
+        }
+
+        vm.prank(lper2);
+        vault.redeem(100e8, lper2, lper2);
+
+        uint performanceFee = vault.performanceFee();
+        vm.prank(curator);
+        vault.withdrawPerformanceFee(curator, performanceFee);
+
+        assertEq(vault.performanceFee(), 0);
+        assertGt(vault.annualizedInterest(), 0);
+        assertEq(vault.supplyQueueLength(), 1);
+        assertEq(vault.supplyQueue(0), order2);
+        assertEq(vault.withdrawQueueLength(), 1);
+        assertEq(vault.withdrawQueue(0), order2);
+
+        vm.warp(currentTime + 182 days);
+        vm.prank(lper2);
+        vault.redeem(100e8, lper2, lper2);
+
+        vm.prank(curator);
+        vault.redeemOrder(ITermMaxOrder(order2));
+
+        assertGt(vault.performanceFee(), 0);
+        assertEq(vault.annualizedInterest(), 0);
+        assertEq(vault.supplyQueueLength(), 0);
+        assertEq(vault.withdrawQueueLength(), 0);
+    }
+
     function testBadDebt() public {
         vm.warp(currentTime + 2 days);
         buyXt(48.219178e8, 1000e8);
@@ -610,10 +820,9 @@ contract VaultTest is Test {
         uint totalAssets = vault.totalAssets();
         uint propotion = (res.ft.balanceOf(address(res.order)) * Constants.DECIMAL_BASE_SQ) /
             (res.ft.totalSupply() - res.ft.balanceOf(address(res.market)));
-        console.log(res.ft.balanceOf(address(res.order)));
-        console.log(res.ft.totalSupply() - res.ft.balanceOf(address(res.market)));
-        console.log("propotion:", propotion);
-        uint badDebt = (res.ft.balanceOf(address(res.order)) * propotion) / Constants.DECIMAL_BASE_SQ;
+
+        uint tokenOut = (res.debt.balanceOf(address(res.market)) * propotion) / Constants.DECIMAL_BASE_SQ;
+        uint badDebt = res.ft.balanceOf(address(res.order)) - tokenOut;
         uint delivered = (propotion * 1e18) / Constants.DECIMAL_BASE_SQ;
 
         vm.startPrank(lper2);
@@ -622,6 +831,68 @@ contract VaultTest is Test {
 
         assertEq(vault.badDebtMapping(address(res.collateral)), badDebt);
         assertEq(res.collateral.balanceOf(address(vault)), delivered);
+
+        uint shareToDealBadDebt = vault.previewWithdraw(badDebt / 2);
+        vm.startPrank(lper2);
+        (uint shares, uint collateralOut) = vault.dealBadDebt(address(res.collateral), badDebt / 2, lper2, lper2);
+        assertEq(shares, shareToDealBadDebt);
+        assertEq(collateralOut, ((badDebt / 2) * delivered) / badDebt);
+        assertEq(vault.badDebtMapping(address(res.collateral)), badDebt - badDebt / 2);
+        assertEq(res.collateral.balanceOf(address(vault)), delivered - collateralOut);
+        vm.stopPrank();
+
+        vm.startPrank(lper2);
+        shareToDealBadDebt = vault.previewWithdraw(badDebt - badDebt / 2);
+        uint remainningCollateral = res.collateral.balanceOf(address(vault));
+        vm.expectEmit();
+        emit VaultEvents.DealBadDebt(
+            lper2,
+            lper2,
+            address(res.collateral),
+            badDebt - badDebt / 2,
+            shareToDealBadDebt,
+            remainningCollateral
+        );
+        (shares, collateralOut) = vault.dealBadDebt(address(res.collateral), badDebt - badDebt / 2, lper2, lper2);
+        assertEq(shares, shareToDealBadDebt);
+        assertEq(collateralOut, remainningCollateral);
+        assertEq(vault.badDebtMapping(address(res.collateral)), 0);
+        assertEq(res.collateral.balanceOf(address(vault)), 0);
+        vm.stopPrank();
+    }
+
+    function testFail_BadDebt() public {
+        vm.warp(currentTime + 2 days);
+        buyXt(48.219178e8, 1000e8);
+
+        vm.warp(currentTime + 3 days);
+        address lper2 = vm.randomAddress();
+        uint256 amount2 = 10000e8;
+        res.debt.mint(lper2, amount2);
+        vm.startPrank(lper2);
+        res.debt.approve(address(vault), amount2);
+        vault.deposit(amount2, lper2);
+        vm.stopPrank();
+
+        address borrower = vm.randomAddress();
+        vm.startPrank(borrower);
+        LoanUtils.fastMintGt(res, borrower, 1000e8, 1e18);
+        vm.stopPrank();
+
+        vm.warp(currentTime + 92 days);
+        vm.startPrank(lper2);
+        vault.redeem(1000e8, lper2, lper2);
+
+        uint256 badDebt = vault.badDebtMapping(address(res.collateral));
+        vm.expectRevert(abi.encodeWithSelector(VaultErrors.InsufficientFunds.selector, 1e18, badDebt));
+        vault.dealBadDebt(address(res.collateral), 1e18, lper2, lper2);
+
+        vault.dealBadDebt(address(res.collateral), badDebt, lper2, lper2);
+
+        vm.expectRevert(VaultErrors.NoBadDebt.selector);
+        vault.dealBadDebt(address(res.collateral), 1e18, lper2, lper2);
+
+        vm.stopPrank();
     }
 
     function buyFt(uint128 tokenAmtIn, uint128 ftAmtOut) internal {

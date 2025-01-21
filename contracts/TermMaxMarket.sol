@@ -303,11 +303,11 @@ contract TermMaxMarket is
     /**
      * @inheritdoc ITermMaxMarket
      */
-    function redeem(uint256 ftAmount, address recipient) external virtual override nonReentrant {
-        _redeem(msg.sender, recipient, ftAmount);
+    function redeem(uint256 ftAmount, address recipient) external virtual override nonReentrant returns (uint256) {
+        return _redeem(msg.sender, recipient, ftAmount);
     }
 
-    function _redeem(address caller, address recipient, uint256 ftAmount) internal {
+    function _redeem(address caller, address recipient, uint256 ftAmount) internal returns (uint256 debtTokenAmt) {
         MarketConfig memory mConfig = _config;
         {
             uint liquidationDeadline = gt.liquidatable()
@@ -321,13 +321,10 @@ contract TermMaxMarket is
         // Burn ft reserves
         ft.burn(ft.balanceOf(address(this)));
 
-        uint debtTokenAmt;
+        ft.safeTransferFrom(caller, address(this), ftAmount);
 
         // The proportion that user will get how many debtToken and collateral should be deliveried
         uint proportion = (ftAmount * Constants.DECIMAL_BASE_SQ) / ft.totalSupply();
-        if (ftAmount > 0) {
-            ft.safeTransferFrom(caller, address(this), ftAmount);
-        }
 
         bytes memory deliveryData = gt.delivery(proportion, caller);
         // Transfer debtToken output
@@ -356,6 +353,9 @@ contract TermMaxMarket is
         gt.updateConfig(configData);
     }
 
+    /**
+     * @inheritdoc ITermMaxMarket
+     */
     function createOrder(
         address maker,
         uint256 maxXtReserve,

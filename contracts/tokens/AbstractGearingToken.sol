@@ -381,7 +381,7 @@ abstract contract AbstractGearingToken is
     /**
      * @inheritdoc IGearingToken
      */
-    function liquidate(uint256 id, uint128 repayAmt) external override nonReentrant {
+    function liquidate(uint256 id, uint128 repayAmt, bool byDebtToken) external override nonReentrant {
         LoanInfo memory loan = loanMapping[id];
         GtConfig memory config = _config;
         if (!config.loanConfig.liquidatable) {
@@ -405,9 +405,13 @@ abstract contract AbstractGearingToken is
             revert RepayAmtExceedsMaxRepayAmt(id, repayAmt, maxRepayAmt);
         }
         // Transfer token
-        config.debtToken.safeTransferFrom(msg.sender, owner(), repayAmt);
-        // Do liquidate
+        if (byDebtToken) {
+            config.debtToken.safeTransferFrom(msg.sender, owner(), repayAmt);
+        } else {
+            config.ft.safeTransferFrom(msg.sender, owner(), repayAmt);
+        }
 
+        // Do liquidate
         (bytes memory cToLiquidator, bytes memory cToTreasurer, bytes memory remainningC) = _calcLiquidationResult(
             loan,
             repayAmt,
@@ -445,7 +449,7 @@ abstract contract AbstractGearingToken is
         }
         _transferCollateral(msg.sender, cToLiquidator);
 
-        emit Liquidate(id, msg.sender, repayAmt, cToLiquidator, cToTreasurer, remainningC);
+        emit Liquidate(id, msg.sender, repayAmt, byDebtToken, cToLiquidator, cToTreasurer, remainningC);
     }
 
     /// @notice Return the collateral distribution plan after liquidation

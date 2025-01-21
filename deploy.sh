@@ -27,6 +27,8 @@ if [ "$2" == "core" ]; then
   SCRIPT=script/deploy/$1/DeployCore$1.s.sol
 elif [ "$2" == "market" ]; then
   SCRIPT=script/deploy/$1/DeployMarket$1.s.sol
+elif [ "$2" == "order" ]; then
+  SCRIPT=script/deploy/$1/DeployOrder$1.s.sol
 else
   echo "Invalid script type"
   exit 1
