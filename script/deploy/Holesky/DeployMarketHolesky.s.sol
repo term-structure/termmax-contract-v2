@@ -31,10 +31,10 @@ contract DeloyMarketHolesky is DeployBase {
     address priceFeedOperatorAddr = vm.envAddress("HOLESKY_PRICE_FEED_OPERATOR_ADDRESS");
 
     // address config
-    address factoryAddr = address(0x03347541Ea8D3c22F5227876d9BDA5E99f6bC8d7);
-    address oracleAddr = address(0x564c189E4599aeCF5557b95D69124750691D743c);
-    address routerAddr = address(0x07e120CB0Cdf8510BF5aFe7611167c79e783AB52);
-    address faucetAddr = address(0xa510FF3c7EA17029AcA84Bf1A819E14E320B307d);
+    address factoryAddr = address(0xc7FDd3804056216fe2E45b6FA71eA1c191b30117);
+    address oracleAddr = address(0xb5b411c88c13768636E99013b6b3b0E20E485789);
+    address routerAddr = address(0xA44742D456e644D4108B8B4421189EF46F583812);
+    address faucetAddr = address(0x422738015AF2E812D5Ec73BdE20bE06755508696);
 
     address[] devs = [
         address(0x19A736387ea2F42AcAb1BC0FdE15e667e63ea9cC), // Sunny
@@ -48,15 +48,14 @@ contract DeloyMarketHolesky is DeployBase {
         Faucet faucet = Faucet(faucetAddr);
         string memory deployDataPath = string.concat(vm.projectRoot(), "/script/deploy/deploydata/holesky.json");
         vm.startBroadcast(deployerPrivateKey);
-        TermMaxMarket[] memory markets = deployMarkets(
+        (TermMaxMarket[] memory markets, JsonLoader.Config[] memory configs) = deployMarkets(
             factoryAddr,
             oracleAddr,
             routerAddr,
             faucetAddr,
             deployDataPath,
             adminAddr,
-            priceFeedOperatorAddr,
-            60
+            priceFeedOperatorAddr
         );
 
         console.log("Faucet token number:", faucet.tokenNum());
@@ -82,12 +81,12 @@ contract DeloyMarketHolesky is DeployBase {
 
         for (uint i = 0; i < markets.length; i++) {
             console.log("===== Market Info - %d =====", i);
-            printMarketConfig(faucet, markets[i]);
+            printMarketConfig(faucet, markets[i], configs[i].salt);
             console.log("");
         }
     }
 
-    function printMarketConfig(Faucet faucet, TermMaxMarket market) public view {
+    function printMarketConfig(Faucet faucet, TermMaxMarket market, uint256 salt) public view {
         MarketConfig memory marketConfig = market.config();
         (IMintableERC20 ft, IMintableERC20 xt, IGearingToken gt, address collateralAddr, IERC20 underlying) = market
             .tokens();
@@ -118,6 +117,7 @@ contract DeloyMarketHolesky is DeployBase {
 
         console.log("Treasurer:", marketConfig.treasurer);
         console.log("Maturity:", marketConfig.maturity);
+        console.log("Salt:", salt);
         console.log("Lend Taker Fee Ratio:", marketConfig.feeConfig.lendTakerFeeRatio);
         console.log("Lend Maker Fee Ratio:", marketConfig.feeConfig.lendMakerFeeRatio);
         console.log("Borrow Taker Fee Ratio:", marketConfig.feeConfig.borrowTakerFeeRatio);

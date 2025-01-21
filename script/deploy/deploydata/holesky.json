@@ -2,6 +2,7 @@
   "configNum": "1",
   "configs": {
     "configs_0": {
+      "salt": 0,
       "marketConfig": {
         "treasurer": "0x7ab945445958819a74b48e8Bd5F9E39ed74bdE9E",
         "maturity": "1743120000",
