@@ -110,7 +110,8 @@ interface IGearingToken is IERC721Enumerable {
     ///         The proportion of collateral liquidated will not exceed the debt liquidation ratio.
     /// @param  id The id of the G-token
     /// @param  repayAmt The amount of the debt to be liquidate
-    function liquidate(uint256 id, uint128 repayAmt) external;
+    /// @param  byDebtToken Repay using debtToken token or bonds token
+    function liquidate(uint256 id, uint128 repayAmt, bool byDebtToken) external;
 
     /// @notice Deilivery outstanding debts after maturity
     /// @param  proportion The proportion of collateral that should be obtained
