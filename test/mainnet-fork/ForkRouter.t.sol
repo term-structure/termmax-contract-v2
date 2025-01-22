@@ -99,7 +99,7 @@ contract ForkRouterTest is Test {
             orderConfig.curveCuts
         );
 
-        uint amount = 1500e8;
+        uint amount = 15000e8;
         deal(address(res.debt), deployer, amount);
 
         res.debt.approve(address(res.market), amount);
@@ -142,7 +142,7 @@ contract ForkRouterTest is Test {
         uint256 underlyingAmtAfterSwap = res.debt.balanceOf(sender);
         uint256 xtAmtAfterSwap = res.xt.balanceOf(sender);
 
-        assert(underlyingAmtBeforeSwap - underlyingAmtAfterSwap == underlyingAmtIn);
+        assert(underlyingAmtBeforeSwap - underlyingAmtAfterSwap == amounts[0]);
         assert(xtAmtAfterSwap - xtAmtBeforeSwap == netXtOut);
         assert(res.debt.balanceOf(address(router)) == 0);
         assert(res.xt.balanceOf(address(router)) == 0);
@@ -226,7 +226,7 @@ contract ForkRouterTest is Test {
         uint256 underlyingAmtAfterSwap = res.debt.balanceOf(sender);
         uint256 xtAmtAfterSwap = res.xt.balanceOf(sender);
 
-        assert(underlyingAmtBeforeSwap - underlyingAmtAfterSwap == underlyingAmtIn);
+        assert(underlyingAmtBeforeSwap - underlyingAmtAfterSwap == amounts[0]);
         assert(xtAmtAfterSwap - xtAmtBeforeSwap == netXtOut);
         assert(res.debt.balanceOf(address(router)) == 0);
         assert(res.xt.balanceOf(address(router)) == 0);
