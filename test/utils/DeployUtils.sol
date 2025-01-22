@@ -89,6 +89,61 @@ library DeployUtils {
         (res.ft, res.xt, res.gt, , ) = res.market.tokens();
     }
 
+    function deployMarket(
+        address admin,
+        MarketConfig memory marketConfig,
+        uint32 maxLtv,
+        uint32 liquidationLtv,
+        address collateral,
+        address debt
+    ) internal returns (Res memory res) {
+        res.factory = deployFactory(admin);
+
+        res.collateral = MockERC20(collateral);
+        res.debt = MockERC20(debt);
+
+        res.debtOracle = new MockPriceFeed(admin);
+        res.collateralOracle = new MockPriceFeed(admin);
+        res.oracle = deployOracle(admin);
+
+        res.oracle.setOracle(address(res.debt), IOracle.Oracle(res.debtOracle, res.debtOracle, 365 days));
+        res.oracle.setOracle(
+            address(res.collateral),
+            IOracle.Oracle(res.collateralOracle, res.collateralOracle, 365 days)
+        );
+
+        MockPriceFeed.RoundData memory roundData = MockPriceFeed.RoundData({
+            roundId: 1,
+            answer: int(1e1 ** res.collateralOracle.decimals()),
+            startedAt: 0,
+            updatedAt: 0,
+            answeredInRound: 0
+        });
+        res.collateralOracle.updateRoundData(roundData);
+
+        MarketInitialParams memory initialParams = MarketInitialParams({
+            collateral: address(res.collateral),
+            debtToken: res.debt,
+            admin: admin,
+            gtImplementation: address(0),
+            marketConfig: marketConfig,
+            loanConfig: LoanConfig({
+                oracle: res.oracle,
+                liquidationLtv: liquidationLtv,
+                maxLtv: maxLtv,
+                liquidatable: true
+            }),
+            gtInitalParams: abi.encode(type(uint256).max),
+            tokenName: "DAI-ETH",
+            tokenSymbol: "DAI-ETH"
+        });
+
+        res.marketConfig = marketConfig;
+        res.market = ITermMaxMarket(res.factory.createMarket(GT_ERC20, initialParams, 0));
+
+        (res.ft, res.xt, res.gt, , ) = res.market.tokens();
+    }
+
     function deployMockMarket(
         address admin,
         MarketConfig memory marketConfig,
