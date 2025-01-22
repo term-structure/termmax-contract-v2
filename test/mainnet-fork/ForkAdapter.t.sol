@@ -6,33 +6,33 @@ import {DeployUtils} from "../utils/DeployUtils.sol";
 import {JSONLoader} from "../utils/JSONLoader.sol";
 import {StateChecker} from "../utils/StateChecker.sol";
 import {SwapUtils} from "../utils/SwapUtils.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import {ITermMaxMarket, TermMaxMarket, Constants, TermMaxCurve} from "contracts/core/TermMaxMarket.sol";
+import {Constants} from "contracts/lib/Constants.sol";
+import {ITermMaxMarket, TermMaxMarket} from "contracts/TermMaxMarket.sol";
 import {MockPriceFeed} from "contracts/test/MockPriceFeed.sol";
-
-import {ITermMaxFactory, TermMaxFactory, IMintableERC20, IGearingToken} from "contracts/core/factory/TermMaxFactory.sol";
-import {IOracle, OracleAggregator, AggregatorV3Interface} from "contracts/core/oracle/OracleAggregator.sol";
-import {MarketConfig} from "contracts/core/storage/TermMaxStorage.sol";
+import {IGearingToken, AbstractGearingToken} from "contracts/tokens/AbstractGearingToken.sol";
+import {IOracle, OracleAggregator, AggregatorV3Interface} from "contracts/oracle/OracleAggregator.sol";
 import {TermMaxRouter, ISwapAdapter, ITermMaxRouter, SwapUnit} from "contracts/router/TermMaxRouter.sol";
 import {UniswapV3Adapter, ERC20SwapAdapter} from "contracts/router/swapAdapters/UniswapV3Adapter.sol";
 import {PendleSwapV3Adapter} from "contracts/router/swapAdapters/PendleSwapV3Adapter.sol";
 import {OdosV2Adapter, IOdosRouterV2} from "contracts/router/swapAdapters/OdosV2Adapter.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "contracts/storage/TermMaxStorage.sol";
 
 contract OdosV2AdapterMock is OdosV2Adapter {
-  using SafeERC20 for IERC20;
-  constructor(address router_) OdosV2Adapter(router_) {}
+    using SafeERC20 for IERC20;
+    constructor(address router_) OdosV2Adapter(router_) {}
 
-  function swap(
-      IERC20 tokenIn,
-      IERC20 tokenOut,
-      uint256 amountIn,
-      bytes memory swapData
-  ) external returns (uint256 tokenOutAmt) {
-    tokenIn.safeTransferFrom(msg.sender, address(this), amountIn);
-    return _swap(tokenIn, tokenOut, amountIn, swapData);
-  }
+    function swap(
+        IERC20 tokenIn,
+        IERC20 tokenOut,
+        uint256 amountIn,
+        bytes memory swapData
+    ) external returns (uint256 tokenOutAmt) {
+        tokenIn.safeTransferFrom(msg.sender, address(this), amountIn);
+        return _swap(tokenIn, tokenOut, amountIn, swapData);
+    }
 }
 
 contract ForkAdapterTest is Test {
@@ -72,14 +72,11 @@ contract ForkAdapterTest is Test {
         // uniswapAdapter = new UniswapV3Adapter(uniswapRouter);
         // pendleAdapter = new PendleSwapV3Adapter(pendleRouter);
         odosAdapter = new OdosV2AdapterMock(odosRouter);
-        
 
         vm.stopPrank();
     }
 
-
     function testOdosAdapter() public {
-        
         uint256 tokenAmtIn = 51869222;
         address inputToken = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48; // usdc
         address outputToken = weth9Addr;
@@ -102,13 +99,9 @@ contract ForkAdapterTest is Test {
         );
         address odosExecutor = 0xB28Ca7e465C452cE4252598e0Bc96Aeba553CF82;
         uint32 odosReferralCode = 0;
-        bytes memory pathDefinition = hex"01020500030102000203000a02030001000104010aff000000000000000000002a79a0e0c226a58eeb99c5704d72d49177cc7516c19c5b63705807079dbf6d54071f9113233283f5a0b86991c6218b36c1d19d4a2e9eb0ce3606eb487a5d3a9dcd33cb8d527f7b5f96eb4fef43d55636";
-        bytes memory odosSwapData = abi.encode(
-          swapTokenInfoParam,
-          pathDefinition,
-          odosExecutor,
-          odosReferralCode
-        );
+        bytes
+            memory pathDefinition = hex"01020500030102000203000a02030001000104010aff000000000000000000002a79a0e0c226a58eeb99c5704d72d49177cc7516c19c5b63705807079dbf6d54071f9113233283f5a0b86991c6218b36c1d19d4a2e9eb0ce3606eb487a5d3a9dcd33cb8d527f7b5f96eb4fef43d55636";
+        bytes memory odosSwapData = abi.encode(swapTokenInfoParam, pathDefinition, odosExecutor, odosReferralCode);
         uint256 beforeInTokenBalance = IERC20(inputToken).balanceOf(sender);
         uint256 beforeOutTokenBalance = IERC20(outputToken).balanceOf(receiver);
         IERC20(inputToken).approve(address(odosAdapter), tokenAmtIn);
@@ -122,5 +115,4 @@ contract ForkAdapterTest is Test {
         assert(afterOutTokenBalance - beforeOutTokenBalance == tokenOutAmt);
         vm.stopPrank();
     }
-
 }
