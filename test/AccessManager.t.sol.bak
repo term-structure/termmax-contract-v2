@@ -62,7 +62,9 @@ contract AccessManagerTest is Test {
 
         AccessManager implementation = new AccessManager();
         bytes memory data = abi.encodeCall(AccessManager.initialize, deployer);
-        address proxy = address(new ERC1967Proxy(address(implementation), data));
+        address proxy = address(
+            new ERC1967Proxy(address(implementation), data)
+        );
 
         manager = AccessManager(proxy);
 
@@ -70,11 +72,14 @@ contract AccessManagerTest is Test {
         IOwnable(address(res.market)).transferOwnership(address(manager));
         IOwnable(address(router)).transferOwnership(address(manager));
         IOwnable(address(res.oracle)).transferOwnership(address(manager));
-        
+
         uint amount = 10000e8;
         res.underlying.mint(deployer, amount);
         res.underlying.approve(address(res.market), amount);
         res.market.provideLiquidity(uint128(amount));
+
+        manager.grantRole(manager.CURATOR_ROLE(), deployer);
+        manager.grantRole(manager.PAUSER_ROLE(), deployer);
 
         vm.stopPrank();
 
@@ -207,7 +212,11 @@ contract AccessManagerTest is Test {
             });
         vm.warp(marketConfig.openTime - 1 days);
         IOwnable(address(factory)).transferOwnership(address(manager));
-        address market = manager.createMarketAndWhitelist(router, factory, params);
+        address market = manager.createMarketAndWhitelist(
+            router,
+            factory,
+            params
+        );
         assert(router.marketWhitelist(market));
         vm.stopPrank();
     }
@@ -318,9 +327,8 @@ contract AccessManagerTest is Test {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector,
-                sender,
-                manager.CURATOR_ROLE()
+                AccessManager.MsgSenderIsNotCurator.selector,
+                res.market
             )
         );
         manager.updateMarketConfig(res.market, newConfig);
@@ -359,7 +367,10 @@ contract AccessManagerTest is Test {
         vm.expectEmit();
         emit IGearingToken.UpdateConfig(abi.encode(newGtCapacity));
         manager.updateGtConfig(res.market, abi.encode(newGtCapacity));
-        assert(GearingTokenWithERC20(address(res.gt)).collateralCapacity() == newGtCapacity);
+        assert(
+            GearingTokenWithERC20(address(res.gt)).collateralCapacity() ==
+                newGtCapacity
+        );
         vm.stopPrank();
     }
 
@@ -368,9 +379,8 @@ contract AccessManagerTest is Test {
         uint256 newGtCapacity = 1000e8;
         vm.expectRevert(
             abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector,
-                sender,
-                manager.CURATOR_ROLE()
+                AccessManager.MsgSenderIsNotCurator.selector,
+                res.market
             )
         );
         manager.updateGtConfig(res.market, abi.encode(newGtCapacity));
@@ -379,15 +389,26 @@ contract AccessManagerTest is Test {
 
     function testSetOracle() public {
         vm.startPrank(deployer);
-        
+
         MockPriceFeed pricefeed = new MockPriceFeed(deployer);
         IOracle.Oracle memory oracle = IOracle.Oracle(pricefeed, pricefeed, 1);
-        
+
         vm.expectEmit();
-        emit IOracle.UpdateOracle(address(res.collateral), pricefeed, pricefeed, 1);
+        emit IOracle.UpdateOracle(
+            address(res.collateral),
+            pricefeed,
+            pricefeed,
+            1
+        );
         manager.setOracle(res.oracle, address(res.collateral), oracle);
 
-        (AggregatorV3Interface aggregator, AggregatorV3Interface backupAggregator, uint32 heartbeat) = OracleAggregator(address(res.oracle)).oracles(address(res.collateral)); // onChain
+        (
+            AggregatorV3Interface aggregator,
+            AggregatorV3Interface backupAggregator,
+            uint32 heartbeat
+        ) = OracleAggregator(address(res.oracle)).oracles(
+                address(res.collateral)
+            ); // onChain
         assert(aggregator == oracle.aggregator);
         assert(backupAggregator == oracle.backupAggregator);
         assert(heartbeat == oracle.heartbeat);
@@ -414,8 +435,12 @@ contract AccessManagerTest is Test {
         vm.startPrank(deployer);
 
         address asset = vm.randomAddress();
-        AggregatorV3Interface aggregator = AggregatorV3Interface(vm.randomAddress());
-        AggregatorV3Interface backupAggregator = AggregatorV3Interface(vm.randomAddress());
+        AggregatorV3Interface aggregator = AggregatorV3Interface(
+            vm.randomAddress()
+        );
+        AggregatorV3Interface backupAggregator = AggregatorV3Interface(
+            vm.randomAddress()
+        );
         uint32 heartbeat = 3600;
 
         // First set an oracle
@@ -428,7 +453,12 @@ contract AccessManagerTest is Test {
 
         // Then remove it
         vm.expectEmit();
-        emit IOracle.UpdateOracle(asset, AggregatorV3Interface(address(0)), AggregatorV3Interface(address(0)), 0);
+        emit IOracle.UpdateOracle(
+            asset,
+            AggregatorV3Interface(address(0)),
+            AggregatorV3Interface(address(0)),
+            0
+        );
         manager.removeOracle(res.oracle, asset);
 
         vm.stopPrank();
@@ -462,8 +492,12 @@ contract AccessManagerTest is Test {
         vm.startPrank(deployer);
 
         // Test with zero asset address
-        AggregatorV3Interface aggregator = AggregatorV3Interface(vm.randomAddress());
-        AggregatorV3Interface backupAggregator = AggregatorV3Interface(vm.randomAddress());
+        AggregatorV3Interface aggregator = AggregatorV3Interface(
+            vm.randomAddress()
+        );
+        AggregatorV3Interface backupAggregator = AggregatorV3Interface(
+            vm.randomAddress()
+        );
         uint32 heartbeat = 3600;
 
         IOracle.Oracle memory oracle = IOracle.Oracle({
@@ -493,7 +527,7 @@ contract AccessManagerTest is Test {
     }
 
     function testSetProviderWhitelist() public {
-         vm.startPrank(deployer);
+        vm.startPrank(deployer);
 
         vm.expectEmit();
         emit ITermMaxMarket.UpdateProviderWhitelist(sender, true);
@@ -507,9 +541,8 @@ contract AccessManagerTest is Test {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector,
-                sender,
-                manager.CURATOR_ROLE()
+                AccessManager.MsgSenderIsNotCurator.selector,
+                res.market
             )
         );
         manager.setProviderWhitelist(res.market, sender, true);
@@ -604,40 +637,52 @@ contract AccessManagerTest is Test {
         vm.startPrank(deployer);
         res.lpFt.approve(address(res.market), res.lpFt.balanceOf(deployer));
         res.lpXt.approve(address(res.market), res.lpXt.balanceOf(deployer));
-        (uint128 excessFt, uint128 excessXt) = res.market
-            .withdrawLiquidity(uint128(res.lpFt.balanceOf(deployer)/2), uint128(res.lpXt.balanceOf(deployer)/2));
+        (uint128 excessFt, uint128 excessXt) = res.market.withdrawLiquidity(
+            uint128(res.lpFt.balanceOf(deployer) / 2),
+            uint128(res.lpXt.balanceOf(deployer) / 2)
+        );
         res.ft.transfer(address(res.market), excessFt);
         res.xt.transfer(address(res.market), excessXt);
-        
+
         address recipient = vm.randomAddress();
-        
+
         // Record initial balances
         uint256 initialRecipientFt = res.ft.balanceOf(recipient);
         uint256 initialRecipientXt = res.xt.balanceOf(recipient);
-        
+
         // Get initial reserves
         (uint256 ftReserve, uint256 xtReserve) = res.market.ftXtReserves();
-        
+
         // Withdraw excess tokens through AccessManager
         vm.expectEmit();
         emit ITermMaxMarket.WithdrawExcessFtXt(recipient, excessFt, excessXt);
         manager.withdrawExcessFtXt(res.market, recipient, excessFt, excessXt);
-        
+
         // Verify balances
-        assertEq(res.ft.balanceOf(recipient), initialRecipientFt + excessFt, "Incorrect FT balance after withdrawal");
-        assertEq(res.xt.balanceOf(recipient), initialRecipientXt + excessXt, "Incorrect XT balance after withdrawal");
-        
+        assertEq(
+            res.ft.balanceOf(recipient),
+            initialRecipientFt + excessFt,
+            "Incorrect FT balance after withdrawal"
+        );
+        assertEq(
+            res.xt.balanceOf(recipient),
+            initialRecipientXt + excessXt,
+            "Incorrect XT balance after withdrawal"
+        );
+
         // Verify reserves unchanged
-        (uint256 newFtReserve, uint256 newXtReserve) = res.market.ftXtReserves();
+        (uint256 newFtReserve, uint256 newXtReserve) = res
+            .market
+            .ftXtReserves();
         assertEq(newFtReserve, ftReserve, "FT reserve should not change");
         assertEq(newXtReserve, xtReserve, "XT reserve should not change");
-        
+
         vm.stopPrank();
     }
 
     function testWithdrawExcessFtXtWhenPaused() public {
         vm.startPrank(deployer);
-        
+
         // First pause the market
         manager.setSwitchOfMarket(res.market, false);
 
@@ -652,7 +697,7 @@ contract AccessManagerTest is Test {
 
     function testWithdrawExcessFtXtAfterMaturity() public {
         vm.startPrank(deployer);
-        
+
         // Set time after market maturity
         vm.warp(marketConfig.maturity + 1);
 
@@ -667,7 +712,7 @@ contract AccessManagerTest is Test {
 
     function testWithdrawExcessFtXtWithoutAuth() public {
         vm.startPrank(sender);
-        
+
         vm.expectRevert(
             abi.encodeWithSelector(
                 IAccessControl.AccessControlUnauthorizedAccount.selector,
@@ -676,7 +721,117 @@ contract AccessManagerTest is Test {
             )
         );
         manager.withdrawExcessFtXt(res.market, sender, 1, 1);
-        
+
         vm.stopPrank();
+    }
+
+    function testMarketCurator() public {
+        address curator = vm.randomAddress();
+
+        // Test setting curator
+        vm.prank(deployer);
+        manager.setMarketCurator(res.market, curator);
+        assertEq(manager.marketCurators(res.market), curator);
+
+        // Test curator permissions
+        vm.startPrank(curator);
+        MarketConfig memory newConfig = res.market.config();
+        manager.updateMarketConfig(res.market, newConfig);
+        manager.setProviderWhitelist(res.market, vm.randomAddress(), true);
+        manager.updateGtConfig(res.market, abi.encode(1));
+        vm.stopPrank();
+
+        // Test non-curator permissions
+        vm.prank(vm.randomAddress());
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                AccessManager.MsgSenderIsNotCurator.selector,
+                res.market
+            )
+        );
+        manager.updateMarketConfig(res.market, newConfig);
+    }
+
+    function testSetMarketCuratorByNonAdmin() public {
+        address curator = vm.randomAddress();
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector,
+                sender,
+                manager.DEFAULT_ADMIN_ROLE()
+            )
+        );
+        vm.prank(sender);
+        manager.setMarketCurator(res.market, curator);
+    }
+
+    function testMarketCuratorAndGlobalCurator() public {
+        address marketCurator = vm.randomAddress();
+        address globalCurator = vm.randomAddress();
+
+        vm.startPrank(deployer);
+        manager.setMarketCurator(res.market, marketCurator);
+        manager.grantRole(manager.CURATOR_ROLE(), globalCurator);
+        vm.stopPrank();
+
+        // Test market curator permissions
+        vm.startPrank(marketCurator);
+        MarketConfig memory newConfig = res.market.config();
+        manager.updateMarketConfig(res.market, newConfig);
+        vm.stopPrank();
+
+        // Test global curator permissions
+        vm.startPrank(globalCurator);
+        manager.updateMarketConfig(res.market, newConfig);
+        vm.stopPrank();
+    }
+
+    function testRevokeRole() public {
+        bytes32 curatorRole = manager.CURATOR_ROLE();
+        address user = vm.randomAddress();
+
+        // Grant role first
+        vm.prank(deployer);
+        manager.grantRole(curatorRole, user);
+
+        // Revoke role
+        vm.prank(deployer);
+        manager.revokeRole(curatorRole, user);
+
+        assertFalse(manager.hasRole(curatorRole, user));
+    }
+
+    function testCannotRevokeSelfRole() public {
+        bytes32 curatorRole = manager.CURATOR_ROLE();
+
+        // Try to revoke own role
+        vm.prank(deployer);
+        vm.expectRevert(
+            abi.encodeWithSignature("AccessControlBadConfirmation()")
+        );
+        manager.revokeRole(curatorRole, deployer);
+    }
+
+    function testRenounceRole() public {
+        bytes32 curatorRole = manager.CURATOR_ROLE();
+        address user = vm.randomAddress();
+
+        // Grant role first
+        vm.prank(deployer);
+        manager.grantRole(curatorRole, user);
+
+        // Renounce role
+        vm.prank(user);
+        manager.renounceRole(curatorRole, user);
+
+        assertFalse(manager.hasRole(curatorRole, user));
+    }
+
+    function testCannotRenounceDefaultAdminRole() public {
+        bytes32 defaultAdminRole = 0x00;
+
+        vm.prank(deployer);
+        vm.expectRevert(AccessManager.CannotRevokeDefaultAdminRole.selector);
+        manager.renounceRole(defaultAdminRole, deployer);
     }
 }
