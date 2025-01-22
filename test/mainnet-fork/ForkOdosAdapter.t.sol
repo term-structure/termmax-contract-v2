@@ -83,7 +83,6 @@ contract ForkOdosAdapterTest is Test {
         // sender = address(odosAdapter);
         vm.startPrank(sender);
         deal(inputToken, sender, 1000e18);
-        console.log("sender", sender);
 
         uint256 outputQuote = 15615669300592542;
         uint256 outputMin = 15459512607586616;
