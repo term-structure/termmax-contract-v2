@@ -3,18 +3,20 @@ pragma solidity ^0.8.27;
 
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
-import {TermMaxFactory} from "../contracts/core/factory/TermMaxFactory.sol";
-import {ITermMaxFactory} from "../contracts/core/factory/ITermMaxFactory.sol";
+import {TermMaxFactory} from "../contracts/factory/TermMaxFactory.sol";
+import {ITermMaxFactory} from "../contracts/factory/ITermMaxFactory.sol";
 import {TermMaxRouter} from "../contracts/router/TermMaxRouter.sol";
 import {ITermMaxRouter} from "../contracts/router/ITermMaxRouter.sol";
+import {TermMaxOrder} from "../contracts/TermMaxOrder.sol";
+import {ITermMaxOrder} from "../contracts/TermMaxOrder.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {TermMaxMarket} from "../contracts/core/TermMaxMarket.sol";
-import {ITermMaxMarket} from "../contracts/core/TermMaxMarket.sol";
+import {TermMaxMarket, Constants} from "../contracts/TermMaxMarket.sol";
+import {ITermMaxMarket} from "../contracts/TermMaxMarket.sol";
 import {MockERC20} from "../contracts/test/MockERC20.sol";
-import {MarketConfig} from "../contracts/core/storage/TermMaxStorage.sol";
-import {IMintableERC20} from "../contracts/core/tokens/IMintableERC20.sol";
-import {IGearingToken} from "../contracts/core/tokens/IGearingToken.sol";
-import {IOracle, OracleAggregator, AggregatorV3Interface} from "contracts/core/oracle/OracleAggregator.sol";
+import {MarketConfig} from "../contracts/storage/TermMaxStorage.sol";
+import {IMintableERC20} from "../contracts/tokens/IMintableERC20.sol";
+import {IGearingToken} from "../contracts/tokens/IGearingToken.sol";
+import {IOracle, OracleAggregator, AggregatorV3Interface} from "contracts/oracle/OracleAggregator.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {MockSwapAdapter} from "../contracts/test/MockSwapAdapter.sol";
@@ -22,7 +24,7 @@ import {Faucet} from "../contracts/test/testnet/Faucet.sol";
 import {FaucetERC20} from "../contracts/test/testnet/FaucetERC20.sol";
 import {MockPriceFeed} from "../contracts/test/MockPriceFeed.sol";
 import {SwapUnit} from "../contracts/router/ISwapAdapter.sol";
-import {MarketConfig} from "../contracts/core/storage/TermMaxStorage.sol";
+import {MarketConfig} from "../contracts/storage/TermMaxStorage.sol";
 
 contract E2ETest is Script {
     // deployer config
@@ -30,234 +32,152 @@ contract E2ETest is Script {
     address userAddr = vm.addr(userPrivateKey);
 
     // address config
-    address faucetAddr = address(0xb12A0134a24CF7654C15369d73CC2C8ab095B4b3);
-    address routerAddr = address(0xc5e9504Bfd53Ca21a0343a3778c7192da20635A9);
-    address swapAdapter = address(0x66C4419330b032e57B81451c168aE0EA8C7Ad830);
-    address[] markets = [
-        address(0x07eFb4FEE55f520838891A3cFDe8c860DfEA6229),
-        address(0x3C5cCDFB3d8Cf11Ec8207c8Cb00009c812dc5603),
-        address(0x1FfB7B0D3D3B017070bB5685087dEC673981cC6B)
-        // address(0xE99967782d07Fbb271A996D221e8513A687c789C)
-    ];
+    address faucetAddr = address(0x422738015AF2E812D5Ec73BdE20bE06755508696);
+    address routerAddr = address(0xA44742D456e644D4108B8B4421189EF46F583812);
+    address swapAdapter = address(0x65feE48150586e72038884920b92033746f324b0);
+    address marketAddr = address(0x0D5168Ae17e62B42ed85DD8Cc35DA7913Ec41dd6);
+    address orderAddr = address(0x3273723c663FC41968354D5d8388AB03EAda390B);
 
-    TermMaxMarket market;
-    TermMaxRouter router;
-    Faucet faucet;
+    Faucet faucet = Faucet(faucetAddr);
+    TermMaxRouter router = TermMaxRouter(routerAddr);
+    TermMaxMarket market = TermMaxMarket(marketAddr);
+    TermMaxOrder order = TermMaxOrder(orderAddr);
     IMintableERC20 ft;
     IMintableERC20 xt;
-    IMintableERC20 lpFt;
-    IMintableERC20 lpXt;
     IGearingToken gt;
     address collateralAddr;
+    IERC20 underlyingERC20;
     FaucetERC20 collateral;
     FaucetERC20 underlying;
-    IERC20 underlyingERC20;
-    MockPriceFeed collateralPriceFeed;
-    MockPriceFeed underlyingPriceFeed;
-    MarketConfig config;
 
     function run() public {
-        faucet = Faucet(faucetAddr);
-        router = TermMaxRouter(routerAddr);
+        (ft, xt, gt, collateralAddr, underlyingERC20) = market.tokens();
+        collateral = FaucetERC20(collateralAddr);
+        underlying = FaucetERC20(address(underlyingERC20));
+        printMarketConfig();
+        depositIntoOrder(1_000_000);
+        lendToOrder(10000);
+        borrowFromOrder(12000, 8000, 8500);
+        // leverageFromOrder();
+    }
+
+    function depositIntoOrder(uint256 depositAmt) public {
+        vm.startBroadcast(userPrivateKey);
+        depositAmt = depositAmt * 10 ** underlying.decimals();
+        faucet.devMint(userAddr, address(underlying), depositAmt);
+        (uint256 oriFtReserve, uint256 oriXtReserve) = order.tokenReserves();
+
+        underlying.approve(address(market), depositAmt);
+        market.mint(address(order), depositAmt);
+        (uint256 newFtReserve, uint256 newXtReserve) = order.tokenReserves();
+        (uint256 newLendApr, uint256 newBorrowApr) = order.apr();
+        console.log("");
+        vm.stopBroadcast();
+        console.log("--- Deposit into order ---");
+        console.log("ori ftReserve:", oriFtReserve);
+        console.log("ori xtReserve:", oriXtReserve);
+        console.log("new ftReserve:", newFtReserve);
+        console.log("new xtReserve:", newXtReserve);
+        console.log("new lendApr:", newLendApr);
+        console.log("new borrowApr:", newBorrowApr);
+    }
+
+    function lendToOrder(uint256 lendAmt) public {
+        (uint256 oriFtReserve, uint256 oriXtReserve) = order.tokenReserves();
+        (uint256 oriLendApr, uint256 oriBorrowApr) = order.apr();
+        uint256 oriFtBalance = ft.balanceOf(userAddr);
 
         vm.startBroadcast(userPrivateKey);
-        // provide liquidity
-        for (uint i = 0; i < markets.length; i++) {
-            address marketAddr = markets[i];
-            market = TermMaxMarket(marketAddr);
-            config = market.config();
-            console.log("current timestamp:", vm.getBlockTimestamp());
-            console.log("market open time:", config.openTime);
-            (ft, xt, lpFt, lpXt, gt, collateralAddr, underlyingERC20) = market
-                .tokens();
-            console.log("Market address", marketAddr);
-            console.log("ft address", address(ft));
-            console.log("xt address", address(xt));
-            console.log("lpFt address", address(lpFt));
-            console.log("lpXt address", address(lpXt));
-            console.log("gt address", address(gt));
-            console.log("collateral address", collateralAddr);
-            console.log("underlying address", address(underlyingERC20));
-            underlying = FaucetERC20(address(underlyingERC20));
-            collateral = FaucetERC20(collateralAddr);
-
-            underlyingPriceFeed = MockPriceFeed(
-                faucet
-                    .getTokenConfig(faucet.getTokenId(address(underlying)))
-                    .priceFeedAddr
-            );
-
-            collateralPriceFeed = MockPriceFeed(
-                faucet
-                    .getTokenConfig(faucet.getTokenId(collateralAddr))
-                    .priceFeedAddr
-            );
-            (, int256 ans, , , ) = underlyingPriceFeed.latestRoundData();
-            uint256 underlyingPrice = uint256(ans);
-            uint256 priceDecimalBase = 10 ** underlyingPriceFeed.decimals();
-            console.log("price decimal base:", priceDecimalBase);
-            console.log("underlying price:", underlyingPrice);
-            uint256 amount = ((2000000 *
-                priceDecimalBase *
-                10 ** underlying.decimals()) / underlyingPrice);
-            console.log(amount);
-            faucet.devMint(userAddr, address(underlying), amount);
-            console.log("Underlying balance: ", underlying.balanceOf(userAddr));
-            underlying.approve(routerAddr, amount);
-            router.provideLiquidity(userAddr, market, amount);
-            console.log("FT Reserve: ", ft.balanceOf(address(market)));
-            console.log("XT Reserve: ", xt.balanceOf(address(market)));
-            console.log("LPFT Reserve: ", lpFt.balanceOf(userAddr));
-            console.log("LPXT Reserve: ", lpXt.balanceOf(userAddr));
-        }
-
-        // // deploy router
-        // address routerImpl = address(new TermMaxRouter());
-
-        // bytes memory data = abi.encodeCall(TermMaxRouter.initialize, userAddr);
-        // address proxy = address(new ERC1967Proxy(routerImpl, data));
-
-        // TermMaxRouter router = TermMaxRouter(proxy);
-        // router.togglePause(false);
-
-        // console.log("new router address:", address(router));
-
-        // // deploy swap adapter
-        // router.setMarketWhitelist(address(market), true);
-        // router.setAdapterWhitelist(address(swapAdapter), true);
-
-        // leverage from token
-        // market = TermMaxMarket(markets[0]);
-        // (ft, xt, lpFt, lpXt, gt, collateralAddr, underlyingERC20) = market
-        //     .tokens();
-        // collateral = FaucetERC20(collateralAddr);
-        // underlying = FaucetERC20(address(underlyingERC20));
-        // collateralPriceFeed = MockPriceFeed(
-        //     faucet
-        //         .getTokenConfig(faucet.getTokenId(collateralAddr))
-        //         .priceFeedAddr
-        // );
-        // underlyingPriceFeed = MockPriceFeed(
-        //     faucet
-        //         .getTokenConfig(faucet.getTokenId(address(underlyingERC20)))
-        //         .priceFeedAddr
-        // );
-        // uint256 underlyingAmtBase = 10 ** underlying.decimals();
-        // uint256 collateralAmtBase = 10 ** collateral.decimals();
-        // uint256 priceBase = 1e8;
-        // uint256 aprBase = 1e8;
-        // uint64 daysInYear = 365;
-        // uint64 secondsInDay = 86400;
-        // uint64 ltvBase = 1e8;
-
-        // config = market.config();
-
-        // uint64 maturity = config.maturity;
-        // uint64 dayToMaturity = uint64(
-        //     (maturity - vm.getBlockTimestamp() + secondsInDay - 1) /
-        //         secondsInDay
-        // );
-        // uint64 apr = config.apr > 0 ? uint64(config.apr) : uint64(-config.apr);
-        // uint64 initialLtv = config.initialLtv;
-        // uint256 ftPrice = (daysInYear * aprBase * priceBase) /
-        //     (aprBase * daysInYear + apr * dayToMaturity);
-        // uint256 xtPrice = priceBase - (ftPrice * initialLtv) / ltvBase;
-        // (, int256 collateralAnswer, , , ) = collateralPriceFeed
-        //     .latestRoundData();
-        // (, int256 underlyingAnswer, , , ) = underlyingPriceFeed
-        //     .latestRoundData();
-
-        // uint256 collateralPrice = uint256(collateralAnswer);
-        // console.log("FT APR:", apr);
-        // console.log("FT price:", ftPrice);
-        // console.log("XT price:", xtPrice);
-        // console.log("collateral price:", collateralPrice);
-        // console.log("underlying price:", underlyingAnswer);
-        // console.log("day to maturity:", dayToMaturity);
-        // uint256 tokenToBuyCollateralAmt = 0;
-        // uint256 tokenToBuyXtAmt = 1000e6;
-        // uint256 maxLtv = 89000000;
-        // uint256 mintXtAmt = 0;
-
-        // uint256 n = priceBase *
-        //     collateralAmtBase *
-        //     (tokenToBuyCollateralAmt *
-        //         underlyingAmtBase *
-        //         xtPrice +
-        //         underlyingAmtBase *
-        //         tokenToBuyXtAmt *
-        //         priceBase);
-        // uint256 d = underlyingAmtBase *
-        //     underlyingAmtBase *
-        //     xtPrice *
-        //     collateralPrice;
-        // uint256 tokenOutAmt = n / d;
-        // uint256 xtAmtZeroSlippage = (tokenToBuyXtAmt * priceBase) / xtPrice;
-        // SwapUnit[] memory swapUnits = new SwapUnit[](1);
-        // swapUnits[0] = SwapUnit({
-        //     adapter: swapAdapter,
-        //     tokenIn: address(underlying),
-        //     tokenOut: address(collateral),
-        //     swapData: abi.encode(
-        //         address(underlyingPriceFeed),
-        //         address(collateralPriceFeed)
-        //     )
-        // });
-        // console.log(
-        //     "Token to buy XT amount:",
-        //     tokenToBuyXtAmt / 10 ** underlying.decimals()
-        // );
-        // console.log("Token to buy collateral amount:", tokenToBuyCollateralAmt);
-        // console.log(
-        //     "Token out amount:",
-        //     tokenOutAmt / 10 ** collateral.decimals()
-        // );
-        // underlying.mint(userAddr, tokenToBuyCollateralAmt + tokenToBuyXtAmt);
-        // underlying.approve(
-        //     routerAddr,
-        //     tokenToBuyCollateralAmt + tokenToBuyXtAmt
-        // );
-        // (uint256 gtId, uint256 netXtOut) = router.leverageFromToken(
-        //     userAddr,
-        //     market,
-        //     tokenToBuyCollateralAmt,
-        //     tokenToBuyXtAmt,
-        //     maxLtv,
-        //     mintXtAmt,
-        //     swapUnits
-        // );
-        // console.log("xt amount with zero slippage:", xtAmtZeroSlippage);
-        // console.log("xt amount with slippage:", netXtOut);
-        // (
-        //     address owner,
-        //     uint128 debtAmt,
-        //     uint128 ltv,
-        //     bytes memory collateralDta
-        // ) = gt.loanInfo(gtId);
-        // uint128 collateralAmt = abi.decode(collateralDta, (uint128));
-        // console.log("Gearing token ID:", gtId);
-        // console.log("Gearing token owner:", owner);
-        // console.log(
-        //     "Gearing token debt amount:",
-        //     debtAmt / 10 ** underlying.decimals()
-        // );
-        // console.log(
-        //     "Gearing token collateral amount:",
-        //     collateralAmt / 10 ** collateral.decimals()
-        // );
-        // console.log("Gearing token ltv:", ltv);
+        lendAmt = lendAmt * 10 ** underlying.decimals();
+        faucet.devMint(userAddr, address(underlying), lendAmt);
+        uint256 oriUnderlyingBalance = underlying.balanceOf(userAddr);
+        underlying.approve(address(order), lendAmt);
+        order.swapExactTokenToToken(underlying, ft, userAddr, uint128(lendAmt), 0);
         vm.stopBroadcast();
 
-        // console.log("\nAfter broadcast");
-        // console.log("Current timestamp:", vm.getBlockTimestamp());
-        // console.log("Market open time:", config.openTime);
-        // console.log("Underlying balance:", underlying.balanceOf(userAddr));
-        // console.log("Underlying symbol:", underlying.symbol());
-        // console.log("Collateral balance:", collateral.balanceOf(userAddr));
-        // console.log("Collateral symbol:", collateral.symbol());
-        // console.log("FT balance:", ft.balanceOf(userAddr));
-        // console.log("XT balance:", xt.balanceOf(userAddr));
-        // console.log("LPFT balance:", lpFt.balanceOf(userAddr));
-        // console.log("LPXT balance:", lpXt.balanceOf(userAddr));
+        (uint256 newFtReserve, uint256 newXtReserve) = order.tokenReserves();
+        (uint256 newLendApr, uint256 newBorrowApr) = order.apr();
+        uint256 newUnderlyingBalance = underlying.balanceOf(userAddr);
+        uint256 newFtBalance = ft.balanceOf(userAddr);
+
+        console.log("--- Lend to order ---");
+        console.log("ori ftReserve:", oriFtReserve);
+        console.log("ori xtReserve:", oriXtReserve);
+        console.log("ori lendApr:", oriLendApr);
+        console.log("ori borrowApr:", oriBorrowApr);
+        console.log("ori underlyingBalance:", oriUnderlyingBalance);
+        console.log("ori ftBalance:", oriFtBalance);
+        console.log("new ftReserve:", newFtReserve);
+        console.log("new xtReserve:", newXtReserve);
+        console.log("new lendApr:", newLendApr);
+        console.log("new borrowApr:", newBorrowApr);
+        console.log("new underlyingBalance:", newUnderlyingBalance);
+        console.log("new ftBalance:", newFtBalance);
+    }
+
+    function borrowFromOrder(uint256 collateralAmt, uint256 borrowAmt, uint256 maxDebtAmt) public {
+        collateralAmt = collateralAmt * 10 ** collateral.decimals();
+        borrowAmt = borrowAmt * 10 ** underlying.decimals();
+        maxDebtAmt = maxDebtAmt * 10 ** underlying.decimals();
+        (uint256 oriFtReserve, uint256 oriXtReserve) = order.tokenReserves();
+        (uint256 oriLendApr, uint256 oriBorrowApr) = order.apr();
+        uint256 oriUnderlyingBalance = underlying.balanceOf(userAddr);
+
+        vm.startBroadcast(userPrivateKey);
+        faucet.devMint(userAddr, collateralAddr, collateralAmt);
+        uint256 oriCollateralBalance = collateral.balanceOf(userAddr);
+        uint256 fee = (market.issueFtFeeRatio() * maxDebtAmt) / Constants.DECIMAL_BASE;
+        uint256 ftAmt = maxDebtAmt - fee;
+        collateral.approve(address(router), collateralAmt);
+        ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
+        orders[0] = order;
+        uint128[] memory ftAmtsToSell = new uint128[](1);
+        ftAmtsToSell[0] = uint128(borrowAmt);
+        router.borrowTokenFromCollateral(userAddr, market, collateralAmt, orders, ftAmtsToSell, uint128(maxDebtAmt));
+        vm.stopBroadcast();
+
+        (uint256 newFtReserve, uint256 newXtReserve) = order.tokenReserves();
+        (uint256 newLendApr, uint256 newBorrowApr) = order.apr();
+        uint256 newUnderlyingBalance = underlying.balanceOf(userAddr);
+        uint256 newCollateralBalance = collateral.balanceOf(userAddr);
+
+        console.log("--- Borrow from order ---");
+        console.log("ori ftReserve:", oriFtReserve);
+        console.log("ori xtReserve:", oriXtReserve);
+        console.log("ori lendApr:", oriLendApr);
+        console.log("ori borrowApr:", oriBorrowApr);
+        console.log("ori underlyingBalance:", oriUnderlyingBalance);
+        console.log("ori collateralBalance:", oriCollateralBalance);
+        console.log("new ftReserve:", newFtReserve);
+        console.log("new xtReserve:", newXtReserve);
+        console.log("new lendApr:", newLendApr);
+        console.log("new borrowApr:", newBorrowApr);
+        console.log("new underlyingBalance:", newUnderlyingBalance);
+        console.log("new collateralBalance:", newCollateralBalance);
+    }
+
+    // function leverageFromOrder(uint128 inputAmt, uint128 minXtOut, ) public {
+    //     ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
+    //     orders[0] = order;
+    //     uint128[] memory amtsToBuyXt = new uint128[](1);
+    //     amtsToBuyXt[0] = inputAmt;
+    //     vm.startBroadcast(userPrivateKey);
+    //     router.leverageFromToken(userAddr, market,orders, amtsToBuyXt, );
+    //     vm.stopBroadcast();
+    // }
+
+    function printMarketConfig() public view {
+        MarketConfig memory config = market.config();
+        console.log("--- Market Config ---");
+        console.log("Treasurer:", config.treasurer);
+        console.log("Maturity:", config.maturity);
+        console.log("lendTakerFeeRatio:", config.feeConfig.lendTakerFeeRatio);
+        console.log("lendMakerFeeRatio:", config.feeConfig.lendMakerFeeRatio);
+        console.log("borrowTakerFeeRatio:", config.feeConfig.borrowTakerFeeRatio);
+        console.log("borrowMakerFeeRatio:", config.feeConfig.borrowMakerFeeRatio);
+        console.log("issueFtFeeRatio:", config.feeConfig.issueFtFeeRatio);
+        console.log("issueFtFeeRef:", config.feeConfig.issueFtFeeRef);
+        console.log("redeemFeeRatio:", config.feeConfig.redeemFeeRatio);
+        console.log("");
     }
 }

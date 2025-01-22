@@ -15,6 +15,9 @@ if [ "$1" == "ArbSepolia" ]; then
 elif [ "$1" == "EthSepolia" ]; then
   RPC_URL=$ETH_SEPOLIA_RPC_URL
   EXPLORER_KEY=$ETHERSCAN_KEY
+elif [ "$1" == "Holesky" ]; then
+  RPC_URL=$HOLESKY_RPC_URL
+  EXPLORER_KEY=$ETHERSCAN_KEY
 else
   echo "Invalid network"
   exit 1
@@ -24,6 +27,8 @@ if [ "$2" == "core" ]; then
   SCRIPT=script/deploy/$1/DeployCore$1.s.sol
 elif [ "$2" == "market" ]; then
   SCRIPT=script/deploy/$1/DeployMarket$1.s.sol
+elif [ "$2" == "order" ]; then
+  SCRIPT=script/deploy/$1/DeployOrder$1.s.sol
 else
   echo "Invalid script type"
   exit 1
