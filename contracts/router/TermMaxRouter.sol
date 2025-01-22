@@ -10,18 +10,20 @@ import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/Pau
 import {Ownable2StepUpgradeable, OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
-import {ITermMaxMarket} from "../ITermMaxMarket.sol";
-import {ITermMaxOrder} from "../ITermMaxOrder.sol";
+import {ITermMaxMarket} from "contracts/ITermMaxMarket.sol";
+import {ITermMaxOrder} from "contracts/ITermMaxOrder.sol";
 import {SwapUnit, ISwapAdapter} from "./ISwapAdapter.sol";
-import {RouterErrors} from "../errors/RouterErrors.sol";
-import {RouterEvents} from "../events/RouterEvents.sol";
-import {TransferUtils} from "../lib/TransferUtils.sol";
-import {IFlashLoanReceiver} from "../IFlashLoanReceiver.sol";
-import {IFlashRepayer} from "../tokens/IFlashRepayer.sol";
+import {RouterErrors} from "contracts/errors/RouterErrors.sol";
+import {RouterEvents} from "contracts/events/RouterEvents.sol";
+import {TransferUtils} from "contracts/lib/TransferUtils.sol";
+import {IFlashLoanReceiver} from "contracts/IFlashLoanReceiver.sol";
+import {IFlashRepayer} from "contracts/tokens/IFlashRepayer.sol";
 import {ITermMaxRouter} from "./ITermMaxRouter.sol";
-import {IGearingToken} from "../tokens/IGearingToken.sol";
-import {CurveCuts} from "../storage/TermMaxStorage.sol";
-import {ISwapCallback} from "../ISwapCallback.sol";
+import {IGearingToken} from "contracts/tokens/IGearingToken.sol";
+import {CurveCuts} from "contracts/storage/TermMaxStorage.sol";
+import {ISwapCallback} from "contracts/ISwapCallback.sol";
+import {Constants} from "contracts/lib/Constants.sol";
+import {MathLib} from "contracts/lib/MathLib.sol";
 
 /**
  * @title TermMax Router
@@ -40,6 +42,7 @@ contract TermMaxRouter is
 {
     using SafeCast for *;
     using TransferUtils for IERC20;
+    using MathLib for uint256;
 
     /// @notice whitelist mapping of market
     mapping(address => bool) public marketWhitelist;
@@ -301,6 +304,53 @@ contract TermMaxRouter is
         );
 
         return gtId;
+    }
+
+    function borrowTokenFromCollateral(
+        address recipient,
+        ITermMaxMarket market,
+        uint256 collInAmt,
+        uint256 borrowAmt
+    ) external ensureMarketWhitelist(address(market)) whenNotPaused returns (uint256) {
+        (IERC20 ft, IERC20 xt, IGearingToken gt, address collateralAddr, ) = market.tokens();
+
+        IERC20(collateralAddr).safeTransferFrom(msg.sender, address(this), collInAmt);
+        IERC20(collateralAddr).safeIncreaseAllowance(address(gt), collInAmt);
+
+        uint issueFtFeeRatio = market.issueFtFeeRatio();
+        uint128 debtAmt = ((borrowAmt * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - issueFtFeeRatio)).toUint128();
+
+        (uint256 gtId, uint128 ftOutAmt) = market.issueFt(address(this), debtAmt, _encodeAmount(collInAmt));
+        // ftOutAmt may be smaller than borrowAmt due to accuracy loss
+        borrowAmt = borrowAmt.min(ftOutAmt);
+        xt.safeTransferFrom(msg.sender, address(this), borrowAmt);
+
+        ft.safeIncreaseAllowance(address(market), borrowAmt);
+        xt.safeIncreaseAllowance(address(market), borrowAmt);
+
+        market.burn(recipient, borrowAmt);
+
+        gt.safeTransferFrom(address(this), recipient, gtId);
+        emit Borrow(market, gtId, msg.sender, recipient, collInAmt, debtAmt, borrowAmt.toUint128());
+        return gtId;
+    }
+
+    function borrowTokenFromGt(address recipient, ITermMaxMarket market, uint256 gtId, uint256 borrowAmt) external {
+        (IERC20 ft, IERC20 xt, IGearingToken gt, , IERC20 debtToken) = market.tokens();
+
+        uint issueFtFeeRatio = market.issueFtFeeRatio();
+        uint128 debtAmt = ((borrowAmt * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - issueFtFeeRatio)).toUint128();
+
+        uint ftOutAmt = market.issueFtByExistedGt(address(this), debtAmt, gtId);
+        // ftOutAmt may be smaller than borrowAmt due to accuracy loss
+        borrowAmt = borrowAmt.min(ftOutAmt);
+        xt.safeTransferFrom(msg.sender, address(this), borrowAmt);
+
+        ft.safeIncreaseAllowance(address(market), borrowAmt);
+        xt.safeIncreaseAllowance(address(market), borrowAmt);
+        market.burn(recipient, borrowAmt);
+
+        emit Borrow(market, gtId, msg.sender, recipient, 0, debtAmt, borrowAmt.toUint128());
     }
 
     /**
