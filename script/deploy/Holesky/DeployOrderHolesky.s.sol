@@ -39,23 +39,44 @@ contract DeloyOrderHolesky is DeployBase {
         uint256 currentBlockNum = block.number;
         TermMaxMarket market = TermMaxMarket(marketAddr);
         vm.startBroadcast(deployerPrivateKey);
-        uint256 maxXtReserve = 1000000000000000000000000000000000000000000000000000000;
-        CurveCut memory curveCut0 = CurveCut({xtReserve: 0, liqSquare: 461683991532123193344, offset: 33973665961});
-        CurveCut memory curveCut1 = CurveCut({
+        uint256 maxXtReserve = 200000000000;
+        CurveCut memory lendCurveCut0 = CurveCut({xtReserve: 0, liqSquare: 461683991532123062272, offset: 33973665961});
+        CurveCut memory lendCurveCut1 = CurveCut({
             xtReserve: 9000000000,
-            liqSquare: 259820550347600396288,
-            offset: 23237900077
+            liqSquare: 425141100695200464896,
+            offset: 32237900077
         });
-        CurveCut memory curveCut2 = CurveCut({
+        CurveCut memory lendCurveCut2 = CurveCut({
             xtReserve: 21000000000,
-            liqSquare: 605605556075689803776,
-            offset: 46538697296
+            liqSquare: 1072059478286836826112,
+            offset: 63540305112
         });
-        CurveCut[] memory _curveCuts = new CurveCut[](3);
-        _curveCuts[0] = curveCut0;
-        _curveCuts[1] = curveCut1;
-        _curveCuts[2] = curveCut2;
-        CurveCuts memory curveCuts = CurveCuts({lendCurveCuts: _curveCuts, borrowCurveCuts: _curveCuts});
+        CurveCut[] memory _lendCurveCuts = new CurveCut[](3);
+        _lendCurveCuts[0] = lendCurveCut0;
+        _lendCurveCuts[1] = lendCurveCut1;
+        _lendCurveCuts[2] = lendCurveCut2;
+
+        CurveCut memory borrowCurveCut0 = CurveCut({
+            xtReserve: 0,
+            liqSquare: 330638754635872993280,
+            offset: 29116862443
+        });
+        CurveCut memory borrowCurveCut1 = CurveCut({
+            xtReserve: 8000000000,
+            liqSquare: 361237873939795017728,
+            offset: 30796363335
+        });
+        CurveCut memory borrowCurveCut2 = CurveCut({
+            xtReserve: 20000000000,
+            liqSquare: 826934466947518169088,
+            offset: 56854894208
+        });
+        CurveCut[] memory _borrowCurveCuts = new CurveCut[](3);
+        _borrowCurveCuts[0] = borrowCurveCut0;
+        _borrowCurveCuts[1] = borrowCurveCut1;
+        _borrowCurveCuts[2] = borrowCurveCut2;
+
+        CurveCuts memory curveCuts = CurveCuts({lendCurveCuts: _lendCurveCuts, borrowCurveCuts: _borrowCurveCuts});
         ITermMaxOrder order = market.createOrder(deployerAddr, maxXtReserve, ISwapCallback(address(0)), curveCuts);
 
         vm.stopBroadcast();
