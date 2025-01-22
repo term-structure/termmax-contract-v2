@@ -35,7 +35,7 @@ contract OdosV2AdapterMock is OdosV2Adapter {
     }
 }
 
-contract ForkAdapterTest is Test {
+contract ForkOdosAdapterTest is Test {
     address deployer = vm.randomAddress();
 
     DeployUtils.Res res;

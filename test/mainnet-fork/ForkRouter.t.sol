@@ -6,18 +6,20 @@ import {DeployUtils} from "../utils/DeployUtils.sol";
 import {JSONLoader} from "../utils/JSONLoader.sol";
 import {StateChecker} from "../utils/StateChecker.sol";
 import {SwapUtils} from "../utils/SwapUtils.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import {ITermMaxMarket, TermMaxMarket, Constants, TermMaxCurve} from "contracts/core/TermMaxMarket.sol";
+import {Constants} from "contracts/lib/Constants.sol";
+import {ITermMaxMarket, TermMaxMarket} from "contracts/TermMaxMarket.sol";
+import {ITermMaxOrder} from "contracts/ITermMaxOrder.sol";
 import {MockPriceFeed} from "contracts/test/MockPriceFeed.sol";
-
-import {ITermMaxFactory, TermMaxFactory, IMintableERC20, IGearingToken} from "contracts/core/factory/TermMaxFactory.sol";
-import {IOracle, OracleAggregator, AggregatorV3Interface} from "contracts/core/oracle/OracleAggregator.sol";
-import {MarketConfig} from "contracts/core/storage/TermMaxStorage.sol";
-import {TermMaxRouter, ISwapAdapter, ITermMaxRouter, SwapUnit} from "contracts/router/TermMaxRouter.sol";
+import {IGearingToken, AbstractGearingToken} from "contracts/tokens/AbstractGearingToken.sol";
+import {IOracle, OracleAggregator, AggregatorV3Interface} from "contracts/oracle/OracleAggregator.sol";
+import {TermMaxRouter, ISwapAdapter, ITermMaxRouter, SwapUnit, RouterErrors} from "contracts/router/TermMaxRouter.sol";
 import {UniswapV3Adapter, ERC20SwapAdapter} from "contracts/router/swapAdapters/UniswapV3Adapter.sol";
 import {PendleSwapV3Adapter} from "contracts/router/swapAdapters/PendleSwapV3Adapter.sol";
 import {OdosV2Adapter, IOdosRouterV2} from "contracts/router/swapAdapters/OdosV2Adapter.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "contracts/storage/TermMaxStorage.sol";
 
 contract ForkRouterTest is Test {
     address deployer = vm.randomAddress();
@@ -59,58 +61,49 @@ contract ForkRouterTest is Test {
         deal(deployer, 1_000e18);
         deal(sender, 1_000e18);
         vm.startPrank(deployer);
-        testdata = vm.readFile(
-            string.concat(vm.projectRoot(), "/test/testdata/testdata.json")
-        );
+        testdata = vm.readFile(string.concat(vm.projectRoot(), "/test/testdata/testdata.json"));
 
         uint32 maxLtv = 0.89e8;
         uint32 liquidationLtv = 0.9e8;
 
-        marketConfig = JSONLoader.getMarketConfigFromJson(
-            treasurer,
-            testdata,
-            ".marketConfig"
-        );
+        marketConfig = JSONLoader.getMarketConfigFromJson(treasurer, testdata, ".marketConfig");
         // 1731854315 is the block time of block 21208075
-        marketConfig.openTime = 1731854315 + 60;
-        marketConfig.maturity = marketConfig.openTime + 30 days;
+        uint64 currentTime = uint64(1731854315);
+        marketConfig.maturity = uint64(currentTime + 90 days);
 
-        vm.warp(marketConfig.openTime - 3600);
-
-        res = DeployUtils.deployMarket(
-            deployer,
-            marketConfig,
-            maxLtv,
-            liquidationLtv,
-            ptWeethAddr,
-            weth9Addr
-        );
-
-        vm.warp(marketConfig.openTime + 3600);
+        res = DeployUtils.deployMarket(deployer, marketConfig, maxLtv, liquidationLtv, ptWeethAddr, weth9Addr);
 
         // update oracle
-        
-        MockPriceFeed.RoundData memory ptRoundData =JSONLoader.getRoundDataFromJson(
-                testdata,
-                ".priceData.ETH_2000_PT_WEETH_1800.ptWeeth"
-            );
-        ptRoundData.updatedAt = block.timestamp;
+
+        MockPriceFeed.RoundData memory ptRoundData = JSONLoader.getRoundDataFromJson(
+            testdata,
+            ".priceData.ETH_2000_PT_WEETH_1800.ptWeeth"
+        );
+        ptRoundData.updatedAt = currentTime;
         res.collateralOracle.updateRoundData(ptRoundData);
 
-        MockPriceFeed.RoundData memory weethRoundData =JSONLoader.getRoundDataFromJson(
-                testdata,
-                ".priceData.ETH_2000_PT_WEETH_1800.eth"
-            );
-        weethRoundData.updatedAt = block.timestamp; 
-        res.underlyingOracle.updateRoundData(
-            weethRoundData
+        MockPriceFeed.RoundData memory weethRoundData = JSONLoader.getRoundDataFromJson(
+            testdata,
+            ".priceData.ETH_2000_PT_WEETH_1800.eth"
+        );
+        weethRoundData.updatedAt = currentTime;
+        res.debtOracle.updateRoundData(weethRoundData);
+
+        // init order
+        OrderConfig memory orderConfig = JSONLoader.getOrderConfigFromJson(testdata, ".orderConfig");
+        orderConfig.maxXtReserve = type(uint128).max;
+        res.order = res.market.createOrder(
+            vm.randomAddress(),
+            orderConfig.maxXtReserve,
+            ISwapCallback(address(0)),
+            orderConfig.curveCuts
         );
 
-        uint amount = 10_000e18;
-        deal(address(res.underlying), deployer, amount);
+        uint amount = 15000e8;
+        deal(address(res.debt), deployer, amount);
 
-        res.underlying.approve(address(res.market), amount);
-        res.market.provideLiquidity(uint128(amount));
+        res.debt.approve(address(res.market), amount);
+        res.market.mint(address(res.order), amount);
 
         router = DeployUtils.deployRouter(deployer);
         router.setMarketWhitelist(address(res.market), true);
@@ -118,7 +111,6 @@ contract ForkRouterTest is Test {
         router.setAdapterWhitelist(address(uniswapAdapter), true);
         router.setAdapterWhitelist(address(pendleAdapter), true);
         router.setAdapterWhitelist(address(odosAdapter), true);
-        router.togglePause(false);
 
         vm.stopPrank();
     }
@@ -126,30 +118,33 @@ contract ForkRouterTest is Test {
     function testLeverageFromXtWithUniswap() public {
         vm.startPrank(sender);
         uint128 underlyingAmtIn = 0.004e18;
-        deal(address(res.underlying), sender, underlyingAmtIn);
+        deal(address(res.debt), sender, underlyingAmtIn);
         uint128 minTokenOut = 0e8;
-        res.underlying.approve(address(router), underlyingAmtIn);
+        res.debt.approve(address(router), underlyingAmtIn);
 
-        uint256 underlyingAmtBeforeSwap = res.underlying.balanceOf(sender);
+        uint256 underlyingAmtBeforeSwap = res.debt.balanceOf(sender);
         uint256 xtAmtBeforeSwap = res.xt.balanceOf(sender);
-        assert(res.underlying.balanceOf(address(router)) == 0);
+        assert(res.debt.balanceOf(address(router)) == 0);
         assert(res.xt.balanceOf(address(router)) == 0);
-        uint256 netXtOut = router.swapExactTokenForXt(
-            receiver,
-            res.market,
-            underlyingAmtIn,
-            minTokenOut,
-            res.marketConfig.lsf
-        );
 
-        uint256 underlyingAmtAfterSwap = res.underlying.balanceOf(sender);
+        ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
+        orders[0] = res.order;
+        uint128[] memory amounts = new uint128[](1);
+        amounts[0] = 5e8;
+        uint256 netXtOut = router.swapExactTokenToToken(
+            res.debt,
+            res.ft,
+            receiver,
+            orders,
+            amounts,
+            uint128(minTokenOut)
+        );
+        uint256 underlyingAmtAfterSwap = res.debt.balanceOf(sender);
         uint256 xtAmtAfterSwap = res.xt.balanceOf(sender);
 
-        assert(
-            underlyingAmtBeforeSwap - underlyingAmtAfterSwap == underlyingAmtIn
-        );
+        assert(underlyingAmtBeforeSwap - underlyingAmtAfterSwap == underlyingAmtIn);
         assert(xtAmtAfterSwap - xtAmtBeforeSwap == netXtOut);
-        assert(res.underlying.balanceOf(address(router)) == 0);
+        assert(res.debt.balanceOf(address(router)) == 0);
         assert(res.xt.balanceOf(address(router)) == 0);
 
         uint256 xtInAmt = netXtOut;
@@ -157,8 +152,8 @@ contract ForkRouterTest is Test {
         uint tokenAmtIn = 10e18;
         uint256 maxLtv = 0.8e8;
 
-        deal(address(res.underlying), sender, tokenAmtIn);
-        res.underlying.approve(address(router), tokenAmtIn);
+        deal(address(res.debt), sender, tokenAmtIn);
+        res.debt.approve(address(router), tokenAmtIn);
 
         SwapUnit[] memory units = new SwapUnit[](2);
         uint24 poolFee = 100;
@@ -166,38 +161,26 @@ contract ForkRouterTest is Test {
             address(uniswapAdapter),
             weth9Addr,
             weethAddr,
-            abi.encode(abi.encodePacked(weth9Addr, poolFee, weethAddr),block.timestamp + 3600, 0)
+            abi.encode(abi.encodePacked(weth9Addr, poolFee, weethAddr), block.timestamp + 3600, 0)
         );
-        units[1] = SwapUnit(
-            address(pendleAdapter),
-            weethAddr,
-            ptWeethAddr,
-            abi.encode(ptWeethMarketAddr, 0)
-        );
+        units[1] = SwapUnit(address(pendleAdapter), weethAddr, ptWeethAddr, abi.encode(ptWeethMarketAddr, 0));
 
-        underlyingAmtBeforeSwap = res.underlying.balanceOf(sender);
+        underlyingAmtBeforeSwap = res.debt.balanceOf(sender);
         xtAmtBeforeSwap = res.xt.balanceOf(sender);
 
         assert(IERC20(weethAddr).balanceOf(address(sender)) == 0);
         assert(IERC20(ptWeethAddr).balanceOf(address(sender)) == 0);
 
-        assert(res.underlying.balanceOf(address(router)) == 0);
+        assert(res.debt.balanceOf(address(router)) == 0);
         assert(res.xt.balanceOf(address(router)) == 0);
         assert(IERC20(weth9Addr).balanceOf(address(router)) == 0);
         assert(IERC20(weethAddr).balanceOf(address(router)) == 0);
         assert(IERC20(ptWeethAddr).balanceOf(address(router)) == 0);
 
         res.xt.approve(address(router), xtInAmt);
-        router.leverageFromXt(
-            receiver,
-            res.market,
-            xtInAmt,
-            tokenAmtIn,
-            maxLtv,
-            units
-        );
+        router.leverageFromXt(receiver, res.market, uint128(xtInAmt), uint128(tokenAmtIn), uint128(maxLtv), units);
 
-        underlyingAmtAfterSwap = res.underlying.balanceOf(sender);
+        underlyingAmtAfterSwap = res.debt.balanceOf(sender);
         xtAmtAfterSwap = res.xt.balanceOf(sender);
 
         assert(underlyingAmtBeforeSwap - underlyingAmtAfterSwap == tokenAmtIn);
@@ -206,7 +189,7 @@ contract ForkRouterTest is Test {
         assert(IERC20(weethAddr).balanceOf(address(sender)) == 0);
         assert(IERC20(ptWeethAddr).balanceOf(address(sender)) == 0);
 
-        assert(res.underlying.balanceOf(address(router)) == 0);
+        assert(res.debt.balanceOf(address(router)) == 0);
         assert(res.xt.balanceOf(address(router)) == 0);
         assert(IERC20(weth9Addr).balanceOf(address(router)) == 0);
         assert(IERC20(weethAddr).balanceOf(address(router)) == 0);
@@ -218,30 +201,34 @@ contract ForkRouterTest is Test {
     function testLeverageFromXtWithOdos() public {
         vm.startPrank(sender);
         uint128 underlyingAmtIn = 0.004e18;
-        deal(address(res.underlying), sender, underlyingAmtIn);
+        deal(address(res.debt), sender, underlyingAmtIn);
         uint128 minTokenOut = 0e8;
-        res.underlying.approve(address(router), underlyingAmtIn);
+        res.debt.approve(address(router), underlyingAmtIn);
 
-        uint256 underlyingAmtBeforeSwap = res.underlying.balanceOf(sender);
+        uint256 underlyingAmtBeforeSwap = res.debt.balanceOf(sender);
         uint256 xtAmtBeforeSwap = res.xt.balanceOf(sender);
-        assert(res.underlying.balanceOf(address(router)) == 0);
+        assert(res.debt.balanceOf(address(router)) == 0);
         assert(res.xt.balanceOf(address(router)) == 0);
-        uint256 netXtOut = router.swapExactTokenForXt(
+
+        ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
+        orders[0] = res.order;
+        uint128[] memory amounts = new uint128[](1);
+        amounts[0] = 5e8;
+        uint256 netXtOut = router.swapExactTokenToToken(
+            res.debt,
+            res.ft,
             receiver,
-            res.market,
-            underlyingAmtIn,
-            minTokenOut,
-            res.marketConfig.lsf
+            orders,
+            amounts,
+            uint128(minTokenOut)
         );
 
-        uint256 underlyingAmtAfterSwap = res.underlying.balanceOf(sender);
+        uint256 underlyingAmtAfterSwap = res.debt.balanceOf(sender);
         uint256 xtAmtAfterSwap = res.xt.balanceOf(sender);
 
-        assert(
-            underlyingAmtBeforeSwap - underlyingAmtAfterSwap == underlyingAmtIn
-        );
+        assert(underlyingAmtBeforeSwap - underlyingAmtAfterSwap == underlyingAmtIn);
         assert(xtAmtAfterSwap - xtAmtBeforeSwap == netXtOut);
-        assert(res.underlying.balanceOf(address(router)) == 0);
+        assert(res.debt.balanceOf(address(router)) == 0);
         assert(res.xt.balanceOf(address(router)) == 0);
 
         uint256 xtInAmt = netXtOut;
@@ -249,8 +236,8 @@ contract ForkRouterTest is Test {
         uint tokenAmtIn = 10e18;
         uint256 maxLtv = 0.8e8;
 
-        deal(address(res.underlying), sender, tokenAmtIn);
-        res.underlying.approve(address(router), tokenAmtIn);
+        deal(address(res.debt), sender, tokenAmtIn);
+        res.debt.approve(address(router), tokenAmtIn);
 
         SwapUnit[] memory units = new SwapUnit[](2);
 
@@ -268,50 +255,30 @@ contract ForkRouterTest is Test {
             address(router)
         );
         address odosExecutor = 0xB28Ca7e465C452cE4252598e0Bc96Aeba553CF82;
-        bytes memory odosPath = hex"010203000a01010001020001ff00000000000000000000000000000000000000db74dfdd3bb46be8ce6c33dc9d82777bcfc3ded5c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2";
+        bytes
+            memory odosPath = hex"010203000a01010001020001ff00000000000000000000000000000000000000db74dfdd3bb46be8ce6c33dc9d82777bcfc3ded5c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2";
         uint32 odosReferralCode = 0;
-        bytes memory odosSwapData = abi.encode(
-            swapTokenInfoParam,
-            odosPath,
-            odosExecutor,
-            odosReferralCode
-        );
-        units[0] = SwapUnit(
-            address(odosAdapter),
-            weth9Addr,
-            weethAddr,
-            odosSwapData
-        );
-        units[1] = SwapUnit(
-            address(pendleAdapter),
-            weethAddr,
-            ptWeethAddr,
-            abi.encode(ptWeethMarketAddr, 0)
-        );
+        bytes memory odosSwapData = abi.encode(swapTokenInfoParam, odosPath, odosExecutor, odosReferralCode);
+        units[0] = SwapUnit(address(odosAdapter), weth9Addr, weethAddr, odosSwapData);
+        units[1] = SwapUnit(address(pendleAdapter), weethAddr, ptWeethAddr, abi.encode(ptWeethMarketAddr, 0));
 
-        underlyingAmtBeforeSwap = res.underlying.balanceOf(sender);
+        underlyingAmtBeforeSwap = res.debt.balanceOf(sender);
         xtAmtBeforeSwap = res.xt.balanceOf(sender);
 
         assert(IERC20(weethAddr).balanceOf(address(sender)) == 0);
         assert(IERC20(ptWeethAddr).balanceOf(address(sender)) == 0);
 
-        assert(res.underlying.balanceOf(address(router)) == 0);
+        assert(res.debt.balanceOf(address(router)) == 0);
         assert(res.xt.balanceOf(address(router)) == 0);
         assert(IERC20(weth9Addr).balanceOf(address(router)) == 0);
         assert(IERC20(weethAddr).balanceOf(address(router)) == 0);
         assert(IERC20(ptWeethAddr).balanceOf(address(router)) == 0);
 
         res.xt.approve(address(router), xtInAmt);
-        router.leverageFromXt(
-            receiver,
-            res.market,
-            xtInAmt,
-            tokenAmtIn,
-            maxLtv,
-            units
-        );
 
-        underlyingAmtAfterSwap = res.underlying.balanceOf(sender);
+        router.leverageFromXt(receiver, res.market, uint128(xtInAmt), uint128(tokenAmtIn), uint128(maxLtv), units);
+
+        underlyingAmtAfterSwap = res.debt.balanceOf(sender);
         xtAmtAfterSwap = res.xt.balanceOf(sender);
 
         assert(underlyingAmtBeforeSwap - underlyingAmtAfterSwap == tokenAmtIn);
@@ -320,7 +287,7 @@ contract ForkRouterTest is Test {
         assert(IERC20(weethAddr).balanceOf(address(sender)) == 0);
         assert(IERC20(ptWeethAddr).balanceOf(address(sender)) == 0);
 
-        assert(res.underlying.balanceOf(address(router)) == 0);
+        assert(res.debt.balanceOf(address(router)) == 0);
         assert(res.xt.balanceOf(address(router)) == 0);
         assert(IERC20(weth9Addr).balanceOf(address(router)) == 0);
         assert(IERC20(weethAddr).balanceOf(address(router)) == 0);
@@ -332,16 +299,21 @@ contract ForkRouterTest is Test {
     function testLeverageFromXtWhenPartialSwap() public {
         vm.startPrank(sender);
         uint128 underlyingAmtIn = 0.004e18;
-        deal(address(res.underlying), sender, underlyingAmtIn);
+        deal(address(res.debt), sender, underlyingAmtIn);
         uint128 minTokenOut = 0e8;
-        res.underlying.approve(address(router), underlyingAmtIn);
+        res.debt.approve(address(router), underlyingAmtIn);
 
-        uint256 netXtOut = router.swapExactTokenForXt(
+        ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
+        orders[0] = res.order;
+        uint128[] memory amounts = new uint128[](1);
+        amounts[0] = 5e8;
+        uint256 netXtOut = router.swapExactTokenToToken(
+            res.debt,
+            res.ft,
             receiver,
-            res.market,
-            underlyingAmtIn,
-            minTokenOut,
-            res.marketConfig.lsf
+            orders,
+            amounts,
+            uint128(minTokenOut)
         );
 
         uint256 xtInAmt = netXtOut;
@@ -349,8 +321,8 @@ contract ForkRouterTest is Test {
         uint tokenAmtIn = 10e18;
         uint256 maxLtv = 0.8e8;
 
-        deal(address(res.underlying), sender, tokenAmtIn);
-        res.underlying.approve(address(router), tokenAmtIn);
+        deal(address(res.debt), sender, tokenAmtIn);
+        res.debt.approve(address(router), tokenAmtIn);
 
         SwapUnit[] memory units = new SwapUnit[](2);
         uint24 poolFee = 3000;
@@ -360,18 +332,13 @@ contract ForkRouterTest is Test {
             weethAddr,
             abi.encode(abi.encodePacked(weth9Addr, poolFee, weethAddr), block.timestamp + 3600, 0)
         );
-        units[1] = SwapUnit(
-            address(pendleAdapter),
-            weethAddr,
-            ptWeethAddr,
-            abi.encode(ptWeethMarketAddr, 0)
-        );
+        units[1] = SwapUnit(address(pendleAdapter), weethAddr, ptWeethAddr, abi.encode(ptWeethMarketAddr, 0));
 
         res.xt.approve(address(router), xtInAmt);
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                ITermMaxRouter.SwapFailed.selector,
+                RouterErrors.SwapFailed.selector,
                 address(uniswapAdapter),
                 abi.encodePacked(
                     abi.encodeWithSelector(
@@ -382,14 +349,7 @@ contract ForkRouterTest is Test {
                 )
             )
         );
-        router.leverageFromXt(
-            receiver,
-            res.market,
-            xtInAmt,
-            tokenAmtIn,
-            maxLtv,
-            units
-        );
+        router.leverageFromXt(receiver, res.market, uint128(xtInAmt), uint128(tokenAmtIn), uint128(maxLtv), units);
 
         vm.stopPrank();
     }
@@ -406,34 +366,23 @@ contract ForkRouterTest is Test {
         uint24 poolFee = 100;
 
         uint256 gtId = _loan(poolFee);
-        (, uint128 debtAmt, ,) = res.gt.loanInfo(
-            gtId
-        );
+        (, uint128 debtAmt, , ) = res.gt.loanInfo(gtId);
 
         uint256 minUnderlyingAmt = debtAmt;
 
         SwapUnit[] memory units = new SwapUnit[](2);
-        units[0] = SwapUnit(
-            address(pendleAdapter),
-            ptWeethAddr,
-            weethAddr,
-            abi.encode(ptWeethMarketAddr, 0)
-        );
+        units[0] = SwapUnit(address(pendleAdapter), ptWeethAddr, weethAddr, abi.encode(ptWeethMarketAddr, 0));
 
         units[1] = SwapUnit(
             address(uniswapAdapter),
             weethAddr,
             weth9Addr,
-            abi.encode(
-                abi.encodePacked(weethAddr, poolFee, weth9Addr),
-                block.timestamp + 3600,
-                minUnderlyingAmt
-            )
+            abi.encode(abi.encodePacked(weethAddr, poolFee, weth9Addr), block.timestamp + 3600, minUnderlyingAmt)
         );
 
         res.gt.approve(address(router), gtId);
 
-        assert(res.underlying.balanceOf(address(router)) == 0);
+        assert(res.debt.balanceOf(address(router)) == 0);
         assert(res.collateral.balanceOf(address(router)) == 0);
         assert(res.xt.balanceOf(address(router)) == 0);
         assert(res.ft.balanceOf(address(router)) == 0);
@@ -441,24 +390,26 @@ contract ForkRouterTest is Test {
         assert(IERC20(weethAddr).balanceOf(address(router)) == 0);
         assert(IERC20(ptWeethAddr).balanceOf(address(router)) == 0);
 
-        uint256 underlyingAmtBeforeRepay = res.underlying.balanceOf(sender);
+        uint256 underlyingAmtBeforeRepay = res.debt.balanceOf(sender);
+        ITermMaxOrder[] memory orders = new ITermMaxOrder[](0);
+        uint128[] memory amtsToBuyFt = new uint128[](0);
+        bool byDebtToken = true;
 
         uint256 netTokenOut = router.flashRepayFromColl(
             sender,
             res.market,
             gtId,
-            true,
-            units,
-            res.marketConfig.lsf
+            orders,
+            amtsToBuyFt,
+            byDebtToken,
+            units
         );
 
-        uint256 underlyingAmtAfterRepay = res.underlying.balanceOf(sender);
+        uint256 underlyingAmtAfterRepay = res.debt.balanceOf(sender);
 
-        assert(
-            underlyingAmtAfterRepay - underlyingAmtBeforeRepay == netTokenOut
-        );
+        assert(underlyingAmtAfterRepay - underlyingAmtBeforeRepay == netTokenOut);
 
-        assert(res.underlying.balanceOf(address(router)) == 0);
+        assert(res.debt.balanceOf(address(router)) == 0);
         assert(res.collateral.balanceOf(address(router)) == 0);
         assert(res.xt.balanceOf(address(router)) == 0);
         assert(res.ft.balanceOf(address(router)) == 0);
@@ -474,33 +425,23 @@ contract ForkRouterTest is Test {
         uint24 poolFee = 100;
 
         uint256 gtId = _loan(poolFee);
-        (, uint128 debtAmt, ,) = res.gt.loanInfo(
-            gtId
-        );
+        (, uint128 debtAmt, , ) = res.gt.loanInfo(gtId);
 
         uint256 minUnderlyingAmt = debtAmt;
 
         SwapUnit[] memory units = new SwapUnit[](2);
-        units[0] = SwapUnit(
-            address(pendleAdapter),
-            ptWeethAddr,
-            weethAddr,
-            abi.encode(ptWeethMarketAddr, 0)
-        );
+        units[0] = SwapUnit(address(pendleAdapter), ptWeethAddr, weethAddr, abi.encode(ptWeethMarketAddr, 0));
 
         units[1] = SwapUnit(
             address(uniswapAdapter),
             weethAddr,
             weth9Addr,
-            abi.encode(
-                abi.encodePacked(weethAddr, poolFee, weth9Addr),
-                minUnderlyingAmt
-            )
+            abi.encode(abi.encodePacked(weethAddr, poolFee, weth9Addr), minUnderlyingAmt)
         );
 
         res.gt.approve(address(router), gtId);
 
-        assert(res.underlying.balanceOf(address(router)) == 0);
+        assert(res.debt.balanceOf(address(router)) == 0);
         assert(res.collateral.balanceOf(address(router)) == 0);
         assert(res.xt.balanceOf(address(router)) == 0);
         assert(res.ft.balanceOf(address(router)) == 0);
@@ -508,22 +449,27 @@ contract ForkRouterTest is Test {
         assert(IERC20(weethAddr).balanceOf(address(router)) == 0);
         assert(IERC20(ptWeethAddr).balanceOf(address(router)) == 0);
 
-        uint256 underlyingAmtBeforeRepay = res.underlying.balanceOf(sender);
+        uint256 underlyingAmtBeforeRepay = res.debt.balanceOf(sender);
+        ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
+        orders[0] = res.order;
+        uint128[] memory amtsToBuyFt = new uint128[](1);
+        amtsToBuyFt[0] = debtAmt;
+        bool byDebtToken = false;
 
         uint256 netTokenOut = router.flashRepayFromColl(
             sender,
             res.market,
             gtId,
-            false,
-            units,
-            res.marketConfig.lsf
-        );
-        uint256 underlyingAmtAfterRepay = res.underlying.balanceOf(sender);
-        assert(
-            underlyingAmtAfterRepay - underlyingAmtBeforeRepay == netTokenOut
+            orders,
+            amtsToBuyFt,
+            byDebtToken,
+            units
         );
 
-        assert(res.underlying.balanceOf(address(router)) == 0);
+        uint256 underlyingAmtAfterRepay = res.debt.balanceOf(sender);
+        assert(underlyingAmtAfterRepay - underlyingAmtBeforeRepay == netTokenOut);
+
+        assert(res.debt.balanceOf(address(router)) == 0);
         assert(res.collateral.balanceOf(address(router)) == 0);
         assert(res.xt.balanceOf(address(router)) == 0);
         assert(res.ft.balanceOf(address(router)) == 0);
@@ -535,20 +481,13 @@ contract ForkRouterTest is Test {
     }
 
     function _loan(uint24 poolFee) internal returns (uint256 gtId) {
-        uint128 underlyingAmtInForBuyXt = 1e18;
+        uint128 underlyingAmtInForBuyXt = 5e8;
         uint256 tokenInAmt = 2e18;
         uint128 minXTOut = 0e8;
         uint256 maxLtv = 0.8e8;
 
-        deal(
-            address(res.underlying),
-            sender,
-            underlyingAmtInForBuyXt + tokenInAmt
-        );
-        res.underlying.approve(
-            address(router),
-            underlyingAmtInForBuyXt + tokenInAmt
-        );
+        deal(address(res.debt), sender, underlyingAmtInForBuyXt + tokenInAmt);
+        res.debt.approve(address(router), underlyingAmtInForBuyXt + tokenInAmt);
         SwapUnit[] memory units = new SwapUnit[](2);
         units[0] = SwapUnit(
             address(uniswapAdapter),
@@ -556,14 +495,9 @@ contract ForkRouterTest is Test {
             weethAddr,
             abi.encode(abi.encodePacked(weth9Addr, poolFee, weethAddr), block.timestamp + 3600, 0)
         );
-        units[1] = SwapUnit(
-            address(pendleAdapter),
-            weethAddr,
-            ptWeethAddr,
-            abi.encode(ptWeethMarketAddr, 0)
-        );
+        units[1] = SwapUnit(address(pendleAdapter), weethAddr, ptWeethAddr, abi.encode(ptWeethMarketAddr, 0));
 
-        uint256 underlyingAmtBeforeSwap = res.underlying.balanceOf(sender);
+        uint256 underlyingAmtBeforeSwap = res.debt.balanceOf(sender);
 
         assert(res.collateral.balanceOf(address(sender)) == 0);
         assert(res.xt.balanceOf(address(sender)) == 0);
@@ -571,30 +505,31 @@ contract ForkRouterTest is Test {
         assert(IERC20(weethAddr).balanceOf(address(sender)) == 0);
         assert(IERC20(ptWeethAddr).balanceOf(address(sender)) == 0);
 
-        assert(res.underlying.balanceOf(address(router)) == 0);
+        assert(res.debt.balanceOf(address(router)) == 0);
         assert(res.collateral.balanceOf(address(router)) == 0);
         assert(res.xt.balanceOf(address(router)) == 0);
         assert(res.ft.balanceOf(address(router)) == 0);
         assert(IERC20(weethAddr).balanceOf(address(router)) == 0);
         assert(IERC20(ptWeethAddr).balanceOf(address(router)) == 0);
 
+        ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
+        orders[0] = res.order;
+        uint128[] memory amtsToBuyXt = new uint128[](1);
+        amtsToBuyXt[0] = underlyingAmtInForBuyXt;
         (gtId, ) = router.leverageFromToken(
             receiver,
             res.market,
-            tokenInAmt,
-            underlyingAmtInForBuyXt,
-            maxLtv,
-            minXTOut,
-            units,
-            res.marketConfig.lsf
+            orders,
+            amtsToBuyXt,
+            uint128(minXTOut),
+            uint128(tokenInAmt),
+            uint128(maxLtv),
+            units
         );
 
-        uint256 underlyingAmtAfterSwap = res.underlying.balanceOf(sender);
+        uint256 underlyingAmtAfterSwap = res.debt.balanceOf(sender);
 
-        assert(
-            underlyingAmtBeforeSwap - underlyingAmtAfterSwap ==
-                underlyingAmtInForBuyXt + tokenInAmt
-        );
+        assert(underlyingAmtBeforeSwap - underlyingAmtAfterSwap == underlyingAmtInForBuyXt + tokenInAmt);
 
         assert(res.collateral.balanceOf(address(sender)) == 0);
         assert(res.xt.balanceOf(address(sender)) == 0);
@@ -602,7 +537,7 @@ contract ForkRouterTest is Test {
         assert(IERC20(weethAddr).balanceOf(address(sender)) == 0);
         assert(IERC20(ptWeethAddr).balanceOf(address(sender)) == 0);
 
-        assert(res.underlying.balanceOf(address(router)) == 0);
+        assert(res.debt.balanceOf(address(router)) == 0);
         assert(res.collateral.balanceOf(address(router)) == 0);
         assert(res.xt.balanceOf(address(router)) == 0);
         assert(res.ft.balanceOf(address(router)) == 0);

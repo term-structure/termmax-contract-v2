@@ -165,6 +165,22 @@
         "updatedAt": "1730391900",
         "answeredInRound": "0"
       }
+    },
+    "ETH_2000_PT_WEETH_1800": {
+      "eth": {
+        "roundId": "1",
+        "answer": "200000000000",
+        "startedAt": "1730391800",
+        "updatedAt": "1730391900",
+        "answeredInRound": "0"
+      },
+      "ptWeeth": {
+        "roundId": "1",
+        "answer": "180000000000",
+        "startedAt": "1730391800",
+        "updatedAt": "1730391900",
+        "answeredInRound": "0"
+      }
     }
   }
 }
