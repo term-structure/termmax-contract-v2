@@ -99,7 +99,7 @@ contract ForkRouterTest is Test {
             orderConfig.curveCuts
         );
 
-        uint amount = 15000e8;
+        uint amount = 1500e8;
         deal(address(res.debt), deployer, amount);
 
         res.debt.approve(address(res.market), amount);
@@ -133,7 +133,7 @@ contract ForkRouterTest is Test {
         amounts[0] = 5e8;
         uint256 netXtOut = router.swapExactTokenToToken(
             res.debt,
-            res.ft,
+            res.xt,
             receiver,
             orders,
             amounts,
@@ -216,7 +216,7 @@ contract ForkRouterTest is Test {
         amounts[0] = 5e8;
         uint256 netXtOut = router.swapExactTokenToToken(
             res.debt,
-            res.ft,
+            res.xt,
             receiver,
             orders,
             amounts,
@@ -309,7 +309,7 @@ contract ForkRouterTest is Test {
         amounts[0] = 5e8;
         uint256 netXtOut = router.swapExactTokenToToken(
             res.debt,
-            res.ft,
+            res.xt,
             receiver,
             orders,
             amounts,

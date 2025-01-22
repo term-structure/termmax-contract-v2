@@ -334,7 +334,6 @@ contract RouterTest is Test {
     }
 
     function testBorrowTokenFromCollateral() public {
-        //TODO check output
         vm.startPrank(sender);
 
         uint256 collInAmt = 1e18;
@@ -366,6 +365,69 @@ contract RouterTest is Test {
         assertEq(owner, sender);
         assertEq(collInAmt, abi.decode(collateralData, (uint256)));
         assert(debtAmt <= maxDebtAmt);
+        assertEq(res.debt.balanceOf(sender), borrowAmt);
+
+        vm.stopPrank();
+    }
+
+    function testBorrowTokenFromCollateralCase2() public {
+        vm.startPrank(sender);
+
+        uint256 collInAmt = 1e18;
+        uint128 borrowAmt = 80e8;
+
+        res.collateral.mint(sender, collInAmt);
+        res.collateral.approve(address(res.router), collInAmt);
+
+        res.debt.mint(sender, borrowAmt);
+        res.debt.approve(address(res.market), borrowAmt);
+        res.market.mint(sender, borrowAmt);
+
+        res.xt.approve(address(res.router), borrowAmt);
+
+        uint issueFtFeeRatio = res.market.issueFtFeeRatio();
+        uint128 previewDebtAmt = ((borrowAmt * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - issueFtFeeRatio))
+            .toUint128();
+
+        vm.expectEmit();
+        emit RouterEvents.Borrow(res.market, 1, sender, sender, collInAmt, previewDebtAmt, borrowAmt);
+
+        uint256 gtId = res.router.borrowTokenFromCollateral(sender, res.market, collInAmt, borrowAmt);
+        (address owner, uint128 debtAmt, , bytes memory collateralData) = res.gt.loanInfo(gtId);
+        assertEq(owner, sender);
+        assertEq(collInAmt, abi.decode(collateralData, (uint256)));
+        assert(previewDebtAmt == debtAmt);
+        assertEq(res.debt.balanceOf(sender), borrowAmt);
+
+        vm.stopPrank();
+    }
+
+    function testBorrowTokenFromGt() public {
+        vm.startPrank(sender);
+
+        (uint256 gtId, ) = LoanUtils.fastMintGt(res, sender, 100e8, 1e18);
+
+        uint256 collInAmt = 1e18;
+        uint128 borrowAmt = 80e8;
+
+        res.debt.mint(sender, borrowAmt);
+        res.debt.approve(address(res.market), borrowAmt);
+        res.market.mint(sender, borrowAmt);
+
+        res.xt.approve(address(res.router), borrowAmt);
+        res.gt.approve(address(res.router), gtId);
+
+        uint issueFtFeeRatio = res.market.issueFtFeeRatio();
+        uint128 previewDebtAmt = ((borrowAmt * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - issueFtFeeRatio))
+            .toUint128();
+
+        vm.expectEmit();
+        emit RouterEvents.Borrow(res.market, 1, sender, sender, 0, previewDebtAmt, borrowAmt);
+
+        res.router.borrowTokenFromGt(sender, res.market, gtId, borrowAmt);
+
+        (, uint128 debtAmt, , ) = res.gt.loanInfo(gtId);
+        assert(debtAmt == 100e8 + previewDebtAmt);
         assertEq(res.debt.balanceOf(sender), borrowAmt);
 
         vm.stopPrank();
