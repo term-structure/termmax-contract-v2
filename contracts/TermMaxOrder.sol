@@ -169,8 +169,7 @@ contract TermMaxOrder is
             oriXtReserve
         );
         lendApr_ =
-            ((lendVFtReserve * Constants.DECIMAL_BASE * Constants.DAYS_IN_YEAR) / lendVXtReserve) *
-            daysToMaturity;
+            ((lendVFtReserve * Constants.DECIMAL_BASE * Constants.DAYS_IN_YEAR) / (lendVXtReserve * daysToMaturity));
 
         uint borrowCutId = TermMaxCurve.calcCutId(curveCuts.borrowCurveCuts, oriXtReserve);
         (, uint borrowVXtReserve, uint borrowVFtReserve) = TermMaxCurve.calcIntervalProps(
@@ -180,8 +179,7 @@ contract TermMaxOrder is
             oriXtReserve
         );
         borrowApr_ =
-            ((borrowVFtReserve * Constants.DECIMAL_BASE * Constants.DAYS_IN_YEAR) / borrowVXtReserve) *
-            daysToMaturity;
+            ((borrowVFtReserve * Constants.DECIMAL_BASE * Constants.DAYS_IN_YEAR) / (borrowVXtReserve * daysToMaturity));
     }
 
     /**
