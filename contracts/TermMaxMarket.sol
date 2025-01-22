@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {OwnableUpgradeable, Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
@@ -26,7 +26,7 @@ import {TransferUtils} from "./lib/TransferUtils.sol";
 contract TermMaxMarket is
     ITermMaxMarket,
     ReentrancyGuardUpgradeable,
-    OwnableUpgradeable,
+    Ownable2StepUpgradeable,
     PausableUpgradeable,
     MarketErrors,
     MarketEvents

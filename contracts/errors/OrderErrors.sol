@@ -8,6 +8,10 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
  */
 interface OrderErrors {
     /**
+     * @notice Error thrown when attempting to interact with a zero address
+     */
+    error ZeroAddress();
+    /**
      * @notice Error thrown when attempting to interact with an order before its term is open
      */
     error TermIsNotOpen();

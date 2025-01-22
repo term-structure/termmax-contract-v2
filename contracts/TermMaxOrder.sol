@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {OwnableUpgradeable, Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
@@ -24,7 +24,7 @@ import {TransferUtils} from "./lib/TransferUtils.sol";
 contract TermMaxOrder is
     ITermMaxOrder,
     ReentrancyGuardUpgradeable,
-    OwnableUpgradeable,
+    Ownable2StepUpgradeable,
     PausableUpgradeable,
     OrderErrors,
     OrderEvents
@@ -124,6 +124,9 @@ contract TermMaxOrder is
         __ReentrancyGuard_init();
         __Pausable_init();
         market = ITermMaxMarket(_msgSender());
+        if (maker_ == address(0)) {
+            revert ZeroAddress();
+        }
         maker = maker_;
         _orderConfig.curveCuts = curveCuts_;
         _orderConfig.feeConfig = marketConfig.feeConfig;
@@ -169,8 +172,7 @@ contract TermMaxOrder is
             oriXtReserve
         );
         lendApr_ =
-            ((lendVFtReserve * Constants.DECIMAL_BASE * Constants.DAYS_IN_YEAR) / lendVXtReserve) *
-            daysToMaturity;
+            ((lendVFtReserve * Constants.DECIMAL_BASE * Constants.DAYS_IN_YEAR) / (lendVXtReserve * daysToMaturity));
 
         uint borrowCutId = TermMaxCurve.calcCutId(curveCuts.borrowCurveCuts, oriXtReserve);
         (, uint borrowVXtReserve, uint borrowVFtReserve) = TermMaxCurve.calcIntervalProps(
@@ -180,8 +182,7 @@ contract TermMaxOrder is
             oriXtReserve
         );
         borrowApr_ =
-            ((borrowVFtReserve * Constants.DECIMAL_BASE * Constants.DAYS_IN_YEAR) / borrowVXtReserve) *
-            daysToMaturity;
+            ((borrowVFtReserve * Constants.DECIMAL_BASE * Constants.DAYS_IN_YEAR) / (borrowVXtReserve * daysToMaturity));
     }
 
     /**
@@ -388,7 +389,7 @@ contract TermMaxOrder is
 
         debtToken.safeTransferFrom(caller, address(this), debtTokenAmtIn);
 
-        debtToken.approve(address(market), debtTokenAmtIn);
+        debtToken.safeIncreaseAllowance(address(market), debtTokenAmtIn);
         market.mint(address(this), debtTokenAmtIn);
         if (tokenOut == ft) {
             uint ftReserve = getTransientFtReserve();
@@ -567,7 +568,7 @@ contract TermMaxOrder is
 
         debtToken.safeTransferFrom(caller, address(this), netTokenIn);
 
-        debtToken.approve(address(market), netTokenIn);
+        debtToken.safeIncreaseAllowance(address(market), netTokenIn);
         market.mint(address(this), netTokenIn);
         if (tokenOut == ft) {
             uint ftReserve = getTransientFtReserve();
