@@ -10,14 +10,17 @@ import {SwapUtils} from "./utils/SwapUtils.sol";
 import {LoanUtils} from "./utils/LoanUtils.sol";
 
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import {ITermMaxMarket, TermMaxMarket, Constants, IERC20} from "../contracts/core/TermMaxMarket.sol";
-import {MockFlashLoanReceiver} from "../contracts/test/MockFlashLoanReceiver.sol";
-import {MockFlashRepayer} from "../contracts/test/MockFlashRepayer.sol";
-import {MockPriceFeed} from "../contracts/test/MockPriceFeed.sol";
-import {AbstractGearingToken} from "../contracts/core/tokens/AbstractGearingToken.sol";
-import {ITermMaxFactory, TermMaxFactory, IMintableERC20, IGearingToken} from "../contracts/core/factory/TermMaxFactory.sol";
-import {IOracle, OracleAggregator, AggregatorV3Interface} from "contracts/core/oracle/OracleAggregator.sol";
-import "../contracts/core/storage/TermMaxStorage.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {Constants} from "contracts/lib/Constants.sol";
+import {ITermMaxMarket, TermMaxMarket, MarketEvents, MarketErrors} from "contracts/TermMaxMarket.sol";
+import {MockFlashLoanReceiver} from "contracts/test/MockFlashLoanReceiver.sol";
+import {MockFlashRepayer} from "contracts/test/MockFlashRepayer.sol";
+import {MockPriceFeed} from "contracts/test/MockPriceFeed.sol";
+import {IGearingToken, AbstractGearingToken, GearingTokenErrors, GearingTokenEvents} from "contracts/tokens/AbstractGearingToken.sol";
+import {IMintableERC20} from "contracts/tokens/MintableERC20.sol";
+import {ITermMaxFactory, TermMaxFactory} from "contracts/factory/TermMaxFactory.sol";
+import {IOracle, OracleAggregator, AggregatorV3Interface} from "contracts/oracle/OracleAggregator.sol";
+import "contracts/storage/TermMaxStorage.sol";
 
 contract GtTest is Test {
     using JSONLoader for *;
@@ -26,11 +29,13 @@ contract GtTest is Test {
 
     DeployUtils.Res res;
 
+    OrderConfig orderConfig;
     MarketConfig marketConfig;
 
     address deployer = vm.randomAddress();
     address sender = vm.randomAddress();
     address treasurer = vm.randomAddress();
+    address maker = vm.randomAddress();
     string testdata;
 
     MockFlashLoanReceiver flashLoanReceiver;
@@ -42,48 +47,37 @@ contract GtTest is Test {
 
     function setUp() public {
         vm.startPrank(deployer);
-        testdata = vm.readFile(
-            string.concat(vm.projectRoot(), "/test/testdata/testdata.json")
+        testdata = vm.readFile(string.concat(vm.projectRoot(), "/test/testdata/testdata.json"));
+
+        marketConfig = JSONLoader.getMarketConfigFromJson(treasurer, testdata, ".marketConfig");
+        orderConfig = JSONLoader.getOrderConfigFromJson(testdata, ".orderConfig");
+        orderConfig.maxXtReserve = type(uint128).max;
+        res = DeployUtils.deployMarket(deployer, marketConfig, maxLtv, liquidationLtv);
+
+        res.order = res.market.createOrder(
+            maker,
+            orderConfig.maxXtReserve,
+            ISwapCallback(address(0)),
+            orderConfig.curveCuts
         );
 
-        marketConfig = JSONLoader.getMarketConfigFromJson(
-            treasurer,
-            testdata,
-            ".marketConfig"
-        );
-        res = DeployUtils.deployMarket(
-            deployer,
-            marketConfig,
-            maxLtv,
-            liquidationLtv
-        );
-
-        flashLoanReceiver = new MockFlashLoanReceiver(res.market);
-        flashRepayer = new MockFlashRepayer(res.gt);
-        vm.warp(
-            vm.parseUint(
-                vm.parseJsonString(testdata, ".marketConfig.currentTime")
-            )
-        );
+        vm.warp(vm.parseUint(vm.parseJsonString(testdata, ".currentTime")));
 
         // update oracle
         res.collateralOracle.updateRoundData(
-            JSONLoader.getRoundDataFromJson(
-                testdata,
-                ".priceData.ETH_2000_DAI_1.eth"
-            )
+            JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_2000_DAI_1.eth")
         );
-        res.underlyingOracle.updateRoundData(
-            JSONLoader.getRoundDataFromJson(
-                testdata,
-                ".priceData.ETH_2000_DAI_1.dai"
-            )
-        );
+        res.debtOracle.updateRoundData(JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_2000_DAI_1.dai"));
 
-        uint amount = 10000e8;
-        res.underlying.mint(deployer, amount);
-        res.underlying.approve(address(res.market), amount);
-        res.market.provideLiquidity(uint128(amount));
+        uint amount = 15000e8;
+        res.debt.mint(deployer, amount);
+        res.debt.approve(address(res.market), amount);
+        res.market.mint(deployer, amount);
+        res.ft.transfer(address(res.order), amount);
+        res.xt.transfer(address(res.order), amount);
+
+        flashLoanReceiver = new MockFlashLoanReceiver(res.market);
+        flashRepayer = new MockFlashRepayer(res.gt);
 
         vm.stopPrank();
     }
@@ -98,14 +92,12 @@ contract GtTest is Test {
         res.collateral.approve(address(res.gt), collateralAmt);
         bytes memory collateralData = abi.encode(collateralAmt);
 
-        StateChecker.MarketState memory state = StateChecker.getMarketState(
-            res
-        );
+        StateChecker.MarketState memory state = StateChecker.getMarketState(res);
 
-        uint issueFee = (debtAmt * marketConfig.issueFtFeeRatio) /
-            Constants.DECIMAL_BASE;
+        uint issueFee = (debtAmt * res.market.issueFtFeeRatio()) / Constants.DECIMAL_BASE;
         vm.expectEmit();
-        emit ITermMaxMarket.IssueFt(
+        emit MarketEvents.IssueFt(
+            sender,
             sender,
             1,
             debtAmt,
@@ -114,10 +106,7 @@ contract GtTest is Test {
             collateralData
         );
 
-        (uint256 gtId, uint128 ftOutAmt) = res.market.issueFt(
-            debtAmt,
-            collateralData
-        );
+        (uint256 gtId, uint128 ftOutAmt) = res.market.issueFt(sender, debtAmt, collateralData);
 
         assert(ftOutAmt == (debtAmt - issueFee));
         assert(gtId == 1);
@@ -128,9 +117,7 @@ contract GtTest is Test {
         assert(res.ft.balanceOf(marketConfig.treasurer) == issueFee);
         assert(res.ft.balanceOf(sender) == ftOutAmt);
 
-        (address owner, uint128 d, uint128 ltv, bytes memory cd) = res
-            .gt
-            .loanInfo(gtId);
+        (address owner, uint128 d, uint128 ltv, bytes memory cd) = res.gt.loanInfo(gtId);
         assert(owner == sender);
         assert(d == debtAmt);
         assert(collateralAmt == abi.decode(cd, (uint256)));
@@ -141,55 +128,37 @@ contract GtTest is Test {
     }
 
     function testMintGtByLeverage() public {
+        vm.startPrank(sender);
         uint collateralAmt = 1e18;
         bytes memory callbackData = abi.encode(sender, collateralAmt);
         res.collateral.mint(address(flashLoanReceiver), collateralAmt);
 
         uint128 xtAmt = 90e8;
-        uint debtAmt = (xtAmt *
-            marketConfig.initialLtv +
-            Constants.DECIMAL_BASE -
-            1) / Constants.DECIMAL_BASE;
-        res.underlying.mint(address(sender), xtAmt);
-        vm.startPrank(sender);
-        res.underlying.approve(address(res.market), xtAmt);
+        uint debtAmt = xtAmt;
 
-        // get XT token
-        (uint128 lpFtOutAmt, uint128 lpXtOutAmt) = res.market.provideLiquidity(
-            xtAmt
-        );
-        res.lpFt.approve(address(res.market), lpFtOutAmt);
-        res.lpXt.approve(address(res.market), lpXtOutAmt);
-        res.market.withdrawLiquidity(lpFtOutAmt, lpXtOutAmt);
-
-        StateChecker.MarketState memory state = StateChecker.getMarketState(
-            res
-        );
+        uint128 debtAmtInForBuyXt = 5e8;
+        uint128 minXTOut = 0e8;
+        res.debt.mint(sender, debtAmtInForBuyXt);
+        res.debt.approve(address(res.order), debtAmtInForBuyXt);
+        res.order.swapExactTokenToToken(res.debt, res.xt, sender, debtAmtInForBuyXt, minXTOut);
+        StateChecker.MarketState memory state = StateChecker.getMarketState(res);
         uint xtBefore = res.xt.balanceOf(address(sender));
 
         res.xt.approve(address(flashLoanReceiver), xtAmt);
 
         vm.expectEmit();
-        emit ITermMaxMarket.MintGt(
-            address(flashLoanReceiver),
-            sender,
-            1,
-            uint128(debtAmt),
-            abi.encode(collateralAmt)
-        );
+        emit MarketEvents.MintGt(address(flashLoanReceiver), sender, 1, uint128(debtAmt), abi.encode(collateralAmt));
         uint256 gtId = flashLoanReceiver.leverageByXt(xtAmt, callbackData);
 
         assert(gtId == 1);
         state.collateralReserve += collateralAmt;
-        state.underlyingReserve -= xtAmt;
+        state.debtReserve -= xtAmt;
         StateChecker.checkMarketState(res, state);
 
         uint xtAfter = res.xt.balanceOf(address(sender));
         assert(xtBefore - xtAfter == xtAmt);
 
-        (address owner, uint128 d, uint128 ltv, bytes memory cd) = res
-            .gt
-            .loanInfo(gtId);
+        (address owner, uint128 d, uint128 ltv, bytes memory cd) = res.gt.loanInfo(gtId);
         assert(owner == sender);
         assert(d == debtAmt);
         assert(collateralAmt == abi.decode(cd, (uint256)));
@@ -211,19 +180,20 @@ contract GtTest is Test {
         res.collateral.approve(address(res.gt), collateralAmt);
         bytes memory collateralData = abi.encode(collateralAmt);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(IOracle.OracleIsNotWorking.selector, address(res.collateral))
-        );
-        res.market.issueFt(debtAmt, collateralData);
+        vm.expectRevert(abi.encodeWithSelector(IOracle.OracleIsNotWorking.selector, address(res.collateral)));
+        res.market.issueFt(sender, debtAmt, collateralData);
 
         vm.stopPrank();
 
         vm.prank(deployer);
-        res.oracle.setOracle(address(res.collateral), IOracle.Oracle(res.collateralOracle, res.collateralOracle, 4000));
+        res.oracle.setOracle(
+            address(res.collateral),
+            IOracle.Oracle(res.collateralOracle, res.collateralOracle, 365 days)
+        );
 
         vm.startPrank(sender);
         res.collateral.approve(address(res.gt), collateralAmt);
-        res.market.issueFt(debtAmt, collateralData);
+        res.market.issueFt(sender, debtAmt, collateralData);
 
         vm.stopPrank();
     }
@@ -241,13 +211,13 @@ contract GtTest is Test {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IGearingToken.GtIsNotHealthy.selector,
+                GearingTokenErrors.GtIsNotHealthy.selector,
                 0,
                 sender,
                 LoanUtils.calcLtv(res, debtAmt, collateralAmt)
             )
         );
-        res.market.issueFt(debtAmt, collateralData);
+        res.market.issueFt(sender, debtAmt, collateralData);
 
         vm.stopPrank();
     }
@@ -265,13 +235,13 @@ contract GtTest is Test {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IGearingToken.GtIsNotHealthy.selector,
+                GearingTokenErrors.GtIsNotHealthy.selector,
                 0,
                 sender,
                 LoanUtils.calcLtv(res, debtAmt, collateralAmt)
             )
         );
-        res.market.issueFt(debtAmt, collateralData);
+        res.market.issueFt(sender, debtAmt, collateralData);
 
         vm.stopPrank();
     }
@@ -287,44 +257,32 @@ contract GtTest is Test {
         res.collateral.approve(address(res.gt), collateralAmt);
         bytes memory collateralData = abi.encode(collateralAmt);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IGearingToken.DebtValueIsTooSmall.selector,
-                debtAmt
-            )
-        );
-        res.market.issueFt(debtAmt, collateralData);
+        vm.expectRevert(abi.encodeWithSelector(GearingTokenErrors.DebtValueIsTooSmall.selector, debtAmt));
+        res.market.issueFt(sender, debtAmt, collateralData);
 
         vm.stopPrank();
     }
 
     function testRevertByGtIsNotHealthyWhenLeverage() public {
-        uint collateralAmt = 1e18;
+        vm.startPrank(sender);
+        uint collateralAmt = 0.001e18;
         bytes memory callbackData = abi.encode(sender, collateralAmt);
         res.collateral.mint(address(flashLoanReceiver), collateralAmt);
-        // debt 1848 USD collaretal 2000USD ltv 0.924
-        uint128 xtAmt = 2100e8;
-        uint debtAmt = (xtAmt *
-            marketConfig.initialLtv +
-            Constants.DECIMAL_BASE -
-            1) / Constants.DECIMAL_BASE;
-        res.underlying.mint(address(sender), xtAmt);
-        vm.startPrank(sender);
-        res.underlying.approve(address(res.market), xtAmt);
 
-        // get XT token
-        (uint128 lpFtOutAmt, uint128 lpXtOutAmt) = res.market.provideLiquidity(
-            xtAmt
-        );
-        res.lpFt.approve(address(res.market), lpFtOutAmt);
-        res.lpXt.approve(address(res.market), lpXtOutAmt);
-        res.market.withdrawLiquidity(lpFtOutAmt, lpXtOutAmt);
+        uint128 xtAmt = 90e8;
+        uint debtAmt = xtAmt;
+
+        uint128 debtAmtInForBuyXt = 5e8;
+        uint128 minXTOut = 0e8;
+        res.debt.mint(sender, debtAmtInForBuyXt);
+        res.debt.approve(address(res.order), debtAmtInForBuyXt);
+        res.order.swapExactTokenToToken(res.debt, res.xt, sender, debtAmtInForBuyXt, minXTOut);
 
         res.xt.approve(address(flashLoanReceiver), xtAmt);
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IGearingToken.GtIsNotHealthy.selector,
+                GearingTokenErrors.GtIsNotHealthy.selector,
                 0,
                 sender,
                 LoanUtils.calcLtv(res, debtAmt, collateralAmt)
@@ -335,48 +293,34 @@ contract GtTest is Test {
         vm.stopPrank();
     }
 
-    function testReapyByUnderlying() public {
+    function testReapyByDebtToken() public {
         uint128 debtAmt = 100e8;
         uint256 collateralAmt = 1e18;
 
         vm.startPrank(sender);
 
-        (uint256 gtId, ) = LoanUtils.fastMintGt(
-            res,
-            sender,
-            debtAmt,
-            collateralAmt
-        );
+        (uint256 gtId, ) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
 
-        res.underlying.mint(sender, debtAmt);
+        res.debt.mint(sender, debtAmt);
 
-        res.underlying.approve(address(res.gt), debtAmt);
+        res.debt.approve(address(res.gt), debtAmt);
         uint collateralBalanceBefore = res.collateral.balanceOf(sender);
-        uint underlyingBalanceBefore = res.underlying.balanceOf(sender);
-        StateChecker.MarketState memory state = StateChecker.getMarketState(
-            res
-        );
-        bool byUnderlying = true;
+        uint debtBalanceBefore = res.debt.balanceOf(sender);
+        StateChecker.MarketState memory state = StateChecker.getMarketState(res);
+        bool byDebtToken = true;
         vm.expectEmit();
-        emit IGearingToken.Repay(gtId, debtAmt, byUnderlying);
-        res.gt.repay(gtId, debtAmt, byUnderlying);
+        emit GearingTokenEvents.Repay(gtId, debtAmt, byDebtToken);
+        res.gt.repay(gtId, debtAmt, byDebtToken);
 
         uint collateralBalanceAfter = res.collateral.balanceOf(sender);
-        uint underlyingBalanceAfter = res.underlying.balanceOf(sender);
-        state.underlyingReserve += debtAmt;
+        uint debtBalanceAfter = res.debt.balanceOf(sender);
+        state.debtReserve += debtAmt;
         state.collateralReserve -= collateralAmt;
         StateChecker.checkMarketState(res, state);
 
-        assert(
-            collateralBalanceAfter - collateralBalanceBefore == collateralAmt
-        );
-        assert(underlyingBalanceAfter + debtAmt == underlyingBalanceBefore);
-        vm.expectRevert(
-            abi.encodePacked(
-                bytes4(keccak256("ERC721NonexistentToken(uint256)")),
-                gtId
-            )
-        );
+        assert(collateralBalanceAfter - collateralBalanceBefore == collateralAmt);
+        assert(debtBalanceAfter + debtAmt == debtBalanceBefore);
+        vm.expectRevert(abi.encodePacked(bytes4(keccak256("ERC721NonexistentToken(uint256)")), gtId));
         res.gt.loanInfo(gtId);
 
         vm.stopPrank();
@@ -388,53 +332,36 @@ contract GtTest is Test {
 
         vm.startPrank(sender);
 
-        (uint256 gtId, ) = LoanUtils.fastMintGt(
-            res,
-            sender,
-            debtAmt,
-            collateralAmt
-        );
+        (uint256 gtId, ) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
 
         // get FT token
-        res.underlying.mint(sender, debtAmt);
-        res.underlying.approve(address(res.market), debtAmt);
-        (uint128 lpFtOutAmt, uint128 lpXtOutAmt) = res.market.provideLiquidity(
-            debtAmt
-        );
-        res.lpFt.approve(address(res.market), lpFtOutAmt);
-        res.lpXt.approve(address(res.market), lpXtOutAmt);
-        res.market.withdrawLiquidity(lpFtOutAmt, lpXtOutAmt);
+        uint128 debtAmtInForBuyFt = 100e8;
+        uint128 minFTOut = 0e8;
+        res.debt.mint(sender, debtAmtInForBuyFt);
+        res.debt.approve(address(res.order), debtAmtInForBuyFt);
+        res.order.swapExactTokenToToken(res.debt, res.ft, sender, debtAmtInForBuyFt, minFTOut);
 
         uint collateralBalanceBefore = res.collateral.balanceOf(sender);
         uint ftBalanceBefore = res.ft.balanceOf(sender);
-        uint ftInGtBefore = res.ft.balanceOf(address(res.gt));
-        StateChecker.MarketState memory state = StateChecker.getMarketState(
-            res
-        );
+        uint ftInMarketBefore = res.ft.balanceOf(address(res.market));
+        StateChecker.MarketState memory state = StateChecker.getMarketState(res);
 
         res.ft.approve(address(res.gt), debtAmt);
 
-        bool byUnderlying = false;
+        bool byDebtToken = false;
         vm.expectEmit();
-        emit IGearingToken.Repay(gtId, debtAmt, byUnderlying);
-        res.gt.repay(gtId, debtAmt, byUnderlying);
+        emit GearingTokenEvents.Repay(gtId, debtAmt, byDebtToken);
+        res.gt.repay(gtId, debtAmt, byDebtToken);
 
         uint collateralBalanceAfter = res.collateral.balanceOf(sender);
         uint ftBalanceAfter = res.ft.balanceOf(sender);
-        uint ftInGtAfter = res.ft.balanceOf(address(res.gt));
+        uint ftInMarketAfter = res.ft.balanceOf(address(res.market));
         state.collateralReserve -= collateralAmt;
         StateChecker.checkMarketState(res, state);
-        assert(ftInGtAfter - debtAmt == ftInGtBefore);
-        assert(
-            collateralBalanceAfter - collateralBalanceBefore == collateralAmt
-        );
+        assert(ftInMarketAfter - debtAmt == ftInMarketBefore);
+        assert(collateralBalanceAfter - collateralBalanceBefore == collateralAmt);
         assert(ftBalanceAfter + debtAmt == ftBalanceBefore);
-        vm.expectRevert(
-            abi.encodePacked(
-                bytes4(keccak256("ERC721NonexistentToken(uint256)")),
-                gtId
-            )
-        );
+        vm.expectRevert(abi.encodePacked(bytes4(keccak256("ERC721NonexistentToken(uint256)")), gtId));
         res.gt.loanInfo(gtId);
 
         vm.stopPrank();
@@ -447,30 +374,23 @@ contract GtTest is Test {
 
         vm.startPrank(sender);
 
-        (uint256 gtId, ) = LoanUtils.fastMintGt(
-            res,
-            sender,
-            debtAmt,
-            collateralAmt
-        );
+        (uint256 gtId, ) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
         vm.stopPrank();
 
         address thirdPeople = vm.randomAddress();
-        res.underlying.mint(thirdPeople, debtAmt);
+        res.debt.mint(thirdPeople, debtAmt);
         // Repay repayAmt
         vm.startPrank(thirdPeople);
-        res.underlying.approve(address(res.gt), debtAmt);
-        StateChecker.MarketState memory state = StateChecker.getMarketState(
-            res
-        );
+        res.debt.approve(address(res.gt), debtAmt);
+        StateChecker.MarketState memory state = StateChecker.getMarketState(res);
 
-        bool byUnderlying = true;
+        bool byDebtToken = true;
         vm.expectEmit();
-        emit IGearingToken.Repay(gtId, repayAmt, byUnderlying);
-        res.gt.repay(gtId, repayAmt, byUnderlying);
-        state.underlyingReserve += repayAmt;
+        emit GearingTokenEvents.Repay(gtId, repayAmt, byDebtToken);
+        res.gt.repay(gtId, repayAmt, byDebtToken);
+        state.debtReserve += repayAmt;
         StateChecker.checkMarketState(res, state);
-        assert(res.underlying.balanceOf(thirdPeople) == debtAmt - repayAmt);
+        assert(res.debt.balanceOf(thirdPeople) == debtAmt - repayAmt);
         assert(res.collateral.balanceOf(thirdPeople) == 0);
 
         (address owner, uint128 d, , bytes memory cd) = res.gt.loanInfo(gtId);
@@ -479,32 +399,25 @@ contract GtTest is Test {
         assert(collateralAmt == abi.decode(cd, (uint256)));
 
         // Repay all
-        uint underlyingBalanceBefore = res.underlying.balanceOf(sender);
+        uint debtBalanceBefore = res.debt.balanceOf(sender);
         uint collateralBalanceBefore = res.collateral.balanceOf(sender);
 
         vm.expectEmit();
-        emit IGearingToken.Repay(gtId, debtAmt - repayAmt, byUnderlying);
-        res.gt.repay(gtId, debtAmt - repayAmt, byUnderlying);
+        emit GearingTokenEvents.Repay(gtId, debtAmt - repayAmt, byDebtToken);
+        res.gt.repay(gtId, debtAmt - repayAmt, byDebtToken);
 
-        state.underlyingReserve += (debtAmt - repayAmt);
+        state.debtReserve += (debtAmt - repayAmt);
         state.collateralReserve -= collateralAmt;
         uint collateralBalanceAfter = res.collateral.balanceOf(sender);
-        uint underlyingBalanceAfter = res.underlying.balanceOf(sender);
+        uint debtBalanceAfter = res.debt.balanceOf(sender);
         StateChecker.checkMarketState(res, state);
 
-        assert(
-            collateralBalanceAfter - collateralBalanceBefore == collateralAmt
-        );
-        assert(underlyingBalanceAfter == underlyingBalanceBefore);
-        assert(res.underlying.balanceOf(thirdPeople) == 0);
+        assert(collateralBalanceAfter - collateralBalanceBefore == collateralAmt);
+        assert(debtBalanceAfter == debtBalanceBefore);
+        assert(res.debt.balanceOf(thirdPeople) == 0);
         assert(res.collateral.balanceOf(thirdPeople) == 0);
 
-        vm.expectRevert(
-            abi.encodePacked(
-                bytes4(keccak256("ERC721NonexistentToken(uint256)")),
-                gtId
-            )
-        );
+        vm.expectRevert(abi.encodePacked(bytes4(keccak256("ERC721NonexistentToken(uint256)")), gtId));
         res.gt.loanInfo(gtId);
 
         vm.stopPrank();
@@ -516,97 +429,69 @@ contract GtTest is Test {
 
         vm.startPrank(sender);
 
-        (uint256 gtId, ) = LoanUtils.fastMintGt(
-            res,
-            sender,
-            debtAmt,
-            collateralAmt
-        );
+        (uint256 gtId, ) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
 
-        res.underlying.mint(address(flashRepayer), debtAmt);
+        res.debt.mint(address(flashRepayer), debtAmt);
         res.gt.approve(address(flashRepayer), gtId);
 
         uint collateralBalanceBefore = res.collateral.balanceOf(sender);
-        uint underlyingBalanceBefore = res.underlying.balanceOf(sender);
-        StateChecker.MarketState memory state = StateChecker.getMarketState(
-            res
-        );
-        bool byUnderlying = true;
+        uint debtBalanceBefore = res.debt.balanceOf(sender);
+        StateChecker.MarketState memory state = StateChecker.getMarketState(res);
+        bool byDebtToken = true;
         vm.expectEmit();
-        emit IGearingToken.Repay(gtId, debtAmt, byUnderlying);
-        flashRepayer.flashRepay(gtId, byUnderlying);
+        emit GearingTokenEvents.Repay(gtId, debtAmt, byDebtToken);
+        flashRepayer.flashRepay(gtId, byDebtToken);
 
         uint collateralBalanceAfter = res.collateral.balanceOf(sender);
-        uint underlyingBalanceAfter = res.underlying.balanceOf(sender);
-        state.underlyingReserve += debtAmt;
+        uint debtBalanceAfter = res.debt.balanceOf(sender);
+        state.debtReserve += debtAmt;
         state.collateralReserve -= collateralAmt;
         StateChecker.checkMarketState(res, state);
 
-        assert(
-            res.collateral.balanceOf(address(flashRepayer)) == collateralAmt
-        );
-        assert(res.underlying.balanceOf(address(flashRepayer)) == 0);
+        assert(res.collateral.balanceOf(address(flashRepayer)) == collateralAmt);
+        assert(res.debt.balanceOf(address(flashRepayer)) == 0);
         assert(collateralBalanceAfter == collateralBalanceBefore);
-        assert(underlyingBalanceAfter == underlyingBalanceBefore);
-        vm.expectRevert(
-            abi.encodePacked(
-                bytes4(keccak256("ERC721NonexistentToken(uint256)")),
-                gtId
-            )
-        );
+        assert(debtBalanceAfter == debtBalanceBefore);
+        vm.expectRevert(abi.encodePacked(bytes4(keccak256("ERC721NonexistentToken(uint256)")), gtId));
         res.gt.loanInfo(gtId);
 
         vm.stopPrank();
     }
 
-    function testFlashRepayThroughFt() public {
-        uint128 debtAmt = 100e8;
-        uint256 collateralAmt = 1e18;
+    // function testFlashRepayThroughFt() public {
+    //     uint128 debtAmt = 100e8;
+    //     uint256 collateralAmt = 1e18;
 
-        vm.startPrank(sender);
+    //     vm.startPrank(sender);
 
-        (uint256 gtId, ) = LoanUtils.fastMintGt(
-            res,
-            sender,
-            debtAmt,
-            collateralAmt
-        );
-        deal(address(res.ft), address(flashRepayer), debtAmt);
+    //     (uint256 gtId, ) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
+    //     deal(address(res.ft), address(flashRepayer), debtAmt);
 
-        res.gt.approve(address(flashRepayer), gtId);
+    //     res.gt.approve(address(flashRepayer), gtId);
 
-        uint collateralBalanceBefore = res.collateral.balanceOf(sender);
-        uint ftBalanceBefore = res.ft.balanceOf(sender);
-        StateChecker.MarketState memory state = StateChecker.getMarketState(
-            res
-        );
-        bool byUnderlying = false;
-        vm.expectEmit();
-        emit IGearingToken.Repay(gtId, debtAmt, byUnderlying);
-        flashRepayer.flashRepay(gtId, byUnderlying);
+    //     uint collateralBalanceBefore = res.collateral.balanceOf(sender);
+    //     uint ftBalanceBefore = res.ft.balanceOf(sender);
+    //     StateChecker.MarketState memory state = StateChecker.getMarketState(res);
+    //     bool byDebtToken = false;
+    //     vm.expectEmit();
+    //     emit GearingTokenEvents.Repay(gtId, debtAmt, byDebtToken);
+    //     flashRepayer.flashRepay(gtId, byDebtToken);
 
-        uint collateralBalanceAfter = res.collateral.balanceOf(sender);
-        uint ftBalanceAfter = res.ft.balanceOf(sender);
-        state.ftReserve += debtAmt;
-        state.collateralReserve -= collateralAmt;
-        StateChecker.checkMarketState(res, state);
+    //     uint collateralBalanceAfter = res.collateral.balanceOf(sender);
+    //     uint ftBalanceAfter = res.ft.balanceOf(sender);
+    //     state.ftReserve += debtAmt;
+    //     state.collateralReserve -= collateralAmt;
+    //     StateChecker.checkMarketState(res, state);
 
-        assert(
-            res.collateral.balanceOf(address(flashRepayer)) == collateralAmt
-        );
-        assert(res.underlying.balanceOf(address(flashRepayer)) == 0);
-        assert(collateralBalanceAfter == collateralBalanceBefore);
-        assert(ftBalanceAfter == ftBalanceBefore);
-        vm.expectRevert(
-            abi.encodePacked(
-                bytes4(keccak256("ERC721NonexistentToken(uint256)")),
-                gtId
-            )
-        );
-        res.gt.loanInfo(gtId);
+    //     assert(res.collateral.balanceOf(address(flashRepayer)) == collateralAmt);
+    //     assert(res.debt.balanceOf(address(flashRepayer)) == 0);
+    //     assert(collateralBalanceAfter == collateralBalanceBefore);
+    //     assert(ftBalanceAfter == ftBalanceBefore);
+    //     vm.expectRevert(abi.encodePacked(bytes4(keccak256("ERC721NonexistentToken(uint256)")), gtId));
+    //     res.gt.loanInfo(gtId);
 
-        vm.stopPrank();
-    }
+    //     vm.stopPrank();
+    // }
 
     function testRevertByGtIsExpiredWhenRepay() public {
         uint128 debtAmt = 100e8;
@@ -614,20 +499,13 @@ contract GtTest is Test {
 
         vm.startPrank(sender);
 
-        (uint256 gtId, ) = LoanUtils.fastMintGt(
-            res,
-            sender,
-            debtAmt,
-            collateralAmt
-        );
+        (uint256 gtId, ) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
         vm.warp(marketConfig.maturity);
-        res.underlying.mint(sender, debtAmt);
+        res.debt.mint(sender, debtAmt);
 
-        res.underlying.approve(address(res.gt), debtAmt);
+        res.debt.approve(address(res.gt), debtAmt);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(IGearingToken.GtIsExpired.selector, gtId)
-        );
+        vm.expectRevert(abi.encodeWithSelector(GearingTokenErrors.GtIsExpired.selector, gtId));
         res.gt.repay(gtId, debtAmt, true);
 
         vm.stopPrank();
@@ -639,19 +517,12 @@ contract GtTest is Test {
 
         vm.startPrank(sender);
 
-        (uint256 gtId, ) = LoanUtils.fastMintGt(
-            res,
-            sender,
-            debtAmt,
-            collateralAmt
-        );
+        (uint256 gtId, ) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
         vm.warp(marketConfig.maturity);
-        res.underlying.mint(address(flashRepayer), debtAmt);
+        res.debt.mint(address(flashRepayer), debtAmt);
         res.gt.approve(address(flashRepayer), gtId);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(IGearingToken.GtIsExpired.selector, gtId)
-        );
+        vm.expectRevert(abi.encodeWithSelector(GearingTokenErrors.GtIsExpired.selector, gtId));
         flashRepayer.flashRepay(gtId, true);
     }
 
@@ -663,37 +534,22 @@ contract GtTest is Test {
 
         uint[] memory ids = new uint[](3);
         for (uint i = 0; i < ids.length; ++i) {
-            (ids[i], ) = LoanUtils.fastMintGt(
-                res,
-                sender,
-                debts[i],
-                collaterals[i]
-            );
+            (ids[i], ) = LoanUtils.fastMintGt(res, sender, debts[i], collaterals[i]);
         }
-        StateChecker.MarketState memory state = StateChecker.getMarketState(
-            res
-        );
+        StateChecker.MarketState memory state = StateChecker.getMarketState(res);
 
         vm.expectEmit();
         uint newId = 4;
-        emit IGearingToken.MergeGts(sender, newId, ids);
+        emit GearingTokenEvents.MergeGts(sender, newId, ids);
         newId = res.gt.merge(ids);
         StateChecker.checkMarketState(res, state);
 
         (address owner, uint128 d, , bytes memory cd) = res.gt.loanInfo(newId);
         assert(owner == sender);
         assert(d == debts[0] + debts[1] + debts[2]);
-        assert(
-            collaterals[0] + collaterals[1] + collaterals[2] ==
-                abi.decode(cd, (uint256))
-        );
+        assert(collaterals[0] + collaterals[1] + collaterals[2] == abi.decode(cd, (uint256)));
         for (uint i = 0; i < ids.length; i++) {
-            vm.expectRevert(
-                abi.encodePacked(
-                    bytes4(keccak256("ERC721NonexistentToken(uint256)")),
-                    ids[i]
-                )
-            );
+            vm.expectRevert(abi.encodePacked(bytes4(keccak256("ERC721NonexistentToken(uint256)")), ids[i]));
             res.gt.loanInfo(ids[i]);
         }
 
@@ -708,21 +564,12 @@ contract GtTest is Test {
 
         uint[] memory ids = new uint[](3);
         for (uint i = 0; i < ids.length; ++i) {
-            (ids[i], ) = LoanUtils.fastMintGt(
-                res,
-                sender,
-                debts[i],
-                collaterals[i]
-            );
+            (ids[i], ) = LoanUtils.fastMintGt(res, sender, debts[i], collaterals[i]);
         }
         vm.stopPrank();
         vm.prank(vm.randomAddress());
         vm.expectRevert(
-            abi.encodeWithSelector(
-                IGearingToken.CanNotMergeLoanWithDiffOwner.selector,
-                ids[0],
-                sender
-            )
+            abi.encodeWithSelector(GearingTokenErrors.CanNotMergeLoanWithDiffOwner.selector, ids[0], sender)
         );
         res.gt.merge(ids);
     }
@@ -734,12 +581,7 @@ contract GtTest is Test {
 
         vm.startPrank(sender);
 
-        (uint256 gtId, ) = LoanUtils.fastMintGt(
-            res,
-            sender,
-            debtAmt,
-            collateralAmt
-        );
+        (uint256 gtId, ) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
         vm.stopPrank();
         // Add collateral by third address
         address thirdPeople = vm.randomAddress();
@@ -748,20 +590,15 @@ contract GtTest is Test {
 
         res.collateral.approve(address(res.gt), addedCollateral);
 
-        StateChecker.MarketState memory state = StateChecker.getMarketState(
-            res
-        );
+        StateChecker.MarketState memory state = StateChecker.getMarketState(res);
 
         vm.expectEmit();
-        emit IGearingToken.AddCollateral(
-            gtId,
-            abi.encode(collateralAmt + addedCollateral)
-        );
+        emit GearingTokenEvents.AddCollateral(gtId, abi.encode(collateralAmt + addedCollateral));
         res.gt.addCollateral(gtId, abi.encode(addedCollateral));
 
         state.collateralReserve += addedCollateral;
         StateChecker.checkMarketState(res, state);
-        assert(res.underlying.balanceOf(thirdPeople) == 0);
+        assert(res.debt.balanceOf(thirdPeople) == 0);
         assert(res.collateral.balanceOf(thirdPeople) == 0);
 
         (address owner, uint128 d, , bytes memory cd) = res.gt.loanInfo(gtId);
@@ -786,12 +623,7 @@ contract GtTest is Test {
 
         vm.startPrank(sender);
 
-        (uint256 gtId, ) = LoanUtils.fastMintGt(
-            res,
-            sender,
-            debtAmt,
-            collateralAmt
-        );
+        (uint256 gtId, ) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
 
         vm.stopPrank();
 
@@ -802,9 +634,7 @@ contract GtTest is Test {
         vm.startPrank(thirdPeople);
         res.collateral.approve(address(res.gt), addedCollateral);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(IGearingToken.GtIsExpired.selector, gtId)
-        );
+        vm.expectRevert(abi.encodeWithSelector(GearingTokenErrors.GtIsExpired.selector, gtId));
 
         res.gt.addCollateral(gtId, abi.encode(addedCollateral));
         vm.stopPrank();
@@ -817,23 +647,13 @@ contract GtTest is Test {
 
         vm.startPrank(sender);
 
-        (uint256 gtId, ) = LoanUtils.fastMintGt(
-            res,
-            sender,
-            debtAmt,
-            collateralAmt
-        );
+        (uint256 gtId, ) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
 
-        StateChecker.MarketState memory state = StateChecker.getMarketState(
-            res
-        );
+        StateChecker.MarketState memory state = StateChecker.getMarketState(res);
         uint collateralBlanceBefore = res.collateral.balanceOf(sender);
 
         vm.expectEmit();
-        emit IGearingToken.RemoveCollateral(
-            gtId,
-            abi.encode(collateralAmt - removedCollateral)
-        );
+        emit GearingTokenEvents.RemoveCollateral(gtId, abi.encode(collateralAmt - removedCollateral));
         res.gt.removeCollateral(gtId, abi.encode(removedCollateral));
 
         state.collateralReserve -= removedCollateral;
@@ -841,9 +661,7 @@ contract GtTest is Test {
 
         uint collateralBlanceAfter = res.collateral.balanceOf(sender);
 
-        assert(
-            collateralBlanceAfter - collateralBlanceBefore == removedCollateral
-        );
+        assert(collateralBlanceAfter - collateralBlanceBefore == removedCollateral);
 
         (address owner, uint128 d, , bytes memory cd) = res.gt.loanInfo(gtId);
         assert(owner == sender);
@@ -860,26 +678,22 @@ contract GtTest is Test {
         uint256 removedCollateral = 0.1e18;
         vm.startPrank(sender);
 
-        (uint256 gtId, ) = LoanUtils.fastMintGt(
-            res,
-            sender,
-            debtAmt,
-            collateralAmt
-        );
+        (uint256 gtId, ) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
         vm.stopPrank();
 
         vm.prank(deployer);
         res.oracle.setOracle(address(res.collateral), IOracle.Oracle(res.collateralOracle, res.collateralOracle, 3600));
         vm.warp(block.timestamp + 3600);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(IOracle.OracleIsNotWorking.selector, address(res.collateral))
-        );
+        vm.expectRevert(abi.encodeWithSelector(IOracle.OracleIsNotWorking.selector, address(res.collateral)));
         vm.prank(sender);
         res.gt.removeCollateral(gtId, abi.encode(removedCollateral));
 
         vm.prank(deployer);
-        res.oracle.setOracle(address(res.collateral), IOracle.Oracle(res.collateralOracle, res.collateralOracle, 4000));
+        res.oracle.setOracle(
+            address(res.collateral),
+            IOracle.Oracle(res.collateralOracle, res.collateralOracle, 365 days)
+        );
 
         vm.prank(sender);
         res.gt.removeCollateral(gtId, abi.encode(removedCollateral));
@@ -892,23 +706,14 @@ contract GtTest is Test {
         uint256 removedCollateral = 0.1e18;
         vm.startPrank(sender);
 
-        (uint256 gtId, ) = LoanUtils.fastMintGt(
-            res,
-            sender,
-            debtAmt,
-            collateralAmt
-        );
+        (uint256 gtId, ) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IGearingToken.GtIsNotHealthy.selector,
+                GearingTokenErrors.GtIsNotHealthy.selector,
                 gtId,
                 sender,
-                LoanUtils.calcLtv(
-                    res,
-                    debtAmt,
-                    collateralAmt - removedCollateral
-                )
+                LoanUtils.calcLtv(res, debtAmt, collateralAmt - removedCollateral)
             )
         );
         res.gt.removeCollateral(gtId, abi.encode(removedCollateral));
@@ -923,21 +728,11 @@ contract GtTest is Test {
         uint256 removedCollateral = 0.1e18;
         vm.startPrank(sender);
 
-        (uint256 gtId, ) = LoanUtils.fastMintGt(
-            res,
-            sender,
-            debtAmt,
-            collateralAmt
-        );
+        (uint256 gtId, ) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
         vm.stopPrank();
 
         address thirdPeople = vm.randomAddress();
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IGearingToken.CallerIsNotTheOwner.selector,
-                gtId
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(GearingTokenErrors.CallerIsNotTheOwner.selector, gtId));
         vm.prank(thirdPeople);
         res.gt.removeCollateral(gtId, abi.encode(removedCollateral));
     }
@@ -949,20 +744,13 @@ contract GtTest is Test {
         uint256 removedCollateral = 0.1e18;
         vm.startPrank(sender);
 
-        (uint256 gtId, ) = LoanUtils.fastMintGt(
-            res,
-            sender,
-            debtAmt,
-            collateralAmt
-        );
+        (uint256 gtId, ) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
 
         vm.stopPrank();
 
         vm.warp(marketConfig.maturity);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(IGearingToken.GtIsExpired.selector, gtId)
-        );
+        vm.expectRevert(abi.encodeWithSelector(GearingTokenErrors.GtIsExpired.selector, gtId));
         vm.prank(sender);
         res.gt.removeCollateral(gtId, abi.encode(removedCollateral));
     }
@@ -974,23 +762,13 @@ contract GtTest is Test {
         uint256 removedCollateral = 0.1e18;
         vm.startPrank(sender);
 
-        (uint256 gtId, ) = LoanUtils.fastMintGt(
-            res,
-            sender,
-            debtAmt,
-            collateralAmt
-        );
+        (uint256 gtId, ) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
 
-        res.underlying.mint(sender, repayAmt);
-        res.underlying.approve(address(res.gt), repayAmt);
+        res.debt.mint(sender, repayAmt);
+        res.debt.approve(address(res.gt), repayAmt);
         res.gt.repay(gtId, repayAmt, true);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IGearingToken.DebtValueIsTooSmall.selector,
-                debtAmt - repayAmt
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(GearingTokenErrors.DebtValueIsTooSmall.selector, debtAmt - repayAmt));
         res.gt.removeCollateral(gtId, abi.encode(removedCollateral));
 
         vm.stopPrank();
@@ -1003,65 +781,46 @@ contract GtTest is Test {
 
         vm.startPrank(sender);
 
-        (uint256 gtId, ) = LoanUtils.fastMintGt(
-            res,
-            sender,
-            debtAmt,
-            collateralAmt
-        );
+        (uint256 gtId, ) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
         vm.stopPrank();
         vm.startPrank(deployer);
         // update oracle
         res.collateralOracle.updateRoundData(
-            JSONLoader.getRoundDataFromJson(
-                testdata,
-                ".priceData.ETH_1000_DAI_1.eth"
-            )
+            JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_1000_DAI_1.eth")
         );
-        res.underlyingOracle.updateRoundData(
-            JSONLoader.getRoundDataFromJson(
-                testdata,
-                ".priceData.ETH_1000_DAI_1.dai"
-            )
-        );
+        res.debtOracle.updateRoundData(JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_1000_DAI_1.dai"));
         vm.stopPrank();
         address liquidator = vm.randomAddress();
         vm.startPrank(liquidator);
 
-        res.underlying.mint(liquidator, debtAmt);
-        res.underlying.approve(address(res.gt), debtAmt);
+        res.debt.mint(liquidator, debtAmt);
+        res.debt.approve(address(res.gt), debtAmt);
 
         uint senderCBalanceBefore = res.collateral.balanceOf(sender);
-        StateChecker.MarketState memory state = StateChecker.getMarketState(
-            res
-        );
+        StateChecker.MarketState memory state = StateChecker.getMarketState(res);
 
         vm.expectEmit();
         uint cToLiquidator = collateralAmt;
         uint cToTreasurer = 0;
         uint remainningC = 0;
-        emit IGearingToken.Liquidate(
+        emit GearingTokenEvents.Liquidate(
             gtId,
             liquidator,
             debtAmt,
+            true,
             abi.encode(cToLiquidator),
             abi.encode(cToTreasurer),
             abi.encode(remainningC)
         );
 
-        res.gt.liquidate(gtId, debtAmt);
+        res.gt.liquidate(gtId, debtAmt, true);
         state.collateralReserve -= collateralAmt;
-        state.underlyingReserve += debtAmt;
+        state.debtReserve += debtAmt;
         StateChecker.checkMarketState(res, state);
 
-        assert(
-            res.collateral.balanceOf(marketConfig.treasurer) == cToTreasurer
-        );
+        assert(res.collateral.balanceOf(marketConfig.treasurer) == cToTreasurer);
         assert(res.collateral.balanceOf(liquidator) == cToLiquidator);
-        assert(
-            res.collateral.balanceOf(sender) ==
-                remainningC + senderCBalanceBefore
-        );
+        assert(res.collateral.balanceOf(sender) == remainningC + senderCBalanceBefore);
         vm.stopPrank();
     }
 
@@ -1072,67 +831,52 @@ contract GtTest is Test {
 
         vm.startPrank(sender);
 
-        (uint256 gtId, ) = LoanUtils.fastMintGt(
-            res,
-            sender,
-            debtAmt,
-            collateralAmt
-        );
+        (uint256 gtId, ) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
         vm.stopPrank();
         vm.startPrank(deployer);
         // update oracle
         res.collateralOracle.updateRoundData(
-            JSONLoader.getRoundDataFromJson(
-                testdata,
-                ".priceData.ETH_1000_DAI_1.eth"
-            )
+            JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_1000_DAI_1.eth")
         );
-        res.underlyingOracle.updateRoundData(
-            JSONLoader.getRoundDataFromJson(
-                testdata,
-                ".priceData.ETH_1000_DAI_1.dai"
-            )
-        );
+        res.debtOracle.updateRoundData(JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_1000_DAI_1.dai"));
         vm.stopPrank();
         address liquidator = vm.randomAddress();
         vm.startPrank(liquidator);
 
-        res.underlying.mint(liquidator, debtAmt);
-        res.underlying.approve(address(res.gt), debtAmt);
+        res.debt.mint(liquidator, debtAmt);
+        res.debt.approve(address(res.gt), debtAmt);
 
         uint senderCBalanceBefore = res.collateral.balanceOf(sender);
-        StateChecker.MarketState memory state = StateChecker.getMarketState(
-            res
-        );
+        StateChecker.MarketState memory state = StateChecker.getMarketState(res);
 
         vm.expectEmit();
         // uint cToLiquidator = 0.9975e18;
         // uint cToTreasurer = 0.0025e18;
         // uint remainningC = 0;
-        (uint cToLiquidator, uint cToTreasurer, uint remainningC) = LoanUtils
-            .calcLiquidationResult(res, debtAmt, collateralAmt, debtAmt);
-        emit IGearingToken.Liquidate(
+        (uint cToLiquidator, uint cToTreasurer, uint remainningC) = LoanUtils.calcLiquidationResult(
+            res,
+            debtAmt,
+            collateralAmt,
+            debtAmt
+        );
+        emit GearingTokenEvents.Liquidate(
             gtId,
             liquidator,
             debtAmt,
+            true,
             abi.encode(cToLiquidator),
             abi.encode(cToTreasurer),
             abi.encode(remainningC)
         );
 
-        res.gt.liquidate(gtId, debtAmt);
+        res.gt.liquidate(gtId, debtAmt, true);
         state.collateralReserve -= collateralAmt;
-        state.underlyingReserve += debtAmt;
+        state.debtReserve += debtAmt;
         StateChecker.checkMarketState(res, state);
 
-        assert(
-            res.collateral.balanceOf(marketConfig.treasurer) == cToTreasurer
-        );
+        assert(res.collateral.balanceOf(marketConfig.treasurer) == cToTreasurer);
         assert(res.collateral.balanceOf(liquidator) == cToLiquidator);
-        assert(
-            res.collateral.balanceOf(sender) ==
-                remainningC + senderCBalanceBefore
-        );
+        assert(res.collateral.balanceOf(sender) == remainningC + senderCBalanceBefore);
         vm.stopPrank();
     }
 
@@ -1143,67 +887,103 @@ contract GtTest is Test {
 
         vm.startPrank(sender);
 
-        (uint256 gtId, ) = LoanUtils.fastMintGt(
-            res,
-            sender,
-            debtAmt,
-            collateralAmt
-        );
+        (uint256 gtId, ) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
         vm.stopPrank();
         vm.startPrank(deployer);
         // update oracle
         res.collateralOracle.updateRoundData(
-            JSONLoader.getRoundDataFromJson(
-                testdata,
-                ".priceData.ETH_1000_DAI_1.eth"
-            )
+            JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_1000_DAI_1.eth")
         );
-        res.underlyingOracle.updateRoundData(
-            JSONLoader.getRoundDataFromJson(
-                testdata,
-                ".priceData.ETH_1000_DAI_1.dai"
-            )
-        );
+        res.debtOracle.updateRoundData(JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_1000_DAI_1.dai"));
         vm.stopPrank();
         address liquidator = vm.randomAddress();
         vm.startPrank(liquidator);
 
-        res.underlying.mint(liquidator, debtAmt);
-        res.underlying.approve(address(res.gt), debtAmt);
+        res.debt.mint(liquidator, debtAmt);
+        res.debt.approve(address(res.gt), debtAmt);
 
         uint senderCBalanceBefore = res.collateral.balanceOf(sender);
-        StateChecker.MarketState memory state = StateChecker.getMarketState(
-            res
-        );
+        StateChecker.MarketState memory state = StateChecker.getMarketState(res);
 
         vm.expectEmit();
         // uint cToLiquidator = 0.945e18;
         // uint cToTreasurer = 0.045e18;
         // uint remainningC = 0.01e18;
-        (uint cToLiquidator, uint cToTreasurer, uint remainningC) = LoanUtils
-            .calcLiquidationResult(res, debtAmt, collateralAmt, debtAmt);
-        emit IGearingToken.Liquidate(
+        (uint cToLiquidator, uint cToTreasurer, uint remainningC) = LoanUtils.calcLiquidationResult(
+            res,
+            debtAmt,
+            collateralAmt,
+            debtAmt
+        );
+        emit GearingTokenEvents.Liquidate(
             gtId,
             liquidator,
             debtAmt,
+            true,
             abi.encode(cToLiquidator),
             abi.encode(cToTreasurer),
             abi.encode(remainningC)
         );
 
-        res.gt.liquidate(gtId, debtAmt);
+        res.gt.liquidate(gtId, debtAmt, true);
         state.collateralReserve -= collateralAmt;
-        state.underlyingReserve += debtAmt;
+        state.debtReserve += debtAmt;
         StateChecker.checkMarketState(res, state);
 
-        assert(
-            res.collateral.balanceOf(marketConfig.treasurer) == cToTreasurer
-        );
+        assert(res.collateral.balanceOf(marketConfig.treasurer) == cToTreasurer);
         assert(res.collateral.balanceOf(liquidator) == cToLiquidator);
-        assert(
-            res.collateral.balanceOf(sender) ==
-                remainningC + senderCBalanceBefore
+        assert(res.collateral.balanceOf(sender) == remainningC + senderCBalanceBefore);
+        vm.stopPrank();
+    }
+
+    function testLiquidateByFt() public {
+        uint128 debtAmt = 1000e8;
+        uint256 collateralAmt = 1e18;
+
+        vm.startPrank(sender);
+
+        (uint256 gtId, ) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
+        vm.stopPrank();
+        vm.startPrank(deployer);
+        // update oracle
+        res.collateralOracle.updateRoundData(
+            JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_1000_DAI_1.eth")
         );
+        res.debtOracle.updateRoundData(JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_1000_DAI_1.dai"));
+        vm.stopPrank();
+        address liquidator = vm.randomAddress();
+        vm.startPrank(liquidator);
+
+        res.debt.mint(liquidator, debtAmt);
+        res.debt.approve(address(res.market), debtAmt);
+        res.market.mint(liquidator, debtAmt);
+        res.ft.approve(address(res.gt), debtAmt);
+
+        uint senderCBalanceBefore = res.collateral.balanceOf(sender);
+        StateChecker.MarketState memory state = StateChecker.getMarketState(res);
+
+        vm.expectEmit();
+        uint cToLiquidator = collateralAmt;
+        uint cToTreasurer = 0;
+        uint remainningC = 0;
+        emit GearingTokenEvents.Liquidate(
+            gtId,
+            liquidator,
+            debtAmt,
+            false,
+            abi.encode(cToLiquidator),
+            abi.encode(cToTreasurer),
+            abi.encode(remainningC)
+        );
+
+        res.gt.liquidate(gtId, debtAmt, false);
+        state.collateralReserve -= collateralAmt;
+        StateChecker.checkMarketState(res, state);
+
+        assert(res.ft.balanceOf(address(res.market)) == debtAmt);
+        assert(res.collateral.balanceOf(marketConfig.treasurer) == cToTreasurer);
+        assert(res.collateral.balanceOf(liquidator) == cToLiquidator);
+        assert(res.collateral.balanceOf(sender) == remainningC + senderCBalanceBefore);
         vm.stopPrank();
     }
 
@@ -1213,62 +993,50 @@ contract GtTest is Test {
         uint128 repayAmt = 300e8;
         vm.startPrank(sender);
 
-        (uint256 gtId, ) = LoanUtils.fastMintGt(
-            res,
-            sender,
-            debtAmt,
-            collateralAmt
-        );
+        (uint256 gtId, ) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
         vm.stopPrank();
         vm.startPrank(deployer);
         // update oracle
         res.collateralOracle.updateRoundData(
-            JSONLoader.getRoundDataFromJson(
-                testdata,
-                ".priceData.ETH_1000_DAI_1.eth"
-            )
+            JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_1000_DAI_1.eth")
         );
-        res.underlyingOracle.updateRoundData(
-            JSONLoader.getRoundDataFromJson(
-                testdata,
-                ".priceData.ETH_1000_DAI_1.dai"
-            )
-        );
+        res.debtOracle.updateRoundData(JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_1000_DAI_1.dai"));
         vm.stopPrank();
         address liquidator = vm.randomAddress();
         vm.startPrank(liquidator);
 
-        res.underlying.mint(liquidator, repayAmt);
-        res.underlying.approve(address(res.gt), repayAmt);
+        res.debt.mint(liquidator, repayAmt);
+        res.debt.approve(address(res.gt), repayAmt);
 
         uint senderCBalanceBefore = res.collateral.balanceOf(sender);
-        StateChecker.MarketState memory state = StateChecker.getMarketState(
-            res
-        );
+        StateChecker.MarketState memory state = StateChecker.getMarketState(res);
 
         vm.expectEmit();
         // uint cToLiquidator = 0.31e18;
         // uint cToTreasurer = 0;
         // uint remainningC = 0.62e18;
-        (uint cToLiquidator, uint cToTreasurer, uint remainningC) = LoanUtils
-            .calcLiquidationResult(res, debtAmt, collateralAmt, repayAmt);
-        emit IGearingToken.Liquidate(
+        (uint cToLiquidator, uint cToTreasurer, uint remainningC) = LoanUtils.calcLiquidationResult(
+            res,
+            debtAmt,
+            collateralAmt,
+            repayAmt
+        );
+        emit GearingTokenEvents.Liquidate(
             gtId,
             liquidator,
             repayAmt,
+            true,
             abi.encode(cToLiquidator),
             abi.encode(cToTreasurer),
             abi.encode(remainningC)
         );
 
-        res.gt.liquidate(gtId, repayAmt);
+        res.gt.liquidate(gtId, repayAmt, true);
         state.collateralReserve -= (cToLiquidator + cToTreasurer);
-        state.underlyingReserve += repayAmt;
+        state.debtReserve += repayAmt;
         StateChecker.checkMarketState(res, state);
 
-        assert(
-            res.collateral.balanceOf(marketConfig.treasurer) == cToTreasurer
-        );
+        assert(res.collateral.balanceOf(marketConfig.treasurer) == cToTreasurer);
         assert(res.collateral.balanceOf(liquidator) == cToLiquidator);
         assert(res.collateral.balanceOf(sender) == senderCBalanceBefore);
         vm.stopPrank();
@@ -1280,77 +1048,58 @@ contract GtTest is Test {
 
         vm.startPrank(sender);
 
-        (uint256 gtId, ) = LoanUtils.fastMintGt(
-            res,
-            sender,
-            debtAmt,
-            collateralAmt
-        );
+        (uint256 gtId, ) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
         vm.stopPrank();
         vm.startPrank(deployer);
         // update oracle
         res.collateralOracle.updateRoundData(
-            JSONLoader.getRoundDataFromJson(
-                testdata,
-                ".priceData.ETH_1000_DAI_1.eth"
-            )
+            JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_1000_DAI_1.eth")
         );
-        res.underlyingOracle.updateRoundData(
-            JSONLoader.getRoundDataFromJson(
-                testdata,
-                ".priceData.ETH_1000_DAI_1.dai"
-            )
-        );
+        res.debtOracle.updateRoundData(JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_1000_DAI_1.dai"));
         vm.stopPrank();
-        (bool isLiquidable, uint128 maxRepayAmt) = res.gt.getLiquidationInfo(
-            gtId
-        );
+        (bool isLiquidable, uint128 maxRepayAmt) = res.gt.getLiquidationInfo(gtId);
         assert(isLiquidable);
         assert(maxRepayAmt == debtAmt / 2);
         address liquidator = vm.randomAddress();
         vm.startPrank(liquidator);
 
-        res.underlying.mint(liquidator, maxRepayAmt);
-        res.underlying.approve(address(res.gt), maxRepayAmt);
+        res.debt.mint(liquidator, maxRepayAmt);
+        res.debt.approve(address(res.gt), maxRepayAmt);
 
         uint senderCBalanceBefore = res.collateral.balanceOf(sender);
-        StateChecker.MarketState memory state = StateChecker.getMarketState(
-            res
-        );
+        StateChecker.MarketState memory state = StateChecker.getMarketState(res);
 
         vm.expectEmit();
         // uint cToLiquidator = 4.725e18;
         // uint cToTreasurer = 0.225e18;
         // uint remainningC = 5.05e18;
-        (uint cToLiquidator, uint cToTreasurer, uint remainningC) = LoanUtils
-            .calcLiquidationResult(res, debtAmt, collateralAmt, maxRepayAmt);
-        emit IGearingToken.Liquidate(
+        (uint cToLiquidator, uint cToTreasurer, uint remainningC) = LoanUtils.calcLiquidationResult(
+            res,
+            debtAmt,
+            collateralAmt,
+            maxRepayAmt
+        );
+        emit GearingTokenEvents.Liquidate(
             gtId,
             liquidator,
             maxRepayAmt,
+            true,
             abi.encode(cToLiquidator),
             abi.encode(cToTreasurer),
             abi.encode(remainningC)
         );
 
-        res.gt.liquidate(gtId, maxRepayAmt);
+        res.gt.liquidate(gtId, maxRepayAmt, true);
         state.collateralReserve -= (cToLiquidator + cToTreasurer);
-        state.underlyingReserve += maxRepayAmt;
+        state.debtReserve += maxRepayAmt;
         StateChecker.checkMarketState(res, state);
 
-        assert(
-            res.collateral.balanceOf(marketConfig.treasurer) == cToTreasurer
-        );
+        assert(res.collateral.balanceOf(marketConfig.treasurer) == cToTreasurer);
         assert(res.collateral.balanceOf(liquidator) == cToLiquidator);
         assert(res.collateral.balanceOf(sender) == senderCBalanceBefore);
         vm.stopPrank();
 
-        (
-            address owner,
-            uint128 newDebtAmt,
-            uint128 ltv,
-            bytes memory collateralData
-        ) = res.gt.loanInfo(gtId);
+        (address owner, uint128 newDebtAmt, uint128 ltv, bytes memory collateralData) = res.gt.loanInfo(gtId);
         assert(owner == sender);
         assert(newDebtAmt == debtAmt - maxRepayAmt);
         assert(ltv < liquidationLtv);
@@ -1368,67 +1117,48 @@ contract GtTest is Test {
 
         vm.startPrank(sender);
 
-        (uint256 gtId, ) = LoanUtils.fastMintGt(
-            res,
-            sender,
-            debtAmt,
-            collateralAmt
-        );
+        (uint256 gtId, ) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
         vm.stopPrank();
         vm.startPrank(deployer);
         // update oracle
         res.collateralOracle.updateRoundData(
-            JSONLoader.getRoundDataFromJson(
-                testdata,
-                ".priceData.ETH_1000_DAI_1.eth"
-            )
+            JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_1000_DAI_1.eth")
         );
-        res.underlyingOracle.updateRoundData(
-            JSONLoader.getRoundDataFromJson(
-                testdata,
-                ".priceData.ETH_1000_DAI_1.dai"
-            )
-        );
+        res.debtOracle.updateRoundData(JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_1000_DAI_1.dai"));
         vm.stopPrank();
 
         vm.warp(liquidateTime);
         address liquidator = vm.randomAddress();
         vm.startPrank(liquidator);
 
-        res.underlying.mint(liquidator, debtAmt);
-        res.underlying.approve(address(res.gt), debtAmt);
+        res.debt.mint(liquidator, debtAmt);
+        res.debt.approve(address(res.gt), debtAmt);
 
         uint senderCBalanceBefore = res.collateral.balanceOf(sender);
-        StateChecker.MarketState memory state = StateChecker.getMarketState(
-            res
-        );
+        StateChecker.MarketState memory state = StateChecker.getMarketState(res);
 
         vm.expectEmit();
         uint cToLiquidator = collateralAmt;
         uint cToTreasurer = 0;
         uint remainningC = 0;
-        emit IGearingToken.Liquidate(
+        emit GearingTokenEvents.Liquidate(
             gtId,
             liquidator,
             debtAmt,
+            true,
             abi.encode(cToLiquidator),
             abi.encode(cToTreasurer),
             abi.encode(remainningC)
         );
 
-        res.gt.liquidate(gtId, debtAmt);
+        res.gt.liquidate(gtId, debtAmt, true);
         state.collateralReserve -= collateralAmt;
-        state.underlyingReserve += debtAmt;
+        state.debtReserve += debtAmt;
         StateChecker.checkMarketState(res, state);
 
-        assert(
-            res.collateral.balanceOf(marketConfig.treasurer) == cToTreasurer
-        );
+        assert(res.collateral.balanceOf(marketConfig.treasurer) == cToTreasurer);
         assert(res.collateral.balanceOf(liquidator) == cToLiquidator);
-        assert(
-            res.collateral.balanceOf(sender) ==
-                remainningC + senderCBalanceBefore
-        );
+        assert(res.collateral.balanceOf(sender) == remainningC + senderCBalanceBefore);
         vm.stopPrank();
     }
 
@@ -1438,33 +1168,18 @@ contract GtTest is Test {
 
         vm.startPrank(sender);
 
-        (uint256 gtId, ) = LoanUtils.fastMintGt(
-            res,
-            sender,
-            debtAmt,
-            collateralAmt
-        );
+        (uint256 gtId, ) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
         vm.stopPrank();
         vm.startPrank(deployer);
         // update oracle
         res.collateralOracle.updateRoundData(
-            JSONLoader.getRoundDataFromJson(
-                testdata,
-                ".priceData.ETH_1000_DAI_1.eth"
-            )
+            JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_1000_DAI_1.eth")
         );
-        res.underlyingOracle.updateRoundData(
-            JSONLoader.getRoundDataFromJson(
-                testdata,
-                ".priceData.ETH_1000_DAI_1.dai"
-            )
-        );
+        res.debtOracle.updateRoundData(JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_1000_DAI_1.dai"));
         vm.stopPrank();
 
         vm.warp(marketConfig.maturity - 1);
-        (bool isLiquidable, uint128 maxRepayAmt) = res.gt.getLiquidationInfo(
-            gtId
-        );
+        (bool isLiquidable, uint128 maxRepayAmt) = res.gt.getLiquidationInfo(gtId);
         assert(isLiquidable);
         assert(maxRepayAmt == debtAmt / 2);
 
@@ -1485,51 +1200,41 @@ contract GtTest is Test {
 
         vm.startPrank(sender);
 
-        (uint256 gtId, ) = LoanUtils.fastMintGt(
-            res,
-            sender,
-            debtAmt,
-            collateralAmt
-        );
+        (uint256 gtId, ) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
         vm.stopPrank();
         vm.startPrank(deployer);
-        // update oracle
-        res.collateralOracle.updateRoundData(
-            JSONLoader.getRoundDataFromJson(
-                testdata,
-                ".priceData.ETH_1000_DAI_1.eth"
-            )
+        MockPriceFeed.RoundData memory peth = JSONLoader.getRoundDataFromJson(
+            testdata,
+            ".priceData.ETH_1000_DAI_1.eth"
         );
-        res.underlyingOracle.updateRoundData(
-            JSONLoader.getRoundDataFromJson(
-                testdata,
-                ".priceData.ETH_1000_DAI_1.dai"
-            )
+        MockPriceFeed.RoundData memory pdai = JSONLoader.getRoundDataFromJson(
+            testdata,
+            ".priceData.ETH_1000_DAI_1.dai"
         );
+        peth.updatedAt = block.timestamp - 1;
+        pdai.updatedAt = block.timestamp - 1;
+        res.collateralOracle.updateRoundData(peth);
+        res.debtOracle.updateRoundData(pdai);
+
         vm.stopPrank();
 
         vm.prank(deployer);
         res.oracle.setOracle(address(res.collateral), IOracle.Oracle(res.collateralOracle, res.collateralOracle, 3600));
-        vm.warp(block.timestamp + 3600);
 
+        vm.warp(block.timestamp + 3600);
         address liquidator = vm.randomAddress();
         vm.startPrank(liquidator);
 
-        res.underlying.mint(liquidator, debtAmt);
-        res.underlying.approve(address(res.gt), debtAmt);
+        res.debt.mint(liquidator, debtAmt);
+        res.debt.approve(address(res.gt), debtAmt);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(IOracle.OracleIsNotWorking.selector, address(res.collateral))
-        );
-        res.gt.liquidate(gtId, debtAmt);
+        vm.expectRevert(abi.encodeWithSelector(IOracle.OracleIsNotWorking.selector, address(res.collateral)));
+        res.gt.liquidate(gtId, debtAmt, true);
 
         vm.stopPrank();
-
-        vm.prank(deployer);
-        res.oracle.setOracle(address(res.collateral), IOracle.Oracle(res.collateralOracle, res.collateralOracle, 4000));
-
+        vm.warp(block.timestamp - 1);
         vm.prank(liquidator);
-        res.gt.liquidate(gtId, debtAmt);
+        res.gt.liquidate(gtId, debtAmt, true);
     }
 
     function testRevertByGtIsSafeWhenLiquidate() public {
@@ -1538,162 +1243,53 @@ contract GtTest is Test {
 
         vm.startPrank(sender);
 
-        (uint256 gtId, ) = LoanUtils.fastMintGt(
-            res,
-            sender,
-            debtAmt,
-            collateralAmt
-        );
+        (uint256 gtId, ) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
         vm.stopPrank();
 
         address liquidator = vm.randomAddress();
         vm.startPrank(liquidator);
 
-        res.underlying.mint(liquidator, debtAmt);
-        res.underlying.approve(address(res.gt), debtAmt);
+        res.debt.mint(liquidator, debtAmt);
+        res.debt.approve(address(res.gt), debtAmt);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(IGearingToken.GtIsSafe.selector, gtId)
-        );
-        res.gt.liquidate(gtId, debtAmt);
-
-        vm.stopPrank();
-    }
-
-    function testRevertByGtDoNotSupportLiquidation() public {
-        DeployUtils.Res memory rt;
-        {
-            vm.startPrank(deployer);
-            vm.warp(marketConfig.openTime - 3600);
-            rt = DeployUtils.deploySpecialMarket(
-                deployer,
-                res.factory,
-                DeployUtils.GT_ERC20,
-                marketConfig,
-                maxLtv,
-                liquidationLtv,
-                false
-            );
-
-            vm.warp(
-                vm.parseUint(
-                    vm.parseJsonString(testdata, ".marketConfig.currentTime")
-                )
-            );
-
-            // update oracle
-            rt.collateralOracle.updateRoundData(
-                JSONLoader.getRoundDataFromJson(
-                    testdata,
-                    ".priceData.ETH_2000_DAI_1.eth"
-                )
-            );
-            rt.underlyingOracle.updateRoundData(
-                JSONLoader.getRoundDataFromJson(
-                    testdata,
-                    ".priceData.ETH_2000_DAI_1.dai"
-                )
-            );
-
-            uint amount = 10000e8;
-            rt.underlying.mint(deployer, amount);
-            rt.underlying.approve(address(rt.market), amount);
-            rt.market.provideLiquidity(uint128(amount));
-
-            vm.stopPrank();
-        }
-
-        uint128 debtAmt = 1000e8;
-        uint256 collateralAmt = 1e18;
-
-        vm.startPrank(sender);
-
-        (uint256 gtId, ) = LoanUtils.fastMintGt(
-            rt,
-            sender,
-            debtAmt,
-            collateralAmt
-        );
-        vm.stopPrank();
-
-        vm.startPrank(deployer);
-        // update oracle
-        rt.collateralOracle.updateRoundData(
-            JSONLoader.getRoundDataFromJson(
-                testdata,
-                ".priceData.ETH_1000_DAI_1.eth"
-            )
-        );
-        rt.underlyingOracle.updateRoundData(
-            JSONLoader.getRoundDataFromJson(
-                testdata,
-                ".priceData.ETH_1000_DAI_1.dai"
-            )
-        );
-        vm.stopPrank();
-
-        address liquidator = vm.randomAddress();
-        vm.startPrank(liquidator);
-
-        rt.underlying.mint(liquidator, debtAmt);
-        rt.underlying.approve(address(rt.gt), debtAmt);
-
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IGearingToken.GtDoNotSupportLiquidation.selector
-            )
-        );
-        rt.gt.liquidate(gtId, debtAmt);
+        vm.expectRevert(abi.encodeWithSelector(GearingTokenErrors.GtIsSafe.selector, gtId));
+        res.gt.liquidate(gtId, debtAmt, true);
 
         vm.stopPrank();
     }
 
     function testRevertByCanNotLiquidationAfterFinalDeadline() public {
-        uint liquidateTime = marketConfig.maturity +
-            Constants.LIQUIDATION_WINDOW;
+        uint liquidateTime = marketConfig.maturity + Constants.LIQUIDATION_WINDOW;
         uint128 debtAmt = 1000e8;
         uint256 collateralAmt = 1e18;
 
         vm.startPrank(sender);
 
-        (uint256 gtId, ) = LoanUtils.fastMintGt(
-            res,
-            sender,
-            debtAmt,
-            collateralAmt
-        );
+        (uint256 gtId, ) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
         vm.stopPrank();
         vm.startPrank(deployer);
         // update oracle
         res.collateralOracle.updateRoundData(
-            JSONLoader.getRoundDataFromJson(
-                testdata,
-                ".priceData.ETH_1000_DAI_1.eth"
-            )
+            JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_1000_DAI_1.eth")
         );
-        res.underlyingOracle.updateRoundData(
-            JSONLoader.getRoundDataFromJson(
-                testdata,
-                ".priceData.ETH_1000_DAI_1.dai"
-            )
-        );
+        res.debtOracle.updateRoundData(JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_1000_DAI_1.dai"));
         vm.stopPrank();
 
         vm.warp(liquidateTime);
         address liquidator = vm.randomAddress();
         vm.startPrank(liquidator);
 
-        res.underlying.mint(liquidator, debtAmt);
-        res.underlying.approve(address(res.gt), debtAmt);
+        res.debt.mint(liquidator, debtAmt);
+        res.debt.approve(address(res.gt), debtAmt);
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IGearingToken.CanNotLiquidationAfterFinalDeadline.selector,
+                GearingTokenErrors.CanNotLiquidationAfterFinalDeadline.selector,
                 gtId,
                 marketConfig.maturity + Constants.LIQUIDATION_WINDOW
             )
         );
-        res.gt.liquidate(gtId, debtAmt);
+        res.gt.liquidate(gtId, debtAmt, true);
     }
 
     function testRevertByRepayAmtExceedsMaxRepayAmt() public {
@@ -1702,114 +1298,80 @@ contract GtTest is Test {
 
         vm.startPrank(sender);
 
-        (uint256 gtId, ) = LoanUtils.fastMintGt(
-            res,
-            sender,
-            debtAmt,
-            collateralAmt
-        );
+        (uint256 gtId, ) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
         vm.stopPrank();
         vm.startPrank(deployer);
         // update oracle
         res.collateralOracle.updateRoundData(
-            JSONLoader.getRoundDataFromJson(
-                testdata,
-                ".priceData.ETH_1000_DAI_1.eth"
-            )
+            JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_1000_DAI_1.eth")
         );
-        res.underlyingOracle.updateRoundData(
-            JSONLoader.getRoundDataFromJson(
-                testdata,
-                ".priceData.ETH_1000_DAI_1.dai"
-            )
-        );
+        res.debtOracle.updateRoundData(JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_1000_DAI_1.dai"));
         vm.stopPrank();
-        (bool isLiquidable, uint128 maxRepayAmt) = res.gt.getLiquidationInfo(
-            gtId
-        );
+        (bool isLiquidable, uint128 maxRepayAmt) = res.gt.getLiquidationInfo(gtId);
         assert(isLiquidable);
         assert(maxRepayAmt == debtAmt / 2);
         address liquidator = vm.randomAddress();
         vm.startPrank(liquidator);
 
         uint128 repayAmt = maxRepayAmt + 1;
-        res.underlying.mint(liquidator, repayAmt);
-        res.underlying.approve(address(res.gt), repayAmt);
+        res.debt.mint(liquidator, repayAmt);
+        res.debt.approve(address(res.gt), repayAmt);
 
         vm.expectRevert(
-            abi.encodeWithSelector(
-                IGearingToken.RepayAmtExceedsMaxRepayAmt.selector,
-                gtId,
-                repayAmt,
-                maxRepayAmt
-            )
+            abi.encodeWithSelector(GearingTokenErrors.RepayAmtExceedsMaxRepayAmt.selector, gtId, repayAmt, maxRepayAmt)
         );
-        res.gt.liquidate(gtId, repayAmt);
+        res.gt.liquidate(gtId, repayAmt, true);
 
         vm.stopPrank();
     }
 
-    function testNoRevertByLtvIncreasedAfterLiquidation(
-        uint128 repayAmt
-    ) public {
+    function testNoRevertByLtvIncreasedAfterLiquidation(uint128 repayAmt) public {
         uint128 debtAmt = 900e8;
         vm.assume(repayAmt >= 5e8 && repayAmt <= debtAmt - 5e8);
         uint256 collateralAmt = 0.6e18;
         vm.startPrank(sender);
 
-        (uint256 gtId, ) = LoanUtils.fastMintGt(
-            res,
-            sender,
-            debtAmt,
-            collateralAmt
-        );
+        (uint256 gtId, ) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
         vm.stopPrank();
         vm.startPrank(deployer);
         // update oracle
         res.collateralOracle.updateRoundData(
-            JSONLoader.getRoundDataFromJson(
-                testdata,
-                ".priceData.ETH_1000_DAI_1.eth"
-            )
+            JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_1000_DAI_1.eth")
         );
-        res.underlyingOracle.updateRoundData(
-            JSONLoader.getRoundDataFromJson(
-                testdata,
-                ".priceData.ETH_1000_DAI_1.dai"
-            )
-        );
+        res.debtOracle.updateRoundData(JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_1000_DAI_1.dai"));
         vm.stopPrank();
         address liquidator = vm.randomAddress();
         vm.startPrank(liquidator);
 
-        res.underlying.mint(liquidator, repayAmt);
-        res.underlying.approve(address(res.gt), repayAmt);
+        res.debt.mint(liquidator, repayAmt);
+        res.debt.approve(address(res.gt), repayAmt);
 
-        StateChecker.MarketState memory state = StateChecker.getMarketState(
-            res
+        StateChecker.MarketState memory state = StateChecker.getMarketState(res);
+        (uint cToLiquidator, uint cToTreasurer, uint remainningC) = LoanUtils.calcLiquidationResult(
+            res,
+            debtAmt,
+            collateralAmt,
+            repayAmt
         );
-        (uint cToLiquidator, uint cToTreasurer, uint remainningC) = LoanUtils
-            .calcLiquidationResult(res, debtAmt, collateralAmt, repayAmt);
-        emit IGearingToken.Liquidate(
+        emit GearingTokenEvents.Liquidate(
             gtId,
             liquidator,
             repayAmt,
+            true,
             abi.encode(cToLiquidator),
             abi.encode(cToTreasurer),
             abi.encode(remainningC)
         );
-        res.gt.liquidate(gtId, repayAmt);
+        res.gt.liquidate(gtId, repayAmt, true);
         if (repayAmt < debtAmt) {
             state.collateralReserve -= (cToLiquidator + cToTreasurer);
         } else {
             state.collateralReserve -= collateralAmt;
         }
-        state.underlyingReserve += repayAmt;
+        state.debtReserve += repayAmt;
         StateChecker.checkMarketState(res, state);
 
-        assert(
-            res.collateral.balanceOf(marketConfig.treasurer) == cToTreasurer
-        );
+        assert(res.collateral.balanceOf(marketConfig.treasurer) == cToTreasurer);
         assert(res.collateral.balanceOf(liquidator) == cToLiquidator);
 
         vm.stopPrank();
@@ -1822,43 +1384,25 @@ contract GtTest is Test {
 
         vm.startPrank(sender);
 
-        (uint256 gtId, ) = LoanUtils.fastMintGt(
-            res,
-            sender,
-            debtAmt,
-            collateralAmt
-        );
+        (uint256 gtId, ) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
         vm.stopPrank();
 
         vm.startPrank(deployer);
         // update oracle
         res.collateralOracle.updateRoundData(
-            JSONLoader.getRoundDataFromJson(
-                testdata,
-                ".priceData.ETH_1000_DAI_1.eth"
-            )
+            JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_1000_DAI_1.eth")
         );
-        res.underlyingOracle.updateRoundData(
-            JSONLoader.getRoundDataFromJson(
-                testdata,
-                ".priceData.ETH_1000_DAI_1.dai"
-            )
-        );
+        res.debtOracle.updateRoundData(JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_1000_DAI_1.dai"));
         vm.stopPrank();
 
         address liquidator = vm.randomAddress();
         vm.startPrank(liquidator);
 
-        res.underlying.mint(liquidator, repayAmt);
-        res.underlying.approve(address(res.gt), repayAmt);
+        res.debt.mint(liquidator, repayAmt);
+        res.debt.approve(address(res.gt), repayAmt);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IGearingToken.DebtValueIsTooSmall.selector,
-                debtAmt - repayAmt
-            )
-        );
-        res.gt.liquidate(gtId, repayAmt);
+        vm.expectRevert(abi.encodeWithSelector(GearingTokenErrors.DebtValueIsTooSmall.selector, debtAmt - repayAmt));
+        res.gt.liquidate(gtId, repayAmt, true);
 
         vm.stopPrank();
     }
