@@ -535,7 +535,7 @@ contract VaultTest is Test {
     function testDeposit() public {
         vm.warp(currentTime + 2 days);
         buyXt(48.219178e8, 1000e8);
-        uint apr = vault.apr();
+
         vm.warp(currentTime + 2 days);
         address lper2 = vm.randomAddress();
         uint256 amount2 = 20000e8;
@@ -552,7 +552,6 @@ contract VaultTest is Test {
     function testRedeem() public {
         vm.warp(currentTime + 2 days);
         buyXt(48.219178e8, 1000e8);
-        uint apr = vault.apr();
         vm.warp(currentTime + 4 days);
         address lper2 = vm.randomAddress();
         uint256 amount2 = 10000e8;
@@ -745,7 +744,7 @@ contract VaultTest is Test {
 
         vm.stopPrank();
 
-        (IERC20 ft, IERC20 xt, , , ) = market2.tokens();
+        (, IERC20 xt, , , ) = market2.tokens();
 
         vm.warp(currentTime + 4 days);
         {
@@ -817,7 +816,6 @@ contract VaultTest is Test {
 
         vm.warp(currentTime + 92 days);
 
-        uint totalAssets = vault.totalAssets();
         uint propotion = (res.ft.balanceOf(address(res.order)) * Constants.DECIMAL_BASE_SQ) /
             (res.ft.totalSupply() - res.ft.balanceOf(address(res.market)));
 

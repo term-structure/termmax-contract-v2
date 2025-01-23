@@ -3,7 +3,7 @@ pragma solidity ^0.8.27;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {IERC4626, ERC4626, ERC20} from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
 import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
@@ -17,9 +17,7 @@ import {TransferUtils} from "../lib/TransferUtils.sol";
 import {ITermMaxVault, BaseVault} from "./BaseVault.sol";
 import {Constants} from "../lib/Constants.sol";
 
-import {console} from "forge-std/console.sol";
-
-contract TermMaxVault is Ownable2Step, ReentrancyGuard, BaseVault, ERC4626 {
+contract TermMaxVault is Ownable2Step, ReentrancyGuard, BaseVault, ERC4626, Pausable {
     using SafeCast for uint256;
     using TransferUtils for IERC20;
     using PendingLib for *;
@@ -108,7 +106,14 @@ contract TermMaxVault is Ownable2Step, ReentrancyGuard, BaseVault, ERC4626 {
         uint256 maxSupply,
         uint256 initialReserve,
         CurveCuts memory curveCuts
-    ) external override onlyCuratorRole marketIsWhitelisted(address(market)) returns (ITermMaxOrder order) {
+    )
+        external
+        override
+        onlyCuratorRole
+        marketIsWhitelisted(address(market))
+        whenNotPaused
+        returns (ITermMaxOrder order)
+    {
         return _createOrder(ITermMaxMarket(market), maxSupply, initialReserve, curveCuts);
     }
 
@@ -120,7 +125,7 @@ contract TermMaxVault is Ownable2Step, ReentrancyGuard, BaseVault, ERC4626 {
         int256[] memory changes,
         uint256[] memory maxSupplies,
         CurveCuts[] memory curveCuts
-    ) external override onlyCuratorRole {
+    ) external override onlyCuratorRole whenNotPaused {
         _accruedInterest();
         for (uint256 i = 0; i < orders.length; ++i) {
             _updateOrder(ITermMaxOrder(orders[i]), changes[i], maxSupplies[i], curveCuts[i]);
@@ -178,7 +183,7 @@ contract TermMaxVault is Ownable2Step, ReentrancyGuard, BaseVault, ERC4626 {
         address recipient,
         uint256 assets,
         uint256 shares
-    ) internal override nonReentrant {
+    ) internal override nonReentrant whenNotPaused {
         IERC20(asset()).safeTransferFrom(caller, address(this), assets);
         _accruedInterest();
         _mint(recipient, shares);
@@ -369,5 +374,13 @@ contract TermMaxVault is Ownable2Step, ReentrancyGuard, BaseVault, ERC4626 {
         _setPerformanceFeeRate(uint(pendingPerformanceFeeRate.value).toUint64());
         delete pendingPerformanceFeeRate;
         emit SetPerformanceFeeRate(_msgSender(), performanceFeeRate);
+    }
+
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    function unpause() external onlyOwner {
+        _unpause();
     }
 }
