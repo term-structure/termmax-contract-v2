@@ -318,7 +318,8 @@ contract TermMaxRouter is
         IERC20(collateralAddr).safeIncreaseAllowance(address(gt), collInAmt);
 
         uint issueFtFeeRatio = market.issueFtFeeRatio();
-        uint128 debtAmt = ((borrowAmt * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - issueFtFeeRatio)).toUint128();
+        uint128 debtAmt = ((borrowAmt * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - issueFtFeeRatio))
+            .toUint128();
 
         (uint256 gtId, uint128 ftOutAmt) = market.issueFt(address(this), debtAmt, _encodeAmount(collInAmt));
         // ftOutAmt may be smaller than borrowAmt due to accuracy loss
@@ -336,10 +337,11 @@ contract TermMaxRouter is
     }
 
     function borrowTokenFromGt(address recipient, ITermMaxMarket market, uint256 gtId, uint256 borrowAmt) external {
-        (IERC20 ft, IERC20 xt, IGearingToken gt, , IERC20 debtToken) = market.tokens();
+        (IERC20 ft, IERC20 xt, , , ) = market.tokens();
 
         uint issueFtFeeRatio = market.issueFtFeeRatio();
-        uint128 debtAmt = ((borrowAmt * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - issueFtFeeRatio)).toUint128();
+        uint128 debtAmt = ((borrowAmt * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - issueFtFeeRatio))
+            .toUint128();
 
         uint ftOutAmt = market.issueFtByExistedGt(address(this), debtAmt, gtId);
         // ftOutAmt may be smaller than borrowAmt due to accuracy loss

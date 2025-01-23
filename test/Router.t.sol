@@ -110,12 +110,12 @@ contract RouterTest is Test {
     function testSetAdapterWhitelist() public {
         vm.startPrank(deployer);
 
-        address adapter = vm.randomAddress();
-        res.router.setAdapterWhitelist(adapter, true);
-        assertTrue(res.router.adapterWhitelist(adapter));
+        address randomAdapter = vm.randomAddress();
+        res.router.setAdapterWhitelist(randomAdapter, true);
+        assertTrue(res.router.adapterWhitelist(randomAdapter));
 
-        res.router.setAdapterWhitelist(adapter, false);
-        assertFalse(res.router.adapterWhitelist(adapter));
+        res.router.setAdapterWhitelist(randomAdapter, false);
+        assertFalse(res.router.adapterWhitelist(randomAdapter));
 
         vm.stopPrank();
     }
@@ -123,9 +123,9 @@ contract RouterTest is Test {
     function testSetAdapterWhitelistUnauthorized() public {
         vm.startPrank(sender);
 
-        address adapter = vm.randomAddress();
+        address randomAdapter = vm.randomAddress();
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, address(sender)));
-        res.router.setAdapterWhitelist(adapter, true);
+        res.router.setAdapterWhitelist(randomAdapter, true);
 
         vm.stopPrank();
     }
@@ -197,7 +197,7 @@ contract RouterTest is Test {
         uint256 balanceAfter = res.ft.balanceOf(sender);
 
         assertEq(maxAmountIn - amountIn, res.debt.balanceOf(sender));
-        assertEq(res.ft.balanceOf(sender) - balanceBefore, amountOut);
+        assertEq(balanceAfter - balanceBefore, amountOut);
 
         vm.stopPrank();
     }
@@ -404,10 +404,10 @@ contract RouterTest is Test {
 
     function testBorrowTokenFromGt() public {
         vm.startPrank(sender);
-
-        (uint256 gtId, ) = LoanUtils.fastMintGt(res, sender, 100e8, 1e18);
-
         uint256 collInAmt = 1e18;
+
+        (uint256 gtId, ) = LoanUtils.fastMintGt(res, sender, 100e8, collInAmt);
+
         uint128 borrowAmt = 80e8;
 
         res.debt.mint(sender, borrowAmt);
