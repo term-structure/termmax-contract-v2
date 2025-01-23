@@ -98,7 +98,7 @@ interface ITermMaxRouter {
     ) external returns (uint256 netTokenIn);
 
     /**
-     * @notice Sells FT (Fixed-Term) and XT (Variable-Term) tokens for underlying tokens
+     * @notice Sells FT and XT tokens for underlying tokens
      * @dev Executes multiple orders to sell tokens
      * @param recipient Address to receive the output tokens
      * @param market The market to sell tokens in
@@ -126,7 +126,7 @@ interface ITermMaxRouter {
      * @param market The market to create position in
      * @param orders Array of orders to execute
      * @param amtsToBuyXt Array of amounts of XT to buy for each order
-     * @param minXtOut Minimum amount of XT to receive
+     * @param minXtOut Minimum amount of XT to establish the position
      * @param tokenToSwap Amount of tokens to swap
      * @param maxLtv Maximum loan-to-value ratio
      * @param units Array of swap units defining the swap path
@@ -185,7 +185,7 @@ interface ITermMaxRouter {
     ) external returns (uint256 gtId);
 
     /**
-     * @notice Borrows tokens using collateral
+     * @notice Borrows tokens using collateral and XT
      * @dev Creates a collateralized debt position
      * @param recipient Address to receive the borrowed tokens
      * @param market The market to borrow from
@@ -233,7 +233,7 @@ interface ITermMaxRouter {
     ) external returns (uint256 netTokenOut);
 
     /**
-     * @notice Repays debt using tokens
+     * @notice Repays debt using FT tokens
      * @dev Repays debt and closes a position
      * @param recipient Address to receive any remaining tokens
      * @param market The market to repay debt in

@@ -568,11 +568,6 @@ contract OrderTest is Test {
         res.market.mint(address(res.order), 150e8);
         vm.stopPrank();
 
-        bool isBuy = true;
-        bool isFt = false;
-
-        uint current = vm.parseUint(vm.parseJsonString(testdata, ".currentTime"));
-        uint maturity = marketConfig.maturity;
         (uint256 lendApr, uint256 borrowApr) = res.order.apr();
         uint apr;
 
