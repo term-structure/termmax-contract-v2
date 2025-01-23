@@ -2,10 +2,10 @@
 pragma solidity ^0.8.27;
 
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {AggregatorV3Interface, IOracle} from "./IOracle.sol";
 
-contract OracleAggregator is IOracle, UUPSUpgradeable, OwnableUpgradeable {
+contract OracleAggregator is IOracle, UUPSUpgradeable, Ownable2StepUpgradeable {
     /// @notice Oracles
     mapping(address => Oracle) public oracles;
 

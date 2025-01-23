@@ -27,12 +27,28 @@ interface ITermMaxRouter {
     function unpause() external;
 
     /**
+     * @notice View the market whitelist status
+     * @dev Used for controlling which markets can interact with the router
+     * @param market The market's address to check whitelist status for
+     * @return True if whitelisted, false otherwise
+     */
+    function marketWhitelist(address market) external view returns (bool);
+
+    /**
      * @notice Set the market whitelist status
      * @dev Used for controlling which markets can interact with the router
      * @param market The market's address to set whitelist status for
      * @param isWhitelist True to whitelist, false to remove from whitelist
      */
     function setMarketWhitelist(address market, bool isWhitelist) external;
+
+    /**
+     * @notice View the adapter whitelist status
+     * @dev Used for controlling which swap adapters can be used
+     * @param adapter The adapter's address to check whitelist status for
+     * @return True if whitelisted, false otherwise
+     */
+    function adapterWhitelist(address adapter) external view returns (bool);
 
     /**
      * @notice Set the adapter whitelist status

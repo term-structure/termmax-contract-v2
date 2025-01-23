@@ -8,6 +8,7 @@ import {ITermMaxFactory} from "contracts/factory/ITermMaxFactory.sol";
 import {ITermMaxRouter} from "contracts/router/ITermMaxRouter.sol";
 import {ITermMaxOrder} from "contracts/ITermMaxOrder.sol";
 import {IOracle} from "contracts/oracle/IOracle.sol";
+import {ITermMaxVault} from "contracts/vault/ITermMaxVault.sol";
 import {MarketConfig, FeeConfig, MarketInitialParams} from "contracts/storage/TermMaxStorage.sol";
 
 interface IOwnable {
@@ -27,10 +28,14 @@ interface IPausable {
  * @author Term Structure Labs
  */
 contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
+    error CannotRevokeDefaultAdminRole();
+
     /// @notice Role to manage switch
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
     /// @notice Role to manage configuration items
     bytes32 public constant CONFIGURATOR_ROLE = keccak256("CONFIGURATOR_ROLE");
+    /// @notice Role to manage vault
+    bytes32 public constant VAULT_ROLE = keccak256("VAULT_ROLE");
 
     function initialize(address admin) public initializer {
         __UUPSUpgradeable_init();
@@ -74,7 +79,7 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
         entity.transferOwnership(to);
     }
 
-    function accessOwnership(IOwnable entity) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function acceptOwnership(IOwnable entity) external onlyRole(DEFAULT_ADMIN_ROLE) {
         entity.acceptOwnership();
     }
 
@@ -144,6 +149,58 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
         } else {
             entity.pause();
         }
+    }
+
+    function submitVaultGuardian(ITermMaxVault vault, address newGuardian) external onlyRole(VAULT_ROLE) {
+        vault.submitGuardian(newGuardian);
+    }
+
+    /// @notice Revoke a pending guardian for the vault
+    function revokeVaultPendingGuardian(ITermMaxVault vault) external onlyRole(VAULT_ROLE) {
+        vault.revokePendingGuardian();
+    }
+
+    /// @notice Revoke a pending timelock for the vault
+    function revokeVaultPendingTimelock(ITermMaxVault vault) external onlyRole(VAULT_ROLE) {
+        vault.revokePendingTimelock();
+    }
+
+    /// @notice Revoke a pending market for the vault
+    function revokeVaultPendingMarket(ITermMaxVault vault, address market) external onlyRole(VAULT_ROLE) {
+        vault.revokePendingMarket(market);
+    }
+
+    /// @notice Set the curator for the vault, only admin role
+    function setCuratorForVault(ITermMaxVault vault, address newCurator) external onlyRole(VAULT_ROLE) {
+        vault.setCurator(newCurator);
+    }
+
+    /// @notice Set the allocator for the vault
+    function setIsAllocatorForVault(
+        ITermMaxVault vault,
+        address allocator,
+        bool isAllocator
+    ) external onlyRole(VAULT_ROLE) {
+        vault.setIsAllocator(allocator, isAllocator);
+    }
+
+    /// @notice Revoke role
+    /// @dev Can't revoke your own role
+    function revokeRole(bytes32 role, address account) public override onlyRole(getRoleAdmin(role)) {
+        if (msg.sender == account) {
+            revert AccessControlBadConfirmation();
+        }
+
+        _revokeRole(role, account);
+    }
+
+    /// @notice Revoke role
+    /// @dev Can't revoke default admin role
+    function renounceRole(bytes32 role, address callerConfirmation) public override {
+        if (role == DEFAULT_ADMIN_ROLE) {
+            revert CannotRevokeDefaultAdminRole();
+        }
+        _revokeRole(role, callerConfirmation);
     }
 
     function _authorizeUpgrade(address newImplementation) internal virtual override onlyRole(DEFAULT_ADMIN_ROLE) {}

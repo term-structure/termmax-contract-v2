@@ -19,8 +19,6 @@ import {OrderConfig, CurveCuts} from "../storage/TermMaxStorage.sol";
 import {MathLib} from "../lib/MathLib.sol";
 import {ITermMaxVault} from "./ITermMaxVault.sol";
 
-import {console} from "forge-std/console.sol";
-
 abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMaxVault {
     using SafeCast for uint256;
     using SafeCast for int256;
