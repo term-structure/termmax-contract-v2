@@ -238,7 +238,7 @@ contract TermMaxOrder is
                         MathLib.sqrt(
                             (newCurveCuts.lendCurveCuts[i].liqSquare * Constants.DECIMAL_BASE_SQ) /
                                 newCurveCuts.lendCurveCuts[i - 1].liqSquare
-                        ) -
+                        ) / Constants.DECIMAL_BASE -
                         newCurveCuts.lendCurveCuts[i].xtReserve
                 ) revert InvalidCurveCuts();
             }
@@ -254,7 +254,7 @@ contract TermMaxOrder is
                         MathLib.sqrt(
                             (newCurveCuts.borrowCurveCuts[i].liqSquare * Constants.DECIMAL_BASE_SQ) /
                                 newCurveCuts.borrowCurveCuts[i - 1].liqSquare
-                        ) -
+                        ) / Constants.DECIMAL_BASE -
                         newCurveCuts.borrowCurveCuts[i].xtReserve
                 ) revert InvalidCurveCuts();
             }
