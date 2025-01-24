@@ -495,14 +495,29 @@ contract OrderTest is Test {
         // Verify curve was updated
         OrderConfig memory updatedConfig = res.order.orderConfig();
         for (uint256 i = 0; i < updatedConfig.curveCuts.lendCurveCuts.length; i++) {
-            assertEq(updatedConfig.curveCuts.lendCurveCuts[i].xtReserve, newOrderConfig.curveCuts.lendCurveCuts[i].xtReserve);
-            assertEq(updatedConfig.curveCuts.lendCurveCuts[i].liqSquare, newOrderConfig.curveCuts.lendCurveCuts[i].liqSquare);
+            assertEq(
+                updatedConfig.curveCuts.lendCurveCuts[i].xtReserve,
+                newOrderConfig.curveCuts.lendCurveCuts[i].xtReserve
+            );
+            assertEq(
+                updatedConfig.curveCuts.lendCurveCuts[i].liqSquare,
+                newOrderConfig.curveCuts.lendCurveCuts[i].liqSquare
+            );
             assertEq(updatedConfig.curveCuts.lendCurveCuts[i].offset, newOrderConfig.curveCuts.lendCurveCuts[i].offset);
         }
         for (uint256 i = 0; i < updatedConfig.curveCuts.borrowCurveCuts.length; i++) {
-            assertEq(updatedConfig.curveCuts.borrowCurveCuts[i].xtReserve, newOrderConfig.curveCuts.borrowCurveCuts[i].xtReserve);
-            assertEq(updatedConfig.curveCuts.borrowCurveCuts[i].liqSquare, newOrderConfig.curveCuts.borrowCurveCuts[i].liqSquare);
-            assertEq(updatedConfig.curveCuts.borrowCurveCuts[i].offset, newOrderConfig.curveCuts.borrowCurveCuts[i].offset);
+            assertEq(
+                updatedConfig.curveCuts.borrowCurveCuts[i].xtReserve,
+                newOrderConfig.curveCuts.borrowCurveCuts[i].xtReserve
+            );
+            assertEq(
+                updatedConfig.curveCuts.borrowCurveCuts[i].liqSquare,
+                newOrderConfig.curveCuts.borrowCurveCuts[i].liqSquare
+            );
+            assertEq(
+                updatedConfig.curveCuts.borrowCurveCuts[i].offset,
+                newOrderConfig.curveCuts.borrowCurveCuts[i].offset
+            );
         }
         assertEq(res.xt.balanceOf(maker), (-xtChangeAmt).toUint256());
         assertEq(res.ft.balanceOf(maker), 0);
@@ -630,6 +645,14 @@ contract OrderTest is Test {
 
         assertEq(ftBalanceBefore.toInt256() + callback.deltaFt(), ftBalanceAfter.toInt256());
         assertEq(xtBalanceBefore.toInt256() + callback.deltaXt(), xtBalanceAfter.toInt256());
+
+        vm.stopPrank();
+    }
+
+    function testTransferMakerOwnership() public {
+        vm.startPrank(maker);
+        res.order.transferMakerOwnership(sender);
+        assertEq(res.order.maker(), sender);
 
         vm.stopPrank();
     }
