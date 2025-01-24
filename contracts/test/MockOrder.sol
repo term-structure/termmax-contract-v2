@@ -342,4 +342,17 @@ contract MockOrder is
     function unpause() external override onlyMaker {
         _unpause();
     }
+
+    /**
+     * @inheritdoc ITermMaxOrder
+     */
+    function transferMakerOwnership(address newMaker) external onlyMaker {
+        _transferMakerOwnership(newMaker);
+    }
+
+    function _transferMakerOwnership(address newMaker) internal onlyMaker {
+        address currentMaker = maker;
+        maker = newMaker;
+        emit MakerOwnershipTransferred(currentMaker, newMaker);
+    }
 }

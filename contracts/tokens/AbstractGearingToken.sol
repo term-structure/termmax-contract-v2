@@ -406,9 +406,9 @@ abstract contract AbstractGearingToken is
         }
         // Transfer token
         if (byDebtToken) {
-            config.debtToken.safeTransferFrom(msg.sender, owner(), repayAmt);
+            config.debtToken.safeTransferFrom(msg.sender, marketAddr(), repayAmt);
         } else {
-            config.ft.safeTransferFrom(msg.sender, owner(), repayAmt);
+            config.ft.safeTransferFrom(msg.sender, marketAddr(), repayAmt);
         }
 
         // Do liquidate

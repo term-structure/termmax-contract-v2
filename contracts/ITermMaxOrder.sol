@@ -94,4 +94,8 @@ interface ITermMaxOrder {
 
     /// @notice Open Market Trading
     function unpause() external;
+
+    /// @notice Transfer maker ownership
+    /// @param newMaker New maker
+    function transferMakerOwnership(address newMaker) external;
 }
