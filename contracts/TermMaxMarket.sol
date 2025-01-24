@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {OwnableUpgradeable, Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
-import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 import {ITermMaxMarket, IMintableERC20, IERC20} from "./ITermMaxMarket.sol";
@@ -26,8 +25,7 @@ import {TransferUtils} from "./lib/TransferUtils.sol";
 contract TermMaxMarket is
     ITermMaxMarket,
     ReentrancyGuardUpgradeable,
-    OwnableUpgradeable,
-    PausableUpgradeable,
+    Ownable2StepUpgradeable,
     MarketErrors,
     MarketEvents
 {
@@ -49,7 +47,6 @@ contract TermMaxMarket is
 
     /// @notice Check if the market is tradable
     modifier isOpen() {
-        _requireNotPaused();
         if (block.timestamp >= _config.maturity) {
             revert TermIsNotOpen();
         }
@@ -75,7 +72,6 @@ contract TermMaxMarket is
     function initialize(MarketInitialParams memory params) external override initializer {
         __Ownable_init(params.admin);
         __ReentrancyGuard_init();
-        __Pausable_init();
         if (params.collateral == address(params.debtToken)) revert CollateralCanNotEqualUnderlyinng();
         MarketConfig memory config_ = params.marketConfig;
         if (config_.maturity <= block.timestamp) revert InvalidMaturity();

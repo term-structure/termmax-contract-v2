@@ -474,7 +474,7 @@ contract OrderTest is Test {
         vm.startPrank(maker);
 
         // Prepare new curve cuts
-        orderConfig.curveCuts.lendCurveCuts[0].liqSquare++;
+        OrderConfig memory newOrderConfig = JSONLoader.getOrderConfigFromJson(testdata, ".newOrderConfig");
         int ftChangeAmt = 1e8;
         int xtChangeAmt = -1e8;
 
@@ -483,18 +483,42 @@ contract OrderTest is Test {
 
         vm.expectEmit();
         emit OrderEvents.UpdateOrder(
-            orderConfig.curveCuts,
+            newOrderConfig.curveCuts,
             ftChangeAmt,
             xtChangeAmt,
             orderConfig.gtId,
             orderConfig.maxXtReserve,
             ISwapCallback(address(0))
         );
-        res.order.updateOrder(orderConfig, ftChangeAmt, xtChangeAmt);
+        res.order.updateOrder(newOrderConfig, ftChangeAmt, xtChangeAmt);
 
         // Verify curve was updated
         OrderConfig memory updatedConfig = res.order.orderConfig();
-        assertEq(updatedConfig.curveCuts.lendCurveCuts[0].liqSquare, orderConfig.curveCuts.lendCurveCuts[0].liqSquare);
+        for (uint256 i = 0; i < updatedConfig.curveCuts.lendCurveCuts.length; i++) {
+            assertEq(
+                updatedConfig.curveCuts.lendCurveCuts[i].xtReserve,
+                newOrderConfig.curveCuts.lendCurveCuts[i].xtReserve
+            );
+            assertEq(
+                updatedConfig.curveCuts.lendCurveCuts[i].liqSquare,
+                newOrderConfig.curveCuts.lendCurveCuts[i].liqSquare
+            );
+            assertEq(updatedConfig.curveCuts.lendCurveCuts[i].offset, newOrderConfig.curveCuts.lendCurveCuts[i].offset);
+        }
+        for (uint256 i = 0; i < updatedConfig.curveCuts.borrowCurveCuts.length; i++) {
+            assertEq(
+                updatedConfig.curveCuts.borrowCurveCuts[i].xtReserve,
+                newOrderConfig.curveCuts.borrowCurveCuts[i].xtReserve
+            );
+            assertEq(
+                updatedConfig.curveCuts.borrowCurveCuts[i].liqSquare,
+                newOrderConfig.curveCuts.borrowCurveCuts[i].liqSquare
+            );
+            assertEq(
+                updatedConfig.curveCuts.borrowCurveCuts[i].offset,
+                newOrderConfig.curveCuts.borrowCurveCuts[i].offset
+            );
+        }
         assertEq(res.xt.balanceOf(maker), (-xtChangeAmt).toUint256());
         assertEq(res.ft.balanceOf(maker), 0);
 
@@ -568,11 +592,6 @@ contract OrderTest is Test {
         res.market.mint(address(res.order), 150e8);
         vm.stopPrank();
 
-        bool isBuy = true;
-        bool isFt = false;
-
-        uint current = vm.parseUint(vm.parseJsonString(testdata, ".currentTime"));
-        uint maturity = marketConfig.maturity;
         (uint256 lendApr, uint256 borrowApr) = res.order.apr();
         uint apr;
 
@@ -626,6 +645,14 @@ contract OrderTest is Test {
 
         assertEq(ftBalanceBefore.toInt256() + callback.deltaFt(), ftBalanceAfter.toInt256());
         assertEq(xtBalanceBefore.toInt256() + callback.deltaXt(), xtBalanceAfter.toInt256());
+
+        vm.stopPrank();
+    }
+
+    function testTransferMakerOwnership() public {
+        vm.startPrank(maker);
+        res.order.transferMakerOwnership(sender);
+        assertEq(res.order.maker(), sender);
 
         vm.stopPrank();
     }

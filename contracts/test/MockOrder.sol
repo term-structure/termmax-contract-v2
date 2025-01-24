@@ -247,7 +247,6 @@ contract MockOrder is
         uint128 minTokenOut
     ) external override nonReentrant isOpen returns (uint256 netTokenOut) {
         if (tokenIn == tokenOut) revert CantSwapSameToken();
-        OrderConfig memory config = _orderConfig;
         uint feeAmt = 0;
         uint ftBlanceBefore = ft.balanceOf(address(this));
         uint xtBlanceBefore = xt.balanceOf(address(this));
@@ -291,7 +290,6 @@ contract MockOrder is
         uint128 maxTokenIn
     ) external nonReentrant isOpen returns (uint256 netTokenIn) {
         if (tokenIn == tokenOut) revert CantSwapSameToken();
-        OrderConfig memory config = _orderConfig;
         uint feeAmt = 0;
         uint ftBlanceBefore = ft.balanceOf(address(this));
         uint xtBlanceBefore = xt.balanceOf(address(this));
@@ -343,5 +341,18 @@ contract MockOrder is
      */
     function unpause() external override onlyMaker {
         _unpause();
+    }
+
+    /**
+     * @inheritdoc ITermMaxOrder
+     */
+    function transferMakerOwnership(address newMaker) external onlyMaker {
+        _transferMakerOwnership(newMaker);
+    }
+
+    function _transferMakerOwnership(address newMaker) internal onlyMaker {
+        address currentMaker = maker;
+        maker = newMaker;
+        emit MakerOwnershipTransferred(currentMaker, newMaker);
     }
 }

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {OwnableUpgradeable, Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
@@ -24,7 +24,7 @@ import {TransferUtils} from "./lib/TransferUtils.sol";
 contract TermMaxOrder is
     ITermMaxOrder,
     ReentrancyGuardUpgradeable,
-    OwnableUpgradeable,
+    Ownable2StepUpgradeable,
     PausableUpgradeable,
     OrderErrors,
     OrderEvents
@@ -124,8 +124,12 @@ contract TermMaxOrder is
         __ReentrancyGuard_init();
         __Pausable_init();
         market = ITermMaxMarket(_msgSender());
+        if (maker_ == address(0)) {
+            revert ZeroAddress();
+        }
         maker = maker_;
-        _orderConfig.curveCuts = curveCuts_;
+        // _orderConfig.curveCuts = curveCuts_;
+        _updateCurve(curveCuts_);
         _orderConfig.feeConfig = marketConfig.feeConfig;
         _orderConfig.maxXtReserve = maxXtReserve_;
         _orderConfig.swapTrigger = swapTrigger;
@@ -168,9 +172,8 @@ contract TermMaxOrder is
             curveCuts.lendCurveCuts[lendCutId],
             oriXtReserve
         );
-        lendApr_ =
-            ((lendVFtReserve * Constants.DECIMAL_BASE * Constants.DAYS_IN_YEAR) / lendVXtReserve) *
-            daysToMaturity;
+        lendApr_ = ((lendVFtReserve * Constants.DECIMAL_BASE * Constants.DAYS_IN_YEAR) /
+            (lendVXtReserve * daysToMaturity));
 
         uint borrowCutId = TermMaxCurve.calcCutId(curveCuts.borrowCurveCuts, oriXtReserve);
         (, uint borrowVXtReserve, uint borrowVFtReserve) = TermMaxCurve.calcIntervalProps(
@@ -179,9 +182,8 @@ contract TermMaxOrder is
             curveCuts.borrowCurveCuts[borrowCutId],
             oriXtReserve
         );
-        borrowApr_ =
-            ((borrowVFtReserve * Constants.DECIMAL_BASE * Constants.DAYS_IN_YEAR) / borrowVXtReserve) *
-            daysToMaturity;
+        borrowApr_ = ((borrowVFtReserve * Constants.DECIMAL_BASE * Constants.DAYS_IN_YEAR) /
+            (borrowVXtReserve * daysToMaturity));
     }
 
     /**
@@ -230,6 +232,16 @@ contract TermMaxOrder is
             for (uint i = 1; i < newCurveCuts.lendCurveCuts.length; i++) {
                 if (newCurveCuts.lendCurveCuts[i].xtReserve <= newCurveCuts.lendCurveCuts[i - 1].xtReserve)
                     revert InvalidCurveCuts();
+                if (
+                    newCurveCuts.lendCurveCuts[i].offset !=
+                    ((newCurveCuts.lendCurveCuts[i].xtReserve + newCurveCuts.lendCurveCuts[i - 1].offset) *
+                        MathLib.sqrt(
+                            (newCurveCuts.lendCurveCuts[i].liqSquare * Constants.DECIMAL_BASE_SQ) /
+                                newCurveCuts.lendCurveCuts[i - 1].liqSquare
+                        )) /
+                        Constants.DECIMAL_BASE -
+                        newCurveCuts.lendCurveCuts[i].xtReserve
+                ) revert InvalidCurveCuts();
             }
             if (newCurveCuts.borrowCurveCuts.length > 0) {
                 if (newCurveCuts.borrowCurveCuts[0].xtReserve != 0) revert InvalidCurveCuts();
@@ -237,6 +249,16 @@ contract TermMaxOrder is
             for (uint i = 1; i < newCurveCuts.borrowCurveCuts.length; i++) {
                 if (newCurveCuts.borrowCurveCuts[i].xtReserve <= newCurveCuts.borrowCurveCuts[i - 1].xtReserve)
                     revert InvalidCurveCuts();
+                if (
+                    newCurveCuts.borrowCurveCuts[i].offset !=
+                    ((newCurveCuts.borrowCurveCuts[i].xtReserve + newCurveCuts.borrowCurveCuts[i - 1].offset) *
+                        MathLib.sqrt(
+                            (newCurveCuts.borrowCurveCuts[i].liqSquare * Constants.DECIMAL_BASE_SQ) /
+                                newCurveCuts.borrowCurveCuts[i - 1].liqSquare
+                        )) /
+                        Constants.DECIMAL_BASE -
+                        newCurveCuts.borrowCurveCuts[i].xtReserve
+                ) revert InvalidCurveCuts();
             }
             _orderConfig.curveCuts = newCurveCuts;
         }
@@ -388,7 +410,7 @@ contract TermMaxOrder is
 
         debtToken.safeTransferFrom(caller, address(this), debtTokenAmtIn);
 
-        debtToken.approve(address(market), debtTokenAmtIn);
+        debtToken.safeIncreaseAllowance(address(market), debtTokenAmtIn);
         market.mint(address(this), debtTokenAmtIn);
         if (tokenOut == ft) {
             uint ftReserve = getTransientFtReserve();
@@ -567,7 +589,7 @@ contract TermMaxOrder is
 
         debtToken.safeTransferFrom(caller, address(this), netTokenIn);
 
-        debtToken.approve(address(market), netTokenIn);
+        debtToken.safeIncreaseAllowance(address(market), netTokenIn);
         market.mint(address(this), netTokenIn);
         if (tokenOut == ft) {
             uint ftReserve = getTransientFtReserve();
@@ -721,6 +743,19 @@ contract TermMaxOrder is
     function withdrawAssets(IERC20 token, address recipient, uint256 amount) external onlyMaker {
         token.safeTransfer(recipient, amount);
         emit WithdrawAssets(token, _msgSender(), recipient, amount);
+    }
+
+    /**
+     * @inheritdoc ITermMaxOrder
+     */
+    function transferMakerOwnership(address newMaker) external onlyMaker {
+        _transferMakerOwnership(newMaker);
+    }
+
+    function _transferMakerOwnership(address newMaker) internal onlyMaker {
+        address currentMaker = maker;
+        maker = newMaker;
+        emit MakerOwnershipTransferred(currentMaker, newMaker);
     }
 
     /**

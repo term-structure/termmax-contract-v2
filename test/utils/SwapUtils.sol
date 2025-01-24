@@ -15,7 +15,9 @@ library SwapUtils {
 
         uint dtm = daysToMaturity(res.market.config().maturity);
         pFt = Constants.DECIMAL_BASE_SQ / (Constants.DECIMAL_BASE + (lendApr_ * dtm) / Constants.DAYS_IN_YEAR);
-        pXt = Constants.DECIMAL_BASE - pFt / Constants.DECIMAL_BASE;
+        uint pFtBorrow = Constants.DECIMAL_BASE_SQ /
+            (Constants.DECIMAL_BASE + (borrowApr_ * dtm) / Constants.DAYS_IN_YEAR);
+        pXt = Constants.DECIMAL_BASE - pFtBorrow / Constants.DECIMAL_BASE;
     }
 
     function daysToMaturity(uint maturity) internal view returns (uint256) {

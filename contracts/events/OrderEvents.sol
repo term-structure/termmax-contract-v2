@@ -98,4 +98,11 @@ interface OrderEvents {
      * @param amount The amount of tokens being withdrawn
      */
     event WithdrawAssets(IERC20 indexed token, address indexed caller, address indexed recipient, uint256 amount);
+
+    /**
+     * @notice Emitted when maker ownership is transferred
+     * @param oldMaker The address of the previous maker
+     * @param newMaker The address of the new maker
+     */
+    event MakerOwnershipTransferred(address oldMaker, address newMaker);
 }

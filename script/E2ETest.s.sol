@@ -36,7 +36,7 @@ contract E2ETest is Script {
     address routerAddr = address(0xA44742D456e644D4108B8B4421189EF46F583812);
     address swapAdapter = address(0x65feE48150586e72038884920b92033746f324b0);
     address marketAddr = address(0x0D5168Ae17e62B42ed85DD8Cc35DA7913Ec41dd6);
-    address orderAddr = address(0x3273723c663FC41968354D5d8388AB03EAda390B);
+    address orderAddr = address(0x20fC1552744D7726827D69248c6cB9733A70FA1C);
 
     Faucet faucet = Faucet(faucetAddr);
     TermMaxRouter router = TermMaxRouter(routerAddr);
@@ -49,16 +49,20 @@ contract E2ETest is Script {
     IERC20 underlyingERC20;
     FaucetERC20 collateral;
     FaucetERC20 underlying;
+    address collateralPriceFeedAddr;
+    address underlyingPriceFeedAddr;
 
     function run() public {
         (ft, xt, gt, collateralAddr, underlyingERC20) = market.tokens();
         collateral = FaucetERC20(collateralAddr);
         underlying = FaucetERC20(address(underlyingERC20));
+        underlyingPriceFeedAddr = faucet.getTokenConfig(faucet.getTokenId(address(underlying))).priceFeedAddr;
+        collateralPriceFeedAddr = faucet.getTokenConfig(faucet.getTokenId(address(collateral))).priceFeedAddr;
         printMarketConfig();
-        depositIntoOrder(1_000_000);
-        lendToOrder(10000);
+        depositIntoOrder(100000);
+        lendToOrder(1);
         borrowFromOrder(12000, 8000, 8500);
-        // leverageFromOrder();
+        leverageFromOrder(4e6, 0, 20000e6, 0.8e8);
     }
 
     function depositIntoOrder(uint256 depositAmt) public {
@@ -156,15 +160,46 @@ contract E2ETest is Script {
         console.log("new collateralBalance:", newCollateralBalance);
     }
 
-    // function leverageFromOrder(uint128 inputAmt, uint128 minXtOut, ) public {
-    //     ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
-    //     orders[0] = order;
-    //     uint128[] memory amtsToBuyXt = new uint128[](1);
-    //     amtsToBuyXt[0] = inputAmt;
-    //     vm.startBroadcast(userPrivateKey);
-    //     router.leverageFromToken(userAddr, market,orders, amtsToBuyXt, );
-    //     vm.stopBroadcast();
-    // }
+    function leverageFromOrder(uint128 amtToBuyXt, uint128 minXtOut, uint128 tokenToSwap, uint128 maxLtv) public {
+        ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
+        orders[0] = order;
+        uint128[] memory amtsToBuyXt = new uint128[](1);
+        amtsToBuyXt[0] = amtToBuyXt;
+        SwapUnit[] memory units = new SwapUnit[](1);
+        units[0] = SwapUnit(
+            address(swapAdapter),
+            address(underlying),
+            address(collateral),
+            abi.encode(underlyingPriceFeedAddr, collateralPriceFeedAddr)
+        );
+
+        (uint256 oriFtReserve, uint256 oriXtReserve) = order.tokenReserves();
+        (uint256 oriLendApr, uint256 oriBorrowApr) = order.apr();
+        uint256 oriUnderlyingBalance = underlying.balanceOf(userAddr);
+
+        vm.startBroadcast(userPrivateKey);
+        faucet.devMint(address(userAddr), address(underlying), amtToBuyXt + tokenToSwap);
+        underlying.approve(address(router), amtToBuyXt + tokenToSwap);
+        router.leverageFromToken(userAddr, market, orders, amtsToBuyXt, minXtOut, tokenToSwap, maxLtv, units);
+        vm.stopBroadcast();
+
+        (uint256 newFtReserve, uint256 newXtReserve) = order.tokenReserves();
+        (uint256 newLendApr, uint256 newBorrowApr) = order.apr();
+        uint256 newUnderlyingBalance = underlying.balanceOf(userAddr);
+        uint256 newCollateralBalance = collateral.balanceOf(userAddr);
+
+        console.log("--- Leverage from order ---");
+        console.log("ori ftReserve:", oriFtReserve);
+        console.log("ori xtReserve:", oriXtReserve);
+        console.log("ori lendApr:", oriLendApr);
+        console.log("ori borrowApr:", oriBorrowApr);
+        console.log("ori underlyingBalance:", oriUnderlyingBalance);
+        console.log("new ftReserve:", newFtReserve);
+        console.log("new xtReserve:", newXtReserve);
+        console.log("new lendApr:", newLendApr);
+        console.log("new borrowApr:", newBorrowApr);
+        console.log("new underlyingBalance:", newUnderlyingBalance);
+    }
 
     function printMarketConfig() public view {
         MarketConfig memory config = market.config();
