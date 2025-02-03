@@ -235,7 +235,6 @@ contract AccessManagerTest is Test {
             maxCapacity: 1000000e18,
             name: "Test Vault",
             symbol: "tVAULT",
-            maxTerm: 365 days,
             performanceFeeRate: 0.2e8 // 20%
         });
 
@@ -284,7 +283,6 @@ contract AccessManagerTest is Test {
             maxCapacity: 1000000e18,
             name: "Test Vault",
             symbol: "tVAULT",
-            maxTerm: 365 days,
             performanceFeeRate: 0.2e8
         });
 
@@ -483,5 +481,30 @@ contract AccessManagerTest is Test {
         );
         manager.setGtImplement(res.factory, gtImplementName, newGtImplement);
         vm.stopPrank();
+    }
+
+    function testUpdateOrderFeeRate() public {
+        // Get new fee config from testdata
+        FeeConfig memory newFeeConfig = res.order.orderConfig().feeConfig;
+
+        // Test that non-admin cannot update fee rate
+        vm.startPrank(sender);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector,
+                sender,
+                manager.CONFIGURATOR_ROLE()
+            )
+        );
+        manager.updateOrderFeeRate(res.market, res.order, newFeeConfig);
+        vm.stopPrank();
+        // Test that admin can update fee rate
+        vm.prank(deployer);
+        manager.updateOrderFeeRate(res.market, res.order, newFeeConfig);
+
+        // Verify fee config was updated
+        OrderConfig memory updatedConfig = res.order.orderConfig();
+        assertEq(updatedConfig.feeConfig.lendTakerFeeRatio, newFeeConfig.lendTakerFeeRatio);
+        assertEq(updatedConfig.feeConfig.borrowTakerFeeRatio, newFeeConfig.borrowTakerFeeRatio);
     }
 }

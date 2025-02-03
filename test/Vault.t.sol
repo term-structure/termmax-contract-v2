@@ -19,7 +19,6 @@ import {MockPriceFeed} from "contracts/test/MockPriceFeed.sol";
 import {TermMaxVault} from "contracts/vault/TermMaxVault.sol";
 import {BaseVault, VaultErrors, VaultEvents, ITermMaxVault} from "contracts/vault/BaseVault.sol";
 import {VaultConstants} from "contracts/lib/VaultConstants.sol";
-import {VaultFactory} from "contracts/factory/VaultFactory.sol";
 import "contracts/storage/TermMaxStorage.sol";
 
 contract VaultTest is Test {
@@ -42,7 +41,6 @@ contract VaultTest is Test {
 
     uint timelock = 86400;
     uint maxCapacity = 1000000e18;
-    uint64 maxTerm = 180 days;
     uint64 performanceFeeRate = 0.5e8;
 
     ITermMaxMarket market2;
@@ -95,9 +93,7 @@ contract VaultTest is Test {
 
         uint amount = 10000e8;
 
-        VaultFactory vaultFactory = new VaultFactory();
-        vault = TermMaxVault(
-            vaultFactory.createVault(
+        vault = new TermMaxVault(
                 VaultInitialParams(
                     deployer,
                     curator,
@@ -106,10 +102,8 @@ contract VaultTest is Test {
                     maxCapacity,
                     "Vault-DAI",
                     "Vault-DAI",
-                    maxTerm,
                     performanceFeeRate
                 )
-            )
         );
         vault.submitGuardian(guardian);
         vault.setIsAllocator(allocator, true);
@@ -263,9 +257,6 @@ contract VaultTest is Test {
         vault.submitMarket(address(market3), true);
         vm.warp(currentTime + timelock + 1);
         vault.acceptMarket(address(market3));
-
-        vm.expectRevert(VaultErrors.MarketIsLaterThanMaxTerm.selector);
-        vault.createOrder(market3, maxCapacity, 0, orderConfig.curveCuts);
         vm.stopPrank();
     }
 

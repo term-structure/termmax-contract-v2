@@ -466,7 +466,7 @@ contract OrderTest is Test {
         res.debt.approve(address(res.market), ftInAmt);
 
         vm.warp(res.market.config().maturity);
-        vm.expectRevert(abi.encodeWithSelector(OrderErrors.TermIsNotOpen.selector));
+        vm.expectRevert(abi.encodeWithSignature("TermIsNotOpen()"));
         res.order.swapTokenToExactToken(res.debt, res.ft, sender, maxTokenOut, ftInAmt);
     }
 
@@ -528,7 +528,7 @@ contract OrderTest is Test {
     function testOnlyMakerCanUpdateOrder() public {
         vm.startPrank(sender);
 
-        vm.expectRevert(OrderErrors.OnlyMaker.selector);
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", sender));
         res.order.updateOrder(orderConfig, 0, 0);
 
         vm.stopPrank();
@@ -555,7 +555,7 @@ contract OrderTest is Test {
     function testOnlyMakerCanPause() public {
         vm.startPrank(sender);
 
-        vm.expectRevert(OrderErrors.OnlyMaker.selector);
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", sender));
         res.order.pause();
 
         vm.stopPrank();
@@ -649,11 +649,28 @@ contract OrderTest is Test {
         vm.stopPrank();
     }
 
-    function testTransferMakerOwnership() public {
-        vm.startPrank(maker);
-        res.order.transferMakerOwnership(sender);
-        assertEq(res.order.maker(), sender);
+    function testUpdateOrderFeeRate() public {
+        // Create new fee config
+        FeeConfig memory newFeeConfig = marketConfig.feeConfig;
+        newFeeConfig.lendTakerFeeRatio++;
+        newFeeConfig.borrowTakerFeeRatio++;
 
+        // Test that non-owner cannot update fee rate
+        vm.expectRevert(abi.encodeWithSelector(OrderErrors.OnlyMarket.selector));
+        vm.prank(sender);
+        res.order.updateFeeConfig(newFeeConfig);
+
+        // Test that owner can update fee rate
+        vm.startPrank(deployer);
+        res.market.updateOrderFeeRate(res.order, newFeeConfig);
+        assertEq(res.order.orderConfig().feeConfig.lendTakerFeeRatio, newFeeConfig.lendTakerFeeRatio);
+        assertEq(res.order.orderConfig().feeConfig.borrowTakerFeeRatio, newFeeConfig.borrowTakerFeeRatio);
+
+        // Test invalid fee rates (over 100%)
+        FeeConfig memory invalidFeeConfig = marketConfig.feeConfig;
+        invalidFeeConfig.lendTakerFeeRatio = Constants.MAX_FEE_RATIO;
+        vm.expectRevert(abi.encodeWithSelector(MarketErrors.FeeTooHigh.selector));
+        res.market.updateOrderFeeRate(res.order, invalidFeeConfig);
         vm.stopPrank();
     }
 }

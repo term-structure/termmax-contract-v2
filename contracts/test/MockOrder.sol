@@ -71,8 +71,8 @@ contract MockOrder is
         _;
     }
 
-    modifier onlyMaker() {
-        if (msg.sender != maker) revert OnlyMaker();
+    modifier onlyMarket() {
+        if (msg.sender != address(market)) revert OnlyMarket();
         _;
     }
 
@@ -84,7 +84,6 @@ contract MockOrder is
      * @inheritdoc ITermMaxOrder
      */
     function initialize(
-        address admin,
         address maker_,
         IERC20[3] memory tokens,
         IGearingToken gt_,
@@ -93,7 +92,7 @@ contract MockOrder is
         CurveCuts memory curveCuts_,
         MarketConfig memory marketConfig
     ) external override initializer {
-        __Ownable_init(admin);
+        __Ownable_init(maker_);
         __ReentrancyGuard_init();
         __Pausable_init();
         market = ITermMaxMarket(_msgSender());
@@ -164,7 +163,7 @@ contract MockOrder is
         OrderConfig memory newOrderConfig,
         int256 ftChangeAmt,
         int256 xtChangeAmt
-    ) external override onlyMaker {
+    ) external override onlyOwner {
         _updateCurve(newOrderConfig.curveCuts);
         if (ftChangeAmt > 0) {
             ft.safeTransferFrom(msg.sender, address(this), ftChangeAmt.toUint256());
@@ -215,20 +214,9 @@ contract MockOrder is
         }
     }
 
-    function updateFeeConfig(FeeConfig memory newFeeConfig) external override onlyOwner {
-        _checkFee(newFeeConfig.borrowTakerFeeRatio);
-        _checkFee(newFeeConfig.borrowMakerFeeRatio);
-        _checkFee(newFeeConfig.lendTakerFeeRatio);
-        _checkFee(newFeeConfig.lendMakerFeeRatio);
-        _checkFee(newFeeConfig.redeemFeeRatio);
-        _checkFee(newFeeConfig.issueFtFeeRatio);
-        _checkFee(newFeeConfig.issueFtFeeRef);
+    function updateFeeConfig(FeeConfig memory newFeeConfig) external override onlyMarket {
         _orderConfig.feeConfig = newFeeConfig;
         emit UpdateFeeConfig(newFeeConfig);
-    }
-
-    function _checkFee(uint32 feeRatio) internal pure {
-        if (feeRatio >= Constants.MAX_FEE_RATIO) revert FeeTooHigh();
     }
 
     /// @notice Calculate how many days until expiration
@@ -324,7 +312,7 @@ contract MockOrder is
         );
     }
 
-    function withdrawAssets(IERC20 token, address recipient, uint256 amount) external onlyMaker {
+    function withdrawAssets(IERC20 token, address recipient, uint256 amount) external onlyOwner {
         token.safeTransfer(recipient, amount);
         emit WithdrawAssets(token, _msgSender(), recipient, amount);
     }
@@ -332,27 +320,14 @@ contract MockOrder is
     /**
      * @inheritdoc ITermMaxOrder
      */
-    function pause() external override onlyMaker {
+    function pause() external override onlyOwner {
         _pause();
     }
 
     /**
      * @inheritdoc ITermMaxOrder
      */
-    function unpause() external override onlyMaker {
+    function unpause() external override onlyOwner {
         _unpause();
-    }
-
-    /**
-     * @inheritdoc ITermMaxOrder
-     */
-    function transferMakerOwnership(address newMaker) external onlyMaker {
-        _transferMakerOwnership(newMaker);
-    }
-
-    function _transferMakerOwnership(address newMaker) internal onlyMaker {
-        address currentMaker = maker;
-        maker = newMaker;
-        emit MakerOwnershipTransferred(currentMaker, newMaker);
     }
 }

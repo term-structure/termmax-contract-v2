@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import {IMintableERC20, IERC20} from "./tokens/IMintableERC20.sol";
 import {IGearingToken} from "./tokens/IGearingToken.sol";
 import {ITermMaxOrder} from "./ITermMaxOrder.sol";
-import {MarketConfig, MarketInitialParams, CurveCuts} from "./storage/TermMaxStorage.sol";
+import {MarketConfig, MarketInitialParams, CurveCuts, FeeConfig} from "./storage/TermMaxStorage.sol";
 import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 import {ISwapCallback} from "./ISwapCallback.sol";
 
@@ -86,6 +86,9 @@ interface ITermMaxMarket {
 
     /// @notice Set the configuration of Gearing Token
     function updateGtConfig(bytes memory configData) external;
+
+    /// @notice Set the fee rate of order
+    function updateOrderFeeRate(ITermMaxOrder order, FeeConfig memory newFeeConfig) external;
 
     /// @notice Create a new order
     function createOrder(

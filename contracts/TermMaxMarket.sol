@@ -359,7 +359,12 @@ contract TermMaxMarket is
         CurveCuts memory curveCuts
     ) external nonReentrant isOpen returns (ITermMaxOrder order) {
         order = ITermMaxOrder(Clones.clone(TERMMAX_ORDER_IMPLEMENT));
-        order.initialize(owner(), maker, [ft, xt, debtToken], gt, maxXtReserve, swapTrigger, curveCuts, _config);
+        order.initialize(maker, [ft, xt, debtToken], gt, maxXtReserve, swapTrigger, curveCuts, _config);
         emit CreateOrder(maker, order);
+    }
+
+    function updateOrderFeeRate(ITermMaxOrder order, FeeConfig memory newFeeConfig) external onlyOwner {
+        _checkFee(newFeeConfig);
+        order.updateFeeConfig(newFeeConfig);
     }
 }

@@ -99,12 +99,6 @@ interface ITermMaxVault is IERC4626 {
     function pendingGuardian() external view returns (address value, uint64 validAt);
 
     /**
-     * @notice Returns the maximum term duration
-     * @return The maximum term duration in seconds
-     */
-    function maxTerm() external view returns (uint64);
-
-    /**
      * @notice Returns the performance fee rate
      * @return The performance fee rate as a percentage with 18 decimals
      */

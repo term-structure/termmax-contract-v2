@@ -42,8 +42,6 @@ contract TermMaxOrder is
 
     OrderConfig private _orderConfig;
 
-    address public maker;
-
     uint64 private maturity;
 
     uint256 private constant T_FT_RESERVE_STORE = 0;
@@ -98,8 +96,8 @@ contract TermMaxOrder is
         _;
     }
 
-    modifier onlyMaker() {
-        if (msg.sender != maker) revert OnlyMaker();
+    modifier onlyMarket() {
+        if (msg.sender != address(market)) revert OnlyMarket();
         _;
     }
 
@@ -107,11 +105,14 @@ contract TermMaxOrder is
         _disableInitializers();
     }
 
+    function maker() public view returns (address) {
+        return owner();
+    }
+
     /**
      * @inheritdoc ITermMaxOrder
      */
     function initialize(
-        address admin,
         address maker_,
         IERC20[3] memory tokens,
         IGearingToken gt_,
@@ -120,14 +121,11 @@ contract TermMaxOrder is
         CurveCuts memory curveCuts_,
         MarketConfig memory marketConfig
     ) external override initializer {
-        __Ownable_init(admin);
+        __Ownable_init(maker_);
         __ReentrancyGuard_init();
         __Pausable_init();
         market = ITermMaxMarket(_msgSender());
-        if (maker_ == address(0)) {
-            revert ZeroAddress();
-        }
-        maker = maker_;
+
         // _orderConfig.curveCuts = curveCuts_;
         _updateCurve(curveCuts_);
         _orderConfig.feeConfig = marketConfig.feeConfig;
@@ -193,7 +191,7 @@ contract TermMaxOrder is
         OrderConfig memory newOrderConfig,
         int256 ftChangeAmt,
         int256 xtChangeAmt
-    ) external override onlyMaker {
+    ) external override onlyOwner {
         _updateCurve(newOrderConfig.curveCuts);
         if (ftChangeAmt > 0) {
             ft.safeTransferFrom(msg.sender, address(this), ftChangeAmt.toUint256());
@@ -264,20 +262,9 @@ contract TermMaxOrder is
         }
     }
 
-    function updateFeeConfig(FeeConfig memory newFeeConfig) external override onlyOwner {
-        _checkFee(newFeeConfig.borrowTakerFeeRatio);
-        _checkFee(newFeeConfig.borrowMakerFeeRatio);
-        _checkFee(newFeeConfig.lendTakerFeeRatio);
-        _checkFee(newFeeConfig.lendMakerFeeRatio);
-        _checkFee(newFeeConfig.redeemFeeRatio);
-        _checkFee(newFeeConfig.issueFtFeeRatio);
-        _checkFee(newFeeConfig.issueFtFeeRef);
+    function updateFeeConfig(FeeConfig memory newFeeConfig) external override onlyMarket {
         _orderConfig.feeConfig = newFeeConfig;
         emit UpdateFeeConfig(newFeeConfig);
-    }
-
-    function _checkFee(uint32 feeRatio) internal pure {
-        if (feeRatio >= Constants.MAX_FEE_RATIO) revert FeeTooHigh();
     }
 
     /// @notice Calculate how many days until expiration
@@ -298,38 +285,23 @@ contract TermMaxOrder is
         if (tokenIn == tokenOut) revert CantSwapSameToken();
         OrderConfig memory config = _orderConfig;
         uint feeAmt;
+        // Storage current ft and xt reserve
         setTransientFtReserve(ft.balanceOf(address(this)));
         setTransientXtReserve(xt.balanceOf(address(this)));
         if (tokenIn == ft && tokenOut == debtToken) {
-            (netTokenOut, feeAmt) = sellFt(tokenAmtIn, minTokenOut, msg.sender, recipient, config);
+            (netTokenOut, feeAmt) = _sellFt(tokenAmtIn, minTokenOut, msg.sender, recipient, config);
         } else if (tokenIn == xt && tokenOut == debtToken) {
-            (netTokenOut, feeAmt) = sellXt(tokenAmtIn, minTokenOut, msg.sender, recipient, config);
+            (netTokenOut, feeAmt) = _sellXt(tokenAmtIn, minTokenOut, msg.sender, recipient, config);
         } else if (tokenIn == debtToken && tokenOut == ft) {
-            (netTokenOut, feeAmt) = buyFt(tokenAmtIn, minTokenOut, msg.sender, recipient, config);
+            (netTokenOut, feeAmt) = _buyFt(tokenAmtIn, minTokenOut, msg.sender, recipient, config);
         } else if (tokenIn == debtToken && tokenOut == xt) {
-            (netTokenOut, feeAmt) = buyXt(tokenAmtIn, minTokenOut, msg.sender, recipient, config);
+            (netTokenOut, feeAmt) = _buyXt(tokenAmtIn, minTokenOut, msg.sender, recipient, config);
         } else {
             revert CantNotSwapToken(tokenIn, tokenOut);
         }
-
-        // else if (tokenIn == ft && tokenOut == xt) {
-        //     (uint debtTokenAmtOut, uint feeOneSide) = sellFt(tokenAmtIn, 0, msg.sender, address(this), config);
-
-        //     (netTokenOut, feeAmt) = buyXt(debtTokenAmtOut, minTokenOut, address(this), recipient, config);
-        //     feeAmt += feeOneSide;
-
-        //     deltaFt = (tokenAmtIn - feeAmt).toInt256();
-        //     deltaXt = -((netTokenOut).toInt256());
-        // } else if (tokenIn == xt && tokenOut == ft) {
-        //     (uint debtTokenAmtOut, uint feeOneSide) = sellXt(tokenAmtIn, 0, msg.sender, address(this), config);
-        //     (netTokenOut, feeAmt) = buyFt(debtTokenAmtOut, minTokenOut, address(this), recipient, config);
-        //     feeAmt += feeOneSide;
-        //     deltaFt = -((netTokenOut + feeAmt).toInt256());
-        //     deltaXt = uint(tokenAmtIn).toInt256();
-        // }
-
+        // transfer fee to treasurer
         ft.safeTransfer(market.config().treasurer, feeAmt);
-
+        /// @dev callback the changes of ft and xt reserve to trigger
         if (address(_orderConfig.swapTrigger) != address(0)) {
             int256 deltaFt = ft.balanceOf(address(this)).toInt256() - getTransientFtReserve().toInt256();
             int256 deltaXt = xt.balanceOf(address(this)).toInt256() - getTransientXtReserve().toInt256();
@@ -346,47 +318,47 @@ contract TermMaxOrder is
         );
     }
 
-    function buyFt(
+    function _buyFt(
         uint debtTokenAmtIn,
         uint minTokenOut,
         address caller,
         address recipient,
         OrderConfig memory config
     ) internal isLendingAllowed(config) returns (uint256 netOut, uint256 feeAmt) {
-        (netOut, feeAmt) = _buyToken(caller, recipient, debtTokenAmtIn, minTokenOut, config, _buyFt);
+        (netOut, feeAmt) = _buyToken(caller, recipient, debtTokenAmtIn, minTokenOut, config, _buyFtStep);
         if (xt.balanceOf(address(this)) > config.maxXtReserve) {
             revert XtReserveTooHigh();
         }
     }
 
-    function buyXt(
+    function _buyXt(
         uint debtTokenAmtIn,
         uint minTokenOut,
         address caller,
         address recipient,
         OrderConfig memory config
     ) internal isBorrowingAllowed(config) returns (uint256 netOut, uint256 feeAmt) {
-        (netOut, feeAmt) = _buyToken(caller, recipient, debtTokenAmtIn, minTokenOut, config, _buyXt);
+        (netOut, feeAmt) = _buyToken(caller, recipient, debtTokenAmtIn, minTokenOut, config, _buyXtStep);
     }
 
-    function sellFt(
+    function _sellFt(
         uint ftAmtIn,
         uint minDebtTokenOut,
         address caller,
         address recipient,
         OrderConfig memory config
     ) internal isBorrowingAllowed(config) returns (uint256 netOut, uint256 feeAmt) {
-        (netOut, feeAmt) = _sellToken(caller, recipient, ftAmtIn, minDebtTokenOut, config, _sellFt);
+        (netOut, feeAmt) = _sellToken(caller, recipient, ftAmtIn, minDebtTokenOut, config, _sellFtStep);
     }
 
-    function sellXt(
+    function _sellXt(
         uint xtAmtIn,
         uint minDebtTokenOut,
         address caller,
         address recipient,
         OrderConfig memory config
     ) internal isLendingAllowed(config) returns (uint256 netOut, uint256 feeAmt) {
-        (netOut, feeAmt) = _sellToken(caller, recipient, xtAmtIn, minDebtTokenOut, config, _sellXt);
+        (netOut, feeAmt) = _sellToken(caller, recipient, xtAmtIn, minDebtTokenOut, config, _sellXtStep);
         if (xt.balanceOf(address(this)) > config.maxXtReserve) {
             revert XtReserveTooHigh();
         }
@@ -422,7 +394,7 @@ contract TermMaxOrder is
         return (netOut, feeAmt);
     }
 
-    function _buyFt(
+    function _buyFtStep(
         uint daysToMaturity,
         uint oriXtReserve,
         uint debtTokenAmtIn,
@@ -436,7 +408,7 @@ contract TermMaxOrder is
         tokenOut = ft;
     }
 
-    function _buyXt(
+    function _buyXtStep(
         uint daysToMaturity,
         uint oriXtReserve,
         uint debtTokenAmtIn,
@@ -476,7 +448,7 @@ contract TermMaxOrder is
         return (netOut, feeAmt);
     }
 
-    function _sellFt(
+    function _sellFtStep(
         uint daysToMaturity,
         uint oriXtReserve,
         uint tokenAmtIn,
@@ -491,7 +463,7 @@ contract TermMaxOrder is
         tokenIn = ft;
     }
 
-    function _sellXt(
+    function _sellXtStep(
         uint daysToMaturity,
         uint oriXtReserve,
         uint tokenAmtIn,
@@ -508,6 +480,9 @@ contract TermMaxOrder is
         tokenIn = xt;
     }
 
+    /**
+     * @inheritdoc ITermMaxOrder
+     */
     function swapTokenToExactToken(
         IERC20 tokenIn,
         IERC20 tokenOut,
@@ -518,21 +493,25 @@ contract TermMaxOrder is
         if (tokenIn == tokenOut) revert CantSwapSameToken();
         OrderConfig memory config = _orderConfig;
         uint feeAmt;
+        // Storage current ft and xt reserve
         setTransientFtReserve(ft.balanceOf(address(this)));
         setTransientXtReserve(xt.balanceOf(address(this)));
+
         if (tokenIn == debtToken && tokenOut == ft) {
-            (netTokenIn, feeAmt) = buyExactFt(tokenAmtOut, maxTokenIn, msg.sender, recipient, config);
+            (netTokenIn, feeAmt) = _buyExactFt(tokenAmtOut, maxTokenIn, msg.sender, recipient, config);
         } else if (tokenIn == debtToken && tokenOut == xt) {
-            (netTokenIn, feeAmt) = buyExactXt(tokenAmtOut, maxTokenIn, msg.sender, recipient, config);
+            (netTokenIn, feeAmt) = _buyExactXt(tokenAmtOut, maxTokenIn, msg.sender, recipient, config);
         } else if (tokenIn == ft && tokenOut == debtToken) {
-            (netTokenIn, feeAmt) = sellFtForExactToken(tokenAmtOut, maxTokenIn, msg.sender, recipient, config);
+            (netTokenIn, feeAmt) = _sellFtForExactToken(tokenAmtOut, maxTokenIn, msg.sender, recipient, config);
         } else if (tokenIn == xt && tokenOut == debtToken) {
-            (netTokenIn, feeAmt) = sellXtForExactToken(tokenAmtOut, maxTokenIn, msg.sender, recipient, config);
+            (netTokenIn, feeAmt) = _sellXtForExactToken(tokenAmtOut, maxTokenIn, msg.sender, recipient, config);
         } else {
             revert CantNotSwapToken(tokenIn, tokenOut);
         }
+        // transfer fee to treasurer
         ft.safeTransfer(market.config().treasurer, feeAmt);
 
+        /// @dev callback the changes of ft and xt reserve to trigger
         if (address(_orderConfig.swapTrigger) != address(0)) {
             int256 deltaFt = ft.balanceOf(address(this)).toInt256() - getTransientFtReserve().toInt256();
             int256 deltaXt = xt.balanceOf(address(this)).toInt256() - getTransientXtReserve().toInt256();
@@ -549,27 +528,27 @@ contract TermMaxOrder is
         );
     }
 
-    function buyExactFt(
+    function _buyExactFt(
         uint tokenAmtOut,
         uint maxTokenIn,
         address caller,
         address recipient,
         OrderConfig memory config
     ) internal isLendingAllowed(config) returns (uint256 netTokenIn, uint256 feeAmt) {
-        (netTokenIn, feeAmt) = _buyExactToken(caller, recipient, tokenAmtOut, maxTokenIn, config, _buyExactFt);
+        (netTokenIn, feeAmt) = _buyExactToken(caller, recipient, tokenAmtOut, maxTokenIn, config, _buyExactFtStep);
         if (xt.balanceOf(address(this)) > config.maxXtReserve) {
             revert XtReserveTooHigh();
         }
     }
 
-    function buyExactXt(
+    function _buyExactXt(
         uint tokenAmtOut,
         uint maxTokenIn,
         address caller,
         address recipient,
         OrderConfig memory config
     ) internal isBorrowingAllowed(config) returns (uint256 netTokenIn, uint256 feeAmt) {
-        (netTokenIn, feeAmt) = _buyExactToken(caller, recipient, tokenAmtOut, maxTokenIn, config, _buyExactXt);
+        (netTokenIn, feeAmt) = _buyExactToken(caller, recipient, tokenAmtOut, maxTokenIn, config, _buyExactXtStep);
     }
 
     function _buyExactToken(
@@ -601,7 +580,7 @@ contract TermMaxOrder is
         return (netTokenIn, feeAmt);
     }
 
-    function _buyExactFt(
+    function _buyExactFtStep(
         uint daysToMaturity,
         uint oriXtReserve,
         uint ftAmtOut,
@@ -616,7 +595,7 @@ contract TermMaxOrder is
         tokenOut = ft;
     }
 
-    function _buyExactXt(
+    function _buyExactXtStep(
         uint daysToMaturity,
         uint oriXtReserve,
         uint xtAmtOut,
@@ -631,7 +610,7 @@ contract TermMaxOrder is
         tokenOut = xt;
     }
 
-    function sellFtForExactToken(
+    function _sellFtForExactToken(
         uint debtTokenAmtOut,
         uint maxFtIn,
         address caller,
@@ -644,11 +623,11 @@ contract TermMaxOrder is
             debtTokenAmtOut,
             maxFtIn,
             config,
-            _sellFtForExactToken
+            _sellFtForExactTokenStep
         );
     }
 
-    function sellXtForExactToken(
+    function _sellXtForExactToken(
         uint debtTokenAmtOut,
         uint maxXtIn,
         address caller,
@@ -661,7 +640,7 @@ contract TermMaxOrder is
             debtTokenAmtOut,
             maxXtIn,
             config,
-            _sellXtForExactToken
+            _sellXtForExactTokenStep
         );
         if (xt.balanceOf(address(this)) > config.maxXtReserve) {
             revert XtReserveTooHigh();
@@ -694,7 +673,7 @@ contract TermMaxOrder is
         return (netTokenIn, feeAmt);
     }
 
-    function _sellFtForExactToken(
+    function _sellFtForExactTokenStep(
         uint daysToMaturity,
         uint oriXtReserve,
         uint debtTokenOut,
@@ -711,7 +690,7 @@ contract TermMaxOrder is
         tokenIn = ft;
     }
 
-    function _sellXtForExactToken(
+    function _sellXtForExactTokenStep(
         uint daysToMaturity,
         uint oriXtReserve,
         uint debtTokenOut,
@@ -740,7 +719,7 @@ contract TermMaxOrder is
         market.issueFtByExistedGt(recipient, (ftAmtToIssue).toUint128(), config.gtId);
     }
 
-    function withdrawAssets(IERC20 token, address recipient, uint256 amount) external onlyMaker {
+    function withdrawAssets(IERC20 token, address recipient, uint256 amount) external onlyOwner {
         token.safeTransfer(recipient, amount);
         emit WithdrawAssets(token, _msgSender(), recipient, amount);
     }
@@ -748,27 +727,14 @@ contract TermMaxOrder is
     /**
      * @inheritdoc ITermMaxOrder
      */
-    function transferMakerOwnership(address newMaker) external onlyMaker {
-        _transferMakerOwnership(newMaker);
-    }
-
-    function _transferMakerOwnership(address newMaker) internal onlyMaker {
-        address currentMaker = maker;
-        maker = newMaker;
-        emit MakerOwnershipTransferred(currentMaker, newMaker);
-    }
-
-    /**
-     * @inheritdoc ITermMaxOrder
-     */
-    function pause() external override onlyMaker {
+    function pause() external override onlyOwner {
         _pause();
     }
 
     /**
      * @inheritdoc ITermMaxOrder
      */
-    function unpause() external override onlyMaker {
+    function unpause() external override onlyOwner {
         _unpause();
     }
 }

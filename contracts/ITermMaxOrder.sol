@@ -13,7 +13,6 @@ import {ISwapCallback} from "./ISwapCallback.sol";
  */
 interface ITermMaxOrder {
     /// @notice Initialize the token and configuration of the order
-    /// @param admin Administrator address for configuring parameters such as transaction fees
     /// @param maker The maker
     /// @param tokens The tokens
     /// @param gt The Gearing Token
@@ -22,7 +21,6 @@ interface ITermMaxOrder {
     /// @param marketConfig The market configuration
     /// @dev Only factory will call this function once when deploying new market
     function initialize(
-        address admin,
         address maker,
         IERC20[3] memory tokens,
         IGearingToken gt,
@@ -35,6 +33,7 @@ interface ITermMaxOrder {
     /// @notice Return the configuration
     function orderConfig() external view returns (OrderConfig memory);
 
+    /// @notice Return the maker
     function maker() external view returns (address);
 
     /// @notice Set the market configuration
@@ -94,8 +93,4 @@ interface ITermMaxOrder {
 
     /// @notice Open Market Trading
     function unpause() external;
-
-    /// @notice Transfer maker ownership
-    /// @param newMaker New maker
-    function transferMakerOwnership(address newMaker) external;
 }
