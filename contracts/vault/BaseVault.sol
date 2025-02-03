@@ -40,7 +40,6 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
     uint256 public performanceFee;
     uint256 public annualizedInterest;
 
-    uint64 public maxTerm;
     uint64 public performanceFeeRate;
 
     address[] public supplyQueue;
@@ -56,10 +55,8 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
     mapping(uint64 => address[]) private maturityToOrders;
     mapping(uint64 => uint128) private maturityToInterest;
 
-    constructor(uint64 maxTerm_, uint64 performanceFeeRate_) {
-        if (maxTerm_ > VaultConstants.MAX_TERM) revert MaxTermExceeded();
+    constructor(uint64 performanceFeeRate_) {
         _setPerformanceFeeRate(performanceFeeRate_);
-        maxTerm = maxTerm_;
     }
 
     function _setPerformanceFeeRate(uint64 newPerformanceFeeRate) internal {
@@ -111,9 +108,6 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
         uint256 initialReserve,
         CurveCuts memory curveCuts
     ) internal returns (ITermMaxOrder order) {
-        uint64 orderMaturity = market.config().maturity;
-        if (orderMaturity > block.timestamp + maxTerm) revert MarketIsLaterThanMaxTerm();
-
         if (
             supplyQueue.length + 1 >= VaultConstants.MAX_QUEUE_LENGTH ||
             withdrawQueue.length + 1 >= VaultConstants.MAX_QUEUE_LENGTH
@@ -129,6 +123,8 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
         }
         supplyQueue.push(address(order));
         withdrawQueue.push(address(order));
+
+        uint64 orderMaturity = market.config().maturity;
         orderMapping[address(order)] = OrderInfo({
             market: market,
             ft: ft,

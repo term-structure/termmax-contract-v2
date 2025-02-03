@@ -85,7 +85,7 @@ contract TermMaxVault is Ownable2Step, ReentrancyGuard, BaseVault, ERC4626, Paus
         Ownable(params.admin)
         ERC4626(params.asset)
         ERC20(params.name, params.symbol)
-        BaseVault(params.maxTerm, params.performanceFeeRate)
+        BaseVault(params.performanceFeeRate)
     {
         _checkTimelockBounds(params.timelock);
         timelock = params.timelock;

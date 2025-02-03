@@ -42,7 +42,6 @@ contract VaultTest is Test {
 
     uint timelock = 86400;
     uint maxCapacity = 1000000e18;
-    uint64 maxTerm = 180 days;
     uint64 performanceFeeRate = 0.5e8;
 
     ITermMaxMarket market2;
@@ -106,7 +105,6 @@ contract VaultTest is Test {
                     maxCapacity,
                     "Vault-DAI",
                     "Vault-DAI",
-                    maxTerm,
                     performanceFeeRate
                 )
             )
@@ -263,9 +261,6 @@ contract VaultTest is Test {
         vault.submitMarket(address(market3), true);
         vm.warp(currentTime + timelock + 1);
         vault.acceptMarket(address(market3));
-
-        vm.expectRevert(VaultErrors.MarketIsLaterThanMaxTerm.selector);
-        vault.createOrder(market3, maxCapacity, 0, orderConfig.curveCuts);
         vm.stopPrank();
     }
 

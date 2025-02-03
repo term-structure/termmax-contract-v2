@@ -138,7 +138,7 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
     }
 
     /// @notice Set the fee rate of an order
-    function setOrderFeeRate(
+    function updateOrderFeeRate(
         ITermMaxMarket market,
         ITermMaxOrder order,
         FeeConfig memory feeConfig

@@ -4,8 +4,9 @@ pragma solidity ^0.8.27;
 import {TermMaxVault} from "contracts/vault/TermMaxVault.sol";
 import {VaultInitialParams} from "contracts/storage/TermMaxStorage.sol";
 import {FactoryEvents} from "contracts/events/FactoryEvents.sol";
+import {IVaultFactory} from "./IVaultFactory.sol";
 
-contract VaultFactory is FactoryEvents {
+contract VaultFactory is FactoryEvents, IVaultFactory {
     function createVault(VaultInitialParams memory initialParams) public returns (address vault) {
         vault = address(new TermMaxVault(initialParams));
         emit VaultCreated(vault, msg.sender, initialParams);

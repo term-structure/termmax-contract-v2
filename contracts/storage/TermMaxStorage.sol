@@ -124,6 +124,5 @@ struct VaultInitialParams {
     uint256 maxCapacity;
     string name;
     string symbol;
-    uint64 maxTerm;
     uint64 performanceFeeRate;
 }
