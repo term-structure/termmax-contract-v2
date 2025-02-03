@@ -19,7 +19,6 @@ import {MockPriceFeed} from "contracts/test/MockPriceFeed.sol";
 import {TermMaxVault} from "contracts/vault/TermMaxVault.sol";
 import {BaseVault, VaultErrors, VaultEvents, ITermMaxVault} from "contracts/vault/BaseVault.sol";
 import {VaultConstants} from "contracts/lib/VaultConstants.sol";
-import {VaultFactory} from "contracts/factory/VaultFactory.sol";
 import "contracts/storage/TermMaxStorage.sol";
 
 contract VaultTest is Test {
@@ -94,9 +93,7 @@ contract VaultTest is Test {
 
         uint amount = 10000e8;
 
-        VaultFactory vaultFactory = new VaultFactory();
-        vault = TermMaxVault(
-            vaultFactory.createVault(
+        vault = new TermMaxVault(
                 VaultInitialParams(
                     deployer,
                     curator,
@@ -107,7 +104,6 @@ contract VaultTest is Test {
                     "Vault-DAI",
                     performanceFeeRate
                 )
-            )
         );
         vault.submitGuardian(guardian);
         vault.setIsAllocator(allocator, true);
