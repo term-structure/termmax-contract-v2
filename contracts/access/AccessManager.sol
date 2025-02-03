@@ -138,8 +138,12 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
     }
 
     /// @notice Set the fee rate of an order
-    function setOrderFeeRate(ITermMaxOrder order, FeeConfig memory feeConfig) external onlyRole(CONFIGURATOR_ROLE) {
-        order.updateFeeConfig(feeConfig);
+    function setOrderFeeRate(
+        ITermMaxMarket market,
+        ITermMaxOrder order,
+        FeeConfig memory feeConfig
+    ) external onlyRole(CONFIGURATOR_ROLE) {
+        market.updateOrderFeeRate(order, feeConfig);
     }
 
     /// @notice Set the switch of an entity

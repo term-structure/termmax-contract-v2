@@ -215,19 +215,8 @@ contract MockOrder is
     }
 
     function updateFeeConfig(FeeConfig memory newFeeConfig) external override onlyMarket {
-        _checkFee(newFeeConfig.borrowTakerFeeRatio);
-        _checkFee(newFeeConfig.borrowMakerFeeRatio);
-        _checkFee(newFeeConfig.lendTakerFeeRatio);
-        _checkFee(newFeeConfig.lendMakerFeeRatio);
-        _checkFee(newFeeConfig.redeemFeeRatio);
-        _checkFee(newFeeConfig.issueFtFeeRatio);
-        _checkFee(newFeeConfig.issueFtFeeRef);
         _orderConfig.feeConfig = newFeeConfig;
         emit UpdateFeeConfig(newFeeConfig);
-    }
-
-    function _checkFee(uint32 feeRatio) internal pure {
-        if (feeRatio >= Constants.MAX_FEE_RATIO) revert FeeTooHigh();
     }
 
     /// @notice Calculate how many days until expiration
