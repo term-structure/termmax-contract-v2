@@ -19,6 +19,11 @@ import {OrderConfig, CurveCuts} from "../storage/TermMaxStorage.sol";
 import {MathLib} from "../lib/MathLib.sol";
 import {ITermMaxVault} from "./ITermMaxVault.sol";
 
+/**
+ * @title Base Vault
+ * @author Term Structure Labs
+ * @notice Base contract for interest calculation and AMM management
+ */
 abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMaxVault {
     using SafeCast for uint256;
     using SafeCast for int256;
@@ -35,24 +40,32 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
     }
 
     uint256 public totalFt;
-    // locked ft = accretingPrincipal + performanceFee;
+    /// @notice The locked ft = accretingPrincipal + performanceFee;
     uint256 public accretingPrincipal;
+    /// @notice The performance fee is paid to the curators
     uint256 public performanceFee;
+    /// @notice Annualize the interest income
     uint256 public annualizedInterest;
 
     uint64 public performanceFeeRate;
 
     address[] public supplyQueue;
-    mapping(address => OrderInfo) public orderMapping;
-    mapping(address => uint256) public badDebtMapping;
 
     address[] public withdrawQueue;
 
-    uint64 lastUpdateTime;
+    /// @dev A mapping from collateral address to bad debt
+    mapping(address => uint256) public badDebtMapping;
+    mapping(address => OrderInfo) public orderMapping;
 
+    /// @dev The last time the interest was accurately calculated
+    uint64 lastUpdateTime;
+    /// @dev The recentest maturity
     uint64 recentestMaturity;
+    /// @dev A one-way linked list presented using a mapping structure, recorded in order according to matiruty
+    /// @dev The key is the maturity, and the value is the next maturity
+    /// Etc. day 0 => day 1 => day 2 => day 3 => ...
     mapping(uint64 => uint64) private maturityMapping;
-    mapping(uint64 => address[]) private maturityToOrders;
+    /// @dev A mapping from maturity to its annualized interest
     mapping(uint64 => uint128) private maturityToInterest;
 
     constructor(uint64 performanceFeeRate_) {
@@ -64,6 +77,7 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
         performanceFeeRate = newPerformanceFeeRate;
     }
 
+    /// @dev Returns the erc4626 asset address
     function asset() public view virtual returns (address);
 
     /**
@@ -381,7 +395,7 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
         withdrawQueue.remove(withdrawQueue.indexOf(order));
     }
 
-    /// @notice Calculate and distribute accrued interest
+    /// @notice Calculate and distribute accrued the interest from start to end time
     function _accruedPeriodInterest(uint startTime, uint endTime) internal {
         uint interest = (annualizedInterest * (endTime - startTime)) / 365 days;
         uint performanceFeeToCurator = (interest * performanceFeeRate) / Constants.DECIMAL_BASE;
@@ -390,6 +404,7 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
         accretingPrincipal += (interest - performanceFeeToCurator);
     }
 
+    /// @notice Distribute interest
     function _accruedInterest() internal {
         uint64 currentTime = block.timestamp.toUint64();
 
@@ -478,11 +493,18 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
         }
     }
 
+    /// @notice Callback function for the swap
+    /// @param deltaFt The change in the ft balance of the order
     function swapCallback(int256 deltaFt, int256) external override {
         address orderAddress = msg.sender;
+        /// @dev Check if the order is valid
         _checkOrder(orderAddress);
         uint64 maturity = orderMapping[orderAddress].maturity;
+        /// @dev Calculate interest from last update time to now
         _accruedInterest();
+
+        /// @dev If ft increases, interest increases, and if ft decreases,
+        ///  interest decreases. Update the expected annualized return based on the change
         uint ftChanges;
 
         if (deltaFt > 0) {
@@ -503,7 +525,8 @@ abstract contract BaseVault is VaultErrors, VaultEvents, ISwapCallback, ITermMax
             maturityToInterest[maturity] -= deltaAnualizedInterest.toUint128();
             annualizedInterest -= deltaAnualizedInterest;
         }
-
+        /// @dev Ensure that the total assets after the transaction are
+        ///greater than or equal to the principal and the allocated interest
         _checkLockedFt();
     }
 
