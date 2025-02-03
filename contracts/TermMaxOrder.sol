@@ -285,6 +285,7 @@ contract TermMaxOrder is
         if (tokenIn == tokenOut) revert CantSwapSameToken();
         OrderConfig memory config = _orderConfig;
         uint feeAmt;
+        // Storage current ft and xt reserve
         setTransientFtReserve(ft.balanceOf(address(this)));
         setTransientXtReserve(xt.balanceOf(address(this)));
         if (tokenIn == ft && tokenOut == debtToken) {
@@ -298,9 +299,9 @@ contract TermMaxOrder is
         } else {
             revert CantNotSwapToken(tokenIn, tokenOut);
         }
-
+        // transfer fee to treasurer
         ft.safeTransfer(market.config().treasurer, feeAmt);
-
+        /// @dev callback the changes of ft and xt reserve to trigger
         if (address(_orderConfig.swapTrigger) != address(0)) {
             int256 deltaFt = ft.balanceOf(address(this)).toInt256() - getTransientFtReserve().toInt256();
             int256 deltaXt = xt.balanceOf(address(this)).toInt256() - getTransientXtReserve().toInt256();
@@ -479,6 +480,9 @@ contract TermMaxOrder is
         tokenIn = xt;
     }
 
+    /**
+     * @inheritdoc ITermMaxOrder
+     */
     function swapTokenToExactToken(
         IERC20 tokenIn,
         IERC20 tokenOut,
@@ -489,8 +493,10 @@ contract TermMaxOrder is
         if (tokenIn == tokenOut) revert CantSwapSameToken();
         OrderConfig memory config = _orderConfig;
         uint feeAmt;
+        // Storage current ft and xt reserve
         setTransientFtReserve(ft.balanceOf(address(this)));
         setTransientXtReserve(xt.balanceOf(address(this)));
+
         if (tokenIn == debtToken && tokenOut == ft) {
             (netTokenIn, feeAmt) = _buyExactFt(tokenAmtOut, maxTokenIn, msg.sender, recipient, config);
         } else if (tokenIn == debtToken && tokenOut == xt) {
@@ -502,8 +508,10 @@ contract TermMaxOrder is
         } else {
             revert CantNotSwapToken(tokenIn, tokenOut);
         }
+        // transfer fee to treasurer
         ft.safeTransfer(market.config().treasurer, feeAmt);
 
+        /// @dev callback the changes of ft and xt reserve to trigger
         if (address(_orderConfig.swapTrigger) != address(0)) {
             int256 deltaFt = ft.balanceOf(address(this)).toInt256() - getTransientFtReserve().toInt256();
             int256 deltaXt = xt.balanceOf(address(this)).toInt256() - getTransientXtReserve().toInt256();
