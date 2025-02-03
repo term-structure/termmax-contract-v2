@@ -31,10 +31,10 @@ contract DeloyMarketHolesky is DeployBase {
     address priceFeedOperatorAddr = vm.envAddress("HOLESKY_PRICE_FEED_OPERATOR_ADDRESS");
 
     // address config
-    address factoryAddr = address(0xc7FDd3804056216fe2E45b6FA71eA1c191b30117);
-    address oracleAddr = address(0xb5b411c88c13768636E99013b6b3b0E20E485789);
-    address routerAddr = address(0xA44742D456e644D4108B8B4421189EF46F583812);
-    address faucetAddr = address(0x422738015AF2E812D5Ec73BdE20bE06755508696);
+    address factoryAddr = address(0x45588fA88635A1B37d69f34A03B7600406533EC8);
+    address oracleAddr = address(0x2FC5F74e16822AA820E677afD5e80b953ad995EE);
+    address routerAddr = address(0x959D4521BD48B6487D415Aad576Af2222ADB1a92);
+    address faucetAddr = address(0x5adA709210846DA33E3866490EAFB90B7ea96f7f);
 
     address[] devs = [
         address(0x19A736387ea2F42AcAb1BC0FdE15e667e63ea9cC), // Sunny

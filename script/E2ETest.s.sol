@@ -32,11 +32,11 @@ contract E2ETest is Script {
     address userAddr = vm.addr(userPrivateKey);
 
     // address config
-    address faucetAddr = address(0x422738015AF2E812D5Ec73BdE20bE06755508696);
-    address routerAddr = address(0xA44742D456e644D4108B8B4421189EF46F583812);
-    address swapAdapter = address(0x65feE48150586e72038884920b92033746f324b0);
-    address marketAddr = address(0x0D5168Ae17e62B42ed85DD8Cc35DA7913Ec41dd6);
-    address orderAddr = address(0x20fC1552744D7726827D69248c6cB9733A70FA1C);
+    address faucetAddr = address(0x5adA709210846DA33E3866490EAFB90B7ea96f7f);
+    address routerAddr = address(0x959D4521BD48B6487D415Aad576Af2222ADB1a92);
+    address swapAdapter = address(0xC16905D5b6E34DA4f76BD896f8e1cc6E4650960C);
+    address marketAddr = address(0x645ef85B26A8eE16D4858725045900ACAb7DE005);
+    address orderAddr = address(0xb17F9B1DFE6264645E09CE6090aaBEdA77e14830);
 
     Faucet faucet = Faucet(faucetAddr);
     TermMaxRouter router = TermMaxRouter(routerAddr);
@@ -59,16 +59,35 @@ contract E2ETest is Script {
         underlyingPriceFeedAddr = faucet.getTokenConfig(faucet.getTokenId(address(underlying))).priceFeedAddr;
         collateralPriceFeedAddr = faucet.getTokenConfig(faucet.getTokenId(address(collateral))).priceFeedAddr;
         printMarketConfig();
+        mintDebtToken(100000);
         depositIntoOrder(100000);
-        lendToOrder(1);
+        mintDebtToken(1000);
+        lendToOrder(1000);
+        mintCollateralToken(12000);
         borrowFromOrder(12000, 8000, 8500);
-        leverageFromOrder(4e6, 0, 20000e6, 0.8e8);
+        printUserPosition();
+        mintDebtToken(20004);
+        leverageFromOrder(4, 0, 20000, 0.8e8);
+        printUserPosition();
+    }
+
+    function mintDebtToken(uint256 amount) public {
+        uint256 mintAmt = amount * 10 ** underlying.decimals();
+        vm.startBroadcast(userPrivateKey);
+        faucet.devMint(userAddr, address(underlying), mintAmt);
+        vm.stopBroadcast();
+    }
+
+    function mintCollateralToken(uint256 amount) public {
+        uint256 mintAmt = amount * 10 ** collateral.decimals();
+        vm.startBroadcast(userPrivateKey);
+        faucet.devMint(userAddr, address(collateral), mintAmt);
+        vm.stopBroadcast();
     }
 
     function depositIntoOrder(uint256 depositAmt) public {
         vm.startBroadcast(userPrivateKey);
         depositAmt = depositAmt * 10 ** underlying.decimals();
-        faucet.devMint(userAddr, address(underlying), depositAmt);
         (uint256 oriFtReserve, uint256 oriXtReserve) = order.tokenReserves();
 
         underlying.approve(address(market), depositAmt);
@@ -77,13 +96,13 @@ contract E2ETest is Script {
         (uint256 newLendApr, uint256 newBorrowApr) = order.apr();
         console.log("");
         vm.stopBroadcast();
-        console.log("--- Deposit into order ---");
-        console.log("ori ftReserve:", oriFtReserve);
-        console.log("ori xtReserve:", oriXtReserve);
-        console.log("new ftReserve:", newFtReserve);
-        console.log("new xtReserve:", newXtReserve);
-        console.log("new lendApr:", newLendApr);
-        console.log("new borrowApr:", newBorrowApr);
+        // console.log("--- Deposit into order ---");
+        // console.log("ori ftReserve:", oriFtReserve);
+        // console.log("ori xtReserve:", oriXtReserve);
+        // console.log("new ftReserve:", newFtReserve);
+        // console.log("new xtReserve:", newXtReserve);
+        // console.log("new lendApr:", newLendApr);
+        // console.log("new borrowApr:", newBorrowApr);
     }
 
     function lendToOrder(uint256 lendAmt) public {
@@ -93,7 +112,6 @@ contract E2ETest is Script {
 
         vm.startBroadcast(userPrivateKey);
         lendAmt = lendAmt * 10 ** underlying.decimals();
-        faucet.devMint(userAddr, address(underlying), lendAmt);
         uint256 oriUnderlyingBalance = underlying.balanceOf(userAddr);
         underlying.approve(address(order), lendAmt);
         order.swapExactTokenToToken(underlying, ft, userAddr, uint128(lendAmt), 0);
@@ -104,19 +122,19 @@ contract E2ETest is Script {
         uint256 newUnderlyingBalance = underlying.balanceOf(userAddr);
         uint256 newFtBalance = ft.balanceOf(userAddr);
 
-        console.log("--- Lend to order ---");
-        console.log("ori ftReserve:", oriFtReserve);
-        console.log("ori xtReserve:", oriXtReserve);
-        console.log("ori lendApr:", oriLendApr);
-        console.log("ori borrowApr:", oriBorrowApr);
-        console.log("ori underlyingBalance:", oriUnderlyingBalance);
-        console.log("ori ftBalance:", oriFtBalance);
-        console.log("new ftReserve:", newFtReserve);
-        console.log("new xtReserve:", newXtReserve);
-        console.log("new lendApr:", newLendApr);
-        console.log("new borrowApr:", newBorrowApr);
-        console.log("new underlyingBalance:", newUnderlyingBalance);
-        console.log("new ftBalance:", newFtBalance);
+        // console.log("--- Lend to order ---");
+        // console.log("ori ftReserve:", oriFtReserve);
+        // console.log("ori xtReserve:", oriXtReserve);
+        // console.log("ori lendApr:", oriLendApr);
+        // console.log("ori borrowApr:", oriBorrowApr);
+        // console.log("ori underlyingBalance:", oriUnderlyingBalance);
+        // console.log("ori ftBalance:", oriFtBalance);
+        // console.log("new ftReserve:", newFtReserve);
+        // console.log("new xtReserve:", newXtReserve);
+        // console.log("new lendApr:", newLendApr);
+        // console.log("new borrowApr:", newBorrowApr);
+        // console.log("new underlyingBalance:", newUnderlyingBalance);
+        // console.log("new ftBalance:", newFtBalance);
     }
 
     function borrowFromOrder(uint256 collateralAmt, uint256 borrowAmt, uint256 maxDebtAmt) public {
@@ -128,10 +146,9 @@ contract E2ETest is Script {
         uint256 oriUnderlyingBalance = underlying.balanceOf(userAddr);
 
         vm.startBroadcast(userPrivateKey);
-        faucet.devMint(userAddr, collateralAddr, collateralAmt);
         uint256 oriCollateralBalance = collateral.balanceOf(userAddr);
-        uint256 fee = (market.issueFtFeeRatio() * maxDebtAmt) / Constants.DECIMAL_BASE;
-        uint256 ftAmt = maxDebtAmt - fee;
+        // uint256 fee = (market.issueFtFeeRatio() * maxDebtAmt) / Constants.DECIMAL_BASE;
+        // uint256 ftAmt = maxDebtAmt - fee;
         collateral.approve(address(router), collateralAmt);
         ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
         orders[0] = order;
@@ -145,22 +162,24 @@ contract E2ETest is Script {
         uint256 newUnderlyingBalance = underlying.balanceOf(userAddr);
         uint256 newCollateralBalance = collateral.balanceOf(userAddr);
 
-        console.log("--- Borrow from order ---");
-        console.log("ori ftReserve:", oriFtReserve);
-        console.log("ori xtReserve:", oriXtReserve);
-        console.log("ori lendApr:", oriLendApr);
-        console.log("ori borrowApr:", oriBorrowApr);
-        console.log("ori underlyingBalance:", oriUnderlyingBalance);
-        console.log("ori collateralBalance:", oriCollateralBalance);
-        console.log("new ftReserve:", newFtReserve);
-        console.log("new xtReserve:", newXtReserve);
-        console.log("new lendApr:", newLendApr);
-        console.log("new borrowApr:", newBorrowApr);
-        console.log("new underlyingBalance:", newUnderlyingBalance);
-        console.log("new collateralBalance:", newCollateralBalance);
+        // console.log("--- Borrow from order ---");
+        // console.log("ori ftReserve:", oriFtReserve);
+        // console.log("ori xtReserve:", oriXtReserve);
+        // console.log("ori lendApr:", oriLendApr);
+        // console.log("ori borrowApr:", oriBorrowApr);
+        // console.log("ori underlyingBalance:", oriUnderlyingBalance);
+        // console.log("ori collateralBalance:", oriCollateralBalance);
+        // console.log("new ftReserve:", newFtReserve);
+        // console.log("new xtReserve:", newXtReserve);
+        // console.log("new lendApr:", newLendApr);
+        // console.log("new borrowApr:", newBorrowApr);
+        // console.log("new underlyingBalance:", newUnderlyingBalance);
+        // console.log("new collateralBalance:", newCollateralBalance);
     }
 
     function leverageFromOrder(uint128 amtToBuyXt, uint128 minXtOut, uint128 tokenToSwap, uint128 maxLtv) public {
+        amtToBuyXt = uint128(amtToBuyXt * 10 ** underlying.decimals());
+        tokenToSwap = uint128(tokenToSwap * 10 ** underlying.decimals());
         ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
         orders[0] = order;
         uint128[] memory amtsToBuyXt = new uint128[](1);
@@ -178,7 +197,6 @@ contract E2ETest is Script {
         uint256 oriUnderlyingBalance = underlying.balanceOf(userAddr);
 
         vm.startBroadcast(userPrivateKey);
-        faucet.devMint(address(userAddr), address(underlying), amtToBuyXt + tokenToSwap);
         underlying.approve(address(router), amtToBuyXt + tokenToSwap);
         router.leverageFromToken(userAddr, market, orders, amtsToBuyXt, minXtOut, tokenToSwap, maxLtv, units);
         vm.stopBroadcast();
@@ -186,19 +204,19 @@ contract E2ETest is Script {
         (uint256 newFtReserve, uint256 newXtReserve) = order.tokenReserves();
         (uint256 newLendApr, uint256 newBorrowApr) = order.apr();
         uint256 newUnderlyingBalance = underlying.balanceOf(userAddr);
-        uint256 newCollateralBalance = collateral.balanceOf(userAddr);
+        // uint256 newCollateralBalance = collateral.balanceOf(userAddr);
 
-        console.log("--- Leverage from order ---");
-        console.log("ori ftReserve:", oriFtReserve);
-        console.log("ori xtReserve:", oriXtReserve);
-        console.log("ori lendApr:", oriLendApr);
-        console.log("ori borrowApr:", oriBorrowApr);
-        console.log("ori underlyingBalance:", oriUnderlyingBalance);
-        console.log("new ftReserve:", newFtReserve);
-        console.log("new xtReserve:", newXtReserve);
-        console.log("new lendApr:", newLendApr);
-        console.log("new borrowApr:", newBorrowApr);
-        console.log("new underlyingBalance:", newUnderlyingBalance);
+        // console.log("--- Leverage from order ---");
+        // console.log("ori ftReserve:", oriFtReserve);
+        // console.log("ori xtReserve:", oriXtReserve);
+        // console.log("ori lendApr:", oriLendApr);
+        // console.log("ori borrowApr:", oriBorrowApr);
+        // console.log("ori underlyingBalance:", oriUnderlyingBalance);
+        // console.log("new ftReserve:", newFtReserve);
+        // console.log("new xtReserve:", newXtReserve);
+        // console.log("new lendApr:", newLendApr);
+        // console.log("new borrowApr:", newBorrowApr);
+        // console.log("new underlyingBalance:", newUnderlyingBalance);
     }
 
     function printMarketConfig() public view {
@@ -214,5 +232,21 @@ contract E2ETest is Script {
         console.log("issueFtFeeRef:", config.feeConfig.issueFtFeeRef);
         console.log("redeemFeeRatio:", config.feeConfig.redeemFeeRatio);
         console.log("");
+    }
+
+    function printUserPosition() public view {
+        console.log("--- User Position ---");
+        console.log("User Addr:", userAddr);
+        console.log("Market Addr:", address(market));
+        (IERC20[4] memory tokens, uint256[4] memory balances, address gtAddr, uint256[] memory gtIds) = router
+            .assetsWithERC20Collateral(market, userAddr);
+        for (uint256 i = 0; i < tokens.length; i++) {
+            console.log(IERC20Metadata(address(tokens[i])).symbol(), ":", balances[i]);
+        }
+        console.log("gtAddr:", gtAddr);
+        console.log("gtIds:");
+        for (uint256 i = 0; i < gtIds.length; i++) {
+            console.log(gtIds[i]);
+        }
     }
 }

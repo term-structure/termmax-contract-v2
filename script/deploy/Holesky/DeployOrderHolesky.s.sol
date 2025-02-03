@@ -33,7 +33,7 @@ contract DeloyOrderHolesky is DeployBase {
     address priceFeedOperatorAddr = vm.envAddress("HOLESKY_PRICE_FEED_OPERATOR_ADDRESS");
 
     // address config
-    address marketAddr = address(0x0D5168Ae17e62B42ed85DD8Cc35DA7913Ec41dd6);
+    address marketAddr = address(0x645ef85B26A8eE16D4858725045900ACAb7DE005);
 
     function run() public {
         uint256 currentBlockNum = block.number;
@@ -44,12 +44,12 @@ contract DeloyOrderHolesky is DeployBase {
         CurveCut memory lendCurveCut1 = CurveCut({
             xtReserve: 9000000000,
             liqSquare: 425141100695200464896,
-            offset: 32237900077
+            offset: 32237899859
         });
         CurveCut memory lendCurveCut2 = CurveCut({
             xtReserve: 21000000000,
             liqSquare: 1072059478286836826112,
-            offset: 63540305112
+            offset: 63540304430
         });
         CurveCut[] memory _lendCurveCuts = new CurveCut[](3);
         _lendCurveCuts[0] = lendCurveCut0;
@@ -64,12 +64,12 @@ contract DeloyOrderHolesky is DeployBase {
         CurveCut memory borrowCurveCut1 = CurveCut({
             xtReserve: 8000000000,
             liqSquare: 361237873939795017728,
-            offset: 30796363335
+            offset: 30796362980
         });
         CurveCut memory borrowCurveCut2 = CurveCut({
             xtReserve: 20000000000,
             liqSquare: 826934466947518169088,
-            offset: 56854894208
+            offset: 56854893632
         });
         CurveCut[] memory _borrowCurveCuts = new CurveCut[](3);
         _borrowCurveCuts[0] = borrowCurveCut0;
