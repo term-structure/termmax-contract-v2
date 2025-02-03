@@ -301,28 +301,28 @@ contract TermMaxOrder is
         setTransientFtReserve(ft.balanceOf(address(this)));
         setTransientXtReserve(xt.balanceOf(address(this)));
         if (tokenIn == ft && tokenOut == debtToken) {
-            (netTokenOut, feeAmt) = sellFt(tokenAmtIn, minTokenOut, msg.sender, recipient, config);
+            (netTokenOut, feeAmt) = _sellFt(tokenAmtIn, minTokenOut, msg.sender, recipient, config);
         } else if (tokenIn == xt && tokenOut == debtToken) {
-            (netTokenOut, feeAmt) = sellXt(tokenAmtIn, minTokenOut, msg.sender, recipient, config);
+            (netTokenOut, feeAmt) = _sellXt(tokenAmtIn, minTokenOut, msg.sender, recipient, config);
         } else if (tokenIn == debtToken && tokenOut == ft) {
-            (netTokenOut, feeAmt) = buyFt(tokenAmtIn, minTokenOut, msg.sender, recipient, config);
+            (netTokenOut, feeAmt) = _buyFt(tokenAmtIn, minTokenOut, msg.sender, recipient, config);
         } else if (tokenIn == debtToken && tokenOut == xt) {
-            (netTokenOut, feeAmt) = buyXt(tokenAmtIn, minTokenOut, msg.sender, recipient, config);
+            (netTokenOut, feeAmt) = _buyXt(tokenAmtIn, minTokenOut, msg.sender, recipient, config);
         } else {
             revert CantNotSwapToken(tokenIn, tokenOut);
         }
 
         // else if (tokenIn == ft && tokenOut == xt) {
-        //     (uint debtTokenAmtOut, uint feeOneSide) = sellFt(tokenAmtIn, 0, msg.sender, address(this), config);
+        //     (uint debtTokenAmtOut, uint feeOneSide) = _sellFt(tokenAmtIn, 0, msg.sender, address(this), config);
 
-        //     (netTokenOut, feeAmt) = buyXt(debtTokenAmtOut, minTokenOut, address(this), recipient, config);
+        //     (netTokenOut, feeAmt) = _buyXt(debtTokenAmtOut, minTokenOut, address(this), recipient, config);
         //     feeAmt += feeOneSide;
 
         //     deltaFt = (tokenAmtIn - feeAmt).toInt256();
         //     deltaXt = -((netTokenOut).toInt256());
         // } else if (tokenIn == xt && tokenOut == ft) {
-        //     (uint debtTokenAmtOut, uint feeOneSide) = sellXt(tokenAmtIn, 0, msg.sender, address(this), config);
-        //     (netTokenOut, feeAmt) = buyFt(debtTokenAmtOut, minTokenOut, address(this), recipient, config);
+        //     (uint debtTokenAmtOut, uint feeOneSide) = _sellXt(tokenAmtIn, 0, msg.sender, address(this), config);
+        //     (netTokenOut, feeAmt) = _buyFt(debtTokenAmtOut, minTokenOut, address(this), recipient, config);
         //     feeAmt += feeOneSide;
         //     deltaFt = -((netTokenOut + feeAmt).toInt256());
         //     deltaXt = uint(tokenAmtIn).toInt256();
@@ -346,47 +346,47 @@ contract TermMaxOrder is
         );
     }
 
-    function buyFt(
+    function _buyFt(
         uint debtTokenAmtIn,
         uint minTokenOut,
         address caller,
         address recipient,
         OrderConfig memory config
     ) internal isLendingAllowed(config) returns (uint256 netOut, uint256 feeAmt) {
-        (netOut, feeAmt) = _buyToken(caller, recipient, debtTokenAmtIn, minTokenOut, config, _buyFt);
+        (netOut, feeAmt) = _buyToken(caller, recipient, debtTokenAmtIn, minTokenOut, config, _buyFtStep);
         if (xt.balanceOf(address(this)) > config.maxXtReserve) {
             revert XtReserveTooHigh();
         }
     }
 
-    function buyXt(
+    function _buyXt(
         uint debtTokenAmtIn,
         uint minTokenOut,
         address caller,
         address recipient,
         OrderConfig memory config
     ) internal isBorrowingAllowed(config) returns (uint256 netOut, uint256 feeAmt) {
-        (netOut, feeAmt) = _buyToken(caller, recipient, debtTokenAmtIn, minTokenOut, config, _buyXt);
+        (netOut, feeAmt) = _buyToken(caller, recipient, debtTokenAmtIn, minTokenOut, config, _buyXtStep);
     }
 
-    function sellFt(
+    function _sellFt(
         uint ftAmtIn,
         uint minDebtTokenOut,
         address caller,
         address recipient,
         OrderConfig memory config
     ) internal isBorrowingAllowed(config) returns (uint256 netOut, uint256 feeAmt) {
-        (netOut, feeAmt) = _sellToken(caller, recipient, ftAmtIn, minDebtTokenOut, config, _sellFt);
+        (netOut, feeAmt) = _sellToken(caller, recipient, ftAmtIn, minDebtTokenOut, config, _sellFtStep);
     }
 
-    function sellXt(
+    function _sellXt(
         uint xtAmtIn,
         uint minDebtTokenOut,
         address caller,
         address recipient,
         OrderConfig memory config
     ) internal isLendingAllowed(config) returns (uint256 netOut, uint256 feeAmt) {
-        (netOut, feeAmt) = _sellToken(caller, recipient, xtAmtIn, minDebtTokenOut, config, _sellXt);
+        (netOut, feeAmt) = _sellToken(caller, recipient, xtAmtIn, minDebtTokenOut, config, _sellXtStep);
         if (xt.balanceOf(address(this)) > config.maxXtReserve) {
             revert XtReserveTooHigh();
         }
@@ -422,7 +422,7 @@ contract TermMaxOrder is
         return (netOut, feeAmt);
     }
 
-    function _buyFt(
+    function _buyFtStep(
         uint daysToMaturity,
         uint oriXtReserve,
         uint debtTokenAmtIn,
@@ -436,7 +436,7 @@ contract TermMaxOrder is
         tokenOut = ft;
     }
 
-    function _buyXt(
+    function _buyXtStep(
         uint daysToMaturity,
         uint oriXtReserve,
         uint debtTokenAmtIn,
@@ -476,7 +476,7 @@ contract TermMaxOrder is
         return (netOut, feeAmt);
     }
 
-    function _sellFt(
+    function _sellFtStep(
         uint daysToMaturity,
         uint oriXtReserve,
         uint tokenAmtIn,
@@ -491,7 +491,7 @@ contract TermMaxOrder is
         tokenIn = ft;
     }
 
-    function _sellXt(
+    function _sellXtStep(
         uint daysToMaturity,
         uint oriXtReserve,
         uint tokenAmtIn,
@@ -521,13 +521,13 @@ contract TermMaxOrder is
         setTransientFtReserve(ft.balanceOf(address(this)));
         setTransientXtReserve(xt.balanceOf(address(this)));
         if (tokenIn == debtToken && tokenOut == ft) {
-            (netTokenIn, feeAmt) = buyExactFt(tokenAmtOut, maxTokenIn, msg.sender, recipient, config);
+            (netTokenIn, feeAmt) = _buyExactFt(tokenAmtOut, maxTokenIn, msg.sender, recipient, config);
         } else if (tokenIn == debtToken && tokenOut == xt) {
-            (netTokenIn, feeAmt) = buyExactXt(tokenAmtOut, maxTokenIn, msg.sender, recipient, config);
+            (netTokenIn, feeAmt) = _buyExactXt(tokenAmtOut, maxTokenIn, msg.sender, recipient, config);
         } else if (tokenIn == ft && tokenOut == debtToken) {
-            (netTokenIn, feeAmt) = sellFtForExactToken(tokenAmtOut, maxTokenIn, msg.sender, recipient, config);
+            (netTokenIn, feeAmt) = _sellFtForExactToken(tokenAmtOut, maxTokenIn, msg.sender, recipient, config);
         } else if (tokenIn == xt && tokenOut == debtToken) {
-            (netTokenIn, feeAmt) = sellXtForExactToken(tokenAmtOut, maxTokenIn, msg.sender, recipient, config);
+            (netTokenIn, feeAmt) = _sellXtForExactToken(tokenAmtOut, maxTokenIn, msg.sender, recipient, config);
         } else {
             revert CantNotSwapToken(tokenIn, tokenOut);
         }
@@ -549,27 +549,27 @@ contract TermMaxOrder is
         );
     }
 
-    function buyExactFt(
+    function _buyExactFt(
         uint tokenAmtOut,
         uint maxTokenIn,
         address caller,
         address recipient,
         OrderConfig memory config
     ) internal isLendingAllowed(config) returns (uint256 netTokenIn, uint256 feeAmt) {
-        (netTokenIn, feeAmt) = _buyExactToken(caller, recipient, tokenAmtOut, maxTokenIn, config, _buyExactFt);
+        (netTokenIn, feeAmt) = _buyExactToken(caller, recipient, tokenAmtOut, maxTokenIn, config, _buyExactFtStep);
         if (xt.balanceOf(address(this)) > config.maxXtReserve) {
             revert XtReserveTooHigh();
         }
     }
 
-    function buyExactXt(
+    function _buyExactXt(
         uint tokenAmtOut,
         uint maxTokenIn,
         address caller,
         address recipient,
         OrderConfig memory config
     ) internal isBorrowingAllowed(config) returns (uint256 netTokenIn, uint256 feeAmt) {
-        (netTokenIn, feeAmt) = _buyExactToken(caller, recipient, tokenAmtOut, maxTokenIn, config, _buyExactXt);
+        (netTokenIn, feeAmt) = _buyExactToken(caller, recipient, tokenAmtOut, maxTokenIn, config, _buyExactXtStep);
     }
 
     function _buyExactToken(
@@ -601,7 +601,7 @@ contract TermMaxOrder is
         return (netTokenIn, feeAmt);
     }
 
-    function _buyExactFt(
+    function _buyExactFtStep(
         uint daysToMaturity,
         uint oriXtReserve,
         uint ftAmtOut,
@@ -616,7 +616,7 @@ contract TermMaxOrder is
         tokenOut = ft;
     }
 
-    function _buyExactXt(
+    function _buyExactXtStep(
         uint daysToMaturity,
         uint oriXtReserve,
         uint xtAmtOut,
@@ -631,7 +631,7 @@ contract TermMaxOrder is
         tokenOut = xt;
     }
 
-    function sellFtForExactToken(
+    function _sellFtForExactToken(
         uint debtTokenAmtOut,
         uint maxFtIn,
         address caller,
@@ -644,11 +644,11 @@ contract TermMaxOrder is
             debtTokenAmtOut,
             maxFtIn,
             config,
-            _sellFtForExactToken
+            _sellFtForExactTokenStep
         );
     }
 
-    function sellXtForExactToken(
+    function _sellXtForExactToken(
         uint debtTokenAmtOut,
         uint maxXtIn,
         address caller,
@@ -661,7 +661,7 @@ contract TermMaxOrder is
             debtTokenAmtOut,
             maxXtIn,
             config,
-            _sellXtForExactToken
+            _sellXtForExactTokenStep
         );
         if (xt.balanceOf(address(this)) > config.maxXtReserve) {
             revert XtReserveTooHigh();
@@ -694,7 +694,7 @@ contract TermMaxOrder is
         return (netTokenIn, feeAmt);
     }
 
-    function _sellFtForExactToken(
+    function _sellFtForExactTokenStep(
         uint daysToMaturity,
         uint oriXtReserve,
         uint debtTokenOut,
@@ -711,7 +711,7 @@ contract TermMaxOrder is
         tokenIn = ft;
     }
 
-    function _sellXtForExactToken(
+    function _sellXtForExactTokenStep(
         uint daysToMaturity,
         uint oriXtReserve,
         uint debtTokenOut,
