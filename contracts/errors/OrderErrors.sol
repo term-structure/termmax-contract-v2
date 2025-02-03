@@ -54,9 +54,9 @@ interface OrderErrors {
     error LendIsNotAllowed();
 
     /**
-     * @notice Error thrown when a non-maker attempts to perform a maker-only action
+     * @notice Error thrown when a non-market attempts to perform a market-only action
      */
-    error OnlyMaker();
+    error OnlyMarket();
 
     /**
      * @notice Error thrown when a GT hasn't been approved for an operation

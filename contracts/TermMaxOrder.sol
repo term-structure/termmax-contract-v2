@@ -42,8 +42,6 @@ contract TermMaxOrder is
 
     OrderConfig private _orderConfig;
 
-    address public maker;
-
     uint64 private maturity;
 
     uint256 private constant T_FT_RESERVE_STORE = 0;
@@ -98,8 +96,8 @@ contract TermMaxOrder is
         _;
     }
 
-    modifier onlyMaker() {
-        if (msg.sender != maker) revert OnlyMaker();
+    modifier onlyMarket() {
+        if (msg.sender != address(market)) revert OnlyMarket();
         _;
     }
 
@@ -107,11 +105,14 @@ contract TermMaxOrder is
         _disableInitializers();
     }
 
+    function maker() public view returns (address) {
+        return owner();
+    }
+
     /**
      * @inheritdoc ITermMaxOrder
      */
     function initialize(
-        address admin,
         address maker_,
         IERC20[3] memory tokens,
         IGearingToken gt_,
@@ -120,14 +121,11 @@ contract TermMaxOrder is
         CurveCuts memory curveCuts_,
         MarketConfig memory marketConfig
     ) external override initializer {
-        __Ownable_init(admin);
+        __Ownable_init(maker_);
         __ReentrancyGuard_init();
         __Pausable_init();
         market = ITermMaxMarket(_msgSender());
-        if (maker_ == address(0)) {
-            revert ZeroAddress();
-        }
-        maker = maker_;
+
         // _orderConfig.curveCuts = curveCuts_;
         _updateCurve(curveCuts_);
         _orderConfig.feeConfig = marketConfig.feeConfig;
@@ -193,7 +191,7 @@ contract TermMaxOrder is
         OrderConfig memory newOrderConfig,
         int256 ftChangeAmt,
         int256 xtChangeAmt
-    ) external override onlyMaker {
+    ) external override onlyOwner {
         _updateCurve(newOrderConfig.curveCuts);
         if (ftChangeAmt > 0) {
             ft.safeTransferFrom(msg.sender, address(this), ftChangeAmt.toUint256());
@@ -264,20 +262,9 @@ contract TermMaxOrder is
         }
     }
 
-    function updateFeeConfig(FeeConfig memory newFeeConfig) external override onlyOwner {
-        _checkFee(newFeeConfig.borrowTakerFeeRatio);
-        _checkFee(newFeeConfig.borrowMakerFeeRatio);
-        _checkFee(newFeeConfig.lendTakerFeeRatio);
-        _checkFee(newFeeConfig.lendMakerFeeRatio);
-        _checkFee(newFeeConfig.redeemFeeRatio);
-        _checkFee(newFeeConfig.issueFtFeeRatio);
-        _checkFee(newFeeConfig.issueFtFeeRef);
+    function updateFeeConfig(FeeConfig memory newFeeConfig) external override onlyMarket {
         _orderConfig.feeConfig = newFeeConfig;
         emit UpdateFeeConfig(newFeeConfig);
-    }
-
-    function _checkFee(uint32 feeRatio) internal pure {
-        if (feeRatio >= Constants.MAX_FEE_RATIO) revert FeeTooHigh();
     }
 
     /// @notice Calculate how many days until expiration
@@ -311,22 +298,6 @@ contract TermMaxOrder is
         } else {
             revert CantNotSwapToken(tokenIn, tokenOut);
         }
-
-        // else if (tokenIn == ft && tokenOut == xt) {
-        //     (uint debtTokenAmtOut, uint feeOneSide) = _sellFt(tokenAmtIn, 0, msg.sender, address(this), config);
-
-        //     (netTokenOut, feeAmt) = _buyXt(debtTokenAmtOut, minTokenOut, address(this), recipient, config);
-        //     feeAmt += feeOneSide;
-
-        //     deltaFt = (tokenAmtIn - feeAmt).toInt256();
-        //     deltaXt = -((netTokenOut).toInt256());
-        // } else if (tokenIn == xt && tokenOut == ft) {
-        //     (uint debtTokenAmtOut, uint feeOneSide) = _sellXt(tokenAmtIn, 0, msg.sender, address(this), config);
-        //     (netTokenOut, feeAmt) = _buyFt(debtTokenAmtOut, minTokenOut, address(this), recipient, config);
-        //     feeAmt += feeOneSide;
-        //     deltaFt = -((netTokenOut + feeAmt).toInt256());
-        //     deltaXt = uint(tokenAmtIn).toInt256();
-        // }
 
         ft.safeTransfer(market.config().treasurer, feeAmt);
 
@@ -740,7 +711,7 @@ contract TermMaxOrder is
         market.issueFtByExistedGt(recipient, (ftAmtToIssue).toUint128(), config.gtId);
     }
 
-    function withdrawAssets(IERC20 token, address recipient, uint256 amount) external onlyMaker {
+    function withdrawAssets(IERC20 token, address recipient, uint256 amount) external onlyOwner {
         token.safeTransfer(recipient, amount);
         emit WithdrawAssets(token, _msgSender(), recipient, amount);
     }
@@ -748,27 +719,14 @@ contract TermMaxOrder is
     /**
      * @inheritdoc ITermMaxOrder
      */
-    function transferMakerOwnership(address newMaker) external onlyMaker {
-        _transferMakerOwnership(newMaker);
-    }
-
-    function _transferMakerOwnership(address newMaker) internal onlyMaker {
-        address currentMaker = maker;
-        maker = newMaker;
-        emit MakerOwnershipTransferred(currentMaker, newMaker);
-    }
-
-    /**
-     * @inheritdoc ITermMaxOrder
-     */
-    function pause() external override onlyMaker {
+    function pause() external override onlyOwner {
         _pause();
     }
 
     /**
      * @inheritdoc ITermMaxOrder
      */
-    function unpause() external override onlyMaker {
+    function unpause() external override onlyOwner {
         _unpause();
     }
 }

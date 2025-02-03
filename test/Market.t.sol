@@ -322,7 +322,7 @@ contract MarketTest is Test {
             orderConfig.curveCuts
         );
         assertEq(address(order.market()), address(res.market));
-        assertEq(Ownable(address(order)).owner(), Ownable(address(res.market)).owner());
+        assertEq(Ownable(address(order)).owner(), sender);
         assertEq(order.orderConfig().maxXtReserve, orderConfig.maxXtReserve);
         assertEq(order.maker(), sender);
 
