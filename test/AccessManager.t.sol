@@ -239,7 +239,7 @@ contract AccessManagerTest is Test {
         });
 
         // Deploy vault
-        TermMaxVault vault = new TermMaxVault(params);
+        ITermMaxVault vault = DeployUtils.deployVault(params);
 
         // Grant VAULT_ROLE to the vault manager
         vm.startPrank(deployer);
@@ -287,7 +287,7 @@ contract AccessManagerTest is Test {
         });
 
         // Deploy vault
-        TermMaxVault vault = new TermMaxVault(params);
+        ITermMaxVault vault = DeployUtils.deployVault(params);
 
         // Grant VAULT_ROLE to the vault manager and set curator
         vm.startPrank(deployer);

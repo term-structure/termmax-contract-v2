@@ -15,11 +15,17 @@ import {ITermMaxFactory, TermMaxFactory} from "contracts/factory/TermMaxFactory.
 import {TermMaxRouter} from "contracts/router/TermMaxRouter.sol";
 import {IOracle, OracleAggregator, AggregatorV3Interface} from "contracts/oracle/OracleAggregator.sol";
 import {MockOrder} from "contracts/test/MockOrder.sol";
+import {VaultFactory, IVaultFactory} from "contracts/factory/VaultFactory.sol";
+import {OrderManager} from "contracts/vault/OrderManager.sol";
+import {TermMaxVault, ITermMaxVault} from "contracts/vault/TermMaxVault.sol";
+import {AccessManager} from "contracts/access/AccessManager.sol";
 import "contracts/storage/TermMaxStorage.sol";
 
 library DeployUtils {
     bytes32 constant GT_ERC20 = keccak256("GearingTokenWithERC20");
     struct Res {
+        ITermMaxVault vault;
+        IVaultFactory vaultFactory;
         TermMaxFactory factory;
         ITermMaxOrder order;
         TermMaxRouter router;
@@ -235,10 +241,18 @@ library DeployUtils {
         router = TermMaxRouter(address(proxy));
     }
 
-    // function deployAccessManager(address admin) internal returns (AccessManager accessManager) {
-    //     AccessManager implementation = new AccessManager();
-    //     bytes memory data = abi.encodeCall(AccessManager.initialize, admin);
-    //     ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), data);
-    //     accessManager = AccessManager(address(proxy));
-    // }
+    function deployVault(VaultInitialParams memory initialParams) public returns (ITermMaxVault vault) {
+        OrderManager orderManager = new OrderManager();
+        TermMaxVault implementation = new TermMaxVault(address(orderManager));
+        VaultFactory vaultFactory = new VaultFactory(address(implementation));
+
+        vault = ITermMaxVault(vaultFactory.createVault(initialParams, 0));
+    }
+
+    function deployAccessManager(address admin) internal returns (AccessManager accessManager) {
+        AccessManager implementation = new AccessManager();
+        bytes memory data = abi.encodeCall(AccessManager.initialize, admin);
+        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), data);
+        accessManager = AccessManager(address(proxy));
+    }
 }

@@ -17,8 +17,10 @@ import {ITermMaxOrder, TermMaxOrder, ISwapCallback, OrderEvents, OrderErrors} fr
 import {MockERC20, ERC20} from "contracts/test/MockERC20.sol";
 import {MockPriceFeed} from "contracts/test/MockPriceFeed.sol";
 import {TermMaxVault} from "contracts/vault/TermMaxVault.sol";
-import {BaseVault, VaultErrors, VaultEvents, ITermMaxVault} from "contracts/vault/BaseVault.sol";
+import {VaultErrors, VaultEvents, ITermMaxVault} from "contracts/vault/TermMaxVault.sol";
+import {OrderManager} from "contracts/vault/OrderManager.sol";
 import {VaultConstants} from "contracts/lib/VaultConstants.sol";
+import {PendingAddress, PendingUint192} from "contracts/lib/PendingLib.sol";
 import "contracts/storage/TermMaxStorage.sol";
 
 contract VaultTest is Test {
@@ -37,7 +39,7 @@ contract VaultTest is Test {
     address treasurer = vm.randomAddress();
     string testdata;
 
-    TermMaxVault vault;
+    ITermMaxVault vault;
 
     uint timelock = 86400;
     uint maxCapacity = 1000000e18;
@@ -48,6 +50,7 @@ contract VaultTest is Test {
     uint currentTime;
     uint32 maxLtv = 0.89e8;
     uint32 liquidationLtv = 0.9e8;
+    VaultInitialParams initialParams;
 
     function setUp() public {
         vm.startPrank(deployer);
@@ -62,6 +65,7 @@ contract VaultTest is Test {
         res = DeployUtils.deployMockMarket(deployer, marketConfig, maxLtv, liquidationLtv);
         MarketConfig memory marketConfig2 = JSONLoader.getMarketConfigFromJson(treasurer, testdata, ".marketConfig");
         marketConfig2.maturity = uint64(currentTime + 180 days);
+
         market2 = ITermMaxMarket(
             res.factory.createMarket(
                 DeployUtils.GT_ERC20,
@@ -93,18 +97,19 @@ contract VaultTest is Test {
 
         uint amount = 10000e8;
 
-        vault = new TermMaxVault(
-                VaultInitialParams(
-                    deployer,
-                    curator,
-                    timelock,
-                    res.debt,
-                    maxCapacity,
-                    "Vault-DAI",
-                    "Vault-DAI",
-                    performanceFeeRate
-                )
+        initialParams = VaultInitialParams(
+            deployer,
+            curator,
+            timelock,
+            res.debt,
+            maxCapacity,
+            "Vault-DAI",
+            "Vault-DAI",
+            performanceFeeRate
         );
+
+        vault = DeployUtils.deployVault(initialParams);
+
         vault.submitGuardian(guardian);
         vault.setIsAllocator(allocator, true);
 
@@ -118,6 +123,7 @@ contract VaultTest is Test {
         res.debt.mint(deployer, amount);
         res.debt.approve(address(vault), amount);
         vault.deposit(amount, deployer);
+
         res.order = vault.createOrder(res.market, maxCapacity, amount, orderConfig.curveCuts);
 
         res.debt.mint(deployer, 10000e18);
@@ -272,8 +278,8 @@ contract VaultTest is Test {
         vault.submitTimelock(newTimelock);
         assertEq(vault.timelock(), 2 days);
 
-        (uint192 pendingTimelock, ) = vault.pendingTimelock();
-        assertEq(uint256(pendingTimelock), newTimelock);
+        PendingUint192 memory pendingTimelock = vault.pendingTimelock();
+        assertEq(uint256(pendingTimelock.value), newTimelock);
         assertEq(vault.timelock(), 2 days);
 
         // Can accept after timelock period
@@ -333,10 +339,10 @@ contract VaultTest is Test {
         vm.prank(curator);
         vault.submitPerformanceFeeRate(newPercentage);
 
-        (uint192 curPercentage, uint64 validAt) = vault.pendingPerformanceFeeRate();
-        assertEq(uint256(curPercentage), newPercentage);
+        PendingUint192 memory pendingFeeRate = vault.pendingPerformanceFeeRate();
+        assertEq(uint256(pendingFeeRate.value), newPercentage);
 
-        vm.warp(validAt);
+        vm.warp(pendingFeeRate.validAt);
         vm.prank(vm.randomAddress());
         vault.acceptPerformanceFeeRate();
         percentage = vault.performanceFeeRate();

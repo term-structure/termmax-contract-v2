@@ -30,5 +30,5 @@ interface FactoryEvents {
      * @param creator The address of the vault creator
      * @param initialParams The initial parameters used to configure the vault
      */
-    event VaultCreated(address indexed vault, address indexed creator, VaultInitialParams indexed initialParams);
+    event CreateVault(address indexed vault, address indexed creator, VaultInitialParams indexed initialParams);
 }
