@@ -7,6 +7,11 @@ pragma solidity ^0.8.0;
  */
 interface VaultErrors {
     /**
+     * @notice Error thrown when attempting to interact with a vault without its proxy
+     */
+    error OnlyProxy();
+
+    /**
      * @notice Error thrown when attempting to interact with a non-whitelisted market
      */
     error MarketNotWhitelisted();
