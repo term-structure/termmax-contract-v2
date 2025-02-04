@@ -22,7 +22,6 @@ import {IOrderManager} from "./IOrderManager.sol";
 import {VaultStorage, OrderInfo} from "./VaultStorage.sol";
 import {Constants} from "contracts/lib/Constants.sol";
 import {ITermMaxVault} from "./ITermMaxVault.sol";
-import {console} from "forge-std/Test.sol";
 
 contract TermMaxVault is
     ITermMaxVault,
@@ -100,9 +99,6 @@ contract TermMaxVault is
         _timelock = params.timelock;
         _maxCapacity = params.maxCapacity;
         _curator = params.curator;
-
-        console.log("owner:", params.admin);
-        console.log("owner:", owner());
     }
 
     function _setPerformanceFeeRate(uint64 newPerformanceFeeRate) internal {
@@ -368,8 +364,6 @@ contract TermMaxVault is
     function _delegateCall(bytes memory data) internal returns (bytes memory) {
         (bool success, bytes memory returnData) = ORDER_MANAGER_SINGLETON.delegatecall(data);
         if (!success) {
-            console.log("delegatecall failed");
-            console.logBytes(returnData);
             revert(string(returnData));
         }
         return returnData;

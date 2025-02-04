@@ -6,6 +6,11 @@ import {ITermMaxMarket} from "contracts/ITermMaxMarket.sol";
 import {ITermMaxOrder} from "contracts/ITermMaxOrder.sol";
 import {CurveCuts} from "contracts/storage/TermMaxStorage.sol";
 
+/**
+ * @title Order Manager Interface
+ * @author Term Structure Labs
+ * @notice Interface for managing orders and calculating interest
+ */
 interface IOrderManager {
     function createOrder(
         IERC20 asset,
