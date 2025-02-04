@@ -87,7 +87,7 @@ contract TermMaxVault is
         _disableInitializers();
     }
 
-    function initialize(VaultInitialParams memory params) external override initializer {
+    function initialize(VaultInitialParams memory params) external initializer {
         __ERC20_init(params.name, params.symbol);
         __Ownable_init(params.admin);
         __ERC4626_init(params.asset);

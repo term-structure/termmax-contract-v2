@@ -4,7 +4,7 @@ pragma solidity ^0.8.27;
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import {ITermMaxMarket} from "contracts/ITermMaxMarket.sol";
-import {CurveCuts} from "contracts/storage/TermMaxStorage.sol";
+import {CurveCuts, VaultInitialParams} from "contracts/storage/TermMaxStorage.sol";
 import {ITermMaxOrder} from "contracts/ITermMaxOrder.sol";
 import {PendingAddress, PendingUint192} from "contracts/lib/PendingLib.sol";
 import {OrderInfo} from "./VaultStorage.sol";
