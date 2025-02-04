@@ -3,9 +3,10 @@ pragma solidity ^0.8.27;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
-import {IERC4626, ERC4626, ERC20} from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
-import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import {IERC4626, ERC4626Upgradeable, ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC4626Upgradeable.sol";
+import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
+import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {PendingLib, PendingAddress, PendingUint192} from "contracts/lib/PendingLib.sol";
 import {ITermMaxMarket} from "contracts/ITermMaxMarket.sol";
@@ -25,13 +26,13 @@ import {console} from "forge-std/Test.sol";
 
 contract TermMaxVault is
     ITermMaxVault,
-    Ownable2Step,
-    ReentrancyGuard,
+    Ownable2StepUpgradeable,
+    ReentrancyGuardUpgradeable,
+    ERC4626Upgradeable,
+    PausableUpgradeable,
     VaultStorage,
     VaultErrors,
     VaultEvents,
-    ERC4626,
-    Pausable,
     ISwapCallback
 {
     using SafeCast for uint256;
@@ -81,17 +82,23 @@ contract TermMaxVault is
         _;
     }
 
-    constructor(
-        address ORDER_MANAGER_SINGLETON_,
-        VaultInitialParams memory params
-    ) Ownable(params.admin) ERC4626(params.asset) ERC20(params.name, params.symbol) {
+    constructor(address ORDER_MANAGER_SINGLETON_) {
         ORDER_MANAGER_SINGLETON = ORDER_MANAGER_SINGLETON_;
-        _checkTimelockBounds(params.timelock);
+        _disableInitializers();
+    }
+
+    function initialize(VaultInitialParams memory params) external override initializer {
+        __ERC20_init(params.name, params.symbol);
+        __Ownable_init(params.admin);
+        __ERC4626_init(params.asset);
+        __ReentrancyGuard_init();
+        __Pausable_init();
+
         _setPerformanceFeeRate(params.performanceFeeRate);
+        _checkTimelockBounds(params.timelock);
         _timelock = params.timelock;
         _maxCapacity = params.maxCapacity;
         _curator = params.curator;
-        // ORDER_MANAGER_SINGLETON = address(new OrderManager());
     }
 
     function _setPerformanceFeeRate(uint64 newPerformanceFeeRate) internal {
@@ -296,19 +303,19 @@ contract TermMaxVault is
     // ERC4626 functions
 
     /** @dev See {IERC4626-maxDeposit}. */
-    function maxDeposit(address) public view override(IERC4626, ERC4626) returns (uint256) {
+    function maxDeposit(address) public view override(IERC4626, ERC4626Upgradeable) returns (uint256) {
         return _maxCapacity - totalAssets();
     }
 
     /** @dev See {IERC4626-maxMint}. */
-    function maxMint(address) public view override(IERC4626, ERC4626) returns (uint256) {
+    function maxMint(address) public view override(IERC4626, ERC4626Upgradeable) returns (uint256) {
         return convertToShares(maxDeposit(address(0)));
     }
 
     /**
      * @dev Get total assets, falling back to real assets if virtual assets exceed limit
      */
-    function totalAssets() public view override(IERC4626, ERC4626) returns (uint256) {
+    function totalAssets() public view override(IERC4626, ERC4626Upgradeable) returns (uint256) {
         (uint256 previewPrincipal, uint256 previewPerformanceFee) = _previewAccruedInterest();
         return previewPrincipal + previewPerformanceFee;
     }

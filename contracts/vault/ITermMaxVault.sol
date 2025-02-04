@@ -16,6 +16,8 @@ import {OrderInfo} from "./VaultStorage.sol";
  * @dev Implements ERC4626 tokenized vault standard with additional TermMax-specific functionality
  */
 interface ITermMaxVault is IERC4626 {
+    function initialize(VaultInitialParams memory params) external;
+
     /**
      * @notice Handles bad debt by exchanging shares for collateral
      * @param collaretal The collateral token address
