@@ -17,8 +17,10 @@ import {ITermMaxOrder, TermMaxOrder, ISwapCallback, OrderEvents, OrderErrors} fr
 import {MockERC20, ERC20} from "contracts/test/MockERC20.sol";
 import {MockPriceFeed} from "contracts/test/MockPriceFeed.sol";
 import {TermMaxVault} from "contracts/vault/TermMaxVault.sol";
-import {BaseVault, VaultErrors, VaultEvents, ITermMaxVault} from "contracts/vault/BaseVault.sol";
+import {VaultErrors, VaultEvents, ITermMaxVault} from "contracts/vault/TermMaxVault.sol";
+import {OrderManager} from "contracts/vault/OrderManager.sol";
 import {VaultConstants} from "contracts/lib/VaultConstants.sol";
+import {PendingAddress, PendingUint192} from "contracts/lib/PendingLib.sol";
 import "contracts/storage/TermMaxStorage.sol";
 
 contract VaultTest is Test {
@@ -93,20 +95,26 @@ contract VaultTest is Test {
 
         uint amount = 10000e8;
 
+        address ordermaner = address(new OrderManager());
+        console.log("ordermaner", ordermaner);
         vault = new TermMaxVault(
-                VaultInitialParams(
-                    deployer,
-                    curator,
-                    timelock,
-                    res.debt,
-                    maxCapacity,
-                    "Vault-DAI",
-                    "Vault-DAI",
-                    performanceFeeRate
-                )
+            ordermaner,
+            VaultInitialParams(
+                deployer,
+                curator,
+                timelock,
+                res.debt,
+                maxCapacity,
+                "Vault-DAI",
+                "Vault-DAI",
+                performanceFeeRate
+            )
         );
+        console.log("vault", address(vault));
         vault.submitGuardian(guardian);
         vault.setIsAllocator(allocator, true);
+
+        console.log("1");
 
         vault.submitMarket(address(res.market), true);
         vault.submitMarket(address(market2), true);
@@ -115,11 +123,15 @@ contract VaultTest is Test {
         vault.acceptMarket(address(market2));
         vm.warp(currentTime);
 
+        console.log("2");
+
         res.debt.mint(deployer, amount);
         res.debt.approve(address(vault), amount);
         vault.deposit(amount, deployer);
+        console.log("2-1");
         res.order = vault.createOrder(res.market, maxCapacity, amount, orderConfig.curveCuts);
 
+        console.log("3");
         res.debt.mint(deployer, 10000e18);
         res.debt.approve(address(res.market), 10000e18);
         res.market.mint(deployer, 10000e18);
@@ -272,8 +284,8 @@ contract VaultTest is Test {
         vault.submitTimelock(newTimelock);
         assertEq(vault.timelock(), 2 days);
 
-        (uint192 pendingTimelock, ) = vault.pendingTimelock();
-        assertEq(uint256(pendingTimelock), newTimelock);
+        PendingUint192 memory pendingTimelock = vault.pendingTimelock();
+        assertEq(uint256(pendingTimelock.value), newTimelock);
         assertEq(vault.timelock(), 2 days);
 
         // Can accept after timelock period
@@ -333,10 +345,10 @@ contract VaultTest is Test {
         vm.prank(curator);
         vault.submitPerformanceFeeRate(newPercentage);
 
-        (uint192 curPercentage, uint64 validAt) = vault.pendingPerformanceFeeRate();
-        assertEq(uint256(curPercentage), newPercentage);
+        PendingUint192 memory pendingFeeRate = vault.pendingPerformanceFeeRate();
+        assertEq(uint256(pendingFeeRate.value), newPercentage);
 
-        vm.warp(validAt);
+        vm.warp(pendingFeeRate.validAt);
         vm.prank(vm.randomAddress());
         vault.acceptPerformanceFeeRate();
         percentage = vault.performanceFeeRate();

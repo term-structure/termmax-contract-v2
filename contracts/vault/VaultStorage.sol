@@ -14,49 +14,47 @@ struct OrderInfo {
 }
 
 contract VaultStorage {
-    address guardian;
-    address curator;
+    // State variables
+    address internal _guardian;
+    address internal _curator;
 
-    mapping(address => bool) isAllocator;
+    mapping(address => bool) internal _isAllocator;
+    mapping(address => bool) internal _marketWhitelist;
+    mapping(address => PendingUint192) internal _pendingMarkets;
 
-    mapping(address => bool) marketWhitelist;
+    PendingUint192 internal _pendingTimelock;
+    PendingUint192 internal _pendingPerformanceFeeRate;
+    PendingAddress internal _pendingGuardian;
 
-    mapping(address => PendingUint192) pendingMarkets;
-
-    PendingUint192 pendingTimelock;
-    PendingUint192 pendingPerformanceFeeRate;
-    PendingAddress pendingGuardian;
-
-    uint256 timelock;
-    uint256 maxCapacity;
+    uint256 internal _timelock;
+    uint256 internal _maxCapacity;
 
     /// @dev The total ft in the vault
-    uint256 totalFt;
+    uint256 internal _totalFt;
     /// @notice The locked ft = accretingPrincipal + performanceFee;
-    uint256 accretingPrincipal;
+    uint256 internal _accretingPrincipal;
     /// @notice The performance fee is paid to the curators
-    uint256 performanceFee;
+    uint256 internal _performanceFee;
     /// @notice Annualize the interest income
-    uint256 annualizedInterest;
+    uint256 internal _annualizedInterest;
 
-    uint64 performanceFeeRate;
+    uint64 internal _performanceFeeRate;
 
-    address[] supplyQueue;
-
-    address[] withdrawQueue;
+    address[] internal _supplyQueue;
+    address[] internal _withdrawQueue;
 
     /// @dev A mapping from collateral address to bad debt
-    mapping(address => uint256) badDebtMapping;
-    mapping(address => OrderInfo) orderMapping;
+    mapping(address => uint256) internal _badDebtMapping;
+    mapping(address => OrderInfo) internal _orderMapping;
 
     /// @dev The last time the interest was accurately calculated
-    uint64 lastUpdateTime;
+    uint64 internal _lastUpdateTime;
     /// @dev The recentest maturity
-    uint64 recentestMaturity;
+    uint64 internal _recentestMaturity;
     /// @dev A one-way linked list presented using a mapping structure, recorded in order according to matiruty
     /// @dev The key is the maturity, and the value is the next maturity
     /// Etc. day 0 => day 1 => day 2 => day 3 => ...
-    mapping(uint64 => uint64) maturityMapping;
+    mapping(uint64 => uint64) internal _maturityMapping;
     /// @dev A mapping from maturity to its annualized interest
-    mapping(uint64 => uint128) maturityToInterest;
+    mapping(uint64 => uint128) internal _maturityToInterest;
 }
