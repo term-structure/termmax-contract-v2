@@ -285,7 +285,7 @@ contract TermMaxOrder is
         if (tokenIn == tokenOut) revert CantSwapSameToken();
         OrderConfig memory config = _orderConfig;
         uint feeAmt;
-        // Storage current ft and xt reserve
+        // Store ft and xt reserve before swap
         setTransientFtReserve(ft.balanceOf(address(this)));
         setTransientXtReserve(xt.balanceOf(address(this)));
         if (tokenIn == ft && tokenOut == debtToken) {
