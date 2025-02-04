@@ -6,6 +6,7 @@ pragma solidity ^0.8.0;
  * @notice Custom errors for the TermMax vault operations
  */
 interface VaultErrors {
+    error InvalidImplementation();
     /**
      * @notice Error thrown when attempting to interact with a vault without its proxy
      */

@@ -16,6 +16,10 @@ import {OrderInfo} from "./VaultStorage.sol";
  * @dev Implements ERC4626 tokenized vault standard with additional TermMax-specific functionality
  */
 interface ITermMaxVault is IERC4626 {
+    /**
+     * @notice Initializes the vault
+     * @param params The initial parameters of the vault
+     */
     function initialize(VaultInitialParams memory params) external;
 
     /**
@@ -136,6 +140,12 @@ interface ITermMaxVault is IERC4626 {
      * @return The address of the withdraw queue at the specified index
      */
     function withdrawQueue(uint256 index) external view returns (address);
+
+    /// @notice Return the length of the supply queue
+    function supplyQueueLength() external view returns (uint256);
+
+    /// @notice Return the length of the withdraw queue
+    function withdrawQueueLength() external view returns (uint256);
 
     /**
      * @notice Returns the order mapping information

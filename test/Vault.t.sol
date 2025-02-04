@@ -39,7 +39,7 @@ contract VaultTest is Test {
     address treasurer = vm.randomAddress();
     string testdata;
 
-    TermMaxVault vault;
+    ITermMaxVault vault;
 
     uint timelock = 86400;
     uint maxCapacity = 1000000e18;
@@ -50,6 +50,7 @@ contract VaultTest is Test {
     uint currentTime;
     uint32 maxLtv = 0.89e8;
     uint32 liquidationLtv = 0.9e8;
+    VaultInitialParams initialParams;
 
     function setUp() public {
         vm.startPrank(deployer);
@@ -64,6 +65,7 @@ contract VaultTest is Test {
         res = DeployUtils.deployMockMarket(deployer, marketConfig, maxLtv, liquidationLtv);
         MarketConfig memory marketConfig2 = JSONLoader.getMarketConfigFromJson(treasurer, testdata, ".marketConfig");
         marketConfig2.maturity = uint64(currentTime + 180 days);
+
         market2 = ITermMaxMarket(
             res.factory.createMarket(
                 DeployUtils.GT_ERC20,
@@ -95,26 +97,21 @@ contract VaultTest is Test {
 
         uint amount = 10000e8;
 
-        address ordermaner = address(new OrderManager());
-        console.log("ordermaner", ordermaner);
-        vault = new TermMaxVault(
-            ordermaner,
-            VaultInitialParams(
-                deployer,
-                curator,
-                timelock,
-                res.debt,
-                maxCapacity,
-                "Vault-DAI",
-                "Vault-DAI",
-                performanceFeeRate
-            )
+        initialParams = VaultInitialParams(
+            deployer,
+            curator,
+            timelock,
+            res.debt,
+            maxCapacity,
+            "Vault-DAI",
+            "Vault-DAI",
+            performanceFeeRate
         );
-        console.log("vault", address(vault));
+
+        vault = DeployUtils.deployVault(initialParams);
+
         vault.submitGuardian(guardian);
         vault.setIsAllocator(allocator, true);
-
-        console.log("1");
 
         vault.submitMarket(address(res.market), true);
         vault.submitMarket(address(market2), true);
@@ -123,15 +120,12 @@ contract VaultTest is Test {
         vault.acceptMarket(address(market2));
         vm.warp(currentTime);
 
-        console.log("2");
-
         res.debt.mint(deployer, amount);
         res.debt.approve(address(vault), amount);
         vault.deposit(amount, deployer);
-        console.log("2-1");
+
         res.order = vault.createOrder(res.market, maxCapacity, amount, orderConfig.curveCuts);
 
-        console.log("3");
         res.debt.mint(deployer, 10000e18);
         res.debt.approve(address(res.market), 10000e18);
         res.market.mint(deployer, 10000e18);

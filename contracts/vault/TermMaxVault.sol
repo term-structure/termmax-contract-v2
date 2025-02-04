@@ -39,7 +39,7 @@ contract TermMaxVault is
     using TransferUtils for IERC20;
     using PendingLib for *;
 
-    address private immutable ORDER_MANAGER_SINGLETON;
+    address public immutable ORDER_MANAGER_SINGLETON;
 
     modifier onlyCuratorRole() {
         address sender = _msgSender();
@@ -83,6 +83,7 @@ contract TermMaxVault is
     }
 
     constructor(address ORDER_MANAGER_SINGLETON_) {
+        if (ORDER_MANAGER_SINGLETON_ == address(0)) revert InvalidImplementation();
         ORDER_MANAGER_SINGLETON = ORDER_MANAGER_SINGLETON_;
         _disableInitializers();
     }
@@ -99,6 +100,9 @@ contract TermMaxVault is
         _timelock = params.timelock;
         _maxCapacity = params.maxCapacity;
         _curator = params.curator;
+
+        console.log("owner:", params.admin);
+        console.log("owner:", owner());
     }
 
     function _setPerformanceFeeRate(uint64 newPerformanceFeeRate) internal {
@@ -241,12 +245,16 @@ contract TermMaxVault is
         return (_annualizedInterest * Constants.DECIMAL_BASE) / (_accretingPrincipal + _performanceFee);
     }
 
-    /// @notice Return the length of the supply queue
+    /**
+     * @inheritdoc ITermMaxVault
+     */
     function supplyQueueLength() external view returns (uint256) {
         return _supplyQueue.length;
     }
 
-    /// @notice Return the length of the withdraw queue
+    /**
+     * @inheritdoc ITermMaxVault
+     */
     function withdrawQueueLength() external view returns (uint256) {
         return _withdrawQueue.length;
     }

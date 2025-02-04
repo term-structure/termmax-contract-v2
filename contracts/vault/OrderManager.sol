@@ -19,8 +19,6 @@ import {MathLib} from "contracts/lib/MathLib.sol";
 import {IOrderManager} from "./IOrderManager.sol";
 import {ISwapCallback} from "contracts/ISwapCallback.sol";
 import {OrderInfo, VaultStorage} from "./VaultStorage.sol";
-import {console} from "forge-std/Test.sol";
-
 /**
  * @title Order Manager
  * @author Term Structure Labs
@@ -36,7 +34,6 @@ contract OrderManager is VaultErrors, VaultEvents, VaultStorage, IOrderManager {
     address private immutable ORDER_MANAGER_SINGLETON;
 
     modifier onlyProxy() {
-        console.log("this", address(this));
         if (address(this) == ORDER_MANAGER_SINGLETON) revert OnlyProxy();
         _;
     }
@@ -74,10 +71,6 @@ contract OrderManager is VaultErrors, VaultEvents, VaultStorage, IOrderManager {
         uint256 initialReserve,
         CurveCuts memory curveCuts
     ) external onlyProxy returns (ITermMaxOrder order) {
-        console.log("createOrder - 1");
-        console.log(_supplyQueue.length);
-        console.log(_withdrawQueue.length);
-        console.log(VaultConstants.MAX_QUEUE_LENGTH);
         if (
             _supplyQueue.length + 1 >= VaultConstants.MAX_QUEUE_LENGTH ||
             _withdrawQueue.length + 1 >= VaultConstants.MAX_QUEUE_LENGTH
@@ -85,7 +78,6 @@ contract OrderManager is VaultErrors, VaultEvents, VaultStorage, IOrderManager {
 
         (IERC20 ft, IERC20 xt, , , IERC20 debtToken) = market.tokens();
         if (asset != debtToken) revert InconsistentAsset();
-        console.log("createOrder - 2");
 
         order = market.createOrder(address(this), maxSupply, ISwapCallback(address(this)), curveCuts);
         if (initialReserve > 0) {

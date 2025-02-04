@@ -14,8 +14,6 @@ interface IVaultFactory {
      */
     function TERMMAX_VAULT_IMPLEMENTATION() external view returns (address);
 
-    function TERMMAX_VAULT_ORDER_MANAGER_IMPLEMENTATION() external view returns (address);
-
     /**
      * @notice Predict the address of a new TermMax vault
      * @param asset The address of the asset
