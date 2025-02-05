@@ -712,6 +712,10 @@ contract TermMaxOrder is
         tokenIn = xt;
     }
 
+    /**
+     * @notice Issue ft by existed gt.
+     * @notice This fuction will be triggered when ft reserve can not cover the output amount.
+     */
     function _issueFt(uint ftReserve, uint targetFtReserve, OrderConfig memory config) internal {
         if (config.gtId == 0) revert CantNotIssueFtWithoutGt();
         uint ftAmtToIssue = ((targetFtReserve - ftReserve) * Constants.DECIMAL_BASE) /
