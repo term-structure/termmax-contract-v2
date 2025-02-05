@@ -6,22 +6,25 @@ import {console} from "forge-std/console.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {TermMaxFactory} from "../../contracts/factory/TermMaxFactory.sol";
-import {ITermMaxFactory} from "../../contracts/factory/ITermMaxFactory.sol";
-import {TermMaxRouter} from "../../contracts/router/TermMaxRouter.sol";
-import {ITermMaxRouter} from "../../contracts/router/ITermMaxRouter.sol";
-import {TermMaxMarket} from "../../contracts/TermMaxMarket.sol";
-import {TermMaxOrder} from "../../contracts/TermMaxOrder.sol";
-import {MockERC20} from "../../contracts/test/MockERC20.sol";
-import {MockPriceFeed} from "../../contracts/test/MockPriceFeed.sol";
-import {MockPriceFeed} from "../../contracts/test/MockPriceFeed.sol";
-import {IMintableERC20, MintableERC20} from "../../contracts/tokens/MintableERC20.sol";
-import {SwapAdapter} from "../../contracts/test/testnet/SwapAdapter.sol";
-import {Faucet} from "../../contracts/test/testnet/Faucet.sol";
+import {TermMaxFactory} from "contracts/factory/TermMaxFactory.sol";
+import {ITermMaxFactory} from "contracts/factory/ITermMaxFactory.sol";
+import {TermMaxRouter} from "contracts/router/TermMaxRouter.sol";
+import {ITermMaxRouter} from "contracts/router/ITermMaxRouter.sol";
+import {TermMaxMarket} from "contracts/TermMaxMarket.sol";
+import {TermMaxOrder} from "contracts/TermMaxOrder.sol";
+import {MockERC20} from "contracts/test/MockERC20.sol";
+import {MockPriceFeed} from "contracts/test/MockPriceFeed.sol";
+import {MockPriceFeed} from "contracts/test/MockPriceFeed.sol";
+import {IMintableERC20, MintableERC20} from "contracts/tokens/MintableERC20.sol";
+import {SwapAdapter} from "contracts/test/testnet/SwapAdapter.sol";
+import {Faucet} from "contracts/test/testnet/Faucet.sol";
 import {JsonLoader} from "../utils/JsonLoader.sol";
-import {FaucetERC20} from "../../contracts/test/testnet/FaucetERC20.sol";
-import {IOracle, OracleAggregator} from "../../contracts/oracle/OracleAggregator.sol";
-import {MarketConfig, FeeConfig, MarketInitialParams, LoanConfig} from "../../contracts/storage/TermMaxStorage.sol";
+import {FaucetERC20} from "contracts/test/testnet/FaucetERC20.sol";
+import {IOracle, OracleAggregator} from "contracts/oracle/OracleAggregator.sol";
+import {IOrderManager, OrderManager} from "contracts/vault/OrderManager.sol";
+import {ITermMaxVault, TermMaxVault} from "contracts/vault/TermMaxVault.sol";
+import {VaultFactory, IVaultFactory} from "contracts/factory/VaultFactory.sol";
+import {MarketConfig, FeeConfig, MarketInitialParams, LoanConfig, VaultInitialParams} from "contracts/storage/TermMaxStorage.sol";
 
 contract DeployBase is Script {
     bytes32 constant GT_ERC20 = keccak256("GearingTokenWithERC20");
@@ -31,6 +34,12 @@ contract DeployBase is Script {
         address orderImplementation = address(new TermMaxOrder());
         TermMaxMarket m = new TermMaxMarket(tokenImplementation, orderImplementation);
         factory = new TermMaxFactory(admin, address(m));
+    }
+
+    function deployVaultFactory() public returns (VaultFactory vaultFactory) {
+        OrderManager orderManager = new OrderManager();
+        TermMaxVault implementation = new TermMaxVault(address(orderManager));
+        vaultFactory = new VaultFactory(address(implementation));
     }
 
     function deployOracleAggregator(address admin) public returns (OracleAggregator oracle) {
@@ -53,6 +62,7 @@ contract DeployBase is Script {
         public
         returns (
             TermMaxFactory factory,
+            VaultFactory vaultFactory,
             OracleAggregator oracleAggregator,
             TermMaxRouter router,
             SwapAdapter swapAdapter,
@@ -61,6 +71,9 @@ contract DeployBase is Script {
     {
         // deploy factory
         factory = deployFactory(adminAddr);
+
+        // deploy vault factory
+        vaultFactory = deployVaultFactory();
 
         // deploy oracle aggregator
         oracleAggregator = deployOracleAggregator(adminAddr);
@@ -204,6 +217,31 @@ contract DeployBase is Script {
             markets[i] = market;
             router.setMarketWhitelist(address(market), true);
         }
+    }
+
+    function deployVault(
+        address factoryAddr,
+        address admin,
+        address curator,
+        uint256 timelock,
+        address assetAddr,
+        uint256 maxCapacity,
+        string memory name,
+        string memory symbol,
+        uint64 performanceFeeRate
+    ) public returns (TermMaxVault vault) {
+        VaultFactory vaultFactory = VaultFactory(factoryAddr);
+        VaultInitialParams memory initialParams = VaultInitialParams({
+            admin: admin,
+            curator: curator,
+            timelock: timelock,
+            asset: IERC20(assetAddr),
+            maxCapacity: maxCapacity,
+            name: name,
+            symbol: symbol,
+            performanceFeeRate: performanceFeeRate
+        });
+        vault = TermMaxVault(vaultFactory.createVault(initialParams, 0));
     }
 
     function getGitCommitHash() public returns (bytes memory) {
