@@ -16,6 +16,7 @@ interface IVaultFactory {
 
     /**
      * @notice Predict the address of a new TermMax vault
+     * @param admin The address of the vault admin
      * @param asset The address of the asset
      * @param name The name of the vault
      * @param symbol The symbol of the vault
@@ -23,6 +24,7 @@ interface IVaultFactory {
      * @return vault The predicted address of the vault
      */
     function predictVaultAddress(
+        address admin,
         address asset,
         string memory name,
         string memory symbol,

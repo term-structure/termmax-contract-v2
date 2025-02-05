@@ -386,7 +386,7 @@ contract TermMaxOrder is
         market.mint(address(this), debtTokenAmtIn);
         if (tokenOut == ft) {
             uint ftReserve = getTransientFtReserve();
-            if (ftReserve < netOut + feeAmt) _issueFt(ftReserve, netOut + feeAmt, config);
+            if (ftReserve < netOut + feeAmt) _issueFtToSelf(ftReserve, netOut + feeAmt, config);
         }
 
         tokenOut.safeTransfer(recipient, netOut);
@@ -440,7 +440,7 @@ contract TermMaxOrder is
         tokenIn.safeTransferFrom(caller, address(this), tokenAmtIn);
         if (tokenIn == xt) {
             uint ftReserve = getTransientFtReserve();
-            if (ftReserve < netOut) _issueFt(ftReserve, netOut + feeAmt, config);
+            if (ftReserve < netOut) _issueFtToSelf(ftReserve, netOut + feeAmt, config);
         }
         ft.approve(address(market), netOut);
         xt.approve(address(market), netOut);
@@ -572,7 +572,7 @@ contract TermMaxOrder is
         market.mint(address(this), netTokenIn);
         if (tokenOut == ft) {
             uint ftReserve = getTransientFtReserve();
-            if (ftReserve < tokenAmtOut + feeAmt) _issueFt(ftReserve, tokenAmtOut + feeAmt, config);
+            if (ftReserve < tokenAmtOut + feeAmt) _issueFtToSelf(ftReserve, tokenAmtOut + feeAmt, config);
         }
 
         tokenOut.safeTransfer(recipient, tokenAmtOut);
@@ -665,7 +665,7 @@ contract TermMaxOrder is
         tokenIn.safeTransferFrom(caller, address(this), netTokenIn);
         if (tokenIn == xt) {
             uint ftReserve = getTransientFtReserve();
-            if (ftReserve < debtTokenAmtOut) _issueFt(ftReserve, debtTokenAmtOut + feeAmt, config);
+            if (ftReserve < debtTokenAmtOut) _issueFtToSelf(ftReserve, debtTokenAmtOut + feeAmt, config);
         }
         ft.approve(address(market), debtTokenAmtOut);
         xt.approve(address(market), debtTokenAmtOut);
@@ -712,7 +712,11 @@ contract TermMaxOrder is
         tokenIn = xt;
     }
 
-    function _issueFt(uint ftReserve, uint targetFtReserve, OrderConfig memory config) internal {
+    /**
+     * @notice Issue ft by existed gt.
+     * @notice This fuction will be triggered when ft reserve can not cover the output amount.
+     */
+    function _issueFtToSelf(uint ftReserve, uint targetFtReserve, OrderConfig memory config) internal {
         if (config.gtId == 0) revert CantNotIssueFtWithoutGt();
         uint ftAmtToIssue = ((targetFtReserve - ftReserve) * Constants.DECIMAL_BASE) /
             (Constants.DECIMAL_BASE - market.issueFtFeeRatio());
