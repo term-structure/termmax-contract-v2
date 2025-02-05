@@ -369,6 +369,9 @@ contract TermMaxVault is
         return returnData;
     }
 
+    /**
+     * @inheritdoc ITermMaxVault
+     */
     function dealBadDebt(
         address collaretal,
         uint256 badDebtAmt,
@@ -405,6 +408,9 @@ contract TermMaxVault is
         delete _pendingTimelock;
     }
 
+    /**
+     * @inheritdoc ITermMaxVault
+     */
     function submitTimelock(uint256 newTimelock) external onlyCuratorRole {
         if (newTimelock == _timelock) revert AlreadySet();
         if (_pendingTimelock.validAt != 0) revert AlreadyPending();
@@ -420,6 +426,9 @@ contract TermMaxVault is
         }
     }
 
+    /**
+     * @inheritdoc ITermMaxVault
+     */
     function setCapacity(uint256 newCapacity) external onlyCuratorRole {
         if (newCapacity == _maxCapacity) revert AlreadySet();
         _maxCapacity = newCapacity;
@@ -431,6 +440,9 @@ contract TermMaxVault is
         if (newTimelock < VaultConstants.POST_INITIALIZATION_MIN_TIMELOCK) revert BelowMinTimelock();
     }
 
+    /**
+     * @inheritdoc ITermMaxVault
+     */
     function submitPerformanceFeeRate(uint184 newPerformanceFeeRate) external onlyCuratorRole {
         if (newPerformanceFeeRate == _performanceFeeRate) revert AlreadySet();
         if (_pendingPerformanceFeeRate.validAt != 0) revert AlreadyPending();
@@ -444,6 +456,9 @@ contract TermMaxVault is
         }
     }
 
+    /**
+     * @inheritdoc ITermMaxVault
+     */
     function submitGuardian(address newGuardian) external onlyOwner {
         if (newGuardian == _guardian) revert AlreadySet();
         if (_pendingGuardian.validAt != 0) revert AlreadyPending();
@@ -465,6 +480,9 @@ contract TermMaxVault is
         delete _pendingGuardian;
     }
 
+    /**
+     * @inheritdoc ITermMaxVault
+     */
     function submitMarket(address market, bool isWhitelisted) external onlyCuratorRole {
         if (_marketWhitelist[market] && isWhitelisted) revert AlreadySet();
         if (_pendingMarkets[market].validAt != 0) revert AlreadyPending();
@@ -482,6 +500,9 @@ contract TermMaxVault is
         delete _pendingMarkets[market];
     }
 
+    /**
+     * @inheritdoc ITermMaxVault
+     */
     function setIsAllocator(address newAllocator, bool newIsAllocator) external onlyOwner {
         if (_isAllocator[newAllocator] == newIsAllocator) revert AlreadySet();
 
@@ -490,6 +511,9 @@ contract TermMaxVault is
         emit SetIsAllocator(newAllocator, newIsAllocator);
     }
 
+    /**
+     * @inheritdoc ITermMaxVault
+     */
     function setCurator(address newCurator) external onlyOwner {
         if (newCurator == _curator) revert AlreadySet();
 
@@ -498,10 +522,16 @@ contract TermMaxVault is
         emit SetCurator(newCurator);
     }
 
+    /**
+     * @inheritdoc ITermMaxVault
+     */
     function updateSupplyQueue(uint256[] memory indexes) external onlyAllocatorRole {
         _updateSupplyQueue(indexes);
     }
 
+    /**
+     * @inheritdoc ITermMaxVault
+     */
     function updateWithdrawQueue(uint256[] memory indexes) external onlyAllocatorRole {
         _updateWithdrawQueue(indexes);
     }
@@ -553,46 +583,74 @@ contract TermMaxVault is
     }
 
     /** Revoke functions */
+
+    /**
+     * @inheritdoc ITermMaxVault
+     */
     function revokePendingTimelock() external onlyGuardianRole {
         delete _pendingTimelock;
 
         emit RevokePendingTimelock(_msgSender());
     }
 
+    /**
+     * @inheritdoc ITermMaxVault
+     */
     function revokePendingGuardian() external onlyGuardianRole {
         delete _pendingGuardian;
 
         emit RevokePendingGuardian(_msgSender());
     }
 
+    /**
+     * @inheritdoc ITermMaxVault
+     */
     function revokePendingMarket(address market) external onlyGuardianRole {
         delete _pendingMarkets[market];
 
         emit RevokePendingMarket(_msgSender(), market);
     }
 
+    /**
+     * @inheritdoc ITermMaxVault
+     */
     function acceptTimelock() external afterTimelock(_pendingTimelock.validAt) {
         _setTimelock(_pendingTimelock.value);
     }
 
+    /**
+     * @inheritdoc ITermMaxVault
+     */
     function acceptGuardian() external afterTimelock(_pendingGuardian.validAt) {
         _setGuardian(_pendingGuardian.value);
     }
 
+    /**
+     * @inheritdoc ITermMaxVault
+     */
     function acceptMarket(address market) external afterTimelock(_pendingMarkets[market].validAt) {
         _setMarketWhitelist(market, true);
     }
 
+    /**
+     * @inheritdoc ITermMaxVault
+     */
     function acceptPerformanceFeeRate() external afterTimelock(_pendingPerformanceFeeRate.validAt) {
         _setPerformanceFeeRate(uint(_pendingPerformanceFeeRate.value).toUint64());
         delete _pendingPerformanceFeeRate;
         emit SetPerformanceFeeRate(_msgSender(), _performanceFeeRate);
     }
 
+    /**
+     * @notice Pauses the contract
+     */
     function pause() external onlyOwner {
         _pause();
     }
 
+    /**
+     * @notice Unpauses the contract
+     */
     function unpause() external onlyOwner {
         _unpause();
     }

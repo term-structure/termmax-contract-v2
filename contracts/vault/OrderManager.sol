@@ -22,7 +22,7 @@ import {OrderInfo, VaultStorage} from "./VaultStorage.sol";
 /**
  * @title Order Manager
  * @author Term Structure Labs
- * @notice Manage orders and calculate interest
+ * @notice The extension of the TermMaxVault that manages orders and calculates interest
  */
 contract OrderManager is VaultErrors, VaultEvents, VaultStorage, IOrderManager {
     using SafeCast for uint256;
@@ -33,6 +33,9 @@ contract OrderManager is VaultErrors, VaultEvents, VaultStorage, IOrderManager {
 
     address private immutable ORDER_MANAGER_SINGLETON;
 
+    /**
+     * @notice Reverts if the caller is not the proxy
+     */
     modifier onlyProxy() {
         if (address(this) == ORDER_MANAGER_SINGLETON) revert OnlyProxy();
         _;
@@ -42,6 +45,9 @@ contract OrderManager is VaultErrors, VaultEvents, VaultStorage, IOrderManager {
         ORDER_MANAGER_SINGLETON = address(this);
     }
 
+    /**
+     * @inheritdoc IOrderManager
+     */
     function updateOrders(
         IERC20 asset,
         ITermMaxOrder[] memory orders,
@@ -55,15 +61,24 @@ contract OrderManager is VaultErrors, VaultEvents, VaultStorage, IOrderManager {
         }
     }
 
+    /**
+     * @inheritdoc IOrderManager
+     */
     function withdrawPerformanceFee(IERC20 asset, address recipient, uint256 amount) external override onlyProxy {
         _accruedInterest();
         _withdrawPerformanceFee(asset, recipient, amount);
     }
 
+    /**
+     * @inheritdoc IOrderManager
+     */
     function redeemOrder(ITermMaxOrder order) external override onlyProxy {
         _redeemFromMarket(address(order), _orderMapping[address(order)]);
     }
 
+    /**
+     * @inheritdoc IOrderManager
+     */
     function createOrder(
         IERC20 asset,
         ITermMaxMarket market,
@@ -100,6 +115,10 @@ contract OrderManager is VaultErrors, VaultEvents, VaultStorage, IOrderManager {
         emit CreateOrder(msg.sender, address(market), address(order), maxSupply, initialReserve, curveCuts);
     }
 
+    /**
+     * @notice Insert a maturity into the maturity linked list
+     * @param maturity The maturity to insert
+     */
     function _insertMaturity(uint64 maturity) internal {
         uint64 priorMaturity = _recentestMaturity;
         if (_recentestMaturity == 0) {
@@ -127,7 +146,6 @@ contract OrderManager is VaultErrors, VaultEvents, VaultStorage, IOrderManager {
         _maturityMapping[priorMaturity] = maturity;
     }
 
-    /// @notice Update order curve cuts and reserves
     function _updateOrder(
         IERC20 asset,
         ITermMaxOrder order,
@@ -162,6 +180,9 @@ contract OrderManager is VaultErrors, VaultEvents, VaultStorage, IOrderManager {
         emit UpdateOrder(msg.sender, address(order), changes, maxSupply, curveCuts);
     }
 
+    /**
+     * @inheritdoc IOrderManager
+     */
     function depositAssets(IERC20 asset, uint256 amount) external override onlyProxy {
         _accruedInterest();
         uint amountLeft = amount;
@@ -188,6 +209,9 @@ contract OrderManager is VaultErrors, VaultEvents, VaultStorage, IOrderManager {
         _accretingPrincipal += amount;
     }
 
+    /**
+     * @inheritdoc IOrderManager
+     */
     function withdrawAssets(IERC20 asset, address recipient, uint256 amount) external override onlyProxy {
         _accruedInterest();
         uint amountLeft = amount;
@@ -254,6 +278,9 @@ contract OrderManager is VaultErrors, VaultEvents, VaultStorage, IOrderManager {
         emit WithdrawPerformanceFee(msg.sender, recipient, amount);
     }
 
+    /**
+     * @inheritdoc IOrderManager
+     */
     function dealBadDebt(
         address recipient,
         address collaretal,

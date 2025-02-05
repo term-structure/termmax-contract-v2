@@ -8,8 +8,14 @@ import {FactoryEvents} from "contracts/events/FactoryEvents.sol";
 import {FactoryErrors} from "contracts/errors/FactoryErrors.sol";
 import {IVaultFactory} from "./IVaultFactory.sol";
 
+/**
+ * @title The TermMax vault factory
+ * @author Term Structure Labs
+ */
 contract VaultFactory is FactoryEvents, IVaultFactory, FactoryErrors {
-    /// @notice The implementation of TermMax Vault contract
+    /**
+     * @notice The implementation of TermMax Vault contract
+     */
     address public immutable TERMMAX_VAULT_IMPLEMENTATION;
 
     constructor(address TERMMAX_VAULT_IMPLEMENTATION_) {
@@ -19,6 +25,9 @@ contract VaultFactory is FactoryEvents, IVaultFactory, FactoryErrors {
         TERMMAX_VAULT_IMPLEMENTATION = TERMMAX_VAULT_IMPLEMENTATION_;
     }
 
+    /**
+     * @inheritdoc IVaultFactory
+     */
     function predictVaultAddress(
         address asset,
         string memory name,
@@ -32,6 +41,9 @@ contract VaultFactory is FactoryEvents, IVaultFactory, FactoryErrors {
             );
     }
 
+    /**
+     * @inheritdoc IVaultFactory
+     */
     function createVault(VaultInitialParams memory initialParams, uint256 salt) public returns (address vault) {
         vault = Clones.cloneDeterministic(
             TERMMAX_VAULT_IMPLEMENTATION,
