@@ -4,6 +4,7 @@ pragma solidity ^0.8.27;
 import "forge-std/Test.sol";
 import {console} from "forge-std/console.sol";
 import {DeployUtils} from "./utils/DeployUtils.sol";
+import {LoanUtils} from "./utils/LoanUtils.sol";
 import {JSONLoader} from "./utils/JSONLoader.sol";
 import {StateChecker} from "./utils/StateChecker.sol";
 import {SwapUtils} from "./utils/SwapUtils.sol";
@@ -468,6 +469,38 @@ contract OrderTest is Test {
         vm.warp(res.market.config().maturity);
         vm.expectRevert(abi.encodeWithSignature("TermIsNotOpen()"));
         res.order.swapTokenToExactToken(res.debt, res.ft, sender, maxTokenOut, ftInAmt);
+    }
+
+    function testIssueFtWhenSwap() public {
+        vm.startPrank(maker);
+        // Mint a GT
+        (uint gtId, ) = LoanUtils.fastMintGt(res, maker, 100e8, 1e18);
+        res.gt.approve(address(res.order), gtId);
+        orderConfig.gtId = gtId;
+        res.order.updateOrder(orderConfig, 0, 0);
+        vm.stopPrank();
+
+        uint128 ftOutAmt = 151e8;
+        uint128 maxTokenIn = 150e8;
+        vm.startPrank(sender);
+        res.debt.mint(sender, maxTokenIn);
+        res.debt.approve(address(res.order), maxTokenIn);
+        res.order.swapTokenToExactToken(res.debt, res.ft, sender, ftOutAmt, maxTokenIn);
+        assertEq(res.ft.balanceOf(sender), ftOutAmt);
+        (, uint128 debtAmt, , ) = res.gt.loanInfo(gtId);
+        assertGt(debtAmt, 100e8);
+        vm.stopPrank();
+    }
+
+    function testRevertWhenIssueFt() public {
+        uint128 ftOutAmt = 151e8;
+        uint128 maxTokenIn = 150e8;
+        vm.startPrank(sender);
+        res.debt.mint(sender, maxTokenIn);
+        res.debt.approve(address(res.order), maxTokenIn);
+        vm.expectRevert(abi.encodeWithSelector(OrderErrors.CantNotIssueFtWithoutGt.selector));
+        res.order.swapTokenToExactToken(res.debt, res.ft, sender, ftOutAmt, maxTokenIn);
+        vm.stopPrank();
     }
 
     function testUpdateOrderConfig() public {
