@@ -16,6 +16,7 @@ interface ITermMaxFactory {
 
     /// @notice Predict the address of token pair
     function predictMarketAddress(
+        address admin,
         address collateral,
         address underlying,
         uint64 maturity,

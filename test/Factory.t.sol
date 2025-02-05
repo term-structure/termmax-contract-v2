@@ -36,6 +36,7 @@ contract FactoryTest is Test {
         DeployUtils.Res memory res = DeployUtils.deployMarket(deployer, marketConfig, maxLtv, liquidationLtv);
 
         address predictedMarketAddress = res.factory.predictMarketAddress(
+            deployer,
             address(res.collateral),
             address(res.debt),
             marketConfig.maturity,
