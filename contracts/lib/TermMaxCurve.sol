@@ -38,6 +38,7 @@ library TermMaxCurve {
         CurveCut memory cut,
         uint xtReserve
     ) internal pure returns (uint liqSquare, uint vXtReserve, uint vFtReserve) {
+        // reference: Eq.(8) in TermMax White Paper
         liqSquare =
             (cut.liqSquare * daysToMaturity * netInterestFactor) /
             (Constants.DAYS_IN_YEAR * Constants.DECIMAL_BASE);
@@ -158,6 +159,7 @@ library TermMaxCurve {
         uint oriDeltaFt,
         uint outputAmount
     ) internal pure returns (uint negDeltaXt, uint deltaFt) {
+        // reference: Section 4.2.3 in TermMax White Paper
         uint acc = outputAmount - (oriNegDeltaXt + oriDeltaFt);
         uint b = vXtReserve + vFtReserve + acc;
         uint c = vXtReserve * acc;
@@ -166,6 +168,7 @@ library TermMaxCurve {
         negDeltaXt = oriNegDeltaXt + segNegDeltaXt;
         deltaFt = oriDeltaFt + acc - segNegDeltaXt;
     }
+
     function buyExactFtStep(
         uint,
         uint vXtReserve,
@@ -174,6 +177,7 @@ library TermMaxCurve {
         uint oriNegDeltaFt,
         uint outputAmount
     ) internal pure returns (uint deltaXt, uint negDeltaFt) {
+        //referece: Section 4.2.4 in TermMax White Paper
         uint acc = outputAmount - (oriNegDeltaFt + oriDeltaXt);
         uint b = vFtReserve + vXtReserve + acc;
         uint c = vFtReserve * acc;
@@ -200,6 +204,7 @@ library TermMaxCurve {
         uint oriDeltaFt,
         uint inputAmount
     ) internal pure returns (uint negDeltaXt, uint deltaFt) {
+        // reference: Eq.(10) in TermMax White Paper
         uint remainingInputAmt = inputAmount - oriDeltaFt;
         negDeltaXt = oriNegDeltaXt + vXtReserve - liqSquare / (vFtReserve + remainingInputAmt);
         deltaFt = inputAmount;
@@ -246,6 +251,7 @@ library TermMaxCurve {
         uint oriNegDeltaFt,
         uint inputAmount
     ) internal pure returns (uint deltaXt, uint negDeltaFt) {
+        // reference: Eq.(9) in TermMax White Paper
         uint remainingInputAmt = inputAmount - oriDeltaXt;
         negDeltaFt = oriNegDeltaFt + vFtReserve - liqSquare / (vXtReserve + remainingInputAmt);
         deltaXt = inputAmount;
@@ -291,6 +297,7 @@ library TermMaxCurve {
         uint oriNegDeltaFt,
         uint inputAmount
     ) internal pure returns (uint deltaXt, uint negDeltaFt) {
+        // reference: Section 4.2.4 in TermMax White Paper
         uint negAcc = inputAmount - (oriDeltaXt + oriNegDeltaFt);
         uint b = vXtReserve + vFtReserve - negAcc;
         uint negC = vXtReserve * negAcc;
@@ -340,6 +347,7 @@ library TermMaxCurve {
         uint oriDeltaFt,
         uint inputAmount
     ) internal pure returns (uint negDeltaXt, uint deltaFt) {
+        // reference: Section 4.2.3 in TermMax White Paper
         uint negAcc = inputAmount - (oriDeltaFt + oriNegDeltaXt);
         uint b = vFtReserve + vXtReserve - negAcc;
         uint negC = vFtReserve * negAcc;
@@ -389,6 +397,7 @@ library TermMaxCurve {
             sellFtForExactDebtTokenStep
         );
     }
+
     function sellXtForExactDebtToken(
         uint netInterestFactor,
         uint daysToMaturity,
@@ -405,6 +414,7 @@ library TermMaxCurve {
             sellXtForExactDebtTokenStep
         );
     }
+
     function sellFtForExactDebtTokenStep(
         uint liqSquare,
         uint vXtReserve,
@@ -413,10 +423,12 @@ library TermMaxCurve {
         uint oriDeltaFt,
         uint outputAmount
     ) internal pure returns (uint negDeltaXt, uint deltaFt) {
+        // reference: Eq.(10) in TermMax White Paper
         uint remainingOutputAmt = outputAmount - oriNegDeltaXt;
         deltaFt = oriDeltaFt + liqSquare / (vXtReserve - remainingOutputAmt) - vFtReserve;
         negDeltaXt = outputAmount;
     }
+
     function sellXtForExactDebtTokenStep(
         uint liqSquare,
         uint vXtReserve,
@@ -425,6 +437,7 @@ library TermMaxCurve {
         uint oriNegDeltaFt,
         uint outputAmount
     ) internal pure returns (uint deltaXt, uint negDeltaFt) {
+        // reference: Eq.(9) in TermMax White Paper
         uint remainingOutputAmt = outputAmount - oriNegDeltaFt;
         deltaXt = oriDeltaXt + liqSquare / (vFtReserve - remainingOutputAmt) - vXtReserve;
         negDeltaFt = outputAmount;
