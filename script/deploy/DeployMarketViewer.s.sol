@@ -6,18 +6,18 @@ import {console} from "forge-std/console.sol";
 import {MarketViewer} from "../../contracts/router/MarketViewer.sol";
 
 contract DeployMarketViewer is Script {
-  // deployer config
-  uint256 deployerPrivateKey = vm.envUint("ARB_SEPOLIA_DEPLOYER_PRIVATE_KEY");
-  address deployerAddr = vm.addr(deployerPrivateKey);
-  
-  function run() public {
-    vm.startBroadcast(deployerPrivateKey);
+    // deployer config
+    uint256 deployerPrivateKey = vm.envUint("ARB_SEPOLIA_DEPLOYER_PRIVATE_KEY");
+    address deployerAddr = vm.addr(deployerPrivateKey);
 
-    console.log("Deployer address: ", deployerAddr);
-    console.log("Deployer balance: ", deployerAddr.balance);
-    MarketViewer marketViewer = new MarketViewer();
-    console.log("MarketViewer deployed at: ", address(marketViewer));
+    function run() public {
+        vm.startBroadcast(deployerPrivateKey);
 
-    vm.stopBroadcast();
-  }
+        console.log("Deployer address: ", deployerAddr);
+        console.log("Deployer balance: ", deployerAddr.balance);
+        MarketViewer marketViewer = new MarketViewer();
+        console.log("MarketViewer deployed at: ", address(marketViewer));
+
+        vm.stopBroadcast();
+    }
 }

@@ -42,13 +42,8 @@ contract PTWithPriceFeed is AggregatorV3Interface {
      * @param duration The TWAP duration
      * @param priceFeed The price feed interface
      */
-    constructor(
-        PendlePYLpOracle pendlePYLpOracle,
-        IPMarket market,
-        uint32 duration,
-        AggregatorV3Interface priceFeed
-    ) {
-        (, int256 answer, , , ) = priceFeed.latestRoundData();
+    constructor(PendlePYLpOracle pendlePYLpOracle, IPMarket market, uint32 duration, AggregatorV3Interface priceFeed) {
+        (, int256 answer,,,) = priceFeed.latestRoundData();
         if (answer == 0) revert PriceIsZero();
 
         PY_LP_ORACLE = pendlePYLpOracle;
@@ -62,16 +57,14 @@ contract PTWithPriceFeed is AggregatorV3Interface {
     /**
      * @notice Revert this function because cannot get the chi (rate accumulator) at a specific round
      */
-    function getRoundData(
-        uint80 /* _roundId */
-    )
+    function getRoundData(uint80 /* _roundId */ )
         external
         pure
         returns (
-            uint80 /* roundId */,
-            int256 /* answer */,
-            uint256 /* startedAt */,
-            uint256 /* updatedAt */,
+            uint80, /* roundId */
+            int256, /* answer */
+            uint256, /* startedAt */
+            uint256, /* updatedAt */
             uint80 /* answeredInRound */
         )
     {
@@ -90,24 +83,12 @@ contract PTWithPriceFeed is AggregatorV3Interface {
     function latestRoundData()
         external
         view
-        returns (
-            uint80 roundId,
-            int256 answer,
-            uint256 startedAt,
-            uint256 updatedAt,
-            uint80 answeredInRound
-        )
+        returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)
     {
         // PT price = PT rate in SY * SY price / PT to asset rate base
         uint256 ptRateInSy = MARKET.getPtToSyRate(DURATION); // PT -> SY
 
-        (
-            roundId,
-            answer,
-            startedAt,
-            updatedAt,
-            answeredInRound
-        ) = PRICE_FEED.latestRoundData();
+        (roundId, answer, startedAt, updatedAt, answeredInRound) = PRICE_FEED.latestRoundData();
         answer = ptRateInSy.mulDiv(answer.toUint256(), PMath.ONE).toInt256();
 
         return (roundId, answer, startedAt, updatedAt, answeredInRound);
@@ -118,17 +99,15 @@ contract PTWithPriceFeed is AggregatorV3Interface {
      * @return True if the oracle is ready, otherwise false
      */
     function _oracleIsReady() internal view returns (bool) {
-        (
-            bool increaseCardinalityRequired,
-            ,
-            bool oldestObservationSatisfied
-        ) = PY_LP_ORACLE.getOracleState(address(MARKET), DURATION);
+        (bool increaseCardinalityRequired,, bool oldestObservationSatisfied) =
+            PY_LP_ORACLE.getOracleState(address(MARKET), DURATION);
 
         return !increaseCardinalityRequired && oldestObservationSatisfied;
     }
 
-    /** ========== Return original price feed data ========== */
-
+    /**
+     * ========== Return original price feed data ==========
+     */
     function decimals() external view returns (uint8) {
         return PRICE_FEED.decimals();
     }

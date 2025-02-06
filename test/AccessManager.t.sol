@@ -27,6 +27,7 @@ import "contracts/storage/TermMaxStorage.sol";
 
 contract AccessManagerTest is Test {
     using JSONLoader for *;
+
     DeployUtils.Res res;
 
     OrderConfig orderConfig;
@@ -51,22 +52,16 @@ contract AccessManagerTest is Test {
 
         res = DeployUtils.deployMarket(deployer, marketConfig, maxLtv, liquidationLtv);
 
-        res.order = res.market.createOrder(
-            maker,
-            orderConfig.maxXtReserve,
-            ISwapCallback(address(0)),
-            orderConfig.curveCuts
-        );
+        res.order =
+            res.market.createOrder(maker, orderConfig.maxXtReserve, ISwapCallback(address(0)), orderConfig.curveCuts);
 
         vm.warp(vm.parseUint(vm.parseJsonString(testdata, ".currentTime")));
 
         // update oracle
-        res.collateralOracle.updateRoundData(
-            JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_2000_DAI_1.eth")
-        );
+        res.collateralOracle.updateRoundData(JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_2000_DAI_1.eth"));
         res.debtOracle.updateRoundData(JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_2000_DAI_1.dai"));
 
-        uint amount = 150e8;
+        uint256 amount = 150e8;
         res.debt.mint(deployer, amount);
         res.debt.approve(address(res.market), amount);
         res.market.mint(deployer, amount);
@@ -114,7 +109,7 @@ contract AccessManagerTest is Test {
         vm.prank(sender);
 
         vm.expectRevert(
-            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, sender, uint(0))
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, sender, uint256(0))
         );
         manager.transferOwnership(IOwnable(address(res.router)), sender);
     }
@@ -213,9 +208,7 @@ contract AccessManagerTest is Test {
         vm.startPrank(nonPauser);
         vm.expectRevert(
             abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector,
-                nonPauser,
-                manager.PAUSER_ROLE()
+                IAccessControl.AccessControlUnauthorizedAccount.selector, nonPauser, manager.PAUSER_ROLE()
             )
         );
         manager.setSwitch(IPausable(address(res.router)), false);
@@ -235,12 +228,11 @@ contract AccessManagerTest is Test {
             maxCapacity: 1000000e18,
             name: "Test Vault",
             symbol: "tVAULT",
-            maxTerm: 365 days,
             performanceFeeRate: 0.2e8 // 20%
         });
 
         // Deploy vault
-        TermMaxVault vault = new TermMaxVault(params);
+        ITermMaxVault vault = DeployUtils.deployVault(params);
 
         // Grant VAULT_ROLE to the vault manager
         vm.startPrank(deployer);
@@ -260,9 +252,7 @@ contract AccessManagerTest is Test {
         vm.startPrank(nonVaultManager);
         vm.expectRevert(
             abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector,
-                nonVaultManager,
-                manager.VAULT_ROLE()
+                IAccessControl.AccessControlUnauthorizedAccount.selector, nonVaultManager, manager.VAULT_ROLE()
             )
         );
         manager.setCuratorForVault(ITermMaxVault(address(vault)), newCurator);
@@ -284,12 +274,11 @@ contract AccessManagerTest is Test {
             maxCapacity: 1000000e18,
             name: "Test Vault",
             symbol: "tVAULT",
-            maxTerm: 365 days,
             performanceFeeRate: 0.2e8
         });
 
         // Deploy vault
-        TermMaxVault vault = new TermMaxVault(params);
+        ITermMaxVault vault = DeployUtils.deployVault(params);
 
         // Grant VAULT_ROLE to the vault manager and set curator
         vm.startPrank(deployer);
@@ -327,27 +316,21 @@ contract AccessManagerTest is Test {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector,
-                nonVaultManager,
-                manager.VAULT_ROLE()
+                IAccessControl.AccessControlUnauthorizedAccount.selector, nonVaultManager, manager.VAULT_ROLE()
             )
         );
         manager.revokeVaultPendingTimelock(ITermMaxVault(address(vault)));
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector,
-                nonVaultManager,
-                manager.VAULT_ROLE()
+                IAccessControl.AccessControlUnauthorizedAccount.selector, nonVaultManager, manager.VAULT_ROLE()
             )
         );
         manager.revokeVaultPendingMarket(ITermMaxVault(address(vault)), newMarket);
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector,
-                nonVaultManager,
-                manager.VAULT_ROLE()
+                IAccessControl.AccessControlUnauthorizedAccount.selector, nonVaultManager, manager.VAULT_ROLE()
             )
         );
         manager.revokeVaultPendingGuardian(ITermMaxVault(address(vault)));
@@ -400,9 +383,7 @@ contract AccessManagerTest is Test {
         vm.startPrank(nonAdmin);
         vm.expectRevert(
             abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector,
-                nonAdmin,
-                manager.DEFAULT_ADMIN_ROLE()
+                IAccessControl.AccessControlUnauthorizedAccount.selector, nonAdmin, manager.DEFAULT_ADMIN_ROLE()
             )
         );
         manager.createMarket(res.factory, gtKey, params, 2);
@@ -425,9 +406,7 @@ contract AccessManagerTest is Test {
         vm.startPrank(nonAdmin);
         vm.expectRevert(
             abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector,
-                nonAdmin,
-                manager.DEFAULT_ADMIN_ROLE()
+                IAccessControl.AccessControlUnauthorizedAccount.selector, nonAdmin, manager.DEFAULT_ADMIN_ROLE()
             )
         );
         manager.upgradeSubContract(UUPSUpgradeable(address(res.router)), address(routerV2), "");
@@ -452,9 +431,7 @@ contract AccessManagerTest is Test {
         vm.startPrank(nonAdmin);
         vm.expectRevert(
             abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector,
-                nonAdmin,
-                manager.DEFAULT_ADMIN_ROLE()
+                IAccessControl.AccessControlUnauthorizedAccount.selector, nonAdmin, manager.DEFAULT_ADMIN_ROLE()
             )
         );
         manager.setMarketWhitelist(res.router, newMarket, true);
@@ -476,12 +453,33 @@ contract AccessManagerTest is Test {
         vm.startPrank(nonAdmin);
         vm.expectRevert(
             abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector,
-                nonAdmin,
-                manager.DEFAULT_ADMIN_ROLE()
+                IAccessControl.AccessControlUnauthorizedAccount.selector, nonAdmin, manager.DEFAULT_ADMIN_ROLE()
             )
         );
         manager.setGtImplement(res.factory, gtImplementName, newGtImplement);
         vm.stopPrank();
+    }
+
+    function testUpdateOrderFeeRate() public {
+        // Get new fee config from testdata
+        FeeConfig memory newFeeConfig = res.order.orderConfig().feeConfig;
+
+        // Test that non-admin cannot update fee rate
+        vm.startPrank(sender);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector, sender, manager.CONFIGURATOR_ROLE()
+            )
+        );
+        manager.updateOrderFeeRate(res.market, res.order, newFeeConfig);
+        vm.stopPrank();
+        // Test that admin can update fee rate
+        vm.prank(deployer);
+        manager.updateOrderFeeRate(res.market, res.order, newFeeConfig);
+
+        // Verify fee config was updated
+        OrderConfig memory updatedConfig = res.order.orderConfig();
+        assertEq(updatedConfig.feeConfig.lendTakerFeeRatio, newFeeConfig.lendTakerFeeRatio);
+        assertEq(updatedConfig.feeConfig.borrowTakerFeeRatio, newFeeConfig.borrowTakerFeeRatio);
     }
 }

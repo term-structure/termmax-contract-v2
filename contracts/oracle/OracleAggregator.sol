@@ -20,9 +20,8 @@ contract OracleAggregator is IOracle, UUPSUpgradeable, Ownable2StepUpgradeable {
      */
     function setOracle(address asset, Oracle memory oracle) external onlyOwner {
         if (
-            asset == address(0) ||
-            address(oracle.aggregator) == address(0) ||
-            address(oracle.backupAggregator) == address(0)
+            asset == address(0) || address(oracle.aggregator) == address(0)
+                || address(oracle.backupAggregator) == address(0)
         ) {
             revert InvalidAssetOrOracle();
         }
@@ -44,10 +43,10 @@ contract OracleAggregator is IOracle, UUPSUpgradeable, Ownable2StepUpgradeable {
      */
     function getPrice(address asset) external view override returns (uint256 price, uint8 decimals) {
         Oracle memory oracle = oracles[asset];
-        (, int256 answer, , uint256 updatedAt, ) = oracle.aggregator.latestRoundData();
+        (, int256 answer,, uint256 updatedAt,) = oracle.aggregator.latestRoundData();
         if (oracle.heartbeat + updatedAt < block.timestamp || answer <= 0) {
             // switch backupAggregator
-            (, answer, , updatedAt, ) = oracle.backupAggregator.latestRoundData();
+            (, answer,, updatedAt,) = oracle.backupAggregator.latestRoundData();
             if (oracle.heartbeat + updatedAt < block.timestamp || answer <= 0) {
                 revert OracleIsNotWorking(asset);
             }

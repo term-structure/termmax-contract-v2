@@ -1,13 +1,56 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import {TermMaxVault} from "contracts/vault/TermMaxVault.sol";
+import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
+import {ITermMaxVault} from "contracts/vault/ITermMaxVault.sol";
 import {VaultInitialParams} from "contracts/storage/TermMaxStorage.sol";
 import {FactoryEvents} from "contracts/events/FactoryEvents.sol";
+import {FactoryErrors} from "contracts/errors/FactoryErrors.sol";
+import {IVaultFactory} from "./IVaultFactory.sol";
 
-contract VaultFactory is FactoryEvents {
-    function createVault(VaultInitialParams memory initialParams) public returns (address vault) {
-        vault = address(new TermMaxVault(initialParams));
-        emit VaultCreated(vault, msg.sender, initialParams);
+/**
+ * @title The TermMax vault factory
+ * @author Term Structure Labs
+ */
+contract VaultFactory is FactoryEvents, IVaultFactory, FactoryErrors {
+    /**
+     * @notice The implementation of TermMax Vault contract
+     */
+    address public immutable TERMMAX_VAULT_IMPLEMENTATION;
+
+    constructor(address TERMMAX_VAULT_IMPLEMENTATION_) {
+        if (TERMMAX_VAULT_IMPLEMENTATION_ == address(0)) {
+            revert InvalidImplementation();
+        }
+        TERMMAX_VAULT_IMPLEMENTATION = TERMMAX_VAULT_IMPLEMENTATION_;
+    }
+
+    /**
+     * @inheritdoc IVaultFactory
+     */
+    function predictVaultAddress(address admin, address asset, string memory name, string memory symbol, uint256 salt)
+        external
+        view
+        returns (address vault)
+    {
+        return Clones.predictDeterministicAddress(
+            TERMMAX_VAULT_IMPLEMENTATION, keccak256(abi.encodePacked(admin, asset, name, symbol, salt))
+        );
+    }
+
+    /**
+     * @inheritdoc IVaultFactory
+     */
+    function createVault(VaultInitialParams memory initialParams, uint256 salt) public returns (address vault) {
+        vault = Clones.cloneDeterministic(
+            TERMMAX_VAULT_IMPLEMENTATION,
+            keccak256(
+                abi.encodePacked(
+                    initialParams.admin, initialParams.asset, initialParams.name, initialParams.symbol, salt
+                )
+            )
+        );
+        ITermMaxVault(vault).initialize(initialParams);
+        emit CreateVault(vault, msg.sender, initialParams);
     }
 }

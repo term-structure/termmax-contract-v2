@@ -15,11 +15,18 @@ import {ITermMaxFactory, TermMaxFactory} from "contracts/factory/TermMaxFactory.
 import {TermMaxRouter} from "contracts/router/TermMaxRouter.sol";
 import {IOracle, OracleAggregator, AggregatorV3Interface} from "contracts/oracle/OracleAggregator.sol";
 import {MockOrder} from "contracts/test/MockOrder.sol";
+import {VaultFactory, IVaultFactory} from "contracts/factory/VaultFactory.sol";
+import {OrderManager} from "contracts/vault/OrderManager.sol";
+import {TermMaxVault, ITermMaxVault} from "contracts/vault/TermMaxVault.sol";
+import {AccessManager} from "contracts/access/AccessManager.sol";
 import "contracts/storage/TermMaxStorage.sol";
 
 library DeployUtils {
     bytes32 constant GT_ERC20 = keccak256("GearingTokenWithERC20");
+
     struct Res {
+        ITermMaxVault vault;
+        IVaultFactory vaultFactory;
         TermMaxFactory factory;
         ITermMaxOrder order;
         TermMaxRouter router;
@@ -36,12 +43,10 @@ library DeployUtils {
         MockERC20 debt;
     }
 
-    function deployMarket(
-        address admin,
-        MarketConfig memory marketConfig,
-        uint32 maxLtv,
-        uint32 liquidationLtv
-    ) internal returns (Res memory res) {
+    function deployMarket(address admin, MarketConfig memory marketConfig, uint32 maxLtv, uint32 liquidationLtv)
+        internal
+        returns (Res memory res)
+    {
         res.factory = deployFactory(admin);
 
         res.collateral = new MockERC20("ETH", "ETH", 18);
@@ -53,13 +58,12 @@ library DeployUtils {
 
         res.oracle.setOracle(address(res.debt), IOracle.Oracle(res.debtOracle, res.debtOracle, 365 days));
         res.oracle.setOracle(
-            address(res.collateral),
-            IOracle.Oracle(res.collateralOracle, res.collateralOracle, 365 days)
+            address(res.collateral), IOracle.Oracle(res.collateralOracle, res.collateralOracle, 365 days)
         );
 
         MockPriceFeed.RoundData memory roundData = MockPriceFeed.RoundData({
             roundId: 1,
-            answer: int(1e1 ** res.collateralOracle.decimals()),
+            answer: int256(1e1 ** res.collateralOracle.decimals()),
             startedAt: 0,
             updatedAt: 0,
             answeredInRound: 0
@@ -72,12 +76,7 @@ library DeployUtils {
             admin: admin,
             gtImplementation: address(0),
             marketConfig: marketConfig,
-            loanConfig: LoanConfig({
-                oracle: res.oracle,
-                liquidationLtv: liquidationLtv,
-                maxLtv: maxLtv,
-                liquidatable: true
-            }),
+            loanConfig: LoanConfig({oracle: res.oracle, liquidationLtv: liquidationLtv, maxLtv: maxLtv, liquidatable: true}),
             gtInitalParams: abi.encode(type(uint256).max),
             tokenName: "DAI-ETH",
             tokenSymbol: "DAI-ETH"
@@ -86,7 +85,7 @@ library DeployUtils {
         res.marketConfig = marketConfig;
         res.market = ITermMaxMarket(res.factory.createMarket(GT_ERC20, initialParams, 0));
 
-        (res.ft, res.xt, res.gt, , ) = res.market.tokens();
+        (res.ft, res.xt, res.gt,,) = res.market.tokens();
     }
 
     function deployMarket(
@@ -108,13 +107,12 @@ library DeployUtils {
 
         res.oracle.setOracle(address(res.debt), IOracle.Oracle(res.debtOracle, res.debtOracle, 365 days));
         res.oracle.setOracle(
-            address(res.collateral),
-            IOracle.Oracle(res.collateralOracle, res.collateralOracle, 365 days)
+            address(res.collateral), IOracle.Oracle(res.collateralOracle, res.collateralOracle, 365 days)
         );
 
         MockPriceFeed.RoundData memory roundData = MockPriceFeed.RoundData({
             roundId: 1,
-            answer: int(1e1 ** res.collateralOracle.decimals()),
+            answer: int256(1e1 ** res.collateralOracle.decimals()),
             startedAt: 0,
             updatedAt: 0,
             answeredInRound: 0
@@ -127,12 +125,7 @@ library DeployUtils {
             admin: admin,
             gtImplementation: address(0),
             marketConfig: marketConfig,
-            loanConfig: LoanConfig({
-                oracle: res.oracle,
-                liquidationLtv: liquidationLtv,
-                maxLtv: maxLtv,
-                liquidatable: true
-            }),
+            loanConfig: LoanConfig({oracle: res.oracle, liquidationLtv: liquidationLtv, maxLtv: maxLtv, liquidatable: true}),
             gtInitalParams: abi.encode(type(uint256).max),
             tokenName: "DAI-ETH",
             tokenSymbol: "DAI-ETH"
@@ -141,15 +134,13 @@ library DeployUtils {
         res.marketConfig = marketConfig;
         res.market = ITermMaxMarket(res.factory.createMarket(GT_ERC20, initialParams, 0));
 
-        (res.ft, res.xt, res.gt, , ) = res.market.tokens();
+        (res.ft, res.xt, res.gt,,) = res.market.tokens();
     }
 
-    function deployMockMarket(
-        address admin,
-        MarketConfig memory marketConfig,
-        uint32 maxLtv,
-        uint32 liquidationLtv
-    ) internal returns (Res memory res) {
+    function deployMockMarket(address admin, MarketConfig memory marketConfig, uint32 maxLtv, uint32 liquidationLtv)
+        internal
+        returns (Res memory res)
+    {
         res.factory = deployFactoryWithMockOrder(admin);
 
         res.collateral = new MockERC20("ETH", "ETH", 18);
@@ -161,13 +152,12 @@ library DeployUtils {
 
         res.oracle.setOracle(address(res.debt), IOracle.Oracle(res.debtOracle, res.debtOracle, 365 days));
         res.oracle.setOracle(
-            address(res.collateral),
-            IOracle.Oracle(res.collateralOracle, res.collateralOracle, 365 days)
+            address(res.collateral), IOracle.Oracle(res.collateralOracle, res.collateralOracle, 365 days)
         );
 
         MockPriceFeed.RoundData memory roundData = MockPriceFeed.RoundData({
             roundId: 1,
-            answer: int(1e1 ** res.collateralOracle.decimals()),
+            answer: int256(1e1 ** res.collateralOracle.decimals()),
             startedAt: 0,
             updatedAt: 0,
             answeredInRound: 0
@@ -180,12 +170,7 @@ library DeployUtils {
             admin: admin,
             gtImplementation: address(0),
             marketConfig: marketConfig,
-            loanConfig: LoanConfig({
-                oracle: res.oracle,
-                liquidationLtv: liquidationLtv,
-                maxLtv: maxLtv,
-                liquidatable: true
-            }),
+            loanConfig: LoanConfig({oracle: res.oracle, liquidationLtv: liquidationLtv, maxLtv: maxLtv, liquidatable: true}),
             gtInitalParams: abi.encode(type(uint256).max),
             tokenName: "DAI-ETH",
             tokenSymbol: "DAI-ETH"
@@ -194,7 +179,7 @@ library DeployUtils {
         res.marketConfig = marketConfig;
         res.market = ITermMaxMarket(res.factory.createMarket(GT_ERC20, initialParams, 0));
 
-        (res.ft, res.xt, res.gt, , ) = res.market.tokens();
+        (res.ft, res.xt, res.gt,,) = res.market.tokens();
     }
 
     function deployOrder(
@@ -235,10 +220,18 @@ library DeployUtils {
         router = TermMaxRouter(address(proxy));
     }
 
-    // function deployAccessManager(address admin) internal returns (AccessManager accessManager) {
-    //     AccessManager implementation = new AccessManager();
-    //     bytes memory data = abi.encodeCall(AccessManager.initialize, admin);
-    //     ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), data);
-    //     accessManager = AccessManager(address(proxy));
-    // }
+    function deployVault(VaultInitialParams memory initialParams) public returns (ITermMaxVault vault) {
+        OrderManager orderManager = new OrderManager();
+        TermMaxVault implementation = new TermMaxVault(address(orderManager));
+        VaultFactory vaultFactory = new VaultFactory(address(implementation));
+
+        vault = ITermMaxVault(vaultFactory.createVault(initialParams, 0));
+    }
+
+    function deployAccessManager(address admin) internal returns (AccessManager accessManager) {
+        AccessManager implementation = new AccessManager();
+        bytes memory data = abi.encodeCall(AccessManager.initialize, admin);
+        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), data);
+        accessManager = AccessManager(address(proxy));
+    }
 }

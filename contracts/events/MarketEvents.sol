@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
+
 import {IMintableERC20, IERC20} from "../tokens/IMintableERC20.sol";
 import {IGearingToken} from "../tokens/IGearingToken.sol";
 import {ITermMaxOrder} from "../ITermMaxOrder.sol";

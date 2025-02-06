@@ -36,10 +36,7 @@ contract FactoryTest is Test {
         DeployUtils.Res memory res = DeployUtils.deployMarket(deployer, marketConfig, maxLtv, liquidationLtv);
 
         address predictedMarketAddress = res.factory.predictMarketAddress(
-            address(res.collateral),
-            address(res.debt),
-            marketConfig.maturity,
-            0
+            deployer, address(res.collateral), address(res.debt), marketConfig.maturity, 0
         );
         assert(address(res.market) == predictedMarketAddress);
 
@@ -181,7 +178,7 @@ contract FactoryTest is Test {
     }
 
     function testInvalidMarketImplementation() public {
-        vm.expectRevert(abi.encodeWithSelector(FactoryErrors.InvalidMarketImplementation.selector));
+        vm.expectRevert(abi.encodeWithSelector(FactoryErrors.InvalidImplementation.selector));
         new TermMaxFactory(deployer, address(0));
     }
 }

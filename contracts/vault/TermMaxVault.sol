@@ -3,51 +3,57 @@ pragma solidity ^0.8.27;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
-import {IERC4626, ERC4626, ERC20} from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
-import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import {
+    IERC4626,
+    ERC4626Upgradeable,
+    ERC20Upgradeable
+} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC4626Upgradeable.sol";
+import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
+import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import {PendingLib, PendingAddress, PendingUint192} from "../lib/PendingLib.sol";
-import {ITermMaxMarket} from "../ITermMaxMarket.sol";
-import {CurveCuts, VaultInitialParams} from "../storage/TermMaxStorage.sol";
-import {ITermMaxRouter} from "../router/ITermMaxRouter.sol";
-import {ITermMaxOrder} from "../ITermMaxOrder.sol";
-import {VaultConstants} from "../lib/VaultConstants.sol";
-import {TransferUtils} from "../lib/TransferUtils.sol";
-import {ITermMaxVault, BaseVault} from "./BaseVault.sol";
-import {Constants} from "../lib/Constants.sol";
+import {PendingLib, PendingAddress, PendingUint192} from "contracts/lib/PendingLib.sol";
+import {ITermMaxMarket} from "contracts/ITermMaxMarket.sol";
+import {CurveCuts, VaultInitialParams} from "contracts/storage/TermMaxStorage.sol";
+import {ITermMaxRouter} from "contracts/router/ITermMaxRouter.sol";
+import {ITermMaxOrder} from "contracts/ITermMaxOrder.sol";
+import {VaultConstants} from "contracts/lib/VaultConstants.sol";
+import {TransferUtils} from "contracts/lib/TransferUtils.sol";
+import {ISwapCallback} from "contracts/ISwapCallback.sol";
+import {VaultErrors} from "contracts/errors/VaultErrors.sol";
+import {VaultEvents} from "contracts/events/VaultEvents.sol";
+import {IOrderManager} from "./IOrderManager.sol";
+import {VaultStorage, OrderInfo} from "./VaultStorage.sol";
+import {Constants} from "contracts/lib/Constants.sol";
+import {ITermMaxVault} from "./ITermMaxVault.sol";
 
-contract TermMaxVault is Ownable2Step, ReentrancyGuard, BaseVault, ERC4626, Pausable {
+contract TermMaxVault is
+    ITermMaxVault,
+    Ownable2StepUpgradeable,
+    ReentrancyGuardUpgradeable,
+    ERC4626Upgradeable,
+    PausableUpgradeable,
+    VaultStorage,
+    VaultErrors,
+    VaultEvents,
+    ISwapCallback
+{
     using SafeCast for uint256;
     using TransferUtils for IERC20;
     using PendingLib for *;
 
-    address public guardian;
-    address public curator;
-
-    mapping(address => bool) public isAllocator;
-
-    mapping(address => bool) public marketWhitelist;
-
-    mapping(address => PendingUint192) public pendingMarkets;
-
-    PendingUint192 public pendingTimelock;
-    PendingUint192 public pendingPerformanceFeeRate;
-    PendingAddress public pendingGuardian;
-
-    uint256 public timelock;
-    uint256 private maxCapacity;
+    address public immutable ORDER_MANAGER_SINGLETON;
 
     modifier onlyCuratorRole() {
         address sender = _msgSender();
-        if (sender != curator && sender != owner()) revert NotCuratorRole();
+        if (sender != _curator && sender != owner()) revert NotCuratorRole();
         _;
     }
 
     /// @dev Reverts if the caller doesn't have the guardian role.
     modifier onlyGuardianRole() {
         address sender = _msgSender();
-        if (sender != guardian && sender != owner()) revert NotGuardianRole();
+        if (sender != _guardian && sender != owner()) revert NotGuardianRole();
 
         _;
     }
@@ -55,17 +61,17 @@ contract TermMaxVault is Ownable2Step, ReentrancyGuard, BaseVault, ERC4626, Paus
     /// @dev Reverts if the caller doesn't have the allocator role.
     modifier onlyAllocatorRole() {
         address sender = _msgSender();
-        if (!isAllocator[sender] && sender != curator && sender != owner()) {
+        if (!_isAllocator[sender] && sender != _curator && sender != owner()) {
             revert NotAllocatorRole();
         }
         _;
     }
 
     modifier marketIsWhitelisted(address market) {
-        if (pendingMarkets[market].validAt != 0 && block.timestamp > pendingMarkets[market].validAt) {
-            marketWhitelist[market] = true;
+        if (_pendingMarkets[market].validAt != 0 && block.timestamp > _pendingMarkets[market].validAt) {
+            _marketWhitelist[market] = true;
         }
-        if (!marketWhitelist[market]) revert MarketNotWhitelisted();
+        if (!_marketWhitelist[market]) revert MarketNotWhitelisted();
         _;
     }
 
@@ -79,42 +85,199 @@ contract TermMaxVault is Ownable2Step, ReentrancyGuard, BaseVault, ERC4626, Paus
         _;
     }
 
-    constructor(
-        VaultInitialParams memory params
-    )
-        Ownable(params.admin)
-        ERC4626(params.asset)
-        ERC20(params.name, params.symbol)
-        BaseVault(params.maxTerm, params.performanceFeeRate)
-    {
+    constructor(address ORDER_MANAGER_SINGLETON_) {
+        if (ORDER_MANAGER_SINGLETON_ == address(0)) revert InvalidImplementation();
+        ORDER_MANAGER_SINGLETON = ORDER_MANAGER_SINGLETON_;
+        _disableInitializers();
+    }
+
+    function initialize(VaultInitialParams memory params) external initializer {
+        __ERC20_init(params.name, params.symbol);
+        __Ownable_init(params.admin);
+        __ERC4626_init(params.asset);
+        __ReentrancyGuard_init();
+        __Pausable_init();
+
+        _setPerformanceFeeRate(params.performanceFeeRate);
         _checkTimelockBounds(params.timelock);
-        timelock = params.timelock;
-        maxCapacity = params.maxCapacity;
-        curator = params.curator;
+        _timelock = params.timelock;
+        _maxCapacity = params.maxCapacity;
+        _curator = params.curator;
     }
 
-    function asset() public view override(ERC4626, BaseVault) returns (address) {
-        return ERC4626.asset();
+    function _setPerformanceFeeRate(uint64 newPerformanceFeeRate) internal {
+        if (newPerformanceFeeRate > VaultConstants.MAX_PERFORMANCE_FEE_RATE) revert PerformanceFeeRateExceeded();
+        _performanceFeeRate = newPerformanceFeeRate;
     }
 
-    // BaseVault functions
+    /// @notice View functions
+
     /**
      * @inheritdoc ITermMaxVault
      */
-    function createOrder(
-        ITermMaxMarket market,
-        uint256 maxSupply,
-        uint256 initialReserve,
-        CurveCuts memory curveCuts
-    )
+    function guardian() external view returns (address) {
+        return _guardian;
+    }
+
+    /**
+     * @inheritdoc ITermMaxVault
+     */
+    function curator() external view returns (address) {
+        return _curator;
+    }
+
+    /**
+     * @inheritdoc ITermMaxVault
+     */
+    function isAllocator(address allocator) external view returns (bool) {
+        return _isAllocator[allocator];
+    }
+
+    /**
+     * @inheritdoc ITermMaxVault
+     */
+    function marketWhitelist(address market) external view returns (bool) {
+        return _marketWhitelist[market];
+    }
+
+    /**
+     * @inheritdoc ITermMaxVault
+     */
+    function timelock() external view returns (uint256) {
+        return _timelock;
+    }
+
+    /**
+     * @inheritdoc ITermMaxVault
+     */
+    function pendingMarkets(address market) external view returns (PendingUint192 memory) {
+        return _pendingMarkets[market];
+    }
+
+    /**
+     * @inheritdoc ITermMaxVault
+     */
+    function pendingTimelock() external view returns (PendingUint192 memory) {
+        return _pendingTimelock;
+    }
+
+    /**
+     * @inheritdoc ITermMaxVault
+     */
+    function pendingPerformanceFeeRate() external view returns (PendingUint192 memory) {
+        return _pendingPerformanceFeeRate;
+    }
+
+    /**
+     * @inheritdoc ITermMaxVault
+     */
+    function pendingGuardian() external view returns (PendingAddress memory) {
+        return _pendingGuardian;
+    }
+
+    /**
+     * @inheritdoc ITermMaxVault
+     */
+    function performanceFeeRate() external view returns (uint64) {
+        return _performanceFeeRate;
+    }
+
+    /**
+     * @inheritdoc ITermMaxVault
+     */
+    function totalFt() external view returns (uint256) {
+        return _totalFt;
+    }
+
+    /**
+     * @inheritdoc ITermMaxVault
+     */
+    function accretingPrincipal() external view returns (uint256) {
+        return _accretingPrincipal;
+    }
+
+    /**
+     * @inheritdoc ITermMaxVault
+     */
+    function annualizedInterest() external view returns (uint256) {
+        return _annualizedInterest;
+    }
+
+    /**
+     * @inheritdoc ITermMaxVault
+     */
+    function performanceFee() external view returns (uint256) {
+        return _performanceFee;
+    }
+
+    /**
+     * @inheritdoc ITermMaxVault
+     */
+    function supplyQueue(uint256 index) external view returns (address) {
+        return _supplyQueue[index];
+    }
+
+    /**
+     * @inheritdoc ITermMaxVault
+     */
+    function withdrawQueue(uint256 index) external view returns (address) {
+        return _withdrawQueue[index];
+    }
+
+    /**
+     * @inheritdoc ITermMaxVault
+     */
+    function orderMapping(address order) external view returns (OrderInfo memory) {
+        return _orderMapping[order];
+    }
+
+    /**
+     * @inheritdoc ITermMaxVault
+     */
+    function badDebtMapping(address order) external view returns (uint256) {
+        return _badDebtMapping[order];
+    }
+
+    /**
+     * @inheritdoc ITermMaxVault
+     */
+    function apr() external view returns (uint256) {
+        return (_annualizedInterest * Constants.DECIMAL_BASE) / (_accretingPrincipal + _performanceFee);
+    }
+
+    /**
+     * @inheritdoc ITermMaxVault
+     */
+    function supplyQueueLength() external view returns (uint256) {
+        return _supplyQueue.length;
+    }
+
+    /**
+     * @inheritdoc ITermMaxVault
+     */
+    function withdrawQueueLength() external view returns (uint256) {
+        return _withdrawQueue.length;
+    }
+
+    // Ordermanager functions
+    /**
+     * @inheritdoc ITermMaxVault
+     */
+    function createOrder(ITermMaxMarket market, uint256 maxSupply, uint256 initialReserve, CurveCuts memory curveCuts)
         external
-        override
         onlyCuratorRole
         marketIsWhitelisted(address(market))
         whenNotPaused
         returns (ITermMaxOrder order)
     {
-        return _createOrder(ITermMaxMarket(market), maxSupply, initialReserve, curveCuts);
+        order = abi.decode(
+            _delegateCall(
+                abi.encodeCall(
+                    IOrderManager.createOrder, (IERC20(asset()), market, maxSupply, initialReserve, curveCuts)
+                )
+            ),
+            (ITermMaxOrder)
+        );
     }
 
     /**
@@ -125,52 +288,46 @@ contract TermMaxVault is Ownable2Step, ReentrancyGuard, BaseVault, ERC4626, Paus
         int256[] memory changes,
         uint256[] memory maxSupplies,
         CurveCuts[] memory curveCuts
-    ) external override onlyCuratorRole whenNotPaused {
-        _accruedInterest();
-        for (uint256 i = 0; i < orders.length; ++i) {
-            _updateOrder(ITermMaxOrder(orders[i]), changes[i], maxSupplies[i], curveCuts[i]);
-        }
-    }
-
-    function updateSupplyQueue(uint256[] memory indexes) external override onlyAllocatorRole {
-        _updateSupplyQueue(indexes);
-    }
-
-    function updateWithdrawQueue(uint256[] memory indexes) external override onlyAllocatorRole {
-        _updateWithdrawQueue(indexes);
+    ) external onlyCuratorRole whenNotPaused {
+        _delegateCall(
+            abi.encodeCall(IOrderManager.updateOrders, (IERC20(asset()), orders, changes, maxSupplies, curveCuts))
+        );
     }
 
     /**
      * @inheritdoc ITermMaxVault
      */
-    function redeemOrder(ITermMaxOrder order) external override onlyCuratorRole {
-        _redeemFromMarket(address(order), orderMapping[address(order)]);
+    function redeemOrder(ITermMaxOrder order) external onlyCuratorRole {
+        _delegateCall(abi.encodeCall(IOrderManager.redeemOrder, (order)));
     }
 
     /**
      * @inheritdoc ITermMaxVault
      */
-    function withdrawPerformanceFee(address recipient, uint256 amount) external override onlyCuratorRole {
-        _accruedInterest();
-        _withdrawPerformanceFee(recipient, amount);
+    function withdrawPerformanceFee(address recipient, uint256 amount) external onlyCuratorRole {
+        _delegateCall(abi.encodeCall(IOrderManager.withdrawPerformanceFee, (IERC20(asset()), recipient, amount)));
     }
 
     // ERC4626 functions
 
-    /** @dev See {IERC4626-maxDeposit}. */
-    function maxDeposit(address) public view override(IERC4626, ERC4626) returns (uint256) {
-        return maxCapacity - totalAssets();
+    /**
+     * @dev See {IERC4626-maxDeposit}.
+     */
+    function maxDeposit(address) public view override(IERC4626, ERC4626Upgradeable) returns (uint256) {
+        return _maxCapacity - totalAssets();
     }
 
-    /** @dev See {IERC4626-maxMint}. */
-    function maxMint(address) public view override(IERC4626, ERC4626) returns (uint256) {
+    /**
+     * @dev See {IERC4626-maxMint}.
+     */
+    function maxMint(address) public view override(IERC4626, ERC4626Upgradeable) returns (uint256) {
         return convertToShares(maxDeposit(address(0)));
     }
 
     /**
      * @dev Get total assets, falling back to real assets if virtual assets exceed limit
      */
-    function totalAssets() public view override(IERC4626, ERC4626) returns (uint256) {
+    function totalAssets() public view override(IERC4626, ERC4626Upgradeable) returns (uint256) {
         (uint256 previewPrincipal, uint256 previewPerformanceFee) = _previewAccruedInterest();
         return previewPrincipal + previewPerformanceFee;
     }
@@ -178,46 +335,54 @@ contract TermMaxVault is Ownable2Step, ReentrancyGuard, BaseVault, ERC4626, Paus
     /**
      * @dev Deposit/mint common workflow.
      */
-    function _deposit(
-        address caller,
-        address recipient,
-        uint256 assets,
-        uint256 shares
-    ) internal override nonReentrant whenNotPaused {
+    function _deposit(address caller, address recipient, uint256 assets, uint256 shares)
+        internal
+        override
+        nonReentrant
+        whenNotPaused
+    {
         IERC20(asset()).safeTransferFrom(caller, address(this), assets);
-        _accruedInterest();
+
+        _delegateCall(abi.encodeCall(IOrderManager.depositAssets, (IERC20(asset()), assets)));
         _mint(recipient, shares);
-        _depositAssets(assets);
+
         emit Deposit(caller, recipient, assets, shares);
     }
 
     /**
      * @dev Withdraw/redeem common workflow.
      */
-    function _withdraw(
-        address caller,
-        address receiver,
-        address owner,
-        uint256 assets,
-        uint256 shares
-    ) internal override nonReentrant {
+    function _withdraw(address caller, address receiver, address owner, uint256 assets, uint256 shares)
+        internal
+        override
+        nonReentrant
+    {
         if (caller != owner) {
             _spendAllowance(owner, caller, shares);
         }
-        _accruedInterest();
 
+        _delegateCall(abi.encodeCall(IOrderManager.withdrawAssets, (IERC20(asset()), receiver, assets)));
         _burn(owner, shares);
-        _withdrawAssets(receiver, assets);
 
         emit Withdraw(caller, receiver, owner, assets, shares);
     }
 
-    function dealBadDebt(
-        address collaretal,
-        uint256 badDebtAmt,
-        address recipient,
-        address owner
-    ) external override nonReentrant returns (uint256 shares, uint256 collaretalOut) {
+    function _delegateCall(bytes memory data) internal returns (bytes memory) {
+        (bool success, bytes memory returnData) = ORDER_MANAGER_SINGLETON.delegatecall(data);
+        if (!success) {
+            revert(string(returnData));
+        }
+        return returnData;
+    }
+
+    /**
+     * @inheritdoc ITermMaxVault
+     */
+    function dealBadDebt(address collaretal, uint256 badDebtAmt, address recipient, address owner)
+        external
+        nonReentrant
+        returns (uint256 shares, uint256 collaretalOut)
+    {
         address caller = msg.sender;
         shares = previewWithdraw(badDebtAmt);
         uint256 maxShares = maxRedeem(owner);
@@ -229,41 +394,48 @@ contract TermMaxVault is Ownable2Step, ReentrancyGuard, BaseVault, ERC4626, Paus
             _spendAllowance(owner, caller, shares);
         }
 
-        _accruedInterest();
         _burn(owner, shares);
 
-        collaretalOut = _dealBadDebt(recipient, collaretal, badDebtAmt);
+        collaretalOut = abi.decode(
+            _delegateCall(abi.encodeCall(IOrderManager.dealBadDebt, (recipient, collaretal, badDebtAmt))), (uint256)
+        );
 
         emit DealBadDebt(caller, recipient, collaretal, badDebtAmt, shares, collaretalOut);
     }
 
     // Guardian functions
     function _setTimelock(uint256 newTimelock) internal {
-        timelock = newTimelock;
+        _timelock = newTimelock;
 
         emit SetTimelock(msg.sender, newTimelock);
 
-        delete pendingTimelock;
+        delete _pendingTimelock;
     }
 
+    /**
+     * @inheritdoc ITermMaxVault
+     */
     function submitTimelock(uint256 newTimelock) external onlyCuratorRole {
-        if (newTimelock == timelock) revert AlreadySet();
-        if (pendingTimelock.validAt != 0) revert AlreadyPending();
+        if (newTimelock == _timelock) revert AlreadySet();
+        if (_pendingTimelock.validAt != 0) revert AlreadyPending();
         _checkTimelockBounds(newTimelock);
 
-        if (newTimelock > timelock) {
+        if (newTimelock > _timelock) {
             _setTimelock(newTimelock);
         } else {
             // Safe "unchecked" cast because newTimelock <= MAX_TIMELOCK.
-            pendingTimelock.update(uint184(newTimelock), timelock);
+            _pendingTimelock.update(uint184(newTimelock), _timelock);
 
             emit SubmitTimelock(newTimelock);
         }
     }
 
+    /**
+     * @inheritdoc ITermMaxVault
+     */
     function setCapacity(uint256 newCapacity) external onlyCuratorRole {
-        if (newCapacity == maxCapacity) revert AlreadySet();
-        maxCapacity = newCapacity;
+        if (newCapacity == _maxCapacity) revert AlreadySet();
+        _maxCapacity = newCapacity;
         emit SetCapacity(_msgSender(), newCapacity);
     }
 
@@ -272,27 +444,33 @@ contract TermMaxVault is Ownable2Step, ReentrancyGuard, BaseVault, ERC4626, Paus
         if (newTimelock < VaultConstants.POST_INITIALIZATION_MIN_TIMELOCK) revert BelowMinTimelock();
     }
 
+    /**
+     * @inheritdoc ITermMaxVault
+     */
     function submitPerformanceFeeRate(uint184 newPerformanceFeeRate) external onlyCuratorRole {
-        if (newPerformanceFeeRate == performanceFeeRate) revert AlreadySet();
-        if (pendingPerformanceFeeRate.validAt != 0) revert AlreadyPending();
-        if (newPerformanceFeeRate < performanceFeeRate) {
-            _setPerformanceFeeRate(uint(newPerformanceFeeRate).toUint64());
+        if (newPerformanceFeeRate == _performanceFeeRate) revert AlreadySet();
+        if (_pendingPerformanceFeeRate.validAt != 0) revert AlreadyPending();
+        if (newPerformanceFeeRate < _performanceFeeRate) {
+            _setPerformanceFeeRate(uint256(newPerformanceFeeRate).toUint64());
             emit SetPerformanceFeeRate(_msgSender(), newPerformanceFeeRate);
             return;
         } else {
-            pendingPerformanceFeeRate.update(newPerformanceFeeRate, block.timestamp + timelock);
+            _pendingPerformanceFeeRate.update(newPerformanceFeeRate, block.timestamp + _timelock);
             emit SubmitPerformanceFeeRate(newPerformanceFeeRate);
         }
     }
 
+    /**
+     * @inheritdoc ITermMaxVault
+     */
     function submitGuardian(address newGuardian) external onlyOwner {
-        if (newGuardian == guardian) revert AlreadySet();
-        if (pendingGuardian.validAt != 0) revert AlreadyPending();
+        if (newGuardian == _guardian) revert AlreadySet();
+        if (_pendingGuardian.validAt != 0) revert AlreadyPending();
 
-        if (guardian == address(0)) {
+        if (_guardian == address(0)) {
             _setGuardian(newGuardian);
         } else {
-            pendingGuardian.update(newGuardian, timelock);
+            _pendingGuardian.update(newGuardian, _timelock);
 
             emit SubmitGuardian(newGuardian);
         }
@@ -300,87 +478,239 @@ contract TermMaxVault is Ownable2Step, ReentrancyGuard, BaseVault, ERC4626, Paus
 
     /// @dev Sets `guardian` to `newGuardian`.
     function _setGuardian(address newGuardian) internal {
-        guardian = newGuardian;
+        _guardian = newGuardian;
         emit SetGuardian(_msgSender(), newGuardian);
 
-        delete pendingGuardian;
+        delete _pendingGuardian;
     }
 
+    /**
+     * @inheritdoc ITermMaxVault
+     */
     function submitMarket(address market, bool isWhitelisted) external onlyCuratorRole {
-        if (marketWhitelist[market] && isWhitelisted) revert AlreadySet();
-        if (pendingMarkets[market].validAt != 0) revert AlreadyPending();
+        if (_marketWhitelist[market] && isWhitelisted) revert AlreadySet();
+        if (_pendingMarkets[market].validAt != 0) revert AlreadyPending();
         if (!isWhitelisted) {
             _setMarketWhitelist(market, isWhitelisted);
         } else {
-            pendingMarkets[market].update(uint184(block.timestamp + timelock), 0);
+            _pendingMarkets[market].update(uint184(block.timestamp + _timelock), 0);
             emit SubmitMarket(market, isWhitelisted);
         }
     }
 
     function _setMarketWhitelist(address market, bool isWhitelisted) internal {
-        marketWhitelist[market] = isWhitelisted;
+        _marketWhitelist[market] = isWhitelisted;
         emit SetMarketWhitelist(_msgSender(), market, isWhitelisted);
-        delete pendingMarkets[market];
+        delete _pendingMarkets[market];
     }
 
+    /**
+     * @inheritdoc ITermMaxVault
+     */
     function setIsAllocator(address newAllocator, bool newIsAllocator) external onlyOwner {
-        if (isAllocator[newAllocator] == newIsAllocator) revert AlreadySet();
+        if (_isAllocator[newAllocator] == newIsAllocator) revert AlreadySet();
 
-        isAllocator[newAllocator] = newIsAllocator;
+        _isAllocator[newAllocator] = newIsAllocator;
 
         emit SetIsAllocator(newAllocator, newIsAllocator);
     }
 
+    /**
+     * @inheritdoc ITermMaxVault
+     */
     function setCurator(address newCurator) external onlyOwner {
-        if (newCurator == curator) revert AlreadySet();
+        if (newCurator == _curator) revert AlreadySet();
 
-        curator = newCurator;
+        _curator = newCurator;
 
         emit SetCurator(newCurator);
     }
 
-    /** Revoke functions */
+    /**
+     * @inheritdoc ITermMaxVault
+     */
+    function updateSupplyQueue(uint256[] memory indexes) external onlyAllocatorRole {
+        _updateSupplyQueue(indexes);
+    }
+
+    /**
+     * @inheritdoc ITermMaxVault
+     */
+    function updateWithdrawQueue(uint256[] memory indexes) external onlyAllocatorRole {
+        _updateWithdrawQueue(indexes);
+    }
+
+    function _updateWithdrawQueue(uint256[] memory indexes) internal {
+        uint256 length = _withdrawQueue.length;
+        if (indexes.length != length) {
+            revert WithdrawQueueLengthMismatch();
+        }
+        bool[] memory seen = new bool[](length);
+        address[] memory newWithdrawQueue = new address[](length);
+
+        for (uint256 i; i < length; ++i) {
+            uint256 prevIndex = indexes[i];
+
+            // If prevIndex >= currLength, it will revert with native "Index out of bounds".
+            address order = _withdrawQueue[prevIndex];
+            if (seen[prevIndex]) revert DuplicateOrder(order);
+            seen[prevIndex] = true;
+
+            newWithdrawQueue[i] = order;
+        }
+        _withdrawQueue = newWithdrawQueue;
+
+        emit UpdateWithdrawQueue(msg.sender, newWithdrawQueue);
+    }
+
+    function _updateSupplyQueue(uint256[] memory indexes) internal {
+        uint256 length = _supplyQueue.length;
+        if (indexes.length != length) {
+            revert SupplyQueueLengthMismatch();
+        }
+        bool[] memory seen = new bool[](length);
+        address[] memory newSupplyQueue = new address[](length);
+
+        for (uint256 i; i < length; ++i) {
+            uint256 prevIndex = indexes[i];
+
+            // If prevIndex >= currLength, it will revert with native "Index out of bounds".
+            address order = _supplyQueue[prevIndex];
+            if (seen[prevIndex]) revert DuplicateOrder(order);
+            seen[prevIndex] = true;
+
+            newSupplyQueue[i] = order;
+        }
+        _supplyQueue = newSupplyQueue;
+
+        emit UpdateSupplyQueue(msg.sender, newSupplyQueue);
+    }
+
+    /**
+     * Revoke functions
+     */
+
+    /**
+     * @inheritdoc ITermMaxVault
+     */
     function revokePendingTimelock() external onlyGuardianRole {
-        delete pendingTimelock;
+        delete _pendingTimelock;
 
         emit RevokePendingTimelock(_msgSender());
     }
 
+    /**
+     * @inheritdoc ITermMaxVault
+     */
     function revokePendingGuardian() external onlyGuardianRole {
-        delete pendingGuardian;
+        delete _pendingGuardian;
 
         emit RevokePendingGuardian(_msgSender());
     }
 
+    /**
+     * @inheritdoc ITermMaxVault
+     */
     function revokePendingMarket(address market) external onlyGuardianRole {
-        delete pendingMarkets[market];
+        delete _pendingMarkets[market];
 
         emit RevokePendingMarket(_msgSender(), market);
     }
 
-    function acceptTimelock() external afterTimelock(pendingTimelock.validAt) {
-        _setTimelock(pendingTimelock.value);
+    /**
+     * @inheritdoc ITermMaxVault
+     */
+    function acceptTimelock() external afterTimelock(_pendingTimelock.validAt) {
+        _setTimelock(_pendingTimelock.value);
     }
 
-    function acceptGuardian() external afterTimelock(pendingGuardian.validAt) {
-        _setGuardian(pendingGuardian.value);
+    /**
+     * @inheritdoc ITermMaxVault
+     */
+    function acceptGuardian() external afterTimelock(_pendingGuardian.validAt) {
+        _setGuardian(_pendingGuardian.value);
     }
 
-    function acceptMarket(address market) external afterTimelock(pendingMarkets[market].validAt) {
+    /**
+     * @inheritdoc ITermMaxVault
+     */
+    function acceptMarket(address market) external afterTimelock(_pendingMarkets[market].validAt) {
         _setMarketWhitelist(market, true);
     }
 
-    function acceptPerformanceFeeRate() external afterTimelock(pendingPerformanceFeeRate.validAt) {
-        _setPerformanceFeeRate(uint(pendingPerformanceFeeRate.value).toUint64());
-        delete pendingPerformanceFeeRate;
-        emit SetPerformanceFeeRate(_msgSender(), performanceFeeRate);
+    /**
+     * @inheritdoc ITermMaxVault
+     */
+    function acceptPerformanceFeeRate() external afterTimelock(_pendingPerformanceFeeRate.validAt) {
+        _setPerformanceFeeRate(uint256(_pendingPerformanceFeeRate.value).toUint64());
+        delete _pendingPerformanceFeeRate;
+        emit SetPerformanceFeeRate(_msgSender(), _performanceFeeRate);
     }
 
+    /**
+     * @notice Pauses the contract
+     */
     function pause() external onlyOwner {
         _pause();
     }
 
+    /**
+     * @notice Unpauses the contract
+     */
     function unpause() external onlyOwner {
         _unpause();
+    }
+
+    function _previewAccruedInterest()
+        internal
+        view
+        returns (uint256 previewPrincipal, uint256 previewPerformanceFee)
+    {
+        uint64 currentTime = block.timestamp.toUint64();
+
+        uint256 lastTime = _lastUpdateTime;
+        if (lastTime == 0) {
+            return (0, 0);
+        }
+        uint64 recentMaturity = _recentestMaturity;
+        uint256 previewAnualizedInterest = _annualizedInterest;
+        previewPrincipal = _accretingPrincipal;
+        previewPerformanceFee = _performanceFee;
+
+        while (currentTime >= recentMaturity && recentMaturity != 0) {
+            (uint256 previewInterest, uint256 previewPerformanceFeeToCurator) =
+                _previewAccruedPeriodInterest(lastTime, recentMaturity, previewAnualizedInterest);
+            lastTime = recentMaturity;
+            uint64 nextMaturity = _maturityMapping[recentMaturity];
+            // update anualized interest
+            previewAnualizedInterest -= _maturityToInterest[recentMaturity];
+
+            previewPerformanceFee += previewPerformanceFeeToCurator;
+            previewPrincipal += previewInterest;
+
+            recentMaturity = nextMaturity;
+        }
+        if (recentMaturity > 0) {
+            (uint256 previewInterest, uint256 previewPerformanceFeeToCurator) =
+                _previewAccruedPeriodInterest(lastTime, currentTime, previewAnualizedInterest);
+            previewPerformanceFee += previewPerformanceFeeToCurator;
+            previewPrincipal += previewInterest;
+        }
+    }
+
+    function _previewAccruedPeriodInterest(uint256 startTime, uint256 endTime, uint256 previewAnualizedInterest)
+        internal
+        view
+        returns (uint256, uint256)
+    {
+        uint256 interest = (previewAnualizedInterest * (endTime - startTime)) / 365 days;
+        uint256 performanceFeeToCurator = (interest * _performanceFeeRate) / Constants.DECIMAL_BASE;
+        return (interest - performanceFeeToCurator, performanceFeeToCurator);
+    }
+
+    /// @notice Callback function for the swap
+    /// @param deltaFt The change in the ft balance of the order
+    function swapCallback(int256 deltaFt, int256) external override {
+        _delegateCall(abi.encodeCall(IOrderManager.swapCallback, (deltaFt)));
     }
 }

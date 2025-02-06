@@ -3,10 +3,11 @@ pragma solidity ^0.8.27;
 
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
-import {ITermMaxMarket} from "../ITermMaxMarket.sol";
-import {CurveCuts} from "../storage/TermMaxStorage.sol";
-import {ITermMaxOrder} from "../ITermMaxOrder.sol";
-import {PendingAddress, PendingUint192} from "../lib/PendingLib.sol";
+import {ITermMaxMarket} from "contracts/ITermMaxMarket.sol";
+import {CurveCuts, VaultInitialParams} from "contracts/storage/TermMaxStorage.sol";
+import {ITermMaxOrder} from "contracts/ITermMaxOrder.sol";
+import {PendingAddress, PendingUint192} from "contracts/lib/PendingLib.sol";
+import {OrderInfo} from "./VaultStorage.sol";
 
 /**
  * @title TermMax Vault Interface
@@ -16,6 +17,12 @@ import {PendingAddress, PendingUint192} from "../lib/PendingLib.sol";
  */
 interface ITermMaxVault is IERC4626 {
     /**
+     * @notice Initializes the vault
+     * @param params The initial parameters of the vault
+     */
+    function initialize(VaultInitialParams memory params) external;
+
+    /**
      * @notice Handles bad debt by exchanging shares for collateral
      * @param collaretal The collateral token address
      * @param badDebtAmt The amount of bad debt to handle
@@ -24,12 +31,9 @@ interface ITermMaxVault is IERC4626 {
      * @return shares The amount of shares burned
      * @return collaretalOut The amount of collateral released
      */
-    function dealBadDebt(
-        address collaretal,
-        uint256 badDebtAmt,
-        address recipient,
-        address owner
-    ) external returns (uint256 shares, uint256 collaretalOut);
+    function dealBadDebt(address collaretal, uint256 badDebtAmt, address recipient, address owner)
+        external
+        returns (uint256 shares, uint256 collaretalOut);
 
     /**
      * @notice Returns the current Annual Percentage Rate (APR)
@@ -72,37 +76,23 @@ interface ITermMaxVault is IERC4626 {
     /**
      * @notice Returns the pending market information
      * @param market The market address to check
-     * @return value The pending market value
-     * @return validAt The timestamp when the pending market value becomes valid
      */
-    function pendingMarkets(address market) external view returns (uint192 value, uint64 validAt);
+    function pendingMarkets(address market) external view returns (PendingUint192 memory);
 
     /**
      * @notice Returns the pending timelock information
-     * @return value The pending timelock value
-     * @return validAt The timestamp when the pending timelock value becomes valid
      */
-    function pendingTimelock() external view returns (uint192 value, uint64 validAt);
+    function pendingTimelock() external view returns (PendingUint192 memory);
 
     /**
      * @notice Returns the pending performance fee rate information
-     * @return value The pending performance fee rate value
-     * @return validAt The timestamp when the pending performance fee rate value becomes valid
      */
-    function pendingPerformanceFeeRate() external view returns (uint192 value, uint64 validAt);
+    function pendingPerformanceFeeRate() external view returns (PendingUint192 memory);
 
     /**
      * @notice Returns the pending guardian information
-     * @return value The pending guardian address
-     * @return validAt The timestamp when the pending guardian address becomes valid
      */
-    function pendingGuardian() external view returns (address value, uint64 validAt);
-
-    /**
-     * @notice Returns the maximum term duration
-     * @return The maximum term duration in seconds
-     */
-    function maxTerm() external view returns (uint64);
+    function pendingGuardian() external view returns (PendingAddress memory);
 
     /**
      * @notice Returns the performance fee rate
@@ -121,6 +111,12 @@ interface ITermMaxVault is IERC4626 {
      * @return The accreting principal amount
      */
     function accretingPrincipal() external view returns (uint256);
+
+    /**
+     * @notice Returns the annualized interest
+     * @return The annualized interest
+     */
+    function annualizedInterest() external view returns (uint256);
 
     /**
      * @notice Returns the performance fee amount
@@ -142,18 +138,17 @@ interface ITermMaxVault is IERC4626 {
      */
     function withdrawQueue(uint256 index) external view returns (address);
 
+    /// @notice Return the length of the supply queue
+    function supplyQueueLength() external view returns (uint256);
+
+    /// @notice Return the length of the withdraw queue
+    function withdrawQueueLength() external view returns (uint256);
+
     /**
      * @notice Returns the order mapping information
      * @param order The order address to retrieve
-     * @return market The market address associated with the order
-     * @return ft The ft token address associated with the order
-     * @return xt The xt token address associated with the order
-     * @return maxSupply The maximum supply of the order
-     * @return maturity The maturity timestamp of the order
      */
-    function orderMapping(
-        address order
-    ) external view returns (ITermMaxMarket market, IERC20 ft, IERC20 xt, uint128 maxSupply, uint64 maturity);
+    function orderMapping(address order) external view returns (OrderInfo memory);
 
     /**
      * @notice Returns the bad debt mapping information
@@ -170,12 +165,9 @@ interface ITermMaxVault is IERC4626 {
      * @param curveCuts The curve cuts to use for the order
      * @return order The newly created order
      */
-    function createOrder(
-        ITermMaxMarket market,
-        uint256 maxSupply,
-        uint256 initialReserve,
-        CurveCuts calldata curveCuts
-    ) external returns (ITermMaxOrder order);
+    function createOrder(ITermMaxMarket market, uint256 maxSupply, uint256 initialReserve, CurveCuts calldata curveCuts)
+        external
+        returns (ITermMaxOrder order);
 
     /**
      * @notice Updates multiple orders

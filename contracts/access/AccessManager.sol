@@ -44,11 +44,10 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
     }
 
     /// @notice Set GT implementation to the factory
-    function setGtImplement(
-        ITermMaxFactory factory,
-        string memory gtImplementName,
-        address gtImplement
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setGtImplement(ITermMaxFactory factory, string memory gtImplementName, address gtImplement)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
         factory.setGtImplement(gtImplementName, gtImplement);
     }
 
@@ -84,38 +83,34 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
     }
 
     /// @notice Upgrade the target contract using UUPS
-    function upgradeSubContract(
-        UUPSUpgradeable proxy,
-        address newImplementation,
-        bytes memory data
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function upgradeSubContract(UUPSUpgradeable proxy, address newImplementation, bytes memory data)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
         proxy.upgradeToAndCall(newImplementation, data);
     }
 
     /// @notice Set the market whitelist for router
-    function setMarketWhitelist(
-        ITermMaxRouter router,
-        address market,
-        bool isWhitelist
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setMarketWhitelist(ITermMaxRouter router, address market, bool isWhitelist)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
         router.setMarketWhitelist(market, isWhitelist);
     }
 
     /// @notice Set the adapter whitelist for router
-    function setAdapterWhitelist(
-        ITermMaxRouter router,
-        address adapter,
-        bool isWhitelist
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setAdapterWhitelist(ITermMaxRouter router, address adapter, bool isWhitelist)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
         router.setAdapterWhitelist(adapter, isWhitelist);
     }
 
     /// @notice Set the oracle
-    function setOracle(
-        IOracle aggregator,
-        address asset,
-        IOracle.Oracle memory oracle
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setOracle(IOracle aggregator, address asset, IOracle.Oracle memory oracle)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
         aggregator.setOracle(asset, oracle);
     }
 
@@ -125,10 +120,10 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
     }
 
     /// @notice Update the market configuration
-    function updateMarketConfig(
-        ITermMaxMarket market,
-        MarketConfig calldata newConfig
-    ) external onlyRole(CONFIGURATOR_ROLE) {
+    function updateMarketConfig(ITermMaxMarket market, MarketConfig calldata newConfig)
+        external
+        onlyRole(CONFIGURATOR_ROLE)
+    {
         market.updateMarketConfig(newConfig);
     }
 
@@ -138,8 +133,11 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
     }
 
     /// @notice Set the fee rate of an order
-    function setOrderFeeRate(ITermMaxOrder order, FeeConfig memory feeConfig) external onlyRole(CONFIGURATOR_ROLE) {
-        order.updateFeeConfig(feeConfig);
+    function updateOrderFeeRate(ITermMaxMarket market, ITermMaxOrder order, FeeConfig memory feeConfig)
+        external
+        onlyRole(CONFIGURATOR_ROLE)
+    {
+        market.updateOrderFeeRate(order, feeConfig);
     }
 
     /// @notice Set the switch of an entity
@@ -176,11 +174,10 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
     }
 
     /// @notice Set the allocator for the vault
-    function setIsAllocatorForVault(
-        ITermMaxVault vault,
-        address allocator,
-        bool isAllocator
-    ) external onlyRole(VAULT_ROLE) {
+    function setIsAllocatorForVault(ITermMaxVault vault, address allocator, bool isAllocator)
+        external
+        onlyRole(VAULT_ROLE)
+    {
         vault.setIsAllocator(allocator, isAllocator);
     }
 

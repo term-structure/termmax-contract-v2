@@ -3,24 +3,24 @@ pragma solidity ^0.8.27;
 
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
-import {TermMaxFactory} from "../../../contracts/factory/TermMaxFactory.sol";
-import {ITermMaxFactory} from "../../../contracts/factory/ITermMaxFactory.sol";
-import {TermMaxRouter} from "../../../contracts/router/TermMaxRouter.sol";
+import {TermMaxFactory} from "contracts/factory/TermMaxFactory.sol";
+import {ITermMaxFactory} from "contracts/factory/ITermMaxFactory.sol";
+import {TermMaxRouter} from "contracts/router/TermMaxRouter.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {TermMaxMarket} from "../../../contracts/TermMaxMarket.sol";
-import {MockERC20} from "../../../contracts/test/MockERC20.sol";
-import {MockPriceFeed} from "../../../contracts/test/MockPriceFeed.sol";
-import {MockPriceFeed} from "../../../contracts/test/MockPriceFeed.sol";
-import {MarketConfig} from "../../../contracts/storage/TermMaxStorage.sol";
-import {IMintableERC20} from "../../../contracts/tokens/IMintableERC20.sol";
-import {IGearingToken} from "../../../contracts/tokens/IGearingToken.sol";
-import {IOracle} from "../../../contracts/oracle/IOracle.sol";
+import {TermMaxMarket} from "contracts/TermMaxMarket.sol";
+import {MockERC20} from "contracts/test/MockERC20.sol";
+import {MockPriceFeed} from "contracts/test/MockPriceFeed.sol";
+import {MockPriceFeed} from "contracts/test/MockPriceFeed.sol";
+import {MarketConfig} from "contracts/storage/TermMaxStorage.sol";
+import {IMintableERC20} from "contracts/tokens/IMintableERC20.sol";
+import {IGearingToken} from "contracts/tokens/IGearingToken.sol";
+import {IOracle} from "contracts/oracle/IOracle.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {MockSwapAdapter} from "../../../contracts/test/MockSwapAdapter.sol";
+import {MockSwapAdapter} from "contracts/test/MockSwapAdapter.sol";
 import {JsonLoader} from "../../utils/JsonLoader.sol";
-import {Faucet} from "../../../contracts/test/testnet/Faucet.sol";
-import {FaucetERC20} from "../../../contracts/test/testnet/FaucetERC20.sol";
+import {Faucet} from "contracts/test/testnet/Faucet.sol";
+import {FaucetERC20} from "contracts/test/testnet/FaucetERC20.sol";
 import {DeployBase} from "../DeployBase.s.sol";
 
 contract DeloyMarketHolesky is DeployBase {
@@ -31,10 +31,10 @@ contract DeloyMarketHolesky is DeployBase {
     address priceFeedOperatorAddr = vm.envAddress("HOLESKY_PRICE_FEED_OPERATOR_ADDRESS");
 
     // address config
-    address factoryAddr = address(0xc7FDd3804056216fe2E45b6FA71eA1c191b30117);
-    address oracleAddr = address(0xb5b411c88c13768636E99013b6b3b0E20E485789);
-    address routerAddr = address(0xA44742D456e644D4108B8B4421189EF46F583812);
-    address faucetAddr = address(0x422738015AF2E812D5Ec73BdE20bE06755508696);
+    address factoryAddr = address(0x45588fA88635A1B37d69f34A03B7600406533EC8);
+    address oracleAddr = address(0x2FC5F74e16822AA820E677afD5e80b953ad995EE);
+    address routerAddr = address(0x959D4521BD48B6487D415Aad576Af2222ADB1a92);
+    address faucetAddr = address(0x5adA709210846DA33E3866490EAFB90B7ea96f7f);
 
     address[] devs = [
         address(0x19A736387ea2F42AcAb1BC0FdE15e667e63ea9cC), // Sunny
@@ -49,13 +49,7 @@ contract DeloyMarketHolesky is DeployBase {
         string memory deployDataPath = string.concat(vm.projectRoot(), "/script/deploy/deploydata/holesky.json");
         vm.startBroadcast(deployerPrivateKey);
         (TermMaxMarket[] memory markets, JsonLoader.Config[] memory configs) = deployMarkets(
-            factoryAddr,
-            oracleAddr,
-            routerAddr,
-            faucetAddr,
-            deployDataPath,
-            adminAddr,
-            priceFeedOperatorAddr
+            factoryAddr, oracleAddr, routerAddr, faucetAddr, deployDataPath, adminAddr, priceFeedOperatorAddr
         );
 
         console.log("Faucet token number:", faucet.tokenNum());
@@ -79,7 +73,7 @@ contract DeloyMarketHolesky is DeployBase {
         console.log("Deployed at block number:", currentBlockNum);
         console.log("");
 
-        for (uint i = 0; i < markets.length; i++) {
+        for (uint256 i = 0; i < markets.length; i++) {
             console.log("===== Market Info - %d =====", i);
             printMarketConfig(faucet, markets[i], configs[i].salt);
             console.log("");
@@ -88,23 +82,17 @@ contract DeloyMarketHolesky is DeployBase {
 
     function printMarketConfig(Faucet faucet, TermMaxMarket market, uint256 salt) public view {
         MarketConfig memory marketConfig = market.config();
-        (IMintableERC20 ft, IMintableERC20 xt, IGearingToken gt, address collateralAddr, IERC20 underlying) = market
-            .tokens();
+        (IMintableERC20 ft, IMintableERC20 xt, IGearingToken gt, address collateralAddr, IERC20 underlying) =
+            market.tokens();
 
         Faucet.TokenConfig memory collateralConfig = faucet.getTokenConfig(faucet.getTokenId(collateralAddr));
 
         Faucet.TokenConfig memory underlyingConfig = faucet.getTokenConfig(faucet.getTokenId(address(underlying)));
 
         console.log("Market deployed at:", address(market));
+        console.log("Collateral (%s) deployed at: %s", IERC20Metadata(collateralAddr).symbol(), address(collateralAddr));
         console.log(
-            "Collateral (%s) deployed at: %s",
-            IERC20Metadata(collateralAddr).symbol(),
-            address(collateralAddr)
-        );
-        console.log(
-            "Underlying (%s) deployed at: %s",
-            IERC20Metadata(address(underlying)).symbol(),
-            address(underlying)
+            "Underlying (%s) deployed at: %s", IERC20Metadata(address(underlying)).symbol(), address(underlying)
         );
         console.log("Collateral price feed deployed at:", address(collateralConfig.priceFeedAddr));
         console.log("Underlying price feed deployed at:", address(underlyingConfig.priceFeedAddr));

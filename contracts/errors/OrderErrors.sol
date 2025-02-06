@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
+
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
@@ -7,10 +8,6 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
  * @notice Custom errors for the TermMax order operations
  */
 interface OrderErrors {
-    /**
-     * @notice Error thrown when attempting to interact with a zero address
-     */
-    error ZeroAddress();
     /**
      * @notice Error thrown when attempting to interact with an order before its term is open
      */
@@ -27,11 +24,6 @@ interface OrderErrors {
      * @notice Error thrown when attempting to swap a token for itself
      */
     error CantSwapSameToken();
-
-    /**
-     * @notice Error thrown when a fee rate is set higher than the maximum allowed
-     */
-    error FeeTooHigh();
 
     /**
      * @notice Error thrown when attempting to issue FT without a corresponding GT
@@ -54,9 +46,9 @@ interface OrderErrors {
     error LendIsNotAllowed();
 
     /**
-     * @notice Error thrown when a non-maker attempts to perform a maker-only action
+     * @notice Error thrown when a non-market attempts to perform a market-only action
      */
-    error OnlyMaker();
+    error OnlyMarket();
 
     /**
      * @notice Error thrown when a GT hasn't been approved for an operation
@@ -74,7 +66,7 @@ interface OrderErrors {
      * @param expectedAmt The expected amount
      * @param actualAmt The actual amount received
      */
-    error UnexpectedAmount(uint expectedAmt, uint actualAmt);
+    error UnexpectedAmount(uint256 expectedAmt, uint256 actualAmt);
 
     /**
      * @notice Error thrown when attempting to redeem before the final liquidation deadline

@@ -26,6 +26,7 @@ import "contracts/storage/TermMaxStorage.sol";
 contract RouterTest is Test {
     using JSONLoader for *;
     using SafeCast for *;
+
     DeployUtils.Res res;
 
     OrderConfig orderConfig;
@@ -53,22 +54,16 @@ contract RouterTest is Test {
 
         res = DeployUtils.deployMarket(deployer, marketConfig, maxLtv, liquidationLtv);
 
-        res.order = res.market.createOrder(
-            maker,
-            orderConfig.maxXtReserve,
-            ISwapCallback(address(0)),
-            orderConfig.curveCuts
-        );
+        res.order =
+            res.market.createOrder(maker, orderConfig.maxXtReserve, ISwapCallback(address(0)), orderConfig.curveCuts);
 
         vm.warp(vm.parseUint(vm.parseJsonString(testdata, ".currentTime")));
 
         // update oracle
-        res.collateralOracle.updateRoundData(
-            JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_2000_DAI_1.eth")
-        );
+        res.collateralOracle.updateRoundData(JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_2000_DAI_1.eth"));
         res.debtOracle.updateRoundData(JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_2000_DAI_1.dai"));
 
-        uint amount = 150e8;
+        uint256 amount = 150e8;
         res.debt.mint(deployer, amount);
         res.debt.approve(address(res.market), amount);
         res.market.mint(deployer, amount);
@@ -213,9 +208,8 @@ contract RouterTest is Test {
         orders[0] = res.order;
         orders[1] = res.order;
 
-        (uint128 maxBurn, uint128 sellAmt) = ftAmount > xtAmount
-            ? (xtAmount, ftAmount - xtAmount)
-            : (ftAmount, xtAmount - ftAmount);
+        (uint128 maxBurn, uint128 sellAmt) =
+            ftAmount > xtAmount ? (xtAmount, ftAmount - xtAmount) : (ftAmount, xtAmount - ftAmount);
         uint128[] memory tradingAmts = new uint128[](2);
         tradingAmts[0] = sellAmt / 2;
         tradingAmts[1] = sellAmt / 2;
@@ -226,15 +220,8 @@ contract RouterTest is Test {
 
         // vm.expectEmit();
         // emit ITermMaxRouter.SellTokens(res.market, tokenToSell, sender, orders, tradingAmts, mintTokenOut);
-        uint256 netOut = res.router.sellTokens(
-            sender,
-            res.market,
-            ftAmount,
-            xtAmount,
-            orders,
-            tradingAmts,
-            mintTokenOut
-        );
+        uint256 netOut =
+            res.router.sellTokens(sender, res.market, ftAmount, xtAmount, orders, tradingAmts, mintTokenOut);
         assertEq(netOut, res.debt.balanceOf(sender));
         assertEq(res.ft.balanceOf(sender), 0);
         assertEq(res.xt.balanceOf(sender), 0);
@@ -264,17 +251,9 @@ contract RouterTest is Test {
         units[0] = SwapUnit(address(adapter), address(res.debt), address(res.collateral), abi.encode(minCollAmt));
 
         res.debt.approve(address(res.router), tokenToSwap + 2e8 * 2);
-        (uint256 gtId, uint256 netXtOut) = res.router.leverageFromToken(
-            sender,
-            res.market,
-            orders,
-            amtsToBuyXt,
-            minXtOut,
-            tokenToSwap,
-            maxLtv,
-            units
-        );
-        (address owner, uint128 debtAmt, , bytes memory collateralData) = res.gt.loanInfo(gtId);
+        (uint256 gtId, uint256 netXtOut) =
+            res.router.leverageFromToken(sender, res.market, orders, amtsToBuyXt, minXtOut, tokenToSwap, maxLtv, units);
+        (address owner, uint128 debtAmt,, bytes memory collateralData) = res.gt.loanInfo(gtId);
         assertEq(owner, sender);
         assertEq(minCollAmt, abi.decode(collateralData, (uint256)));
         assertEq(netXtOut, debtAmt);
@@ -299,7 +278,7 @@ contract RouterTest is Test {
         res.debt.approve(address(res.router), tokenToSwap);
 
         uint256 gtId = res.router.leverageFromXt(sender, res.market, xtAmt, tokenToSwap, maxLtv, units);
-        (address owner, uint128 debtAmt, , bytes memory collateralData) = res.gt.loanInfo(gtId);
+        (address owner, uint128 debtAmt,, bytes memory collateralData) = res.gt.loanInfo(gtId);
         assertEq(owner, sender);
         assertEq(minCollAmt, abi.decode(collateralData, (uint256)));
         assertEq(xtAmt, debtAmt);
@@ -314,7 +293,7 @@ contract RouterTest is Test {
         uint128 maxLtv = 0.1e2;
         uint256 minCollAmt = 1e18;
 
-        uint ltv = xtAmt / 2000;
+        uint256 ltv = xtAmt / 2000;
 
         deal(address(res.xt), sender, xtAmt);
 
@@ -353,15 +332,9 @@ contract RouterTest is Test {
 
         // vm.expectEmit();
         // emit RouterEvents.Borrow(res.market, gtId, sender, sender, collInAmt, maxDebtAmt.toUint128(), borrowAmt);
-        uint256 gtId = res.router.borrowTokenFromCollateral(
-            sender,
-            res.market,
-            collInAmt,
-            orders,
-            tokenAmtsWantBuy,
-            maxDebtAmt
-        );
-        (address owner, uint128 debtAmt, , bytes memory collateralData) = res.gt.loanInfo(gtId);
+        uint256 gtId =
+            res.router.borrowTokenFromCollateral(sender, res.market, collInAmt, orders, tokenAmtsWantBuy, maxDebtAmt);
+        (address owner, uint128 debtAmt,, bytes memory collateralData) = res.gt.loanInfo(gtId);
         assertEq(owner, sender);
         assertEq(collInAmt, abi.decode(collateralData, (uint256)));
         assert(debtAmt <= maxDebtAmt);
@@ -385,15 +358,15 @@ contract RouterTest is Test {
 
         res.xt.approve(address(res.router), borrowAmt);
 
-        uint issueFtFeeRatio = res.market.issueFtFeeRatio();
-        uint128 previewDebtAmt = ((borrowAmt * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - issueFtFeeRatio))
-            .toUint128();
+        uint256 issueFtFeeRatio = res.market.issueFtFeeRatio();
+        uint128 previewDebtAmt =
+            ((borrowAmt * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - issueFtFeeRatio)).toUint128();
 
         vm.expectEmit();
         emit RouterEvents.Borrow(res.market, 1, sender, sender, collInAmt, previewDebtAmt, borrowAmt);
 
         uint256 gtId = res.router.borrowTokenFromCollateral(sender, res.market, collInAmt, borrowAmt);
-        (address owner, uint128 debtAmt, , bytes memory collateralData) = res.gt.loanInfo(gtId);
+        (address owner, uint128 debtAmt,, bytes memory collateralData) = res.gt.loanInfo(gtId);
         assertEq(owner, sender);
         assertEq(collInAmt, abi.decode(collateralData, (uint256)));
         assert(previewDebtAmt == debtAmt);
@@ -406,7 +379,7 @@ contract RouterTest is Test {
         vm.startPrank(sender);
         uint256 collInAmt = 1e18;
 
-        (uint256 gtId, ) = LoanUtils.fastMintGt(res, sender, 100e8, collInAmt);
+        (uint256 gtId,) = LoanUtils.fastMintGt(res, sender, 100e8, collInAmt);
 
         uint128 borrowAmt = 80e8;
 
@@ -417,16 +390,16 @@ contract RouterTest is Test {
         res.xt.approve(address(res.router), borrowAmt);
         res.gt.approve(address(res.router), gtId);
 
-        uint issueFtFeeRatio = res.market.issueFtFeeRatio();
-        uint128 previewDebtAmt = ((borrowAmt * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - issueFtFeeRatio))
-            .toUint128();
+        uint256 issueFtFeeRatio = res.market.issueFtFeeRatio();
+        uint128 previewDebtAmt =
+            ((borrowAmt * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - issueFtFeeRatio)).toUint128();
 
         vm.expectEmit();
         emit RouterEvents.Borrow(res.market, 1, sender, sender, 0, previewDebtAmt, borrowAmt);
 
         res.router.borrowTokenFromGt(sender, res.market, gtId, borrowAmt);
 
-        (, uint128 debtAmt, , ) = res.gt.loanInfo(gtId);
+        (, uint128 debtAmt,,) = res.gt.loanInfo(gtId);
         assert(debtAmt == 100e8 + previewDebtAmt);
         assertEq(res.debt.balanceOf(sender), borrowAmt);
 
@@ -436,13 +409,13 @@ contract RouterTest is Test {
     function testFlashRepayFromCollateral() public {
         vm.startPrank(sender);
         uint128 debtAmt = 100e8;
-        (uint gtId, ) = LoanUtils.fastMintGt(res, sender, debtAmt, 1e18);
+        (uint256 gtId,) = LoanUtils.fastMintGt(res, sender, debtAmt, 1e18);
 
         ITermMaxOrder[] memory orders = new ITermMaxOrder[](0);
         uint128[] memory amtsToBuyFt = new uint128[](0);
         bool byDebtToken = true;
 
-        uint mintTokenOut = 2000e8;
+        uint256 mintTokenOut = 2000e8;
         SwapUnit[] memory units = new SwapUnit[](1);
         units[0] = SwapUnit(address(adapter), address(res.collateral), address(res.debt), abi.encode(mintTokenOut));
 
@@ -461,7 +434,7 @@ contract RouterTest is Test {
     function testFlashRepayFromCollateral_ByFt() public {
         vm.startPrank(sender);
         uint128 debtAmt = 100e8;
-        (uint gtId, ) = LoanUtils.fastMintGt(res, sender, debtAmt, 1e18);
+        (uint256 gtId,) = LoanUtils.fastMintGt(res, sender, debtAmt, 1e18);
 
         ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
         orders[0] = res.order;
@@ -470,7 +443,7 @@ contract RouterTest is Test {
 
         bool byDebtToken = false;
 
-        uint mintTokenOut = 2000e8;
+        uint256 mintTokenOut = 2000e8;
         SwapUnit[] memory units = new SwapUnit[](1);
         units[0] = SwapUnit(address(adapter), address(res.collateral), address(res.debt), abi.encode(mintTokenOut));
 
@@ -489,8 +462,8 @@ contract RouterTest is Test {
     function testRepayByTokenThroughFt() public {
         vm.startPrank(sender);
         uint128 debtAmt = 100e8;
-        uint collateralAmt = 1e18;
-        (uint gtId, ) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
+        uint256 collateralAmt = 1e18;
+        (uint256 gtId,) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
 
         ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
         orders[0] = res.order;
@@ -501,7 +474,7 @@ contract RouterTest is Test {
         res.debt.mint(sender, maxTokenIn);
         res.debt.approve(address(res.router), maxTokenIn);
 
-        uint returnAmt = res.router.repayByTokenThroughFt(sender, res.market, gtId, orders, amtsToBuyFt, maxTokenIn);
+        uint256 returnAmt = res.router.repayByTokenThroughFt(sender, res.market, gtId, orders, amtsToBuyFt, maxTokenIn);
 
         assertEq(res.debt.balanceOf(sender), returnAmt);
         assertEq(res.collateral.balanceOf(sender), collateralAmt);
@@ -515,8 +488,8 @@ contract RouterTest is Test {
     function testPartialRepayByTokenThroughFt() public {
         vm.startPrank(sender);
         uint128 debtAmt = 100e8;
-        uint collateralAmt = 1e18;
-        (uint gtId, ) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
+        uint256 collateralAmt = 1e18;
+        (uint256 gtId,) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
 
         ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
         orders[0] = res.order;
@@ -527,12 +500,12 @@ contract RouterTest is Test {
         res.debt.mint(sender, maxTokenIn);
         res.debt.approve(address(res.router), maxTokenIn);
 
-        uint returnAmt = res.router.repayByTokenThroughFt(sender, res.market, gtId, orders, amtsToBuyFt, maxTokenIn);
+        uint256 returnAmt = res.router.repayByTokenThroughFt(sender, res.market, gtId, orders, amtsToBuyFt, maxTokenIn);
 
         assertEq(res.debt.balanceOf(sender), returnAmt);
         assertEq(res.collateral.balanceOf(sender), 0);
 
-        (address owner, uint128 dAmt, , bytes memory collateralData) = res.gt.loanInfo(gtId);
+        (address owner, uint128 dAmt,, bytes memory collateralData) = res.gt.loanInfo(gtId);
         assertEq(owner, sender);
         assertEq(collateralAmt, abi.decode(collateralData, (uint256)));
         assertEq(dAmt, debtAmt / 2);
@@ -573,23 +546,21 @@ contract RouterTest is Test {
 
         vm.startPrank(bob);
 
-        uint minDebtOutAmt = 1000e8;
+        uint256 minDebtOutAmt = 1000e8;
         SwapUnit[] memory units = new SwapUnit[](1);
         units[0] = SwapUnit(address(adapter), address(res.collateral), address(res.debt), abi.encode(minDebtOutAmt));
 
         res.ft.approve(address(res.router), depositAmt);
-        uint ftTotalSupply = res.ft.totalSupply();
-        uint redeemedDebtToken = (res.debt.balanceOf(address(res.market)) * depositAmt) / ftTotalSupply;
+        uint256 ftTotalSupply = res.ft.totalSupply();
+        uint256 redeemedDebtToken = (res.debt.balanceOf(address(res.market)) * depositAmt) / ftTotalSupply;
         redeemedDebtToken =
-            redeemedDebtToken -
-            (marketConfig.feeConfig.redeemFeeRatio * redeemedDebtToken) /
-            Constants.DECIMAL_BASE;
+            redeemedDebtToken - (marketConfig.feeConfig.redeemFeeRatio * redeemedDebtToken) / Constants.DECIMAL_BASE;
 
-        uint expectedOutput = redeemedDebtToken + minDebtOutAmt;
+        uint256 expectedOutput = redeemedDebtToken + minDebtOutAmt;
 
         vm.expectEmit();
         emit RouterEvents.RedeemAndSwap(res.market, depositAmt, bob, bob, expectedOutput);
-        uint netOutput = res.router.redeemAndSwap(bob, res.market, depositAmt, units, expectedOutput);
+        uint256 netOutput = res.router.redeemAndSwap(bob, res.market, depositAmt, units, expectedOutput);
 
         assertEq(netOutput, expectedOutput);
         assertEq(res.debt.balanceOf(bob), netOutput);
@@ -614,14 +585,7 @@ contract RouterTest is Test {
         res.ft.approve(address(res.router), ftToDeposit);
         res.xt.approve(address(res.router), xtToDeposit);
         ITermMaxOrder order = res.router.createOrderAndDeposit(
-            res.market,
-            maker,
-            maxXtReserve,
-            swapTrigger,
-            debtTokenToDeposit,
-            ftToDeposit,
-            xtToDeposit,
-            curveCuts
+            res.market, maker, maxXtReserve, swapTrigger, debtTokenToDeposit, ftToDeposit, xtToDeposit, curveCuts
         );
 
         assertEq(order.maker(), maker);

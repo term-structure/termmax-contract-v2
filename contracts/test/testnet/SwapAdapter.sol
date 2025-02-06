@@ -13,12 +13,12 @@ contract SwapAdapter is ERC20SwapAdapter {
         pool = pool_;
     }
 
-    function _swap(
-        IERC20 tokenIn,
-        IERC20 tokenOut,
-        uint256 amount,
-        bytes memory swapData
-    ) internal virtual override returns (uint256 tokenOutAmt) {
+    function _swap(IERC20 tokenIn, IERC20 tokenOut, uint256 amount, bytes memory swapData)
+        internal
+        virtual
+        override
+        returns (uint256 tokenOutAmt)
+    {
         (address tokenInPriceFeedAddr, address tokenOutPriceFeedAddr) = abi.decode(swapData, (address, address));
 
         uint8 tokenInDecimals = IMintableERC20(address(tokenIn)).decimals();
@@ -26,14 +26,13 @@ contract SwapAdapter is ERC20SwapAdapter {
 
         MockPriceFeed tokenInPriceFeed = MockPriceFeed(tokenInPriceFeedAddr);
         MockPriceFeed tokenOutPriceFeed = MockPriceFeed(address(tokenOutPriceFeedAddr));
-        (, int256 tokenInPrice, , , ) = tokenInPriceFeed.latestRoundData();
+        (, int256 tokenInPrice,,,) = tokenInPriceFeed.latestRoundData();
         uint8 tokenInPriceDecimals = tokenInPriceFeed.decimals();
-        (, int256 tokenOutPrice, , , ) = tokenOutPriceFeed.latestRoundData();
+        (, int256 tokenOutPrice,,,) = tokenOutPriceFeed.latestRoundData();
         uint8 tokenOutPriceDecimals = tokenOutPriceFeed.decimals();
 
-        tokenOutAmt =
-            (amount * uint256(tokenInPrice) * 10 ** tokenOutPriceDecimals * 10 ** tokenOutDecimals) /
-            (uint256(tokenOutPrice) * 10 ** tokenInPriceDecimals * 10 ** tokenInDecimals);
+        tokenOutAmt = (amount * uint256(tokenInPrice) * 10 ** tokenOutPriceDecimals * 10 ** tokenOutDecimals)
+            / (uint256(tokenOutPrice) * 10 ** tokenInPriceDecimals * 10 ** tokenInDecimals);
         console.log("tokenInAmt: %d", amount);
         console.log("tokenOutAmt: %d", tokenOutAmt);
         IERC20(tokenIn).transfer(pool, amount);

@@ -15,12 +15,8 @@ interface IGearingToken is IERC721Enumerable {
     /// @param symbol The token's symbol
     /// @param config Configuration of GT
     /// @param initalParams The initilization parameters of implementation
-    function initialize(
-        string memory name,
-        string memory symbol,
-        GtConfig memory config,
-        bytes memory initalParams
-    ) external;
+    function initialize(string memory name, string memory symbol, GtConfig memory config, bytes memory initalParams)
+        external;
 
     /// @notice Set the treasurer address
     /// @param treasurer New address of treasurer
@@ -46,17 +42,14 @@ interface IGearingToken is IERC721Enumerable {
     /// @param  collateralData The encoded data of collateral
     /// @return id The id of Gearing Token
     /// @dev Only the market can mint Gearing Token
-    function mint(
-        address collateralProvider,
-        address to,
-        uint128 debtAmt,
-        bytes memory collateralData
-    ) external returns (uint256 id);
+    function mint(address collateralProvider, address to, uint128 debtAmt, bytes memory collateralData)
+        external
+        returns (uint256 id);
 
     /// @notice Augment the debt of Gearing Token
     /// @param  id The id of Gearing Token
     /// @param  ftAmt The amount of debt, unit by debtToken token
-    function augmentDebt(address caller, uint256 id, uint ftAmt) external;
+    function augmentDebt(address caller, uint256 id, uint256 ftAmt) external;
 
     /// @notice Return the loan information of Gearing Token
     /// @param  id The id of Gearing Token
@@ -64,9 +57,10 @@ interface IGearingToken is IERC721Enumerable {
     /// @return debtAmt The amount of debt, unit by debtToken token
     /// @return ltv The loan to collateral
     /// @return collateralData The encoded data of collateral
-    function loanInfo(
-        uint256 id
-    ) external view returns (address owner, uint128 debtAmt, uint128 ltv, bytes memory collateralData);
+    function loanInfo(uint256 id)
+        external
+        view
+        returns (address owner, uint128 debtAmt, uint128 ltv, bytes memory collateralData);
 
     /// @notice Merge multiple Gearing Tokens into one
     /// @param  ids The array of Gearing Tokens to be merged

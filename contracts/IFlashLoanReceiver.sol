@@ -15,10 +15,7 @@ interface IFlashLoanReceiver {
     /// @param amount Amount to be flash loaned
     /// @param data Data to be passed to the receiver
     /// @return collateralData Collateral data for borrowing
-    function executeOperation(
-        address gtReceiver,
-        IERC20 asset,
-        uint256 amount,
-        bytes calldata data
-    ) external returns (bytes memory collateralData);
+    function executeOperation(address gtReceiver, IERC20 asset, uint256 amount, bytes calldata data)
+        external
+        returns (bytes memory collateralData);
 }

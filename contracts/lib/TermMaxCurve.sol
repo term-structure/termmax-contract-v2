@@ -18,7 +18,7 @@ library TermMaxCurve {
     /// @param cuts Curve cut array
     /// @param xtReserve XT reserve
     /// @return cutId Curve cut id
-    function calcCutId(CurveCut[] memory cuts, uint xtReserve) internal pure returns (uint cutId) {
+    function calcCutId(CurveCut[] memory cuts, uint256 xtReserve) internal pure returns (uint256 cutId) {
         cutId = cuts.length - 1;
         for (; cutId >= 0; cutId--) {
             if (xtReserve > cuts[cutId].xtReserve) break;
@@ -33,14 +33,14 @@ library TermMaxCurve {
     /// @return vXtReserve virtual XT reserve
     /// @return vFtReserve virtual FT reserve
     function calcIntervalProps(
-        uint netInterestFactor,
-        uint daysToMaturity,
+        uint256 netInterestFactor,
+        uint256 daysToMaturity,
         CurveCut memory cut,
-        uint xtReserve
-    ) internal pure returns (uint liqSquare, uint vXtReserve, uint vFtReserve) {
+        uint256 xtReserve
+    ) internal pure returns (uint256 liqSquare, uint256 vXtReserve, uint256 vFtReserve) {
+        // reference: Eq.(8) in TermMax White Paper
         liqSquare =
-            (cut.liqSquare * daysToMaturity * netInterestFactor) /
-            (Constants.DAYS_IN_YEAR * Constants.DECIMAL_BASE);
+            (cut.liqSquare * daysToMaturity * netInterestFactor) / (Constants.DAYS_IN_YEAR * Constants.DECIMAL_BASE);
         vXtReserve = xtReserve + cut.offset;
         vFtReserve = liqSquare / vXtReserve;
     }
@@ -54,30 +54,28 @@ library TermMaxCurve {
     /// @return deltaXt Delta XT
     /// @return negDeltaFt Negative delta FT
     function cutsForwardIter(
-        uint netInterestFactor,
-        uint daysToMaturity,
+        uint256 netInterestFactor,
+        uint256 daysToMaturity,
         CurveCut[] memory cuts,
-        uint oriXtReserve,
-        uint acc,
+        uint256 oriXtReserve,
+        uint256 acc,
         function(uint, uint, uint, uint, uint, uint) internal pure returns (uint, uint) func
-    ) internal pure returns (uint deltaXt, uint negDeltaFt) {
-        uint cutId = calcCutId(cuts, oriXtReserve);
-        for (uint i = cutId; i < cuts.length; ++i) {
-            uint xtReserve = oriXtReserve + deltaXt;
-            (uint liqSquare, uint vXtReserve, uint vFtReserve) = calcIntervalProps(
-                netInterestFactor,
-                daysToMaturity,
-                cuts[i],
-                xtReserve
-            );
-            uint oriNegDeltaFt = negDeltaFt;
+    ) internal pure returns (uint256 deltaXt, uint256 negDeltaFt) {
+        uint256 cutId = calcCutId(cuts, oriXtReserve);
+        for (uint256 i = cutId; i < cuts.length; ++i) {
+            uint256 xtReserve = oriXtReserve + deltaXt;
+            (uint256 liqSquare, uint256 vXtReserve, uint256 vFtReserve) =
+                calcIntervalProps(netInterestFactor, daysToMaturity, cuts[i], xtReserve);
+            uint256 oriNegDeltaFt = negDeltaFt;
             (deltaXt, negDeltaFt) = func(liqSquare, vXtReserve, vFtReserve, deltaXt, negDeltaFt, acc);
             if (i < cuts.length - 1) {
                 if (oriXtReserve + deltaXt > cuts[i + 1].xtReserve) {
                     deltaXt = cuts[i + 1].xtReserve - oriXtReserve;
                     negDeltaFt = oriNegDeltaFt + vFtReserve - liqSquare / (vXtReserve + deltaXt);
                     continue;
-                } else break;
+                } else {
+                    break;
+                }
             }
         }
     }
@@ -91,94 +89,83 @@ library TermMaxCurve {
     /// @return negDeltaXt Negative delta XT
     /// @return deltaFt Delta FT
     function cutsReverseIter(
-        uint netInterestFactor,
-        uint daysToMaturity,
+        uint256 netInterestFactor,
+        uint256 daysToMaturity,
         CurveCut[] memory cuts,
-        uint oriXtReserve,
-        uint acc,
+        uint256 oriXtReserve,
+        uint256 acc,
         function(uint, uint, uint, uint, uint, uint) internal pure returns (uint, uint) func
-    ) internal pure returns (uint negDeltaXt, uint deltaFt) {
-        uint cutId = calcCutId(cuts, oriXtReserve);
-        for (uint i = cutId + 1; i > 0; i--) {
-            uint idx = i - 1;
-            uint xtReserve = oriXtReserve - negDeltaXt;
-            (uint liqSquare, uint vXtReserve, uint vFtReserve) = calcIntervalProps(
-                netInterestFactor,
-                daysToMaturity,
-                cuts[idx],
-                xtReserve
-            );
+    ) internal pure returns (uint256 negDeltaXt, uint256 deltaFt) {
+        uint256 cutId = calcCutId(cuts, oriXtReserve);
+        for (uint256 i = cutId + 1; i > 0; i--) {
+            uint256 idx = i - 1;
+            uint256 xtReserve = oriXtReserve - negDeltaXt;
+            (uint256 liqSquare, uint256 vXtReserve, uint256 vFtReserve) =
+                calcIntervalProps(netInterestFactor, daysToMaturity, cuts[idx], xtReserve);
             (negDeltaXt, deltaFt) = func(liqSquare, vXtReserve, vFtReserve, negDeltaXt, deltaFt, acc);
             if (oriXtReserve < negDeltaXt + cuts[idx].xtReserve) {
                 negDeltaXt = oriXtReserve - cuts[idx].xtReserve;
                 deltaFt = liqSquare / (vXtReserve - negDeltaXt) - vFtReserve;
-            } else break;
+            } else {
+                break;
+            }
         }
     }
 
     function buyExactXt(
-        uint netInterestFactor,
-        uint daysToMaturity,
+        uint256 netInterestFactor,
+        uint256 daysToMaturity,
         CurveCut[] memory cuts,
-        uint oriXtReserve,
-        uint outputAmount
-    ) internal pure returns (uint negDeltaXt, uint deltaFt) {
-        (negDeltaXt, deltaFt) = cutsReverseIter(
-            netInterestFactor,
-            daysToMaturity,
-            cuts,
-            oriXtReserve,
-            outputAmount,
-            buyExactXtStep
-        );
+        uint256 oriXtReserve,
+        uint256 outputAmount
+    ) internal pure returns (uint256 negDeltaXt, uint256 deltaFt) {
+        (negDeltaXt, deltaFt) =
+            cutsReverseIter(netInterestFactor, daysToMaturity, cuts, oriXtReserve, outputAmount, buyExactXtStep);
     }
 
     function buyExactFt(
-        uint netInterestFactor,
-        uint daysToMaturity,
+        uint256 netInterestFactor,
+        uint256 daysToMaturity,
         CurveCut[] memory cuts,
-        uint oriXtReserve,
-        uint outputAmount
-    ) internal pure returns (uint deltaXt, uint negDeltaFt) {
-        (deltaXt, negDeltaFt) = cutsForwardIter(
-            netInterestFactor,
-            daysToMaturity,
-            cuts,
-            oriXtReserve,
-            outputAmount,
-            buyExactFtStep
-        );
+        uint256 oriXtReserve,
+        uint256 outputAmount
+    ) internal pure returns (uint256 deltaXt, uint256 negDeltaFt) {
+        (deltaXt, negDeltaFt) =
+            cutsForwardIter(netInterestFactor, daysToMaturity, cuts, oriXtReserve, outputAmount, buyExactFtStep);
     }
 
     function buyExactXtStep(
-        uint,
-        uint vXtReserve,
-        uint vFtReserve,
-        uint oriNegDeltaXt,
-        uint oriDeltaFt,
-        uint outputAmount
-    ) internal pure returns (uint negDeltaXt, uint deltaFt) {
-        uint acc = outputAmount - (oriNegDeltaXt + oriDeltaFt);
-        uint b = vXtReserve + vFtReserve + acc;
-        uint c = vXtReserve * acc;
+        uint256,
+        uint256 vXtReserve,
+        uint256 vFtReserve,
+        uint256 oriNegDeltaXt,
+        uint256 oriDeltaFt,
+        uint256 outputAmount
+    ) internal pure returns (uint256 negDeltaXt, uint256 deltaFt) {
+        // reference: Section 4.2.3 in TermMax White Paper
+        uint256 acc = outputAmount - (oriNegDeltaXt + oriDeltaFt);
+        uint256 b = vXtReserve + vFtReserve + acc;
+        uint256 c = vXtReserve * acc;
 
-        uint segNegDeltaXt = (b - MathLib.sqrt(b * b - 4 * c)) / 2;
+        uint256 segNegDeltaXt = (b - MathLib.sqrt(b * b - 4 * c)) / 2;
         negDeltaXt = oriNegDeltaXt + segNegDeltaXt;
         deltaFt = oriDeltaFt + acc - segNegDeltaXt;
     }
-    function buyExactFtStep(
-        uint,
-        uint vXtReserve,
-        uint vFtReserve,
-        uint oriDeltaXt,
-        uint oriNegDeltaFt,
-        uint outputAmount
-    ) internal pure returns (uint deltaXt, uint negDeltaFt) {
-        uint acc = outputAmount - (oriNegDeltaFt + oriDeltaXt);
-        uint b = vFtReserve + vXtReserve + acc;
-        uint c = vFtReserve * acc;
 
-        uint segNegDeltaFt = (b - MathLib.sqrt(b * b - 4 * c)) / 2;
+    function buyExactFtStep(
+        uint256,
+        uint256 vXtReserve,
+        uint256 vFtReserve,
+        uint256 oriDeltaXt,
+        uint256 oriNegDeltaFt,
+        uint256 outputAmount
+    ) internal pure returns (uint256 deltaXt, uint256 negDeltaFt) {
+        //referece: Section 4.2.4 in TermMax White Paper
+        uint256 acc = outputAmount - (oriNegDeltaFt + oriDeltaXt);
+        uint256 b = vFtReserve + vXtReserve + acc;
+        uint256 c = vFtReserve * acc;
+
+        uint256 segNegDeltaFt = (b - MathLib.sqrt(b * b - 4 * c)) / 2;
         negDeltaFt = oriNegDeltaFt + segNegDeltaFt;
         deltaXt = oriDeltaXt + acc - segNegDeltaFt;
     }
@@ -193,14 +180,15 @@ library TermMaxCurve {
     /// @return negDeltaXt Negative delta XT
     /// @return deltaFt Delta FT
     function buyXtStep(
-        uint liqSquare,
-        uint vXtReserve,
-        uint vFtReserve,
-        uint oriNegDeltaXt,
-        uint oriDeltaFt,
-        uint inputAmount
-    ) internal pure returns (uint negDeltaXt, uint deltaFt) {
-        uint remainingInputAmt = inputAmount - oriDeltaFt;
+        uint256 liqSquare,
+        uint256 vXtReserve,
+        uint256 vFtReserve,
+        uint256 oriNegDeltaXt,
+        uint256 oriDeltaFt,
+        uint256 inputAmount
+    ) internal pure returns (uint256 negDeltaXt, uint256 deltaFt) {
+        // reference: Eq.(10) in TermMax White Paper
+        uint256 remainingInputAmt = inputAmount - oriDeltaFt;
         negDeltaXt = oriNegDeltaXt + vXtReserve - liqSquare / (vFtReserve + remainingInputAmt);
         deltaFt = inputAmount;
     }
@@ -213,20 +201,14 @@ library TermMaxCurve {
     /// @return negDeltaXt Negative delta XT
     /// @return deltaFt Delta FT
     function buyXt(
-        uint netInterestFactor,
-        uint daysToMaturity,
+        uint256 netInterestFactor,
+        uint256 daysToMaturity,
         CurveCut[] memory cuts,
-        uint oriXtReserve,
-        uint inputAmount
-    ) internal pure returns (uint negDeltaXt, uint deltaFt) {
-        (negDeltaXt, deltaFt) = cutsReverseIter(
-            netInterestFactor,
-            daysToMaturity,
-            cuts,
-            oriXtReserve,
-            inputAmount,
-            buyXtStep
-        );
+        uint256 oriXtReserve,
+        uint256 inputAmount
+    ) internal pure returns (uint256 negDeltaXt, uint256 deltaFt) {
+        (negDeltaXt, deltaFt) =
+            cutsReverseIter(netInterestFactor, daysToMaturity, cuts, oriXtReserve, inputAmount, buyXtStep);
     }
 
     /// @notice Calculation for one step of buying FT
@@ -239,14 +221,15 @@ library TermMaxCurve {
     /// @return deltaXt Delta XT
     /// @return negDeltaFt Negative delta FT
     function buyFtStep(
-        uint liqSquare,
-        uint vXtReserve,
-        uint vFtReserve,
-        uint oriDeltaXt,
-        uint oriNegDeltaFt,
-        uint inputAmount
-    ) internal pure returns (uint deltaXt, uint negDeltaFt) {
-        uint remainingInputAmt = inputAmount - oriDeltaXt;
+        uint256 liqSquare,
+        uint256 vXtReserve,
+        uint256 vFtReserve,
+        uint256 oriDeltaXt,
+        uint256 oriNegDeltaFt,
+        uint256 inputAmount
+    ) internal pure returns (uint256 deltaXt, uint256 negDeltaFt) {
+        // reference: Eq.(9) in TermMax White Paper
+        uint256 remainingInputAmt = inputAmount - oriDeltaXt;
         negDeltaFt = oriNegDeltaFt + vFtReserve - liqSquare / (vXtReserve + remainingInputAmt);
         deltaXt = inputAmount;
     }
@@ -259,20 +242,14 @@ library TermMaxCurve {
     /// @return deltaXt Delta XT
     /// @return negDeltaFt Negative delta FT
     function buyFt(
-        uint netInterestFactor,
-        uint daysToMaturity,
+        uint256 netInterestFactor,
+        uint256 daysToMaturity,
         CurveCut[] memory cuts,
-        uint oriXtReserve,
-        uint inputAmount
-    ) internal pure returns (uint deltaXt, uint negDeltaFt) {
-        (deltaXt, negDeltaFt) = cutsForwardIter(
-            netInterestFactor,
-            daysToMaturity,
-            cuts,
-            oriXtReserve,
-            inputAmount,
-            buyFtStep
-        );
+        uint256 oriXtReserve,
+        uint256 inputAmount
+    ) internal pure returns (uint256 deltaXt, uint256 negDeltaFt) {
+        (deltaXt, negDeltaFt) =
+            cutsForwardIter(netInterestFactor, daysToMaturity, cuts, oriXtReserve, inputAmount, buyFtStep);
     }
 
     /// @notice Calculation for one step of selling XT
@@ -284,18 +261,19 @@ library TermMaxCurve {
     /// @return deltaXt Delta XT
     /// @return negDeltaFt Negative delta FT
     function sellXtStep(
-        uint,
-        uint vXtReserve,
-        uint vFtReserve,
-        uint oriDeltaXt,
-        uint oriNegDeltaFt,
-        uint inputAmount
-    ) internal pure returns (uint deltaXt, uint negDeltaFt) {
-        uint negAcc = inputAmount - (oriDeltaXt + oriNegDeltaFt);
-        uint b = vXtReserve + vFtReserve - negAcc;
-        uint negC = vXtReserve * negAcc;
+        uint256,
+        uint256 vXtReserve,
+        uint256 vFtReserve,
+        uint256 oriDeltaXt,
+        uint256 oriNegDeltaFt,
+        uint256 inputAmount
+    ) internal pure returns (uint256 deltaXt, uint256 negDeltaFt) {
+        // reference: Section 4.2.4 in TermMax White Paper
+        uint256 negAcc = inputAmount - (oriDeltaXt + oriNegDeltaFt);
+        uint256 b = vXtReserve + vFtReserve - negAcc;
+        uint256 negC = vXtReserve * negAcc;
 
-        uint segDeltaXt = (MathLib.sqrt(b * b + 4 * negC) - b) / 2;
+        uint256 segDeltaXt = (MathLib.sqrt(b * b + 4 * negC) - b) / 2;
         deltaXt = oriDeltaXt + segDeltaXt;
         negDeltaFt = oriNegDeltaFt + negAcc - segDeltaXt;
     }
@@ -308,20 +286,14 @@ library TermMaxCurve {
     /// @return deltaXt Delta XT
     /// @return negDeltaFt Negative delta FT
     function sellXt(
-        uint netInterestFactor,
-        uint daysToMaturity,
+        uint256 netInterestFactor,
+        uint256 daysToMaturity,
         CurveCut[] memory cuts,
-        uint oriXtReserve,
-        uint inputAmount
-    ) internal pure returns (uint deltaXt, uint negDeltaFt) {
-        (deltaXt, negDeltaFt) = cutsForwardIter(
-            netInterestFactor,
-            daysToMaturity,
-            cuts,
-            oriXtReserve,
-            inputAmount,
-            sellXtStep
-        );
+        uint256 oriXtReserve,
+        uint256 inputAmount
+    ) internal pure returns (uint256 deltaXt, uint256 negDeltaFt) {
+        (deltaXt, negDeltaFt) =
+            cutsForwardIter(netInterestFactor, daysToMaturity, cuts, oriXtReserve, inputAmount, sellXtStep);
     }
 
     /// @notice Calculation for one step of selling FT
@@ -333,18 +305,19 @@ library TermMaxCurve {
     /// @return negDeltaXt Negative delta XT
     /// @return deltaFt Delta FT
     function sellFtStep(
-        uint,
-        uint vXtReserve,
-        uint vFtReserve,
-        uint oriNegDeltaXt,
-        uint oriDeltaFt,
-        uint inputAmount
-    ) internal pure returns (uint negDeltaXt, uint deltaFt) {
-        uint negAcc = inputAmount - (oriDeltaFt + oriNegDeltaXt);
-        uint b = vFtReserve + vXtReserve - negAcc;
-        uint negC = vFtReserve * negAcc;
+        uint256,
+        uint256 vXtReserve,
+        uint256 vFtReserve,
+        uint256 oriNegDeltaXt,
+        uint256 oriDeltaFt,
+        uint256 inputAmount
+    ) internal pure returns (uint256 negDeltaXt, uint256 deltaFt) {
+        // reference: Section 4.2.3 in TermMax White Paper
+        uint256 negAcc = inputAmount - (oriDeltaFt + oriNegDeltaXt);
+        uint256 b = vFtReserve + vXtReserve - negAcc;
+        uint256 negC = vFtReserve * negAcc;
 
-        uint segDeltaFt = (MathLib.sqrt(b * b + 4 * negC) - b) / 2;
+        uint256 segDeltaFt = (MathLib.sqrt(b * b + 4 * negC) - b) / 2;
         deltaFt = oriDeltaFt + segDeltaFt;
         negDeltaXt = oriNegDeltaXt + negAcc - segDeltaFt;
     }
@@ -357,75 +330,64 @@ library TermMaxCurve {
     /// @return negDeltaXt Negative delta XT
     /// @return deltaFt Delta FT
     function sellFt(
-        uint netInterestFactor,
-        uint daysToMaturity,
+        uint256 netInterestFactor,
+        uint256 daysToMaturity,
         CurveCut[] memory cuts,
-        uint oriXtReserve,
-        uint inputAmount
-    ) internal pure returns (uint negDeltaXt, uint deltaFt) {
-        (negDeltaXt, deltaFt) = cutsReverseIter(
-            netInterestFactor,
-            daysToMaturity,
-            cuts,
-            oriXtReserve,
-            inputAmount,
-            sellFtStep
-        );
+        uint256 oriXtReserve,
+        uint256 inputAmount
+    ) internal pure returns (uint256 negDeltaXt, uint256 deltaFt) {
+        (negDeltaXt, deltaFt) =
+            cutsReverseIter(netInterestFactor, daysToMaturity, cuts, oriXtReserve, inputAmount, sellFtStep);
     }
 
     function sellFtForExactDebtToken(
-        uint netInterestFactor,
-        uint daysToMaturity,
+        uint256 netInterestFactor,
+        uint256 daysToMaturity,
         CurveCut[] memory cuts,
-        uint oriXtReserve,
-        uint outputAmount
-    ) internal pure returns (uint negDeltaXt, uint deltaFt) {
+        uint256 oriXtReserve,
+        uint256 outputAmount
+    ) internal pure returns (uint256 negDeltaXt, uint256 deltaFt) {
         (negDeltaXt, deltaFt) = cutsReverseIter(
-            netInterestFactor,
-            daysToMaturity,
-            cuts,
-            oriXtReserve,
-            outputAmount,
-            sellFtForExactDebtTokenStep
+            netInterestFactor, daysToMaturity, cuts, oriXtReserve, outputAmount, sellFtForExactDebtTokenStep
         );
     }
+
     function sellXtForExactDebtToken(
-        uint netInterestFactor,
-        uint daysToMaturity,
+        uint256 netInterestFactor,
+        uint256 daysToMaturity,
         CurveCut[] memory cuts,
-        uint oriXtReserve,
-        uint outputAmount
-    ) internal pure returns (uint deltaXt, uint negDeltaFt) {
+        uint256 oriXtReserve,
+        uint256 outputAmount
+    ) internal pure returns (uint256 deltaXt, uint256 negDeltaFt) {
         (deltaXt, negDeltaFt) = cutsForwardIter(
-            netInterestFactor,
-            daysToMaturity,
-            cuts,
-            oriXtReserve,
-            outputAmount,
-            sellXtForExactDebtTokenStep
+            netInterestFactor, daysToMaturity, cuts, oriXtReserve, outputAmount, sellXtForExactDebtTokenStep
         );
     }
+
     function sellFtForExactDebtTokenStep(
-        uint liqSquare,
-        uint vXtReserve,
-        uint vFtReserve,
-        uint oriNegDeltaXt,
-        uint oriDeltaFt,
-        uint outputAmount
-    ) internal pure returns (uint negDeltaXt, uint deltaFt) {
-        uint remainingOutputAmt = outputAmount - oriNegDeltaXt;
+        uint256 liqSquare,
+        uint256 vXtReserve,
+        uint256 vFtReserve,
+        uint256 oriNegDeltaXt,
+        uint256 oriDeltaFt,
+        uint256 outputAmount
+    ) internal pure returns (uint256 negDeltaXt, uint256 deltaFt) {
+        // reference: Eq.(10) in TermMax White Paper
+        uint256 remainingOutputAmt = outputAmount - oriNegDeltaXt;
         deltaFt = oriDeltaFt + liqSquare / (vXtReserve - remainingOutputAmt) - vFtReserve;
         negDeltaXt = outputAmount;
     }
+
     function sellXtForExactDebtTokenStep(
-        uint liqSquare,
-        uint vXtReserve,
-        uint vFtReserve,
-        uint oriDeltaXt,
-        uint oriNegDeltaFt,
-        uint outputAmount
-    ) internal pure returns (uint deltaXt, uint negDeltaFt) {
-        uint remainingOutputAmt = outputAmount - oriNegDeltaFt;
+        uint256 liqSquare,
+        uint256 vXtReserve,
+        uint256 vFtReserve,
+        uint256 oriDeltaXt,
+        uint256 oriNegDeltaFt,
+        uint256 outputAmount
+    ) internal pure returns (uint256 deltaXt, uint256 negDeltaFt) {
+        // reference: Eq.(9) in TermMax White Paper
+        uint256 remainingOutputAmt = outputAmount - oriNegDeltaFt;
         deltaXt = oriDeltaXt + liqSquare / (vFtReserve - remainingOutputAmt) - vXtReserve;
         negDeltaFt = outputAmount;
     }

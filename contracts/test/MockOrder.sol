@@ -71,8 +71,8 @@ contract MockOrder is
         _;
     }
 
-    modifier onlyMaker() {
-        if (msg.sender != maker) revert OnlyMaker();
+    modifier onlyMarket() {
+        if (msg.sender != address(market)) revert OnlyMarket();
         _;
     }
 
@@ -84,7 +84,6 @@ contract MockOrder is
      * @inheritdoc ITermMaxOrder
      */
     function initialize(
-        address admin,
         address maker_,
         IERC20[3] memory tokens,
         IGearingToken gt_,
@@ -93,7 +92,7 @@ contract MockOrder is
         CurveCuts memory curveCuts_,
         MarketConfig memory marketConfig
     ) external override initializer {
-        __Ownable_init(admin);
+        __Ownable_init(maker_);
         __ReentrancyGuard_init();
         __Pausable_init();
         market = ITermMaxMarket(_msgSender());
@@ -129,42 +128,34 @@ contract MockOrder is
      * @inheritdoc ITermMaxOrder
      */
     function apr() external view override returns (uint256 lendApr_, uint256 borrowApr_) {
-        uint daysToMaturity = _daysToMaturity();
-        uint oriXtReserve = xt.balanceOf(address(this));
+        uint256 daysToMaturity = _daysToMaturity();
+        uint256 oriXtReserve = xt.balanceOf(address(this));
 
         CurveCuts memory curveCuts = _orderConfig.curveCuts;
 
-        uint lendCutId = TermMaxCurve.calcCutId(curveCuts.lendCurveCuts, oriXtReserve);
-        (, uint lendVXtReserve, uint lendVFtReserve) = TermMaxCurve.calcIntervalProps(
-            Constants.DECIMAL_BASE,
-            daysToMaturity,
-            curveCuts.lendCurveCuts[lendCutId],
-            oriXtReserve
+        uint256 lendCutId = TermMaxCurve.calcCutId(curveCuts.lendCurveCuts, oriXtReserve);
+        (, uint256 lendVXtReserve, uint256 lendVFtReserve) = TermMaxCurve.calcIntervalProps(
+            Constants.DECIMAL_BASE, daysToMaturity, curveCuts.lendCurveCuts[lendCutId], oriXtReserve
         );
         lendApr_ =
-            ((lendVFtReserve * Constants.DECIMAL_BASE * Constants.DAYS_IN_YEAR) / lendVXtReserve) *
-            daysToMaturity;
+            ((lendVFtReserve * Constants.DECIMAL_BASE * Constants.DAYS_IN_YEAR) / lendVXtReserve) * daysToMaturity;
 
-        uint borrowCutId = TermMaxCurve.calcCutId(curveCuts.borrowCurveCuts, oriXtReserve);
-        (, uint borrowVXtReserve, uint borrowVFtReserve) = TermMaxCurve.calcIntervalProps(
-            Constants.DECIMAL_BASE,
-            daysToMaturity,
-            curveCuts.borrowCurveCuts[borrowCutId],
-            oriXtReserve
+        uint256 borrowCutId = TermMaxCurve.calcCutId(curveCuts.borrowCurveCuts, oriXtReserve);
+        (, uint256 borrowVXtReserve, uint256 borrowVFtReserve) = TermMaxCurve.calcIntervalProps(
+            Constants.DECIMAL_BASE, daysToMaturity, curveCuts.borrowCurveCuts[borrowCutId], oriXtReserve
         );
         borrowApr_ =
-            ((borrowVFtReserve * Constants.DECIMAL_BASE * Constants.DAYS_IN_YEAR) / borrowVXtReserve) *
-            daysToMaturity;
+            ((borrowVFtReserve * Constants.DECIMAL_BASE * Constants.DAYS_IN_YEAR) / borrowVXtReserve) * daysToMaturity;
     }
 
     /**
      * @inheritdoc ITermMaxOrder
      */
-    function updateOrder(
-        OrderConfig memory newOrderConfig,
-        int256 ftChangeAmt,
-        int256 xtChangeAmt
-    ) external override onlyMaker {
+    function updateOrder(OrderConfig memory newOrderConfig, int256 ftChangeAmt, int256 xtChangeAmt)
+        external
+        override
+        onlyOwner
+    {
         _updateCurve(newOrderConfig.curveCuts);
         if (ftChangeAmt > 0) {
             ft.safeTransferFrom(msg.sender, address(this), ftChangeAmt.toUint256());
@@ -200,35 +191,26 @@ contract MockOrder is
             if (newCurveCuts.lendCurveCuts.length > 0) {
                 if (newCurveCuts.lendCurveCuts[0].xtReserve != 0) revert InvalidCurveCuts();
             }
-            for (uint i = 1; i < newCurveCuts.lendCurveCuts.length; i++) {
-                if (newCurveCuts.lendCurveCuts[i].xtReserve <= newCurveCuts.lendCurveCuts[i - 1].xtReserve)
+            for (uint256 i = 1; i < newCurveCuts.lendCurveCuts.length; i++) {
+                if (newCurveCuts.lendCurveCuts[i].xtReserve <= newCurveCuts.lendCurveCuts[i - 1].xtReserve) {
                     revert InvalidCurveCuts();
+                }
             }
             if (newCurveCuts.borrowCurveCuts.length > 0) {
                 if (newCurveCuts.borrowCurveCuts[0].xtReserve != 0) revert InvalidCurveCuts();
             }
-            for (uint i = 1; i < newCurveCuts.borrowCurveCuts.length; i++) {
-                if (newCurveCuts.borrowCurveCuts[i].xtReserve <= newCurveCuts.borrowCurveCuts[i - 1].xtReserve)
+            for (uint256 i = 1; i < newCurveCuts.borrowCurveCuts.length; i++) {
+                if (newCurveCuts.borrowCurveCuts[i].xtReserve <= newCurveCuts.borrowCurveCuts[i - 1].xtReserve) {
                     revert InvalidCurveCuts();
+                }
             }
             _orderConfig.curveCuts = newCurveCuts;
         }
     }
 
-    function updateFeeConfig(FeeConfig memory newFeeConfig) external override onlyOwner {
-        _checkFee(newFeeConfig.borrowTakerFeeRatio);
-        _checkFee(newFeeConfig.borrowMakerFeeRatio);
-        _checkFee(newFeeConfig.lendTakerFeeRatio);
-        _checkFee(newFeeConfig.lendMakerFeeRatio);
-        _checkFee(newFeeConfig.redeemFeeRatio);
-        _checkFee(newFeeConfig.issueFtFeeRatio);
-        _checkFee(newFeeConfig.issueFtFeeRef);
+    function updateFeeConfig(FeeConfig memory newFeeConfig) external override onlyMarket {
         _orderConfig.feeConfig = newFeeConfig;
         emit UpdateFeeConfig(newFeeConfig);
-    }
-
-    function _checkFee(uint32 feeRatio) internal pure {
-        if (feeRatio >= Constants.MAX_FEE_RATIO) revert FeeTooHigh();
     }
 
     /// @notice Calculate how many days until expiration
@@ -247,9 +229,9 @@ contract MockOrder is
         uint128 minTokenOut
     ) external override nonReentrant isOpen returns (uint256 netTokenOut) {
         if (tokenIn == tokenOut) revert CantSwapSameToken();
-        uint feeAmt = 0;
-        uint ftBlanceBefore = ft.balanceOf(address(this));
-        uint xtBlanceBefore = xt.balanceOf(address(this));
+        uint256 feeAmt = 0;
+        uint256 ftBlanceBefore = ft.balanceOf(address(this));
+        uint256 xtBlanceBefore = xt.balanceOf(address(this));
 
         tokenIn.safeTransferFrom(msg.sender, address(this), tokenAmtIn);
         if (tokenIn == debtToken) {
@@ -272,13 +254,7 @@ contract MockOrder is
             _orderConfig.swapTrigger.swapCallback(deltaFt, deltaXt);
         }
         emit SwapExactTokenToToken(
-            tokenIn,
-            tokenOut,
-            msg.sender,
-            recipient,
-            tokenAmtIn,
-            netTokenOut.toUint128(),
-            feeAmt.toUint128()
+            tokenIn, tokenOut, msg.sender, recipient, tokenAmtIn, netTokenOut.toUint128(), feeAmt.toUint128()
         );
     }
 
@@ -290,9 +266,9 @@ contract MockOrder is
         uint128 maxTokenIn
     ) external nonReentrant isOpen returns (uint256 netTokenIn) {
         if (tokenIn == tokenOut) revert CantSwapSameToken();
-        uint feeAmt = 0;
-        uint ftBlanceBefore = ft.balanceOf(address(this));
-        uint xtBlanceBefore = xt.balanceOf(address(this));
+        uint256 feeAmt = 0;
+        uint256 ftBlanceBefore = ft.balanceOf(address(this));
+        uint256 xtBlanceBefore = xt.balanceOf(address(this));
 
         tokenIn.safeTransferFrom(msg.sender, address(this), maxTokenIn);
         if (tokenIn == debtToken) {
@@ -314,17 +290,11 @@ contract MockOrder is
             _orderConfig.swapTrigger.swapCallback(deltaFt, deltaXt);
         }
         emit SwapTokenToExactToken(
-            tokenIn,
-            tokenOut,
-            msg.sender,
-            recipient,
-            tokenAmtOut,
-            netTokenIn.toUint128(),
-            feeAmt.toUint128()
+            tokenIn, tokenOut, msg.sender, recipient, tokenAmtOut, netTokenIn.toUint128(), feeAmt.toUint128()
         );
     }
 
-    function withdrawAssets(IERC20 token, address recipient, uint256 amount) external onlyMaker {
+    function withdrawAssets(IERC20 token, address recipient, uint256 amount) external onlyOwner {
         token.safeTransfer(recipient, amount);
         emit WithdrawAssets(token, _msgSender(), recipient, amount);
     }
@@ -332,27 +302,14 @@ contract MockOrder is
     /**
      * @inheritdoc ITermMaxOrder
      */
-    function pause() external override onlyMaker {
+    function pause() external override onlyOwner {
         _pause();
     }
 
     /**
      * @inheritdoc ITermMaxOrder
      */
-    function unpause() external override onlyMaker {
+    function unpause() external override onlyOwner {
         _unpause();
-    }
-
-    /**
-     * @inheritdoc ITermMaxOrder
-     */
-    function transferMakerOwnership(address newMaker) external onlyMaker {
-        _transferMakerOwnership(newMaker);
-    }
-
-    function _transferMakerOwnership(address newMaker) internal onlyMaker {
-        address currentMaker = maker;
-        maker = newMaker;
-        emit MakerOwnershipTransferred(currentMaker, newMaker);
     }
 }

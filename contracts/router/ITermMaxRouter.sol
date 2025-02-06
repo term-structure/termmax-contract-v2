@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
+
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ITermMaxMarket} from "../ITermMaxMarket.sol";
 import {ITermMaxOrder} from "../ITermMaxOrder.sol";
@@ -68,10 +69,10 @@ interface ITermMaxRouter {
      * @return gt The GT token contract address
      * @return gtIds Array of GT token IDs owned by the address
      */
-    function assetsWithERC20Collateral(
-        ITermMaxMarket market,
-        address owner
-    ) external view returns (IERC20[4] memory tokens, uint256[4] memory balances, address gt, uint256[] memory gtIds);
+    function assetsWithERC20Collateral(ITermMaxMarket market, address owner)
+        external
+        view
+        returns (IERC20[4] memory tokens, uint256[4] memory balances, address gt, uint256[] memory gtIds);
 
     /**
      * @notice Swaps an exact amount of input token for output token
@@ -209,12 +210,9 @@ interface ITermMaxRouter {
      * @param borrowAmt Amount of tokens to borrow
      * @return gtId ID of the generated GT token
      */
-    function borrowTokenFromCollateral(
-        address recipient,
-        ITermMaxMarket market,
-        uint256 collInAmt,
-        uint256 borrowAmt
-    ) external returns (uint256 gtId);
+    function borrowTokenFromCollateral(address recipient, ITermMaxMarket market, uint256 collInAmt, uint256 borrowAmt)
+        external
+        returns (uint256 gtId);
 
     /**
      * @notice Borrows tokens from an existing GT position

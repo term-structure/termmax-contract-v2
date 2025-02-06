@@ -29,7 +29,7 @@ contract TermMaxFactory is Ownable2Step, FactoryErrors, FactoryEvents, ITermMaxF
 
     constructor(address admin, address TERMMAX_MARKET_IMPLEMENTATION_) Ownable(admin) {
         if (TERMMAX_MARKET_IMPLEMENTATION_ == address(0)) {
-            revert InvalidMarketImplementation();
+            revert InvalidImplementation();
         }
         TERMMAX_MARKET_IMPLEMENTATION = TERMMAX_MARKET_IMPLEMENTATION_;
 
@@ -42,31 +42,28 @@ contract TermMaxFactory is Ownable2Step, FactoryErrors, FactoryEvents, ITermMaxF
         emit SetGtImplement(key, gtImplement);
     }
 
-    function predictMarketAddress(
-        address collateral,
-        address debtToken,
-        uint64 maturity,
-        uint256 salt
-    ) external view returns (address market) {
-        return
-            Clones.predictDeterministicAddress(
-                TERMMAX_MARKET_IMPLEMENTATION,
-                keccak256(abi.encode(collateral, debtToken, maturity, salt))
-            );
+    function predictMarketAddress(address admin, address collateral, address debtToken, uint64 maturity, uint256 salt)
+        external
+        view
+        returns (address market)
+    {
+        return Clones.predictDeterministicAddress(
+            TERMMAX_MARKET_IMPLEMENTATION, keccak256(abi.encode(admin, collateral, debtToken, maturity, salt))
+        );
     }
 
-    function createMarket(
-        bytes32 gtKey,
-        MarketInitialParams memory params,
-        uint256 salt
-    ) external onlyOwner returns (address market) {
+    function createMarket(bytes32 gtKey, MarketInitialParams memory params, uint256 salt)
+        external
+        onlyOwner
+        returns (address market)
+    {
         params.gtImplementation = gtImplements[gtKey];
         if (params.gtImplementation == address(0)) {
             revert CantNotFindGtImplementation();
         }
         market = Clones.cloneDeterministic(
             TERMMAX_MARKET_IMPLEMENTATION,
-            keccak256(abi.encode(params.collateral, params.debtToken, params.marketConfig.maturity, salt))
+            keccak256(abi.encode(params.admin, params.collateral, params.debtToken, params.marketConfig.maturity, salt))
         );
         ITermMaxMarket(market).initialize(params);
 

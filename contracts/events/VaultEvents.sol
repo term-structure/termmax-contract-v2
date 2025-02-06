@@ -89,11 +89,7 @@ interface VaultEvents {
      * @param curveCuts The updated curve parameters for the order
      */
     event UpdateOrder(
-        address indexed caller,
-        address indexed order,
-        int256 changes,
-        uint256 maxSupply,
-        CurveCuts curveCuts
+        address indexed caller, address indexed order, int256 changes, uint256 maxSupply, CurveCuts curveCuts
     );
 
     /**

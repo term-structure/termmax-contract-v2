@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import {OwnableUpgradeable, Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
+import {
+    OwnableUpgradeable,
+    Ownable2StepUpgradeable
+} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
@@ -59,11 +62,10 @@ contract TermMaxMarket is
         _disableInitializers();
     }
 
-    function issueFtFeeRatio() public view override returns (uint) {
-        uint daysToMaturity = _daysToMaturity(_config.maturity);
-        return
-            (daysToMaturity * uint(_config.feeConfig.issueFtFeeRatio) * uint(_config.feeConfig.issueFtFeeRef)) /
-            (Constants.DAYS_IN_YEAR * Constants.DECIMAL_BASE + uint(_config.feeConfig.issueFtFeeRef) * daysToMaturity);
+    function issueFtFeeRatio() public view override returns (uint256) {
+        uint256 daysToMaturity = _daysToMaturity(_config.maturity);
+        return (daysToMaturity * uint256(_config.feeConfig.issueFtFeeRatio) * uint256(_config.feeConfig.issueFtFeeRef))
+            / (Constants.DAYS_IN_YEAR * Constants.DECIMAL_BASE + uint256(_config.feeConfig.issueFtFeeRef) * daysToMaturity);
     }
 
     /**
@@ -86,9 +88,10 @@ contract TermMaxMarket is
         emit MarketInitialized(params.collateral, params.debtToken, _config.maturity, ft, xt, gt);
     }
 
-    function _deployTokens(
-        MarketInitialParams memory params
-    ) internal returns (IMintableERC20 ft_, IMintableERC20 xt_, IGearingToken gt_) {
+    function _deployTokens(MarketInitialParams memory params)
+        internal
+        returns (IMintableERC20 ft_, IMintableERC20 xt_, IGearingToken gt_)
+    {
         ft_ = IMintableERC20(Clones.clone(MINTABLE_ERC20_IMPLEMENT));
         xt_ = IMintableERC20(Clones.clone(MINTABLE_ERC20_IMPLEMENT));
         gt_ = IGearingToken(Clones.clone(params.gtImplementation));
@@ -154,18 +157,15 @@ contract TermMaxMarket is
 
     function _checkFee(FeeConfig memory fee) internal pure {
         if (
-            fee.borrowTakerFeeRatio >= Constants.MAX_FEE_RATIO ||
-            fee.borrowMakerFeeRatio >= Constants.MAX_FEE_RATIO ||
-            fee.lendTakerFeeRatio >= Constants.MAX_FEE_RATIO ||
-            fee.lendMakerFeeRatio >= Constants.MAX_FEE_RATIO ||
-            fee.redeemFeeRatio >= Constants.MAX_FEE_RATIO ||
-            fee.issueFtFeeRatio >= Constants.MAX_FEE_RATIO ||
-            fee.issueFtFeeRef > Constants.DECIMAL_BASE
+            fee.borrowTakerFeeRatio >= Constants.MAX_FEE_RATIO || fee.borrowMakerFeeRatio >= Constants.MAX_FEE_RATIO
+                || fee.lendTakerFeeRatio >= Constants.MAX_FEE_RATIO || fee.lendMakerFeeRatio >= Constants.MAX_FEE_RATIO
+                || fee.redeemFeeRatio >= Constants.MAX_FEE_RATIO || fee.issueFtFeeRatio >= Constants.MAX_FEE_RATIO
+                || fee.issueFtFeeRef > Constants.DECIMAL_BASE
         ) revert FeeTooHigh();
     }
 
     /// @notice Calculate how many days until expiration
-    function _daysToMaturity(uint maturity) internal view returns (uint256 daysToMaturity) {
+    function _daysToMaturity(uint256 maturity) internal view returns (uint256 daysToMaturity) {
         daysToMaturity = (maturity - block.timestamp + Constants.SECONDS_IN_DAY - 1) / Constants.SECONDS_IN_DAY;
     }
 
@@ -201,20 +201,20 @@ contract TermMaxMarket is
     /**
      * @inheritdoc ITermMaxMarket
      */
-    function leverageByXt(
-        address recipient,
-        uint128 xtAmt,
-        bytes calldata callbackData
-    ) external override nonReentrant isOpen returns (uint256 gtId) {
+    function leverageByXt(address recipient, uint128 xtAmt, bytes calldata callbackData)
+        external
+        override
+        nonReentrant
+        isOpen
+        returns (uint256 gtId)
+    {
         return _leverageByXt(msg.sender, recipient, xtAmt, callbackData);
     }
 
-    function _leverageByXt(
-        address loanReceiver,
-        address gtReceiver,
-        uint128 xtAmt,
-        bytes calldata callbackData
-    ) internal returns (uint256 gtId) {
+    function _leverageByXt(address loanReceiver, address gtReceiver, uint128 xtAmt, bytes calldata callbackData)
+        internal
+        returns (uint256 gtId)
+    {
         xt.safeTransferFrom(loanReceiver, address(this), xtAmt);
 
         // 1 xt -> 1 debtToken raised
@@ -223,12 +223,8 @@ contract TermMaxMarket is
         // Send debt to borrower
         debtToken.safeTransfer(loanReceiver, xtAmt);
         // Callback function
-        bytes memory collateralData = IFlashLoanReceiver(loanReceiver).executeOperation(
-            gtReceiver,
-            debtToken,
-            xtAmt,
-            callbackData
-        );
+        bytes memory collateralData =
+            IFlashLoanReceiver(loanReceiver).executeOperation(gtReceiver, debtToken, xtAmt, callbackData);
 
         // Mint GT
         gtId = gt.mint(loanReceiver, gtReceiver, debt, collateralData);
@@ -240,20 +236,20 @@ contract TermMaxMarket is
     /**
      * @inheritdoc ITermMaxMarket
      */
-    function issueFt(
-        address recipient,
-        uint128 debt,
-        bytes calldata collateralData
-    ) external override nonReentrant isOpen returns (uint256 gtId, uint128 ftOutAmt) {
+    function issueFt(address recipient, uint128 debt, bytes calldata collateralData)
+        external
+        override
+        nonReentrant
+        isOpen
+        returns (uint256 gtId, uint128 ftOutAmt)
+    {
         return _issueFt(msg.sender, recipient, debt, collateralData);
     }
 
-    function _issueFt(
-        address caller,
-        address recipient,
-        uint128 debt,
-        bytes calldata collateralData
-    ) internal returns (uint256 gtId, uint128 ftOutAmt) {
+    function _issueFt(address caller, address recipient, uint128 debt, bytes calldata collateralData)
+        internal
+        returns (uint256 gtId, uint128 ftOutAmt)
+    {
         // Mint GT
         gtId = gt.mint(caller, recipient, debt, collateralData);
 
@@ -270,20 +266,20 @@ contract TermMaxMarket is
     /**
      * @inheritdoc ITermMaxMarket
      */
-    function issueFtByExistedGt(
-        address recipient,
-        uint128 debt,
-        uint gtId
-    ) external override nonReentrant isOpen returns (uint128 ftOutAmt) {
+    function issueFtByExistedGt(address recipient, uint128 debt, uint256 gtId)
+        external
+        override
+        nonReentrant
+        isOpen
+        returns (uint128 ftOutAmt)
+    {
         return _issueFtByExistedGt(msg.sender, recipient, debt, gtId);
     }
 
-    function _issueFtByExistedGt(
-        address caller,
-        address recipient,
-        uint128 debt,
-        uint gtId
-    ) internal returns (uint128 ftOutAmt) {
+    function _issueFtByExistedGt(address caller, address recipient, uint128 debt, uint256 gtId)
+        internal
+        returns (uint128 ftOutAmt)
+    {
         gt.augmentDebt(caller, gtId, debt);
 
         MarketConfig memory mConfig = _config;
@@ -306,9 +302,8 @@ contract TermMaxMarket is
     function _redeem(address caller, address recipient, uint256 ftAmount) internal returns (uint256 debtTokenAmt) {
         MarketConfig memory mConfig = _config;
         {
-            uint liquidationDeadline = gt.liquidatable()
-                ? mConfig.maturity + Constants.LIQUIDATION_WINDOW
-                : mConfig.maturity;
+            uint256 liquidationDeadline =
+                gt.liquidatable() ? mConfig.maturity + Constants.LIQUIDATION_WINDOW : mConfig.maturity;
             if (block.timestamp < liquidationDeadline) {
                 revert CanNotRedeemBeforeFinalLiquidationDeadline(liquidationDeadline);
             }
@@ -320,12 +315,12 @@ contract TermMaxMarket is
         ft.safeTransferFrom(caller, address(this), ftAmount);
 
         // The proportion that user will get how many debtToken and collateral should be deliveried
-        uint proportion = (ftAmount * Constants.DECIMAL_BASE_SQ) / ft.totalSupply();
+        uint256 proportion = (ftAmount * Constants.DECIMAL_BASE_SQ) / ft.totalSupply();
 
         bytes memory deliveryData = gt.delivery(proportion, caller);
         // Transfer debtToken output
         debtTokenAmt += ((debtToken.balanceOf(address(this))) * proportion) / Constants.DECIMAL_BASE_SQ;
-        uint feeAmt;
+        uint256 feeAmt;
         if (mConfig.feeConfig.redeemFeeRatio > 0) {
             feeAmt = (debtTokenAmt * mConfig.feeConfig.redeemFeeRatio) / Constants.DECIMAL_BASE;
             debtToken.safeTransfer(mConfig.treasurer, feeAmt);
@@ -333,12 +328,7 @@ contract TermMaxMarket is
         }
         debtToken.safeTransfer(recipient, debtTokenAmt);
         emit Redeem(
-            caller,
-            recipient,
-            proportion.toUint128(),
-            debtTokenAmt.toUint128(),
-            feeAmt.toUint128(),
-            deliveryData
+            caller, recipient, proportion.toUint128(), debtTokenAmt.toUint128(), feeAmt.toUint128(), deliveryData
         );
     }
 
@@ -352,14 +342,19 @@ contract TermMaxMarket is
     /**
      * @inheritdoc ITermMaxMarket
      */
-    function createOrder(
-        address maker,
-        uint256 maxXtReserve,
-        ISwapCallback swapTrigger,
-        CurveCuts memory curveCuts
-    ) external nonReentrant isOpen returns (ITermMaxOrder order) {
+    function createOrder(address maker, uint256 maxXtReserve, ISwapCallback swapTrigger, CurveCuts memory curveCuts)
+        external
+        nonReentrant
+        isOpen
+        returns (ITermMaxOrder order)
+    {
         order = ITermMaxOrder(Clones.clone(TERMMAX_ORDER_IMPLEMENT));
-        order.initialize(owner(), maker, [ft, xt, debtToken], gt, maxXtReserve, swapTrigger, curveCuts, _config);
+        order.initialize(maker, [ft, xt, debtToken], gt, maxXtReserve, swapTrigger, curveCuts, _config);
         emit CreateOrder(maker, order);
+    }
+
+    function updateOrderFeeRate(ITermMaxOrder order, FeeConfig memory newFeeConfig) external onlyOwner {
+        _checkFee(newFeeConfig);
+        order.updateFeeConfig(newFeeConfig);
     }
 }

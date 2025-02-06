@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
+
 import {MarketInitialParams} from "../storage/TermMaxStorage.sol";
 
 /**
@@ -15,17 +16,13 @@ interface ITermMaxFactory {
     function setGtImplement(string memory gtImplementName, address gtImplement) external;
 
     /// @notice Predict the address of token pair
-    function predictMarketAddress(
-        address collateral,
-        address underlying,
-        uint64 maturity,
-        uint256 salt
-    ) external view returns (address market);
+    function predictMarketAddress(address admin, address collateral, address underlying, uint64 maturity, uint256 salt)
+        external
+        view
+        returns (address market);
 
     /// @notice Deploy a new market
-    function createMarket(
-        bytes32 gtKey,
-        MarketInitialParams memory params,
-        uint256 salt
-    ) external returns (address market);
+    function createMarket(bytes32 gtKey, MarketInitialParams memory params, uint256 salt)
+        external
+        returns (address market);
 }

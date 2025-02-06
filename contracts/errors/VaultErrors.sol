@@ -6,6 +6,12 @@ pragma solidity ^0.8.0;
  * @notice Custom errors for the TermMax vault operations
  */
 interface VaultErrors {
+    error InvalidImplementation();
+    /**
+     * @notice Error thrown when attempting to interact with a vault without its proxy
+     */
+    error OnlyProxy();
+
     /**
      * @notice Error thrown when attempting to interact with a non-whitelisted market
      */
@@ -25,19 +31,9 @@ interface VaultErrors {
     error InsufficientFunds(uint256 maxWithdraw, uint256 expectedWithdraw);
 
     /**
-     * @notice Error thrown when a market's maturity exceeds the maximum term
-     */
-    error MarketIsLaterThanMaxTerm();
-
-    /**
      * @notice Error thrown when the locked FT amount exceeds the total FT
      */
     error LockedFtGreaterThanTotalFt();
-
-    /**
-     * @notice Error thrown when attempting to set a term beyond the maximum allowed
-     */
-    error MaxTermExceeded();
 
     /**
      * @notice Error thrown when attempting to set a performance fee rate beyond the maximum allowed

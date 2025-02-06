@@ -46,19 +46,21 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
     }
 
     function _delivery(uint256 proportion) internal virtual override returns (bytes memory deliveryData) {
-        uint collateralReserve = IERC20(_config.collateral).balanceOf(address(this));
-        uint amount = (collateralReserve * proportion) / Constants.DECIMAL_BASE_SQ;
+        uint256 collateralReserve = IERC20(_config.collateral).balanceOf(address(this));
+        uint256 amount = (collateralReserve * proportion) / Constants.DECIMAL_BASE_SQ;
         deliveryData = abi.encode(amount);
     }
 
     /**
      * @inheritdoc AbstractGearingToken
      */
-    function _mergeCollateral(
-        bytes memory collateralDataA,
-        bytes memory collateralDataB
-    ) internal virtual override returns (bytes memory collateralData) {
-        uint total = _decodeAmount(collateralDataA) + _decodeAmount(collateralDataB);
+    function _mergeCollateral(bytes memory collateralDataA, bytes memory collateralDataB)
+        internal
+        virtual
+        override
+        returns (bytes memory collateralData)
+    {
+        uint256 total = _decodeAmount(collateralDataA) + _decodeAmount(collateralDataB);
         collateralData = abi.encode(total);
     }
 
@@ -66,7 +68,7 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
      * @inheritdoc AbstractGearingToken
      */
     function _transferCollateralFrom(address from, address to, bytes memory collateralData) internal virtual override {
-        uint amount = _decodeAmount(collateralData);
+        uint256 amount = _decodeAmount(collateralData);
         if (amount == 0) {
             return;
         }
@@ -77,7 +79,7 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
      * @inheritdoc AbstractGearingToken
      */
     function _transferCollateral(address to, bytes memory collateralData) internal virtual override {
-        uint amount = _decodeAmount(collateralData);
+        uint256 amount = _decodeAmount(collateralData);
         if (amount == 0) {
             return;
         }
@@ -87,31 +89,39 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
     /**
      * @inheritdoc AbstractGearingToken
      */
-    function _getCollateralValue(
-        bytes memory collateralData,
-        bytes memory priceData
-    ) internal view virtual override returns (uint256) {
-        uint collateralAmt = _decodeAmount(collateralData);
-        (uint price, uint priceDenominator, uint collateralDemonimator) = abi.decode(priceData, (uint, uint, uint));
+    function _getCollateralValue(bytes memory collateralData, bytes memory priceData)
+        internal
+        view
+        virtual
+        override
+        returns (uint256)
+    {
+        uint256 collateralAmt = _decodeAmount(collateralData);
+        (uint256 price, uint256 priceDenominator, uint256 collateralDemonimator) =
+            abi.decode(priceData, (uint256, uint256, uint256));
         return (collateralAmt * price * Constants.DECIMAL_BASE) / (priceDenominator * collateralDemonimator);
     }
 
     /**
      * @inheritdoc AbstractGearingToken
      */
-    function _getCollateralPriceData(
-        GtConfig memory config
-    ) internal view virtual override returns (bytes memory priceData) {
+    function _getCollateralPriceData(GtConfig memory config)
+        internal
+        view
+        virtual
+        override
+        returns (bytes memory priceData)
+    {
         (uint256 price, uint8 decimals) = config.loanConfig.oracle.getPrice(config.collateral);
-        uint priceDenominator = 10 ** decimals;
+        uint256 priceDenominator = 10 ** decimals;
 
-        uint cTokenDenominator = 10 ** collateralDecimals;
+        uint256 cTokenDenominator = 10 ** collateralDecimals;
         priceData = abi.encode(price, priceDenominator, cTokenDenominator);
     }
 
     /// @notice Encode amount to collateral data
     function _decodeAmount(bytes memory collateralData) internal pure returns (uint256 amount) {
-        amount = abi.decode(collateralData, (uint));
+        amount = abi.decode(collateralData, (uint256));
         if (amount == type(uint256).max) {
             revert AmountCanNotBeUint256Max();
         }
@@ -125,44 +135,42 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
     /**
      * @inheritdoc AbstractGearingToken
      */
-    function _removeCollateral(
-        LoanInfo memory loan,
-        bytes memory collateralData
-    ) internal virtual override returns (bytes memory) {
-        uint amount = _decodeAmount(loan.collateralData) - _decodeAmount(collateralData);
+    function _removeCollateral(LoanInfo memory loan, bytes memory collateralData)
+        internal
+        virtual
+        override
+        returns (bytes memory)
+    {
+        uint256 amount = _decodeAmount(loan.collateralData) - _decodeAmount(collateralData);
         return _encodeAmount(amount);
     }
 
     /**
      * @inheritdoc AbstractGearingToken
      */
-    function _addCollateral(
-        LoanInfo memory loan,
-        bytes memory collateralData
-    ) internal virtual override returns (bytes memory) {
-        uint amount = _decodeAmount(loan.collateralData) + _decodeAmount(collateralData);
+    function _addCollateral(LoanInfo memory loan, bytes memory collateralData)
+        internal
+        virtual
+        override
+        returns (bytes memory)
+    {
+        uint256 amount = _decodeAmount(loan.collateralData) + _decodeAmount(collateralData);
         return _encodeAmount(amount);
     }
 
     /**
      * @inheritdoc AbstractGearingToken
      */
-    function _calcLiquidationResult(
-        LoanInfo memory loan,
-        uint128 repayAmt,
-        ValueAndPrice memory valueAndPrice
-    )
+    function _calcLiquidationResult(LoanInfo memory loan, uint128 repayAmt, ValueAndPrice memory valueAndPrice)
         internal
         virtual
         override
         returns (bytes memory cToLiquidator, bytes memory cToTreasurer, bytes memory remainningC)
     {
-        uint collateralAmt = _decodeAmount(loan.collateralData);
+        uint256 collateralAmt = _decodeAmount(loan.collateralData);
 
-        (uint collateralPrice, uint cPriceDenominator, uint cTokenDenominator) = abi.decode(
-            valueAndPrice.collateralPriceData,
-            (uint, uint, uint)
-        );
+        (uint256 collateralPrice, uint256 cPriceDenominator, uint256 cTokenDenominator) =
+            abi.decode(valueAndPrice.collateralPriceData, (uint256, uint256, uint256));
 
         // maxRomvedCollateral = min(
         // (repayAmt * (1 + REWARD_TO_LIQUIDATOR + REWARD_TO_PROTOCOL)) * debtTokenPrice / collateralTokenPrice ,
@@ -176,19 +184,19 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
          * The value of 1(decimal) debt token / The value of 1(decimal) collateral token
          *     ddPriceToCdPrice = (DP/DPD) / (CP/CPD) = (DP*CPD) / (CP*DPD)
          */
-        uint ddPriceToCdPrice = (valueAndPrice.debtPrice * cPriceDenominator * Constants.DECIMAL_BASE) /
-            (collateralPrice * valueAndPrice.priceDenominator);
+        uint256 ddPriceToCdPrice = (valueAndPrice.debtPrice * cPriceDenominator * Constants.DECIMAL_BASE)
+            / (collateralPrice * valueAndPrice.priceDenominator);
 
         // calculate the amount of collateral that is equivalent to repayAmt
         // with debt to collateral price
-        uint cEqualRepayAmt = (repayAmt * ddPriceToCdPrice * cTokenDenominator) /
-            (valueAndPrice.debtDenominator * Constants.DECIMAL_BASE);
+        uint256 cEqualRepayAmt =
+            (repayAmt * ddPriceToCdPrice * cTokenDenominator) / (valueAndPrice.debtDenominator * Constants.DECIMAL_BASE);
 
-        uint rewardToLiquidator = (cEqualRepayAmt * GearingTokenConstants.REWARD_TO_LIQUIDATOR) /
-            Constants.DECIMAL_BASE;
-        uint rewardToProtocol = (cEqualRepayAmt * GearingTokenConstants.REWARD_TO_PROTOCOL) / Constants.DECIMAL_BASE;
+        uint256 rewardToLiquidator =
+            (cEqualRepayAmt * GearingTokenConstants.REWARD_TO_LIQUIDATOR) / Constants.DECIMAL_BASE;
+        uint256 rewardToProtocol = (cEqualRepayAmt * GearingTokenConstants.REWARD_TO_PROTOCOL) / Constants.DECIMAL_BASE;
 
-        uint removedCollateralAmt = cEqualRepayAmt + rewardToLiquidator + rewardToProtocol;
+        uint256 removedCollateralAmt = cEqualRepayAmt + rewardToLiquidator + rewardToProtocol;
 
         removedCollateralAmt = removedCollateralAmt.min((collateralAmt * repayAmt) / loan.debtAmt);
 

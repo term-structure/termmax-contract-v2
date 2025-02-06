@@ -11,12 +11,12 @@ contract MockSwapAdapter is ERC20SwapAdapter {
         pool = pool_;
     }
 
-    function _swap(
-        IERC20 tokenIn,
-        IERC20 tokenOut,
-        uint256 amount,
-        bytes memory swapData
-    ) internal virtual override returns (uint256 tokenOutAmt) {
+    function _swap(IERC20 tokenIn, IERC20 tokenOut, uint256 amount, bytes memory swapData)
+        internal
+        virtual
+        override
+        returns (uint256 tokenOutAmt)
+    {
         uint256 minTokenOut = abi.decode(swapData, (uint256));
 
         IERC20(tokenIn).transfer(pool, amount);

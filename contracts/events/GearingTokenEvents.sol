@@ -8,7 +8,7 @@ interface GearingTokenEvents {
     /// @notice Emitted when Debt is augmented
     /// @param id The id of Gearing Token
     /// @param ftAmt The amount of debt augmented
-    event AugmentDebt(uint256 indexed id, uint ftAmt);
+    event AugmentDebt(uint256 indexed id, uint256 ftAmt);
 
     /// @notice Emitted when merging multiple Gearing Tokens into one
     /// @param owner The owner of those tokens

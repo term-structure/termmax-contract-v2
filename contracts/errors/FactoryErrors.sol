@@ -7,10 +7,9 @@ pragma solidity ^0.8.0;
  */
 interface FactoryErrors {
     /**
-     * @notice Error thrown when attempting to initialize a market with an invalid implementation
-     * @dev This can occur when trying to set an implementation that's already been set or is invalid
+     * @notice Error thrown when attempting to initialize with an invalid implementation
      */
-    error InvalidMarketImplementation();
+    error InvalidImplementation();
 
     /**
      * @notice Error thrown when a requested Gearing Token implementation cannot be found

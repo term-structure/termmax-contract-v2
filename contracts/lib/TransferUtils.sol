@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 library TransferUtils {
     using SafeERC20 for IERC20;
+
     error CanNotTransferUintMax();
 
     function safeTransferFrom(IERC20 token, address from, address to, uint256 value) internal {
