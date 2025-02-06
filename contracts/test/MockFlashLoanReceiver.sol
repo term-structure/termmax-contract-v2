@@ -16,13 +16,12 @@ contract MockFlashLoanReceiver is IFlashLoanReceiver {
         (, xt, gt, collateral, underlying) = market.tokens();
     }
 
-    function executeOperation(
-        address gtReceiver,
-        IERC20 asset,
-        uint256 amount,
-        bytes calldata data
-    ) external override returns (bytes memory collateralData) {
-        (address caller, uint256 collateralAmt) = abi.decode(data, (address, uint));
+    function executeOperation(address gtReceiver, IERC20 asset, uint256 amount, bytes calldata data)
+        external
+        override
+        returns (bytes memory collateralData)
+    {
+        (address caller, uint256 collateralAmt) = abi.decode(data, (address, uint256));
         IERC20(collateral).approve(address(gt), collateralAmt);
 
         assert(gtReceiver == caller);

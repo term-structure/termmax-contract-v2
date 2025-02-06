@@ -16,13 +16,10 @@ contract MockFlashRepayer is IFlashRepayer, IERC721Receiver {
         gt.flashRepay(id, byUnderlying, abi.encode(msg.sender));
     }
 
-    function executeOperation(
-        IERC20 repayToken,
-        uint128 debtAmt,
-        address,
-        bytes memory,
-        bytes calldata
-    ) external override {
+    function executeOperation(IERC20 repayToken, uint128 debtAmt, address, bytes memory, bytes calldata)
+        external
+        override
+    {
         repayToken.approve(address(gt), debtAmt);
     }
 

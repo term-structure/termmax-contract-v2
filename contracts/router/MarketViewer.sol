@@ -13,6 +13,7 @@ contract MarketViewer {
         uint256 collateralAmt;
         uint256 debtAmt;
     }
+
     struct Position {
         uint256 underlyingBalance;
         uint256 collateralBalance;
@@ -24,34 +25,34 @@ contract MarketViewer {
     }
 
     function getPositionDetail(ITermMaxMarket market, address owner) external view returns (Position memory position) {
-        (IMintableERC20 ft, IMintableERC20 xt, IGearingToken gt, address collateral, IERC20 underlying) = market
-            .tokens();
+        (IMintableERC20 ft, IMintableERC20 xt, IGearingToken gt, address collateral, IERC20 underlying) =
+            market.tokens();
         position.underlyingBalance = underlying.balanceOf(owner);
         position.collateralBalance = IERC20(collateral).balanceOf(owner);
         position.ftBalance = ft.balanceOf(owner);
         position.xtBalance = xt.balanceOf(owner);
 
         IERC721Enumerable gtNft = IERC721Enumerable(address(gt));
-        uint balance = gtNft.balanceOf(owner);
+        uint256 balance = gtNft.balanceOf(owner);
         position.gtInfo = new LoanPosition[](balance);
 
-        for (uint i = 0; i < balance; ++i) {
+        for (uint256 i = 0; i < balance; ++i) {
             uint256 loanId = gtNft.tokenOfOwnerByIndex(owner, i);
             position.gtInfo[i].loanId = loanId;
-            (, uint128 debtAmt, , bytes memory collateralData) = gt.loanInfo(loanId);
+            (, uint128 debtAmt,, bytes memory collateralData) = gt.loanInfo(loanId);
             position.gtInfo[i].debtAmt = debtAmt;
             position.gtInfo[i].collateralAmt = _decodeAmount(collateralData);
         }
     }
 
     function getAllLoanPosition(ITermMaxMarket market, address owner) external view returns (LoanPosition[] memory) {
-        (, , IGearingToken gt, , ) = market.tokens();
+        (,, IGearingToken gt,,) = market.tokens();
         IERC721Enumerable gtNft = IERC721Enumerable(address(gt));
-        uint balance = gtNft.balanceOf(owner);
+        uint256 balance = gtNft.balanceOf(owner);
         LoanPosition[] memory loanPositions = new LoanPosition[](balance);
-        for (uint i = 0; i < balance; ++i) {
+        for (uint256 i = 0; i < balance; ++i) {
             uint256 loanId = gtNft.tokenOfOwnerByIndex(owner, i);
-            (, uint128 debtAmt, , bytes memory collateralData) = gt.loanInfo(loanId);
+            (, uint128 debtAmt,, bytes memory collateralData) = gt.loanInfo(loanId);
             loanPositions[i].loanId = loanId;
             loanPositions[i].debtAmt = debtAmt;
             loanPositions[i].collateralAmt = _decodeAmount(collateralData);
@@ -60,6 +61,6 @@ contract MarketViewer {
     }
 
     function _decodeAmount(bytes memory collateralData) internal pure returns (uint256) {
-        return abi.decode(collateralData, (uint));
+        return abi.decode(collateralData, (uint256));
     }
 }

@@ -9,6 +9,7 @@ import "./ERC20SwapAdapter.sol";
  * @title TermMax PendleSwapV3Adapter
  * @author Term Structure Labs
  */
+
 contract PendleSwapV3Adapter is ERC20SwapAdapter, PendleHelper {
     IPAllActionV3 public immutable router;
 
@@ -16,19 +17,19 @@ contract PendleSwapV3Adapter is ERC20SwapAdapter, PendleHelper {
         router = IPAllActionV3(router_);
     }
 
-    function _swap(
-        IERC20 tokenIn,
-        IERC20 tokenOut,
-        uint256 amount,
-        bytes memory swapData
-    ) internal virtual override returns (uint256 tokenOutAmt) {
+    function _swap(IERC20 tokenIn, IERC20 tokenOut, uint256 amount, bytes memory swapData)
+        internal
+        virtual
+        override
+        returns (uint256 tokenOutAmt)
+    {
         (address ptMarketAddr, uint256 minTokenOut) = abi.decode(swapData, (address, uint256));
         IPMarket market = IPMarket(ptMarketAddr);
 
-        (, IPPrincipalToken PT, ) = market.readTokens();
+        (, IPPrincipalToken PT,) = market.readTokens();
         IERC20(tokenIn).approve(address(router), amount);
         if (tokenOut == PT) {
-            (tokenOutAmt, , ) = router.swapExactTokenForPt(
+            (tokenOutAmt,,) = router.swapExactTokenForPt(
                 address(this),
                 address(market),
                 minTokenOut,
@@ -37,7 +38,7 @@ contract PendleSwapV3Adapter is ERC20SwapAdapter, PendleHelper {
                 emptyLimit
             );
         } else {
-            (tokenOutAmt, , ) = router.swapExactPtForToken(
+            (tokenOutAmt,,) = router.swapExactPtForToken(
                 address(this),
                 address(market),
                 amount,

@@ -238,8 +238,8 @@ contract E2ETest is Script {
         console.log("--- User Position ---");
         console.log("User Addr:", userAddr);
         console.log("Market Addr:", address(market));
-        (IERC20[4] memory tokens, uint256[4] memory balances, address gtAddr, uint256[] memory gtIds) = router
-            .assetsWithERC20Collateral(market, userAddr);
+        (IERC20[4] memory tokens, uint256[4] memory balances, address gtAddr, uint256[] memory gtIds) =
+            router.assetsWithERC20Collateral(market, userAddr);
         for (uint256 i = 0; i < tokens.length; i++) {
             console.log(IERC20Metadata(address(tokens[i])).symbol(), ":", balances[i]);
         }

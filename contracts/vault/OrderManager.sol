@@ -24,6 +24,7 @@ import {OrderInfo, VaultStorage} from "./VaultStorage.sol";
  * @author Term Structure Labs
  * @notice The extension of the TermMaxVault that manages orders and calculates interest
  */
+
 contract OrderManager is VaultErrors, VaultEvents, VaultStorage, IOrderManager {
     using SafeCast for uint256;
     using SafeCast for int256;
@@ -87,11 +88,11 @@ contract OrderManager is VaultErrors, VaultEvents, VaultStorage, IOrderManager {
         CurveCuts memory curveCuts
     ) external onlyProxy returns (ITermMaxOrder order) {
         if (
-            _supplyQueue.length + 1 >= VaultConstants.MAX_QUEUE_LENGTH ||
-            _withdrawQueue.length + 1 >= VaultConstants.MAX_QUEUE_LENGTH
+            _supplyQueue.length + 1 >= VaultConstants.MAX_QUEUE_LENGTH
+                || _withdrawQueue.length + 1 >= VaultConstants.MAX_QUEUE_LENGTH
         ) revert MaxQueueLengthExceeded();
 
-        (IERC20 ft, IERC20 xt, , , IERC20 debtToken) = market.tokens();
+        (IERC20 ft, IERC20 xt,,, IERC20 debtToken) = market.tokens();
         if (asset != debtToken) revert InconsistentAsset();
 
         order = market.createOrder(address(this), maxSupply, ISwapCallback(address(this)), curveCuts);
@@ -103,13 +104,8 @@ contract OrderManager is VaultErrors, VaultEvents, VaultStorage, IOrderManager {
         _withdrawQueue.push(address(order));
 
         uint64 orderMaturity = market.config().maturity;
-        _orderMapping[address(order)] = OrderInfo({
-            market: market,
-            ft: ft,
-            xt: xt,
-            maxSupply: maxSupply.toUint128(),
-            maturity: orderMaturity
-        });
+        _orderMapping[address(order)] =
+            OrderInfo({market: market, ft: ft, xt: xt, maxSupply: maxSupply.toUint128(), maturity: orderMaturity});
         _insertMaturity(orderMaturity);
 
         emit CreateOrder(msg.sender, address(market), address(order), maxSupply, initialReserve, curveCuts);
@@ -163,13 +159,13 @@ contract OrderManager is VaultErrors, VaultEvents, VaultStorage, IOrderManager {
         if (changes < 0) {
             // withdraw assets from order and burn to assets
             order.updateOrder(newOrderConfig, changes, changes);
-            uint withdrawChanges = (-changes).toUint256();
+            uint256 withdrawChanges = (-changes).toUint256();
             orderInfo.ft.safeIncreaseAllowance(address(orderInfo.market), withdrawChanges);
             orderInfo.xt.safeIncreaseAllowance(address(orderInfo.market), withdrawChanges);
             orderInfo.market.burn(address(this), withdrawChanges);
         } else {
             // deposit assets to order
-            uint depositChanges = changes.toUint256();
+            uint256 depositChanges = changes.toUint256();
             asset.safeIncreaseAllowance(address(orderInfo.market), depositChanges);
             orderInfo.market.mint(address(order), depositChanges);
             changes = 0;
@@ -185,8 +181,8 @@ contract OrderManager is VaultErrors, VaultEvents, VaultStorage, IOrderManager {
      */
     function depositAssets(IERC20 asset, uint256 amount) external override onlyProxy {
         _accruedInterest();
-        uint amountLeft = amount;
-        for (uint i = 0; i < _supplyQueue.length; ++i) {
+        uint256 amountLeft = amount;
+        for (uint256 i = 0; i < _supplyQueue.length; ++i) {
             address order = _supplyQueue[i];
 
             //check maturity
@@ -194,10 +190,10 @@ contract OrderManager is VaultErrors, VaultEvents, VaultStorage, IOrderManager {
             if (block.timestamp > orderInfo.maturity) continue;
 
             //check supply
-            uint xtReserve = orderInfo.xt.balanceOf(order);
+            uint256 xtReserve = orderInfo.xt.balanceOf(order);
             if (xtReserve >= orderInfo.maxSupply) continue;
 
-            uint depositAmt = (orderInfo.maxSupply - xtReserve).min(amountLeft);
+            uint256 depositAmt = (orderInfo.maxSupply - xtReserve).min(amountLeft);
 
             asset.safeIncreaseAllowance(address(orderInfo.market), depositAmt);
             orderInfo.market.mint(order, depositAmt);
@@ -214,17 +210,17 @@ contract OrderManager is VaultErrors, VaultEvents, VaultStorage, IOrderManager {
      */
     function withdrawAssets(IERC20 asset, address recipient, uint256 amount) external override onlyProxy {
         _accruedInterest();
-        uint amountLeft = amount;
-        uint assetBalance = asset.balanceOf(address(this));
+        uint256 amountLeft = amount;
+        uint256 assetBalance = asset.balanceOf(address(this));
         if (assetBalance >= amount) {
             asset.safeTransfer(recipient, amount);
             _totalFt -= amount;
             _accretingPrincipal -= amount;
         } else {
             amountLeft -= assetBalance;
-            uint length = _withdrawQueue.length;
+            uint256 length = _withdrawQueue.length;
             // withdraw from orders
-            uint i;
+            uint256 i;
             while (length > 0 && i < length) {
                 address order = _withdrawQueue[i];
                 OrderInfo memory orderInfo = _orderMapping[order];
@@ -242,7 +238,7 @@ contract OrderManager is VaultErrors, VaultEvents, VaultStorage, IOrderManager {
                     }
                 } else if (block.timestamp < orderInfo.maturity) {
                     // withraw ft and xt from order to burn
-                    uint maxWithdraw = orderInfo.xt.balanceOf(order).min(orderInfo.ft.balanceOf(order));
+                    uint256 maxWithdraw = orderInfo.xt.balanceOf(order).min(orderInfo.ft.balanceOf(order));
 
                     if (maxWithdraw < amountLeft) {
                         amountLeft -= maxWithdraw;
@@ -260,7 +256,7 @@ contract OrderManager is VaultErrors, VaultEvents, VaultStorage, IOrderManager {
                 }
             }
             if (amountLeft > 0) {
-                uint maxWithdraw = amount - amountLeft;
+                uint256 maxWithdraw = amount - amountLeft;
                 revert InsufficientFunds(maxWithdraw, amount);
             }
         }
@@ -281,16 +277,16 @@ contract OrderManager is VaultErrors, VaultEvents, VaultStorage, IOrderManager {
     /**
      * @inheritdoc IOrderManager
      */
-    function dealBadDebt(
-        address recipient,
-        address collaretal,
-        uint256 amount
-    ) external onlyProxy returns (uint256 collateralOut) {
+    function dealBadDebt(address recipient, address collaretal, uint256 amount)
+        external
+        onlyProxy
+        returns (uint256 collateralOut)
+    {
         _accruedInterest();
-        uint badDebtAmt = _badDebtMapping[collaretal];
+        uint256 badDebtAmt = _badDebtMapping[collaretal];
         if (badDebtAmt == 0) revert NoBadDebt(collaretal);
         if (amount > badDebtAmt) revert InsufficientFunds(badDebtAmt, amount);
-        uint collateralBalance = IERC20(collaretal).balanceOf(address(this));
+        uint256 collateralBalance = IERC20(collaretal).balanceOf(address(this));
         collateralOut = (amount * collateralBalance) / badDebtAmt;
         IERC20(collaretal).safeTransfer(recipient, collateralOut);
         _badDebtMapping[collaretal] -= amount;
@@ -308,13 +304,13 @@ contract OrderManager is VaultErrors, VaultEvents, VaultStorage, IOrderManager {
     }
 
     function _redeemFromMarket(address order, OrderInfo memory orderInfo) internal returns (uint256 totalRedeem) {
-        uint ftReserve = orderInfo.ft.balanceOf(order);
+        uint256 ftReserve = orderInfo.ft.balanceOf(order);
         ITermMaxOrder(order).withdrawAssets(orderInfo.ft, address(this), ftReserve);
         orderInfo.ft.safeIncreaseAllowance(address(orderInfo.market), ftReserve);
         totalRedeem = orderInfo.market.redeem(ftReserve, address(this));
         if (totalRedeem < ftReserve) {
             // storage bad debt
-            (, , , address collateral, ) = orderInfo.market.tokens();
+            (,,, address collateral,) = orderInfo.market.tokens();
             _badDebtMapping[collateral] = ftReserve - totalRedeem;
         }
         emit RedeemOrder(msg.sender, order, ftReserve.toUint128(), totalRedeem.toUint128());
@@ -325,9 +321,9 @@ contract OrderManager is VaultErrors, VaultEvents, VaultStorage, IOrderManager {
     }
 
     /// @notice Calculate and distribute accrued the interest from start to end time
-    function _accruedPeriodInterest(uint startTime, uint endTime) internal {
-        uint interest = (_annualizedInterest * (endTime - startTime)) / 365 days;
-        uint _performanceFeeToCurator = (interest * _performanceFeeRate) / Constants.DECIMAL_BASE;
+    function _accruedPeriodInterest(uint256 startTime, uint256 endTime) internal {
+        uint256 interest = (_annualizedInterest * (endTime - startTime)) / 365 days;
+        uint256 _performanceFeeToCurator = (interest * _performanceFeeRate) / Constants.DECIMAL_BASE;
         // accrue interest
         _performanceFee += _performanceFeeToCurator;
         _accretingPrincipal += (interest - _performanceFeeToCurator);
@@ -337,7 +333,7 @@ contract OrderManager is VaultErrors, VaultEvents, VaultStorage, IOrderManager {
     function _accruedInterest() internal {
         uint64 currentTime = block.timestamp.toUint64();
 
-        uint lastTime = _lastUpdateTime;
+        uint256 lastTime = _lastUpdateTime;
         uint64 recentMaturity = _recentestMaturity;
         if (lastTime == 0) {
             lastTime = currentTime;
@@ -385,12 +381,12 @@ contract OrderManager is VaultErrors, VaultEvents, VaultStorage, IOrderManager {
 
         /// @dev If ft increases, interest increases, and if ft decreases,
         ///  interest decreases. Update the expected annualized return based on the change
-        uint ftChanges;
+        uint256 ftChanges;
 
         if (deltaFt > 0) {
             ftChanges = deltaFt.toUint256();
             _totalFt += ftChanges;
-            uint deltaAnualizedInterest = (ftChanges * Constants.DAYS_IN_YEAR) / _daysToMaturity(maturity);
+            uint256 deltaAnualizedInterest = (ftChanges * Constants.DAYS_IN_YEAR) / _daysToMaturity(maturity);
 
             _maturityToInterest[maturity] += deltaAnualizedInterest.toUint128();
 
@@ -398,10 +394,9 @@ contract OrderManager is VaultErrors, VaultEvents, VaultStorage, IOrderManager {
         } else {
             ftChanges = (-deltaFt).toUint256();
             _totalFt -= ftChanges;
-            uint deltaAnualizedInterest = (ftChanges * Constants.DAYS_IN_YEAR) / _daysToMaturity(maturity);
-            if (
-                _maturityToInterest[maturity] < deltaAnualizedInterest || _annualizedInterest < deltaAnualizedInterest
-            ) {
+            uint256 deltaAnualizedInterest = (ftChanges * Constants.DAYS_IN_YEAR) / _daysToMaturity(maturity);
+            if (_maturityToInterest[maturity] < deltaAnualizedInterest || _annualizedInterest < deltaAnualizedInterest)
+            {
                 revert LockedFtGreaterThanTotalFt();
             }
             _maturityToInterest[maturity] -= deltaAnualizedInterest.toUint128();

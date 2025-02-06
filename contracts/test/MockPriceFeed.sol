@@ -13,11 +13,7 @@ contract MockPriceFeed is AggregatorV3Interface, Ownable {
         uint80 answeredInRound;
     }
 
-    event AnswerUpdated(
-        int256 indexed current,
-        uint256 indexed roundId,
-        uint256 updatedAt
-    );
+    event AnswerUpdated(int256 indexed current, uint256 indexed roundId, uint256 updatedAt);
 
     RoundData private _latestRoundData;
 
@@ -35,19 +31,11 @@ contract MockPriceFeed is AggregatorV3Interface, Ownable {
         return 1;
     }
 
-    function getRoundData(
-        uint80
-    )
+    function getRoundData(uint80)
         external
         view
         override
-        returns (
-            uint80 roundId,
-            int256 answer,
-            uint256 startedAt,
-            uint256 updatedAt,
-            uint80 answeredInRound
-        )
+        returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)
     {
         return (
             _latestRoundData.roundId,
@@ -62,13 +50,7 @@ contract MockPriceFeed is AggregatorV3Interface, Ownable {
         external
         view
         override
-        returns (
-            uint80 roundId,
-            int256 answer,
-            uint256 startedAt,
-            uint256 updatedAt,
-            uint80 answeredInRound
-        )
+        returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)
     {
         return (
             _latestRoundData.roundId,
@@ -81,10 +63,6 @@ contract MockPriceFeed is AggregatorV3Interface, Ownable {
 
     function updateRoundData(RoundData memory roundData) external onlyOwner {
         _latestRoundData = roundData;
-        emit AnswerUpdated(
-            roundData.answer,
-            roundData.roundId,
-            roundData.updatedAt
-        );
+        emit AnswerUpdated(roundData.answer, roundData.roundId, roundData.updatedAt);
     }
 }

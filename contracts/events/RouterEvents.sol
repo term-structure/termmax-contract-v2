@@ -14,7 +14,7 @@ interface RouterEvents {
     /**
      * @notice Emitted when a market's whitelist status is updated
      * @param market The address of the market
-     *param isWhitelist Whether the market is whitelisted
+     * param isWhitelist Whether the market is whitelisted
      */
     event UpdateMarketWhiteList(address market, bool isWhitelist);
 
@@ -156,11 +156,7 @@ interface RouterEvents {
      * @param actualTokenOut The actual amount of output tokens
      */
     event RedeemAndSwap(
-        ITermMaxMarket indexed market,
-        uint256 ftAmount,
-        address caller,
-        address recipient,
-        uint256 actualTokenOut
+        ITermMaxMarket indexed market, uint256 ftAmount, address caller, address recipient, uint256 actualTokenOut
     );
 
     /**

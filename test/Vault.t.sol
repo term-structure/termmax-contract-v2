@@ -26,6 +26,7 @@ import "contracts/storage/TermMaxStorage.sol";
 contract VaultTest is Test {
     using JSONLoader for *;
     using SafeCast for *;
+
     DeployUtils.Res res;
 
     OrderConfig orderConfig;
@@ -41,13 +42,13 @@ contract VaultTest is Test {
 
     ITermMaxVault vault;
 
-    uint timelock = 86400;
-    uint maxCapacity = 1000000e18;
+    uint256 timelock = 86400;
+    uint256 maxCapacity = 1000000e18;
     uint64 performanceFeeRate = 0.5e8;
 
     ITermMaxMarket market2;
 
-    uint currentTime;
+    uint256 currentTime;
     uint32 maxLtv = 0.89e8;
     uint32 liquidationLtv = 0.9e8;
     VaultInitialParams initialParams;
@@ -90,22 +91,13 @@ contract VaultTest is Test {
         );
 
         // update oracle
-        res.collateralOracle.updateRoundData(
-            JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_2000_DAI_1.eth")
-        );
+        res.collateralOracle.updateRoundData(JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_2000_DAI_1.eth"));
         res.debtOracle.updateRoundData(JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_2000_DAI_1.dai"));
 
-        uint amount = 10000e8;
+        uint256 amount = 10000e8;
 
         initialParams = VaultInitialParams(
-            deployer,
-            curator,
-            timelock,
-            res.debt,
-            maxCapacity,
-            "Vault-DAI",
-            "Vault-DAI",
-            performanceFeeRate
+            deployer, curator, timelock, res.debt, maxCapacity, "Vault-DAI", "Vault-DAI", performanceFeeRate
         );
 
         vault = DeployUtils.deployVault(initialParams);
@@ -332,7 +324,7 @@ contract VaultTest is Test {
         vm.prank(curator);
         vault.submitPerformanceFeeRate(newPercentage);
 
-        uint percentage = vault.performanceFeeRate();
+        uint256 percentage = vault.performanceFeeRate();
         assertEq(percentage, newPercentage);
 
         newPercentage = 0.5e8;
@@ -379,57 +371,57 @@ contract VaultTest is Test {
         vm.stopPrank();
     }
 
-    function testSupplyQueue(uint orderCount, uint seed) public {
+    function testSupplyQueue(uint256 orderCount, uint256 seed) public {
         vm.assume(orderCount < VaultConstants.MAX_QUEUE_LENGTH && orderCount > 0);
         address[] memory supplyQueue = new address[](orderCount);
         supplyQueue[0] = vault.supplyQueue(0);
         vm.startPrank(curator);
-        for (uint i = 1; i < orderCount; i++) {
+        for (uint256 i = 1; i < orderCount; i++) {
             address order = address(vault.createOrder(res.market, maxCapacity, 0, orderConfig.curveCuts));
             supplyQueue[i] = order;
             assertEq(vault.supplyQueue(i), order);
         }
 
         uint256[] memory indexes = new uint256[](orderCount);
-        for (uint i = 0; i < orderCount; i++) {
+        for (uint256 i = 0; i < orderCount; i++) {
             indexes[i] = i;
         }
         indexes = shuffle(indexes, seed);
         vault.updateSupplyQueue(indexes);
 
-        for (uint i = 0; i < orderCount; i++) {
+        for (uint256 i = 0; i < orderCount; i++) {
             assertEq(vault.supplyQueue(i), supplyQueue[indexes[i]]);
         }
 
         vm.stopPrank();
     }
 
-    function testWithdrawQueue(uint orderCount, uint seed) public {
+    function testWithdrawQueue(uint256 orderCount, uint256 seed) public {
         vm.assume(orderCount < VaultConstants.MAX_QUEUE_LENGTH && orderCount > 0);
         address[] memory withdrawQueue = new address[](orderCount);
         withdrawQueue[0] = vault.withdrawQueue(0);
         vm.startPrank(curator);
-        for (uint i = 1; i < orderCount; i++) {
+        for (uint256 i = 1; i < orderCount; i++) {
             address order = address(vault.createOrder(res.market, maxCapacity, 0, orderConfig.curveCuts));
             withdrawQueue[i] = order;
             assertEq(vault.withdrawQueue(i), order);
         }
 
         uint256[] memory indexes = new uint256[](orderCount);
-        for (uint i = 0; i < orderCount; i++) {
+        for (uint256 i = 0; i < orderCount; i++) {
             indexes[i] = i;
         }
         indexes = shuffle(indexes, seed);
         vault.updateWithdrawQueue(indexes);
 
-        for (uint i = 0; i < orderCount; i++) {
+        for (uint256 i = 0; i < orderCount; i++) {
             assertEq(vault.withdrawQueue(i), withdrawQueue[indexes[i]]);
         }
 
         vm.stopPrank();
     }
 
-    function shuffle(uint256[] memory arr, uint seed) public pure returns (uint256[] memory) {
+    function shuffle(uint256[] memory arr, uint256 seed) public pure returns (uint256[] memory) {
         uint256 length = arr.length;
 
         for (uint256 i = length - 1; i > 0; i--) {
@@ -453,7 +445,7 @@ contract VaultTest is Test {
         vault.updateSupplyQueue(new uint256[](0));
 
         address order2 = address(vault.createOrder(res.market, maxCapacity, 0, orderConfig.curveCuts));
-        uint[] memory indexes = new uint[](2);
+        uint256[] memory indexes = new uint256[](2);
         indexes[0] = 1;
         indexes[1] = 1;
         vm.expectRevert(abi.encodeWithSelector(VaultErrors.DuplicateOrder.selector, order2));
@@ -472,7 +464,7 @@ contract VaultTest is Test {
         vault.updateWithdrawQueue(new uint256[](0));
 
         address order2 = address(vault.createOrder(res.market, maxCapacity, 0, orderConfig.curveCuts));
-        uint[] memory indexes = new uint[](2);
+        uint256[] memory indexes = new uint256[](2);
         indexes[0] = 1;
         indexes[1] = 1;
         vm.expectRevert(abi.encodeWithSelector(VaultErrors.DuplicateOrder.selector, order2));
@@ -507,13 +499,13 @@ contract VaultTest is Test {
         newCurveCuts.lendCurveCuts[0].liqSquare++;
         curveCuts[2] = newCurveCuts;
 
-        uint[] memory balancesBefore = new uint[](3);
+        uint256[] memory balancesBefore = new uint256[](3);
         balancesBefore[0] = res.ft.balanceOf(address(orders[0]));
         balancesBefore[1] = res.ft.balanceOf(address(orders[1]));
         balancesBefore[2] = res.ft.balanceOf(address(orders[2]));
         vault.updateOrders(orders, changes, maxSupplies, curveCuts);
 
-        for (uint i = 0; i < orders.length; i++) {
+        for (uint256 i = 0; i < orders.length; i++) {
             assertEq(orders[i].orderConfig().maxXtReserve, maxSupplies[i]);
             if (changes[i] < 0) {
                 assertEq(res.ft.balanceOf(address(orders[i])), balancesBefore[i] - (-changes[i]).toUint256());
@@ -521,8 +513,7 @@ contract VaultTest is Test {
                 assertEq(res.ft.balanceOf(address(orders[i])), balancesBefore[i] + changes[i].toUint256());
             }
             assertEq(
-                orders[i].orderConfig().curveCuts.lendCurveCuts[0].liqSquare,
-                curveCuts[i].lendCurveCuts[0].liqSquare
+                orders[i].orderConfig().curveCuts.lendCurveCuts[0].liqSquare, curveCuts[i].lendCurveCuts[0].liqSquare
             );
         }
 
@@ -539,7 +530,7 @@ contract VaultTest is Test {
         res.debt.mint(lper2, amount2);
         vm.startPrank(lper2);
         res.debt.approve(address(vault), amount2);
-        uint share = vault.previewDeposit(amount2);
+        uint256 share = vault.previewDeposit(amount2);
         vault.deposit(amount2, lper2);
         assertEq(vault.balanceOf(lper2), share);
 
@@ -559,8 +550,8 @@ contract VaultTest is Test {
         vm.stopPrank();
 
         vm.startPrank(deployer);
-        uint share = vault.balanceOf(deployer);
-        uint redeem = vault.previewRedeem(share);
+        uint256 share = vault.balanceOf(deployer);
+        uint256 redeem = vault.previewRedeem(share);
         assertEq(redeem, vault.redeem(share, deployer, deployer));
         assert(redeem > 10000e8);
         vm.stopPrank();
@@ -673,7 +664,7 @@ contract VaultTest is Test {
 
         vm.startPrank(curator);
         address order2 = address(vault.createOrder(market2, maxCapacity, 0, orderConfig.curveCuts));
-        uint[] memory indexes = new uint[](2);
+        uint256[] memory indexes = new uint256[](2);
         indexes[0] = 1;
         indexes[1] = 0;
         vault.updateSupplyQueue(indexes);
@@ -691,7 +682,7 @@ contract VaultTest is Test {
         vault.redeem(1000e8, lper2, lper2);
         vm.stopPrank();
 
-        uint performanceFee = vault.performanceFee();
+        uint256 performanceFee = vault.performanceFee();
         vm.prank(curator);
         vault.withdrawPerformanceFee(curator, performanceFee);
 
@@ -730,7 +721,7 @@ contract VaultTest is Test {
 
         vm.startPrank(curator);
         address order2 = address(vault.createOrder(market2, maxCapacity, 0, orderConfig.curveCuts));
-        uint[] memory indexes = new uint[](2);
+        uint256[] memory indexes = new uint256[](2);
         indexes[0] = 1;
         indexes[1] = 0;
         vault.updateSupplyQueue(indexes);
@@ -741,7 +732,7 @@ contract VaultTest is Test {
 
         vm.stopPrank();
 
-        (, IERC20 xt, , , ) = market2.tokens();
+        (, IERC20 xt,,,) = market2.tokens();
 
         vm.warp(currentTime + 4 days);
         {
@@ -769,7 +760,7 @@ contract VaultTest is Test {
         vm.prank(lper2);
         vault.redeem(100e8, lper2, lper2);
 
-        uint performanceFee = vault.performanceFee();
+        uint256 performanceFee = vault.performanceFee();
         vm.prank(curator);
         vault.withdrawPerformanceFee(curator, performanceFee);
 
@@ -813,12 +804,12 @@ contract VaultTest is Test {
 
         vm.warp(currentTime + 92 days);
 
-        uint propotion = (res.ft.balanceOf(address(res.order)) * Constants.DECIMAL_BASE_SQ) /
-            (res.ft.totalSupply() - res.ft.balanceOf(address(res.market)));
+        uint256 propotion = (res.ft.balanceOf(address(res.order)) * Constants.DECIMAL_BASE_SQ)
+            / (res.ft.totalSupply() - res.ft.balanceOf(address(res.market)));
 
-        uint tokenOut = (res.debt.balanceOf(address(res.market)) * propotion) / Constants.DECIMAL_BASE_SQ;
-        uint badDebt = res.ft.balanceOf(address(res.order)) - tokenOut;
-        uint delivered = (propotion * 1e18) / Constants.DECIMAL_BASE_SQ;
+        uint256 tokenOut = (res.debt.balanceOf(address(res.market)) * propotion) / Constants.DECIMAL_BASE_SQ;
+        uint256 badDebt = res.ft.balanceOf(address(res.order)) - tokenOut;
+        uint256 delivered = (propotion * 1e18) / Constants.DECIMAL_BASE_SQ;
 
         vm.startPrank(lper2);
         vault.redeem(1000e8, lper2, lper2);
@@ -827,9 +818,9 @@ contract VaultTest is Test {
         assertEq(vault.badDebtMapping(address(res.collateral)), badDebt);
         assertEq(res.collateral.balanceOf(address(vault)), delivered);
 
-        uint shareToDealBadDebt = vault.previewWithdraw(badDebt / 2);
+        uint256 shareToDealBadDebt = vault.previewWithdraw(badDebt / 2);
         vm.startPrank(lper2);
-        (uint shares, uint collateralOut) = vault.dealBadDebt(address(res.collateral), badDebt / 2, lper2, lper2);
+        (uint256 shares, uint256 collateralOut) = vault.dealBadDebt(address(res.collateral), badDebt / 2, lper2, lper2);
         assertEq(shares, shareToDealBadDebt);
         assertEq(collateralOut, ((badDebt / 2) * delivered) / badDebt);
         assertEq(vault.badDebtMapping(address(res.collateral)), badDebt - badDebt / 2);
@@ -838,15 +829,10 @@ contract VaultTest is Test {
 
         vm.startPrank(lper2);
         shareToDealBadDebt = vault.previewWithdraw(badDebt - badDebt / 2);
-        uint remainningCollateral = res.collateral.balanceOf(address(vault));
+        uint256 remainningCollateral = res.collateral.balanceOf(address(vault));
         vm.expectEmit();
         emit VaultEvents.DealBadDebt(
-            lper2,
-            lper2,
-            address(res.collateral),
-            badDebt - badDebt / 2,
-            shareToDealBadDebt,
-            remainningCollateral
+            lper2, lper2, address(res.collateral), badDebt - badDebt / 2, shareToDealBadDebt, remainningCollateral
         );
         (shares, collateralOut) = vault.dealBadDebt(address(res.collateral), badDebt - badDebt / 2, lper2, lper2);
         assertEq(shares, shareToDealBadDebt);
@@ -949,8 +935,6 @@ contract VaultTest is Test {
     }
 
     function _daysToMaturity(uint256 _now) internal view returns (uint256 daysToMaturity) {
-        daysToMaturity =
-            (res.market.config().maturity - _now + Constants.SECONDS_IN_DAY - 1) /
-            Constants.SECONDS_IN_DAY;
+        daysToMaturity = (res.market.config().maturity - _now + Constants.SECONDS_IN_DAY - 1) / Constants.SECONDS_IN_DAY;
     }
 }

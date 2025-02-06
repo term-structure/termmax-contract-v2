@@ -27,6 +27,7 @@ import "contracts/storage/TermMaxStorage.sol";
 
 contract AccessManagerTest is Test {
     using JSONLoader for *;
+
     DeployUtils.Res res;
 
     OrderConfig orderConfig;
@@ -51,22 +52,16 @@ contract AccessManagerTest is Test {
 
         res = DeployUtils.deployMarket(deployer, marketConfig, maxLtv, liquidationLtv);
 
-        res.order = res.market.createOrder(
-            maker,
-            orderConfig.maxXtReserve,
-            ISwapCallback(address(0)),
-            orderConfig.curveCuts
-        );
+        res.order =
+            res.market.createOrder(maker, orderConfig.maxXtReserve, ISwapCallback(address(0)), orderConfig.curveCuts);
 
         vm.warp(vm.parseUint(vm.parseJsonString(testdata, ".currentTime")));
 
         // update oracle
-        res.collateralOracle.updateRoundData(
-            JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_2000_DAI_1.eth")
-        );
+        res.collateralOracle.updateRoundData(JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_2000_DAI_1.eth"));
         res.debtOracle.updateRoundData(JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_2000_DAI_1.dai"));
 
-        uint amount = 150e8;
+        uint256 amount = 150e8;
         res.debt.mint(deployer, amount);
         res.debt.approve(address(res.market), amount);
         res.market.mint(deployer, amount);
@@ -114,7 +109,7 @@ contract AccessManagerTest is Test {
         vm.prank(sender);
 
         vm.expectRevert(
-            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, sender, uint(0))
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, sender, uint256(0))
         );
         manager.transferOwnership(IOwnable(address(res.router)), sender);
     }
@@ -213,9 +208,7 @@ contract AccessManagerTest is Test {
         vm.startPrank(nonPauser);
         vm.expectRevert(
             abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector,
-                nonPauser,
-                manager.PAUSER_ROLE()
+                IAccessControl.AccessControlUnauthorizedAccount.selector, nonPauser, manager.PAUSER_ROLE()
             )
         );
         manager.setSwitch(IPausable(address(res.router)), false);
@@ -259,9 +252,7 @@ contract AccessManagerTest is Test {
         vm.startPrank(nonVaultManager);
         vm.expectRevert(
             abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector,
-                nonVaultManager,
-                manager.VAULT_ROLE()
+                IAccessControl.AccessControlUnauthorizedAccount.selector, nonVaultManager, manager.VAULT_ROLE()
             )
         );
         manager.setCuratorForVault(ITermMaxVault(address(vault)), newCurator);
@@ -325,27 +316,21 @@ contract AccessManagerTest is Test {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector,
-                nonVaultManager,
-                manager.VAULT_ROLE()
+                IAccessControl.AccessControlUnauthorizedAccount.selector, nonVaultManager, manager.VAULT_ROLE()
             )
         );
         manager.revokeVaultPendingTimelock(ITermMaxVault(address(vault)));
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector,
-                nonVaultManager,
-                manager.VAULT_ROLE()
+                IAccessControl.AccessControlUnauthorizedAccount.selector, nonVaultManager, manager.VAULT_ROLE()
             )
         );
         manager.revokeVaultPendingMarket(ITermMaxVault(address(vault)), newMarket);
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector,
-                nonVaultManager,
-                manager.VAULT_ROLE()
+                IAccessControl.AccessControlUnauthorizedAccount.selector, nonVaultManager, manager.VAULT_ROLE()
             )
         );
         manager.revokeVaultPendingGuardian(ITermMaxVault(address(vault)));
@@ -398,9 +383,7 @@ contract AccessManagerTest is Test {
         vm.startPrank(nonAdmin);
         vm.expectRevert(
             abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector,
-                nonAdmin,
-                manager.DEFAULT_ADMIN_ROLE()
+                IAccessControl.AccessControlUnauthorizedAccount.selector, nonAdmin, manager.DEFAULT_ADMIN_ROLE()
             )
         );
         manager.createMarket(res.factory, gtKey, params, 2);
@@ -423,9 +406,7 @@ contract AccessManagerTest is Test {
         vm.startPrank(nonAdmin);
         vm.expectRevert(
             abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector,
-                nonAdmin,
-                manager.DEFAULT_ADMIN_ROLE()
+                IAccessControl.AccessControlUnauthorizedAccount.selector, nonAdmin, manager.DEFAULT_ADMIN_ROLE()
             )
         );
         manager.upgradeSubContract(UUPSUpgradeable(address(res.router)), address(routerV2), "");
@@ -450,9 +431,7 @@ contract AccessManagerTest is Test {
         vm.startPrank(nonAdmin);
         vm.expectRevert(
             abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector,
-                nonAdmin,
-                manager.DEFAULT_ADMIN_ROLE()
+                IAccessControl.AccessControlUnauthorizedAccount.selector, nonAdmin, manager.DEFAULT_ADMIN_ROLE()
             )
         );
         manager.setMarketWhitelist(res.router, newMarket, true);
@@ -474,9 +453,7 @@ contract AccessManagerTest is Test {
         vm.startPrank(nonAdmin);
         vm.expectRevert(
             abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector,
-                nonAdmin,
-                manager.DEFAULT_ADMIN_ROLE()
+                IAccessControl.AccessControlUnauthorizedAccount.selector, nonAdmin, manager.DEFAULT_ADMIN_ROLE()
             )
         );
         manager.setGtImplement(res.factory, gtImplementName, newGtImplement);
@@ -491,9 +468,7 @@ contract AccessManagerTest is Test {
         vm.startPrank(sender);
         vm.expectRevert(
             abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector,
-                sender,
-                manager.CONFIGURATOR_ROLE()
+                IAccessControl.AccessControlUnauthorizedAccount.selector, sender, manager.CONFIGURATOR_ROLE()
             )
         );
         manager.updateOrderFeeRate(res.market, res.order, newFeeConfig);

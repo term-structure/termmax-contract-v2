@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
+
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 
 /**
@@ -13,6 +14,7 @@ interface IOracle {
         uint32 heartbeat;
     }
     /// @notice Error thrown when the oracle is not working
+
     error OracleIsNotWorking(address asset);
 
     /// @notice Error thrown when the asset or oracle address is invalid
@@ -31,9 +33,7 @@ interface IOracle {
     );
 
     /// @notice Get the price of an asset
-    function getPrice(
-        address asset
-    ) external view returns (uint256 price, uint8 decimals);
+    function getPrice(address asset) external view returns (uint256 price, uint8 decimals);
 
     /// @notice Set oracle
     function setOracle(address asset, Oracle memory oracle) external;

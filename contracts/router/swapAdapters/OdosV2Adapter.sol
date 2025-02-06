@@ -14,12 +14,10 @@ interface IOdosRouterV2 {
         address outputReceiver;
     }
 
-    function swap(
-        swapTokenInfo memory tokenInfo,
-        bytes calldata pathDefinition,
-        address executor,
-        uint32 referralCode
-    ) external payable returns (uint256 amountOut);
+    function swap(swapTokenInfo memory tokenInfo, bytes calldata pathDefinition, address executor, uint32 referralCode)
+        external
+        payable
+        returns (uint256 amountOut);
 }
 
 /**
@@ -33,12 +31,12 @@ contract OdosV2Adapter is ERC20SwapAdapter {
         router = IOdosRouterV2(router_);
     }
 
-    function _swap(
-        IERC20 tokenIn,
-        IERC20 tokenOut,
-        uint256 amountIn,
-        bytes memory swapData
-    ) internal virtual override returns (uint256 tokenOutAmt) {
+    function _swap(IERC20 tokenIn, IERC20 tokenOut, uint256 amountIn, bytes memory swapData)
+        internal
+        virtual
+        override
+        returns (uint256 tokenOutAmt)
+    {
         IERC20(tokenIn).approve(address(router), amountIn);
 
         (
@@ -49,17 +47,14 @@ contract OdosV2Adapter is ERC20SwapAdapter {
         ) = abi.decode(swapData, (IOdosRouterV2.swapTokenInfo, bytes, address, uint32));
 
         require(tokenInfo.outputToken == address(tokenOut), "INVALID_OUTPUT_TOKEN");
-        /** Note: Scaling Input/Output amount */
+        /**
+         * Note: Scaling Input/Output amount
+         */
         tokenInfo.outputQuote = (tokenInfo.outputQuote * amountIn) / tokenInfo.inputAmount;
         tokenInfo.outputMin = (tokenInfo.outputMin * amountIn) / tokenInfo.inputAmount;
         tokenInfo.inputAmount = amountIn;
         tokenInfo.outputReceiver = address(this);
 
-        tokenOutAmt = router.swap(
-            tokenInfo,
-            pathDefinition,
-            executor,
-            referralCode
-        );
+        tokenOutAmt = router.swap(tokenInfo, pathDefinition, executor, referralCode);
     }
 }

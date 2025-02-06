@@ -20,6 +20,7 @@ import "contracts/storage/TermMaxStorage.sol";
 
 contract MarketTest is Test {
     using JSONLoader for *;
+
     DeployUtils.Res res;
 
     OrderConfig orderConfig;
@@ -42,19 +43,13 @@ contract MarketTest is Test {
         orderConfig = JSONLoader.getOrderConfigFromJson(testdata, ".orderConfig");
         res = DeployUtils.deployMarket(deployer, marketConfig, maxLtv, liquidationLtv);
 
-        res.order = res.market.createOrder(
-            maker,
-            orderConfig.maxXtReserve,
-            ISwapCallback(address(0)),
-            orderConfig.curveCuts
-        );
+        res.order =
+            res.market.createOrder(maker, orderConfig.maxXtReserve, ISwapCallback(address(0)), orderConfig.curveCuts);
 
         vm.warp(vm.parseUint(vm.parseJsonString(testdata, ".currentTime")));
 
         // update oracle
-        res.collateralOracle.updateRoundData(
-            JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_2000_DAI_1.eth")
-        );
+        res.collateralOracle.updateRoundData(JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_2000_DAI_1.eth"));
         res.debtOracle.updateRoundData(JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_2000_DAI_1.dai"));
 
         vm.stopPrank();
@@ -111,7 +106,7 @@ contract MarketTest is Test {
 
     function testMint() public {
         vm.startPrank(sender);
-        uint amount = 150e8;
+        uint256 amount = 150e8;
         res.debt.mint(sender, amount);
         res.debt.approve(address(res.market), amount);
 
@@ -128,7 +123,7 @@ contract MarketTest is Test {
 
     function testMintWhenTermIsNotOpen() public {
         vm.startPrank(sender);
-        uint amount = 150e8;
+        uint256 amount = 150e8;
         res.debt.mint(sender, amount);
         res.debt.approve(address(res.market), amount);
 
@@ -141,7 +136,7 @@ contract MarketTest is Test {
 
     function testBurn() public {
         vm.startPrank(sender);
-        uint amount = 150e8;
+        uint256 amount = 150e8;
         res.debt.mint(sender, amount);
         res.debt.approve(address(res.market), amount);
         res.market.mint(sender, amount);
@@ -159,7 +154,7 @@ contract MarketTest is Test {
 
     function testBurnWhenTermIsNotOpen() public {
         vm.startPrank(sender);
-        uint amount = 150e8;
+        uint256 amount = 150e8;
         res.debt.mint(sender, amount);
         res.debt.approve(address(res.market), amount);
         vm.warp(marketConfig.maturity);
@@ -175,21 +170,15 @@ contract MarketTest is Test {
         res.debt.approve(address(res.market), debtAmt);
         res.market.mint(sender, debtAmt);
 
-        uint fee = (res.market.issueFtFeeRatio() * debtAmt) / Constants.DECIMAL_BASE;
-        uint collateralAmt = 1e18;
+        uint256 fee = (res.market.issueFtFeeRatio() * debtAmt) / Constants.DECIMAL_BASE;
+        uint256 collateralAmt = 1e18;
         res.collateral.mint(sender, collateralAmt);
         res.collateral.approve(address(res.gt), collateralAmt);
         vm.expectEmit();
         emit MarketEvents.IssueFt(
-            sender,
-            sender,
-            1,
-            debtAmt,
-            uint128(debtAmt - fee),
-            uint128(fee),
-            abi.encode(collateralAmt)
+            sender, sender, 1, debtAmt, uint128(debtAmt - fee), uint128(fee), abi.encode(collateralAmt)
         );
-        (uint gtId, uint128 ftOutAmt) = res.market.issueFt(sender, debtAmt, abi.encode(collateralAmt));
+        (uint256 gtId, uint128 ftOutAmt) = res.market.issueFt(sender, debtAmt, abi.encode(collateralAmt));
 
         assertEq(gtId, 1);
         assertEq(res.debt.balanceOf(sender), 0);
@@ -198,7 +187,7 @@ contract MarketTest is Test {
         assertEq(res.collateral.balanceOf(address(res.gt)), collateralAmt);
         assertEq(res.debt.balanceOf(address(res.market)), debtAmt);
 
-        (address owner, uint128 dAmt, , bytes memory collateralData) = res.gt.loanInfo(gtId);
+        (address owner, uint128 dAmt,, bytes memory collateralData) = res.gt.loanInfo(gtId);
         assertEq(owner, sender);
         assertEq(dAmt, debtAmt);
 
@@ -211,19 +200,19 @@ contract MarketTest is Test {
         vm.startPrank(sender);
         uint128 debtAmt = 1000e8;
 
-        uint collateralAmt = 1e18;
+        uint256 collateralAmt = 1e18;
         res.collateral.mint(sender, collateralAmt);
         res.collateral.approve(address(res.gt), collateralAmt);
-        (uint gtId, uint128 ftOutAmt) = res.market.issueFt(sender, debtAmt, abi.encode(collateralAmt));
+        (uint256 gtId, uint128 ftOutAmt) = res.market.issueFt(sender, debtAmt, abi.encode(collateralAmt));
 
         uint128 debtAmt2 = debtAmt / 2;
-        uint fee = (res.market.issueFtFeeRatio() * debtAmt2) / Constants.DECIMAL_BASE;
+        uint256 fee = (res.market.issueFtFeeRatio() * debtAmt2) / Constants.DECIMAL_BASE;
         vm.expectEmit();
         emit MarketEvents.IssueFtByExistedGt(sender, sender, gtId, debtAmt2, uint128(debtAmt2 - fee), uint128(fee));
-        uint ftOutAmt2 = res.market.issueFtByExistedGt(sender, debtAmt2, gtId);
+        uint256 ftOutAmt2 = res.market.issueFtByExistedGt(sender, debtAmt2, gtId);
 
         assertEq(res.ft.balanceOf(sender), ftOutAmt + ftOutAmt2);
-        (address owner, uint128 dAmt, , bytes memory collateralData) = res.gt.loanInfo(gtId);
+        (address owner, uint128 dAmt,, bytes memory collateralData) = res.gt.loanInfo(gtId);
         assertEq(owner, sender);
         assertEq(dAmt, debtAmt + debtAmt2);
         assertEq(abi.decode(collateralData, (uint256)), collateralAmt);
@@ -275,7 +264,7 @@ contract MarketTest is Test {
         assertEq(res.debt.balanceOf(address(receiver)), debtAmt);
         assertEq(res.xt.balanceOf(sender), 0);
 
-        (address owner, uint128 dAmt, , bytes memory collateralData) = res.gt.loanInfo(1);
+        (address owner, uint128 dAmt,, bytes memory collateralData) = res.gt.loanInfo(1);
         assertEq(owner, sender);
         assertEq(dAmt, debtAmt);
 
@@ -309,18 +298,10 @@ contract MarketTest is Test {
 
         vm.expectEmit();
         emit OrderEvents.OrderInitialized(
-            res.market,
-            sender,
-            orderConfig.maxXtReserve,
-            ISwapCallback(address(0)),
-            orderConfig.curveCuts
+            res.market, sender, orderConfig.maxXtReserve, ISwapCallback(address(0)), orderConfig.curveCuts
         );
-        ITermMaxOrder order = res.market.createOrder(
-            sender,
-            orderConfig.maxXtReserve,
-            ISwapCallback(address(0)),
-            orderConfig.curveCuts
-        );
+        ITermMaxOrder order =
+            res.market.createOrder(sender, orderConfig.maxXtReserve, ISwapCallback(address(0)), orderConfig.curveCuts);
         assertEq(address(order.market()), address(res.market));
         assertEq(Ownable(address(order)).owner(), sender);
         assertEq(order.orderConfig().maxXtReserve, orderConfig.maxXtReserve);
@@ -371,7 +352,7 @@ contract MarketTest is Test {
         vm.startPrank(bob);
         res.ft.approve(address(res.market), depositAmt);
 
-        uint redeemFee = (marketConfig.feeConfig.redeemFeeRatio * (depositAmt - debtAmt)) / Constants.DECIMAL_BASE;
+        uint256 redeemFee = (marketConfig.feeConfig.redeemFeeRatio * (depositAmt - debtAmt)) / Constants.DECIMAL_BASE;
         vm.expectEmit();
         emit MarketEvents.Redeem(
             bob,
@@ -399,7 +380,7 @@ contract MarketTest is Test {
         res.market.mint(sender, depositAmt);
 
         res.ft.approve(address(res.market), depositAmt);
-        uint deadline = marketConfig.maturity + Constants.LIQUIDATION_WINDOW;
+        uint256 deadline = marketConfig.maturity + Constants.LIQUIDATION_WINDOW;
         vm.warp(deadline - 1);
         vm.expectRevert(
             abi.encodeWithSelector(MarketErrors.CanNotRedeemBeforeFinalLiquidationDeadline.selector, deadline)

@@ -49,14 +49,12 @@ interface ITermMaxMarket {
     /// @param collateralData The encoded data of collateral
     /// @return gtId The id of Gearing Token
     ///
-    function issueFt(
-        address recipient,
-        uint128 debt,
-        bytes calldata collateralData
-    ) external returns (uint256 gtId, uint128 ftOutAmt);
+    function issueFt(address recipient, uint128 debt, bytes calldata collateralData)
+        external
+        returns (uint256 gtId, uint128 ftOutAmt);
 
     /// @notice Return the issue fee ratio
-    function issueFtFeeRatio() external view returns (uint);
+    function issueFtFeeRatio() external view returns (uint256);
 
     /// @notice Using collateral to issue FT tokens.
     ///         Caller will get FT(bond) tokens equal to the debt amount subtract issue fee
@@ -65,7 +63,7 @@ interface ITermMaxMarket {
     /// @param gtId The id of Gearing Token
     /// @return ftOutAmt The amount of FT issued
     ///
-    function issueFtByExistedGt(address recipient, uint128 debt, uint gtId) external returns (uint128 ftOutAmt);
+    function issueFtByExistedGt(address recipient, uint128 debt, uint256 gtId) external returns (uint128 ftOutAmt);
 
     /// @notice Flash loan underlying token for leverage
     /// @param recipient Who will receive Gearing Token
@@ -73,11 +71,9 @@ interface ITermMaxMarket {
     ///              The caller will receive an equal amount of underlying token by flash loan.
     /// @param callbackData The data of flash loan callback
     /// @return gtId The id of Gearing Token
-    function leverageByXt(
-        address recipient,
-        uint128 xtAmt,
-        bytes calldata callbackData
-    ) external returns (uint256 gtId);
+    function leverageByXt(address recipient, uint128 xtAmt, bytes calldata callbackData)
+        external
+        returns (uint256 gtId);
 
     /// @notice Redeem underlying tokens after maturity
     /// @param ftAmount The amount of FT want to redeem
@@ -91,10 +87,7 @@ interface ITermMaxMarket {
     function updateOrderFeeRate(ITermMaxOrder order, FeeConfig memory newFeeConfig) external;
 
     /// @notice Create a new order
-    function createOrder(
-        address maker,
-        uint256 maxXtReserve,
-        ISwapCallback swapTrigger,
-        CurveCuts memory curveCuts
-    ) external returns (ITermMaxOrder order);
+    function createOrder(address maker, uint256 maxXtReserve, ISwapCallback swapTrigger, CurveCuts memory curveCuts)
+        external
+        returns (ITermMaxOrder order);
 }

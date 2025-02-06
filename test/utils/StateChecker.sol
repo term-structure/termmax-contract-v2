@@ -7,13 +7,13 @@ import "contracts/storage/TermMaxStorage.sol";
 
 library StateChecker {
     struct MarketState {
-        uint collateralReserve;
-        uint debtReserve;
+        uint256 collateralReserve;
+        uint256 debtReserve;
     }
 
     struct OrderState {
-        uint ftReserve;
-        uint xtReserve;
+        uint256 ftReserve;
+        uint256 xtReserve;
     }
 
     function checkMarketState(DeployUtils.Res memory res, MarketState memory expect) internal view {
@@ -38,7 +38,11 @@ library StateChecker {
         state.xtReserve = res.xt.balanceOf(order);
     }
 
-    function getUserBalances(DeployUtils.Res memory res, address user) internal view returns (uint[6] memory balances) {
+    function getUserBalances(DeployUtils.Res memory res, address user)
+        internal
+        view
+        returns (uint256[6] memory balances)
+    {
         balances[0] = res.ft.balanceOf(user);
         balances[1] = res.xt.balanceOf(user);
         balances[2] = res.debt.balanceOf(user);

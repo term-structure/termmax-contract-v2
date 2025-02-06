@@ -10,7 +10,6 @@ import {ISwapCallback} from "../ISwapCallback.sol";
  * @title The data struct of token pair
  * @author Term Structure Labs
  */
-
 struct CurveCut {
     uint256 xtReserve;
     uint256 liqSquare;

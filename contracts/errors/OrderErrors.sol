@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
+
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
@@ -65,7 +66,7 @@ interface OrderErrors {
      * @param expectedAmt The expected amount
      * @param actualAmt The actual amount received
      */
-    error UnexpectedAmount(uint expectedAmt, uint actualAmt);
+    error UnexpectedAmount(uint256 expectedAmt, uint256 actualAmt);
 
     /**
      * @notice Error thrown when attempting to redeem before the final liquidation deadline

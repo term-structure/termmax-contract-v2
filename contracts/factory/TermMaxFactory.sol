@@ -42,25 +42,21 @@ contract TermMaxFactory is Ownable2Step, FactoryErrors, FactoryEvents, ITermMaxF
         emit SetGtImplement(key, gtImplement);
     }
 
-    function predictMarketAddress(
-        address admin,
-        address collateral,
-        address debtToken,
-        uint64 maturity,
-        uint256 salt
-    ) external view returns (address market) {
-        return
-            Clones.predictDeterministicAddress(
-                TERMMAX_MARKET_IMPLEMENTATION,
-                keccak256(abi.encode(admin, collateral, debtToken, maturity, salt))
-            );
+    function predictMarketAddress(address admin, address collateral, address debtToken, uint64 maturity, uint256 salt)
+        external
+        view
+        returns (address market)
+    {
+        return Clones.predictDeterministicAddress(
+            TERMMAX_MARKET_IMPLEMENTATION, keccak256(abi.encode(admin, collateral, debtToken, maturity, salt))
+        );
     }
 
-    function createMarket(
-        bytes32 gtKey,
-        MarketInitialParams memory params,
-        uint256 salt
-    ) external onlyOwner returns (address market) {
+    function createMarket(bytes32 gtKey, MarketInitialParams memory params, uint256 salt)
+        external
+        onlyOwner
+        returns (address market)
+    {
         params.gtImplementation = gtImplements[gtKey];
         if (params.gtImplementation == address(0)) {
             revert CantNotFindGtImplementation();

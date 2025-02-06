@@ -7,12 +7,10 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 contract FaucetERC20 is ERC20, Ownable {
     uint8 private immutable _decimals;
 
-    constructor(
-        address adminAddr,
-        string memory name,
-        string memory symbol,
-        uint8 _dec
-    ) ERC20(name, symbol) Ownable(adminAddr) {
+    constructor(address adminAddr, string memory name, string memory symbol, uint8 _dec)
+        ERC20(name, symbol)
+        Ownable(adminAddr)
+    {
         _decimals = _dec;
     }
 

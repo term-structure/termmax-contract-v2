@@ -49,7 +49,7 @@ contract DeloyVaultHolesky is DeployBase {
         VaultFactory vaultFactory = VaultFactory(factoryAddr);
 
         ITermMaxVault[] memory vaults = new ITermMaxVault[](assetAddrs.length);
-        for (uint i = 0; i < assetAddrs.length; i++) {
+        for (uint256 i = 0; i < assetAddrs.length; i++) {
             console.log("Deploying vault at index", i);
             vaults[i] = deployVault(
                 address(vaultFactory),
@@ -72,7 +72,7 @@ contract DeloyVaultHolesky is DeployBase {
         console.log();
 
         console.log("===== Vault Info =====");
-        for (uint i = 0; i < names.length; i++) {
+        for (uint256 i = 0; i < names.length; i++) {
             console.log("Vault", names[i], ":", address(vaults[i]));
         }
         console.log("Deployed at block number:", currentBlockNum);

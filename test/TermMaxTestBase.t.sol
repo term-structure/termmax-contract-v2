@@ -29,6 +29,7 @@ import "contracts/storage/TermMaxStorage.sol";
 abstract contract TermMaxTestBase is Test {
     using JSONLoader for *;
     using SafeCast for *;
+
     DeployUtils.Res res;
 
     OrderConfig orderConfig;
@@ -43,13 +44,13 @@ abstract contract TermMaxTestBase is Test {
 
     ITermMaxVault vault;
 
-    uint timelock = 86400;
-    uint maxCapacity = 1000000e18;
+    uint256 timelock = 86400;
+    uint256 maxCapacity = 1000000e18;
     uint64 performanceFeeRate = 0.5e8;
 
     ITermMaxMarket market2;
 
-    uint currentTime;
+    uint256 currentTime;
     uint32 maxLtv = 0.89e8;
     uint32 liquidationLtv = 0.9e8;
     VaultInitialParams initialParams;
@@ -96,20 +97,11 @@ abstract contract TermMaxTestBase is Test {
         );
 
         // update oracle
-        res.collateralOracle.updateRoundData(
-            JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_2000_DAI_1.eth")
-        );
+        res.collateralOracle.updateRoundData(JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_2000_DAI_1.eth"));
         res.debtOracle.updateRoundData(JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_2000_DAI_1.dai"));
 
         initialParams = VaultInitialParams(
-            admin,
-            curator,
-            timelock,
-            res.debt,
-            maxCapacity,
-            "Vault-DAI",
-            "Vault-DAI",
-            performanceFeeRate
+            admin, curator, timelock, res.debt, maxCapacity, "Vault-DAI", "Vault-DAI", performanceFeeRate
         );
 
         res.vault = DeployUtils.deployVault(initialParams);
@@ -121,7 +113,6 @@ abstract contract TermMaxTestBase is Test {
         vm.warp(currentTime + timelock + 1);
         res.vault.acceptMarket(address(res.market));
         vm.warp(currentTime);
-
 
         res.order = res.vault.createOrder(res.market, maxCapacity, 0, orderConfig.curveCuts);
 

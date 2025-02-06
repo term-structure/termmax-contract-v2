@@ -75,17 +75,13 @@ contract ForkRouterTest is Test {
 
         // update oracle
 
-        MockPriceFeed.RoundData memory ptRoundData = JSONLoader.getRoundDataFromJson(
-            testdata,
-            ".priceData.ETH_2000_PT_WEETH_1800.ptWeeth"
-        );
+        MockPriceFeed.RoundData memory ptRoundData =
+            JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_2000_PT_WEETH_1800.ptWeeth");
         ptRoundData.updatedAt = currentTime;
         res.collateralOracle.updateRoundData(ptRoundData);
 
-        MockPriceFeed.RoundData memory weethRoundData = JSONLoader.getRoundDataFromJson(
-            testdata,
-            ".priceData.ETH_2000_PT_WEETH_1800.eth"
-        );
+        MockPriceFeed.RoundData memory weethRoundData =
+            JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_2000_PT_WEETH_1800.eth");
         weethRoundData.updatedAt = currentTime;
         res.debtOracle.updateRoundData(weethRoundData);
 
@@ -93,13 +89,10 @@ contract ForkRouterTest is Test {
         OrderConfig memory orderConfig = JSONLoader.getOrderConfigFromJson(testdata, ".orderConfig");
         orderConfig.maxXtReserve = type(uint128).max;
         res.order = res.market.createOrder(
-            vm.randomAddress(),
-            orderConfig.maxXtReserve,
-            ISwapCallback(address(0)),
-            orderConfig.curveCuts
+            vm.randomAddress(), orderConfig.maxXtReserve, ISwapCallback(address(0)), orderConfig.curveCuts
         );
 
-        uint amount = 15000e8;
+        uint256 amount = 15000e8;
         deal(address(res.debt), deployer, amount);
 
         res.debt.approve(address(res.market), amount);
@@ -131,14 +124,8 @@ contract ForkRouterTest is Test {
         orders[0] = res.order;
         uint128[] memory amounts = new uint128[](1);
         amounts[0] = 5e8;
-        uint256 netXtOut = router.swapExactTokenToToken(
-            res.debt,
-            res.xt,
-            receiver,
-            orders,
-            amounts,
-            uint128(minTokenOut)
-        );
+        uint256 netXtOut =
+            router.swapExactTokenToToken(res.debt, res.xt, receiver, orders, amounts, uint128(minTokenOut));
         uint256 underlyingAmtAfterSwap = res.debt.balanceOf(sender);
         uint256 xtAmtAfterSwap = res.xt.balanceOf(sender);
 
@@ -149,7 +136,7 @@ contract ForkRouterTest is Test {
 
         uint256 xtInAmt = netXtOut;
 
-        uint tokenAmtIn = 10e18;
+        uint256 tokenAmtIn = 10e18;
         uint256 maxLtv = 0.8e8;
 
         deal(address(res.debt), sender, tokenAmtIn);
@@ -214,14 +201,8 @@ contract ForkRouterTest is Test {
         orders[0] = res.order;
         uint128[] memory amounts = new uint128[](1);
         amounts[0] = 5e8;
-        uint256 netXtOut = router.swapExactTokenToToken(
-            res.debt,
-            res.xt,
-            receiver,
-            orders,
-            amounts,
-            uint128(minTokenOut)
-        );
+        uint256 netXtOut =
+            router.swapExactTokenToToken(res.debt, res.xt, receiver, orders, amounts, uint128(minTokenOut));
 
         uint256 underlyingAmtAfterSwap = res.debt.balanceOf(sender);
         uint256 xtAmtAfterSwap = res.xt.balanceOf(sender);
@@ -233,7 +214,7 @@ contract ForkRouterTest is Test {
 
         uint256 xtInAmt = netXtOut;
 
-        uint tokenAmtIn = 10e18;
+        uint256 tokenAmtIn = 10e18;
         uint256 maxLtv = 0.8e8;
 
         deal(address(res.debt), sender, tokenAmtIn);
@@ -255,8 +236,8 @@ contract ForkRouterTest is Test {
             address(router)
         );
         address odosExecutor = 0xB28Ca7e465C452cE4252598e0Bc96Aeba553CF82;
-        bytes
-            memory odosPath = hex"010203000a01010001020001ff00000000000000000000000000000000000000db74dfdd3bb46be8ce6c33dc9d82777bcfc3ded5c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2";
+        bytes memory odosPath =
+            hex"010203000a01010001020001ff00000000000000000000000000000000000000db74dfdd3bb46be8ce6c33dc9d82777bcfc3ded5c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2";
         uint32 odosReferralCode = 0;
         bytes memory odosSwapData = abi.encode(swapTokenInfoParam, odosPath, odosExecutor, odosReferralCode);
         units[0] = SwapUnit(address(odosAdapter), weth9Addr, weethAddr, odosSwapData);
@@ -307,18 +288,12 @@ contract ForkRouterTest is Test {
         orders[0] = res.order;
         uint128[] memory amounts = new uint128[](1);
         amounts[0] = 5e8;
-        uint256 netXtOut = router.swapExactTokenToToken(
-            res.debt,
-            res.xt,
-            receiver,
-            orders,
-            amounts,
-            uint128(minTokenOut)
-        );
+        uint256 netXtOut =
+            router.swapExactTokenToToken(res.debt, res.xt, receiver, orders, amounts, uint128(minTokenOut));
 
         uint256 xtInAmt = netXtOut;
 
-        uint tokenAmtIn = 10e18;
+        uint256 tokenAmtIn = 10e18;
         uint256 maxLtv = 0.8e8;
 
         deal(address(res.debt), sender, tokenAmtIn);
@@ -344,7 +319,7 @@ contract ForkRouterTest is Test {
                     abi.encodeWithSelector(
                         ERC20SwapAdapter.ERC20InvalidPartialSwap.selector,
                         tokenAmtIn + xtInAmt,
-                        uint(39902378112923432)
+                        uint256(39902378112923432)
                     )
                 )
             )
@@ -366,7 +341,7 @@ contract ForkRouterTest is Test {
         uint24 poolFee = 100;
 
         uint256 gtId = _loan(poolFee);
-        (, uint128 debtAmt, , ) = res.gt.loanInfo(gtId);
+        (, uint128 debtAmt,,) = res.gt.loanInfo(gtId);
 
         uint256 minUnderlyingAmt = debtAmt;
 
@@ -395,15 +370,8 @@ contract ForkRouterTest is Test {
         uint128[] memory amtsToBuyFt = new uint128[](0);
         bool byDebtToken = true;
 
-        uint256 netTokenOut = router.flashRepayFromColl(
-            sender,
-            res.market,
-            gtId,
-            orders,
-            amtsToBuyFt,
-            byDebtToken,
-            units
-        );
+        uint256 netTokenOut =
+            router.flashRepayFromColl(sender, res.market, gtId, orders, amtsToBuyFt, byDebtToken, units);
 
         uint256 underlyingAmtAfterRepay = res.debt.balanceOf(sender);
 
@@ -425,7 +393,7 @@ contract ForkRouterTest is Test {
         uint24 poolFee = 100;
 
         uint256 gtId = _loan(poolFee);
-        (, uint128 debtAmt, , ) = res.gt.loanInfo(gtId);
+        (, uint128 debtAmt,,) = res.gt.loanInfo(gtId);
 
         uint256 minUnderlyingAmt = debtAmt;
 
@@ -456,15 +424,8 @@ contract ForkRouterTest is Test {
         amtsToBuyFt[0] = debtAmt;
         bool byDebtToken = false;
 
-        uint256 netTokenOut = router.flashRepayFromColl(
-            sender,
-            res.market,
-            gtId,
-            orders,
-            amtsToBuyFt,
-            byDebtToken,
-            units
-        );
+        uint256 netTokenOut =
+            router.flashRepayFromColl(sender, res.market, gtId, orders, amtsToBuyFt, byDebtToken, units);
 
         uint256 underlyingAmtAfterRepay = res.debt.balanceOf(sender);
         assert(underlyingAmtAfterRepay - underlyingAmtBeforeRepay == netTokenOut);
@@ -516,15 +477,8 @@ contract ForkRouterTest is Test {
         orders[0] = res.order;
         uint128[] memory amtsToBuyXt = new uint128[](1);
         amtsToBuyXt[0] = underlyingAmtInForBuyXt;
-        (gtId, ) = router.leverageFromToken(
-            receiver,
-            res.market,
-            orders,
-            amtsToBuyXt,
-            uint128(minXTOut),
-            uint128(tokenInAmt),
-            uint128(maxLtv),
-            units
+        (gtId,) = router.leverageFromToken(
+            receiver, res.market, orders, amtsToBuyXt, uint128(minXTOut), uint128(tokenInAmt), uint128(maxLtv), units
         );
 
         uint256 underlyingAmtAfterSwap = res.debt.balanceOf(sender);

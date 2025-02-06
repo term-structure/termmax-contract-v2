@@ -22,14 +22,13 @@ import "contracts/storage/TermMaxStorage.sol";
 
 contract OdosV2AdapterMock is OdosV2Adapter {
     using SafeERC20 for IERC20;
+
     constructor(address router_) OdosV2Adapter(router_) {}
 
-    function swap(
-        IERC20 tokenIn,
-        IERC20 tokenOut,
-        uint256 amountIn,
-        bytes memory swapData
-    ) external returns (uint256 tokenOutAmt) {
+    function swap(IERC20 tokenIn, IERC20 tokenOut, uint256 amountIn, bytes memory swapData)
+        external
+        returns (uint256 tokenOutAmt)
+    {
         tokenIn.safeTransferFrom(msg.sender, address(this), amountIn);
         return _swap(tokenIn, tokenOut, amountIn, swapData);
     }
@@ -98,8 +97,8 @@ contract ForkOdosAdapterTest is Test {
         );
         address odosExecutor = 0xB28Ca7e465C452cE4252598e0Bc96Aeba553CF82;
         uint32 odosReferralCode = 0;
-        bytes
-            memory pathDefinition = hex"01020500030102000203000a02030001000104010aff000000000000000000002a79a0e0c226a58eeb99c5704d72d49177cc7516c19c5b63705807079dbf6d54071f9113233283f5a0b86991c6218b36c1d19d4a2e9eb0ce3606eb487a5d3a9dcd33cb8d527f7b5f96eb4fef43d55636";
+        bytes memory pathDefinition =
+            hex"01020500030102000203000a02030001000104010aff000000000000000000002a79a0e0c226a58eeb99c5704d72d49177cc7516c19c5b63705807079dbf6d54071f9113233283f5a0b86991c6218b36c1d19d4a2e9eb0ce3606eb487a5d3a9dcd33cb8d527f7b5f96eb4fef43d55636";
         bytes memory odosSwapData = abi.encode(swapTokenInfoParam, pathDefinition, odosExecutor, odosReferralCode);
         uint256 beforeInTokenBalance = IERC20(inputToken).balanceOf(sender);
         uint256 beforeOutTokenBalance = IERC20(outputToken).balanceOf(receiver);

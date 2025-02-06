@@ -31,12 +31,9 @@ interface ITermMaxVault is IERC4626 {
      * @return shares The amount of shares burned
      * @return collaretalOut The amount of collateral released
      */
-    function dealBadDebt(
-        address collaretal,
-        uint256 badDebtAmt,
-        address recipient,
-        address owner
-    ) external returns (uint256 shares, uint256 collaretalOut);
+    function dealBadDebt(address collaretal, uint256 badDebtAmt, address recipient, address owner)
+        external
+        returns (uint256 shares, uint256 collaretalOut);
 
     /**
      * @notice Returns the current Annual Percentage Rate (APR)
@@ -168,12 +165,9 @@ interface ITermMaxVault is IERC4626 {
      * @param curveCuts The curve cuts to use for the order
      * @return order The newly created order
      */
-    function createOrder(
-        ITermMaxMarket market,
-        uint256 maxSupply,
-        uint256 initialReserve,
-        CurveCuts calldata curveCuts
-    ) external returns (ITermMaxOrder order);
+    function createOrder(ITermMaxMarket market, uint256 maxSupply, uint256 initialReserve, CurveCuts calldata curveCuts)
+        external
+        returns (ITermMaxOrder order);
 
     /**
      * @notice Updates multiple orders

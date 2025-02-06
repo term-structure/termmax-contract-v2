@@ -34,11 +34,9 @@ interface IOrderManager {
      * @param collaretal The collateral token address
      * @param amount The amount of bad debt to deal
      */
-    function dealBadDebt(
-        address recipient,
-        address collaretal,
-        uint256 amount
-    ) external returns (uint256 collateralOut);
+    function dealBadDebt(address recipient, address collaretal, uint256 amount)
+        external
+        returns (uint256 collateralOut);
 
     /**
      * @notice Updates multiple orders

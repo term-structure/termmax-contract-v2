@@ -11,16 +11,16 @@ library SwapUtils {
     using SafeCast for int256;
 
     function getPrice(DeployUtils.Res memory res) internal view returns (uint256 pFt, uint256 pXt) {
-        (uint lendApr_, uint borrowApr_) = res.order.apr();
+        (uint256 lendApr_, uint256 borrowApr_) = res.order.apr();
 
-        uint dtm = daysToMaturity(res.market.config().maturity);
+        uint256 dtm = daysToMaturity(res.market.config().maturity);
         pFt = Constants.DECIMAL_BASE_SQ / (Constants.DECIMAL_BASE + (lendApr_ * dtm) / Constants.DAYS_IN_YEAR);
-        uint pFtBorrow = Constants.DECIMAL_BASE_SQ /
-            (Constants.DECIMAL_BASE + (borrowApr_ * dtm) / Constants.DAYS_IN_YEAR);
+        uint256 pFtBorrow =
+            Constants.DECIMAL_BASE_SQ / (Constants.DECIMAL_BASE + (borrowApr_ * dtm) / Constants.DAYS_IN_YEAR);
         pXt = Constants.DECIMAL_BASE - pFtBorrow / Constants.DECIMAL_BASE;
     }
 
-    function daysToMaturity(uint maturity) internal view returns (uint256) {
+    function daysToMaturity(uint256 maturity) internal view returns (uint256) {
         return (maturity - block.timestamp + Constants.SECONDS_IN_DAY - 1) / Constants.SECONDS_IN_DAY;
     }
 }
