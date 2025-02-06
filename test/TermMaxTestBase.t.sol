@@ -101,8 +101,6 @@ abstract contract TermMaxTestBase is Test {
         );
         res.debtOracle.updateRoundData(JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_2000_DAI_1.dai"));
 
-        uint amount = 10000e8;
-
         initialParams = VaultInitialParams(
             admin,
             curator,
@@ -124,11 +122,8 @@ abstract contract TermMaxTestBase is Test {
         res.vault.acceptMarket(address(res.market));
         vm.warp(currentTime);
 
-        res.debt.mint(admin, amount);
-        res.debt.approve(address(res.vault), amount);
-        res.vault.deposit(amount, admin);
 
-        res.order = res.vault.createOrder(res.market, maxCapacity, amount, orderConfig.curveCuts);
+        res.order = res.vault.createOrder(res.market, maxCapacity, 0, orderConfig.curveCuts);
 
         res.router = DeployUtils.deployRouter(admin);
         res.router.setMarketWhitelist(address(res.market), true);
