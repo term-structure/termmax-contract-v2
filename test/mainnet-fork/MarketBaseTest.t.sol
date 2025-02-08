@@ -172,9 +172,6 @@ abstract contract MarketBaseTest is ForkBaseTest {
     function _testBorrow(address taker, uint256 collInAmt, uint128 borrowAmt, uint128 maxDebtAmt) internal {
         vm.startPrank(taker);
 
-        // uint fee = (market.issueFtFeeRatio() * maxDebtAmt) / Constants.DECIMAL_BASE;
-        // uint ftAmt = maxDebtAmt - fee;
-
         ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
         orders[0] = order;
         uint128[] memory tokenAmtsWantBuy = new uint128[](1);
