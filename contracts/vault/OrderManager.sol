@@ -328,6 +328,13 @@ contract OrderManager is VaultErrors, VaultEvents, VaultStorage, IOrderManager {
         _performanceFee += _performanceFeeToCurator;
         _accretingPrincipal += (interest - _performanceFeeToCurator);
     }
+    
+    /**
+     * @inheritdoc IOrderManager
+     */
+    function accruedInterest() external onlyProxy{
+        _accruedInterest();
+    }
 
     /// @notice Distribute interest
     function _accruedInterest() internal {
