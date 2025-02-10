@@ -55,23 +55,21 @@ abstract contract MarketBaseTest is ForkBaseTest {
         collateralPriceFeed = deployMockPriceFeed(marketInitialParams.admin);
         debtPriceFeed = deployMockPriceFeed(marketInitialParams.admin);
         oracle.setOracle(
-            address(marketInitialParams.collateral),
-            IOracle.Oracle(collateralPriceFeed, collateralPriceFeed, 365 days)
+            address(marketInitialParams.collateral), IOracle.Oracle(collateralPriceFeed, collateralPriceFeed, 365 days)
         );
-        oracle.setOracle(
-            address(marketInitialParams.debtToken),
-            IOracle.Oracle(debtPriceFeed, debtPriceFeed, 365 days)
-        );
+        oracle.setOracle(address(marketInitialParams.debtToken), IOracle.Oracle(debtPriceFeed, debtPriceFeed, 365 days));
+        string memory testdata = vm.readFile(string.concat(vm.projectRoot(), "/test/testdata/testdata.json"));
+        // update oracle
+        collateralPriceFeed.updateRoundData(JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_2000_DAI_1.eth"));
+        debtPriceFeed.updateRoundData(JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_2000_DAI_1.dai"));
 
         market = TermMaxMarket(
             deployFactory(marketInitialParams.admin).createMarket(
-                keccak256("GearingTokenWithERC20"),
-                marketInitialParams,
-                0
+                keccak256("GearingTokenWithERC20"), marketInitialParams, 0
             )
         );
 
-        (ft, xt, gt, , ) = market.tokens();
+        (ft, xt, gt,,) = market.tokens();
         debtToken = marketInitialParams.debtToken;
         collateral = IERC20(marketInitialParams.collateral);
 
@@ -80,15 +78,18 @@ abstract contract MarketBaseTest is ForkBaseTest {
         router = deployRouter(marketInitialParams.admin);
         router.setMarketWhitelist(address(market), true);
 
-        deal(address(debtToken), maker, 150e8);
+        uint256 amount = 150e8;
+        deal(address(debtToken), maker, amount);
 
-        debtToken.approve(address(market), 150e8);
-        market.mint(address(order), 150e8);
+        debtToken.approve(address(market), amount);
+        market.mint(address(order), amount);
 
         vm.stopPrank();
     }
 
-    function _testMint(address to, uint256 amount) internal {
+    function testMint() public {
+        address to = vm.randomAddress();
+        uint256 amount = 100e8;
         deal(address(debtToken), to, amount);
         deal(to, 1e18);
         vm.startPrank(to);
@@ -99,7 +100,9 @@ abstract contract MarketBaseTest is ForkBaseTest {
         vm.stopPrank();
     }
 
-    function _testBurn(address taker, uint256 amount) internal {
+    function testBurn() public {
+        address taker = vm.randomAddress();
+        uint256 amount = 100e8;
         deal(taker, 1e18);
         deal(address(debtToken), taker, amount);
         vm.startPrank(taker);
@@ -113,7 +116,7 @@ abstract contract MarketBaseTest is ForkBaseTest {
         vm.stopPrank();
     }
 
-    function _testRedeem() internal {
+    function testRedeem() public {
         MarketConfig memory marketConfig = market.config();
         marketConfig.feeConfig.redeemFeeRatio = 0.01e8;
         vm.prank(marketInitialParams.admin);
@@ -169,7 +172,12 @@ abstract contract MarketBaseTest is ForkBaseTest {
         vm.stopPrank();
     }
 
-    function _testBorrow(address taker, uint256 collInAmt, uint128 borrowAmt, uint128 maxDebtAmt) internal {
+    function testBorrow() public {
+        address taker = vm.randomAddress();
+        uint256 collInAmt = 1e18;
+        uint128 borrowAmt = 80e8;
+        uint128 maxDebtAmt = 100e8;
+
         vm.startPrank(taker);
 
         ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
@@ -184,7 +192,7 @@ abstract contract MarketBaseTest is ForkBaseTest {
         uint256 expectedGtId = 1;
         emit RouterEvents.Borrow(market, expectedGtId, taker, taker, collInAmt, maxDebtAmt, borrowAmt);
         uint256 gtId = router.borrowTokenFromCollateral(taker, market, collInAmt, orders, tokenAmtsWantBuy, maxDebtAmt);
-        (address owner, uint128 debtAmt, , bytes memory collateralData) = gt.loanInfo(gtId);
+        (address owner, uint128 debtAmt,, bytes memory collateralData) = gt.loanInfo(gtId);
         assertEq(owner, taker);
         assertEq(collInAmt, abi.decode(collateralData, (uint256)));
         assert(debtAmt <= maxDebtAmt);
