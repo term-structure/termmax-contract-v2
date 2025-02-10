@@ -432,7 +432,7 @@ contract TermMaxOrder is
         tokenIn.safeTransferFrom(caller, address(this), tokenAmtIn);
         if (tokenIn == xt) {
             uint256 ftReserve = getTransientFtReserve();
-            if (ftReserve < netOut) _issueFtToSelf(ftReserve, netOut + feeAmt, config);
+            if (ftReserve < netOut + feeAmt) _issueFtToSelf(ftReserve, netOut + feeAmt, config);
         }
         ft.approve(address(market), netOut);
         xt.approve(address(market), netOut);
@@ -635,7 +635,7 @@ contract TermMaxOrder is
         tokenIn.safeTransferFrom(caller, address(this), netTokenIn);
         if (tokenIn == xt) {
             uint256 ftReserve = getTransientFtReserve();
-            if (ftReserve < debtTokenAmtOut) _issueFtToSelf(ftReserve, debtTokenAmtOut + feeAmt, config);
+            if (ftReserve < debtTokenAmtOut + feeAmt) _issueFtToSelf(ftReserve, debtTokenAmtOut + feeAmt, config);
         }
         ft.approve(address(market), debtTokenAmtOut);
         xt.approve(address(market), debtTokenAmtOut);
