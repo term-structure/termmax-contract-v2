@@ -455,7 +455,7 @@ contract TermMaxVault is
             emit SetPerformanceFeeRate(_msgSender(), newPerformanceFeeRate);
             return;
         } else {
-            _pendingPerformanceFeeRate.update(newPerformanceFeeRate, block.timestamp + _timelock);
+            _pendingPerformanceFeeRate.update(newPerformanceFeeRate, _timelock);
             emit SubmitPerformanceFeeRate(newPerformanceFeeRate);
         }
     }
@@ -615,6 +615,15 @@ contract TermMaxVault is
         delete _pendingMarkets[market];
 
         emit RevokePendingMarket(_msgSender(), market);
+    }
+
+    /**
+     * @inheritdoc ITermMaxVault
+     */
+    function revokePendingPerformanceFeeRate() external onlyGuardianRole {
+        delete _pendingPerformanceFeeRate;
+
+        emit RevokePendingPerformanceFeeRate(_msgSender());
     }
 
     /**
