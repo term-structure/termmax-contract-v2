@@ -87,9 +87,10 @@ abstract contract GtBaseTest is ForkBaseTest {
         order = market.createOrder(maker, maxXtReserve, ISwapCallback(address(0)), curveCuts);
 
         router = deployRouter(marketInitialParams.admin);
+
         router.setMarketWhitelist(address(market), true);
         uint256 amount = 15000e8;
-        deal(address(debtToken), maker, amount);
+        deal(address(debtToken), marketInitialParams.admin, amount);
 
         debtToken.approve(address(market), amount);
         market.mint(address(order), amount);
@@ -124,7 +125,6 @@ abstract contract GtBaseTest is ForkBaseTest {
         address taker,
         uint128 xtAmtIn,
         uint128 tokenAmtIn,
-        ISwapAdapter swapAdapter,
         SwapUnit[] memory units
     ) internal returns (uint256 gtId) {
         vm.startPrank(taker);
@@ -164,7 +164,6 @@ abstract contract GtBaseTest is ForkBaseTest {
         address taker,
         uint128 tokenAmtToBuyXt,
         uint128 tokenAmtIn,
-        ISwapAdapter swapAdapter,
         SwapUnit[] memory units
     ) internal returns (uint256 gtId) {
         vm.startPrank(taker);
@@ -186,7 +185,6 @@ abstract contract GtBaseTest is ForkBaseTest {
             router.leverageFromToken(taker, market, orders, amtsToBuyXt, minXTOut, tokenAmtIn, uint128(maxLtv), units);
 
         uint256 debtTokenBalanceAfterSwap = debtToken.balanceOf(taker);
-        uint256 xtAmtAfterSwap = xt.balanceOf(taker);
 
         assertEq(debtTokenBalanceBeforeSwap - debtTokenBalanceAfterSwap, tokenAmtToBuyXt + tokenAmtIn);
 
@@ -200,12 +198,9 @@ abstract contract GtBaseTest is ForkBaseTest {
         vm.stopPrank();
     }
 
-    function _testFlashRepay(address taker, ISwapAdapter swapAdapter, SwapUnit[] memory units) internal {
+    function _testFlashRepay(uint256 gtId, address taker, SwapUnit[] memory units) internal {
         deal(taker, 1e18);
 
-        uint128 debtAmt = 1e17;
-        uint128 collateralAmt = 1e18;
-        uint256 gtId = _fastLoan(taker, debtAmt, collateralAmt);
         vm.startPrank(taker);
 
         gt.approve(address(router), gtId);
@@ -224,14 +219,10 @@ abstract contract GtBaseTest is ForkBaseTest {
         vm.stopPrank();
     }
 
-    function _testFlashRepayByFt(address taker, ISwapAdapter swapAdapter, SwapUnit[] memory units) internal {
+    function _testFlashRepayByFt(uint256 gtId, uint128 debtAmt, address taker, SwapUnit[] memory units) internal {
         deal(taker, 1e18);
 
-        uint128 debtAmt = 1e17;
-        uint128 collateralAmt = 1e18;
-        uint256 gtId = _fastLoan(taker, debtAmt, collateralAmt);
         vm.startPrank(taker);
-
         gt.approve(address(router), gtId);
 
         uint256 debtTokenBalanceBeforeRepay = debtToken.balanceOf(taker);
@@ -254,7 +245,7 @@ abstract contract GtBaseTest is ForkBaseTest {
         deal(liquidator, 1e18);
         vm.startPrank(liquidator);
 
-        (, uint128 debtAmt,, bytes memory collateralData) = gt.loanInfo(gtId);
+        (, uint128 debtAmt,,) = gt.loanInfo(gtId);
 
         deal(address(debtToken), liquidator, debtAmt);
         debtToken.approve(address(gt), debtAmt);
@@ -273,7 +264,7 @@ abstract contract GtBaseTest is ForkBaseTest {
         vm.startPrank(taker);
         deal(taker, 1e18);
         deal(address(collateral), taker, collateralAmt);
-        collateral.approve(address(market), collateralAmt);
+        collateral.approve(address(gt), collateralAmt);
         (gtId,) = market.issueFt(taker, uint128(debtAmt), abi.encode(collateralAmt));
         vm.stopPrank();
     }

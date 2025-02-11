@@ -56,5 +56,91 @@
       },
       "length": 3
     }
+  },
+  "routers": {
+    "uniswap": {
+      "address": "0xE592427A0AEce92De3Edee1F18E0157C05861564",
+      "poolFee": "100"
+    },
+    "pendle":{
+      "address": "0x888888888889758F76e7103c6CbF23ABbF58F946",
+      "market": "0x7d372819240D14fB477f17b964f95F33BeB4c704",
+      "underlying": "0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee"
+    },
+    "odos":{
+      "address": "0xCf5540fFFCdC3d510B18bFcA6d2b9987b0772559",
+      "odosInputReceiver": "0xDB74dfDD3BB46bE8Ce6C33dC9D82777BCFc3dEd5",
+      "outputQuote": "9455438286641436672",
+      "outputMin": "9360883903775023104",
+      "odosExecutor": "0xB28Ca7e465C452cE4252598e0Bc96Aeba553CF82",
+      "odosPath": "010203000a01010001020001ff00000000000000000000000000000000000000db74dfdd3bb46be8ce6c33dc9d82777bcfc3ded5c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+      "odosReferralCode": "0"
+    }
+  },
+  "priceData": {
+    "ETH_2000_DAI_1": {
+      "eth": {
+        "roundId": "1",
+        "answer": "200000000000",
+        "startedAt": "1730391800",
+        "updatedAt": "1730391900",
+        "answeredInRound": "0"
+      },
+      "dai": {
+        "roundId": "1",
+        "answer": "100000000",
+        "startedAt": "1730391800",
+        "updatedAt": "1730391900",
+        "answeredInRound": "0"
+      }
+    },
+    "ETH_1000_DAI_1": {
+      "eth": {
+        "roundId": "1",
+        "answer": "100000000000",
+        "startedAt": "1730391800",
+        "updatedAt": "1730391900",
+        "answeredInRound": "0"
+      },
+      "dai": {
+        "roundId": "1",
+        "answer": "100000000",
+        "startedAt": "1730391800",
+        "updatedAt": "1730391900",
+        "answeredInRound": "0"
+      }
+    },
+    "ETH_2000_PT_WEETH_1800": {
+      "eth": {
+        "roundId": "1",
+        "answer": "200000000000000000000",
+        "startedAt": "1730391800",
+        "updatedAt": "1730391900",
+        "answeredInRound": "0"
+      },
+      "ptWeeth": {
+        "roundId": "1",
+        "answer": "180000000000000000000",
+        "startedAt": "1730391800",
+        "updatedAt": "1730391900",
+        "answeredInRound": "0"
+      }
+    },
+    "ETH_2000_PT_WEETH_1000": {
+      "eth": {
+        "roundId": "1",
+        "answer": "200000000000000000000",
+        "startedAt": "1730391800",
+        "updatedAt": "1730391900",
+        "answeredInRound": "0"
+      },
+      "ptWeeth": {
+        "roundId": "1",
+        "answer": "100000000000000000000",
+        "startedAt": "1730391800",
+        "updatedAt": "1730391900",
+        "answeredInRound": "0"
+      }
+    }
   }
 }

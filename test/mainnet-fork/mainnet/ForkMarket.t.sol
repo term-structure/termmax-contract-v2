@@ -66,13 +66,6 @@ contract ForkMarket is MarketBaseTest {
         return orderConfig;
     }
 
-    // function testBorrow() public{
-    //     uint256 collateralAmt = 1e18;
-    //     uint128 borrowAmt = 1e15;
-    //     uint128 maxDebtAmt = 1e16;
-    //     _testBorrow(collateralAmt, borrowAmt, maxDebtAmt);
-    // }
-
     function testIssueFtByGtWhenSwap() public{
         uint256 collateralAmt = 1e18;
         uint128 debtAmt = 1e15;
