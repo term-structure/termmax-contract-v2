@@ -177,27 +177,15 @@ abstract contract VaultBaseTest is ForkBaseTest {
         assertEq(vault.badDebtMapping(address(collateral)), badDebt);
         assertEq(collateral.balanceOf(address(vault)), delivered);
 
-        uint256 shareToDealBadDebt = vault.previewWithdraw(badDebt / 2);
-        vm.startPrank(lper2);
-        (uint256 shares, uint256 collateralOut) = vault.dealBadDebt(address(collateral), badDebt / 2, lper2, lper2);
-        assertEq(shares, shareToDealBadDebt);
-        assertEq(collateralOut, ((badDebt / 2) * delivered) / badDebt);
-        assertEq(vault.badDebtMapping(address(collateral)), badDebt - badDebt / 2);
-        assertEq(collateral.balanceOf(address(vault)), delivered - collateralOut);
-        vm.stopPrank();
+        uint256 shareToDealBadDebt = vault.balanceOf(lper2);
+        uint256 withdrawAmt = vault.previewRedeem(shareToDealBadDebt);
 
         vm.startPrank(lper2);
-        shareToDealBadDebt = vault.previewWithdraw(badDebt - badDebt / 2);
-        uint256 remainningCollateral = collateral.balanceOf(address(vault));
-        vm.expectEmit();
-        emit VaultEvents.DealBadDebt(
-            lper2, lper2, address(collateral), badDebt - badDebt / 2, shareToDealBadDebt, remainningCollateral
-        );
-        (shares, collateralOut) = vault.dealBadDebt(address(collateral), badDebt - badDebt / 2, lper2, lper2);
+        (uint256 shares, uint256 collateralOut) = vault.dealBadDebt(address(collateral), shareToDealBadDebt, lper2, lper2);
         assertEq(shares, shareToDealBadDebt);
-        assertEq(collateralOut, remainningCollateral);
-        assertEq(vault.badDebtMapping(address(collateral)), 0);
-        assertEq(collateral.balanceOf(address(vault)), 0);
+        assertEq(collateralOut, (withdrawAmt * delivered) / badDebt);
+        assertEq(vault.badDebtMapping(address(collateral)), badDebt - withdrawAmt);
+        assertEq(collateral.balanceOf(address(vault)), delivered - collateralOut);
         vm.stopPrank();
     }
 
