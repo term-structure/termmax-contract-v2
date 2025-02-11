@@ -11,6 +11,7 @@ import {TermMaxMarket} from "contracts/TermMaxMarket.sol";
 import {TermMaxOrder} from "contracts/TermMaxOrder.sol";
 import {MockERC20} from "contracts/test/MockERC20.sol";
 import {MockPriceFeed} from "contracts/test/MockPriceFeed.sol";
+import {MockOrder} from "contracts/test/MockOrder.sol";
 import {IMintableERC20, MintableERC20} from "contracts/tokens/MintableERC20.sol";
 import {SwapAdapter} from "contracts/test/testnet/SwapAdapter.sol";
 import {IOracle, OracleAggregator} from "contracts/oracle/OracleAggregator.sol";
@@ -48,6 +49,13 @@ abstract contract ForkBaseTest is Test {
     function deployFactory(address admin) public returns (TermMaxFactory factory) {
         address tokenImplementation = address(new MintableERC20());
         address orderImplementation = address(new TermMaxOrder());
+        TermMaxMarket m = new TermMaxMarket(tokenImplementation, orderImplementation);
+        factory = new TermMaxFactory(admin, address(m));
+    }
+
+    function deployFactoryWithMockOrder(address admin) public returns (TermMaxFactory factory) {
+        address tokenImplementation = address(new MintableERC20());
+        address orderImplementation = address(new MockOrder());
         TermMaxMarket m = new TermMaxMarket(tokenImplementation, orderImplementation);
         factory = new TermMaxFactory(admin, address(m));
     }

@@ -14,7 +14,7 @@ import {ITermMaxMarket, TermMaxMarket, MarketEvents} from "contracts/TermMaxMark
 import {ITermMaxOrder} from "contracts/ITermMaxOrder.sol";
 import {IMintableERC20} from "contracts/tokens/IMintableERC20.sol";
 import {MockPriceFeed} from "contracts/test/MockPriceFeed.sol";
-import {IGearingToken, AbstractGearingToken} from "contracts/tokens/AbstractGearingToken.sol";
+import {IGearingToken, AbstractGearingToken, GearingTokenConstants} from "contracts/tokens/AbstractGearingToken.sol";
 import {IOracle, OracleAggregator, AggregatorV3Interface} from "contracts/oracle/OracleAggregator.sol";
 import {TermMaxRouter, ISwapAdapter, ITermMaxRouter, SwapUnit, RouterErrors} from "contracts/router/TermMaxRouter.sol";
 import {UniswapV3Adapter, ERC20SwapAdapter} from "contracts/router/swapAdapters/UniswapV3Adapter.sol";
@@ -94,61 +94,35 @@ abstract contract GtBaseTest is ForkBaseTest {
         vm.stopPrank();
     }
 
-    function _testLeverageFromXt(address taker, ISwapAdapter swapAdapter, SwapUnit[] memory units)
-        internal
-        returns (uint256 gtId)
-    {
+    function _testLeverageFromXt(
+        address taker,
+        uint128 xtAmtIn,
+        uint128 tokenAmtIn,
+        ISwapAdapter swapAdapter,
+        SwapUnit[] memory units
+    ) internal returns (uint256 gtId) {
         vm.startPrank(taker);
-        uint128 debtTokenAmtIn = 0.004e18;
-        deal(address(debtToken), taker, debtTokenAmtIn);
-        uint128 minTokenOut = 0e8;
-        debtToken.approve(address(router), debtTokenAmtIn);
+        deal(taker, 1e8);
+        deal(address(debtToken), taker, xtAmtIn);
+        debtToken.approve(address(market), xtAmtIn);
+        market.mint(taker, xtAmtIn);
 
-        uint256 debtTokenBalanceBeforeSwap = debtToken.balanceOf(taker);
-        uint256 xtAmtBeforeSwap = xt.balanceOf(taker);
-        assertEq(debtToken.balanceOf(address(router)), 0);
-        assertEq(xt.balanceOf(address(router)), 0);
-
-        ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
-        orders[0] = order;
-        uint128[] memory amounts = new uint128[](1);
-        amounts[0] = 5e8;
-        uint256 netXtOut = router.swapExactTokenToToken(debtToken, xt, taker, orders, amounts, uint128(minTokenOut));
-        uint256 debtTokenBalanceAfterSwap = debtToken.balanceOf(taker);
-        uint256 xtAmtAfterSwap = xt.balanceOf(taker);
-
-        assertEq(debtTokenBalanceBeforeSwap - debtTokenBalanceAfterSwap, amounts[0]);
-        assertEq(xtAmtAfterSwap - xtAmtBeforeSwap, netXtOut);
-        assertEq(debtToken.balanceOf(address(router)), 0);
-        assertEq(xt.balanceOf(address(router)), 0);
-
-        uint256 xtInAmt = netXtOut;
-
-        uint256 tokenAmtIn = 10e18;
-        uint256 maxLtv = 0.8e8;
+        uint256 maxLtv = marketInitialParams.loanConfig.maxLtv;
 
         deal(address(debtToken), taker, tokenAmtIn);
         debtToken.approve(address(router), tokenAmtIn);
 
-        debtTokenBalanceBeforeSwap = debtToken.balanceOf(taker);
-        xtAmtBeforeSwap = xt.balanceOf(taker);
+        uint256 debtTokenBalanceBeforeSwap = debtToken.balanceOf(taker);
+        uint256 xtAmtBeforeSwap = xt.balanceOf(taker);
 
-        assertEq(debtToken.balanceOf(address(taker)), 0);
-        assertEq(collateral.balanceOf(address(taker)), 0);
+        xt.approve(address(router), xtAmtIn);
+        gtId = router.leverageFromXt(taker, market, xtAmtIn, tokenAmtIn, uint128(maxLtv), units);
 
-        assertEq(debtToken.balanceOf(address(router)), 0);
-        assertEq(xt.balanceOf(address(router)), 0);
-        assertEq(debtToken.balanceOf(address(router)), 0);
-        assertEq(collateral.balanceOf(address(router)), 0);
-
-        xt.approve(address(router), xtInAmt);
-        gtId = router.leverageFromXt(taker, market, uint128(xtInAmt), uint128(tokenAmtIn), uint128(maxLtv), units);
-
-        debtTokenBalanceAfterSwap = debtToken.balanceOf(taker);
-        xtAmtAfterSwap = xt.balanceOf(taker);
+        uint256 debtTokenBalanceAfterSwap = debtToken.balanceOf(taker);
+        uint256 xtAmtAfterSwap = xt.balanceOf(taker);
 
         assertEq(debtTokenBalanceBeforeSwap - debtTokenBalanceAfterSwap, tokenAmtIn);
-        assertEq(xtAmtBeforeSwap - xtAmtAfterSwap, xtInAmt);
+        assertEq(xtAmtBeforeSwap - xtAmtAfterSwap, xtAmtIn);
 
         assertEq(collateral.balanceOf(address(taker)), 0);
 
@@ -160,63 +134,121 @@ abstract contract GtBaseTest is ForkBaseTest {
         vm.stopPrank();
     }
 
-    function testLeverageFromToken(address taker) public {
+    function _testLeverageFromToken(
+        address taker,
+        uint128 tokenAmtToBuyXt,
+        uint128 tokenAmtIn,
+        ISwapAdapter swapAdapter,
+        SwapUnit[] memory units
+    ) internal returns (uint256 gtId) {
         vm.startPrank(taker);
-        uint128 underlyingAmtInForBuyXt = 5e8;
-        uint256 tokenInAmt = 2e18;
+        deal(taker, 1e8);
+
+        uint256 maxLtv = marketInitialParams.loanConfig.maxLtv;
         uint128 minXTOut = 0e8;
-        uint256 maxLtv = 0.8e8;
+        deal(address(debtToken), taker, tokenAmtToBuyXt + tokenAmtIn);
+        debtToken.approve(address(router), tokenAmtToBuyXt + tokenAmtIn);
 
-        deal(address(debtToken), taker, underlyingAmtInForBuyXt + tokenInAmt);
-        debtToken.approve(address(router), underlyingAmtInForBuyXt + tokenInAmt);
-        SwapUnit[] memory units = new SwapUnit[](2);
-        units[0] = SwapUnit(
-            address(uniswapAdapter),
-            weth9Addr,
-            weethAddr,
-            abi.encode(abi.encodePacked(weth9Addr, poolFee, weethAddr), block.timestamp + 3600, 0)
-        );
-        units[1] = SwapUnit(address(pendleAdapter), weethAddr, ptWeethAddr, abi.encode(ptWeethMarketAddr, 0));
-
-        uint256 underlyingAmtBeforeSwap = debtToken.balanceOf(taker);
-
-        assert(res.collateral.balanceOf(address(taker)) == 0);
-        assert(res.xt.balanceOf(address(taker)) == 0);
-        assert(res.ft.balanceOf(address(taker)) == 0);
-        assert(IERC20(weethAddr).balanceOf(address(taker)) == 0);
-        assert(IERC20(ptWeethAddr).balanceOf(address(taker)) == 0);
-
-        assert(debtToken.balanceOf(address(router)) == 0);
-        assert(res.collateral.balanceOf(address(router)) == 0);
-        assert(res.xt.balanceOf(address(router)) == 0);
-        assert(res.ft.balanceOf(address(router)) == 0);
-        assert(IERC20(weethAddr).balanceOf(address(router)) == 0);
-        assert(IERC20(ptWeethAddr).balanceOf(address(router)) == 0);
+        uint256 debtTokenBalanceBeforeSwap = debtToken.balanceOf(taker);
 
         ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
-        orders[0] = res.order;
+        orders[0] = order;
         uint128[] memory amtsToBuyXt = new uint128[](1);
-        amtsToBuyXt[0] = underlyingAmtInForBuyXt;
-        (gtId,) = router.leverageFromToken(
-            receiver, res.market, orders, amtsToBuyXt, uint128(minXTOut), uint128(tokenInAmt), uint128(maxLtv), units
-        );
+        amtsToBuyXt[0] = tokenAmtToBuyXt;
 
-        uint256 underlyingAmtAfterSwap = debtToken.balanceOf(taker);
+        (gtId,) =
+            router.leverageFromToken(taker, market, orders, amtsToBuyXt, minXTOut, tokenAmtIn, uint128(maxLtv), units);
 
-        assert(underlyingAmtBeforeSwap - underlyingAmtAfterSwap == underlyingAmtInForBuyXt + tokenInAmt);
+        uint256 debtTokenBalanceAfterSwap = debtToken.balanceOf(taker);
+        uint256 xtAmtAfterSwap = xt.balanceOf(taker);
 
-        assert(res.collateral.balanceOf(address(taker)) == 0);
-        assert(res.xt.balanceOf(address(taker)) == 0);
-        assert(res.ft.balanceOf(address(taker)) == 0);
-        assert(IERC20(weethAddr).balanceOf(address(taker)) == 0);
-        assert(IERC20(ptWeethAddr).balanceOf(address(taker)) == 0);
+        assertEq(debtTokenBalanceBeforeSwap - debtTokenBalanceAfterSwap, tokenAmtToBuyXt + tokenAmtIn);
 
-        assert(debtToken.balanceOf(address(router)) == 0);
-        assert(res.collateral.balanceOf(address(router)) == 0);
-        assert(res.xt.balanceOf(address(router)) == 0);
-        assert(res.ft.balanceOf(address(router)) == 0);
-        assert(IERC20(weethAddr).balanceOf(address(router)) == 0);
-        assert(IERC20(ptWeethAddr).balanceOf(address(router)) == 0);
+        assertEq(collateral.balanceOf(address(taker)), 0);
+
+        assertEq(debtToken.balanceOf(address(router)), 0);
+        assertEq(xt.balanceOf(address(router)), 0);
+        assertEq(debtToken.balanceOf(address(router)), 0);
+        assertEq(collateral.balanceOf(address(router)), 0);
+
+        vm.stopPrank();
+    }
+
+    function _testFlashRepay(address taker, ISwapAdapter swapAdapter, SwapUnit[] memory units) internal {
+        deal(taker, 1e18);
+
+        uint128 debtAmt = 1e17;
+        uint128 collateralAmt = 1e18;
+        uint256 gtId = _fastLoan(taker, debtAmt, collateralAmt);
+        vm.startPrank(taker);
+
+        gt.approve(address(router), gtId);
+
+        uint256 debtTokenBalanceBeforeRepay = debtToken.balanceOf(taker);
+        ITermMaxOrder[] memory orders = new ITermMaxOrder[](0);
+        uint128[] memory amtsToBuyFt = new uint128[](0);
+        bool byDebtToken = true;
+
+        uint256 netTokenOut = router.flashRepayFromColl(taker, market, gtId, orders, amtsToBuyFt, byDebtToken, units);
+
+        uint256 debtTokenBalanceAfterRepay = debtToken.balanceOf(taker);
+
+        assertEq(debtTokenBalanceAfterRepay - debtTokenBalanceBeforeRepay, netTokenOut);
+
+        vm.stopPrank();
+    }
+
+    function _testFlashRepayByFt(address taker, ISwapAdapter swapAdapter, SwapUnit[] memory units) internal {
+        deal(taker, 1e18);
+
+        uint128 debtAmt = 1e17;
+        uint128 collateralAmt = 1e18;
+        uint256 gtId = _fastLoan(taker, debtAmt, collateralAmt);
+        vm.startPrank(taker);
+
+        gt.approve(address(router), gtId);
+
+        uint256 debtTokenBalanceBeforeRepay = debtToken.balanceOf(taker);
+        ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
+        orders[0] = order;
+        uint128[] memory amtsToBuyFt = new uint128[](1);
+        amtsToBuyFt[0] = debtAmt;
+        bool byDebtToken = false;
+
+        uint256 netTokenOut = router.flashRepayFromColl(taker, market, gtId, orders, amtsToBuyFt, byDebtToken, units);
+
+        uint256 debtTokenBalanceAfterRepay = debtToken.balanceOf(taker);
+
+        assertEq(debtTokenBalanceAfterRepay - debtTokenBalanceBeforeRepay, netTokenOut);
+
+        vm.stopPrank();
+    }
+
+    function _testLiquidate(address liquidator, uint256 gtId) internal returns (uint256 collateralAmt) {
+        deal(liquidator, 1e18);
+        vm.startPrank(liquidator);
+
+        (, uint128 debtAmt,, bytes memory collateralData) = gt.loanInfo(gtId);
+
+        deal(address(debtToken), liquidator, debtAmt);
+        debtToken.approve(address(gt), debtAmt);
+
+        collateralAmt = collateral.balanceOf(liquidator);
+
+        bool byDebtToken = true;
+        gt.liquidate(gtId, debtAmt, byDebtToken);
+
+        collateralAmt = collateral.balanceOf(liquidator) - collateralAmt;
+
+        vm.stopPrank();
+    }
+
+    function _fastLoan(address taker, uint256 debtAmt, uint256 collateralAmt) internal returns (uint256 gtId) {
+        vm.startPrank(taker);
+        deal(taker, 1e18);
+        deal(address(collateral), taker, collateralAmt);
+        collateral.approve(address(market), collateralAmt);
+        (gtId,) = market.issueFt(taker, uint128(debtAmt), abi.encode(collateralAmt));
         vm.stopPrank();
     }
 }

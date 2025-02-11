@@ -200,4 +200,34 @@ abstract contract MarketBaseTest is ForkBaseTest {
 
         vm.stopPrank();
     }
+
+    function testIssueFtByGtWhenSwap() internal {
+        address taker = vm.randomAddress();
+        deal(taker, 1e18);
+
+        vm.startPrank(maker);
+        deal(maker, 1e18);
+        uint256 collateralAmt = 1e18;
+        uint128 debtAmt = 100e8;
+        deal(address(collateral), maker, collateralAmt);
+        collateral.approve(address(market), collateralAmt);
+        (uint256 gtId,) = market.issueFt(taker, uint128(debtAmt), abi.encode(collateralAmt));
+
+        gt.approve(address(order), gtId);
+        OrderConfig memory orderConfig = order.orderConfig();
+        orderConfig.gtId = gtId;
+        order.updateOrder(orderConfig, 0, 0);
+        vm.stopPrank();
+
+        uint128 ftOutAmt = 151e8;
+        uint128 maxTokenIn = 150e8;
+        vm.startPrank(taker);
+        deal(address(debtToken), taker, maxTokenIn);
+        debtToken.approve(address(order), maxTokenIn);
+        order.swapTokenToExactToken(debtToken, ft, taker, ftOutAmt, maxTokenIn);
+        assertEq(ft.balanceOf(taker), ftOutAmt);
+        (, uint128 debtAmtNow,,) = gt.loanInfo(gtId);
+        assertGt(debtAmtNow, debtAmt);
+        vm.stopPrank();
+    }
 }
