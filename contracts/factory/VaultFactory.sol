@@ -34,7 +34,7 @@ contract VaultFactory is FactoryEvents, IVaultFactory, FactoryErrors {
         returns (address vault)
     {
         return Clones.predictDeterministicAddress(
-            TERMMAX_VAULT_IMPLEMENTATION, keccak256(abi.encodePacked(admin, asset, name, symbol, salt))
+            TERMMAX_VAULT_IMPLEMENTATION, keccak256(abi.encode(admin, asset, name, symbol, salt))
         );
     }
 
@@ -45,7 +45,7 @@ contract VaultFactory is FactoryEvents, IVaultFactory, FactoryErrors {
         vault = Clones.cloneDeterministic(
             TERMMAX_VAULT_IMPLEMENTATION,
             keccak256(
-                abi.encodePacked(
+                abi.encode(
                     initialParams.admin, initialParams.asset, initialParams.name, initialParams.symbol, salt
                 )
             )
