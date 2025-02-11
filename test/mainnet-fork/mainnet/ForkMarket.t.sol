@@ -10,7 +10,22 @@ contract ForkMarket is MarketBaseTest {
     string MAINNET_RPC_URL = vm.envString("MAINNET_RPC_URL");
 
     function _finishSetup() internal override {
-        
+        vm.startPrank(marketInitialParams.admin);
+        // update oracle
+        collateralPriceFeed.updateRoundData(
+            JSONLoader.getRoundDataFromJson(envData, ".priceData.ETH_2000_PT_WEETH_1800.ptWeeth")
+        );
+        debtPriceFeed.updateRoundData(
+            JSONLoader.getRoundDataFromJson(envData, ".priceData.ETH_2000_PT_WEETH_1800.eth")
+        );
+
+        uint256 amount = 150e8;
+        deal(address(debtToken), marketInitialParams.admin, amount);
+
+        debtToken.approve(address(market), amount);
+        market.mint(address(order), amount);
+
+        vm.stopPrank();
     }
 
     function _getEnv() internal override returns (EnvConfig memory env) {

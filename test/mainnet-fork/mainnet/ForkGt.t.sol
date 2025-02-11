@@ -18,6 +18,20 @@ contract ForkGt is GtBaseTest {
         router.setAdapterWhitelist(address(uniswapAdapter), true);
         router.setAdapterWhitelist(address(pendleAdapter), true);
         router.setAdapterWhitelist(address(odosAdapter), true);
+
+        // update oracle
+        collateralPriceFeed.updateRoundData(
+            JSONLoader.getRoundDataFromJson(envData, ".priceData.ETH_2000_PT_WEETH_1800.ptWeeth")
+        );
+        debtPriceFeed.updateRoundData(
+            JSONLoader.getRoundDataFromJson(envData, ".priceData.ETH_2000_PT_WEETH_1800.eth")
+        );
+
+        uint256 amount = 1.5e18;
+        deal(address(debtToken), marketInitialParams.admin, amount);
+
+        debtToken.approve(address(market), amount);
+        market.mint(address(order), amount);
         vm.stopPrank();
     }
 
@@ -76,15 +90,15 @@ contract ForkGt is GtBaseTest {
 
     function testBorrow() public{
         uint256 collateralAmt = 1e18;
-        uint128 borrowAmt = 10000e8;
-        uint128 maxDebtAmt = 15000e8;
+        uint128 borrowAmt = 0.01e18;
+        uint128 maxDebtAmt = 0.03e18;
         _testBorrow(collateralAmt, borrowAmt, maxDebtAmt);
     }
 
     function testLeverageFromXtWithUniswap() public {
         address taker = vm.randomAddress();
-        uint128 xtAmtIn = 10000e8;
-        uint128 tokenAmtIn = 1e15;
+        uint128 xtAmtIn = 0.01e18;
+        uint128 tokenAmtIn = 1e18;
 
         uint24 poolFee = uint24(vm.parseUint(vm.parseJsonString(envData, ".routers.uniswap.poolFee")));
         address ptUnderlying = vm.parseJsonAddress(envData, ".routers.pendle.underlying");
@@ -110,7 +124,7 @@ contract ForkGt is GtBaseTest {
 
     function testLeverageFromXtWithPendle() public {
         address taker = vm.randomAddress();
-        uint128 xtAmtIn = 10000e8;
+        uint128 xtAmtIn = 0.01e18;
         uint128 tokenAmtIn = 10e18;
 
         address ptUnderlying = vm.parseJsonAddress(envData, ".routers.pendle.underlying");
@@ -154,8 +168,8 @@ contract ForkGt is GtBaseTest {
     function testFlashRepay() public {
         address taker = vm.randomAddress();
 
-        uint128 debtAmt = 10000e8;
-        uint128 collateralAmt = 15000e8;
+        uint128 debtAmt = 0.01e18;
+        uint128 collateralAmt = 1e18;
         uint256 gtId = _fastLoan(taker, debtAmt, collateralAmt);
 
         uint24 poolFee = uint24(vm.parseUint(vm.parseJsonString(envData, ".routers.uniswap.poolFee")));
@@ -178,8 +192,8 @@ contract ForkGt is GtBaseTest {
     function testFlashRepayByFt() public {
         address taker = vm.randomAddress();
 
-        uint128 debtAmt = 10000e8;
-        uint128 collateralAmt = 15000e8;
+        uint128 debtAmt = 0.01e18;
+        uint128 collateralAmt = 1e18;
         uint256 gtId = _fastLoan(taker, debtAmt, collateralAmt);
 
         uint24 poolFee = uint24(vm.parseUint(vm.parseJsonString(envData, ".routers.uniswap.poolFee")));
@@ -202,8 +216,8 @@ contract ForkGt is GtBaseTest {
     function testLiquidate() public {
         address liquidator = vm.randomAddress();
         address borrower = vm.randomAddress();
-        // ltv = 2000 * 0.8 / 1800
-        uint256 gtId = _fastLoan(borrower, 0.8e18, 1e18);
+        // ltv = 2000 * 0.08 / 1800 * 0.1
+        uint256 gtId = _fastLoan(borrower, 0.8e17, 1e17);
         vm.startPrank(marketInitialParams.admin);
         // update oracle
         collateralPriceFeed.updateRoundData(

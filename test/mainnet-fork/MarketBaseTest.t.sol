@@ -59,13 +59,6 @@ abstract contract MarketBaseTest is ForkBaseTest {
         );
         oracle.setOracle(address(marketInitialParams.debtToken), IOracle.Oracle(debtPriceFeed, debtPriceFeed, 365 days));
         string memory testdata = vm.readFile(string.concat(vm.projectRoot(), "/test/testdata/testdata.json"));
-        // update oracle
-        collateralPriceFeed.updateRoundData(
-            JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_2000_PT_WEETH_1800.ptWeeth")
-        );
-        debtPriceFeed.updateRoundData(
-            JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_2000_PT_WEETH_1800.eth")
-        );
 
         marketInitialParams.marketConfig.maturity += uint64(block.timestamp);
         marketInitialParams.loanConfig.oracle = oracle;
@@ -84,13 +77,7 @@ abstract contract MarketBaseTest is ForkBaseTest {
 
         router = deployRouter(marketInitialParams.admin);
         router.setMarketWhitelist(address(market), true);
-
-        uint256 amount = 150e8;
-        deal(address(debtToken), marketInitialParams.admin, amount);
-
-        debtToken.approve(address(market), amount);
-        market.mint(address(order), amount);
-
+        
         vm.stopPrank();
     }
 
