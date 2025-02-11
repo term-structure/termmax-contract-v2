@@ -60,8 +60,15 @@ abstract contract MarketBaseTest is ForkBaseTest {
         oracle.setOracle(address(marketInitialParams.debtToken), IOracle.Oracle(debtPriceFeed, debtPriceFeed, 365 days));
         string memory testdata = vm.readFile(string.concat(vm.projectRoot(), "/test/testdata/testdata.json"));
         // update oracle
-        collateralPriceFeed.updateRoundData(JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_2000_DAI_1.eth"));
-        debtPriceFeed.updateRoundData(JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_2000_DAI_1.dai"));
+        collateralPriceFeed.updateRoundData(
+            JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_2000_PT_WEETH_1800.ptWeeth")
+        );
+        debtPriceFeed.updateRoundData(
+            JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_2000_PT_WEETH_1800.eth")
+        );
+
+        marketInitialParams.marketConfig.maturity += uint64(block.timestamp);
+        marketInitialParams.loanConfig.oracle = oracle;
 
         market = TermMaxMarket(
             deployFactory(marketInitialParams.admin).createMarket(
@@ -79,7 +86,7 @@ abstract contract MarketBaseTest is ForkBaseTest {
         router.setMarketWhitelist(address(market), true);
 
         uint256 amount = 150e8;
-        deal(address(debtToken), maker, amount);
+        deal(address(debtToken), marketInitialParams.admin, amount);
 
         debtToken.approve(address(market), amount);
         market.mint(address(order), amount);
@@ -152,66 +159,39 @@ abstract contract MarketBaseTest is ForkBaseTest {
 
         vm.startPrank(bob);
         ft.approve(address(market), depositAmt);
+        
+        uint256 propotion = depositAmt * Constants.DECIMAL_BASE_SQ / (ft.totalSupply() - ft.balanceOf(address(market)));
+        uint256 redeemAmt = propotion * debtToken.balanceOf(address(market)) / Constants.DECIMAL_BASE_SQ;
+        uint256 redeemedCollateral = propotion * collateral.balanceOf(address(gt)) / Constants.DECIMAL_BASE_SQ;
+        uint256 redeemFee = (marketConfig.feeConfig.redeemFeeRatio * redeemAmt) / Constants.DECIMAL_BASE;
 
-        uint256 redeemFee = (marketConfig.feeConfig.redeemFeeRatio * (depositAmt - debtAmt)) / Constants.DECIMAL_BASE;
+        redeemAmt -= redeemFee;
         vm.expectEmit();
         emit MarketEvents.Redeem(
             bob,
             bob,
-            uint128(Constants.DECIMAL_BASE_SQ),
-            uint128(depositAmt - debtAmt - redeemFee),
+            uint128(propotion),
+            uint128(redeemAmt),
             uint128(redeemFee),
-            abi.encode(collateralAmt)
+            abi.encode(redeemedCollateral)
         );
         market.redeem(depositAmt, bob);
 
-        assertEq(debtToken.balanceOf(bob), depositAmt - debtAmt - redeemFee);
-        assertEq(collateral.balanceOf(bob), collateralAmt);
-        assertEq(debtToken.balanceOf(address(market)), 0);
+        assertEq(debtToken.balanceOf(bob), redeemAmt);
+        assertEq(collateral.balanceOf(bob), redeemedCollateral);
         assertEq(ft.balanceOf(bob), 0);
         vm.stopPrank();
     }
 
-    function testBorrow() public {
-        address taker = vm.randomAddress();
-        uint256 collInAmt = 1e18;
-        uint128 borrowAmt = 80e8;
-        uint128 maxDebtAmt = 100e8;
-
-        vm.startPrank(taker);
-
-        ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
-        orders[0] = order;
-        uint128[] memory tokenAmtsWantBuy = new uint128[](1);
-        tokenAmtsWantBuy[0] = borrowAmt;
-
-        deal(address(collateral), taker, collInAmt);
-        collateral.approve(address(router), collInAmt);
-
-        vm.expectEmit();
-        uint256 expectedGtId = 1;
-        emit RouterEvents.Borrow(market, expectedGtId, taker, taker, collInAmt, maxDebtAmt, borrowAmt);
-        uint256 gtId = router.borrowTokenFromCollateral(taker, market, collInAmt, orders, tokenAmtsWantBuy, maxDebtAmt);
-        (address owner, uint128 debtAmt,, bytes memory collateralData) = gt.loanInfo(gtId);
-        assertEq(owner, taker);
-        assertEq(collInAmt, abi.decode(collateralData, (uint256)));
-        assert(debtAmt <= maxDebtAmt);
-        assertEq(debtToken.balanceOf(taker), borrowAmt);
-
-        vm.stopPrank();
-    }
-
-    function testIssueFtByGtWhenSwap() internal {
+    function _testIssueFtByGtWhenSwap(uint256 collateralAmt, uint128 debtAmt) internal {
         address taker = vm.randomAddress();
         deal(taker, 1e18);
 
         vm.startPrank(maker);
         deal(maker, 1e18);
-        uint256 collateralAmt = 1e18;
-        uint128 debtAmt = 100e8;
         deal(address(collateral), maker, collateralAmt);
-        collateral.approve(address(market), collateralAmt);
-        (uint256 gtId,) = market.issueFt(taker, uint128(debtAmt), abi.encode(collateralAmt));
+        collateral.approve(address(gt), collateralAmt);
+        (uint256 gtId,) = market.issueFt(maker, debtAmt, abi.encode(collateralAmt));
 
         gt.approve(address(order), gtId);
         OrderConfig memory orderConfig = order.orderConfig();

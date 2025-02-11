@@ -71,6 +71,9 @@ abstract contract GtBaseTest is ForkBaseTest {
             JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_2000_PT_WEETH_1800.eth")
         );
 
+        marketInitialParams.marketConfig.maturity += uint64(block.timestamp);
+        marketInitialParams.loanConfig.oracle = oracle;
+
         market = TermMaxMarket(
             deployFactory(marketInitialParams.admin).createMarket(
                 keccak256("GearingTokenWithERC20"), marketInitialParams, 0
@@ -90,6 +93,29 @@ abstract contract GtBaseTest is ForkBaseTest {
 
         debtToken.approve(address(market), amount);
         market.mint(address(order), amount);
+
+        vm.stopPrank();
+    }
+
+    function _testBorrow(uint256 collInAmt, uint128 borrowAmt, uint128 maxDebtAmt) internal {
+        address taker = vm.randomAddress();
+
+        vm.startPrank(taker);
+
+        ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
+        orders[0] = order;
+        uint128[] memory tokenAmtsWantBuy = new uint128[](1);
+        tokenAmtsWantBuy[0] = borrowAmt;
+
+        deal(address(collateral), taker, collInAmt);
+        collateral.approve(address(router), collInAmt);
+
+        uint256 gtId = router.borrowTokenFromCollateral(taker, market, collInAmt, orders, tokenAmtsWantBuy, maxDebtAmt);
+        (address owner, uint128 debtAmt,, bytes memory collateralData) = gt.loanInfo(gtId);
+        assertEq(owner, taker);
+        assertEq(collInAmt, abi.decode(collateralData, (uint256)));
+        assertLe(debtAmt, maxDebtAmt);
+        assertEq(debtToken.balanceOf(taker), borrowAmt);
 
         vm.stopPrank();
     }

@@ -74,6 +74,9 @@ abstract contract VaultBaseTest is ForkBaseTest {
         collateralPriceFeed.updateRoundData(JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_2000_DAI_1.eth"));
         debtPriceFeed.updateRoundData(JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_2000_DAI_1.dai"));
 
+        marketInitialParams.marketConfig.maturity += uint64(block.timestamp);
+        marketInitialParams.loanConfig.oracle = oracle;
+
         market = TermMaxMarket(
             deployFactoryWithMockOrder(marketInitialParams.admin).createMarket(
                 keccak256("GearingTokenWithERC20"), marketInitialParams, 0

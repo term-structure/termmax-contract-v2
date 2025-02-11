@@ -1,0 +1,60 @@
+{
+  "blockNumber": "21208075",
+  "duration": "30",
+  "collateral": "0x6ee2b5E19ECBa773a352E5B21415Dc419A700d1d",
+  "debtToken": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+  "loanConfig": {
+    "maxLtv": "89000000",
+    "liquidationLtv": "90000000",
+    "liquidatable": true
+  },
+  "feeConfig": {
+    "redeemFeeRatio": "0",
+    "issueFtFeeRatio": "1000000",
+    "issueFtFeeRef": "2000000",
+    "lendTakerFeeRatio": "1000000",
+    "borrowTakerFeeRatio": "2000000",
+    "lendMakerFeeRatio": "1000000",
+    "borrowMakerFeeRatio": "2000000"
+  },
+  "orderConfig": {
+    "maxXtReserve": "2000000000000000000000000000000000000000000000000000000000000000000",
+    "gtId": "0",
+    "lendCurveCuts": {
+      "0": {
+        "xtReserve": "0",
+        "liqSquare": "461683991532123062272",
+        "offset": "33973665961"
+      },
+      "1": {
+        "xtReserve": "9000000000",
+        "liqSquare": "425141100695200464896",
+        "offset": "32237899859"
+      },
+      "2": {
+        "xtReserve": "21000000000",
+        "liqSquare": "1072059478286836826112",
+        "offset": "63540304430"
+      },
+      "length": 3
+    },
+    "borrowCurveCuts": {
+      "0": {
+        "xtReserve": "0",
+        "liqSquare": "330638754635872993280",
+        "offset": "29116862443"
+      },
+      "1": {
+        "xtReserve": "8000000000",
+        "liqSquare": "361237873939795017728",
+        "offset": "30796362980"
+      },
+      "2": {
+        "xtReserve": "20000000000",
+        "liqSquare": "826934466947518169088",
+        "offset": "56854893632"
+      },
+      "length": 3
+    }
+  }
+}
