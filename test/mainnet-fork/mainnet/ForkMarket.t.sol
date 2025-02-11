@@ -13,10 +13,10 @@ contract ForkMarket is MarketBaseTest {
         vm.startPrank(marketInitialParams.admin);
         // update oracle
         collateralPriceFeed.updateRoundData(
-            JSONLoader.getRoundDataFromJson(envData, ".priceData.ETH_2000_PT_WEETH_1800.ptWeeth")
+            JSONLoader.getRoundDataFromJson(envData, ".priceData.ETH_200000000000_PT_WEETH_180000000000.ptWeeth")
         );
         debtPriceFeed.updateRoundData(
-            JSONLoader.getRoundDataFromJson(envData, ".priceData.ETH_2000_PT_WEETH_1800.eth")
+            JSONLoader.getRoundDataFromJson(envData, ".priceData.ETH_200000000000_PT_WEETH_180000000000.eth")
         );
 
         uint256 amount = 150e8;
