@@ -28,12 +28,12 @@ import {Constants} from "contracts/lib/Constants.sol";
 import {ITermMaxVault} from "./ITermMaxVault.sol";
 
 contract TermMaxVault is
+    VaultStorage,
     ITermMaxVault,
     Ownable2StepUpgradeable,
     ReentrancyGuardUpgradeable,
     ERC4626Upgradeable,
     PausableUpgradeable,
-    VaultStorage,
     VaultErrors,
     VaultEvents,
     ISwapCallback
