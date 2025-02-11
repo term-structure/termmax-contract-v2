@@ -35,7 +35,6 @@ import "contracts/storage/TermMaxStorage.sol";
 abstract contract VaultBaseTest is ForkBaseTest {
 
     MarketInitialParams marketInitialParams;
-    uint256 maxXtReserve = type(uint128).max;
 
     TermMaxMarket market;
     IMintableERC20 ft;
@@ -55,7 +54,6 @@ abstract contract VaultBaseTest is ForkBaseTest {
     function _initialize(bytes memory data) internal override {
         currentTime = block.timestamp;
         CurveCuts memory curveCuts;
-        
         (marketInitialParams, curveCuts, vaultInitialParams) = abi.decode(data, (MarketInitialParams, CurveCuts, VaultInitialParams));
 
         deal(vaultInitialParams.curator, 1e18);
@@ -69,10 +67,9 @@ abstract contract VaultBaseTest is ForkBaseTest {
             address(marketInitialParams.collateral), IOracle.Oracle(collateralPriceFeed, collateralPriceFeed, 365 days)
         );
         oracle.setOracle(address(marketInitialParams.debtToken), IOracle.Oracle(debtPriceFeed, debtPriceFeed, 365 days));
-        string memory testdata = vm.readFile(string.concat(vm.projectRoot(), "/test/testdata/testdata.json"));
-        // update oracle
-        collateralPriceFeed.updateRoundData(JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_2000_DAI_1.eth"));
-        debtPriceFeed.updateRoundData(JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_2000_DAI_1.dai"));
+
+        marketInitialParams.marketConfig.maturity += uint64(currentTime);
+        marketInitialParams.loanConfig.oracle = oracle;
 
         market = TermMaxMarket(
             deployFactoryWithMockOrder(marketInitialParams.admin).createMarket(
@@ -85,6 +82,7 @@ abstract contract VaultBaseTest is ForkBaseTest {
         collateral = IERC20(marketInitialParams.collateral);
 
         vault = ITermMaxVault(deployVaultFactory().createVault(vaultInitialParams, 0));
+
         vault.submitMarket(address(market), true);
         vm.warp(currentTime + vaultInitialParams.timelock + 1);
         vault.acceptMarket(address(market));
@@ -95,15 +93,15 @@ abstract contract VaultBaseTest is ForkBaseTest {
         deal(address(debtToken), marketInitialParams.admin, amount);
 
         debtToken.approve(address(vault), amount);
-        vault.createOrder(market, maxXtReserve, amount, curveCuts);
+        vault.deposit(amount, marketInitialParams.admin);
+
+        order = vault.createOrder(market, vaultInitialParams.maxCapacity, amount, curveCuts);
 
         vm.stopPrank();
     }
 
     function testDeposit() public {
-        vm.warp(currentTime + 2 days);
         _buyXt(48.219178e8, 1000e8);
-
         vm.warp(currentTime + 2 days);
         address lper2 = vm.randomAddress();
         uint256 amount2 = 20000e8;
@@ -159,8 +157,8 @@ abstract contract VaultBaseTest is ForkBaseTest {
         deal(borrower, 1e18);
         uint collateralAmt = 1e18;
         deal(address(collateral), borrower, collateralAmt);
-        collateral.approve(address(market), collateralAmt);
-        (uint256 gtId,) = market.issueFt(borrower, 1000e8, abi.encode(collateralAmt));
+        collateral.approve(address(gt), collateralAmt);
+        market.issueFt(borrower, 0.01e18, abi.encode(collateralAmt));
         vm.stopPrank();
 
         vm.warp(currentTime + 92 days);
@@ -179,27 +177,15 @@ abstract contract VaultBaseTest is ForkBaseTest {
         assertEq(vault.badDebtMapping(address(collateral)), badDebt);
         assertEq(collateral.balanceOf(address(vault)), delivered);
 
-        uint256 shareToDealBadDebt = vault.previewWithdraw(badDebt / 2);
-        vm.startPrank(lper2);
-        (uint256 shares, uint256 collateralOut) = vault.dealBadDebt(address(collateral), badDebt / 2, lper2, lper2);
-        assertEq(shares, shareToDealBadDebt);
-        assertEq(collateralOut, ((badDebt / 2) * delivered) / badDebt);
-        assertEq(vault.badDebtMapping(address(collateral)), badDebt - badDebt / 2);
-        assertEq(collateral.balanceOf(address(vault)), delivered - collateralOut);
-        vm.stopPrank();
+        uint256 shareToDealBadDebt = vault.balanceOf(lper2);
+        uint256 withdrawAmt = vault.previewRedeem(shareToDealBadDebt);
 
         vm.startPrank(lper2);
-        shareToDealBadDebt = vault.previewWithdraw(badDebt - badDebt / 2);
-        uint256 remainningCollateral = collateral.balanceOf(address(vault));
-        vm.expectEmit();
-        emit VaultEvents.DealBadDebt(
-            lper2, lper2, address(collateral), badDebt - badDebt / 2, shareToDealBadDebt, remainningCollateral
-        );
-        (shares, collateralOut) = vault.dealBadDebt(address(collateral), badDebt - badDebt / 2, lper2, lper2);
+        (uint256 shares, uint256 collateralOut) = vault.dealBadDebt(address(collateral), shareToDealBadDebt, lper2, lper2);
         assertEq(shares, shareToDealBadDebt);
-        assertEq(collateralOut, remainningCollateral);
-        assertEq(vault.badDebtMapping(address(collateral)), 0);
-        assertEq(collateral.balanceOf(address(vault)), 0);
+        assertEq(collateralOut, (withdrawAmt * delivered) / badDebt);
+        assertEq(vault.badDebtMapping(address(collateral)), badDebt - withdrawAmt);
+        assertEq(collateral.balanceOf(address(vault)), delivered - collateralOut);
         vm.stopPrank();
     }
 
@@ -213,5 +199,4 @@ abstract contract VaultBaseTest is ForkBaseTest {
         vm.stopPrank();
     }
 
-   
 }

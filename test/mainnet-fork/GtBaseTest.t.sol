@@ -62,14 +62,9 @@ abstract contract GtBaseTest is ForkBaseTest {
             address(marketInitialParams.collateral), IOracle.Oracle(collateralPriceFeed, collateralPriceFeed, 365 days)
         );
         oracle.setOracle(address(marketInitialParams.debtToken), IOracle.Oracle(debtPriceFeed, debtPriceFeed, 365 days));
-        string memory testdata = vm.readFile(string.concat(vm.projectRoot(), "/test/testdata/testdata.json"));
-        // update oracle
-        collateralPriceFeed.updateRoundData(
-            JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_2000_PT_WEETH_1800.ptWeeth")
-        );
-        debtPriceFeed.updateRoundData(
-            JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_2000_PT_WEETH_1800.eth")
-        );
+
+        marketInitialParams.marketConfig.maturity += uint64(block.timestamp);
+        marketInitialParams.loanConfig.oracle = oracle;
 
         market = TermMaxMarket(
             deployFactory(marketInitialParams.admin).createMarket(
@@ -84,12 +79,31 @@ abstract contract GtBaseTest is ForkBaseTest {
         order = market.createOrder(maker, maxXtReserve, ISwapCallback(address(0)), curveCuts);
 
         router = deployRouter(marketInitialParams.admin);
-        router.setMarketWhitelist(address(market), true);
-        uint256 amount = 15000e8;
-        deal(address(debtToken), maker, amount);
 
-        debtToken.approve(address(market), amount);
-        market.mint(address(order), amount);
+        router.setMarketWhitelist(address(market), true);
+
+        vm.stopPrank();
+    }
+
+    function _testBorrow(uint256 collInAmt, uint128 borrowAmt, uint128 maxDebtAmt) internal {
+        address taker = vm.randomAddress();
+
+        vm.startPrank(taker);
+
+        ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
+        orders[0] = order;
+        uint128[] memory tokenAmtsWantBuy = new uint128[](1);
+        tokenAmtsWantBuy[0] = borrowAmt;
+
+        deal(address(collateral), taker, collInAmt);
+        collateral.approve(address(router), collInAmt);
+
+        uint256 gtId = router.borrowTokenFromCollateral(taker, market, collInAmt, orders, tokenAmtsWantBuy, maxDebtAmt);
+        (address owner, uint128 debtAmt,, bytes memory collateralData) = gt.loanInfo(gtId);
+        assertEq(owner, taker);
+        assertEq(collInAmt, abi.decode(collateralData, (uint256)));
+        assertLe(debtAmt, maxDebtAmt);
+        assertEq(debtToken.balanceOf(taker), borrowAmt);
 
         vm.stopPrank();
     }
@@ -98,7 +112,6 @@ abstract contract GtBaseTest is ForkBaseTest {
         address taker,
         uint128 xtAmtIn,
         uint128 tokenAmtIn,
-        ISwapAdapter swapAdapter,
         SwapUnit[] memory units
     ) internal returns (uint256 gtId) {
         vm.startPrank(taker);
@@ -138,7 +151,6 @@ abstract contract GtBaseTest is ForkBaseTest {
         address taker,
         uint128 tokenAmtToBuyXt,
         uint128 tokenAmtIn,
-        ISwapAdapter swapAdapter,
         SwapUnit[] memory units
     ) internal returns (uint256 gtId) {
         vm.startPrank(taker);
@@ -160,7 +172,6 @@ abstract contract GtBaseTest is ForkBaseTest {
             router.leverageFromToken(taker, market, orders, amtsToBuyXt, minXTOut, tokenAmtIn, uint128(maxLtv), units);
 
         uint256 debtTokenBalanceAfterSwap = debtToken.balanceOf(taker);
-        uint256 xtAmtAfterSwap = xt.balanceOf(taker);
 
         assertEq(debtTokenBalanceBeforeSwap - debtTokenBalanceAfterSwap, tokenAmtToBuyXt + tokenAmtIn);
 
@@ -174,12 +185,9 @@ abstract contract GtBaseTest is ForkBaseTest {
         vm.stopPrank();
     }
 
-    function _testFlashRepay(address taker, ISwapAdapter swapAdapter, SwapUnit[] memory units) internal {
+    function _testFlashRepay(uint256 gtId, address taker, SwapUnit[] memory units) internal {
         deal(taker, 1e18);
 
-        uint128 debtAmt = 1e17;
-        uint128 collateralAmt = 1e18;
-        uint256 gtId = _fastLoan(taker, debtAmt, collateralAmt);
         vm.startPrank(taker);
 
         gt.approve(address(router), gtId);
@@ -198,14 +206,10 @@ abstract contract GtBaseTest is ForkBaseTest {
         vm.stopPrank();
     }
 
-    function _testFlashRepayByFt(address taker, ISwapAdapter swapAdapter, SwapUnit[] memory units) internal {
+    function _testFlashRepayByFt(uint256 gtId, uint128 debtAmt, address taker, SwapUnit[] memory units) internal {
         deal(taker, 1e18);
 
-        uint128 debtAmt = 1e17;
-        uint128 collateralAmt = 1e18;
-        uint256 gtId = _fastLoan(taker, debtAmt, collateralAmt);
         vm.startPrank(taker);
-
         gt.approve(address(router), gtId);
 
         uint256 debtTokenBalanceBeforeRepay = debtToken.balanceOf(taker);
@@ -228,7 +232,7 @@ abstract contract GtBaseTest is ForkBaseTest {
         deal(liquidator, 1e18);
         vm.startPrank(liquidator);
 
-        (, uint128 debtAmt,, bytes memory collateralData) = gt.loanInfo(gtId);
+        (, uint128 debtAmt,,) = gt.loanInfo(gtId);
 
         deal(address(debtToken), liquidator, debtAmt);
         debtToken.approve(address(gt), debtAmt);
@@ -247,7 +251,7 @@ abstract contract GtBaseTest is ForkBaseTest {
         vm.startPrank(taker);
         deal(taker, 1e18);
         deal(address(collateral), taker, collateralAmt);
-        collateral.approve(address(market), collateralAmt);
+        collateral.approve(address(gt), collateralAmt);
         (gtId,) = market.issueFt(taker, uint128(debtAmt), abi.encode(collateralAmt));
         vm.stopPrank();
     }
