@@ -16,14 +16,14 @@ interface IVaultFactory {
 
     /**
      * @notice Predict the address of a new TermMax vault
-     * @param admin The address of the vault admin
+     * @param deployer The address of the vault deployer
      * @param asset The address of the asset
      * @param name The name of the vault
      * @param symbol The symbol of the vault
      * @param salt The salt used to create the vault
      * @return vault The predicted address of the vault
      */
-    function predictVaultAddress(address admin, address asset, string memory name, string memory symbol, uint256 salt)
+    function predictVaultAddress(address deployer, address asset, string memory name, string memory symbol, uint256 salt)
         external
         view
         returns (address vault);

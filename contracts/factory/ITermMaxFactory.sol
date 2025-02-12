@@ -16,7 +16,7 @@ interface ITermMaxFactory {
     function setGtImplement(string memory gtImplementName, address gtImplement) external;
 
     /// @notice Predict the address of token pair
-    function predictMarketAddress(address admin, address collateral, address underlying, uint64 maturity, uint256 salt)
+    function predictMarketAddress(address deployer, address collateral, address debtToken, uint64 maturity, uint256 salt)
         external
         view
         returns (address market);
