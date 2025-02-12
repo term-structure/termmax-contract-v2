@@ -556,10 +556,59 @@ contract VaultTest is Test {
         vm.stopPrank();
 
         vm.startPrank(deployer);
+        uint256 totalFt = vault.totalFt();
+        uint256 lockedFr = vault.totalAssets();
+
         uint256 share = vault.balanceOf(deployer);
-        uint256 redeem = vault.previewRedeem(share);
-        assertEq(redeem, vault.redeem(share, deployer, deployer));
-        assert(redeem > 10000e8);
+        uint256 redeemmedAmt = vault.previewRedeem(share);
+        assertEq(redeemmedAmt, vault.redeem(share, deployer, deployer));
+        assert(redeemmedAmt > 10000e8);
+        assertEq(vault.totalFt(), totalFt - redeemmedAmt);
+        assertEq(vault.totalAssets(), lockedFr - redeemmedAmt);
+
+        vm.stopPrank();
+    }
+    
+    // redeem when balance bigger tha redeemed
+    function testRedeemCase2() public {
+        vm.warp(currentTime + 2 days);
+        buyXt(48.219178e8, 1000e8);
+        vm.warp(currentTime + 4 days);
+        address lper2 = vm.randomAddress();
+        uint256 amount2 = 10000e8;
+        res.debt.mint(lper2, amount2);
+        vm.startPrank(lper2);
+        res.debt.approve(address(vault), amount2);
+        vault.deposit(amount2, lper2);
+        vm.stopPrank();
+
+        vm.startPrank(curator);
+        ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
+        orders[0] = res.order;
+
+        int256[] memory changes = new int256[](1);
+        changes[0] = -1000e8;
+
+        uint256[] memory maxSupplies = new uint256[](1);
+        maxSupplies[0] = maxCapacity;
+
+        CurveCuts[] memory curveCuts = new CurveCuts[](1);
+        curveCuts[0] = orderConfig.curveCuts;
+        
+        vault.updateOrders(orders, changes, maxSupplies, curveCuts);
+        vm.stopPrank();
+
+        vm.startPrank(deployer);
+        uint256 totalFt = vault.totalFt();
+        uint256 lockedFr = vault.totalAssets();
+
+        uint256 share = 100e8;
+        uint256 redeemmedAmt = vault.previewRedeem(share);
+        assertEq(redeemmedAmt, vault.redeem(share, deployer, deployer));
+        assert(redeemmedAmt > share);
+        assertEq(vault.totalFt(), totalFt - redeemmedAmt);
+        assertEq(vault.totalAssets(), lockedFr - redeemmedAmt);
+
         vm.stopPrank();
     }
 
