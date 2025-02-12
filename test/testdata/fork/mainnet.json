@@ -1,4 +1,7 @@
 {
+  "tokenPairs":[
+    "WETH-PTWEETH"
+  ],
   "blockNumber": "21208075",
   "duration": "30",
   "collateral": "0x6ee2b5E19ECBa773a352E5B21415Dc419A700d1d",
@@ -59,15 +62,18 @@
   },
   "routers": {
     "uniswap": {
+      "active": true,
       "address": "0xE592427A0AEce92De3Edee1F18E0157C05861564",
       "poolFee": "100"
     },
     "pendle":{
+      "active": true,
       "address": "0x888888888889758F76e7103c6CbF23ABbF58F946",
       "market": "0x7d372819240D14fB477f17b964f95F33BeB4c704",
       "underlying": "0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee"
     },
     "odos":{
+      "active": true,
       "address": "0xCf5540fFFCdC3d510B18bFcA6d2b9987b0772559",
       "odosInputReceiver": "0xDB74dfDD3BB46bE8Ce6C33dC9D82777BCFc3dEd5",
       "outputQuote": "9455438286641436672",
