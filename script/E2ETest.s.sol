@@ -36,7 +36,7 @@ contract E2ETest is Script {
     address routerAddr = address(0x959D4521BD48B6487D415Aad576Af2222ADB1a92);
     address swapAdapter = address(0xC16905D5b6E34DA4f76BD896f8e1cc6E4650960C);
     address marketAddr = address(0x645ef85B26A8eE16D4858725045900ACAb7DE005);
-    address orderAddr = address(0xb17F9B1DFE6264645E09CE6090aaBEdA77e14830);
+    address orderAddr = address(0x031FEcF98032Ab1B2601B32cD9487B1AaBAE573C);
 
     Faucet faucet = Faucet(faucetAddr);
     TermMaxRouter router = TermMaxRouter(routerAddr);
@@ -64,7 +64,13 @@ contract E2ETest is Script {
         mintDebtToken(1000);
         lendToOrder(1000);
         mintCollateralToken(12000);
-        borrowFromOrder(12000, 8000, 8500);
+        uint256 gtId = borrowFromOrder(12000, 8000, 8500);
+        mintCollateralToken(100);
+        addCollateral(gtId, 100);
+        removeCollateral(gtId, 50);
+        mintDebtToken(500);
+        repay(gtId, 500, true);
+        transferGT(gtId, vm.randomAddress());
         printUserPosition();
         mintDebtToken(20004);
         leverageFromOrder(4, 0, 20000, 0.8e8);
@@ -137,7 +143,7 @@ contract E2ETest is Script {
         // console.log("new ftBalance:", newFtBalance);
     }
 
-    function borrowFromOrder(uint256 collateralAmt, uint256 borrowAmt, uint256 maxDebtAmt) public {
+    function borrowFromOrder(uint256 collateralAmt, uint256 borrowAmt, uint256 maxDebtAmt) public returns (uint256 gtId){
         collateralAmt = collateralAmt * 10 ** collateral.decimals();
         borrowAmt = borrowAmt * 10 ** underlying.decimals();
         maxDebtAmt = maxDebtAmt * 10 ** underlying.decimals();
@@ -154,7 +160,7 @@ contract E2ETest is Script {
         orders[0] = order;
         uint128[] memory ftAmtsToSell = new uint128[](1);
         ftAmtsToSell[0] = uint128(borrowAmt);
-        router.borrowTokenFromCollateral(userAddr, market, collateralAmt, orders, ftAmtsToSell, uint128(maxDebtAmt));
+        gtId = router.borrowTokenFromCollateral(userAddr, market, collateralAmt, orders, ftAmtsToSell, uint128(maxDebtAmt));
         vm.stopBroadcast();
 
         (uint256 newFtReserve, uint256 newXtReserve) = order.tokenReserves();
@@ -218,7 +224,36 @@ contract E2ETest is Script {
         // console.log("new borrowApr:", newBorrowApr);
         // console.log("new underlyingBalance:", newUnderlyingBalance);
     }
+    
+    function addCollateral(uint256 gtId, uint256 addCollateralAmt) public {
+        addCollateralAmt = addCollateralAmt * 10 ** collateral.decimals();
+        vm.startBroadcast(userPrivateKey);
+        collateral.approve(address(gt), addCollateralAmt);
+        gt.addCollateral(gtId, abi.encode(addCollateralAmt));
+        vm.stopBroadcast();
+    }
 
+    function removeCollateral(uint256 gtId, uint256 removeCollateralAmt) public {
+        removeCollateralAmt = removeCollateralAmt * 10 ** collateral.decimals();
+        vm.startBroadcast(userPrivateKey);
+        gt.removeCollateral(gtId, abi.encode(removeCollateralAmt));
+        vm.stopBroadcast();
+    }
+
+    function repay(uint256 gtId, uint128 repayAmt, bool byDebtToken) public {
+        repayAmt = uint128(repayAmt * 10 ** underlying.decimals());
+        vm.startBroadcast(userPrivateKey);
+        underlying.approve(address(gt), repayAmt);
+        gt.repay(gtId, repayAmt, byDebtToken);
+        vm.stopBroadcast();
+    }
+
+    function transferGT(uint256 gtId, address toAddr) public {
+        vm.startBroadcast(userPrivateKey);
+        gt.transferFrom(userAddr, toAddr, gtId);
+        vm.stopBroadcast();
+        console.log("Transfer GT No. %d from %s to %s", gtId, userAddr, toAddr);
+    }
     function printMarketConfig() public view {
         MarketConfig memory config = market.config();
         console.log("--- Market Config ---");
@@ -238,8 +273,8 @@ contract E2ETest is Script {
         console.log("--- User Position ---");
         console.log("User Addr:", userAddr);
         console.log("Market Addr:", address(market));
-        (IERC20[4] memory tokens, uint256[4] memory balances, address gtAddr, uint256[] memory gtIds) =
-            router.assetsWithERC20Collateral(market, userAddr);
+        (IERC20[4] memory tokens, uint256[4] memory balances, address gtAddr, uint256[] memory gtIds) = router
+            .assetsWithERC20Collateral(market, userAddr);
         for (uint256 i = 0; i < tokens.length; i++) {
             console.log(IERC20Metadata(address(tokens[i])).symbol(), ":", balances[i]);
         }
