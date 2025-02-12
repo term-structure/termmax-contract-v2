@@ -259,10 +259,10 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
                 uint256 maxWithdraw = amount - amountLeft;
                 revert InsufficientFunds(maxWithdraw, amount);
             }
-        }
 
-        _totalFt -= amount;
-        _accretingPrincipal -= amount;
+            _totalFt -= amount;
+            _accretingPrincipal -= amount;
+        }
     }
 
     function _withdrawPerformanceFee(IERC20 asset, address recipient, uint256 amount) internal {
