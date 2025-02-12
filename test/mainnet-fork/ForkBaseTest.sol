@@ -39,8 +39,14 @@ abstract contract ForkBaseTest is Test {
     function setUp() public {
         dataPath = _getDataPath();
         _readTokenPairs();
+
+        uint256 mainnetFork = vm.createFork(_getForkRpcUrl());
+        vm.selectFork(mainnetFork);
+
         _finishSetup();
     }
+
+    function _getForkRpcUrl() internal view virtual returns (string memory);
 
     function _getDataPath() internal view virtual returns (string memory);
 

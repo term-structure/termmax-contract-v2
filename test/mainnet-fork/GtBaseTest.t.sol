@@ -45,6 +45,8 @@ abstract contract GtBaseTest is ForkBaseTest {
         ITermMaxOrder order;
         ITermMaxRouter router;
 
+        uint256 maxXtReserve;
+
         address maker;
 
         UniswapV3Adapter uniswapAdapter;
@@ -53,47 +55,7 @@ abstract contract GtBaseTest is ForkBaseTest {
     }
 
     function _finishSetup() internal override {
-        uint256 mainnetFork = vm.createFork(_getForkRpcUrl());
-        vm.selectFork(mainnetFork);
-    }
-
-    function _getForkRpcUrl() internal pure returns (string memory);
-
-    function _initialize(bytes memory data) internal override {
-        deal(maker, 1e18);
-        CurveCuts memory curveCuts;
-        (marketInitialParams, curveCuts) = abi.decode(data, (MarketInitialParams, CurveCuts));
-
-        vm.startPrank(marketInitialParams.admin);
-
-        oracle = deployOracleAggregator(marketInitialParams.admin);
-        collateralPriceFeed = deployMockPriceFeed(marketInitialParams.admin);
-        debtPriceFeed = deployMockPriceFeed(marketInitialParams.admin);
-        oracle.setOracle(
-            address(marketInitialParams.collateral), IOracle.Oracle(collateralPriceFeed, collateralPriceFeed, 365 days)
-        );
-        oracle.setOracle(address(marketInitialParams.debtToken), IOracle.Oracle(debtPriceFeed, debtPriceFeed, 365 days));
-
-        marketInitialParams.marketConfig.maturity += uint64(block.timestamp);
-        marketInitialParams.loanConfig.oracle = oracle;
-
-        market = TermMaxMarket(
-            deployFactory(marketInitialParams.admin).createMarket(
-                keccak256("GearingTokenWithERC20"), marketInitialParams, 0
-            )
-        );
-
-        (ft, xt, gt,,) = market.tokens();
-        debtToken = marketInitialParams.debtToken;
-        collateral = IERC20(marketInitialParams.collateral);
-
-        order = market.createOrder(maker, maxXtReserve, ISwapCallback(address(0)), curveCuts);
-
-        router = deployRouter(marketInitialParams.admin);
-
-        router.setMarketWhitelist(address(market), true);
-
-        vm.stopPrank();
+        
     }
 
     function _initializeGtTestRes(string memory key) internal returns (GtTestRes memory) {
@@ -101,6 +63,8 @@ abstract contract GtBaseTest is ForkBaseTest {
         res.blockNumber = _readBlockNumber(key);
         res.marketInitialParams = _readMarketInitialParams(key);
         res.orderConfig = _readOrderConfig(key);
+        res.maker = vm.randomAddress();
+        res.maxXtReserve = type(uint128).max;
 
         vm.rollFork(res.blockNumber);
 
@@ -110,28 +74,28 @@ abstract contract GtBaseTest is ForkBaseTest {
         res.collateralPriceFeed = deployMockPriceFeed(res.marketInitialParams.admin);
         res.debtPriceFeed = deployMockPriceFeed(res.marketInitialParams.admin);
         res.oracle.setOracle(
-            address(res.marketInitialParams.collateral), IOracle.Oracle(collateralPriceFeed, collateralPriceFeed, 365 days)
+            address(res.marketInitialParams.collateral), IOracle.Oracle(res.collateralPriceFeed, res.collateralPriceFeed, 365 days)
         );
-        res.oracle.setOracle(address(res.marketInitialParams.debtToken), IOracle.Oracle(debtPriceFeed, debtPriceFeed, 365 days));
+        res.oracle.setOracle(address(res.marketInitialParams.debtToken), IOracle.Oracle(res.debtPriceFeed, res.debtPriceFeed, 365 days));
 
         res.marketInitialParams.marketConfig.maturity += uint64(block.timestamp);
-        res.marketInitialParams.loanConfig.oracle = oracle;
+        res.marketInitialParams.loanConfig.oracle = res.oracle;
 
         res.market = TermMaxMarket(
-            deployFactory(marketInitialParams.admin).createMarket(
-                keccak256("GearingTokenWithERC20"), marketInitialParams, 0
+            deployFactory(res.marketInitialParams.admin).createMarket(
+                keccak256("GearingTokenWithERC20"), res.marketInitialParams, 0
             )
         );
 
-        (ft, xt, gt,,) = market.tokens();
-        debtToken = marketInitialParams.debtToken;
-        collateral = IERC20(marketInitialParams.collateral);
+        (res.ft, res.xt, res.gt,,) = res.market.tokens();
+        res.debtToken = res.marketInitialParams.debtToken;
+        res.collateral = IERC20(res.marketInitialParams.collateral);
 
-        order = market.createOrder(maker, maxXtReserve, ISwapCallback(address(0)), curveCuts);
+        res.order = res.market.createOrder(res.maker, res.maxXtReserve, ISwapCallback(address(0)), res.orderConfig.curveCuts);
 
-        router = deployRouter(marketInitialParams.admin);
+        res.router = deployRouter(res.marketInitialParams.admin);
 
-        router.setMarketWhitelist(address(market), true);
+        res.router.setMarketWhitelist(address(res.market), true);
 
         vm.stopPrank();
 
