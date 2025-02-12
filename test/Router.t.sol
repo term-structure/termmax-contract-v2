@@ -406,6 +406,33 @@ contract RouterTest is Test {
         vm.stopPrank();
     }
 
+    function testBorrowTokenFromGtInvalidSender() public {
+        vm.startPrank(sender);
+        uint256 collInAmt = 1e18;
+
+        (uint256 gtId,) = LoanUtils.fastMintGt(res, sender, 100e8, collInAmt);
+
+        uint128 borrowAmt = 80e8;
+
+        res.debt.mint(sender, borrowAmt);
+        res.debt.approve(address(res.market), borrowAmt);
+        res.market.mint(sender, borrowAmt);
+
+        res.xt.approve(address(res.router), borrowAmt);
+        res.gt.approve(address(res.router), gtId);
+
+        uint256 issueFtFeeRatio = res.market.issueFtFeeRatio();
+        uint128 previewDebtAmt =
+            ((borrowAmt * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - issueFtFeeRatio)).toUint128();
+        vm.stopPrank();
+
+        vm.expectRevert(abi.encodeWithSelector(RouterErrors.GtNotOwnedBySender.selector));
+        vm.prank(deployer);
+        res.router.borrowTokenFromGt(sender, res.market, gtId, borrowAmt);
+
+        vm.stopPrank();
+    }
+
     function testFlashRepayFromCollateral() public {
         vm.startPrank(sender);
         uint128 debtAmt = 100e8;

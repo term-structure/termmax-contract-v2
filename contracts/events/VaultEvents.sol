@@ -160,6 +160,12 @@ interface VaultEvents {
     event RevokePendingGuardian(address indexed caller);
 
     /**
+     * @notice Emitted when the performance fee rate is proposed to be revoked
+     * @param caller The address that initiated the revocation
+     */
+    event RevokePendingPerformanceFeeRate(address indexed caller);
+
+    /**
      * @notice Emitted when the cap for an order is updated
      * @param caller The address that updated the cap
      * @param order The order address

@@ -78,6 +78,11 @@ interface IOrderManager {
     function withdrawAssets(IERC20 asset, address recipient, uint256 amount) external;
 
     /**
+     * @notice Accrues interest
+     */
+    function accruedInterest() external;
+
+    /**
      * @notice Redeems an order
      * @param order The order to redeem
      */

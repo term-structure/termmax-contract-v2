@@ -28,12 +28,12 @@ import {Constants} from "contracts/lib/Constants.sol";
 import {ITermMaxVault} from "./ITermMaxVault.sol";
 
 contract TermMaxVault is
+    VaultStorage,
     ITermMaxVault,
     Ownable2StepUpgradeable,
     ReentrancyGuardUpgradeable,
     ERC4626Upgradeable,
     PausableUpgradeable,
-    VaultStorage,
     VaultErrors,
     VaultEvents,
     ISwapCallback
@@ -455,7 +455,7 @@ contract TermMaxVault is
             emit SetPerformanceFeeRate(_msgSender(), newPerformanceFeeRate);
             return;
         } else {
-            _pendingPerformanceFeeRate.update(newPerformanceFeeRate, block.timestamp + _timelock);
+            _pendingPerformanceFeeRate.update(newPerformanceFeeRate, _timelock);
             emit SubmitPerformanceFeeRate(newPerformanceFeeRate);
         }
     }
@@ -620,6 +620,15 @@ contract TermMaxVault is
     /**
      * @inheritdoc ITermMaxVault
      */
+    function revokePendingPerformanceFeeRate() external onlyGuardianRole {
+        delete _pendingPerformanceFeeRate;
+
+        emit RevokePendingPerformanceFeeRate(_msgSender());
+    }
+
+    /**
+     * @inheritdoc ITermMaxVault
+     */
     function acceptTimelock() external afterTimelock(_pendingTimelock.validAt) {
         _setTimelock(_pendingTimelock.value);
     }
@@ -642,6 +651,7 @@ contract TermMaxVault is
      * @inheritdoc ITermMaxVault
      */
     function acceptPerformanceFeeRate() external afterTimelock(_pendingPerformanceFeeRate.validAt) {
+        _delegateCall(abi.encodeCall(IOrderManager.accruedInterest, ()));
         _setPerformanceFeeRate(uint256(_pendingPerformanceFeeRate.value).toUint64());
         delete _pendingPerformanceFeeRate;
         emit SetPerformanceFeeRate(_msgSender(), _performanceFeeRate);

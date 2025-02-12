@@ -28,13 +28,13 @@ contract VaultFactory is FactoryEvents, IVaultFactory, FactoryErrors {
     /**
      * @inheritdoc IVaultFactory
      */
-    function predictVaultAddress(address admin, address asset, string memory name, string memory symbol, uint256 salt)
+    function predictVaultAddress(address deployer, address asset, string memory name, string memory symbol, uint256 salt)
         external
         view
         returns (address vault)
     {
         return Clones.predictDeterministicAddress(
-            TERMMAX_VAULT_IMPLEMENTATION, keccak256(abi.encodePacked(admin, asset, name, symbol, salt))
+            TERMMAX_VAULT_IMPLEMENTATION, keccak256(abi.encode(deployer, asset, name, symbol, salt))
         );
     }
 
@@ -45,8 +45,8 @@ contract VaultFactory is FactoryEvents, IVaultFactory, FactoryErrors {
         vault = Clones.cloneDeterministic(
             TERMMAX_VAULT_IMPLEMENTATION,
             keccak256(
-                abi.encodePacked(
-                    initialParams.admin, initialParams.asset, initialParams.name, initialParams.symbol, salt
+                abi.encode(
+                    msg.sender, initialParams.asset, initialParams.name, initialParams.symbol, salt
                 )
             )
         );

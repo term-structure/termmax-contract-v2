@@ -25,7 +25,7 @@ import {OrderInfo, VaultStorage} from "./VaultStorage.sol";
  * @notice The extension of the TermMaxVault that manages orders and calculates interest
  */
 
-contract OrderManager is VaultErrors, VaultEvents, VaultStorage, IOrderManager {
+contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
     using SafeCast for uint256;
     using SafeCast for int256;
     using TransferUtils for IERC20;
@@ -327,6 +327,13 @@ contract OrderManager is VaultErrors, VaultEvents, VaultStorage, IOrderManager {
         // accrue interest
         _performanceFee += _performanceFeeToCurator;
         _accretingPrincipal += (interest - _performanceFeeToCurator);
+    }
+    
+    /**
+     * @inheritdoc IOrderManager
+     */
+    function accruedInterest() external onlyProxy{
+        _accruedInterest();
     }
 
     /// @notice Distribute interest

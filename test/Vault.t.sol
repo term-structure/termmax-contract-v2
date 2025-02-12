@@ -331,6 +331,12 @@ contract VaultTest is Test {
         vm.prank(curator);
         vault.submitPerformanceFeeRate(newPercentage);
 
+        vm.prank(guardian);
+        vault.revokePendingPerformanceFeeRate();
+
+        vm.prank(curator);
+        vault.submitPerformanceFeeRate(newPercentage);
+
         PendingUint192 memory pendingFeeRate = vault.pendingPerformanceFeeRate();
         assertEq(uint256(pendingFeeRate.value), newPercentage);
 

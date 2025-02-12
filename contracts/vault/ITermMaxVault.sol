@@ -269,6 +269,11 @@ interface ITermMaxVault is IERC4626 {
     function revokePendingMarket(address market) external;
 
     /**
+     * @notice Revokes the pending performance fee rate
+     */
+    function revokePendingPerformanceFeeRate() external;
+
+    /**
      * @notice Accepts the pending timelock
      */
     function acceptTimelock() external;
