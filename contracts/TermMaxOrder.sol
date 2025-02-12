@@ -35,6 +35,7 @@ contract TermMaxOrder is
     using SafeCast for uint256;
     using SafeCast for int256;
     using TransferUtils for IERC20;
+    using MathLib for *;
 
     ITermMaxMarket public market;
 
@@ -229,14 +230,14 @@ contract TermMaxOrder is
                     revert InvalidCurveCuts();
                 }
                 if (
-                    newCurveCuts.lendCurveCuts[i].offset
+                    newCurveCuts.lendCurveCuts[i].xtReserve.plusInt256(newCurveCuts.lendCurveCuts[i].offset)
                         != (
-                            (newCurveCuts.lendCurveCuts[i].xtReserve + newCurveCuts.lendCurveCuts[i - 1].offset)
+                            (newCurveCuts.lendCurveCuts[i].xtReserve.plusInt256(newCurveCuts.lendCurveCuts[i - 1].offset))
                                 * MathLib.sqrt(
                                     (newCurveCuts.lendCurveCuts[i].liqSquare * Constants.DECIMAL_BASE_SQ)
                                         / newCurveCuts.lendCurveCuts[i - 1].liqSquare
                                 )
-                        ) / Constants.DECIMAL_BASE - newCurveCuts.lendCurveCuts[i].xtReserve
+                        ) / Constants.DECIMAL_BASE
                 ) revert InvalidCurveCuts();
             }
             if (newCurveCuts.borrowCurveCuts.length > 0) {
@@ -247,14 +248,14 @@ contract TermMaxOrder is
                     revert InvalidCurveCuts();
                 }
                 if (
-                    newCurveCuts.borrowCurveCuts[i].offset
+                    newCurveCuts.borrowCurveCuts[i].xtReserve.plusInt256(newCurveCuts.borrowCurveCuts[i].offset)
                         != (
-                            (newCurveCuts.borrowCurveCuts[i].xtReserve + newCurveCuts.borrowCurveCuts[i - 1].offset)
+                            (newCurveCuts.borrowCurveCuts[i].xtReserve.plusInt256(newCurveCuts.borrowCurveCuts[i - 1].offset))
                                 * MathLib.sqrt(
                                     (newCurveCuts.borrowCurveCuts[i].liqSquare * Constants.DECIMAL_BASE_SQ)
                                         / newCurveCuts.borrowCurveCuts[i - 1].liqSquare
                                 )
-                        ) / Constants.DECIMAL_BASE - newCurveCuts.borrowCurveCuts[i].xtReserve
+                        ) / Constants.DECIMAL_BASE
                 ) revert InvalidCurveCuts();
             }
             _orderConfig.curveCuts = newCurveCuts;

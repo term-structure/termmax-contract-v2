@@ -62,7 +62,7 @@ library JSONLoader {
                 orderConfig.curveCuts.borrowCurveCuts[i].liqSquare =
                     vm.parseUint(vm.parseJsonString(testdataJSON, string.concat(indexPath, ".liqSquare")));
                 orderConfig.curveCuts.borrowCurveCuts[i].offset =
-                    vm.parseUint(vm.parseJsonString(testdataJSON, string.concat(indexPath, ".offset")));
+                    vm.parseInt(vm.parseJsonString(testdataJSON, string.concat(indexPath, ".offset")));
             }
         }
         {
@@ -77,7 +77,7 @@ library JSONLoader {
                 orderConfig.curveCuts.lendCurveCuts[i].liqSquare =
                     vm.parseUint(vm.parseJsonString(testdataJSON, string.concat(indexPath, ".liqSquare")));
                 orderConfig.curveCuts.lendCurveCuts[i].offset =
-                    vm.parseUint(vm.parseJsonString(testdataJSON, string.concat(indexPath, ".offset")));
+                    vm.parseInt(vm.parseJsonString(testdataJSON, string.concat(indexPath, ".offset")));
             }
         }
     }

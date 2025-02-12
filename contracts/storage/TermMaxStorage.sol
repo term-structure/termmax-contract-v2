@@ -13,7 +13,7 @@ import {ISwapCallback} from "../ISwapCallback.sol";
 struct CurveCut {
     uint256 xtReserve;
     uint256 liqSquare;
-    uint256 offset;
+    int256 offset;
 }
 
 struct FeeConfig {

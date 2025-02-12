@@ -41,7 +41,7 @@ library TermMaxCurve {
         // reference: Eq.(8) in TermMax White Paper
         liqSquare =
             (cut.liqSquare * daysToMaturity * netInterestFactor) / (Constants.DAYS_IN_YEAR * Constants.DECIMAL_BASE);
-        vXtReserve = xtReserve + cut.offset;
+        vXtReserve = xtReserve.plusInt256(cut.offset);
         vFtReserve = liqSquare / vXtReserve;
     }
 
