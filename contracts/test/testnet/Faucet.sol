@@ -31,11 +31,11 @@ contract Faucet is Ownable {
         return tokenConfigs[index];
     }
 
-    function addToken(string memory name, string memory symbol, uint8 decimals)
-        public
-        onlyOwner
-        returns (FaucetERC20 token, MockPriceFeed priceFeed)
-    {
+    function addToken(
+        string memory name,
+        string memory symbol,
+        uint8 decimals
+    ) public onlyOwner returns (FaucetERC20 token, MockPriceFeed priceFeed) {
         if (getTokenIdByKey[calcTokenKey(name, symbol, decimals)] != 0) {
             revert TokenExisted(name, symbol, decimals);
         } else {
@@ -66,9 +66,10 @@ contract Faucet is Ownable {
         for (uint256 i = 1; i < tokenNum + 1; i++) {
             TokenConfig memory tokenConfig = tokenConfigs[i];
             MockPriceFeed priceFeed = MockPriceFeed(tokenConfig.priceFeedAddr);
-            (, int256 answer,,,) = priceFeed.latestRoundData();
-            uint8 decimals = priceFeed.decimals();
-            uint256 mintAmt = (mintUsdValue * 10 ** (decimals)) / uint256(answer);
+            (, int256 answer, , , ) = priceFeed.latestRoundData();
+            uint8 tokenDecimals = FaucetERC20(tokenConfig.tokenAddr).decimals();
+            uint8 priceFeedDecimals = priceFeed.decimals();
+            uint256 mintAmt = (mintUsdValue * 10 ** (priceFeedDecimals + tokenDecimals)) / uint256(answer);
             FaucetERC20(tokenConfig.tokenAddr).mint(msg.sender, mintAmt);
         }
     }
@@ -77,9 +78,10 @@ contract Faucet is Ownable {
         for (uint256 i = 1; i < tokenNum + 1; i++) {
             TokenConfig memory tokenConfig = tokenConfigs[i];
             MockPriceFeed priceFeed = MockPriceFeed(tokenConfig.priceFeedAddr);
-            (, int256 answer,,,) = priceFeed.latestRoundData();
-            uint8 decimals = priceFeed.decimals();
-            uint256 mintAmt = (mintUsdValue * 10 ** (decimals)) / uint256(answer);
+            (, int256 answer, , , ) = priceFeed.latestRoundData();
+            uint8 tokenDecimals = FaucetERC20(tokenConfig.tokenAddr).decimals();
+            uint8 priceFeedDecimals = priceFeed.decimals();
+            uint256 mintAmt = (mintUsdValue * 10 ** (priceFeedDecimals + tokenDecimals)) / uint256(answer);
             FaucetERC20(tokenConfig.tokenAddr).mint(to, mintAmt);
         }
     }
