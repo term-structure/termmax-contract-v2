@@ -22,48 +22,31 @@ import {JsonLoader} from "../../utils/JsonLoader.sol";
 import {Faucet} from "contracts/test/testnet/Faucet.sol";
 import {FaucetERC20} from "contracts/test/testnet/FaucetERC20.sol";
 import {DeployBase} from "../DeployBase.s.sol";
+import {OracleAggregator, AggregatorV3Interface} from "contracts/oracle/OracleAggregator.sol";
 
-contract DeloyMarketHolesky is DeployBase {
+contract DeloyMarketFork is DeployBase {
     // admin config
-    uint256 deployerPrivateKey = vm.envUint("HOLESKY_DEPLOYER_PRIVATE_KEY");
+    uint256 deployerPrivateKey = vm.envUint("FORK_DEPLOYER_PRIVATE_KEY");
     address deployerAddr = vm.addr(deployerPrivateKey);
-    address adminAddr = vm.envAddress("HOLESKY_ADMIN_ADDRESS");
-    address priceFeedOperatorAddr = vm.envAddress("HOLESKY_PRICE_FEED_OPERATOR_ADDRESS");
+    address adminAddr = vm.envAddress("FORK_ADMIN_ADDRESS");
 
     // address config
-    address factoryAddr = address(0x4e45b67f9A6711C39d04052F766fA2E44d8bDfa5);
-    address oracleAddr = address(0x70207A48A28Fcd5111762F570C83c0714fDE7443);
-    address routerAddr = address(0xbFccC3c7F739d4aE7CCf680b3fafcFB5Bdc4f842);
-    address faucetAddr = address(0xb927B74d5D9c3985D4DCdd62CbffEc66CF527fAa);
-
-    address[] devs = [
-        address(0x19A736387ea2F42AcAb1BC0FdE15e667e63ea9cC), // Sunny
-        address(0x9b1A93b6C9F275FE1720e18331315Ec35484a662), // Mingyu
-        address(0x86e59Ec7629b58E1575997B9dF9622a496f0b4Eb), // Garrick
-        address(0xE355d5D8aa52EF0FbbD037C4a3C5E6Fd659cf46B) // Aaron
-    ];
+    address factoryAddr = address(0x98f66624BA8b543748e610631487A647819462eA);
+    address oracleAddr = address(0xbF23687645bDBC4Fbc164469C3e09650FD72782c);
+    address routerAddr = address(0xCe95eEB4B5eCa104845614b0c52827D6595a9bE7);
 
     function run() public {
         uint256 currentBlockNum = block.number;
-        Faucet faucet = Faucet(faucetAddr);
-        string memory deployDataPath = string.concat(vm.projectRoot(), "/script/deploy/deploydata/holesky.json");
+        string memory deployDataPath = string.concat(vm.projectRoot(), "/script/deploy/deploydata/fork.json");
+        OracleAggregator oracle = OracleAggregator(oracleAddr);
         vm.startBroadcast(deployerPrivateKey);
-        (TermMaxMarket[] memory markets, JsonLoader.Config[] memory configs) = deployMarkets(
+        (TermMaxMarket[] memory markets, JsonLoader.Config[] memory configs) = deployMarketsMainnet(
             factoryAddr,
             oracleAddr,
             routerAddr,
-            faucetAddr,
             deployDataPath,
-            adminAddr,
-            priceFeedOperatorAddr
+            adminAddr
         );
-
-        console.log("Faucet token number:", faucet.tokenNum());
-
-        // for (uint i = 0; i < devs.length; i++) {
-        //     console.log("Mint faucet tokens to %s", devs[i]);
-        //     faucet.devBatchMint(devs[i]);
-        // }
 
         vm.stopBroadcast();
 
@@ -75,25 +58,20 @@ contract DeloyMarketHolesky is DeployBase {
 
         console.log("===== Address Info =====");
         console.log("Deplyer:", deployerAddr);
-        console.log("Price Feed Operator:", priceFeedOperatorAddr);
         console.log("Deployed at block number:", currentBlockNum);
         console.log("");
 
         for (uint256 i = 0; i < markets.length; i++) {
             console.log("===== Market Info - %d =====", i);
-            printMarketConfig(faucet, markets[i], configs[i].salt);
+            printMarketConfig(oracle, markets[i], configs[i].salt);
             console.log("");
         }
     }
 
-    function printMarketConfig(Faucet faucet, TermMaxMarket market, uint256 salt) public view {
+    function printMarketConfig(OracleAggregator oracle, TermMaxMarket market, uint256 salt) public view {
         MarketConfig memory marketConfig = market.config();
         (IMintableERC20 ft, IMintableERC20 xt, IGearingToken gt, address collateralAddr, IERC20 underlying) = market
             .tokens();
-
-        Faucet.TokenConfig memory collateralConfig = faucet.getTokenConfig(faucet.getTokenId(collateralAddr));
-
-        Faucet.TokenConfig memory underlyingConfig = faucet.getTokenConfig(faucet.getTokenId(address(underlying)));
 
         console.log("Market deployed at:", address(market));
         console.log(
@@ -106,8 +84,19 @@ contract DeloyMarketHolesky is DeployBase {
             IERC20Metadata(address(underlying)).symbol(),
             address(underlying)
         );
-        console.log("Collateral price feed deployed at:", address(collateralConfig.priceFeedAddr));
-        console.log("Underlying price feed deployed at:", address(underlyingConfig.priceFeedAddr));
+        (
+            AggregatorV3Interface collateralAggregator,
+            AggregatorV3Interface collateralBackupAggregator,
+            uint32 collateralHeartbeat
+        ) = oracle.oracles(collateralAddr);
+
+        (
+            AggregatorV3Interface underlyingAggregator,
+            AggregatorV3Interface underlyingBackupAggregator,
+            uint32 underlyingHeartbeat
+        ) = oracle.oracles(address(underlying));
+        console.log("Collateral price feed deployed at:", address(collateralAggregator));
+        console.log("Underlying price feed deployed at:", address(underlyingAggregator));
 
         console.log("FT deployed at:", address(ft));
         console.log("XT deployed at:", address(xt));

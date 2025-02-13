@@ -30,15 +30,15 @@ contract E2ETest is Script {
     // deployer config
     uint256 deployerPrivateKey = vm.envUint("ARB_SEPOLIA_DEPLOYER_PRIVATE_KEY");
     address deployerAddr = vm.addr(deployerPrivateKey);
-    address userAddr;
-    uint256 userPrivateKey;
+    address userAddr = deployerAddr;
+    uint256 userPrivateKey = deployerPrivateKey;
 
     // address config
-    address faucetAddr = address(0x5adA709210846DA33E3866490EAFB90B7ea96f7f);
-    address routerAddr = address(0x959D4521BD48B6487D415Aad576Af2222ADB1a92);
-    address swapAdapter = address(0xC16905D5b6E34DA4f76BD896f8e1cc6E4650960C);
-    address marketAddr = address(0x645ef85B26A8eE16D4858725045900ACAb7DE005);
-    address orderAddr = address(0x031FEcF98032Ab1B2601B32cD9487B1AaBAE573C);
+    address faucetAddr = address(0xb927B74d5D9c3985D4DCdd62CbffEc66CF527fAa);
+    address routerAddr = address(0xbFccC3c7F739d4aE7CCf680b3fafcFB5Bdc4f842);
+    address swapAdapter = address(0xC622E39c594570c731baCcDc2b6cD062EF941b06);
+    address marketAddr = address(0xD0586B5a5F97347C769983C404348346FE26f38e);
+    address orderAddr = address(0x550a95c76A929635E7836cBef401C378485f4422);
 
     Faucet faucet = Faucet(faucetAddr);
     TermMaxRouter router = TermMaxRouter(routerAddr);
@@ -55,10 +55,10 @@ contract E2ETest is Script {
     address underlyingPriceFeedAddr;
 
     function run() public {
-        (userAddr, userPrivateKey) = makeAddrAndKey("New User1");
-        vm.startBroadcast(deployerPrivateKey);
-        payable(userAddr).transfer(0.1 ether);
-        vm.stopBroadcast();
+        // (userAddr, userPrivateKey) = makeAddrAndKey("New User1");
+        // vm.startBroadcast(deployerPrivateKey);
+        // payable(userAddr).transfer(0.1 ether);
+        // vm.stopBroadcast();
         (ft, xt, gt, collateralAddr, underlyingERC20) = market.tokens();
         collateral = FaucetERC20(collateralAddr);
         underlying = FaucetERC20(address(underlyingERC20));
@@ -67,9 +67,6 @@ contract E2ETest is Script {
         printMarketConfig();
         mintDebtToken(deployerAddr, 100000);
         depositIntoOrder(100000);
-
-        console.log("User addr:", userAddr);
-        console.log("User private key:", userPrivateKey);
         printUserPosition();
 
         console.log("> Mint 21504 debt token");

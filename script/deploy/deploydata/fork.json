@@ -1,0 +1,39 @@
+{
+  "configNum": "1",
+  "configs": {
+    "configs_0": {
+      "salt": 0,
+      "marketConfig": {
+        "treasurer": "0x7ab945445958819a74b48e8Bd5F9E39ed74bdE9E",
+        "maturity": "1743120000",
+        "lendTakerFeeRatio": "5000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "500000",
+        "borrowMakerFeeRatio": "2000000",
+        "issueFtFeeRatio": "1000000",
+        "issueFtFeeRef": "20000000",
+        "redeemFeeRatio": "0"
+      },
+      "loanConfig": {
+        "liquidationLtv": "84000000",
+        "maxLtv": "82000000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "name": "USD Coin",
+        "symbol": "USDC",
+        "decimals": "6",
+        "initialPrice": "100000000"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0x5bae9a5d67d1ca5b09b14c91935f635cfbf3b685",
+        "name": "PT USD0++ 27MAR2025",
+        "symbol": "PT-USD0++-27MAR2025",
+        "decimals": "18",
+        "initialPrice": "92000000",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    }
+  }
+}
