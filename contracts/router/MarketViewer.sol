@@ -60,6 +60,27 @@ contract MarketViewer {
         return loanPositions;
     }
 
+    function getOrderState(ITermMaxOrder order) external view returns (OrderState memory orderState) {
+        ITermMaxMarket market = order.market();
+        (,, IGearingToken gt,,) = market.tokens();
+
+        (OrderConfig memory orderConfig) = order.orderConfig();
+        (uint256 ftReserve, uint256 xtReserve) = order.tokenReserves();
+        if(orderConfig.gtId != 0) {
+            (, uint128 debtAmt,, bytes memory collateralData) = gt.loanInfo(orderConfig.gtId);
+            orderState.collateralReserve = _decodeAmount(collateralData);
+            orderState.debtReserve = debtAmt;
+        }
+
+        orderState.ftReserve = ftReserve;
+        orderState.xtReserve = xtReserve;
+        orderState.maxXtReserve = orderConfig.maxXtReserve;
+        orderState.gtId = orderConfig.gtId;
+        orderState.curveCuts = orderConfig.curveCuts;
+        orderState.feeConfig = orderConfig.feeConfig;
+        return orderState;
+    }
+
     function _decodeAmount(bytes memory collateralData) internal pure returns (uint256) {
         return abi.decode(collateralData, (uint256));
     }
