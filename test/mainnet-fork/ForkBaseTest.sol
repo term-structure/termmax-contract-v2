@@ -7,7 +7,7 @@ import {TermMaxFactory} from "contracts/factory/TermMaxFactory.sol";
 import {ITermMaxFactory} from "contracts/factory/ITermMaxFactory.sol";
 import {TermMaxRouter} from "contracts/router/TermMaxRouter.sol";
 import {ITermMaxRouter} from "contracts/router/ITermMaxRouter.sol";
-import {TermMaxMarket} from "contracts/TermMaxMarket.sol";
+import {TermMaxMarket, Constants, SafeCast} from "contracts/TermMaxMarket.sol";
 import {TermMaxOrder, OrderConfig} from "contracts/TermMaxOrder.sol";
 import {MockERC20} from "contracts/test/MockERC20.sol";
 import {MockPriceFeed} from "contracts/test/MockPriceFeed.sol";
@@ -29,6 +29,8 @@ import {JSONLoader} from "test/utils/JSONLoader.sol";
 import "forge-std/Test.sol";
 
 abstract contract ForkBaseTest is Test {
+
+    using SafeCast for *;
 
     string dataPath;
 
@@ -113,6 +115,11 @@ abstract contract ForkBaseTest is Test {
         vaultInitialParams.symbol = string.concat("Vault-", key);
         vaultInitialParams.performanceFeeRate = 0.1e8;
         return vaultInitialParams;
+    }
+
+    function _setPriceFeedInTokenDecimal8(MockPriceFeed priceFeed, uint8 tokenDecimals, MockPriceFeed.RoundData memory roundData) internal{
+        roundData.answer = (roundData.answer.toUint256() * (10**uint256(tokenDecimals)) / Constants.DECIMAL_BASE).toInt256();
+        priceFeed.updateRoundData(roundData);
     }
 
     function deployFactory(address admin) public returns (TermMaxFactory factory) {
