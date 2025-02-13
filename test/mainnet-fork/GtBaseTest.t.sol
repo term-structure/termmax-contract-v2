@@ -102,169 +102,169 @@ abstract contract GtBaseTest is ForkBaseTest {
         return res;
     }
 
-    // function _testBorrow(GtTestRes memory res, uint256 collInAmt, uint128 borrowAmt, uint128 maxDebtAmt) internal {
-    //     address taker = vm.randomAddress();
+    function _testBorrow(GtTestRes memory res, uint256 collInAmt, uint128 borrowAmt, uint128 maxDebtAmt) internal {
+        address taker = vm.randomAddress();
 
-    //     vm.startPrank(taker);
+        vm.startPrank(taker);
 
-    //     ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
-    //     orders[0] = order;
-    //     uint128[] memory tokenAmtsWantBuy = new uint128[](1);
-    //     tokenAmtsWantBuy[0] = borrowAmt;
+        ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
+        orders[0] = res.order;
+        uint128[] memory tokenAmtsWantBuy = new uint128[](1);
+        tokenAmtsWantBuy[0] = borrowAmt;
 
-    //     deal(address(collateral), taker, collInAmt);
-    //     collateral.approve(address(router), collInAmt);
+        deal(address(res.collateral), taker, collInAmt);
+        res.collateral.approve(address(res.router), collInAmt);
 
-    //     uint256 gtId = router.borrowTokenFromCollateral(taker, market, collInAmt, orders, tokenAmtsWantBuy, maxDebtAmt);
-    //     (address owner, uint128 debtAmt,, bytes memory collateralData) = gt.loanInfo(gtId);
-    //     assertEq(owner, taker);
-    //     assertEq(collInAmt, abi.decode(collateralData, (uint256)));
-    //     assertLe(debtAmt, maxDebtAmt);
-    //     assertEq(debtToken.balanceOf(taker), borrowAmt);
+        uint256 gtId = res.router.borrowTokenFromCollateral(taker, res.market, collInAmt, orders, tokenAmtsWantBuy, maxDebtAmt);
+        (address owner, uint128 debtAmt,, bytes memory collateralData) = res.gt.loanInfo(gtId);
+        assertEq(owner, taker);
+        assertEq(collInAmt, abi.decode(collateralData, (uint256)));
+        assertLe(debtAmt, maxDebtAmt);
+        assertEq(res.debtToken.balanceOf(taker), borrowAmt);
 
-    //     vm.stopPrank();
-    // }
+        vm.stopPrank();
+    }
 
-    // function _testLeverageFromXt(
-    //     GtTestRes memory res,
-    //     address taker,
-    //     uint128 xtAmtIn,
-    //     uint128 tokenAmtIn,
-    //     SwapUnit[] memory units
-    // ) internal returns (uint256 gtId) {
-    //     vm.startPrank(taker);
-    //     deal(taker, 1e8);
-    //     deal(address(debtToken), taker, xtAmtIn);
-    //     debtToken.approve(address(market), xtAmtIn);
-    //     market.mint(taker, xtAmtIn);
+    function _testLeverageFromXt(
+        GtTestRes memory res,
+        address taker,
+        uint128 xtAmtIn,
+        uint128 tokenAmtIn,
+        SwapUnit[] memory units
+    ) internal returns (uint256 gtId) {
+        vm.startPrank(taker);
+        deal(taker, 1e8);
+        deal(address(res.debtToken), taker, xtAmtIn);
+        res.debtToken.approve(address(res.market), xtAmtIn);
+        res.market.mint(taker, xtAmtIn);
 
-    //     uint256 maxLtv = marketInitialParams.loanConfig.maxLtv;
+        uint256 maxLtv = res.marketInitialParams.loanConfig.maxLtv;
 
-    //     deal(address(debtToken), taker, tokenAmtIn);
-    //     debtToken.approve(address(router), tokenAmtIn);
+        deal(address(res.debtToken), taker, tokenAmtIn);
+        res.debtToken.approve(address(res.router), tokenAmtIn);
 
-    //     uint256 debtTokenBalanceBeforeSwap = debtToken.balanceOf(taker);
-    //     uint256 xtAmtBeforeSwap = xt.balanceOf(taker);
+        uint256 debtTokenBalanceBeforeSwap = res.debtToken.balanceOf(taker);
+        uint256 xtAmtBeforeSwap = res.xt.balanceOf(taker);
 
-    //     xt.approve(address(router), xtAmtIn);
-    //     gtId = router.leverageFromXt(taker, market, xtAmtIn, tokenAmtIn, uint128(maxLtv), units);
+        res.xt.approve(address(res.router), xtAmtIn);
+        gtId = res.router.leverageFromXt(taker, res.market, xtAmtIn, tokenAmtIn, uint128(maxLtv), units);
 
-    //     uint256 debtTokenBalanceAfterSwap = debtToken.balanceOf(taker);
-    //     uint256 xtAmtAfterSwap = xt.balanceOf(taker);
+        uint256 debtTokenBalanceAfterSwap = res.debtToken.balanceOf(taker);
+        uint256 xtAmtAfterSwap = res.xt.balanceOf(taker);
 
-    //     assertEq(debtTokenBalanceBeforeSwap - debtTokenBalanceAfterSwap, tokenAmtIn);
-    //     assertEq(xtAmtBeforeSwap - xtAmtAfterSwap, xtAmtIn);
+        assertEq(debtTokenBalanceBeforeSwap - debtTokenBalanceAfterSwap, tokenAmtIn);
+        assertEq(xtAmtBeforeSwap - xtAmtAfterSwap, xtAmtIn);
 
-    //     assertEq(collateral.balanceOf(address(taker)), 0);
+        assertEq(res.collateral.balanceOf(taker), 0);
 
-    //     assertEq(debtToken.balanceOf(address(router)), 0);
-    //     assertEq(xt.balanceOf(address(router)), 0);
-    //     assertEq(debtToken.balanceOf(address(router)), 0);
-    //     assertEq(collateral.balanceOf(address(router)), 0);
+        assertEq(res.debtToken.balanceOf(address(res.router)), 0);
+        assertEq(res.xt.balanceOf(address(res.router)), 0);
+        assertEq(res.debtToken.balanceOf(address(res.router)), 0);
+        assertEq(res.collateral.balanceOf(address(res.router)), 0);
 
-    //     vm.stopPrank();
-    // }
+        vm.stopPrank();
+    }
 
-    // function _testLeverageFromToken(
-    //     GtTestRes memory res,
-    //     address taker,
-    //     uint128 tokenAmtToBuyXt,
-    //     uint128 tokenAmtIn,
-    //     SwapUnit[] memory units
-    // ) internal returns (uint256 gtId) {
-    //     vm.startPrank(taker);
-    //     deal(taker, 1e8);
+    function _testLeverageFromToken(
+        GtTestRes memory res,
+        address taker,
+        uint128 tokenAmtToBuyXt,
+        uint128 tokenAmtIn,
+        SwapUnit[] memory units
+    ) internal returns (uint256 gtId) {
+        vm.startPrank(taker);
+        deal(taker, 1e8);
 
-    //     uint256 maxLtv = marketInitialParams.loanConfig.maxLtv;
-    //     uint128 minXTOut = 0e8;
-    //     deal(address(debtToken), taker, tokenAmtToBuyXt + tokenAmtIn);
-    //     debtToken.approve(address(router), tokenAmtToBuyXt + tokenAmtIn);
+        uint256 maxLtv = res.marketInitialParams.loanConfig.maxLtv;
+        uint128 minXTOut = 0e8;
+        deal(address(res.debtToken), taker, tokenAmtToBuyXt + tokenAmtIn);
+        res.debtToken.approve(address(res.router), tokenAmtToBuyXt + tokenAmtIn);
 
-    //     uint256 debtTokenBalanceBeforeSwap = debtToken.balanceOf(taker);
+        uint256 debtTokenBalanceBeforeSwap = res.debtToken.balanceOf(taker);
 
-    //     ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
-    //     orders[0] = order;
-    //     uint128[] memory amtsToBuyXt = new uint128[](1);
-    //     amtsToBuyXt[0] = tokenAmtToBuyXt;
+        ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
+        orders[0] = res.order;
+        uint128[] memory amtsToBuyXt = new uint128[](1);
+        amtsToBuyXt[0] = tokenAmtToBuyXt;
 
-    //     (gtId,) =
-    //         router.leverageFromToken(taker, market, orders, amtsToBuyXt, minXTOut, tokenAmtIn, uint128(maxLtv), units);
+        (gtId,) =
+            res.router.leverageFromToken(taker, res.market, orders, amtsToBuyXt, minXTOut, tokenAmtIn, uint128(maxLtv), units);
 
-    //     uint256 debtTokenBalanceAfterSwap = debtToken.balanceOf(taker);
+        uint256 debtTokenBalanceAfterSwap = res.debtToken.balanceOf(taker);
 
-    //     assertEq(debtTokenBalanceBeforeSwap - debtTokenBalanceAfterSwap, tokenAmtToBuyXt + tokenAmtIn);
+        assertEq(debtTokenBalanceBeforeSwap - debtTokenBalanceAfterSwap, tokenAmtToBuyXt + tokenAmtIn);
 
-    //     assertEq(collateral.balanceOf(address(taker)), 0);
+        assertEq(res.collateral.balanceOf(taker), 0);
 
-    //     assertEq(debtToken.balanceOf(address(router)), 0);
-    //     assertEq(xt.balanceOf(address(router)), 0);
-    //     assertEq(debtToken.balanceOf(address(router)), 0);
-    //     assertEq(collateral.balanceOf(address(router)), 0);
+        assertEq(res.debtToken.balanceOf(address(res.router)), 0);
+        assertEq(res.xt.balanceOf(address(res.router)), 0);
+        assertEq(res.debtToken.balanceOf(address(res.router)), 0);
+        assertEq(res.collateral.balanceOf(address(res.router)), 0);
 
-    //     vm.stopPrank();
-    // }
+        vm.stopPrank();
+    }
 
-    // function _testFlashRepay(GtTestRes memory res, uint256 gtId, address taker, SwapUnit[] memory units) internal {
-    //     deal(taker, 1e18);
+    function _testFlashRepay(GtTestRes memory res, uint256 gtId, address taker, SwapUnit[] memory units) internal {
+        deal(taker, 1e18);
 
-    //     vm.startPrank(taker);
+        vm.startPrank(taker);
 
-    //     gt.approve(address(router), gtId);
+        res.gt.approve(address(res.router), gtId);
 
-    //     uint256 debtTokenBalanceBeforeRepay = debtToken.balanceOf(taker);
-    //     ITermMaxOrder[] memory orders = new ITermMaxOrder[](0);
-    //     uint128[] memory amtsToBuyFt = new uint128[](0);
-    //     bool byDebtToken = true;
+        uint256 debtTokenBalanceBeforeRepay = res.debtToken.balanceOf(taker);
+        ITermMaxOrder[] memory orders = new ITermMaxOrder[](0);
+        uint128[] memory amtsToBuyFt = new uint128[](0);
+        bool byDebtToken = true;
 
-    //     uint256 netTokenOut = router.flashRepayFromColl(taker, market, gtId, orders, amtsToBuyFt, byDebtToken, units);
+        uint256 netTokenOut = res.router.flashRepayFromColl(taker, res.market, gtId, orders, amtsToBuyFt, byDebtToken, units);
 
-    //     uint256 debtTokenBalanceAfterRepay = debtToken.balanceOf(taker);
+        uint256 debtTokenBalanceAfterRepay = res.debtToken.balanceOf(taker);
 
-    //     assertEq(debtTokenBalanceAfterRepay - debtTokenBalanceBeforeRepay, netTokenOut);
+        assertEq(debtTokenBalanceAfterRepay - debtTokenBalanceBeforeRepay, netTokenOut);
 
-    //     vm.stopPrank();
-    // }
+        vm.stopPrank();
+    }
 
-    // function _testFlashRepayByFt(GtTestRes memory res, uint256 gtId, uint128 debtAmt, address taker, SwapUnit[] memory units) internal {
-    //     deal(taker, 1e18);
+    function _testFlashRepayByFt(GtTestRes memory res, uint256 gtId, uint128 debtAmt, address taker, SwapUnit[] memory units) internal {
+        deal(taker, 1e18);
 
-    //     vm.startPrank(taker);
-    //     gt.approve(address(router), gtId);
+        vm.startPrank(taker);
+        res.gt.approve(address(res.router), gtId);
 
-    //     uint256 debtTokenBalanceBeforeRepay = debtToken.balanceOf(taker);
-    //     ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
-    //     orders[0] = order;
-    //     uint128[] memory amtsToBuyFt = new uint128[](1);
-    //     amtsToBuyFt[0] = debtAmt;
-    //     bool byDebtToken = false;
+        uint256 debtTokenBalanceBeforeRepay = res.debtToken.balanceOf(taker);
+        ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
+        orders[0] = res.order;
+        uint128[] memory amtsToBuyFt = new uint128[](1);
+        amtsToBuyFt[0] = debtAmt;
+        bool byDebtToken = false;
 
-    //     uint256 netTokenOut = router.flashRepayFromColl(taker, market, gtId, orders, amtsToBuyFt, byDebtToken, units);
+        uint256 netTokenOut = res.router.flashRepayFromColl(taker, res.market, gtId, orders, amtsToBuyFt, byDebtToken, units);
 
-    //     uint256 debtTokenBalanceAfterRepay = debtToken.balanceOf(taker);
+        uint256 debtTokenBalanceAfterRepay = res.debtToken.balanceOf(taker);
 
-    //     assertEq(debtTokenBalanceAfterRepay - debtTokenBalanceBeforeRepay, netTokenOut);
+        assertEq(debtTokenBalanceAfterRepay - debtTokenBalanceBeforeRepay, netTokenOut);
 
-    //     vm.stopPrank();
-    // }
+        vm.stopPrank();
+    }
 
-    // function _testLiquidate(GtTestRes memory res, address liquidator, uint256 gtId) internal returns (uint256 collateralAmt) {
-    //     deal(liquidator, 1e18);
-    //     vm.startPrank(liquidator);
+    function _testLiquidate(GtTestRes memory res, address liquidator, uint256 gtId) internal returns (uint256 collateralAmt) {
+        deal(liquidator, 1e18);
+        vm.startPrank(liquidator);
 
-    //     (, uint128 debtAmt,,) = gt.loanInfo(gtId);
+        (, uint128 debtAmt,,) = res.gt.loanInfo(gtId);
 
-    //     deal(address(debtToken), liquidator, debtAmt);
-    //     debtToken.approve(address(gt), debtAmt);
+        deal(address(res.debtToken), liquidator, debtAmt);
+        res.debtToken.approve(address(res.gt), debtAmt);
 
-    //     collateralAmt = collateral.balanceOf(liquidator);
+        collateralAmt = res.collateral.balanceOf(liquidator);
 
-    //     bool byDebtToken = true;
-    //     gt.liquidate(gtId, debtAmt, byDebtToken);
+        bool byDebtToken = true;
+        res.gt.liquidate(gtId, debtAmt, byDebtToken);
 
-    //     collateralAmt = collateral.balanceOf(liquidator) - collateralAmt;
+        collateralAmt = res.collateral.balanceOf(liquidator) - collateralAmt;
 
-    //     vm.stopPrank();
-    // }
+        vm.stopPrank();
+    }
 
     function _fastLoan(GtTestRes memory res, address taker, uint256 debtAmt, uint256 collateralAmt) internal returns (uint256 gtId) {
         vm.startPrank(taker);
