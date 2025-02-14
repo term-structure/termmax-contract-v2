@@ -32,14 +32,14 @@ abstract contract ForkBaseTest is Test {
 
     using SafeCast for *;
 
-    string dataPath;
+    string jsonData;
 
     string[] tokenPairs;
 
     function _finishSetup() internal virtual;
 
     function setUp() public {
-        dataPath = _getDataPath();
+        jsonData = vm.readFile(_getDataPath());
         _readTokenPairs();
 
         uint256 mainnetFork = vm.createFork(_getForkRpcUrl());
@@ -53,47 +53,50 @@ abstract contract ForkBaseTest is Test {
     function _getDataPath() internal view virtual returns (string memory);
 
     function _readTokenPairs() internal{
-        tokenPairs = vm.parseJsonStringArray(dataPath, ".tokenPairs");
+        uint256 len = vm.parseJsonUint(jsonData, ".tokenPairs.length");
+        for(uint256 i = 0; i < len; i++){
+            tokenPairs.push(vm.parseJsonString(jsonData, string.concat(".tokenPairs.", vm.toString(i))));
+        }
     }
 
     function _readBlockNumber(string memory key) internal view returns (uint256){
-        return uint256(vm.parseJsonUint(dataPath, string.concat(key, ".blockNumber")));
+        return uint256(vm.parseJsonUint(jsonData, string.concat(key, ".blockNumber")));
     }
 
     function _readMarketInitialParams(string memory key) internal returns (MarketInitialParams memory marketInitialParams){
         marketInitialParams.admin = vm.randomAddress();
-        marketInitialParams.collateral = vm.parseJsonAddress(dataPath,string.concat(key, ".collateral"));
-        marketInitialParams.debtToken = IERC20Metadata(vm.parseJsonAddress(dataPath,string.concat(key, ".debtToken")));
+        marketInitialParams.collateral = vm.parseJsonAddress(jsonData,string.concat(key, ".collateral"));
+        marketInitialParams.debtToken = IERC20Metadata(vm.parseJsonAddress(jsonData,string.concat(key, ".debtToken")));
 
         marketInitialParams.tokenName = key;
         marketInitialParams.tokenSymbol = key;
 
         MarketConfig memory marketConfig;
         marketConfig.feeConfig.redeemFeeRatio =
-            uint32(vm.parseUint(vm.parseJsonString(dataPath,string.concat(key, ".feeConfig.redeemFeeRatio"))));
+            uint32(vm.parseUint(vm.parseJsonString(jsonData,string.concat(key, ".feeConfig.redeemFeeRatio"))));
         marketConfig.feeConfig.issueFtFeeRatio =
-            uint32(vm.parseUint(vm.parseJsonString(dataPath,string.concat(key, ".feeConfig.issueFtFeeRatio"))));
+            uint32(vm.parseUint(vm.parseJsonString(jsonData,string.concat(key, ".feeConfig.issueFtFeeRatio"))));
         marketConfig.feeConfig.issueFtFeeRef =
-            uint32(vm.parseUint(vm.parseJsonString(dataPath,string.concat(key, ".feeConfig.issueFtFeeRef"))));
+            uint32(vm.parseUint(vm.parseJsonString(jsonData,string.concat(key, ".feeConfig.issueFtFeeRef"))));
         marketConfig.feeConfig.lendTakerFeeRatio =
-            uint32(vm.parseUint(vm.parseJsonString(dataPath,string.concat(key, ".feeConfig.lendTakerFeeRatio"))));
+            uint32(vm.parseUint(vm.parseJsonString(jsonData,string.concat(key, ".feeConfig.lendTakerFeeRatio"))));
         marketConfig.feeConfig.borrowTakerFeeRatio =
-            uint32(vm.parseUint(vm.parseJsonString(dataPath,string.concat(key, ".feeConfig.borrowTakerFeeRatio"))));
+            uint32(vm.parseUint(vm.parseJsonString(jsonData,string.concat(key, ".feeConfig.borrowTakerFeeRatio"))));
         marketConfig.feeConfig.lendMakerFeeRatio =
-            uint32(vm.parseUint(vm.parseJsonString(dataPath,string.concat(key, ".feeConfig.lendMakerFeeRatio"))));
+            uint32(vm.parseUint(vm.parseJsonString(jsonData,string.concat(key, ".feeConfig.lendMakerFeeRatio"))));
         marketConfig.feeConfig.borrowMakerFeeRatio =
-            uint32(vm.parseUint(vm.parseJsonString(dataPath,string.concat(key, ".feeConfig.borrowMakerFeeRatio"))));
+            uint32(vm.parseUint(vm.parseJsonString(jsonData,string.concat(key, ".feeConfig.borrowMakerFeeRatio"))));
         marketInitialParams.marketConfig = marketConfig;
 
         marketConfig.treasurer = vm.randomAddress();
-        marketConfig.maturity = uint64(86400 * vm.parseUint(vm.parseJsonString(dataPath,string.concat(key, ".duration"))));
+        marketConfig.maturity = uint64(86400 * vm.parseUint(vm.parseJsonString(jsonData,string.concat(key, ".duration"))));
 
         marketInitialParams.loanConfig.maxLtv =
-            uint32(vm.parseUint(vm.parseJsonString(dataPath,string.concat(key, ".loanConfig.maxLtv"))));
+            uint32(vm.parseUint(vm.parseJsonString(jsonData,string.concat(key, ".loanConfig.maxLtv"))));
         marketInitialParams.loanConfig.liquidationLtv =
-            uint32(vm.parseUint(vm.parseJsonString(dataPath,string.concat(key, ".loanConfig.liquidationLtv"))));
+            uint32(vm.parseUint(vm.parseJsonString(jsonData,string.concat(key, ".loanConfig.liquidationLtv"))));
         marketInitialParams.loanConfig.liquidatable =
-            vm.parseBool(vm.parseJsonString(dataPath,string.concat(key, ".loanConfig.liquidatable")));
+            vm.parseBool(vm.parseJsonString(jsonData,string.concat(key, ".loanConfig.liquidatable")));
 
         marketInitialParams.gtInitalParams = abi.encode(type(uint256).max);
         
@@ -101,7 +104,7 @@ abstract contract ForkBaseTest is Test {
     }
 
     function _readOrderConfig(string memory key) internal view returns (OrderConfig memory orderConfig) {
-        orderConfig = JSONLoader.getOrderConfigFromJson(dataPath, key);
+        orderConfig = JSONLoader.getOrderConfigFromJson(jsonData, string.concat(key, ".orderConfig"));
         return orderConfig;
     }
 

@@ -57,6 +57,7 @@ abstract contract GtBaseTest is ForkBaseTest {
 
     struct GtTestRes{
         uint256 blockNumber;
+        uint256 orderInitialAmount;
         MarketInitialParams marketInitialParams;
         OrderConfig orderConfig;
 
@@ -64,8 +65,8 @@ abstract contract GtBaseTest is ForkBaseTest {
         IMintableERC20 ft;
         IMintableERC20 xt;
         IGearingToken gt;
-        IERC20 collateral;
-        IERC20 debtToken;
+        IERC20Metadata collateral;
+        IERC20Metadata debtToken;
         IOracle oracle;
         MockPriceFeed collateralPriceFeed;
         MockPriceFeed debtPriceFeed;
@@ -112,7 +113,13 @@ abstract contract GtBaseTest is ForkBaseTest {
 
         (res.ft, res.xt, res.gt,,) = res.market.tokens();
         res.debtToken = res.marketInitialParams.debtToken;
-        res.collateral = IERC20(res.marketInitialParams.collateral);
+        res.collateral = IERC20Metadata(res.marketInitialParams.collateral);
+
+        // set all price as 1 USD = 1e8 tokens
+        uint8 debtDecimals = res.debtToken.decimals();
+        _setPriceFeedInTokenDecimal8(res.debtPriceFeed, debtDecimals, MockPriceFeed.RoundData(1, 1e8, block.timestamp, block.timestamp, 0));
+        uint8 collateralDecimals = res.collateral.decimals();
+        _setPriceFeedInTokenDecimal8(res.collateralPriceFeed, collateralDecimals, MockPriceFeed.RoundData(1, 1e8, block.timestamp, block.timestamp, 0));
 
         res.order = res.market.createOrder(res.maker, res.maxXtReserve, ISwapCallback(address(0)), res.orderConfig.curveCuts);
 
@@ -134,42 +141,48 @@ abstract contract GtBaseTest is ForkBaseTest {
             res.router.setAdapterWhitelist(address(res.odosData.adapter), true);
         }
 
+        res.orderInitialAmount = vm.parseJsonUint(jsonData, string.concat(key, ".orderInitialAmount"));
+        deal(address(res.debtToken), res.marketInitialParams.admin, res.orderInitialAmount);
+
+        res.debtToken.approve(address(res.market), res.orderInitialAmount);
+        res.market.mint(address(res.order), res.orderInitialAmount);
+
         vm.stopPrank();
 
         return res;
     }
 
     function _readUniswapData(string memory key) internal returns (UniswapData memory data){
-        data.active = vm.parseJsonBool(dataPath, string.concat(key, ".routers.uniswap.active"));
+        data.active = vm.parseJsonBool(jsonData, string.concat(key, ".routers.uniswap.active"));
         if(data.active){
-            data.router = vm.parseAddress(dataPath, string.concat(key, ".routers.uniswap.address"));
+            data.router = vm.parseJsonAddress(jsonData, string.concat(key, ".routers.uniswap.address"));
             data.adapter = new UniswapV3Adapter(data.router);
-            data.poolFee = uint24(vm.parseJsonUint(dataPath, string.concat(key, ".routers.uniswap.poolFee")));
+            data.poolFee = uint24(vm.parseJsonUint(jsonData, string.concat(key, ".routers.uniswap.poolFee")));
         }
     }
 
     function _readPendleSwapData(string memory key) internal returns (PendleSwapData memory data){
-        data.active = vm.parseJsonBool(dataPath, string.concat(key, ".routers.pendle.active"));
+        data.active = vm.parseJsonBool(jsonData, string.concat(key, ".routers.pendle.active"));
         if(data.active){
-            data.router = vm.parseAddress(dataPath, string.concat(key, ".routers.pendle.address"));
+            data.router = vm.parseJsonAddress(jsonData, string.concat(key, ".routers.pendle.address"));
             data.adapter = new PendleSwapV3Adapter(data.router);
-            data.pendleMarket = vm.parseAddress(dataPath, string.concat(key, ".routers.pendle.market"));
-            data.underlying = vm.parseAddress(dataPath, string.concat(key, ".routers.pendle.underlying"));
+            data.pendleMarket = vm.parseJsonAddress(jsonData, string.concat(key, ".routers.pendle.market"));
+            data.underlying = vm.parseJsonAddress(jsonData, string.concat(key, ".routers.pendle.underlying"));
         }
     }
 
     function _readOdosSwapData(string memory key) internal returns (OdosSwapData memory data){
-        data.active = vm.parseJsonBool(dataPath, string.concat(key, ".routers.odos.active"));
+        data.active = vm.parseJsonBool(jsonData, string.concat(key, ".routers.odos.active"));
         if(data.active){
-            data.router = vm.parseAddress(dataPath, string.concat(key, ".routers.odos.address"));
+            data.router = vm.parseJsonAddress(jsonData, string.concat(key, ".routers.odos.address"));
             data.adapter = new OdosV2Adapter(data.router);
 
-            data.odosInputReceiver = vm.parseAddress(dataPath, string.concat(key, ".routers.odos.inputReceiver"));
-            data.outputQuote = vm.parseJsonUint(dataPath, string.concat(key, ".routers.odos.outputQuote"));
-            data.outputMin = vm.parseJsonUint(dataPath, string.concat(key, ".routers.odos.outputMin"));
-            data.odosExecutor = vm.parseAddress(dataPath, string.concat(key, ".routers.odos.executor"));
-            data.odosPath = vm.parseJsonBytes(dataPath, string.concat(key, ".routers.odos.path"));
-            data.odosReferralCode = vm.parseJsonUint(dataPath, string.concat(key, ".routers.odos.referralCode"));
+            data.odosInputReceiver = vm.parseJsonAddress(jsonData, string.concat(key, ".routers.odos.inputReceiver"));
+            data.outputQuote = vm.parseJsonUint(jsonData, string.concat(key, ".routers.odos.outputQuote"));
+            data.outputMin = vm.parseJsonUint(jsonData, string.concat(key, ".routers.odos.outputMin"));
+            data.odosExecutor = vm.parseJsonAddress(jsonData, string.concat(key, ".routers.odos.executor"));
+            data.odosPath = vm.parseJsonBytes(jsonData, string.concat(key, ".routers.odos.path"));
+            data.odosReferralCode = uint32(vm.parseJsonUint(jsonData, string.concat(key, ".routers.odos.referralCode")));
         }
     }
 
