@@ -133,8 +133,8 @@ abstract contract VaultBaseTest is ForkBaseTest {
         res.vaultInitialParams.performanceFeeRate = 0.1e8;
     }
 
-    function testDeposit(VaultTestRes memory res) public {
-        _buyXt(res, 48.219178e8, 1000e8);
+    function _testDeposit(VaultTestRes memory res) internal {
+        _buyXt(res, 48.219178e8, uint128(res.orderInitialAmount/100));
         vm.warp(res.currentTime + 2 days);
         address lper2 = vm.randomAddress();
         uint256 amount2 = 20000e8;
@@ -149,9 +149,9 @@ abstract contract VaultBaseTest is ForkBaseTest {
         vm.stopPrank();
     }
 
-    function testRedeem(VaultTestRes memory res) public {
+    function _testRedeem(VaultTestRes memory res) internal {
         vm.warp(res.currentTime + 2 days);
-        _buyXt(res, 48.219178e8, 1000e8);
+        _buyXt(res, 48.219178e8, uint128(res.orderInitialAmount/100));
         vm.warp(res.currentTime + 4 days);
         address lper2 = vm.randomAddress();
         uint256 amount2 = 10000e8;
@@ -167,18 +167,18 @@ abstract contract VaultBaseTest is ForkBaseTest {
         uint256 share = res.vault.balanceOf(admin);
         uint256 redeem = res.vault.previewRedeem(share);
         assertEq(redeem, res.vault.redeem(share, admin, admin));
-        assertGt(redeem, 10000e8);
+        assertGt(redeem, amount2);
         vm.stopPrank();
     }
 
-    function testBadDebt(VaultTestRes memory res) public {
+    function _testBadDebt(VaultTestRes memory res) internal {
         vm.warp(res.currentTime + 2 days);
-        _buyXt(res, 48.219178e8, 1000e8);
+        _buyXt(res, 48.219178e8, uint128(res.orderInitialAmount/100));
 
         vm.warp(res.currentTime + 3 days);
         address lper2 = vm.randomAddress();
         deal(lper2, 1e18);
-        uint256 amount2 = 10000e8;
+        uint256 amount2 = 100e8;
         deal(address(res.debtToken), lper2, amount2);
         vm.startPrank(lper2);
         res.debtToken.approve(address(res.vault), amount2);
@@ -191,7 +191,7 @@ abstract contract VaultBaseTest is ForkBaseTest {
         uint collateralAmt = 1e18;
         deal(address(res.collateral), borrower, collateralAmt);
         res.collateral.approve(address(res.gt), collateralAmt);
-        res.market.issueFt(borrower, 0.01e18, abi.encode(collateralAmt));
+        res.market.issueFt(borrower, uint128(res.orderInitialAmount/20), abi.encode(collateralAmt));
         vm.stopPrank();
 
         vm.warp(res.currentTime + 92 days);
@@ -204,7 +204,7 @@ abstract contract VaultBaseTest is ForkBaseTest {
         uint256 delivered = (propotion * 1e18) / Constants.DECIMAL_BASE_SQ;
 
         vm.startPrank(lper2);
-        res.vault.redeem(1000e8, lper2, lper2);
+        res.vault.redeem(10e8, lper2, lper2);
         vm.stopPrank();
 
         assertEq(res.vault.badDebtMapping(address(res.collateral)), badDebt);
