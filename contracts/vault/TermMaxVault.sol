@@ -304,7 +304,7 @@ contract TermMaxVault is
     /**
      * @inheritdoc ITermMaxVault
      */
-    function withdrawPerformanceFee(address recipient, uint256 amount) external onlyCuratorRole {
+    function withdrawPerformanceFee(address recipient, uint256 amount) external onlyCuratorRole nonReentrant{
         _delegateCall(abi.encodeCall(IOrderManager.withdrawPerformanceFee, (IERC20(asset()), recipient, amount)));
     }
 
