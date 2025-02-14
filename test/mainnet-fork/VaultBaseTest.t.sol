@@ -191,7 +191,7 @@ abstract contract VaultBaseTest is ForkBaseTest {
         uint collateralAmt = 1e18;
         deal(address(res.collateral), borrower, collateralAmt);
         res.collateral.approve(address(res.gt), collateralAmt);
-        res.market.issueFt(borrower, uint128(res.orderInitialAmount/20), abi.encode(collateralAmt));
+        res.market.issueFt(borrower, uint128(res.orderInitialAmount/10), abi.encode(collateralAmt));
         vm.stopPrank();
 
         vm.warp(res.currentTime + 92 days);
@@ -212,9 +212,12 @@ abstract contract VaultBaseTest is ForkBaseTest {
 
         uint256 shareToDealBadDebt = res.vault.balanceOf(lper2);
         uint256 withdrawAmt = res.vault.previewRedeem(shareToDealBadDebt);
+        if(withdrawAmt > badDebt) {
+            withdrawAmt = badDebt;
+        }
 
         vm.startPrank(lper2);
-        (uint256 shares, uint256 collateralOut) = res.vault.dealBadDebt(address(res.collateral), shareToDealBadDebt, lper2, lper2);
+        (uint256 shares, uint256 collateralOut) = res.vault.dealBadDebt(address(res.collateral), withdrawAmt, lper2, lper2);
         assertEq(shares, shareToDealBadDebt);
         assertEq(collateralOut, (withdrawAmt * delivered) / badDebt);
         assertEq(res.vault.badDebtMapping(address(res.collateral)), badDebt - withdrawAmt);
