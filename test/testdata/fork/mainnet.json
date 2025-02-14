@@ -67,7 +67,11 @@
       "uniswap": {
         "active": true,
         "address": "0xE592427A0AEce92De3Edee1F18E0157C05861564",
-        "poolFee": "100"
+        "poolFee": "100",
+        "leverage":{
+          "debtAmt" : "1000000000",
+          "swapAmtIn": "1000000000000000000"
+        }
       },
       "pendle":{
         "active": true,
@@ -83,7 +87,11 @@
         "outputMin": "9360883903775023104",
         "executor": "0xB28Ca7e465C452cE4252598e0Bc96Aeba553CF82",
         "path": "010203000a01010001020001ff00000000000000000000000000000000000000db74dfdd3bb46be8ce6c33dc9d82777bcfc3ded5c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
-        "referralCode": "0"
+        "referralCode": "0",
+        "leverage":{
+          "debtAmt" : "1000000000",
+          "swapAmtIn": "10000000000000000000"
+        }
       }
     }
   }

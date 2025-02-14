@@ -28,11 +28,17 @@ import "contracts/storage/TermMaxStorage.sol";
 
 abstract contract GtBaseTest is ForkBaseTest {
 
+    struct LeverageAmountData{
+        uint128 debtAmt;
+        uint128 swapAmtIn;
+    }
+
     struct UniswapData{
         address router;
         UniswapV3Adapter adapter;
         bool active;
         uint24 poolFee;
+        LeverageAmountData leverageAmountData;
     }
 
     struct PendleSwapData{
@@ -53,6 +59,7 @@ abstract contract GtBaseTest is ForkBaseTest {
         address odosExecutor;
         bytes odosPath;
         uint32 odosReferralCode;
+        LeverageAmountData leverageAmountData;
     }
 
     struct GtTestRes{
@@ -158,6 +165,8 @@ abstract contract GtBaseTest is ForkBaseTest {
             data.router = vm.parseJsonAddress(jsonData, string.concat(key, ".routers.uniswap.address"));
             data.adapter = new UniswapV3Adapter(data.router);
             data.poolFee = uint24(vm.parseJsonUint(jsonData, string.concat(key, ".routers.uniswap.poolFee")));
+            data.leverageAmountData.debtAmt = uint128(vm.parseJsonUint(jsonData, string.concat(key, ".routers.uniswap.leverage.debtAmt")));
+            data.leverageAmountData.swapAmtIn = uint128(vm.parseJsonUint(jsonData, string.concat(key, ".routers.uniswap.leverage.swapAmtIn")));
         }
     }
 
@@ -183,7 +192,21 @@ abstract contract GtBaseTest is ForkBaseTest {
             data.odosExecutor = vm.parseJsonAddress(jsonData, string.concat(key, ".routers.odos.executor"));
             data.odosPath = vm.parseJsonBytes(jsonData, string.concat(key, ".routers.odos.path"));
             data.odosReferralCode = uint32(vm.parseJsonUint(jsonData, string.concat(key, ".routers.odos.referralCode")));
+
+            data.leverageAmountData.debtAmt = uint128(vm.parseJsonUint(jsonData, string.concat(key, ".routers.odos.leverage.debtAmt")));
+            data.leverageAmountData.swapAmtIn = uint128(vm.parseJsonUint(jsonData, string.concat(key, ".routers.odos.leverage.swapAmtIn")));
         }
+    }
+
+    function _updateCollateralPrice(GtTestRes memory res, int256 price) internal{
+        vm.startPrank(res.marketInitialParams.admin);
+        // set all price as 1 USD = 1e8 tokens
+        uint8 decimals = res.collateral.decimals();
+        (uint80 roundId,,,,) = res.collateralPriceFeed.latestRoundData();
+        roundId++;
+        uint time = block.timestamp;
+        _setPriceFeedInTokenDecimal8(res.collateralPriceFeed, decimals, MockPriceFeed.RoundData(roundId, price, time, time, 0));
+        vm.stopPrank();
     }
 
     function _testBorrow(GtTestRes memory res, uint256 collInAmt, uint128 borrowAmt, uint128 maxDebtAmt) internal {
