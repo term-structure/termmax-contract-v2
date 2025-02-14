@@ -5,85 +5,41 @@ import "../VaultBaseTest.t.sol";
 
 contract ForkVault is VaultBaseTest {
 
-    string envData;
-
     string MAINNET_RPC_URL = vm.envString("MAINNET_RPC_URL");
+    string DATA_PATH = string.concat(vm.projectRoot(), "/test/testdata/fork/mainnet.json");
 
-    function _finishSetup() internal override {
-        vm.startPrank(marketInitialParams.admin);
-        // update oracle
-        collateralPriceFeed.updateRoundData(
-            JSONLoader.getRoundDataFromJson(envData, ".priceData.ETH_2000_PT_WEETH_1800.ptWeeth")
-        );
-        debtPriceFeed.updateRoundData(
-            JSONLoader.getRoundDataFromJson(envData, ".priceData.ETH_2000_PT_WEETH_1800.eth")
-        );
-        vm.stopPrank();
+    function _getForkRpcUrl() internal view override returns (string memory){
+        return MAINNET_RPC_URL;
     }
 
-    function _getEnv() internal override returns (EnvConfig memory env) {
-        envData = vm.readFile(string.concat(vm.projectRoot(), "/test/testdata/fork/mainnet.json"));
-        env.forkRpcUrl = MAINNET_RPC_URL;
-        env.forkBlockNumber = vm.parseUint(vm.parseJsonString(envData, ".blockNumber"));
-        MarketInitialParams memory _marketInitialParams = _readMarketInitialParams();
-        env.extraData = abi.encode(_marketInitialParams, _readOrderConfig().curveCuts,_readVaultInitialParams(_marketInitialParams));
-        return env;
+    function _getDataPath() internal view override returns (string memory){
+        return DATA_PATH;
     }
 
-    function _readMarketInitialParams() internal returns (MarketInitialParams memory marketInitialParams) {
-        marketInitialParams.admin = vm.randomAddress();
-        marketInitialParams.collateral = vm.parseJsonAddress(envData, ".collateral");
-        marketInitialParams.debtToken = IERC20Metadata(vm.parseJsonAddress(envData, ".debtToken"));
-
-        marketInitialParams.tokenName = "PTWEETH-WETH";
-        marketInitialParams.tokenSymbol = "PTWEETH-WETH";
-
-        MarketConfig memory marketConfig;
-        marketConfig.feeConfig.redeemFeeRatio =
-            uint32(vm.parseUint(vm.parseJsonString(envData, ".feeConfig.redeemFeeRatio")));
-        marketConfig.feeConfig.issueFtFeeRatio =
-            uint32(vm.parseUint(vm.parseJsonString(envData, ".feeConfig.issueFtFeeRatio")));
-        marketConfig.feeConfig.issueFtFeeRef =
-            uint32(vm.parseUint(vm.parseJsonString(envData, ".feeConfig.issueFtFeeRef")));
-        marketConfig.feeConfig.lendTakerFeeRatio =
-            uint32(vm.parseUint(vm.parseJsonString(envData, ".feeConfig.lendTakerFeeRatio")));
-        marketConfig.feeConfig.borrowTakerFeeRatio =
-            uint32(vm.parseUint(vm.parseJsonString(envData, ".feeConfig.borrowTakerFeeRatio")));
-        marketConfig.feeConfig.lendMakerFeeRatio =
-            uint32(vm.parseUint(vm.parseJsonString(envData, ".feeConfig.lendMakerFeeRatio")));
-        marketConfig.feeConfig.borrowMakerFeeRatio =
-            uint32(vm.parseUint(vm.parseJsonString(envData, ".feeConfig.borrowMakerFeeRatio")));
-        marketInitialParams.marketConfig = marketConfig;
-
-        marketConfig.treasurer = vm.randomAddress();
-        marketConfig.maturity = uint64(86400 * vm.parseUint(vm.parseJsonString(envData, ".duration")));
-
-        marketInitialParams.loanConfig.maxLtv =
-            uint32(vm.parseUint(vm.parseJsonString(envData, ".loanConfig.maxLtv")));
-        marketInitialParams.loanConfig.liquidationLtv =
-            uint32(vm.parseUint(vm.parseJsonString(envData, ".loanConfig.liquidationLtv")));
-        marketInitialParams.loanConfig.liquidatable =
-            vm.parseBool(vm.parseJsonString(envData, ".loanConfig.liquidatable"));
-
-        marketInitialParams.gtInitalParams = abi.encode(type(uint256).max);
-        
-        return marketInitialParams;
+    function _finishSetup() internal override {  
     }
 
-    function _readOrderConfig() internal view returns (OrderConfig memory orderConfig) {
-        orderConfig = JSONLoader.getOrderConfigFromJson(envData, ".orderConfig");
-        return orderConfig;
+    function testDeposit() public{
+        for(uint256 i = 0; i < tokenPairs.length; i++){
+            string memory tokenPair = tokenPairs[i];
+            VaultTestRes memory res = _initializeVaultTestRes(tokenPair);
+            _testDeposit(res);
+        }
     }
 
-    function _readVaultInitialParams(MarketInitialParams memory marketInitialParams) internal returns (VaultInitialParams memory vaultInitialParams) {
-        vaultInitialParams.admin = marketInitialParams.admin;
-        vaultInitialParams.curator = vm.randomAddress();
-        vaultInitialParams.timelock = 1 days;
-        vaultInitialParams.asset = marketInitialParams.debtToken;
-        vaultInitialParams.maxCapacity = type(uint128).max;
-        vaultInitialParams.name = "Vault";
-        vaultInitialParams.symbol = "Vault";
-        vaultInitialParams.performanceFeeRate = 0.1e8;
-        return vaultInitialParams;
+    function testRedeem() public{
+        for(uint256 i = 0; i < tokenPairs.length; i++){
+            string memory tokenPair = tokenPairs[i];
+            VaultTestRes memory res = _initializeVaultTestRes(tokenPair);
+            _testRedeem(res);
+        }
+    }
+
+    function testBadDebt() public{
+        for(uint256 i = 0; i < tokenPairs.length; i++){
+            string memory tokenPair = tokenPairs[i];
+            VaultTestRes memory res = _initializeVaultTestRes(tokenPair);
+            _testBadDebt(res);
+        }
     }
 }

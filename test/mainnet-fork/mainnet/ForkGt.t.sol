@@ -5,229 +5,179 @@ import "../GtBaseTest.t.sol";
 
 contract ForkGt is GtBaseTest {
 
-    string envData;
-
     string MAINNET_RPC_URL = vm.envString("MAINNET_RPC_URL");
+    string DATA_PATH = string.concat(vm.projectRoot(), "/test/testdata/fork/mainnet.json");
 
-    function _finishSetup() internal override {
-        uniswapAdapter = new UniswapV3Adapter(vm.parseJsonAddress(envData, ".routers.uniswap.address"));
-        pendleAdapter = new PendleSwapV3Adapter(vm.parseJsonAddress(envData, ".routers.pendle.address"));
-        odosAdapter = new OdosV2Adapter(vm.parseJsonAddress(envData, ".routers.odos.address"));
-
-        vm.startPrank(marketInitialParams.admin);
-        router.setAdapterWhitelist(address(uniswapAdapter), true);
-        router.setAdapterWhitelist(address(pendleAdapter), true);
-        router.setAdapterWhitelist(address(odosAdapter), true);
-
-        // update oracle
-        collateralPriceFeed.updateRoundData(
-            JSONLoader.getRoundDataFromJson(envData, ".priceData.ETH_2000_PT_WEETH_1800.ptWeeth")
-        );
-        debtPriceFeed.updateRoundData(
-            JSONLoader.getRoundDataFromJson(envData, ".priceData.ETH_2000_PT_WEETH_1800.eth")
-        );
-
-        uint256 amount = 1.5e18;
-        deal(address(debtToken), marketInitialParams.admin, amount);
-
-        debtToken.approve(address(market), amount);
-        market.mint(address(order), amount);
-        vm.stopPrank();
+    function _getForkRpcUrl() internal view override returns (string memory){
+        return MAINNET_RPC_URL;
     }
 
-    function _getEnv() internal override returns (EnvConfig memory env) {
-        envData = vm.readFile(string.concat(vm.projectRoot(), "/test/testdata/fork/mainnet.json"));
-        env.forkRpcUrl = MAINNET_RPC_URL;
-        env.forkBlockNumber = vm.parseUint(vm.parseJsonString(envData, ".blockNumber"));
-        env.extraData = abi.encode(_readMarketInitialParams(), _readOrderConfig().curveCuts);
-        return env;
+    function _getDataPath() internal view override returns (string memory){
+        return DATA_PATH;
     }
 
-    function _readMarketInitialParams() internal returns (MarketInitialParams memory marketInitialParams) {
-        marketInitialParams.admin = vm.randomAddress();
-        marketInitialParams.collateral = vm.parseJsonAddress(envData, ".collateral");
-        marketInitialParams.debtToken = IERC20Metadata(vm.parseJsonAddress(envData, ".debtToken"));
+    function _finishSetup() internal override{
 
-        marketInitialParams.tokenName = "PTWEETH-WETH";
-        marketInitialParams.tokenSymbol = "PTWEETH-WETH";
-
-        MarketConfig memory marketConfig;
-        marketConfig.feeConfig.redeemFeeRatio =
-            uint32(vm.parseUint(vm.parseJsonString(envData, ".feeConfig.redeemFeeRatio")));
-        marketConfig.feeConfig.issueFtFeeRatio =
-            uint32(vm.parseUint(vm.parseJsonString(envData, ".feeConfig.issueFtFeeRatio")));
-        marketConfig.feeConfig.issueFtFeeRef =
-            uint32(vm.parseUint(vm.parseJsonString(envData, ".feeConfig.issueFtFeeRef")));
-        marketConfig.feeConfig.lendTakerFeeRatio =
-            uint32(vm.parseUint(vm.parseJsonString(envData, ".feeConfig.lendTakerFeeRatio")));
-        marketConfig.feeConfig.borrowTakerFeeRatio =
-            uint32(vm.parseUint(vm.parseJsonString(envData, ".feeConfig.borrowTakerFeeRatio")));
-        marketConfig.feeConfig.lendMakerFeeRatio =
-            uint32(vm.parseUint(vm.parseJsonString(envData, ".feeConfig.lendMakerFeeRatio")));
-        marketConfig.feeConfig.borrowMakerFeeRatio =
-            uint32(vm.parseUint(vm.parseJsonString(envData, ".feeConfig.borrowMakerFeeRatio")));
-        marketInitialParams.marketConfig = marketConfig;
-
-        marketConfig.treasurer = vm.randomAddress();
-        marketConfig.maturity = uint64(86400 * vm.parseUint(vm.parseJsonString(envData, ".duration")));
-
-        marketInitialParams.loanConfig.maxLtv =
-            uint32(vm.parseUint(vm.parseJsonString(envData, ".loanConfig.maxLtv")));
-        marketInitialParams.loanConfig.liquidationLtv =
-            uint32(vm.parseUint(vm.parseJsonString(envData, ".loanConfig.liquidationLtv")));
-        marketInitialParams.loanConfig.liquidatable =
-            vm.parseBool(vm.parseJsonString(envData, ".loanConfig.liquidatable"));
-
-        marketInitialParams.gtInitalParams = abi.encode(type(uint256).max);
-        
-        return marketInitialParams;
-    }
-
-    function _readOrderConfig() internal view returns (OrderConfig memory orderConfig) {
-        orderConfig = JSONLoader.getOrderConfigFromJson(envData, ".orderConfig");
-        return orderConfig;
     }
 
     function testBorrow() public{
-        uint256 collateralAmt = 1e18;
-        uint128 borrowAmt = 0.01e18;
-        uint128 maxDebtAmt = 0.03e18;
-        _testBorrow(collateralAmt, borrowAmt, maxDebtAmt);
+        for(uint256 i = 0; i < tokenPairs.length; i++){
+            string memory tokenPair = tokenPairs[i];
+            GtTestRes memory res = _initializeGtTestRes(tokenPair);
+            uint256 collateralAmt = res.orderInitialAmount/10;
+            uint128 borrowAmt = uint128(res.orderInitialAmount/30);
+            uint128 maxDebtAmt = uint128(res.orderInitialAmount/20);
+            _testBorrow(res, collateralAmt, borrowAmt, maxDebtAmt);
+        }
     }
 
-    function testLeverageFromXtWithUniswap() public {
-        address taker = vm.randomAddress();
-        uint128 xtAmtIn = 0.01e18;
-        uint128 tokenAmtIn = 1e18;
+    function testLeverageFromXtWithUniswapAndPendle() public {
+        for(uint256 i = 0; i < tokenPairs.length; i++){
+            string memory tokenPair = tokenPairs[i];
+            GtTestRes memory res = _initializeGtTestRes(tokenPair);
+            if(!res.uniswapData.active || !res.pendleData.active){
+                continue;
+            }
+            address taker = vm.randomAddress();
 
-        uint24 poolFee = uint24(vm.parseUint(vm.parseJsonString(envData, ".routers.uniswap.poolFee")));
-        address ptUnderlying = vm.parseJsonAddress(envData, ".routers.pendle.underlying");
-        address ptMarket = vm.parseJsonAddress(envData, ".routers.pendle.market");
-
-        SwapUnit[] memory units = new SwapUnit[](2);
+            SwapUnit[] memory units = new SwapUnit[](2);
         
-        units[0] = SwapUnit(
-            address(uniswapAdapter),
-            address(marketInitialParams.debtToken),
-            ptUnderlying,
-            abi.encode(abi.encodePacked(address(marketInitialParams.debtToken), poolFee, ptUnderlying), block.timestamp + 3600, 0)
-        );
-        units[1] = SwapUnit(address(pendleAdapter), ptUnderlying, marketInitialParams.collateral, abi.encode(ptMarket, 0));
+            units[0] = SwapUnit(
+                address(res.uniswapData.adapter),
+                address(res.marketInitialParams.debtToken),
+                res.pendleData.underlying,
+                abi.encode(abi.encodePacked(address(res.marketInitialParams.debtToken), res.uniswapData.poolFee, res.pendleData.underlying), block.timestamp + 3600, 0)
+            );
+            units[1] = SwapUnit(address(res.pendleData.adapter), res.pendleData.underlying, res.marketInitialParams.collateral, abi.encode(res.pendleData.pendleMarket, 0));
 
-        _testLeverageFromXt(
-            taker,
-            xtAmtIn,
-            tokenAmtIn,
-            units
-        );
+            _testLeverageFromXt(
+                res,
+                taker,
+                res.uniswapData.leverageAmountData.debtAmt,
+                res.uniswapData.leverageAmountData.swapAmtIn,
+                units
+            );
+        }
     }
 
-    function testLeverageFromXtWithPendle() public {
-        address taker = vm.randomAddress();
-        uint128 xtAmtIn = 0.01e18;
-        uint128 tokenAmtIn = 10e18;
 
-        address ptUnderlying = vm.parseJsonAddress(envData, ".routers.pendle.underlying");
-        address ptMarket = vm.parseJsonAddress(envData, ".routers.pendle.market");
+    function testLeverageFromXtWithOdosAndPendle() public {
+        for(uint256 i = 0; i < tokenPairs.length; i++){
+            string memory tokenPair = tokenPairs[i];
+            GtTestRes memory res = _initializeGtTestRes(tokenPair);
+            if(!res.odosData.active || !res.pendleData.active){
+                continue;
+            }
+            address taker = vm.randomAddress();
 
-        // Note: reference Odos docs: https://docs.odos.xyz/build/api-docs
-        address odosInputReceiver = vm.parseJsonAddress(envData, ".routers.odos.odosInputReceiver"); // Curve pool weETH/WETH
-        uint256 outputQuote = vm.parseUint(vm.parseJsonString(envData, ".routers.odos.outputQuote"));
-        uint256 outputMin = vm.parseUint(vm.parseJsonString(envData, ".routers.odos.outputMin"));
-        IOdosRouterV2.swapTokenInfo memory swapTokenInfoParam = IOdosRouterV2.swapTokenInfo(
-            address(marketInitialParams.debtToken),
-            tokenAmtIn,
-            address(odosInputReceiver),
-            address(ptUnderlying),
-            outputQuote,
-            outputMin,
-            address(router)
-        );
-        address odosExecutor = vm.parseJsonAddress(envData, ".routers.odos.odosExecutor");
-        bytes memory odosPath = vm.parseJsonBytes(envData, ".routers.odos.odosPath");
-        uint32 odosReferralCode = uint32(vm.parseUint(vm.parseJsonString(envData, ".routers.odos.odosReferralCode")));
-        bytes memory odosSwapData = abi.encode(swapTokenInfoParam, odosPath, odosExecutor, odosReferralCode);
+            // Note: reference Odos docs: https://docs.odos.xyz/build/api-docs
+            IOdosRouterV2.swapTokenInfo memory swapTokenInfoParam = IOdosRouterV2.swapTokenInfo(
+                address(res.marketInitialParams.debtToken),
+                res.odosData.leverageAmountData.swapAmtIn,
+                res.odosData.odosInputReceiver,
+                res.pendleData.underlying,
+                res.odosData.outputQuote,
+                res.odosData.outputMin,
+                res.odosData.router
+            );
+            bytes memory odosSwapData = abi.encode(swapTokenInfoParam, res.odosData.odosPath, res.odosData.odosExecutor, res.odosData.odosReferralCode);
 
-        SwapUnit[] memory units = new SwapUnit[](2);
-        units[0] = SwapUnit(
-            address(odosAdapter),
-            address(marketInitialParams.debtToken),
-            ptUnderlying,
-            odosSwapData
-        );
-        units[1] = SwapUnit(address(pendleAdapter), ptUnderlying, marketInitialParams.collateral, abi.encode(ptMarket, 0));
+            SwapUnit[] memory units = new SwapUnit[](2);
+        
+            units[0] = SwapUnit(
+                address(res.odosData.adapter),
+                address(res.marketInitialParams.debtToken),
+                res.pendleData.underlying,
+                odosSwapData
+            );
+            units[1] = SwapUnit(address(res.pendleData.adapter), res.pendleData.underlying, res.marketInitialParams.collateral, abi.encode(res.pendleData.pendleMarket, 0));
 
-        _testLeverageFromXt(
-            taker,
-            xtAmtIn,
-            tokenAmtIn,
-            units
-        );
+            _testLeverageFromXt(
+                res,
+                taker,
+                res.odosData.leverageAmountData.debtAmt,
+                res.odosData.leverageAmountData.swapAmtIn,
+                units
+            );
+        }
     }
 
-    function testFlashRepay() public {
-        address taker = vm.randomAddress();
+    function testFashRepayWithUniswapAndPendle() public {
+        for(uint256 i = 0; i < tokenPairs.length; i++){ 
+            string memory tokenPair = tokenPairs[i];
+            GtTestRes memory res = _initializeGtTestRes(tokenPair);
+            if(!res.uniswapData.active || !res.pendleData.active){
+                continue;
+            }
+            address taker = vm.randomAddress();
 
-        uint128 debtAmt = 0.01e18;
-        uint128 collateralAmt = 1e18;
-        uint256 gtId = _fastLoan(taker, debtAmt, collateralAmt);
+            uint128 debtAmt = uint128(res.orderInitialAmount/20);
+            uint128 collateralAmt = uint128(res.orderInitialAmount/10);
+            uint256 gtId = _fastLoan(res, taker, debtAmt, collateralAmt);
 
-        uint24 poolFee = uint24(vm.parseUint(vm.parseJsonString(envData, ".routers.uniswap.poolFee")));
-        address ptUnderlying = vm.parseJsonAddress(envData, ".routers.pendle.underlying");
-        address ptMarket = vm.parseJsonAddress(envData, ".routers.pendle.market");
+            SwapUnit[] memory units = new SwapUnit[](2);
+             units[0] = SwapUnit(address(res.pendleData.adapter),
+              res.marketInitialParams.collateral, 
+              res.pendleData.underlying, 
+              abi.encode(res.pendleData.pendleMarket, 0));
 
-        SwapUnit[] memory units = new SwapUnit[](2);
-        units[0] = SwapUnit(address(pendleAdapter), marketInitialParams.collateral, ptUnderlying, abi.encode(ptMarket, 0));
+            units[1] = SwapUnit(
+                address(res.uniswapData.adapter),
+                res.pendleData.underlying,
+                address(res.marketInitialParams.debtToken),
+                abi.encode(abi.encodePacked(res.pendleData.underlying, res.uniswapData.poolFee, address(res.marketInitialParams.debtToken)), block.timestamp + 3600, 0)
+            );
 
-        units[1] = SwapUnit(
-            address(uniswapAdapter),
-            ptUnderlying,
-            address(marketInitialParams.debtToken),
-            abi.encode(abi.encodePacked(ptUnderlying, poolFee, address(marketInitialParams.debtToken)), block.timestamp + 3600, 0)
-        );
-
-        _testFlashRepay(gtId, taker, units);
+            _testFlashRepay(res, gtId, taker, units);
+        }
     }
 
-    function testFlashRepayByFt() public {
-        address taker = vm.randomAddress();
+    function testFashRepayByFtWithUniswapAndPendle() public {
+        for(uint256 i = 0; i < tokenPairs.length; i++){ 
+            string memory tokenPair = tokenPairs[i];
+            GtTestRes memory res = _initializeGtTestRes(tokenPair);
+            if(!res.uniswapData.active || !res.pendleData.active){
+                continue;
+            }
+            address taker = vm.randomAddress();
 
-        uint128 debtAmt = 0.01e18;
-        uint128 collateralAmt = 1e18;
-        uint256 gtId = _fastLoan(taker, debtAmt, collateralAmt);
+            uint128 debtAmt = uint128(res.orderInitialAmount/20);
+            uint128 collateralAmt = uint128(res.orderInitialAmount/10);
+            uint256 gtId = _fastLoan(res, taker, debtAmt, collateralAmt);
 
-        uint24 poolFee = uint24(vm.parseUint(vm.parseJsonString(envData, ".routers.uniswap.poolFee")));
-        address ptUnderlying = vm.parseJsonAddress(envData, ".routers.pendle.underlying");
-        address ptMarket = vm.parseJsonAddress(envData, ".routers.pendle.market");
+            SwapUnit[] memory units = new SwapUnit[](2);
+             units[0] = SwapUnit(address(res.pendleData.adapter),
+              res.marketInitialParams.collateral, 
+              res.pendleData.underlying, 
+              abi.encode(res.pendleData.pendleMarket, 0));
 
-        SwapUnit[] memory units = new SwapUnit[](2);
-        units[0] = SwapUnit(address(pendleAdapter), marketInitialParams.collateral, ptUnderlying, abi.encode(ptMarket, 0));
-
-        units[1] = SwapUnit(
-            address(uniswapAdapter),
-            ptUnderlying,
-            address(marketInitialParams.debtToken),
-            abi.encode(abi.encodePacked(ptUnderlying, poolFee, address(marketInitialParams.debtToken)), block.timestamp + 3600, 0)
-        );
-
-        _testFlashRepayByFt(gtId, debtAmt, taker, units);
+            units[1] = SwapUnit(
+                address(res.uniswapData.adapter),
+                res.pendleData.underlying,
+                address(res.marketInitialParams.debtToken),
+                abi.encode(abi.encodePacked(res.pendleData.underlying, res.uniswapData.poolFee, address(res.marketInitialParams.debtToken)), block.timestamp + 3600, 0)
+            );
+            _testFlashRepayByFt(res, gtId, debtAmt, taker, units);
+        }
     }
 
     function testLiquidate() public {
-        address liquidator = vm.randomAddress();
-        address borrower = vm.randomAddress();
-        // ltv = 2000 * 0.08 / 1800 * 0.1
-        uint256 gtId = _fastLoan(borrower, 0.8e17, 1e17);
-        vm.startPrank(marketInitialParams.admin);
-        // update oracle
-        collateralPriceFeed.updateRoundData(
-            JSONLoader.getRoundDataFromJson(envData, ".priceData.ETH_2000_PT_WEETH_1000.ptWeeth")
-        );
-        debtPriceFeed.updateRoundData(
-            JSONLoader.getRoundDataFromJson(envData, ".priceData.ETH_2000_PT_WEETH_1000.eth")
-        );
-        vm.stopPrank();
-        _testLiquidate(liquidator, gtId);
+
+        for(uint256 i = 0; i < tokenPairs.length; i++){
+            string memory tokenPair = tokenPairs[i];
+            GtTestRes memory res = _initializeGtTestRes(tokenPair);
+
+            address liquidator = vm.randomAddress();
+            address borrower = vm.randomAddress();
+
+            uint256 collateralAmt = res.orderInitialAmount/10;
+            uint128 borrowAmt = uint128(res.orderInitialAmount/20);
+
+            uint256 gtId = _fastLoan(res, borrower, borrowAmt, collateralAmt);
+            _updateCollateralPrice(res, 0.5e8);
+
+            _testLiquidate(res, liquidator, gtId);
+        }
     }
 
 }

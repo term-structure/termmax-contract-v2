@@ -6,6 +6,8 @@ import {IERC721Enumerable} from "@openzeppelin/contracts/interfaces/IERC721Enume
 import {ITermMaxMarket} from "contracts/ITermMaxMarket.sol";
 import {IMintableERC20} from "contracts/tokens/IMintableERC20.sol";
 import {IGearingToken} from "contracts/tokens/IGearingToken.sol";
+import {ITermMaxOrder} from "contracts/ITermMaxOrder.sol";
+import {OrderConfig, CurveCuts, FeeConfig} from "contracts/storage/TermMaxStorage.sol";
 
 contract MarketViewer {
     struct LoanPosition {
@@ -22,6 +24,17 @@ contract MarketViewer {
         uint256 lpFtBalance;
         uint256 lpXtBalance;
         LoanPosition[] gtInfo;
+    }
+
+    struct OrderState {
+        uint256 collateralReserve;
+        uint256 debtReserve;
+        uint256 ftReserve;
+        uint256 xtReserve;
+        uint256 maxXtReserve;
+        uint256 gtId;
+        CurveCuts curveCuts;
+        FeeConfig feeConfig;
     }
 
     function getPositionDetail(ITermMaxMarket market, address owner) external view returns (Position memory position) {
@@ -58,6 +71,27 @@ contract MarketViewer {
             loanPositions[i].collateralAmt = _decodeAmount(collateralData);
         }
         return loanPositions;
+    }
+
+    function getOrderState(ITermMaxOrder order) external view returns (OrderState memory orderState) {
+        ITermMaxMarket market = order.market();
+        (,, IGearingToken gt,,) = market.tokens();
+
+        (OrderConfig memory orderConfig) = order.orderConfig();
+        (uint256 ftReserve, uint256 xtReserve) = order.tokenReserves();
+        if(orderConfig.gtId != 0) {
+            (, uint128 debtAmt,, bytes memory collateralData) = gt.loanInfo(orderConfig.gtId);
+            orderState.collateralReserve = _decodeAmount(collateralData);
+            orderState.debtReserve = debtAmt;
+        }
+
+        orderState.ftReserve = ftReserve;
+        orderState.xtReserve = xtReserve;
+        orderState.maxXtReserve = orderConfig.maxXtReserve;
+        orderState.gtId = orderConfig.gtId;
+        orderState.curveCuts = orderConfig.curveCuts;
+        orderState.feeConfig = orderConfig.feeConfig;
+        return orderState;
     }
 
     function _decodeAmount(bytes memory collateralData) internal pure returns (uint256) {

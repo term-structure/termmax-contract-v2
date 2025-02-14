@@ -20,7 +20,6 @@ import {TermMaxRouter, ISwapAdapter, ITermMaxRouter, SwapUnit, RouterErrors} fro
 import {UniswapV3Adapter, ERC20SwapAdapter} from "contracts/router/swapAdapters/UniswapV3Adapter.sol";
 import {PendleSwapV3Adapter} from "contracts/router/swapAdapters/PendleSwapV3Adapter.sol";
 import {OdosV2Adapter, IOdosRouterV2} from "contracts/router/swapAdapters/OdosV2Adapter.sol";
-import {EnvConfig} from "test/mainnet-fork/EnvConfig.sol";
 import {TermMaxOrder, ITermMaxOrder} from "contracts/TermMaxOrder.sol";
 import {ForkBaseTest} from "./ForkBaseTest.sol";
 import {RouterEvents} from "contracts/events/RouterEvents.sol";
@@ -32,170 +31,207 @@ import {VaultConstants} from "contracts/lib/VaultConstants.sol";
 import {PendingAddress, PendingUint192} from "contracts/lib/PendingLib.sol";
 import "contracts/storage/TermMaxStorage.sol";
 
-abstract contract VaultBaseTest is ForkBaseTest {
+abstract contract VaultBaseTest is ForkBaseTest { 
 
-    MarketInitialParams marketInitialParams;
+    struct VaultTestRes{
+        uint256 blockNumber;
+        uint256 orderInitialAmount;
+        MarketInitialParams marketInitialParams;
+        OrderConfig orderConfig;
 
-    TermMaxMarket market;
-    IMintableERC20 ft;
-    IMintableERC20 xt;
-    IGearingToken gt;
-    IERC20 collateral;
-    IERC20 debtToken;
-    IOracle oracle;
-    MockPriceFeed collateralPriceFeed;
-    MockPriceFeed debtPriceFeed;
-    ITermMaxOrder order;
-    ITermMaxVault vault;
-    VaultInitialParams vaultInitialParams;
+        TermMaxMarket market;
+        IMintableERC20 ft;
+        IMintableERC20 xt;
+        IGearingToken gt;
+        IERC20Metadata collateral;
+        IERC20Metadata debtToken;
+        IOracle oracle;
+        MockPriceFeed collateralPriceFeed;
+        MockPriceFeed debtPriceFeed;
+        ITermMaxOrder order;
+        ITermMaxVault vault;
+        VaultInitialParams vaultInitialParams;
 
-    uint currentTime;
+        uint currentTime;
 
-    function _initialize(bytes memory data) internal override {
-        currentTime = block.timestamp;
-        CurveCuts memory curveCuts;
-        (marketInitialParams, curveCuts, vaultInitialParams) = abi.decode(data, (MarketInitialParams, CurveCuts, VaultInitialParams));
+        uint256 maxCapacity;
 
-        deal(vaultInitialParams.curator, 1e18);
-        deal(marketInitialParams.admin, 1e18);
-        vm.startPrank(marketInitialParams.admin);
+        address maker;
+    }
 
-        oracle = deployOracleAggregator(marketInitialParams.admin);
-        collateralPriceFeed = deployMockPriceFeed(marketInitialParams.admin);
-        debtPriceFeed = deployMockPriceFeed(marketInitialParams.admin);
-        oracle.setOracle(
-            address(marketInitialParams.collateral), IOracle.Oracle(collateralPriceFeed, collateralPriceFeed, 365 days)
+    function _initializeVaultTestRes(string memory key) internal returns (VaultTestRes memory) {
+        VaultTestRes memory res;
+        res.blockNumber = _readBlockNumber(key);
+        res.orderInitialAmount = vm.parseJsonUint(jsonData, string.concat(key, ".orderInitialAmount"));
+        res.marketInitialParams = _readMarketInitialParams(key);
+        res.orderConfig = _readOrderConfig(key);
+        res.maker = vm.randomAddress();
+
+        vm.rollFork(res.blockNumber);
+        res.currentTime = block.timestamp;
+
+        _generateVaultInitialParams(res);
+
+        vm.startPrank(res.marketInitialParams.admin);
+
+        res.oracle = deployOracleAggregator(res.marketInitialParams.admin);
+        res.collateralPriceFeed = deployMockPriceFeed(res.marketInitialParams.admin);
+        res.debtPriceFeed = deployMockPriceFeed(res.marketInitialParams.admin);
+        res.oracle.setOracle(
+            address(res.marketInitialParams.collateral), IOracle.Oracle(res.collateralPriceFeed, res.collateralPriceFeed, 365 days)
         );
-        oracle.setOracle(address(marketInitialParams.debtToken), IOracle.Oracle(debtPriceFeed, debtPriceFeed, 365 days));
+        res.oracle.setOracle(address(res.marketInitialParams.debtToken), IOracle.Oracle(res.debtPriceFeed, res.debtPriceFeed, 365 days));
 
-        marketInitialParams.marketConfig.maturity += uint64(currentTime);
-        marketInitialParams.loanConfig.oracle = oracle;
+        res.marketInitialParams.marketConfig.maturity += uint64(block.timestamp);
+        res.marketInitialParams.loanConfig.oracle = res.oracle;
 
-        market = TermMaxMarket(
-            deployFactoryWithMockOrder(marketInitialParams.admin).createMarket(
-                keccak256("GearingTokenWithERC20"), marketInitialParams, 0
+        res.market = TermMaxMarket(
+            deployFactoryWithMockOrder(res.marketInitialParams.admin).createMarket(
+                keccak256("GearingTokenWithERC20"), res.marketInitialParams, 0
             )
         );
 
-        (ft, xt, gt,,) = market.tokens();
-        debtToken = marketInitialParams.debtToken;
-        collateral = IERC20(marketInitialParams.collateral);
+        (res.ft, res.xt, res.gt,,) = res.market.tokens();
+        res.debtToken = res.marketInitialParams.debtToken;
+        res.collateral = IERC20Metadata(res.marketInitialParams.collateral);
 
-        vault = ITermMaxVault(deployVaultFactory().createVault(vaultInitialParams, 0));
+        // set all price as 1 USD = 1e8 tokens
+        uint8 debtDecimals = res.debtToken.decimals();
+        _setPriceFeedInTokenDecimal8(res.debtPriceFeed, debtDecimals, MockPriceFeed.RoundData(1, 1e8, block.timestamp, block.timestamp, 0));
+        uint8 collateralDecimals = res.collateral.decimals();
+        _setPriceFeedInTokenDecimal8(res.collateralPriceFeed, collateralDecimals, MockPriceFeed.RoundData(1, 1e8, block.timestamp, block.timestamp, 0));
 
-        vault.submitMarket(address(market), true);
-        vm.warp(currentTime + vaultInitialParams.timelock + 1);
-        vault.acceptMarket(address(market));
+        res.vault = ITermMaxVault(deployVaultFactory().createVault(res.vaultInitialParams, 0));
 
-        vm.warp(currentTime);
+        res.vault.submitMarket(address(res.market), true);
+        vm.warp(res.currentTime + res.vaultInitialParams.timelock + 1);
+        res.vault.acceptMarket(address(res.market));
 
-        uint256 amount = 10000e18;
-        deal(address(debtToken), marketInitialParams.admin, amount);
+        vm.warp(res.currentTime);
 
-        debtToken.approve(address(vault), amount);
-        vault.deposit(amount, marketInitialParams.admin);
+        res.orderInitialAmount = vm.parseJsonUint(jsonData, string.concat(key, ".orderInitialAmount"));
+        deal(address(res.debtToken), res.marketInitialParams.admin, res.orderInitialAmount);
 
-        order = vault.createOrder(market, vaultInitialParams.maxCapacity, amount, curveCuts);
+        res.debtToken.approve(address(res.vault), res.orderInitialAmount);
+        res.vault.deposit(res.orderInitialAmount, res.marketInitialParams.admin);
+
+        res.order = res.vault.createOrder(res.market, res.vaultInitialParams.maxCapacity, res.orderInitialAmount, res.orderConfig.curveCuts);
 
         vm.stopPrank();
+
+        return res;
     }
 
-    function testDeposit() public {
-        _buyXt(48.219178e8, 1000e8);
-        vm.warp(currentTime + 2 days);
+    function _generateVaultInitialParams(VaultTestRes memory res) internal {
+        res.vaultInitialParams.admin = res.marketInitialParams.admin;
+        res.vaultInitialParams.curator = vm.randomAddress();
+        res.vaultInitialParams.timelock = 1 days;
+        res.vaultInitialParams.asset = res.marketInitialParams.debtToken;
+        res.vaultInitialParams.maxCapacity = type(uint128).max;
+        res.vaultInitialParams.name = string.concat("Vault-", res.marketInitialParams.tokenName);
+        res.vaultInitialParams.symbol = res.vaultInitialParams.name;
+        res.vaultInitialParams.performanceFeeRate = 0.1e8;
+    }
+
+    function _testDeposit(VaultTestRes memory res) internal {
+        _buyXt(res, 48.219178e8, uint128(res.orderInitialAmount/100));
+        vm.warp(res.currentTime + 2 days);
         address lper2 = vm.randomAddress();
         uint256 amount2 = 20000e8;
         deal(lper2, 1e18);
-        deal(address(debtToken), lper2, amount2);
+        deal(address(res.debtToken), lper2, amount2);
         vm.startPrank(lper2);
-        debtToken.approve(address(vault), amount2);
-        uint256 share = vault.previewDeposit(amount2);
-        vault.deposit(amount2, lper2);
-        assertEq(vault.balanceOf(lper2), share);
+        res.debtToken.approve(address(res.vault), amount2);
+        uint256 share = res.vault.previewDeposit(amount2);
+        res.vault.deposit(amount2, lper2);
+        assertEq(res.vault.balanceOf(lper2), share);
 
         vm.stopPrank();
     }
 
-    function testRedeem() public {
-        vm.warp(currentTime + 2 days);
-        _buyXt(48.219178e8, 1000e8);
-        vm.warp(currentTime + 4 days);
+    function _testRedeem(VaultTestRes memory res) internal {
+        vm.warp(res.currentTime + 2 days);
+        _buyXt(res, 48.219178e8, uint128(res.orderInitialAmount/100));
+        vm.warp(res.currentTime + 4 days);
         address lper2 = vm.randomAddress();
         uint256 amount2 = 10000e8;
         deal(lper2, 1e18);
-        deal(address(debtToken), lper2, amount2);
+        deal(address(res.debtToken), lper2, amount2);
         vm.startPrank(lper2);
-        debtToken.approve(address(vault), amount2);
-        vault.deposit(amount2, lper2);
+        res.debtToken.approve(address(res.vault), amount2);
+        res.vault.deposit(amount2, lper2);
         vm.stopPrank();
 
-        address admin = marketInitialParams.admin;
+        address admin = res.marketInitialParams.admin;
         vm.startPrank(admin);
-        uint256 share = vault.balanceOf(admin);
-        uint256 redeem = vault.previewRedeem(share);
-        assertEq(redeem, vault.redeem(share, admin, admin));
-        assertGt(redeem, 10000e8);
+        uint256 share = res.vault.balanceOf(admin);
+        uint256 redeem = res.vault.previewRedeem(share);
+        assertEq(redeem, res.vault.redeem(share, admin, admin));
+        assertGt(redeem, amount2);
         vm.stopPrank();
     }
 
-    function testBadDebt() public {
-        vm.warp(currentTime + 2 days);
-        _buyXt(48.219178e8, 1000e8);
+    function _testBadDebt(VaultTestRes memory res) internal {
+        vm.warp(res.currentTime + 2 days);
+        _buyXt(res, 48.219178e8, uint128(res.orderInitialAmount/100));
 
-        vm.warp(currentTime + 3 days);
+        vm.warp(res.currentTime + 3 days);
         address lper2 = vm.randomAddress();
         deal(lper2, 1e18);
-        uint256 amount2 = 10000e8;
-        deal(address(debtToken), lper2, amount2);
+        uint256 amount2 = 100e8;
+        deal(address(res.debtToken), lper2, amount2);
         vm.startPrank(lper2);
-        debtToken.approve(address(vault), amount2);
-        vault.deposit(amount2, lper2);
+        res.debtToken.approve(address(res.vault), amount2);
+        res.vault.deposit(amount2, lper2);
         vm.stopPrank();
 
         address borrower = vm.randomAddress();
         vm.startPrank(borrower);
         deal(borrower, 1e18);
         uint collateralAmt = 1e18;
-        deal(address(collateral), borrower, collateralAmt);
-        collateral.approve(address(gt), collateralAmt);
-        market.issueFt(borrower, 0.01e18, abi.encode(collateralAmt));
+        deal(address(res.collateral), borrower, collateralAmt);
+        res.collateral.approve(address(res.gt), collateralAmt);
+        res.market.issueFt(borrower, uint128(res.orderInitialAmount/10), abi.encode(collateralAmt));
         vm.stopPrank();
 
-        vm.warp(currentTime + 92 days);
+        vm.warp(res.currentTime + 92 days);
 
-        uint256 propotion = (ft.balanceOf(address(order)) * Constants.DECIMAL_BASE_SQ)
-            / (ft.totalSupply() - ft.balanceOf(address(market)));
+        uint256 propotion = (res.ft.balanceOf(address(res.order)) * Constants.DECIMAL_BASE_SQ)
+            / (res.ft.totalSupply() - res.ft.balanceOf(address(res.market)));
 
-        uint256 tokenOut = (debtToken.balanceOf(address(market)) * propotion) / Constants.DECIMAL_BASE_SQ;
-        uint256 badDebt = ft.balanceOf(address(order)) - tokenOut;
+        uint256 tokenOut = (res.debtToken.balanceOf(address(res.market)) * propotion) / Constants.DECIMAL_BASE_SQ;
+        uint256 badDebt = res.ft.balanceOf(address(res.order)) - tokenOut;
         uint256 delivered = (propotion * 1e18) / Constants.DECIMAL_BASE_SQ;
 
         vm.startPrank(lper2);
-        vault.redeem(1000e8, lper2, lper2);
+        res.vault.redeem(10e8, lper2, lper2);
         vm.stopPrank();
 
-        assertEq(vault.badDebtMapping(address(collateral)), badDebt);
-        assertEq(collateral.balanceOf(address(vault)), delivered);
+        assertEq(res.vault.badDebtMapping(address(res.collateral)), badDebt);
+        assertEq(res.collateral.balanceOf(address(res.vault)), delivered);
 
-        uint256 shareToDealBadDebt = vault.balanceOf(lper2);
-        uint256 withdrawAmt = vault.previewRedeem(shareToDealBadDebt);
+        uint256 shareToDealBadDebt = res.vault.balanceOf(lper2);
+        uint256 withdrawAmt = res.vault.previewRedeem(shareToDealBadDebt);
+        if(withdrawAmt > badDebt) {
+            withdrawAmt = badDebt;
+        }
 
         vm.startPrank(lper2);
-        (uint256 shares, uint256 collateralOut) = vault.dealBadDebt(address(collateral), shareToDealBadDebt, lper2, lper2);
+        (uint256 shares, uint256 collateralOut) = res.vault.dealBadDebt(address(res.collateral), withdrawAmt, lper2, lper2);
         assertEq(shares, shareToDealBadDebt);
         assertEq(collateralOut, (withdrawAmt * delivered) / badDebt);
-        assertEq(vault.badDebtMapping(address(collateral)), badDebt - withdrawAmt);
-        assertEq(collateral.balanceOf(address(vault)), delivered - collateralOut);
+        assertEq(res.vault.badDebtMapping(address(res.collateral)), badDebt - withdrawAmt);
+        assertEq(res.collateral.balanceOf(address(res.vault)), delivered - collateralOut);
         vm.stopPrank();
     }
 
-    function _buyXt(uint128 tokenAmtIn, uint128 xtAmtOut) internal {
+    function _buyXt(VaultTestRes memory res, uint128 tokenAmtIn, uint128 xtAmtOut) internal {
         address taker = vm.randomAddress();
         deal(taker, 1e18);
-        deal(address(debtToken), taker, tokenAmtIn);
+        deal(address(res.debtToken), taker, tokenAmtIn);
         vm.startPrank(taker);
-        debtToken.approve(address(order), tokenAmtIn);
-        order.swapExactTokenToToken(debtToken, xt, taker, tokenAmtIn, xtAmtOut);
+        res.debtToken.approve(address(res.order), tokenAmtIn);
+        res.order.swapExactTokenToToken(res.debtToken, res.xt, taker, tokenAmtIn, xtAmtOut);
         vm.stopPrank();
     }
 

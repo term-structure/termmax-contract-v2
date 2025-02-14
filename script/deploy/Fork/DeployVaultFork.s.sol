@@ -27,11 +27,10 @@ import {DeployBase} from "../DeployBase.s.sol";
 import {ITermMaxVault, TermMaxVault} from "contracts/vault/TermMaxVault.sol";
 import {VaultFactory, IVaultFactory} from "contracts/factory/VaultFactory.sol";
 
-contract DeloyVaultHolesky is DeployBase {
+contract DeloyVaultFork is DeployBase {
     // admin config
-    uint256 deployerPrivateKey = vm.envUint("HOLESKY_DEPLOYER_PRIVATE_KEY");
-    address deployerAddr = vm.addr(deployerPrivateKey);
-    address adminAddr = vm.envAddress("HOLESKY_ADMIN_ADDRESS");
+    uint256 deployerPrivateKey = vm.envUint("FORK_DEPLOYER_PRIVATE_KEY");
+    address adminAddr = vm.envAddress("FORK_ADMIN_ADDRESS");
 
     // address config
     address vaultFactoryAddr = address(0xbfFcE1615cA63C97cD168e459e958a40E98b8FC8);

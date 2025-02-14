@@ -24,43 +24,59 @@ import {JsonLoader} from "../../utils/JsonLoader.sol";
 import {Faucet} from "contracts/test/testnet/Faucet.sol";
 import {FaucetERC20} from "contracts/test/testnet/FaucetERC20.sol";
 import {DeployBase} from "../DeployBase.s.sol";
-import {ITermMaxVault, TermMaxVault} from "contracts/vault/TermMaxVault.sol";
-import {VaultFactory, IVaultFactory} from "contracts/factory/VaultFactory.sol";
 
-contract DeloyVaultHolesky is DeployBase {
+contract DeloyOrderFork is DeployBase {
     // admin config
-    uint256 deployerPrivateKey = vm.envUint("HOLESKY_DEPLOYER_PRIVATE_KEY");
+    uint256 deployerPrivateKey = vm.envUint("FORK_DEPLOYER_PRIVATE_KEY");
     address deployerAddr = vm.addr(deployerPrivateKey);
-    address adminAddr = vm.envAddress("HOLESKY_ADMIN_ADDRESS");
 
     // address config
-    address vaultFactoryAddr = address(0xbfFcE1615cA63C97cD168e459e958a40E98b8FC8);
-    uint256 timelock = 1;
-    address[] assetAddrs = [address(0x8f6136B147b49bd6075E5Ae60C8c946269FA79e3)];
-    uint256 maxCapacity = type(uint128).max;
-    string[] names = ["VAULT-USDC"];
-    uint64 performanceFeeRate = 0.1e8;
+    address marketAddr = address(0xAb1070659f1B57433B855D28380154d3E723DB7a);
 
     function run() public {
         uint256 currentBlockNum = block.number;
+        TermMaxMarket market = TermMaxMarket(marketAddr);
         vm.startBroadcast(deployerPrivateKey);
-        VaultFactory vaultFactory = VaultFactory(vaultFactoryAddr);
+        uint256 maxXtReserve = 200000000000;
+        CurveCut memory lendCurveCut0 = CurveCut({xtReserve: 0, liqSquare: 461683991532123062272, offset: 33973665961});
+        CurveCut memory lendCurveCut1 = CurveCut({
+            xtReserve: 9000000000,
+            liqSquare: 425141100695200464896,
+            offset: 32237899859
+        });
+        CurveCut memory lendCurveCut2 = CurveCut({
+            xtReserve: 21000000000,
+            liqSquare: 1072059478286836826112,
+            offset: 63540304430
+        });
+        CurveCut[] memory _lendCurveCuts = new CurveCut[](3);
+        _lendCurveCuts[0] = lendCurveCut0;
+        _lendCurveCuts[1] = lendCurveCut1;
+        _lendCurveCuts[2] = lendCurveCut2;
 
-        ITermMaxVault[] memory vaults = new ITermMaxVault[](assetAddrs.length);
-        for (uint256 i = 0; i < assetAddrs.length; i++) {
-            console.log("Deploying vault at index", i);
-            vaults[i] = deployVault(
-                address(vaultFactory),
-                adminAddr,
-                address(0),
-                timelock,
-                assetAddrs[i],
-                maxCapacity,
-                names[i],
-                names[i],
-                performanceFeeRate
-            );
-        }
+        CurveCut memory borrowCurveCut0 = CurveCut({
+            xtReserve: 0,
+            liqSquare: 330638754635872993280,
+            offset: 29116862443
+        });
+        CurveCut memory borrowCurveCut1 = CurveCut({
+            xtReserve: 8000000000,
+            liqSquare: 361237873939795017728,
+            offset: 30796362980
+        });
+        CurveCut memory borrowCurveCut2 = CurveCut({
+            xtReserve: 20000000000,
+            liqSquare: 826934466947518169088,
+            offset: 56854893632
+        });
+        CurveCut[] memory _borrowCurveCuts = new CurveCut[](3);
+        _borrowCurveCuts[0] = borrowCurveCut0;
+        _borrowCurveCuts[1] = borrowCurveCut1;
+        _borrowCurveCuts[2] = borrowCurveCut2;
+
+        CurveCuts memory curveCuts = CurveCuts({lendCurveCuts: _lendCurveCuts, borrowCurveCuts: _borrowCurveCuts});
+        ITermMaxOrder order = market.createOrder(deployerAddr, maxXtReserve, ISwapCallback(address(0)), curveCuts);
+
         vm.stopBroadcast();
 
         console.log("===== Git Info =====");
@@ -69,10 +85,9 @@ contract DeloyVaultHolesky is DeployBase {
         console.logBytes(getGitCommitHash());
         console.log();
 
-        console.log("===== Vault Info =====");
-        for (uint256 i = 0; i < names.length; i++) {
-            console.log("Vault", names[i], ":", address(vaults[i]));
-        }
+        console.log("===== Order Info =====");
+        console.log("Order Maker:", deployerAddr);
+        console.log("Order Address:", address(order));
         console.log("Deployed at block number:", currentBlockNum);
         console.log("");
     }
