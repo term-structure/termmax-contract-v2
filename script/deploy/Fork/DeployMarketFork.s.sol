@@ -40,13 +40,8 @@ contract DeloyMarketFork is DeployBase {
         string memory deployDataPath = string.concat(vm.projectRoot(), "/script/deploy/deploydata/fork.json");
         OracleAggregator oracle = OracleAggregator(oracleAddr);
         vm.startBroadcast(deployerPrivateKey);
-        (TermMaxMarket[] memory markets, JsonLoader.Config[] memory configs) = deployMarketsMainnet(
-            factoryAddr,
-            oracleAddr,
-            routerAddr,
-            deployDataPath,
-            adminAddr
-        );
+        (TermMaxMarket[] memory markets, JsonLoader.Config[] memory configs) =
+            deployMarketsMainnet(factoryAddr, oracleAddr, routerAddr, deployDataPath, adminAddr);
 
         vm.stopBroadcast();
 
@@ -70,19 +65,13 @@ contract DeloyMarketFork is DeployBase {
 
     function printMarketConfig(OracleAggregator oracle, TermMaxMarket market, uint256 salt) public view {
         MarketConfig memory marketConfig = market.config();
-        (IMintableERC20 ft, IMintableERC20 xt, IGearingToken gt, address collateralAddr, IERC20 underlying) = market
-            .tokens();
+        (IMintableERC20 ft, IMintableERC20 xt, IGearingToken gt, address collateralAddr, IERC20 underlying) =
+            market.tokens();
 
         console.log("Market deployed at:", address(market));
+        console.log("Collateral (%s) deployed at: %s", IERC20Metadata(collateralAddr).symbol(), address(collateralAddr));
         console.log(
-            "Collateral (%s) deployed at: %s",
-            IERC20Metadata(collateralAddr).symbol(),
-            address(collateralAddr)
-        );
-        console.log(
-            "Underlying (%s) deployed at: %s",
-            IERC20Metadata(address(underlying)).symbol(),
-            address(underlying)
+            "Underlying (%s) deployed at: %s", IERC20Metadata(address(underlying)).symbol(), address(underlying)
         );
         (
             AggregatorV3Interface collateralAggregator,

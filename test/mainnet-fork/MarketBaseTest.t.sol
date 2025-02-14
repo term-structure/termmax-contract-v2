@@ -29,12 +29,11 @@ import "contracts/storage/TermMaxStorage.sol";
 abstract contract MarketBaseTest is ForkBaseTest {
     using SafeCast for *;
 
-    struct MarketTestRes{
+    struct MarketTestRes {
         uint256 blockNumber;
         uint256 orderInitialAmount;
         MarketInitialParams marketInitialParams;
         OrderConfig orderConfig;
-
         TermMaxMarket market;
         IMintableERC20 ft;
         IMintableERC20 xt;
@@ -46,9 +45,7 @@ abstract contract MarketBaseTest is ForkBaseTest {
         MockPriceFeed debtPriceFeed;
         ITermMaxOrder order;
         ITermMaxRouter router;
-
         uint256 maxXtReserve;
-
         address maker;
     }
 
@@ -68,9 +65,12 @@ abstract contract MarketBaseTest is ForkBaseTest {
         res.collateralPriceFeed = deployMockPriceFeed(res.marketInitialParams.admin);
         res.debtPriceFeed = deployMockPriceFeed(res.marketInitialParams.admin);
         res.oracle.setOracle(
-            address(res.marketInitialParams.collateral), IOracle.Oracle(res.collateralPriceFeed, res.collateralPriceFeed, 365 days)
+            address(res.marketInitialParams.collateral),
+            IOracle.Oracle(res.collateralPriceFeed, res.collateralPriceFeed, 365 days)
         );
-        res.oracle.setOracle(address(res.marketInitialParams.debtToken), IOracle.Oracle(res.debtPriceFeed, res.debtPriceFeed, 365 days));
+        res.oracle.setOracle(
+            address(res.marketInitialParams.debtToken), IOracle.Oracle(res.debtPriceFeed, res.debtPriceFeed, 365 days)
+        );
 
         res.marketInitialParams.marketConfig.maturity += uint64(block.timestamp);
         res.marketInitialParams.loanConfig.oracle = res.oracle;
@@ -87,11 +87,18 @@ abstract contract MarketBaseTest is ForkBaseTest {
 
         // set all price as 1 USD = 1e8 tokens
         uint8 debtDecimals = res.debtToken.decimals();
-        _setPriceFeedInTokenDecimal8(res.debtPriceFeed, debtDecimals, MockPriceFeed.RoundData(1, 1e8, block.timestamp, block.timestamp, 0));
+        _setPriceFeedInTokenDecimal8(
+            res.debtPriceFeed, debtDecimals, MockPriceFeed.RoundData(1, 1e8, block.timestamp, block.timestamp, 0)
+        );
         uint8 collateralDecimals = res.collateral.decimals();
-        _setPriceFeedInTokenDecimal8(res.collateralPriceFeed, collateralDecimals, MockPriceFeed.RoundData(1, 1e8, block.timestamp, block.timestamp, 0));
+        _setPriceFeedInTokenDecimal8(
+            res.collateralPriceFeed,
+            collateralDecimals,
+            MockPriceFeed.RoundData(1, 1e8, block.timestamp, block.timestamp, 0)
+        );
 
-        res.order = res.market.createOrder(res.maker, res.maxXtReserve, ISwapCallback(address(0)), res.orderConfig.curveCuts);
+        res.order =
+            res.market.createOrder(res.maker, res.maxXtReserve, ISwapCallback(address(0)), res.orderConfig.curveCuts);
 
         res.router = deployRouter(res.marketInitialParams.admin);
 
@@ -129,7 +136,7 @@ abstract contract MarketBaseTest is ForkBaseTest {
         vm.startPrank(taker);
         res.debtToken.approve(address(res.market), amount);
         res.market.mint(taker, amount);
- 
+
         res.ft.approve(address(res.market), amount);
         res.xt.approve(address(res.market), amount);
         res.market.burn(taker, amount);
@@ -149,8 +156,8 @@ abstract contract MarketBaseTest is ForkBaseTest {
         deal(alice, 1e18);
 
         uint128 depositAmt = uint128(res.orderInitialAmount);
-        uint128 debtAmt = uint128(res.orderInitialAmount/20);
-        uint256 collateralAmt = uint256(res.orderInitialAmount/10);
+        uint128 debtAmt = uint128(res.orderInitialAmount / 20);
+        uint256 collateralAmt = uint256(res.orderInitialAmount / 10);
 
         vm.startPrank(bob);
         deal(address(res.debtToken), bob, depositAmt);
@@ -173,8 +180,9 @@ abstract contract MarketBaseTest is ForkBaseTest {
 
         vm.startPrank(bob);
         res.ft.approve(address(res.market), depositAmt);
-        
-        uint256 propotion = depositAmt * Constants.DECIMAL_BASE_SQ / (res.ft.totalSupply() - res.ft.balanceOf(address(res.market)));
+
+        uint256 propotion =
+            depositAmt * Constants.DECIMAL_BASE_SQ / (res.ft.totalSupply() - res.ft.balanceOf(address(res.market)));
         uint256 redeemAmt = propotion * res.debtToken.balanceOf(address(res.market)) / Constants.DECIMAL_BASE_SQ;
         uint256 redeemedCollateral = propotion * res.collateral.balanceOf(address(res.gt)) / Constants.DECIMAL_BASE_SQ;
         uint256 redeemFee = (marketConfig.feeConfig.redeemFeeRatio * redeemAmt) / Constants.DECIMAL_BASE;
@@ -182,12 +190,7 @@ abstract contract MarketBaseTest is ForkBaseTest {
         redeemAmt -= redeemFee;
         vm.expectEmit();
         emit MarketEvents.Redeem(
-            bob,
-            bob,
-            uint128(propotion),
-            uint128(redeemAmt),
-            uint128(redeemFee),
-            abi.encode(redeemedCollateral)
+            bob, bob, uint128(propotion), uint128(redeemAmt), uint128(redeemFee), abi.encode(redeemedCollateral)
         );
         res.market.redeem(depositAmt, bob);
 
@@ -197,7 +200,7 @@ abstract contract MarketBaseTest is ForkBaseTest {
         vm.stopPrank();
     }
 
-    function _testIssueFtByGtWhenSwap(MarketTestRes memory res,uint256 collateralAmt, uint128 debtAmt) internal {
+    function _testIssueFtByGtWhenSwap(MarketTestRes memory res, uint256 collateralAmt, uint128 debtAmt) internal {
         address taker = vm.randomAddress();
         deal(taker, 1e18);
 
@@ -214,10 +217,13 @@ abstract contract MarketBaseTest is ForkBaseTest {
         OrderConfig memory orderConfig = res.order.orderConfig();
         orderConfig.gtId = gtId;
         // make sure ft reserve in order is 150e8
-        res.order.updateOrder(orderConfig, -(res.ft.balanceOf(address(res.order)) - maxTokenIn).toInt256(), -(res.xt.balanceOf(address(res.order)) - maxTokenIn).toInt256());
+        res.order.updateOrder(
+            orderConfig,
+            -(res.ft.balanceOf(address(res.order)) - maxTokenIn).toInt256(),
+            -(res.xt.balanceOf(address(res.order)) - maxTokenIn).toInt256()
+        );
         vm.stopPrank();
 
-        
         vm.startPrank(taker);
         deal(address(res.debtToken), taker, maxTokenIn);
         res.debtToken.approve(address(res.order), maxTokenIn);

@@ -568,7 +568,7 @@ contract VaultTest is Test {
 
         vm.stopPrank();
     }
-    
+
     // redeem when balance bigger tha redeemed
     function testRedeemCase2() public {
         vm.warp(currentTime + 2 days);
@@ -594,7 +594,7 @@ contract VaultTest is Test {
 
         CurveCuts[] memory curveCuts = new CurveCuts[](1);
         curveCuts[0] = orderConfig.curveCuts;
-        
+
         vault.updateOrders(orders, changes, maxSupplies, curveCuts);
         vm.stopPrank();
 

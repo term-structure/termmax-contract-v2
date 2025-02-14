@@ -232,6 +232,7 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
                         amountLeft -= totalRedeem;
                         continue;
                     } else {
+                        // transfer all assets to recipient
                         asset.safeTransfer(recipient, amount);
                         amountLeft = 0;
                         break;
@@ -246,6 +247,7 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
                         ++i;
                     } else {
                         _burnFromOrder(ITermMaxOrder(order), orderInfo, amountLeft);
+                        // transfer all assets to recipient
                         asset.safeTransfer(recipient, amount);
                         amountLeft = 0;
                         break;
@@ -328,11 +330,11 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
         _performanceFee += _performanceFeeToCurator;
         _accretingPrincipal += (interest - _performanceFeeToCurator);
     }
-    
+
     /**
      * @inheritdoc IOrderManager
      */
-    function accruedInterest() external onlyProxy{
+    function accruedInterest() external onlyProxy {
         _accruedInterest();
     }
 

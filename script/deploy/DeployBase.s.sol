@@ -24,7 +24,13 @@ import {IOracle, OracleAggregator} from "contracts/oracle/OracleAggregator.sol";
 import {IOrderManager, OrderManager} from "contracts/vault/OrderManager.sol";
 import {ITermMaxVault, TermMaxVault} from "contracts/vault/TermMaxVault.sol";
 import {VaultFactory, IVaultFactory} from "contracts/factory/VaultFactory.sol";
-import {MarketConfig, FeeConfig, MarketInitialParams, LoanConfig, VaultInitialParams} from "contracts/storage/TermMaxStorage.sol";
+import {
+    MarketConfig,
+    FeeConfig,
+    MarketInitialParams,
+    LoanConfig,
+    VaultInitialParams
+} from "contracts/storage/TermMaxStorage.sol";
 import {KyberswapV2Adapter} from "contracts/router/swapAdapters/KyberswapV2Adapter.sol";
 import {OdosV2Adapter} from "contracts/router/swapAdapters/OdosV2Adapter.sol";
 import {PendleSwapV3Adapter} from "contracts/router/swapAdapters/PendleSwapV3Adapter.sol";
@@ -60,9 +66,7 @@ contract DeployBase is Script {
         router = TermMaxRouter(address(proxy));
     }
 
-    function deployCore(
-        address adminAddr
-    )
+    function deployCore(address adminAddr)
         public
         returns (
             TermMaxFactory factory,
@@ -157,9 +161,7 @@ contract DeployBase is Script {
 
             // deploy underlying & collateral
             bytes32 tokenKey = faucet.calcTokenKey(
-                config.collateralConfig.name,
-                config.collateralConfig.symbol,
-                config.collateralConfig.decimals
+                config.collateralConfig.name, config.collateralConfig.symbol, config.collateralConfig.decimals
             );
             uint256 tokenId = faucet.getTokenIdByKey(tokenKey);
             FaucetERC20 collateral;
@@ -168,9 +170,7 @@ contract DeployBase is Script {
             MockPriceFeed underlyingPriceFeed;
             if (tokenId == 0) {
                 (collateral, collateralPriceFeed) = faucet.addToken(
-                    config.collateralConfig.name,
-                    config.collateralConfig.symbol,
-                    config.collateralConfig.decimals
+                    config.collateralConfig.name, config.collateralConfig.symbol, config.collateralConfig.decimals
                 );
 
                 collateralPriceFeed.updateRoundData(
@@ -184,8 +184,7 @@ contract DeployBase is Script {
                 );
                 collateralPriceFeed.transferOwnership(priceFeedOperatorAddr);
                 oracle.setOracle(
-                    address(collateral),
-                    IOracle.Oracle(collateralPriceFeed, collateralPriceFeed, 365 days)
+                    address(collateral), IOracle.Oracle(collateralPriceFeed, collateralPriceFeed, 365 days)
                 );
             } else {
                 collateral = FaucetERC20(faucet.getTokenConfig(tokenId).tokenAddr);
@@ -193,16 +192,12 @@ contract DeployBase is Script {
             }
 
             tokenKey = faucet.calcTokenKey(
-                config.underlyingConfig.name,
-                config.underlyingConfig.symbol,
-                config.underlyingConfig.decimals
+                config.underlyingConfig.name, config.underlyingConfig.symbol, config.underlyingConfig.decimals
             );
             tokenId = faucet.getTokenIdByKey(tokenKey);
             if (tokenId == 0) {
                 (underlying, underlyingPriceFeed) = faucet.addToken(
-                    config.underlyingConfig.name,
-                    config.underlyingConfig.symbol,
-                    config.underlyingConfig.decimals
+                    config.underlyingConfig.name, config.underlyingConfig.symbol, config.underlyingConfig.decimals
                 );
 
                 underlyingPriceFeed.updateRoundData(
@@ -216,8 +211,7 @@ contract DeployBase is Script {
                 );
                 underlyingPriceFeed.transferOwnership(priceFeedOperatorAddr);
                 oracle.setOracle(
-                    address(underlying),
-                    IOracle.Oracle(underlyingPriceFeed, underlyingPriceFeed, 365 days)
+                    address(underlying), IOracle.Oracle(underlyingPriceFeed, underlyingPriceFeed, 365 days)
                 );
             } else {
                 underlying = FaucetERC20(faucet.getTokenConfig(tokenId).tokenAddr);

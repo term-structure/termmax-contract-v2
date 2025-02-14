@@ -29,7 +29,6 @@ import {JSONLoader} from "test/utils/JSONLoader.sol";
 import "forge-std/Test.sol";
 
 abstract contract ForkBaseTest is Test {
-
     using SafeCast for *;
 
     string jsonData;
@@ -52,54 +51,58 @@ abstract contract ForkBaseTest is Test {
 
     function _getDataPath() internal view virtual returns (string memory);
 
-    function _readTokenPairs() internal{
+    function _readTokenPairs() internal {
         uint256 len = vm.parseJsonUint(jsonData, ".tokenPairs.length");
-        for(uint256 i = 0; i < len; i++){
+        for (uint256 i = 0; i < len; i++) {
             tokenPairs.push(vm.parseJsonString(jsonData, string.concat(".tokenPairs.", vm.toString(i))));
         }
     }
 
-    function _readBlockNumber(string memory key) internal view returns (uint256){
+    function _readBlockNumber(string memory key) internal view returns (uint256) {
         return uint256(vm.parseJsonUint(jsonData, string.concat(key, ".blockNumber")));
     }
 
-    function _readMarketInitialParams(string memory key) internal returns (MarketInitialParams memory marketInitialParams){
+    function _readMarketInitialParams(string memory key)
+        internal
+        returns (MarketInitialParams memory marketInitialParams)
+    {
         marketInitialParams.admin = vm.randomAddress();
-        marketInitialParams.collateral = vm.parseJsonAddress(jsonData,string.concat(key, ".collateral"));
-        marketInitialParams.debtToken = IERC20Metadata(vm.parseJsonAddress(jsonData,string.concat(key, ".debtToken")));
+        marketInitialParams.collateral = vm.parseJsonAddress(jsonData, string.concat(key, ".collateral"));
+        marketInitialParams.debtToken = IERC20Metadata(vm.parseJsonAddress(jsonData, string.concat(key, ".debtToken")));
 
         marketInitialParams.tokenName = key;
         marketInitialParams.tokenSymbol = key;
 
         MarketConfig memory marketConfig;
         marketConfig.feeConfig.redeemFeeRatio =
-            uint32(vm.parseUint(vm.parseJsonString(jsonData,string.concat(key, ".feeConfig.redeemFeeRatio"))));
+            uint32(vm.parseUint(vm.parseJsonString(jsonData, string.concat(key, ".feeConfig.redeemFeeRatio"))));
         marketConfig.feeConfig.issueFtFeeRatio =
-            uint32(vm.parseUint(vm.parseJsonString(jsonData,string.concat(key, ".feeConfig.issueFtFeeRatio"))));
+            uint32(vm.parseUint(vm.parseJsonString(jsonData, string.concat(key, ".feeConfig.issueFtFeeRatio"))));
         marketConfig.feeConfig.issueFtFeeRef =
-            uint32(vm.parseUint(vm.parseJsonString(jsonData,string.concat(key, ".feeConfig.issueFtFeeRef"))));
+            uint32(vm.parseUint(vm.parseJsonString(jsonData, string.concat(key, ".feeConfig.issueFtFeeRef"))));
         marketConfig.feeConfig.lendTakerFeeRatio =
-            uint32(vm.parseUint(vm.parseJsonString(jsonData,string.concat(key, ".feeConfig.lendTakerFeeRatio"))));
+            uint32(vm.parseUint(vm.parseJsonString(jsonData, string.concat(key, ".feeConfig.lendTakerFeeRatio"))));
         marketConfig.feeConfig.borrowTakerFeeRatio =
-            uint32(vm.parseUint(vm.parseJsonString(jsonData,string.concat(key, ".feeConfig.borrowTakerFeeRatio"))));
+            uint32(vm.parseUint(vm.parseJsonString(jsonData, string.concat(key, ".feeConfig.borrowTakerFeeRatio"))));
         marketConfig.feeConfig.lendMakerFeeRatio =
-            uint32(vm.parseUint(vm.parseJsonString(jsonData,string.concat(key, ".feeConfig.lendMakerFeeRatio"))));
+            uint32(vm.parseUint(vm.parseJsonString(jsonData, string.concat(key, ".feeConfig.lendMakerFeeRatio"))));
         marketConfig.feeConfig.borrowMakerFeeRatio =
-            uint32(vm.parseUint(vm.parseJsonString(jsonData,string.concat(key, ".feeConfig.borrowMakerFeeRatio"))));
+            uint32(vm.parseUint(vm.parseJsonString(jsonData, string.concat(key, ".feeConfig.borrowMakerFeeRatio"))));
         marketInitialParams.marketConfig = marketConfig;
 
         marketConfig.treasurer = vm.randomAddress();
-        marketConfig.maturity = uint64(86400 * vm.parseUint(vm.parseJsonString(jsonData,string.concat(key, ".duration"))));
+        marketConfig.maturity =
+            uint64(86400 * vm.parseUint(vm.parseJsonString(jsonData, string.concat(key, ".duration"))));
 
         marketInitialParams.loanConfig.maxLtv =
-            uint32(vm.parseUint(vm.parseJsonString(jsonData,string.concat(key, ".loanConfig.maxLtv"))));
+            uint32(vm.parseUint(vm.parseJsonString(jsonData, string.concat(key, ".loanConfig.maxLtv"))));
         marketInitialParams.loanConfig.liquidationLtv =
-            uint32(vm.parseUint(vm.parseJsonString(jsonData,string.concat(key, ".loanConfig.liquidationLtv"))));
+            uint32(vm.parseUint(vm.parseJsonString(jsonData, string.concat(key, ".loanConfig.liquidationLtv"))));
         marketInitialParams.loanConfig.liquidatable =
-            vm.parseBool(vm.parseJsonString(jsonData,string.concat(key, ".loanConfig.liquidatable")));
+            vm.parseBool(vm.parseJsonString(jsonData, string.concat(key, ".loanConfig.liquidatable")));
 
         marketInitialParams.gtInitalParams = abi.encode(type(uint256).max);
-        
+
         return marketInitialParams;
     }
 
@@ -108,7 +111,10 @@ abstract contract ForkBaseTest is Test {
         return orderConfig;
     }
 
-    function _readVaultInitialParams(address admin, IERC20 debtToken, string memory key) internal returns (VaultInitialParams memory vaultInitialParams){
+    function _readVaultInitialParams(address admin, IERC20 debtToken, string memory key)
+        internal
+        returns (VaultInitialParams memory vaultInitialParams)
+    {
         vaultInitialParams.admin = admin;
         vaultInitialParams.curator = vm.randomAddress();
         vaultInitialParams.timelock = 1 days;
@@ -120,8 +126,13 @@ abstract contract ForkBaseTest is Test {
         return vaultInitialParams;
     }
 
-    function _setPriceFeedInTokenDecimal8(MockPriceFeed priceFeed, uint8 tokenDecimals, MockPriceFeed.RoundData memory roundData) internal{
-        roundData.answer = (roundData.answer.toUint256() * (10**uint256(tokenDecimals)) / Constants.DECIMAL_BASE).toInt256();
+    function _setPriceFeedInTokenDecimal8(
+        MockPriceFeed priceFeed,
+        uint8 tokenDecimals,
+        MockPriceFeed.RoundData memory roundData
+    ) internal {
+        roundData.answer =
+            (roundData.answer.toUint256() * (10 ** uint256(tokenDecimals)) / Constants.DECIMAL_BASE).toInt256();
         priceFeed.updateRoundData(roundData);
     }
 
