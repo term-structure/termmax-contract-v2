@@ -5,8 +5,6 @@ import "../GtBaseTest.t.sol";
 
 contract ForkGt is GtBaseTest {
 
-    string envData;
-
     string MAINNET_RPC_URL = vm.envString("MAINNET_RPC_URL");
     string DATA_PATH = string.concat(vm.projectRoot(), "/test/testdata/fork/mainnet.json");
 

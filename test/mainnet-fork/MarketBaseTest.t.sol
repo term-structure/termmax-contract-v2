@@ -10,7 +10,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {TermMaxFactory} from "contracts/factory/TermMaxFactory.sol";
 import {Constants} from "contracts/lib/Constants.sol";
-import {ITermMaxMarket, TermMaxMarket, MarketEvents} from "contracts/TermMaxMarket.sol";
+import {ITermMaxMarket, TermMaxMarket, MarketEvents, SafeCast} from "contracts/TermMaxMarket.sol";
 import {ITermMaxOrder} from "contracts/ITermMaxOrder.sol";
 import {IMintableERC20} from "contracts/tokens/IMintableERC20.sol";
 import {MockPriceFeed} from "contracts/test/MockPriceFeed.sol";
@@ -27,6 +27,7 @@ import {MockFlashLoanReceiver} from "contracts/test/MockFlashLoanReceiver.sol";
 import "contracts/storage/TermMaxStorage.sol";
 
 abstract contract MarketBaseTest is ForkBaseTest {
+    using SafeCast for *;
 
     struct MarketTestRes{
         uint256 blockNumber;
@@ -200,6 +201,9 @@ abstract contract MarketBaseTest is ForkBaseTest {
         address taker = vm.randomAddress();
         deal(taker, 1e18);
 
+        uint128 ftOutAmt = 151e8;
+        uint128 maxTokenIn = 150e8;
+
         vm.startPrank(res.maker);
         deal(res.maker, 1e18);
         deal(address(res.collateral), res.maker, collateralAmt);
@@ -209,11 +213,11 @@ abstract contract MarketBaseTest is ForkBaseTest {
         res.gt.approve(address(res.order), gtId);
         OrderConfig memory orderConfig = res.order.orderConfig();
         orderConfig.gtId = gtId;
-        res.order.updateOrder(orderConfig, 0, 0);
+        // make sure ft reserve in order is 150e8
+        res.order.updateOrder(orderConfig, -(res.ft.balanceOf(address(res.order)) - maxTokenIn).toInt256(), -(res.xt.balanceOf(address(res.order)) - maxTokenIn).toInt256());
         vm.stopPrank();
 
-        uint128 ftOutAmt = uint128(res.orderInitialAmount * 101 / 100);
-        uint128 maxTokenIn = uint128(res.orderInitialAmount);
+        
         vm.startPrank(taker);
         deal(address(res.debtToken), taker, maxTokenIn);
         res.debtToken.approve(address(res.order), maxTokenIn);
