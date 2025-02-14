@@ -28,6 +28,33 @@ import "contracts/storage/TermMaxStorage.sol";
 
 abstract contract GtBaseTest is ForkBaseTest {
 
+    struct UniswapData{
+        address router;
+        UniswapV3Adapter adapter;
+        bool active;
+        uint24 poolFee;
+    }
+
+    struct PendleSwapData{
+        address router;
+        PendleSwapV3Adapter adapter;
+        bool active;
+        address underlying;
+        address pendleMarket;
+    }
+
+    struct OdosSwapData{
+        address router;
+        OdosV2Adapter adapter;
+        bool active;
+        address odosInputReceiver;
+        uint256 outputQuote;
+        uint256 outputMin;
+        address odosExecutor;
+        bytes odosPath;
+        uint32 odosReferralCode;
+    }
+
     struct GtTestRes{
         uint256 blockNumber;
         MarketInitialParams marketInitialParams;
@@ -49,13 +76,9 @@ abstract contract GtBaseTest is ForkBaseTest {
 
         address maker;
 
-        UniswapV3Adapter uniswapAdapter;
-        PendleSwapV3Adapter pendleAdapter;
-        OdosV2Adapter odosAdapter;
-    }
-
-    function _finishSetup() internal override {
-        
+        UniswapData uniswapData;
+        PendleSwapData pendleData;
+        OdosSwapData odosData;
     }
 
     function _initializeGtTestRes(string memory key) internal returns (GtTestRes memory) {
@@ -97,9 +120,57 @@ abstract contract GtBaseTest is ForkBaseTest {
 
         res.router.setMarketWhitelist(address(res.market), true);
 
+
+        res.uniswapData = _readUniswapData(key);
+        if(res.uniswapData.active){
+            res.router.setAdapterWhitelist(address(res.uniswapData.adapter), true);
+        }
+        res.pendleData = _readPendleSwapData(key);
+        if(res.pendleData.active){
+            res.router.setAdapterWhitelist(address(res.pendleData.adapter), true);
+        }
+        res.odosData = _readOdosSwapData(key);
+        if(res.odosData.active){
+            res.router.setAdapterWhitelist(address(res.odosData.adapter), true);
+        }
+
         vm.stopPrank();
 
         return res;
+    }
+
+    function _readUniswapData(string memory key) internal returns (UniswapData memory data){
+        data.active = vm.parseJsonBool(dataPath, string.concat(key, ".routers.uniswap.active"));
+        if(data.active){
+            data.router = vm.parseAddress(dataPath, string.concat(key, ".routers.uniswap.address"));
+            data.adapter = new UniswapV3Adapter(data.router);
+            data.poolFee = uint24(vm.parseJsonUint(dataPath, string.concat(key, ".routers.uniswap.poolFee")));
+        }
+    }
+
+    function _readPendleSwapData(string memory key) internal returns (PendleSwapData memory data){
+        data.active = vm.parseJsonBool(dataPath, string.concat(key, ".routers.pendle.active"));
+        if(data.active){
+            data.router = vm.parseAddress(dataPath, string.concat(key, ".routers.pendle.address"));
+            data.adapter = new PendleSwapV3Adapter(data.router);
+            data.pendleMarket = vm.parseAddress(dataPath, string.concat(key, ".routers.pendle.market"));
+            data.underlying = vm.parseAddress(dataPath, string.concat(key, ".routers.pendle.underlying"));
+        }
+    }
+
+    function _readOdosSwapData(string memory key) internal returns (OdosSwapData memory data){
+        data.active = vm.parseJsonBool(dataPath, string.concat(key, ".routers.odos.active"));
+        if(data.active){
+            data.router = vm.parseAddress(dataPath, string.concat(key, ".routers.odos.address"));
+            data.adapter = new OdosV2Adapter(data.router);
+
+            data.odosInputReceiver = vm.parseAddress(dataPath, string.concat(key, ".routers.odos.inputReceiver"));
+            data.outputQuote = vm.parseJsonUint(dataPath, string.concat(key, ".routers.odos.outputQuote"));
+            data.outputMin = vm.parseJsonUint(dataPath, string.concat(key, ".routers.odos.outputMin"));
+            data.odosExecutor = vm.parseAddress(dataPath, string.concat(key, ".routers.odos.executor"));
+            data.odosPath = vm.parseJsonBytes(dataPath, string.concat(key, ".routers.odos.path"));
+            data.odosReferralCode = vm.parseJsonUint(dataPath, string.concat(key, ".routers.odos.referralCode"));
+        }
     }
 
     function _testBorrow(GtTestRes memory res, uint256 collInAmt, uint128 borrowAmt, uint128 maxDebtAmt) internal {

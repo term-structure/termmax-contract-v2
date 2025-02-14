@@ -158,12 +158,12 @@
     "odos":{
       "active": true,
       "address": "0xCf5540fFFCdC3d510B18bFcA6d2b9987b0772559",
-      "odosInputReceiver": "0xDB74dfDD3BB46bE8Ce6C33dC9D82777BCFc3dEd5",
+      "inputReceiver": "0xDB74dfDD3BB46bE8Ce6C33dC9D82777BCFc3dEd5",
       "outputQuote": "9455438286641436672",
       "outputMin": "9360883903775023104",
-      "odosExecutor": "0xB28Ca7e465C452cE4252598e0Bc96Aeba553CF82",
-      "odosPath": "010203000a01010001020001ff00000000000000000000000000000000000000db74dfdd3bb46be8ce6c33dc9d82777bcfc3ded5c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
-      "odosReferralCode": "0"
+      "executor": "0xB28Ca7e465C452cE4252598e0Bc96Aeba553CF82",
+      "path": "010203000a01010001020001ff00000000000000000000000000000000000000db74dfdd3bb46be8ce6c33dc9d82777bcfc3ded5c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+      "referralCode": "0"
     }
   },
   "priceData": {
