@@ -6,6 +6,8 @@ import {IERC721Enumerable} from "@openzeppelin/contracts/interfaces/IERC721Enume
 import {ITermMaxMarket} from "contracts/ITermMaxMarket.sol";
 import {IMintableERC20} from "contracts/tokens/IMintableERC20.sol";
 import {IGearingToken} from "contracts/tokens/IGearingToken.sol";
+import {ITermMaxOrder} from "contracts/ITermMaxOrder.sol";
+import {OrderConfig, CurveCuts, FeeConfig} from "contracts/storage/TermMaxStorage.sol";
 
 contract MarketViewer {
     struct LoanPosition {
@@ -22,6 +24,17 @@ contract MarketViewer {
         uint256 lpFtBalance;
         uint256 lpXtBalance;
         LoanPosition[] gtInfo;
+    }
+
+    struct OrderState {
+        uint256 collateralReserve;
+        uint256 debtReserve;
+        uint256 ftReserve;
+        uint256 xtReserve;
+        uint256 maxXtReserve;
+        uint256 gtId;
+        CurveCuts curveCuts;
+        FeeConfig feeConfig;
     }
 
     function getPositionDetail(ITermMaxMarket market, address owner) external view returns (Position memory position) {
