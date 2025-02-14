@@ -27,13 +27,12 @@ import {MockFlashLoanReceiver} from "contracts/test/MockFlashLoanReceiver.sol";
 import "contracts/storage/TermMaxStorage.sol";
 
 abstract contract GtBaseTest is ForkBaseTest {
-
-    struct LeverageAmountData{
+    struct LeverageAmountData {
         uint128 debtAmt;
         uint128 swapAmtIn;
     }
 
-    struct UniswapData{
+    struct UniswapData {
         address router;
         UniswapV3Adapter adapter;
         bool active;
@@ -41,7 +40,7 @@ abstract contract GtBaseTest is ForkBaseTest {
         LeverageAmountData leverageAmountData;
     }
 
-    struct PendleSwapData{
+    struct PendleSwapData {
         address router;
         PendleSwapV3Adapter adapter;
         bool active;
@@ -49,7 +48,7 @@ abstract contract GtBaseTest is ForkBaseTest {
         address pendleMarket;
     }
 
-    struct OdosSwapData{
+    struct OdosSwapData {
         address router;
         OdosV2Adapter adapter;
         bool active;
@@ -62,12 +61,11 @@ abstract contract GtBaseTest is ForkBaseTest {
         LeverageAmountData leverageAmountData;
     }
 
-    struct GtTestRes{
+    struct GtTestRes {
         uint256 blockNumber;
         uint256 orderInitialAmount;
         MarketInitialParams marketInitialParams;
         OrderConfig orderConfig;
-
         TermMaxMarket market;
         IMintableERC20 ft;
         IMintableERC20 xt;
@@ -79,11 +77,8 @@ abstract contract GtBaseTest is ForkBaseTest {
         MockPriceFeed debtPriceFeed;
         ITermMaxOrder order;
         ITermMaxRouter router;
-
         uint256 maxXtReserve;
-
         address maker;
-
         UniswapData uniswapData;
         PendleSwapData pendleData;
         OdosSwapData odosData;
@@ -105,9 +100,12 @@ abstract contract GtBaseTest is ForkBaseTest {
         res.collateralPriceFeed = deployMockPriceFeed(res.marketInitialParams.admin);
         res.debtPriceFeed = deployMockPriceFeed(res.marketInitialParams.admin);
         res.oracle.setOracle(
-            address(res.marketInitialParams.collateral), IOracle.Oracle(res.collateralPriceFeed, res.collateralPriceFeed, 365 days)
+            address(res.marketInitialParams.collateral),
+            IOracle.Oracle(res.collateralPriceFeed, res.collateralPriceFeed, 365 days)
         );
-        res.oracle.setOracle(address(res.marketInitialParams.debtToken), IOracle.Oracle(res.debtPriceFeed, res.debtPriceFeed, 365 days));
+        res.oracle.setOracle(
+            address(res.marketInitialParams.debtToken), IOracle.Oracle(res.debtPriceFeed, res.debtPriceFeed, 365 days)
+        );
 
         res.marketInitialParams.marketConfig.maturity += uint64(block.timestamp);
         res.marketInitialParams.loanConfig.oracle = res.oracle;
@@ -124,27 +122,33 @@ abstract contract GtBaseTest is ForkBaseTest {
 
         // set all price as 1 USD = 1e8 tokens
         uint8 debtDecimals = res.debtToken.decimals();
-        _setPriceFeedInTokenDecimal8(res.debtPriceFeed, debtDecimals, MockPriceFeed.RoundData(1, 1e8, block.timestamp, block.timestamp, 0));
+        _setPriceFeedInTokenDecimal8(
+            res.debtPriceFeed, debtDecimals, MockPriceFeed.RoundData(1, 1e8, block.timestamp, block.timestamp, 0)
+        );
         uint8 collateralDecimals = res.collateral.decimals();
-        _setPriceFeedInTokenDecimal8(res.collateralPriceFeed, collateralDecimals, MockPriceFeed.RoundData(1, 1e8, block.timestamp, block.timestamp, 0));
+        _setPriceFeedInTokenDecimal8(
+            res.collateralPriceFeed,
+            collateralDecimals,
+            MockPriceFeed.RoundData(1, 1e8, block.timestamp, block.timestamp, 0)
+        );
 
-        res.order = res.market.createOrder(res.maker, res.maxXtReserve, ISwapCallback(address(0)), res.orderConfig.curveCuts);
+        res.order =
+            res.market.createOrder(res.maker, res.maxXtReserve, ISwapCallback(address(0)), res.orderConfig.curveCuts);
 
         res.router = deployRouter(res.marketInitialParams.admin);
 
         res.router.setMarketWhitelist(address(res.market), true);
 
-
         res.uniswapData = _readUniswapData(key);
-        if(res.uniswapData.active){
+        if (res.uniswapData.active) {
             res.router.setAdapterWhitelist(address(res.uniswapData.adapter), true);
         }
         res.pendleData = _readPendleSwapData(key);
-        if(res.pendleData.active){
+        if (res.pendleData.active) {
             res.router.setAdapterWhitelist(address(res.pendleData.adapter), true);
         }
         res.odosData = _readOdosSwapData(key);
-        if(res.odosData.active){
+        if (res.odosData.active) {
             res.router.setAdapterWhitelist(address(res.odosData.adapter), true);
         }
 
@@ -159,20 +163,22 @@ abstract contract GtBaseTest is ForkBaseTest {
         return res;
     }
 
-    function _readUniswapData(string memory key) internal returns (UniswapData memory data){
+    function _readUniswapData(string memory key) internal returns (UniswapData memory data) {
         data.active = vm.parseJsonBool(jsonData, string.concat(key, ".routers.uniswap.active"));
-        if(data.active){
+        if (data.active) {
             data.router = vm.parseJsonAddress(jsonData, string.concat(key, ".routers.uniswap.address"));
             data.adapter = new UniswapV3Adapter(data.router);
             data.poolFee = uint24(vm.parseJsonUint(jsonData, string.concat(key, ".routers.uniswap.poolFee")));
-            data.leverageAmountData.debtAmt = uint128(vm.parseJsonUint(jsonData, string.concat(key, ".routers.uniswap.leverage.debtAmt")));
-            data.leverageAmountData.swapAmtIn = uint128(vm.parseJsonUint(jsonData, string.concat(key, ".routers.uniswap.leverage.swapAmtIn")));
+            data.leverageAmountData.debtAmt =
+                uint128(vm.parseJsonUint(jsonData, string.concat(key, ".routers.uniswap.leverage.debtAmt")));
+            data.leverageAmountData.swapAmtIn =
+                uint128(vm.parseJsonUint(jsonData, string.concat(key, ".routers.uniswap.leverage.swapAmtIn")));
         }
     }
 
-    function _readPendleSwapData(string memory key) internal returns (PendleSwapData memory data){
+    function _readPendleSwapData(string memory key) internal returns (PendleSwapData memory data) {
         data.active = vm.parseJsonBool(jsonData, string.concat(key, ".routers.pendle.active"));
-        if(data.active){
+        if (data.active) {
             data.router = vm.parseJsonAddress(jsonData, string.concat(key, ".routers.pendle.address"));
             data.adapter = new PendleSwapV3Adapter(data.router);
             data.pendleMarket = vm.parseJsonAddress(jsonData, string.concat(key, ".routers.pendle.market"));
@@ -180,9 +186,9 @@ abstract contract GtBaseTest is ForkBaseTest {
         }
     }
 
-    function _readOdosSwapData(string memory key) internal returns (OdosSwapData memory data){
+    function _readOdosSwapData(string memory key) internal returns (OdosSwapData memory data) {
         data.active = vm.parseJsonBool(jsonData, string.concat(key, ".routers.odos.active"));
-        if(data.active){
+        if (data.active) {
             data.router = vm.parseJsonAddress(jsonData, string.concat(key, ".routers.odos.address"));
             data.adapter = new OdosV2Adapter(data.router);
 
@@ -193,19 +199,23 @@ abstract contract GtBaseTest is ForkBaseTest {
             data.odosPath = vm.parseJsonBytes(jsonData, string.concat(key, ".routers.odos.path"));
             data.odosReferralCode = uint32(vm.parseJsonUint(jsonData, string.concat(key, ".routers.odos.referralCode")));
 
-            data.leverageAmountData.debtAmt = uint128(vm.parseJsonUint(jsonData, string.concat(key, ".routers.odos.leverage.debtAmt")));
-            data.leverageAmountData.swapAmtIn = uint128(vm.parseJsonUint(jsonData, string.concat(key, ".routers.odos.leverage.swapAmtIn")));
+            data.leverageAmountData.debtAmt =
+                uint128(vm.parseJsonUint(jsonData, string.concat(key, ".routers.odos.leverage.debtAmt")));
+            data.leverageAmountData.swapAmtIn =
+                uint128(vm.parseJsonUint(jsonData, string.concat(key, ".routers.odos.leverage.swapAmtIn")));
         }
     }
 
-    function _updateCollateralPrice(GtTestRes memory res, int256 price) internal{
+    function _updateCollateralPrice(GtTestRes memory res, int256 price) internal {
         vm.startPrank(res.marketInitialParams.admin);
         // set all price as 1 USD = 1e8 tokens
         uint8 decimals = res.collateral.decimals();
         (uint80 roundId,,,,) = res.collateralPriceFeed.latestRoundData();
         roundId++;
-        uint time = block.timestamp;
-        _setPriceFeedInTokenDecimal8(res.collateralPriceFeed, decimals, MockPriceFeed.RoundData(roundId, price, time, time, 0));
+        uint256 time = block.timestamp;
+        _setPriceFeedInTokenDecimal8(
+            res.collateralPriceFeed, decimals, MockPriceFeed.RoundData(roundId, price, time, time, 0)
+        );
         vm.stopPrank();
     }
 
@@ -222,7 +232,8 @@ abstract contract GtBaseTest is ForkBaseTest {
         deal(address(res.collateral), taker, collInAmt);
         res.collateral.approve(address(res.router), collInAmt);
 
-        uint256 gtId = res.router.borrowTokenFromCollateral(taker, res.market, collInAmt, orders, tokenAmtsWantBuy, maxDebtAmt);
+        uint256 gtId =
+            res.router.borrowTokenFromCollateral(taker, res.market, collInAmt, orders, tokenAmtsWantBuy, maxDebtAmt);
         (address owner, uint128 debtAmt,, bytes memory collateralData) = res.gt.loanInfo(gtId);
         assertEq(owner, taker);
         assertEq(collInAmt, abi.decode(collateralData, (uint256)));
@@ -294,8 +305,9 @@ abstract contract GtBaseTest is ForkBaseTest {
         uint128[] memory amtsToBuyXt = new uint128[](1);
         amtsToBuyXt[0] = tokenAmtToBuyXt;
 
-        (gtId,) =
-            res.router.leverageFromToken(taker, res.market, orders, amtsToBuyXt, minXTOut, tokenAmtIn, uint128(maxLtv), units);
+        (gtId,) = res.router.leverageFromToken(
+            taker, res.market, orders, amtsToBuyXt, minXTOut, tokenAmtIn, uint128(maxLtv), units
+        );
 
         uint256 debtTokenBalanceAfterSwap = res.debtToken.balanceOf(taker);
 
@@ -323,7 +335,8 @@ abstract contract GtBaseTest is ForkBaseTest {
         uint128[] memory amtsToBuyFt = new uint128[](0);
         bool byDebtToken = true;
 
-        uint256 netTokenOut = res.router.flashRepayFromColl(taker, res.market, gtId, orders, amtsToBuyFt, byDebtToken, units);
+        uint256 netTokenOut =
+            res.router.flashRepayFromColl(taker, res.market, gtId, orders, amtsToBuyFt, byDebtToken, units);
 
         uint256 debtTokenBalanceAfterRepay = res.debtToken.balanceOf(taker);
 
@@ -332,7 +345,13 @@ abstract contract GtBaseTest is ForkBaseTest {
         vm.stopPrank();
     }
 
-    function _testFlashRepayByFt(GtTestRes memory res, uint256 gtId, uint128 debtAmt, address taker, SwapUnit[] memory units) internal {
+    function _testFlashRepayByFt(
+        GtTestRes memory res,
+        uint256 gtId,
+        uint128 debtAmt,
+        address taker,
+        SwapUnit[] memory units
+    ) internal {
         deal(taker, 1e18);
 
         vm.startPrank(taker);
@@ -345,7 +364,8 @@ abstract contract GtBaseTest is ForkBaseTest {
         amtsToBuyFt[0] = debtAmt;
         bool byDebtToken = false;
 
-        uint256 netTokenOut = res.router.flashRepayFromColl(taker, res.market, gtId, orders, amtsToBuyFt, byDebtToken, units);
+        uint256 netTokenOut =
+            res.router.flashRepayFromColl(taker, res.market, gtId, orders, amtsToBuyFt, byDebtToken, units);
 
         uint256 debtTokenBalanceAfterRepay = res.debtToken.balanceOf(taker);
 
@@ -354,7 +374,10 @@ abstract contract GtBaseTest is ForkBaseTest {
         vm.stopPrank();
     }
 
-    function _testLiquidate(GtTestRes memory res, address liquidator, uint256 gtId) internal returns (uint256 collateralAmt) {
+    function _testLiquidate(GtTestRes memory res, address liquidator, uint256 gtId)
+        internal
+        returns (uint256 collateralAmt)
+    {
         deal(liquidator, 1e18);
         vm.startPrank(liquidator);
 
@@ -373,7 +396,10 @@ abstract contract GtBaseTest is ForkBaseTest {
         vm.stopPrank();
     }
 
-    function _fastLoan(GtTestRes memory res, address taker, uint256 debtAmt, uint256 collateralAmt) internal returns (uint256 gtId) {
+    function _fastLoan(GtTestRes memory res, address taker, uint256 debtAmt, uint256 collateralAmt)
+        internal
+        returns (uint256 gtId)
+    {
         vm.startPrank(taker);
         deal(taker, 1e18);
         deal(address(res.collateral), taker, collateralAmt);

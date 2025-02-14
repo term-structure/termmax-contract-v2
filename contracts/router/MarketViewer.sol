@@ -79,7 +79,7 @@ contract MarketViewer {
 
         (OrderConfig memory orderConfig) = order.orderConfig();
         (uint256 ftReserve, uint256 xtReserve) = order.tokenReserves();
-        if(orderConfig.gtId != 0) {
+        if (orderConfig.gtId != 0) {
             (, uint128 debtAmt,, bytes memory collateralData) = gt.loanInfo(orderConfig.gtId);
             orderState.collateralReserve = _decodeAmount(collateralData);
             orderState.debtReserve = debtAmt;

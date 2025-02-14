@@ -337,7 +337,11 @@ contract TermMaxRouter is
         return gtId;
     }
 
-    function borrowTokenFromGt(address recipient, ITermMaxMarket market, uint256 gtId, uint256 borrowAmt) external {
+    function borrowTokenFromGt(address recipient, ITermMaxMarket market, uint256 gtId, uint256 borrowAmt)
+        external
+        ensureMarketWhitelist(address(market))
+        whenNotPaused
+    {
         (IERC20 ft, IERC20 xt, IGearingToken gt,,) = market.tokens();
 
         if (gt.ownerOf(gtId) != msg.sender) {

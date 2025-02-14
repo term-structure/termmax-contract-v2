@@ -39,36 +39,21 @@ contract DeloyOrderFork is DeployBase {
         vm.startBroadcast(deployerPrivateKey);
         uint256 maxXtReserve = 200000000000;
         CurveCut memory lendCurveCut0 = CurveCut({xtReserve: 0, liqSquare: 461683991532123062272, offset: 33973665961});
-        CurveCut memory lendCurveCut1 = CurveCut({
-            xtReserve: 9000000000,
-            liqSquare: 425141100695200464896,
-            offset: 32237899859
-        });
-        CurveCut memory lendCurveCut2 = CurveCut({
-            xtReserve: 21000000000,
-            liqSquare: 1072059478286836826112,
-            offset: 63540304430
-        });
+        CurveCut memory lendCurveCut1 =
+            CurveCut({xtReserve: 9000000000, liqSquare: 425141100695200464896, offset: 32237899859});
+        CurveCut memory lendCurveCut2 =
+            CurveCut({xtReserve: 21000000000, liqSquare: 1072059478286836826112, offset: 63540304430});
         CurveCut[] memory _lendCurveCuts = new CurveCut[](3);
         _lendCurveCuts[0] = lendCurveCut0;
         _lendCurveCuts[1] = lendCurveCut1;
         _lendCurveCuts[2] = lendCurveCut2;
 
-        CurveCut memory borrowCurveCut0 = CurveCut({
-            xtReserve: 0,
-            liqSquare: 330638754635872993280,
-            offset: 29116862443
-        });
-        CurveCut memory borrowCurveCut1 = CurveCut({
-            xtReserve: 8000000000,
-            liqSquare: 361237873939795017728,
-            offset: 30796362980
-        });
-        CurveCut memory borrowCurveCut2 = CurveCut({
-            xtReserve: 20000000000,
-            liqSquare: 826934466947518169088,
-            offset: 56854893632
-        });
+        CurveCut memory borrowCurveCut0 =
+            CurveCut({xtReserve: 0, liqSquare: 330638754635872993280, offset: 29116862443});
+        CurveCut memory borrowCurveCut1 =
+            CurveCut({xtReserve: 8000000000, liqSquare: 361237873939795017728, offset: 30796362980});
+        CurveCut memory borrowCurveCut2 =
+            CurveCut({xtReserve: 20000000000, liqSquare: 826934466947518169088, offset: 56854893632});
         CurveCut[] memory _borrowCurveCuts = new CurveCut[](3);
         _borrowCurveCuts[0] = borrowCurveCut0;
         _borrowCurveCuts[1] = borrowCurveCut1;

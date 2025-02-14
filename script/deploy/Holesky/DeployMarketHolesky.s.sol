@@ -49,13 +49,7 @@ contract DeloyMarketHolesky is DeployBase {
         string memory deployDataPath = string.concat(vm.projectRoot(), "/script/deploy/deploydata/holesky.json");
         vm.startBroadcast(deployerPrivateKey);
         (TermMaxMarket[] memory markets, JsonLoader.Config[] memory configs) = deployMarkets(
-            factoryAddr,
-            oracleAddr,
-            routerAddr,
-            faucetAddr,
-            deployDataPath,
-            adminAddr,
-            priceFeedOperatorAddr
+            factoryAddr, oracleAddr, routerAddr, faucetAddr, deployDataPath, adminAddr, priceFeedOperatorAddr
         );
 
         console.log("Faucet token number:", faucet.tokenNum());
@@ -88,23 +82,17 @@ contract DeloyMarketHolesky is DeployBase {
 
     function printMarketConfig(Faucet faucet, TermMaxMarket market, uint256 salt) public view {
         MarketConfig memory marketConfig = market.config();
-        (IMintableERC20 ft, IMintableERC20 xt, IGearingToken gt, address collateralAddr, IERC20 underlying) = market
-            .tokens();
+        (IMintableERC20 ft, IMintableERC20 xt, IGearingToken gt, address collateralAddr, IERC20 underlying) =
+            market.tokens();
 
         Faucet.TokenConfig memory collateralConfig = faucet.getTokenConfig(faucet.getTokenId(collateralAddr));
 
         Faucet.TokenConfig memory underlyingConfig = faucet.getTokenConfig(faucet.getTokenId(address(underlying)));
 
         console.log("Market deployed at:", address(market));
+        console.log("Collateral (%s) deployed at: %s", IERC20Metadata(collateralAddr).symbol(), address(collateralAddr));
         console.log(
-            "Collateral (%s) deployed at: %s",
-            IERC20Metadata(collateralAddr).symbol(),
-            address(collateralAddr)
-        );
-        console.log(
-            "Underlying (%s) deployed at: %s",
-            IERC20Metadata(address(underlying)).symbol(),
-            address(underlying)
+            "Underlying (%s) deployed at: %s", IERC20Metadata(address(underlying)).symbol(), address(underlying)
         );
         console.log("Collateral price feed deployed at:", address(collateralConfig.priceFeedAddr));
         console.log("Underlying price feed deployed at:", address(underlyingConfig.priceFeedAddr));

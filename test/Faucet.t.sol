@@ -82,7 +82,7 @@ contract FaucetTest is Test {
         uint256 oriBalance = FaucetERC20(tokenConfig.tokenAddr).balanceOf(user);
 
         priceFeed = MockPriceFeed(tokenConfig.priceFeedAddr);
-        (, int256 answer, , , ) = priceFeed.latestRoundData();
+        (, int256 answer,,,) = priceFeed.latestRoundData();
         uint8 tokenDecimals = FaucetERC20(tokenConfig.tokenAddr).decimals();
         uint8 priceFeedDecimals = priceFeed.decimals();
         uint256 mintAmt = (faucet.mintUsdValue() * 10 ** (priceFeedDecimals + tokenDecimals)) / uint256(answer);
@@ -101,7 +101,7 @@ contract FaucetTest is Test {
         uint256 oriBalance = FaucetERC20(tokenConfig.tokenAddr).balanceOf(to);
 
         priceFeed = MockPriceFeed(tokenConfig.priceFeedAddr);
-        (, int256 answer, , , ) = priceFeed.latestRoundData();
+        (, int256 answer,,,) = priceFeed.latestRoundData();
         uint8 tokenDecimals = FaucetERC20(tokenConfig.tokenAddr).decimals();
         uint8 priceFeedDecimals = priceFeed.decimals();
         uint256 mintAmt = (faucet.mintUsdValue() * 10 ** (priceFeedDecimals + tokenDecimals)) / uint256(answer);

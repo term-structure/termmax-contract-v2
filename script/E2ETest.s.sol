@@ -172,11 +172,10 @@ contract E2ETest is Script {
         // console.log("new ftBalance:", newFtBalance);
     }
 
-    function borrowFromOrder(
-        uint256 collateralAmt,
-        uint256 borrowAmt,
-        uint256 maxDebtAmt
-    ) public returns (uint256 gtId) {
+    function borrowFromOrder(uint256 collateralAmt, uint256 borrowAmt, uint256 maxDebtAmt)
+        public
+        returns (uint256 gtId)
+    {
         collateralAmt = collateralAmt * 10 ** collateral.decimals();
         borrowAmt = borrowAmt * 10 ** underlying.decimals();
         maxDebtAmt = maxDebtAmt * 10 ** underlying.decimals();
@@ -193,14 +192,8 @@ contract E2ETest is Script {
         orders[0] = order;
         uint128[] memory ftAmtsToSell = new uint128[](1);
         ftAmtsToSell[0] = uint128(borrowAmt);
-        gtId = router.borrowTokenFromCollateral(
-            userAddr,
-            market,
-            collateralAmt,
-            orders,
-            ftAmtsToSell,
-            uint128(maxDebtAmt)
-        );
+        gtId =
+            router.borrowTokenFromCollateral(userAddr, market, collateralAmt, orders, ftAmtsToSell, uint128(maxDebtAmt));
         vm.stopBroadcast();
 
         (uint256 newFtReserve, uint256 newXtReserve) = order.tokenReserves();
@@ -314,8 +307,8 @@ contract E2ETest is Script {
         console.log("--- User Position ---");
         console.log("User Addr:", userAddr);
         console.log("Market Addr:", address(market));
-        (IERC20[4] memory tokens, uint256[4] memory balances, address gtAddr, uint256[] memory gtIds) = router
-            .assetsWithERC20Collateral(market, userAddr);
+        (IERC20[4] memory tokens, uint256[4] memory balances, address gtAddr, uint256[] memory gtIds) =
+            router.assetsWithERC20Collateral(market, userAddr);
         for (uint256 i = 0; i < tokens.length; i++) {
             console.log(IERC20Metadata(address(tokens[i])).symbol(), ":", balances[i]);
         }

@@ -250,7 +250,11 @@ contract TermMaxOrder is
                 if (
                     newCurveCuts.borrowCurveCuts[i].xtReserve.plusInt256(newCurveCuts.borrowCurveCuts[i].offset)
                         != (
-                            (newCurveCuts.borrowCurveCuts[i].xtReserve.plusInt256(newCurveCuts.borrowCurveCuts[i - 1].offset))
+                            (
+                                newCurveCuts.borrowCurveCuts[i].xtReserve.plusInt256(
+                                    newCurveCuts.borrowCurveCuts[i - 1].offset
+                                )
+                            )
                                 * MathLib.sqrt(
                                     (newCurveCuts.borrowCurveCuts[i].liqSquare * Constants.DECIMAL_BASE_SQ)
                                         / newCurveCuts.borrowCurveCuts[i - 1].liqSquare
