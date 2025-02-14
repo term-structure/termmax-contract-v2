@@ -232,7 +232,7 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
                         amountLeft -= totalRedeem;
                         continue;
                     } else {
-                        asset.safeTransfer(recipient, amountLeft);
+                        asset.safeTransfer(recipient, amount);
                         amountLeft = 0;
                         break;
                     }
@@ -246,7 +246,7 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
                         ++i;
                     } else {
                         _burnFromOrder(ITermMaxOrder(order), orderInfo, amountLeft);
-                        asset.safeTransfer(recipient, amountLeft);
+                        asset.safeTransfer(recipient, amount);
                         amountLeft = 0;
                         break;
                     }

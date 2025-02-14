@@ -422,8 +422,7 @@ contract RouterTest is Test {
         res.gt.approve(address(res.router), gtId);
 
         uint256 issueFtFeeRatio = res.market.issueFtFeeRatio();
-        uint128 previewDebtAmt =
-            ((borrowAmt * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - issueFtFeeRatio)).toUint128();
+        ((borrowAmt * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - issueFtFeeRatio)).toUint128();
         vm.stopPrank();
 
         vm.expectRevert(abi.encodeWithSelector(RouterErrors.GtNotOwnedBySender.selector));

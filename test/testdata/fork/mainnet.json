@@ -1,161 +1,97 @@
 {
-  "blockNumber": "21208075",
-  "duration": "30",
-  "collateral": "0x6ee2b5E19ECBa773a352E5B21415Dc419A700d1d",
-  "debtToken": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
-  "loanConfig": {
-    "maxLtv": "89000000",
-    "liquidationLtv": "90000000",
-    "liquidatable": true
+  "tokenPairs":{
+    "length":"1",
+    "0":".WETH-PTWEETH"
   },
-  "feeConfig": {
-    "redeemFeeRatio": "0",
-    "issueFtFeeRatio": "1000000",
-    "issueFtFeeRef": "2000000",
-    "lendTakerFeeRatio": "1000000",
-    "borrowTakerFeeRatio": "2000000",
-    "lendMakerFeeRatio": "1000000",
-    "borrowMakerFeeRatio": "2000000"
-  },
-  "orderConfig": {
-    "maxXtReserve": "2000000000000000000000000000000000000000000000000000000000000000000",
-    "gtId": "0",
-    "lendCurveCuts": {
-      "0": {
-        "xtReserve": "0",
-        "liqSquare": "461683991532123062272",
-        "offset": "33973665961"
-      },
-      "1": {
-        "xtReserve": "9000000000",
-        "liqSquare": "425141100695200464896",
-        "offset": "32237899859"
-      },
-      "2": {
-        "xtReserve": "21000000000",
-        "liqSquare": "1072059478286836826112",
-        "offset": "63540304430"
-      },
-      "length": 3
+  "WETH-PTWEETH":{
+    "blockNumber": "21208075",
+    "orderInitialAmount": "2000000000000",
+    "duration": "30",
+    "collateral": "0x6ee2b5E19ECBa773a352E5B21415Dc419A700d1d",
+    "debtToken": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+    "loanConfig": {
+      "maxLtv": "89000000",
+      "liquidationLtv": "90000000",
+      "liquidatable": true
     },
-    "borrowCurveCuts": {
-      "0": {
-        "xtReserve": "0",
-        "liqSquare": "330638754635872993280",
-        "offset": "29116862443"
-      },
-      "1": {
-        "xtReserve": "8000000000",
-        "liqSquare": "361237873939795017728",
-        "offset": "30796362980"
-      },
-      "2": {
-        "xtReserve": "20000000000",
-        "liqSquare": "826934466947518169088",
-        "offset": "56854893632"
-      },
-      "length": 3
-    }
-  },
-  "routers": {
-    "uniswap": {
-      "address": "0xE592427A0AEce92De3Edee1F18E0157C05861564",
-      "poolFee": "100"
+    "feeConfig": {
+      "redeemFeeRatio": "0",
+      "issueFtFeeRatio": "1000000",
+      "issueFtFeeRef": "2000000",
+      "lendTakerFeeRatio": "1000000",
+      "borrowTakerFeeRatio": "2000000",
+      "lendMakerFeeRatio": "1000000",
+      "borrowMakerFeeRatio": "2000000"
     },
-    "pendle":{
-      "address": "0x888888888889758F76e7103c6CbF23ABbF58F946",
-      "market": "0x7d372819240D14fB477f17b964f95F33BeB4c704",
-      "underlying": "0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee"
-    },
-    "odos":{
-      "address": "0xCf5540fFFCdC3d510B18bFcA6d2b9987b0772559",
-      "odosInputReceiver": "0xDB74dfDD3BB46bE8Ce6C33dC9D82777BCFc3dEd5",
-      "outputQuote": "9455438286641436672",
-      "outputMin": "9360883903775023104",
-      "odosExecutor": "0xB28Ca7e465C452cE4252598e0Bc96Aeba553CF82",
-      "odosPath": "010203000a01010001020001ff00000000000000000000000000000000000000db74dfdd3bb46be8ce6c33dc9d82777bcfc3ded5c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
-      "odosReferralCode": "0"
-    }
-  },
-  "priceData": {
-    "ETH_2000_DAI_1": {
-      "eth": {
-        "roundId": "1",
-        "answer": "200000000000",
-        "startedAt": "1730391800",
-        "updatedAt": "1730391900",
-        "answeredInRound": "0"
+    "orderConfig": {
+      "maxXtReserve": "2000000000000000000000000000000000000000000000000000000000000000000",
+      "gtId": "0",
+      "lendCurveCuts": {
+        "0": {
+          "xtReserve": "0",
+          "liqSquare": "461683991532123062272",
+          "offset": "33973665961"
+        },
+        "1": {
+          "xtReserve": "9000000000",
+          "liqSquare": "425141100695200464896",
+          "offset": "32237899859"
+        },
+        "2": {
+          "xtReserve": "21000000000",
+          "liqSquare": "1072059478286836826112",
+          "offset": "63540304430"
+        },
+        "length": 3
       },
-      "dai": {
-        "roundId": "1",
-        "answer": "100000000",
-        "startedAt": "1730391800",
-        "updatedAt": "1730391900",
-        "answeredInRound": "0"
+      "borrowCurveCuts": {
+        "0": {
+          "xtReserve": "0",
+          "liqSquare": "330638754635872993280",
+          "offset": "29116862443"
+        },
+        "1": {
+          "xtReserve": "8000000000",
+          "liqSquare": "361237873939795017728",
+          "offset": "30796362980"
+        },
+        "2": {
+          "xtReserve": "20000000000",
+          "liqSquare": "826934466947518169088",
+          "offset": "56854893632"
+        },
+        "length": 3
       }
     },
-    "ETH_1000_DAI_1": {
-      "eth": {
-        "roundId": "1",
-        "answer": "100000000000",
-        "startedAt": "1730391800",
-        "updatedAt": "1730391900",
-        "answeredInRound": "0"
+    "routers": {
+      "uniswap": {
+        "active": true,
+        "address": "0xE592427A0AEce92De3Edee1F18E0157C05861564",
+        "poolFee": "100",
+        "leverage":{
+          "debtAmt" : "1000000000",
+          "swapAmtIn": "1000000000000000000"
+        }
       },
-      "dai": {
-        "roundId": "1",
-        "answer": "100000000",
-        "startedAt": "1730391800",
-        "updatedAt": "1730391900",
-        "answeredInRound": "0"
-      }
-    },
-    "ETH_2000_PT_WEETH_1800": {
-      "eth": {
-        "roundId": "1",
-        "answer": "200000000000",
-        "startedAt": "1730391800",
-        "updatedAt": "1730391900",
-        "answeredInRound": "0"
+      "pendle":{
+        "active": true,
+        "address": "0x888888888889758F76e7103c6CbF23ABbF58F946",
+        "market": "0x7d372819240D14fB477f17b964f95F33BeB4c704",
+        "underlying": "0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee"
       },
-      "ptWeeth": {
-        "roundId": "1",
-        "answer": "180000000000",
-        "startedAt": "1730391800",
-        "updatedAt": "1730391900",
-        "answeredInRound": "0"
-      }
-    },
-    "ETH_2000_PT_WEETH_1000": {
-      "eth": {
-        "roundId": "1",
-        "answer": "200000000000",
-        "startedAt": "1730391800",
-        "updatedAt": "1730391900",
-        "answeredInRound": "0"
-      },
-      "ptWeeth": {
-        "roundId": "1",
-        "answer": "100000000000",
-        "startedAt": "1730391800",
-        "updatedAt": "1730391900",
-        "answeredInRound": "0"
-      }
-    },
-    "ETH_200000000000_PT_WEETH_180000000000": {
-      "eth": {
-        "roundId": "1",
-        "answer": "20000000000000000000",
-        "startedAt": "1730391800",
-        "updatedAt": "1730391900",
-        "answeredInRound": "0"
-      },
-      "ptWeeth": {
-        "roundId": "1",
-        "answer": "18000000000000000000",
-        "startedAt": "1730391800",
-        "updatedAt": "1730391900",
-        "answeredInRound": "0"
+      "odos":{
+        "active": true,
+        "address": "0xCf5540fFFCdC3d510B18bFcA6d2b9987b0772559",
+        "inputReceiver": "0xDB74dfDD3BB46bE8Ce6C33dC9D82777BCFc3dEd5",
+        "outputQuote": "9455438286641436672",
+        "outputMin": "9360883903775023104",
+        "executor": "0xB28Ca7e465C452cE4252598e0Bc96Aeba553CF82",
+        "path": "010203000a01010001020001ff00000000000000000000000000000000000000db74dfdd3bb46be8ce6c33dc9d82777bcfc3ded5c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+        "referralCode": "0",
+        "leverage":{
+          "debtAmt" : "1000000000",
+          "swapAmtIn": "10000000000000000000"
+        }
       }
     }
   }
