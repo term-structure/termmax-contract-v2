@@ -395,4 +395,26 @@ contract MarketTest is Test {
 
         vm.stopPrank();
     }
+
+    function testFuzzIssueFtByExistedGtDebtAmount(uint256 ftReserve, uint256 targetFtReserve) public {
+        vm.assume(ftReserve >= 1e6 && ftReserve <= 1e24);
+        vm.assume(targetFtReserve >= ftReserve && targetFtReserve <= ftReserve + 1e24);
+        vm.assume(targetFtReserve - ftReserve >= 5e8);
+        
+        uint128 debt = uint128(((targetFtReserve - ftReserve) * Constants.DECIMAL_BASE) / 
+            (Constants.DECIMAL_BASE - res.market.issueFtFeeRatio()));
+            
+        uint256 gtId = 1;
+        
+        vm.startPrank(sender);
+        
+        bytes memory collateralData = abi.encode(1e50);
+        res.collateral.mint(sender, 1e50);
+        res.collateral.approve(address(res.gt), 1e50);
+        (, uint128 ftOutAmt) = res.market.issueFt(sender, debt, collateralData);
+        
+        assertTrue(ftOutAmt == targetFtReserve - ftReserve);
+        vm.stopPrank();
+    }
+
 }
