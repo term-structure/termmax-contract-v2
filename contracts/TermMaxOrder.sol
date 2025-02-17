@@ -385,7 +385,9 @@ contract TermMaxOrder is
         market.mint(address(this), debtTokenAmtIn);
         if (tokenOut == ft) {
             uint256 ftReserve = getTransientFtReserve();
-            if (ftReserve < netOut + feeAmt) _issueFtToSelf(ftReserve, netOut + feeAmt, config);
+            if (ftReserve + debtTokenAmtIn < netOut + feeAmt) {
+                _issueFtToSelf(ftReserve + debtTokenAmtIn, netOut + feeAmt, config);
+            }
         }
 
         tokenOut.safeTransfer(recipient, netOut);
@@ -559,7 +561,9 @@ contract TermMaxOrder is
         market.mint(address(this), netTokenIn);
         if (tokenOut == ft) {
             uint256 ftReserve = getTransientFtReserve();
-            if (ftReserve < tokenAmtOut + feeAmt) _issueFtToSelf(ftReserve, tokenAmtOut + feeAmt, config);
+            if (ftReserve + netTokenIn < tokenAmtOut + feeAmt) {
+                _issueFtToSelf(ftReserve + netTokenIn, tokenAmtOut + feeAmt, config);
+            }
         }
 
         tokenOut.safeTransfer(recipient, tokenAmtOut);
