@@ -313,7 +313,7 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
         if (totalRedeem < ftReserve) {
             // storage bad debt
             (,,, address collateral,) = orderInfo.market.tokens();
-            _badDebtMapping[collateral] = ftReserve - totalRedeem;
+            _badDebtMapping[collateral] += ftReserve - totalRedeem;
         }
         emit RedeemOrder(msg.sender, order, ftReserve.toUint128(), totalRedeem.toUint128());
 
