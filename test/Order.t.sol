@@ -420,7 +420,7 @@ contract OrderTest is Test {
         uint128 ftOutAmt = 151e8;
         uint128 maxTokenIn = 150e8;
         vm.startPrank(sender);
-        
+
         res.debt.mint(sender, maxTokenIn);
         res.debt.approve(address(res.order), maxTokenIn);
         vm.expectRevert(abi.encodeWithSelector(OrderErrors.CantNotIssueFtWithoutGt.selector));
