@@ -624,6 +624,66 @@ contract OrderTest is Test {
         res.market.updateOrderFeeRate(res.order, invalidFeeConfig);
         vm.stopPrank();
     }
+
+    function testRevertLendIsNotAllowed() public {
+        vm.startPrank(maker);
+        OrderConfig memory testOrderConfig = res.order.orderConfig();
+        testOrderConfig.curveCuts.borrowCurveCuts = new CurveCut[](0);
+
+        vm.expectEmit();
+        emit OrderEvents.UpdateOrder(
+            testOrderConfig.curveCuts,
+            0,
+            0,
+            testOrderConfig.gtId,
+            testOrderConfig.maxXtReserve,
+            ISwapCallback(address(0))
+        );
+        res.order.updateOrder(testOrderConfig, 0, 0);
+        vm.stopPrank();
+
+        vm.startPrank(sender);
+
+        uint128 underlyingAmtIn = 100e8;
+        uint128 minTokenOut = 0e8;
+        res.debt.mint(sender, underlyingAmtIn);
+        res.debt.approve(address(res.order), underlyingAmtIn);
+
+        vm.expectRevert(abi.encodeWithSelector(OrderErrors.LendIsNotAllowed.selector));
+        res.order.swapExactTokenToToken(res.debt, res.ft, sender, underlyingAmtIn, minTokenOut);
+
+        vm.stopPrank();
+    }
+
+    function testRevertBorrowIsNotAllowed() public {
+        vm.startPrank(maker);
+        OrderConfig memory testOrderConfig = res.order.orderConfig();
+        testOrderConfig.curveCuts.lendCurveCuts = new CurveCut[](0);
+
+        vm.expectEmit();
+        emit OrderEvents.UpdateOrder(
+            testOrderConfig.curveCuts,
+            0,
+            0,
+            testOrderConfig.gtId,
+            testOrderConfig.maxXtReserve,
+            ISwapCallback(address(0))
+        );
+        res.order.updateOrder(testOrderConfig, 0, 0);
+        vm.stopPrank();
+
+        vm.startPrank(sender);
+
+        uint128 underlyingAmtIn = 100e8;
+        uint128 minTokenOut = 0e8;
+        res.debt.mint(sender, underlyingAmtIn);
+        res.debt.approve(address(res.order), underlyingAmtIn);
+
+        vm.expectRevert(abi.encodeWithSelector(OrderErrors.BorrowIsNotAllowed.selector));
+        res.order.swapExactTokenToToken(res.debt, res.xt, sender, underlyingAmtIn, minTokenOut);
+
+        vm.stopPrank();
+    }
 }
 
 // Mock contracts for testing
