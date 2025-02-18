@@ -1,4 +1,10 @@
 {
-  "prettier.documentSelectors": ["**/*.sol"],
-  "printWidth": 120
+  "prettier.documentSelectors": [
+    "**/*.sol",
+    "**/*.ts",
+    "**/*.js"
+  ],
+  "printWidth": 120,
+  "singleQuote": true,
+  "trailingComma": "all"
 }
