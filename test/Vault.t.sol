@@ -661,7 +661,6 @@ contract VaultTest is Test {
         vm.warp(currentTime + 91 days);
         console.log("new principal:", vault.totalAssets());
         console.log("previewRedeem: ", vault.previewRedeem(1000e8));
-        console.log("redeem fee ratio:", res.market.config().feeConfig.redeemFeeRatio);
 
         console.log("----day 92----");
         vm.warp(currentTime + 92 days);

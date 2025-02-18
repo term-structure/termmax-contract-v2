@@ -74,8 +74,7 @@ abstract contract ForkBaseTest is Test {
         marketInitialParams.tokenSymbol = key;
 
         MarketConfig memory marketConfig;
-        marketConfig.feeConfig.redeemFeeRatio =
-            uint32(vm.parseUint(vm.parseJsonString(jsonData, string.concat(key, ".feeConfig.redeemFeeRatio"))));
+
         marketConfig.feeConfig.issueFtFeeRatio =
             uint32(vm.parseUint(vm.parseJsonString(jsonData, string.concat(key, ".feeConfig.issueFtFeeRatio"))));
         marketConfig.feeConfig.issueFtFeeRef =
