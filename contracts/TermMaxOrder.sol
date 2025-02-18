@@ -77,7 +77,7 @@ contract TermMaxOrder is
 
     /// @notice Check if the market is borrowing allowed
     modifier isBorrowingAllowed(OrderConfig memory config) {
-        if (config.curveCuts.borrowCurveCuts.length == 0) {
+        if (config.curveCuts.lendCurveCuts.length == 0) {
             revert BorrowIsNotAllowed();
         }
         _;
@@ -85,7 +85,7 @@ contract TermMaxOrder is
 
     /// @notice Check if the market is lending allowed
     modifier isLendingAllowed(OrderConfig memory config) {
-        if (config.curveCuts.lendCurveCuts.length == 0) {
+        if (config.curveCuts.borrowCurveCuts.length == 0) {
             revert LendIsNotAllowed();
         }
         _;

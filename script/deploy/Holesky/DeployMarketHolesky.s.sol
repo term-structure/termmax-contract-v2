@@ -36,13 +36,6 @@ contract DeloyMarketHolesky is DeployBase {
     address routerAddr = address(0xbFccC3c7F739d4aE7CCf680b3fafcFB5Bdc4f842);
     address faucetAddr = address(0xb927B74d5D9c3985D4DCdd62CbffEc66CF527fAa);
 
-    address[] devs = [
-        address(0x19A736387ea2F42AcAb1BC0FdE15e667e63ea9cC), // Sunny
-        address(0x9b1A93b6C9F275FE1720e18331315Ec35484a662), // Mingyu
-        address(0x86e59Ec7629b58E1575997B9dF9622a496f0b4Eb), // Garrick
-        address(0xE355d5D8aa52EF0FbbD037C4a3C5E6Fd659cf46B) // Aaron
-    ];
-
     function run() public {
         uint256 currentBlockNum = block.number;
         Faucet faucet = Faucet(faucetAddr);
@@ -53,11 +46,6 @@ contract DeloyMarketHolesky is DeployBase {
         );
 
         console.log("Faucet token number:", faucet.tokenNum());
-
-        // for (uint i = 0; i < devs.length; i++) {
-        //     console.log("Mint faucet tokens to %s", devs[i]);
-        //     faucet.devBatchMint(devs[i]);
-        // }
 
         vm.stopBroadcast();
 

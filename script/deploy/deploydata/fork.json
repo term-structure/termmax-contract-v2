@@ -1,22 +1,56 @@
 {
-  "configNum": "1",
+  "configNum": "8",
   "configs": {
     "configs_0": {
       "salt": 0,
       "marketConfig": {
         "treasurer": "0x7ab945445958819a74b48e8Bd5F9E39ed74bdE9E",
         "maturity": "1743120000",
-        "lendTakerFeeRatio": "5000000",
+        "lendTakerFeeRatio": "2000000",
         "lendMakerFeeRatio": "2000000",
-        "borrowTakerFeeRatio": "500000",
-        "borrowMakerFeeRatio": "2000000",
-        "issueFtFeeRatio": "1000000",
+        "borrowTakerFeeRatio": "300000",
+        "borrowMakerFeeRatio": "3000000",
+        "issueFtFeeRatio": "200000",
+        "issueFtFeeRef": "4000000",
+        "redeemFeeRatio": "0"
+      },
+      "loanConfig": {
+        "liquidationLtv": "94000000",
+        "maxLtv": "90000000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+        "name": "Wrapped ETH",
+        "symbol": "WETH",
+        "decimals": "18",
+        "initialPrice": "300000000000"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee",
+        "name": "Wrapped eETH",
+        "symbol": "weETH",
+        "decimals": "18",
+        "initialPrice": "320000000000",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    },
+    "configs_1": {
+      "salt": 0,
+      "marketConfig": {
+        "treasurer": "0x7ab945445958819a74b48e8Bd5F9E39ed74bdE9E",
+        "maturity": "1743120000",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "300000",
+        "borrowMakerFeeRatio": "3000000",
+        "issueFtFeeRatio": "600000",
         "issueFtFeeRef": "20000000",
         "redeemFeeRatio": "0"
       },
       "loanConfig": {
-        "liquidationLtv": "84000000",
-        "maxLtv": "82000000",
+        "liquidationLtv": "85000000",
+        "maxLtv": "81000000",
         "liquidatable": true
       },
       "underlyingConfig": {
@@ -27,11 +61,215 @@
         "initialPrice": "100000000"
       },
       "collateralConfig": {
-        "tokenAddr": "0x5bae9a5d67d1ca5b09b14c91935f635cfbf3b685",
-        "name": "PT USD0++ 27MAR2025",
-        "symbol": "PT-USD0++-27MAR2025",
+        "tokenAddr": "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0",
+        "name": "Wrapped liquid staked Ether 2.0",
+        "symbol": "wstETH",
         "decimals": "18",
-        "initialPrice": "92000000",
+        "initialPrice": "360000000000",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    },
+    "configs_2": {
+      "salt": 0,
+      "marketConfig": {
+        "treasurer": "0x7ab945445958819a74b48e8Bd5F9E39ed74bdE9E",
+        "maturity": "1743120000",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "300000",
+        "borrowMakerFeeRatio": "3000000",
+        "issueFtFeeRatio": "600000",
+        "issueFtFeeRef": "20000000",
+        "redeemFeeRatio": "0"
+      },
+      "loanConfig": {
+        "liquidationLtv": "90000000",
+        "maxLtv": "86000000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+        "name": "Tether USD",
+        "symbol": "USDT",
+        "decimals": "6",
+        "initialPrice": "100000000"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0x9D39A5DE30e57443BfF2A8307A4256c8797A3497",
+        "name": "Staked USDe",
+        "symbol": "sUSDe",
+        "decimals": "18",
+        "initialPrice": "116000000",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    },
+    "configs_3": {
+      "salt": 0,
+      "marketConfig": {
+        "treasurer": "0x7ab945445958819a74b48e8Bd5F9E39ed74bdE9E",
+        "maturity": "1743120000",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "300000",
+        "borrowMakerFeeRatio": "3000000",
+        "issueFtFeeRatio": "600000",
+        "issueFtFeeRef": "20000000",
+        "redeemFeeRatio": "0"
+      },
+      "loanConfig": {
+        "liquidationLtv": "90000000",
+        "maxLtv": "86000000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+        "name": "Tether USD",
+        "symbol": "USDT",
+        "decimals": "6",
+        "initialPrice": "100000000"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0xe00bd3df25fb187d6abbb620b3dfd19839947b81",
+        "name": "PT Ethena sUSDE 27MAR2025",
+        "symbol": "PT-sUSDE-27MAR2025",
+        "decimals": "18",
+        "initialPrice": "98190000",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    },
+    "configs_4": {
+      "salt": 0,
+      "marketConfig": {
+        "treasurer": "0x7ab945445958819a74b48e8Bd5F9E39ed74bdE9E",
+        "maturity": "1743120000",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "300000",
+        "borrowMakerFeeRatio": "3000000",
+        "issueFtFeeRatio": "600000",
+        "issueFtFeeRef": "20000000",
+        "redeemFeeRatio": "0"
+      },
+      "loanConfig": {
+        "liquidationLtv": "80000000",
+        "maxLtv": "75000000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "name": "USD Coin",
+        "symbol": "USDC",
+        "decimals": "6",
+        "initialPrice": "100000000"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0xd63070114470f685b75B74D60EEc7c1113d33a3D",
+        "name": "Usual Boosted USDC",
+        "symbol": "USUALUSDC+",
+        "decimals": "18",
+        "initialPrice": "105000000",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    },
+    "configs_5": {
+      "salt": 0,
+      "marketConfig": {
+        "treasurer": "0x7ab945445958819a74b48e8Bd5F9E39ed74bdE9E",
+        "maturity": "1740700800",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "300000",
+        "borrowMakerFeeRatio": "3000000",
+        "issueFtFeeRatio": "0",
+        "issueFtFeeRef": "0",
+        "redeemFeeRatio": "0"
+      },
+      "loanConfig": {
+        "liquidationLtv": "94000000",
+        "maxLtv": "92000000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0xD9A442856C234a39a81a089C06451EBAa4306a72",
+        "name": "pufETH",
+        "symbol": "pufETH",
+        "decimals": "18",
+        "initialPrice": "320000000000"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0x9cfc9917c171a384c7168d3529fc7e851a2e0d6d",
+        "name": "PT Puffer ETH 26JUN2025",
+        "symbol": "PT-pufETH-26JUN2025",
+        "decimals": "18",
+        "initialPrice": "315000000000",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    },
+    "configs_6": {
+      "salt": 0,
+      "marketConfig": {
+        "treasurer": "0x7ab945445958819a74b48e8Bd5F9E39ed74bdE9E",
+        "maturity": "1743120000",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "300000",
+        "borrowMakerFeeRatio": "3000000",
+        "issueFtFeeRatio": "200000",
+        "issueFtFeeRef": "4000000",
+        "redeemFeeRatio": "0"
+      },
+      "loanConfig": {
+        "liquidationLtv": "92000000",
+        "maxLtv": "88000000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+        "name": "Wrapped ETH",
+        "symbol": "WETH",
+        "decimals": "18",
+        "initialPrice": "300000000000"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0x97Ad75064b20fb2B2447feD4fa953bF7F007a706",
+        "name": "Berachain STONE",
+        "symbol": "beraSTONE",
+        "decimals": "18",
+        "initialPrice": "300000000000",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    },
+    "configs_7": {
+      "salt": 0,
+      "marketConfig": {
+        "treasurer": "0x7ab945445958819a74b48e8Bd5F9E39ed74bdE9E",
+        "maturity": "1743120000",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "300000",
+        "borrowMakerFeeRatio": "3000000",
+        "issueFtFeeRatio": "200000",
+        "issueFtFeeRef": "4000000",
+        "redeemFeeRatio": "0"
+      },
+      "loanConfig": {
+        "liquidationLtv": "94000000",
+        "maxLtv": "90000000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+        "name": "Wrapped BTC",
+        "symbol": "WBTC",
+        "decimals": "8",
+        "initialPrice": "1000000000000"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0x8236a87084f8B84306f72007F36F2618A5634494",
+        "name": "Lombard Staked BTC",
+        "symbol": "LBTC",
+        "decimals": "8",
+        "initialPrice": "1000000000000",
         "gtKeyIdentifier": "GearingTokenWithERC20"
       }
     }
