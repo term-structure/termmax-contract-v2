@@ -19,9 +19,10 @@ library TermMaxCurve {
     /// @param xtReserve XT reserve
     /// @return cutId Curve cut id
     function calcCutId(CurveCut[] memory cuts, uint256 xtReserve) internal pure returns (uint256 cutId) {
-        cutId = cuts.length - 1;
-        for (; cutId >= 0; cutId--) {
-            if (xtReserve > cuts[cutId].xtReserve) break;
+        cutId = cuts.length;
+        while(cutId > 0){
+            cutId--;
+            if (xtReserve >= cuts[cutId].xtReserve) break;
         }
     }
 
