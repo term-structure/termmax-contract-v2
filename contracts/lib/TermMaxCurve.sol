@@ -75,7 +75,11 @@ library TermMaxCurve {
             uint256 oriNegDeltaFt = negDeltaFt;
             (deltaXt, negDeltaFt) = func(liqSquare, vXtReserve, vFtReserve, deltaXt, negDeltaFt, acc);
             if (i < cuts.length - 1) {
-                if (deltaXt == type(uint256).max) continue;
+                if (deltaXt == type(uint256).max) {
+                    deltaXt = cuts[i + 1].xtReserve - oriXtReserve;
+                    negDeltaFt = oriNegDeltaFt + vFtReserve - liqSquare / (vXtReserve + deltaXt);
+                    continue;
+                }
                 if (oriXtReserve + deltaXt > cuts[i + 1].xtReserve) {
                     deltaXt = cuts[i + 1].xtReserve - oriXtReserve;
                     negDeltaFt = oriNegDeltaFt + vFtReserve - liqSquare / (vXtReserve + deltaXt);
@@ -114,7 +118,11 @@ library TermMaxCurve {
                 xtReserve
             );
             (negDeltaXt, deltaFt) = func(liqSquare, vXtReserve, vFtReserve, negDeltaXt, deltaFt, acc);
-            if (negDeltaXt == type(uint256).max) continue;
+            if (negDeltaXt == type(uint256).max) {
+                negDeltaXt = oriXtReserve - cuts[idx].xtReserve;
+                deltaFt = liqSquare / (vXtReserve - negDeltaXt) - vFtReserve;
+                continue;
+            }
             if (oriXtReserve < negDeltaXt + cuts[idx].xtReserve) {
                 negDeltaXt = oriXtReserve - cuts[idx].xtReserve;
                 deltaFt = liqSquare / (vXtReserve - negDeltaXt) - vFtReserve;
