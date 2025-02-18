@@ -25,8 +25,6 @@ library JSONLoader {
     {
         marketConfig.treasurer = treasurer;
         marketConfig.maturity = uint64(vm.parseUint(vm.parseJsonString(testdataJSON, string.concat(key, ".maturity"))));
-        marketConfig.feeConfig.redeemFeeRatio =
-            uint32(vm.parseUint(vm.parseJsonString(testdataJSON, string.concat(key, ".redeemFeeRatio"))));
         marketConfig.feeConfig.issueFtFeeRatio =
             uint32(vm.parseUint(vm.parseJsonString(testdataJSON, string.concat(key, ".issueFtFeeRatio"))));
         marketConfig.feeConfig.issueFtFeeRef =

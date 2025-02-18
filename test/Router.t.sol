@@ -540,10 +540,6 @@ contract RouterTest is Test {
     }
 
     function testRedeemAndSwap() public {
-        marketConfig.feeConfig.redeemFeeRatio = 0.01e8;
-        vm.prank(deployer);
-        res.market.updateMarketConfig(marketConfig);
-
         address bob = vm.randomAddress();
         address alice = vm.randomAddress();
 
@@ -579,8 +575,6 @@ contract RouterTest is Test {
         res.ft.approve(address(res.router), depositAmt);
         uint256 ftTotalSupply = res.ft.totalSupply();
         uint256 redeemedDebtToken = (res.debt.balanceOf(address(res.market)) * depositAmt) / ftTotalSupply;
-        redeemedDebtToken =
-            redeemedDebtToken - (marketConfig.feeConfig.redeemFeeRatio * redeemedDebtToken) / Constants.DECIMAL_BASE;
 
         uint256 expectedOutput = redeemedDebtToken + minDebtOutAmt;
 

@@ -413,6 +413,29 @@ contract OrderTest is Test {
         vm.stopPrank();
     }
 
+    function testIssueFtWhenNoAssets() public {
+        vm.startPrank(maker);
+        // Mint a GT
+        (uint256 gtId,) = LoanUtils.fastMintGt(res, maker, 100e8, 1e18);
+        res.gt.approve(address(res.order), gtId);
+        orderConfig.gtId = gtId;
+        res.order.updateOrder(orderConfig, -150e8, -150e8);
+        assert(res.ft.balanceOf(address(res.order)) == 0);
+        assert(res.xt.balanceOf(address(res.order)) == 0);
+        vm.stopPrank();
+
+        uint128 ftOutAmt = 151e8;
+        uint128 maxTokenIn = 150e8;
+        vm.startPrank(sender);
+        res.debt.mint(sender, maxTokenIn);
+        res.debt.approve(address(res.order), maxTokenIn);
+        res.order.swapTokenToExactToken(res.debt, res.ft, sender, ftOutAmt, maxTokenIn);
+        assertEq(res.ft.balanceOf(sender), ftOutAmt);
+        (, uint128 debtAmt,,) = res.gt.loanInfo(gtId);
+        assertGt(debtAmt, 100e8);
+        vm.stopPrank();
+    }
+
     function testRevertWhenIssueFt() public {
         vm.prank(maker);
         res.order.updateOrder(orderConfig, -150e8, 0);

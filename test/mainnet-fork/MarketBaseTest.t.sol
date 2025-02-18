@@ -146,7 +146,6 @@ abstract contract MarketBaseTest is ForkBaseTest {
 
     function _testRedeem(MarketTestRes memory res) internal {
         MarketConfig memory marketConfig = res.market.config();
-        marketConfig.feeConfig.redeemFeeRatio = 0.01e8;
         vm.prank(res.marketInitialParams.admin);
         res.market.updateMarketConfig(marketConfig);
 
@@ -185,13 +184,9 @@ abstract contract MarketBaseTest is ForkBaseTest {
             depositAmt * Constants.DECIMAL_BASE_SQ / (res.ft.totalSupply() - res.ft.balanceOf(address(res.market)));
         uint256 redeemAmt = propotion * res.debtToken.balanceOf(address(res.market)) / Constants.DECIMAL_BASE_SQ;
         uint256 redeemedCollateral = propotion * res.collateral.balanceOf(address(res.gt)) / Constants.DECIMAL_BASE_SQ;
-        uint256 redeemFee = (marketConfig.feeConfig.redeemFeeRatio * redeemAmt) / Constants.DECIMAL_BASE;
 
-        redeemAmt -= redeemFee;
         vm.expectEmit();
-        emit MarketEvents.Redeem(
-            bob, bob, uint128(propotion), uint128(redeemAmt), uint128(redeemFee), abi.encode(redeemedCollateral)
-        );
+        emit MarketEvents.Redeem(bob, bob, uint128(propotion), uint128(redeemAmt), abi.encode(redeemedCollateral));
         res.market.redeem(depositAmt, bob);
 
         assertEq(res.debtToken.balanceOf(bob), redeemAmt);

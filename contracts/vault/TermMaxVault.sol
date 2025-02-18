@@ -242,7 +242,7 @@ contract TermMaxVault is
      * @inheritdoc ITermMaxVault
      */
     function apr() external view returns (uint256) {
-        return (_annualizedInterest * Constants.DECIMAL_BASE) / (_accretingPrincipal + _performanceFee);
+        return (_annualizedInterest * (Constants.DECIMAL_BASE - _performanceFeeRate)) / (_accretingPrincipal);
     }
 
     /**
@@ -333,8 +333,8 @@ contract TermMaxVault is
      * @dev Get total assets, falling back to real assets if virtual assets exceed limit
      */
     function totalAssets() public view override(IERC4626, ERC4626Upgradeable) returns (uint256) {
-        (uint256 previewPrincipal, uint256 previewPerformanceFee) = _previewAccruedInterest();
-        return previewPrincipal + previewPerformanceFee;
+        (uint256 previewPrincipal,) = _previewAccruedInterest();
+        return previewPrincipal;
     }
 
     /**

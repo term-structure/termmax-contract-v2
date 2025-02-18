@@ -357,8 +357,7 @@ contract AccessManagerTest is Test {
                     borrowTakerFeeRatio: 0.001e8,
                     borrowMakerFeeRatio: 0.001e8,
                     issueFtFeeRatio: 0.001e8,
-                    issueFtFeeRef: 0.001e8,
-                    redeemFeeRatio: 0.001e8
+                    issueFtFeeRef: 0.001e8
                 })
             }),
             loanConfig: LoanConfig({oracle: res.oracle, liquidationLtv: 0.9e8, maxLtv: 0.85e8, liquidatable: true}),

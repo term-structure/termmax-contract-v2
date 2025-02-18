@@ -100,6 +100,5 @@ contract DeloyMarketHolesky is DeployBase {
         console.log("Borrow Maker Fee Ratio:", marketConfig.feeConfig.borrowMakerFeeRatio);
         console.log("Issue FT Fee Ratio:", marketConfig.feeConfig.issueFtFeeRatio);
         console.log("Issue FT Fee Ref:", marketConfig.feeConfig.issueFtFeeRef);
-        console.log("Redeem FT Fee Ratio:", marketConfig.feeConfig.redeemFeeRatio);
     }
 }
