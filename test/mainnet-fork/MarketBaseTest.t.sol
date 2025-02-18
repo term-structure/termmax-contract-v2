@@ -216,10 +216,10 @@ abstract contract MarketBaseTest is ForkBaseTest {
         res.gt.approve(address(res.order), gtId);
         OrderConfig memory orderConfig = res.order.orderConfig();
         orderConfig.gtId = gtId;
-        // make sure ft reserve in order is 150e8
+        // make sure ft reserve in order is zero and xt is 150e8
         res.order.updateOrder(
             orderConfig,
-            -(res.ft.balanceOf(address(res.order)) - maxTokenIn).toInt256(),
+            -(res.ft.balanceOf(address(res.order)).toInt256()),
             -(res.xt.balanceOf(address(res.order)) - maxTokenIn).toInt256()
         );
         vm.stopPrank();

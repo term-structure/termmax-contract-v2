@@ -22,13 +22,13 @@
       },
       "1": {
         "xtReserve": "9000000000",
-        "liqSquare": "425141100695200464896",
-        "offset": "32237899859"
+        "liqSquare": "2657131879345003954176",
+        "offset": "94094749863"
       },
       "2": {
-        "xtReserve": "21000000000",
-        "liqSquare": "1072059478286836826112",
-        "offset": "63540304430"
+        "xtReserve": "39000000000",
+        "liqSquare": "2969693845669949952",
+        "offset": "-34550510749"
       },
       "length": 3
     },
@@ -105,31 +105,31 @@
     "testBuyXt": {
       "contractState": {
         "ftReserve": "15485294117",
-        "xtReserve": "3211030904"
+        "xtReserve": "3537404294"
       },
       "output": {
-        "netOut": "12288969096",
+        "netOut": "11962595706",
         "fee": "14705883"
       }
     },
     "testSellFt": {
       "contractState": {
-        "ftReserve": "15016931932",
-        "xtReserve": "15031799542"
+        "ftReserve": "15088601437",
+        "xtReserve": "15105640850"
       },
       "output": {
-        "netOut": "9968200458",
-        "fee": "7797473"
+        "netOut": "9894359150",
+        "fee": "9969276"
       }
     },
     "testSellXt": {
       "contractState": {
-        "ftReserve": "15023896144",
-        "xtReserve": "15052172555"
+        "ftReserve": "15040569958",
+        "xtReserve": "15068355963"
       },
       "output": {
-        "netOut": "447827445",
-        "fee": "13570528"
+        "netOut": "431644037",
+        "fee": "13080122"
       }
     },
     "testBuyExactFt": {
@@ -144,31 +144,31 @@
     },
     "testBuyExactXt": {
       "contractState": {
-        "ftReserve": "15373687659",
-        "xtReserve": "5385011528"
+        "ftReserve": "15390431728",
+        "xtReserve": "5402262993"
       },
       "output": {
-        "netOut": "385011528",
-        "fee": "11323869"
+        "netOut": "402262993",
+        "fee": "11831265"
       }
     },
     "testSellFtForExactToken": {
       "contractState": {
-        "ftReserve": "14958424150",
+        "ftReserve": "15021078506",
         "xtReserve": "17000000000"
       },
       "output": {
-        "netOut": "8204833325",
-        "fee": "6024510"
+        "netOut": "8269386298",
+        "fee": "7923127"
       }
     },
     "testSellXtForExactToken": {
       "contractState": {
         "ftReserve": "15176203208",
-        "xtReserve": "10312687820"
+        "xtReserve": "10796542093"
       },
       "output": {
-        "netOut": "7401656916",
+        "netOut": "7559137799",
         "fee": "9090909"
       }
     }
