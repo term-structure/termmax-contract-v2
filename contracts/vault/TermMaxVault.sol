@@ -107,6 +107,7 @@ contract TermMaxVault is
 
     function _setPerformanceFeeRate(uint64 newPerformanceFeeRate) internal {
         if (newPerformanceFeeRate > VaultConstants.MAX_PERFORMANCE_FEE_RATE) revert PerformanceFeeRateExceeded();
+        _delegateCall(abi.encodeCall(IOrderManager.accruedInterest, ()));
         _performanceFeeRate = newPerformanceFeeRate;
     }
 
@@ -656,7 +657,6 @@ contract TermMaxVault is
      * @inheritdoc ITermMaxVault
      */
     function acceptPerformanceFeeRate() external afterTimelock(_pendingPerformanceFeeRate.validAt) {
-        _delegateCall(abi.encodeCall(IOrderManager.accruedInterest, ()));
         _setPerformanceFeeRate(uint256(_pendingPerformanceFeeRate.value).toUint64());
         delete _pendingPerformanceFeeRate;
         emit SetPerformanceFeeRate(_msgSender(), _performanceFeeRate);
