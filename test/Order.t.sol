@@ -711,6 +711,30 @@ contract OrderTest is Test {
 
         vm.stopPrank();
     }
+
+    function testAprWithoutCurve() public {
+        vm.startPrank(maker);
+        OrderConfig memory testOrderConfig = res.order.orderConfig();
+        testOrderConfig.curveCuts.lendCurveCuts = new CurveCut[](0);
+        testOrderConfig.curveCuts.borrowCurveCuts = new CurveCut[](0);
+
+        vm.expectEmit();
+        emit OrderEvents.UpdateOrder(
+            testOrderConfig.curveCuts,
+            0,
+            0,
+            testOrderConfig.gtId,
+            testOrderConfig.maxXtReserve,
+            ISwapCallback(address(0))
+        );
+        res.order.updateOrder(testOrderConfig, 0, 0);
+        vm.stopPrank();
+
+        (uint256 lendApr, uint256 borrowApr) = res.order.apr();
+
+        assert(lendApr == 0);
+        assert(borrowApr == type(uint256).max);
+    }
 }
 
 // Mock contracts for testing
