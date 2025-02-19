@@ -93,6 +93,17 @@
           "swapAmtIn": "10000000000000000000"
         }
       }
+    },
+    "tradingBot": {
+      "aave": {
+        "active": true,
+        "pool": "0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2",
+        "addressProvider": "0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e"
+      },
+      "morpho": {
+        "active": true,
+        "morpho": "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb"
+      }
     }
   }
 }

@@ -35,7 +35,7 @@ contract TradingBot is IAaveFlashLoanCallback, IMorphoFlashLoanCallback {
 
     function doTrade(address asset, uint256 borrowAmount, BorrowType borrowType, bytes memory params) external {
         if (borrowType == BorrowType.AAVE) {
-            AAVE_POOL.flashLoanSimple(address(this), asset, borrowAmount, abi.encode(asset, params), 0);
+            AAVE_POOL.flashLoanSimple(address(this), asset, borrowAmount, params, 0);
         } else if (borrowType == BorrowType.MORPHO) {
             MORPHO.flashLoan(asset, borrowAmount, abi.encode(asset, params));
         }
@@ -54,17 +54,18 @@ contract TradingBot is IAaveFlashLoanCallback, IMorphoFlashLoanCallback {
             IERC20 tradeToken,
             address recipient,
             ITermMaxOrder[] memory buyOrders,
-            uint128[] memory buyAmts,
             ITermMaxOrder[] memory sellOrders,
-            uint128[] memory sellAmts
-        ) = abi.decode(data, (uint256, IERC20, address, ITermMaxOrder[], uint128[], ITermMaxOrder[], uint128[]));
+            uint128[] memory tradingAmts
+        ) = abi.decode(data, (uint256, IERC20, address, ITermMaxOrder[], ITermMaxOrder[], uint128[]));
         tradeToken.safeIncreaseAllowance(address(MORPHO), assets);
         token.safeIncreaseAllowance(address(termMaxRouter), assets);
-        termMaxRouter.swapTokenToExactToken(token, tradeToken, address(this), buyOrders, buyAmts, assets);
-        tradeToken.safeIncreaseAllowance(address(termMaxRouter), _sumUint128Array(sellAmts));
+        uint256 cost =
+            termMaxRouter.swapTokenToExactToken(token, tradeToken, address(this), buyOrders, tradingAmts, assets);
+        tradeToken.safeIncreaseAllowance(address(termMaxRouter), _sumUint128Array(tradingAmts));
         uint256 income = termMaxRouter.swapExactTokenToToken(
-            tradeToken, token, address(this), sellOrders, sellAmts, (assets + minIncome + premium).toUint128()
-        ) - assets - premium;
+            tradeToken, token, address(this), sellOrders, tradingAmts, (cost + minIncome + premium).toUint128()
+        );
+        income = income - cost - premium;
         token.safeTransfer(recipient, income);
     }
 
@@ -75,7 +76,7 @@ contract TradingBot is IAaveFlashLoanCallback, IMorphoFlashLoanCallback {
         returns (bool)
     {
         _doTrade(IERC20(asset), premium, amount.toUint128(), params);
-        IERC20(asset).safeIncreaseAllowance(address(MORPHO), amount + premium);
+        IERC20(asset).safeIncreaseAllowance(address(AAVE_POOL), amount + premium);
         return true;
     }
 

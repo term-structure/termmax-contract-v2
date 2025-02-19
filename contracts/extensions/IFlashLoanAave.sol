@@ -63,7 +63,6 @@ interface IFlashLoanAave {
  * @dev Implement this interface to develop a flashloan-compatible flashLoanReceiver contract
  */
 interface IAaveFlashLoanCallback {
-
     /**
      * @notice Executes an operation after receiving the flash-borrowed asset
      * @dev Ensure that the contract can return the debt + premium, e.g., has
