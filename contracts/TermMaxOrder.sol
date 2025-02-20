@@ -284,8 +284,10 @@ contract TermMaxOrder is
         IERC20 tokenOut,
         address recipient,
         uint128 tokenAmtIn,
-        uint128 minTokenOut
+        uint128 minTokenOut,
+        uint256 deadline
     ) external override nonReentrant isOpen returns (uint256 netTokenOut) {
+        if (block.timestamp > deadline) revert DeadlineExpired();
         if (tokenIn == tokenOut) revert CantSwapSameToken();
         OrderConfig memory config = _orderConfig;
         uint256 feeAmt;
@@ -483,8 +485,10 @@ contract TermMaxOrder is
         IERC20 tokenOut,
         address recipient,
         uint128 tokenAmtOut,
-        uint128 maxTokenIn
-    ) external nonReentrant isOpen returns (uint256 netTokenIn) {
+        uint128 maxTokenIn,
+        uint256 deadline
+    ) external override nonReentrant isOpen returns (uint256 netTokenIn) {
+        if (block.timestamp > deadline) revert DeadlineExpired();
         if (tokenIn == tokenOut) revert CantSwapSameToken();
         OrderConfig memory config = _orderConfig;
         uint256 feeAmt;

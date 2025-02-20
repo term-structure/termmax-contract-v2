@@ -64,13 +64,15 @@ interface ITermMaxOrder {
     /// @param recipient Who receive output tokens
     /// @param tokenAmtIn The number of tokenIn tokens input
     /// @param minTokenOut Minimum number of tokenOut token outputs required
+    /// @param deadline The timestamp after which the transaction will revert
     /// @return netOut The actual number of tokenOut tokens received
     function swapExactTokenToToken(
         IERC20 tokenIn,
         IERC20 tokenOut,
         address recipient,
         uint128 tokenAmtIn,
-        uint128 minTokenOut
+        uint128 minTokenOut,
+        uint256 deadline
     ) external returns (uint256 netOut);
 
     /// @notice Swap token to exact token
@@ -79,13 +81,15 @@ interface ITermMaxOrder {
     /// @param recipient Who receive output tokens
     /// @param tokenAmtOut The number of tokenOut tokens output
     /// @param maxTokenIn Maximum number of tokenIn token inputs required
+    /// @param deadline The timestamp after which the transaction will revert
     /// @return netIn The actual number of tokenIn tokens input
     function swapTokenToExactToken(
         IERC20 tokenIn,
         IERC20 tokenOut,
         address recipient,
         uint128 tokenAmtOut,
-        uint128 maxTokenIn
+        uint128 maxTokenIn,
+        uint256 deadline
     ) external returns (uint256 netIn);
 
     /// @notice Suspension of market trading

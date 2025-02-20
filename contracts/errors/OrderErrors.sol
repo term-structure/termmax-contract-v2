@@ -51,6 +51,11 @@ interface OrderErrors {
     error OnlyMarket();
 
     /**
+     * @notice Error thrown when a swap transaction is submitted after its deadline
+     */
+    error DeadlineExpired();
+
+    /**
      * @notice Error thrown when a GT hasn't been approved for an operation
      * @param gtId The ID of the unapproved GT
      */
