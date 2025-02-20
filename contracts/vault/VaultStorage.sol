@@ -49,8 +49,6 @@ contract VaultStorage {
 
     /// @dev The last time the interest was accurately calculated
     uint64 internal _lastUpdateTime;
-    /// @dev The recentest maturity
-    uint64 internal _recentestMaturity;
     /// @dev A one-way linked list presented using a mapping structure, recorded in order according to matiruty
     /// @dev The key is the maturity, and the value is the next maturity
     /// Etc. day 0 => day 1 => day 2 => day 3 => ...

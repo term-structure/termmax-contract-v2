@@ -16,6 +16,7 @@ import {Constants} from "contracts/lib/Constants.sol";
 import {ArrayUtils} from "contracts/lib/ArrayUtils.sol";
 import {OrderConfig, CurveCuts} from "contracts/storage/TermMaxStorage.sol";
 import {MathLib} from "contracts/lib/MathLib.sol";
+import {LinkedList} from "contracts/lib/LinkedList.sol";
 import {IOrderManager} from "./IOrderManager.sol";
 import {ISwapCallback} from "contracts/ISwapCallback.sol";
 import {OrderInfo, VaultStorage} from "./VaultStorage.sol";
@@ -31,6 +32,7 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
     using TransferUtils for IERC20;
     using ArrayUtils for address[];
     using MathLib for uint256;
+    using LinkedList for mapping(uint64 => uint64);
 
     address private immutable ORDER_MANAGER_SINGLETON;
 
@@ -106,40 +108,8 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
         uint64 orderMaturity = market.config().maturity;
         _orderMapping[address(order)] =
             OrderInfo({market: market, ft: ft, xt: xt, maxSupply: maxSupply.toUint128(), maturity: orderMaturity});
-        _insertMaturity(orderMaturity);
-
+        _maturityMapping.insertWhenZeroAsRoot(orderMaturity);
         emit CreateOrder(msg.sender, address(market), address(order), maxSupply, initialReserve, curveCuts);
-    }
-
-    /**
-     * @notice Insert a maturity into the maturity linked list
-     * @param maturity The maturity to insert
-     */
-    function _insertMaturity(uint64 maturity) internal {
-        uint64 priorMaturity = _recentestMaturity;
-        if (_recentestMaturity == 0) {
-            _recentestMaturity = maturity;
-            return;
-        } else if (maturity < priorMaturity) {
-            _recentestMaturity = maturity;
-            _maturityMapping[maturity] = priorMaturity;
-            return;
-        }
-
-        uint64 nextMaturity = _maturityMapping[priorMaturity];
-        while (nextMaturity > 0) {
-            if (maturity < nextMaturity) {
-                _maturityMapping[maturity] = nextMaturity;
-                if (priorMaturity > 0) _maturityMapping[priorMaturity] = maturity;
-                return;
-            } else if (maturity == nextMaturity) {
-                break;
-            } else {
-                priorMaturity = nextMaturity;
-                nextMaturity = _maturityMapping[priorMaturity];
-            }
-        }
-        _maturityMapping[priorMaturity] = maturity;
     }
 
     function _updateOrder(
@@ -344,24 +314,25 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
         uint64 currentTime = block.timestamp.toUint64();
 
         uint256 lastTime = _lastUpdateTime;
-        uint64 recentMaturity = _recentestMaturity;
+        uint64 recentMaturity = _maturityMapping[0];
 
-        while (currentTime >= recentMaturity && recentMaturity != 0) {
+        while (recentMaturity != 0 && recentMaturity < currentTime) {
+            // pop first maturity
+            _maturityMapping.popWhenZeroAsRoot();
             _accruedPeriodInterest(lastTime, recentMaturity);
+            // update last time
             lastTime = recentMaturity;
-            uint64 nextMaturity = _maturityMapping[recentMaturity];
-            delete _maturityMapping[recentMaturity];
             // update anualized interest
             _annualizedInterest -= _maturityToInterest[recentMaturity];
             delete _maturityToInterest[recentMaturity];
-            recentMaturity = nextMaturity;
+            // get next maturity
+            recentMaturity = _maturityMapping[0];
         }
+        // accrued interest for the remaining maturity
         if (recentMaturity > 0) {
             _accruedPeriodInterest(lastTime, currentTime);
-            _recentestMaturity = recentMaturity;
         } else {
             // all orders are expired
-            _recentestMaturity = 0;
             _annualizedInterest = 0;
         }
         _lastUpdateTime = currentTime;
