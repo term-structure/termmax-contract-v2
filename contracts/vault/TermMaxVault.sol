@@ -668,7 +668,7 @@ contract TermMaxVault is
     function pause() external onlyOwner {
         _pause();
         // pause orders
-        for(uint i = 0; i < _supplyQueue.length; ++i) {
+        for (uint256 i = 0; i < _supplyQueue.length; ++i) {
             ITermMaxOrder(_supplyQueue[i]).pause();
         }
     }
@@ -679,7 +679,7 @@ contract TermMaxVault is
     function unpause() external onlyOwner {
         _unpause();
         // unpause orders
-        for(uint i = 0; i < _supplyQueue.length; ++i) {
+        for (uint256 i = 0; i < _supplyQueue.length; ++i) {
             ITermMaxOrder(_supplyQueue[i]).unpause();
         }
     }

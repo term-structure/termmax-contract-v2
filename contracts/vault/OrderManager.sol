@@ -306,13 +306,15 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
 
     function _redeemFromMarket(address order, OrderInfo memory orderInfo) internal returns (uint256 totalRedeem) {
         uint256 ftReserve = orderInfo.ft.balanceOf(order);
-        ITermMaxOrder(order).withdrawAssets(orderInfo.ft, address(this), ftReserve);
-        orderInfo.ft.safeIncreaseAllowance(address(orderInfo.market), ftReserve);
-        totalRedeem = orderInfo.market.redeem(ftReserve, address(this));
-        if (totalRedeem < ftReserve) {
-            // storage bad debt
-            (,,, address collateral,) = orderInfo.market.tokens();
-            _badDebtMapping[collateral] += ftReserve - totalRedeem;
+        if (ftReserve != 0) {
+            ITermMaxOrder(order).withdrawAssets(orderInfo.ft, address(this), ftReserve);
+            orderInfo.ft.safeIncreaseAllowance(address(orderInfo.market), ftReserve);
+            totalRedeem = orderInfo.market.redeem(ftReserve, address(this));
+            if (totalRedeem < ftReserve) {
+                // storage bad debt
+                (,,, address collateral,) = orderInfo.market.tokens();
+                _badDebtMapping[collateral] += ftReserve - totalRedeem;
+            }
         }
         emit RedeemOrder(msg.sender, order, ftReserve.toUint128(), totalRedeem.toUint128());
 
@@ -343,9 +345,7 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
 
         uint256 lastTime = _lastUpdateTime;
         uint64 recentMaturity = _recentestMaturity;
-        if (lastTime == 0) {
-            lastTime = currentTime;
-        }
+
         while (currentTime >= recentMaturity && recentMaturity != 0) {
             _accruedPeriodInterest(lastTime, recentMaturity);
             lastTime = recentMaturity;
