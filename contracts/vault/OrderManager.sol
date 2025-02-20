@@ -168,9 +168,8 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
             uint256 depositChanges = changes.toUint256();
             asset.safeIncreaseAllowance(address(orderInfo.market), depositChanges);
             orderInfo.market.mint(address(order), depositChanges);
-            changes = 0;
-
-            order.updateOrder(newOrderConfig, changes, changes);
+            // update curve cuts
+            order.updateOrder(newOrderConfig, 0, 0);
         }
         _orderMapping[address(order)] = orderInfo;
         emit UpdateOrder(msg.sender, address(order), changes, maxSupply, curveCuts);
