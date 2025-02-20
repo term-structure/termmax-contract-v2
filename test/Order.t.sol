@@ -787,6 +787,31 @@ contract OrderTest is Test {
         }
         vm.stopPrank();
     }
+
+    function testUtWhenDeadlineLessThanBlockTime() public {
+        vm.startPrank(sender);
+
+        uint128 swapAmt = 5e8;
+        IERC20 tokenIn = IERC20(address(res.debt));
+        IERC20 tokenOut = IERC20(address(res.xt));
+
+        // Set block timestamp
+        uint256 currentTime = 1000;
+        vm.warp(currentTime);
+
+        // Try to swap with deadline less than block time
+        uint256 pastDeadline = currentTime - 1;
+
+        tokenIn.approve(address(res.order), swapAmt);
+
+        vm.expectRevert(OrderErrors.DeadlineExpired.selector);
+        res.order.swapExactTokenToToken(tokenIn, tokenOut, sender, swapAmt, 0, pastDeadline);
+
+        vm.expectRevert(OrderErrors.DeadlineExpired.selector);
+        res.order.swapTokenToExactToken(tokenIn, tokenOut, sender, 1, swapAmt, pastDeadline);
+
+        vm.stopPrank();
+    }
 }
 
 // Mock contracts for testing

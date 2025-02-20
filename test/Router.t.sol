@@ -338,8 +338,9 @@ contract RouterTest is Test {
 
         // vm.expectEmit();
         // emit RouterEvents.Borrow(res.market, gtId, sender, sender, collInAmt, maxDebtAmt.toUint128(), borrowAmt);
-        uint256 gtId =
-            res.router.borrowTokenFromCollateral(sender, res.market, collInAmt, orders, tokenAmtsWantBuy, maxDebtAmt, block.timestamp + 1 hours);
+        uint256 gtId = res.router.borrowTokenFromCollateral(
+            sender, res.market, collInAmt, orders, tokenAmtsWantBuy, maxDebtAmt, block.timestamp + 1 hours
+        );
 
         (address owner, uint128 debtAmt,, bytes memory collateralData) = res.gt.loanInfo(gtId);
         assertEq(owner, sender);
@@ -453,7 +454,9 @@ contract RouterTest is Test {
         units[0] = SwapUnit(address(adapter), address(res.collateral), address(res.debt), abi.encode(mintTokenOut));
 
         res.gt.approve(address(res.router), gtId);
-        res.router.flashRepayFromColl(sender, res.market, gtId, orders, amtsToBuyFt, byDebtToken, units, block.timestamp + 1 hours);
+        res.router.flashRepayFromColl(
+            sender, res.market, gtId, orders, amtsToBuyFt, byDebtToken, units, block.timestamp + 1 hours
+        );
 
         assertEq(res.collateral.balanceOf(sender), 0);
         assertEq(res.debt.balanceOf(sender), mintTokenOut - debtAmt);
