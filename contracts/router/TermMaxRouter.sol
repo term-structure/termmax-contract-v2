@@ -128,11 +128,12 @@ contract TermMaxRouter is
         address recipient,
         ITermMaxOrder[] memory orders,
         uint128[] memory tradingAmts,
-        uint128 minTokenOut
+        uint128 minTokenOut,
+        uint256 deadline
     ) external whenNotPaused returns (uint256 netTokenOut) {
         uint256 totalAmtIn = sum(tradingAmts);
         tokenIn.safeTransferFrom(msg.sender, address(this), totalAmtIn);
-        netTokenOut = _swapExactTokenToToken(tokenIn, tokenOut, recipient, orders, tradingAmts, minTokenOut);
+        netTokenOut = _swapExactTokenToToken(tokenIn, tokenOut, recipient, orders, tradingAmts, minTokenOut, deadline);
         emit SwapExactTokenToToken(tokenIn, tokenOut, msg.sender, recipient, orders, tradingAmts, netTokenOut);
     }
 
@@ -142,12 +143,13 @@ contract TermMaxRouter is
         address recipient,
         ITermMaxOrder[] memory orders,
         uint128[] memory tradingAmts,
-        uint128 minTokenOut
+        uint128 minTokenOut,
+        uint256 deadline
     ) internal returns (uint256 netTokenOut) {
         for (uint256 i = 0; i < orders.length; ++i) {
             ITermMaxOrder order = orders[i];
             tokenIn.safeIncreaseAllowance(address(order), tradingAmts[i]);
-            netTokenOut += order.swapExactTokenToToken(tokenIn, tokenOut, recipient, tradingAmts[i], 0);
+            netTokenOut += order.swapExactTokenToToken(tokenIn, tokenOut, recipient, tradingAmts[i], 0, deadline);
         }
         if (netTokenOut < minTokenOut) revert InsufficientTokenOut(address(tokenOut), netTokenOut, minTokenOut);
     }
@@ -158,10 +160,11 @@ contract TermMaxRouter is
         address recipient,
         ITermMaxOrder[] memory orders,
         uint128[] memory tradingAmts,
-        uint128 maxTokenIn
+        uint128 maxTokenIn,
+        uint256 deadline
     ) external whenNotPaused returns (uint256 netTokenIn) {
         tokenIn.safeTransferFrom(msg.sender, address(this), maxTokenIn);
-        netTokenIn = _swapTokenToExactToken(tokenIn, tokenOut, recipient, orders, tradingAmts, maxTokenIn);
+        netTokenIn = _swapTokenToExactToken(tokenIn, tokenOut, recipient, orders, tradingAmts, maxTokenIn, deadline);
         tokenIn.safeTransfer(recipient, maxTokenIn - netTokenIn);
         emit SwapTokenToExactToken(tokenIn, tokenOut, msg.sender, recipient, orders, tradingAmts, netTokenIn);
     }
@@ -172,12 +175,14 @@ contract TermMaxRouter is
         address recipient,
         ITermMaxOrder[] memory orders,
         uint128[] memory tradingAmts,
-        uint128 maxTokenIn
+        uint128 maxTokenIn,
+        uint256 deadline
     ) internal returns (uint256 netTokenIn) {
         for (uint256 i = 0; i < orders.length; ++i) {
             ITermMaxOrder order = orders[i];
             tokenIn.safeIncreaseAllowance(address(order), maxTokenIn);
-            netTokenIn += order.swapTokenToExactToken(tokenIn, tokenOut, recipient, tradingAmts[i], maxTokenIn);
+            netTokenIn +=
+                order.swapTokenToExactToken(tokenIn, tokenOut, recipient, tradingAmts[i], maxTokenIn, deadline);
         }
         if (netTokenIn > maxTokenIn) revert InsufficientTokenIn(address(tokenIn), netTokenIn, maxTokenIn);
     }
@@ -195,7 +200,8 @@ contract TermMaxRouter is
         uint128 xtInAmt,
         ITermMaxOrder[] memory orders,
         uint128[] memory amtsToSellTokens,
-        uint128 minTokenOut
+        uint128 minTokenOut,
+        uint256 deadline
     ) external whenNotPaused ensureMarketWhitelist(address(market)) returns (uint256 netTokenOut) {
         (IERC20 ft, IERC20 xt,,, IERC20 debtToken) = market.tokens();
         (uint256 maxBurn, IERC20 toenToSell) = ftInAmt > xtInAmt ? (xtInAmt, ft) : (ftInAmt, xt);
@@ -205,7 +211,7 @@ contract TermMaxRouter is
         xt.safeTransferFrom(msg.sender, address(this), xtInAmt);
         xt.safeIncreaseAllowance(address(market), maxBurn);
         market.burn(recipient, maxBurn);
-        netTokenOut = _swapExactTokenToToken(toenToSell, debtToken, recipient, orders, amtsToSellTokens, 0);
+        netTokenOut = _swapExactTokenToToken(toenToSell, debtToken, recipient, orders, amtsToSellTokens, 0, deadline);
         netTokenOut += maxBurn;
         if (netTokenOut < minTokenOut) revert InsufficientTokenOut(address(debtToken), netTokenOut, minTokenOut);
         emit SellTokens(market, msg.sender, recipient, ftInAmt, xtInAmt, orders, amtsToSellTokens, netTokenOut);
@@ -219,12 +225,13 @@ contract TermMaxRouter is
         uint128 minXtOut,
         uint128 tokenToSwap,
         uint128 maxLtv,
-        SwapUnit[] memory units
+        SwapUnit[] memory units,
+        uint256 deadline
     ) external whenNotPaused ensureMarketWhitelist(address(market)) returns (uint256 gtId, uint256 netXtOut) {
         (, IERC20 xt, IGearingToken gt,, IERC20 debtToken) = market.tokens();
         uint256 totalAmtToBuyXt = sum(amtsToBuyXt);
         debtToken.safeTransferFrom(msg.sender, address(this), tokenToSwap + totalAmtToBuyXt);
-        netXtOut = _swapExactTokenToToken(debtToken, xt, address(this), orders, amtsToBuyXt, minXtOut);
+        netXtOut = _swapExactTokenToToken(debtToken, xt, address(this), orders, amtsToBuyXt, minXtOut, deadline);
 
         bytes memory callbackData = abi.encode(address(gt), tokenToSwap, units);
         xt.safeIncreaseAllowance(address(market), netXtOut);
@@ -273,20 +280,16 @@ contract TermMaxRouter is
         uint256 collInAmt,
         ITermMaxOrder[] memory orders,
         uint128[] memory tokenAmtsWantBuy,
-        uint128 maxDebtAmt
+        uint128 maxDebtAmt,
+        uint256 deadline
     ) external ensureMarketWhitelist(address(market)) whenNotPaused returns (uint256) {
         (IERC20 ft,, IGearingToken gt, address collateralAddr, IERC20 debtToken) = market.tokens();
         IERC20(collateralAddr).safeTransferFrom(msg.sender, address(this), collInAmt);
         IERC20(collateralAddr).safeIncreaseAllowance(address(gt), collInAmt);
 
-        /**
-         * 1. MintGT with Collateral, and get GT, FT
-         * 2. Sell FT to get UnderlyingToken
-         * 3. Transfer UnderlyingToken and GT to Receiver
-         */
         (uint256 gtId, uint128 ftOutAmt) = market.issueFt(address(this), maxDebtAmt, _encodeAmount(collInAmt));
-        uint256 netTokenIn = _swapTokenToExactToken(ft, debtToken, recipient, orders, tokenAmtsWantBuy, ftOutAmt);
-        // NOTE: if netTokenIn < ftOutAmt, repay
+        uint256 netTokenIn =
+            _swapTokenToExactToken(ft, debtToken, recipient, orders, tokenAmtsWantBuy, ftOutAmt, deadline);
         uint256 repayAmt = ftOutAmt - netTokenIn;
         if (repayAmt > 0) {
             ft.safeIncreaseAllowance(address(gt), repayAmt);
@@ -294,16 +297,7 @@ contract TermMaxRouter is
         }
 
         gt.safeTransferFrom(address(this), recipient, gtId);
-        emit Borrow(
-            market,
-            gtId,
-            msg.sender,
-            recipient,
-            collInAmt,
-            (maxDebtAmt - repayAmt).toUint128(),
-            sum(tokenAmtsWantBuy).toUint128()
-        );
-
+        emit Borrow(market, gtId, msg.sender, recipient, collInAmt, ftOutAmt, netTokenIn.toUint128());
         return gtId;
     }
 
@@ -323,7 +317,6 @@ contract TermMaxRouter is
             ((borrowAmt * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - issueFtFeeRatio)).toUint128();
 
         (uint256 gtId, uint128 ftOutAmt) = market.issueFt(address(this), debtAmt, _encodeAmount(collInAmt));
-        // ftOutAmt may be smaller than borrowAmt due to accuracy loss
         borrowAmt = borrowAmt.min(ftOutAmt);
         xt.safeTransferFrom(msg.sender, address(this), borrowAmt);
 
@@ -353,7 +346,6 @@ contract TermMaxRouter is
             ((borrowAmt * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - issueFtFeeRatio)).toUint128();
 
         uint256 ftOutAmt = market.issueFtByExistedGt(address(this), debtAmt, gtId);
-        // ftOutAmt may be smaller than borrowAmt due to accuracy loss
         borrowAmt = borrowAmt.min(ftOutAmt);
         xt.safeTransferFrom(msg.sender, address(this), borrowAmt);
 
@@ -374,12 +366,12 @@ contract TermMaxRouter is
         ITermMaxOrder[] memory orders,
         uint128[] memory amtsToBuyFt,
         bool byDebtToken,
-        SwapUnit[] memory units
+        SwapUnit[] memory units,
+        uint256 deadline
     ) external ensureMarketWhitelist(address(market)) whenNotPaused returns (uint256 netTokenOut) {
         (IERC20 ft,, IGearingToken gt,, IERC20 debtToken) = market.tokens();
         gt.safeTransferFrom(msg.sender, address(this), gtId, "");
-        gt.flashRepay(gtId, byDebtToken, abi.encode(orders, amtsToBuyFt, ft, units));
-        // SafeTransfer remainning debtToken token
+        gt.flashRepay(gtId, byDebtToken, abi.encode(orders, amtsToBuyFt, ft, units, deadline));
         netTokenOut = debtToken.balanceOf(address(this));
         debtToken.safeTransfer(recipient, netTokenOut);
     }
@@ -393,12 +385,14 @@ contract TermMaxRouter is
         uint256 gtId,
         ITermMaxOrder[] memory orders,
         uint128[] memory ftAmtsWantBuy,
-        uint128 maxTokenIn
+        uint128 maxTokenIn,
+        uint256 deadline
     ) external ensureMarketWhitelist(address(market)) whenNotPaused returns (uint256 returnAmt) {
         (IERC20 ft,, IGearingToken gt,, IERC20 debtToken) = market.tokens();
 
         debtToken.safeTransferFrom(msg.sender, address(this), maxTokenIn);
-        uint256 netCost = _swapTokenToExactToken(debtToken, ft, address(this), orders, ftAmtsWantBuy, maxTokenIn);
+        uint256 netCost =
+            _swapTokenToExactToken(debtToken, ft, address(this), orders, ftAmtsWantBuy, maxTokenIn, deadline);
         uint256 totalFtAmt = sum(ftAmtsWantBuy);
         (, uint128 repayAmt,,) = gt.loanInfo(gtId);
 
@@ -480,7 +474,6 @@ contract TermMaxRouter is
         if (!adapterWhitelist[lastUnit.adapter]) {
             revert AdapterNotWhitelisted(lastUnit.adapter);
         }
-        // encode collateral data and approve
         bytes memory approvalData =
             abi.encodeCall(ISwapAdapter.approveOutputToken, (lastUnit.tokenOut, gt, collateralData));
         (bool success, bytes memory returnData) = lastUnit.adapter.delegatecall(approvalData);
@@ -509,15 +502,19 @@ contract TermMaxRouter is
         bytes memory collateralData,
         bytes memory callbackData
     ) external override ensureGtWhitelist(msg.sender) {
-        (ITermMaxOrder[] memory orders, uint128[] memory amtsToBuyFt, IERC20 ft, SwapUnit[] memory units) =
-            abi.decode(callbackData, (ITermMaxOrder[], uint128[], IERC20, SwapUnit[]));
-        // do swap
+        (
+            ITermMaxOrder[] memory orders,
+            uint128[] memory amtsToBuyFt,
+            IERC20 ft,
+            SwapUnit[] memory units,
+            uint256 deadline
+        ) = abi.decode(callbackData, (ITermMaxOrder[], uint128[], IERC20, SwapUnit[], uint256));
         bytes memory outData = _doSwap(collateralData, units);
 
         if (address(repayToken) == address(ft)) {
             IERC20 debtToken = IERC20(units[units.length - 1].tokenOut);
             uint256 amount = abi.decode(outData, (uint256));
-            _swapTokenToExactToken(debtToken, ft, address(this), orders, amtsToBuyFt, amount.toUint128());
+            _swapTokenToExactToken(debtToken, ft, address(this), orders, amtsToBuyFt, amount.toUint128(), deadline);
         }
         repayToken.safeIncreaseAllowance(msg.sender, debtAmt);
     }
@@ -527,11 +524,9 @@ contract TermMaxRouter is
             if (!adapterWhitelist[units[i].adapter]) {
                 revert AdapterNotWhitelisted(units[i].adapter);
             }
-            // encode datas
             bytes memory dataToSwap =
                 abi.encodeCall(ISwapAdapter.swap, (units[i].tokenIn, units[i].tokenOut, inputData, units[i].swapData));
 
-            // delegatecall
             (bool success, bytes memory returnData) = units[i].adapter.delegatecall(dataToSwap);
             if (!success) {
                 revert SwapFailed(units[i].adapter, returnData);

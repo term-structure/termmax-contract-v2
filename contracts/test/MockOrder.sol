@@ -226,7 +226,8 @@ contract MockOrder is
         IERC20 tokenOut,
         address recipient,
         uint128 tokenAmtIn,
-        uint128 minTokenOut
+        uint128 minTokenOut,
+        uint256
     ) external override nonReentrant isOpen returns (uint256 netTokenOut) {
         if (tokenIn == tokenOut) revert CantSwapSameToken();
         uint256 feeAmt = 0;
@@ -263,7 +264,8 @@ contract MockOrder is
         IERC20 tokenOut,
         address recipient,
         uint128 tokenAmtOut,
-        uint128 maxTokenIn
+        uint128 maxTokenIn,
+        uint256
     ) external nonReentrant isOpen returns (uint256 netTokenIn) {
         if (tokenIn == tokenOut) revert CantSwapSameToken();
         uint256 feeAmt = 0;
