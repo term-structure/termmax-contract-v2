@@ -133,7 +133,9 @@ contract GtTest is Test {
         uint128 minXTOut = 0e8;
         res.debt.mint(sender, debtAmtInForBuyXt);
         res.debt.approve(address(res.order), debtAmtInForBuyXt);
-        res.order.swapExactTokenToToken(res.debt, res.xt, sender, debtAmtInForBuyXt, minXTOut);
+        res.order.swapExactTokenToToken(
+            res.debt, res.xt, sender, debtAmtInForBuyXt, minXTOut, block.timestamp + 1 hours
+        );
         StateChecker.MarketState memory state = StateChecker.getMarketState(res);
         uint256 xtBefore = res.xt.balanceOf(address(sender));
 
@@ -262,7 +264,9 @@ contract GtTest is Test {
         uint128 minXTOut = 0e8;
         res.debt.mint(sender, debtAmtInForBuyXt);
         res.debt.approve(address(res.order), debtAmtInForBuyXt);
-        res.order.swapExactTokenToToken(res.debt, res.xt, sender, debtAmtInForBuyXt, minXTOut);
+        res.order.swapExactTokenToToken(
+            res.debt, res.xt, sender, debtAmtInForBuyXt, minXTOut, block.timestamp + 1 hours
+        );
 
         res.xt.approve(address(flashLoanReceiver), xtAmt);
 
@@ -322,7 +326,9 @@ contract GtTest is Test {
         uint128 minFTOut = 0e8;
         res.debt.mint(sender, debtAmtInForBuyFt);
         res.debt.approve(address(res.order), debtAmtInForBuyFt);
-        res.order.swapExactTokenToToken(res.debt, res.ft, sender, debtAmtInForBuyFt, minFTOut);
+        res.order.swapExactTokenToToken(
+            res.debt, res.ft, sender, debtAmtInForBuyFt, minFTOut, block.timestamp + 1 hours
+        );
 
         uint256 collateralBalanceBefore = res.collateral.balanceOf(sender);
         uint256 ftBalanceBefore = res.ft.balanceOf(sender);
@@ -359,7 +365,7 @@ contract GtTest is Test {
 
         (uint256 gtId,) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
         vm.stopPrank();
-
+        // Repay repayAmt
         address thirdPeople = vm.randomAddress();
         res.debt.mint(thirdPeople, debtAmt);
         // Repay repayAmt
@@ -588,7 +594,7 @@ contract GtTest is Test {
         assert(owner == sender);
         assert(d == debtAmt);
         assert(collateralAmt + addedCollateral == abi.decode(cd, (uint256)));
-        vm.stopPrank();
+
         // Add collateral by self
         vm.startPrank(sender);
 

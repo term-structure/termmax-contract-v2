@@ -222,7 +222,7 @@ abstract contract MarketBaseTest is ForkBaseTest {
         vm.startPrank(taker);
         deal(address(res.debtToken), taker, maxTokenIn);
         res.debtToken.approve(address(res.order), maxTokenIn);
-        res.order.swapTokenToExactToken(res.debtToken, res.ft, taker, ftOutAmt, maxTokenIn);
+        res.order.swapTokenToExactToken(res.debtToken, res.ft, taker, ftOutAmt, maxTokenIn, block.timestamp + 1 hours);
         assertEq(res.ft.balanceOf(taker), ftOutAmt);
         (, uint128 debtAmtNow,,) = res.gt.loanInfo(gtId);
         assertGt(debtAmtNow, debtAmt);
