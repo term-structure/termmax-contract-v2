@@ -96,7 +96,7 @@ interface VaultEvents {
      * @notice Emitted when bad debt is dealt with
      * @param caller The address that initiated the bad debt deal
      * @param recipient The address that received the bad debt
-     * @param collaretal The collateral address
+     * @param collateral The collateral address
      * @param badDebt The amount of bad debt
      * @param shares The number of shares
      * @param collateralOut The amount of collateral out
@@ -104,7 +104,7 @@ interface VaultEvents {
     event DealBadDebt(
         address indexed caller,
         address indexed recipient,
-        address indexed collaretal,
+        address indexed collateral,
         uint256 badDebt,
         uint256 shares,
         uint256 collateralOut

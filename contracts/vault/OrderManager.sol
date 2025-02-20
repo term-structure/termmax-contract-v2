@@ -248,19 +248,19 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
     /**
      * @inheritdoc IOrderManager
      */
-    function dealBadDebt(address recipient, address collaretal, uint256 amount)
+    function dealBadDebt(address recipient, address collateral, uint256 amount)
         external
         onlyProxy
         returns (uint256 collateralOut)
     {
         _accruedInterest();
-        uint256 badDebtAmt = _badDebtMapping[collaretal];
-        if (badDebtAmt == 0) revert NoBadDebt(collaretal);
+        uint256 badDebtAmt = _badDebtMapping[collateral];
+        if (badDebtAmt == 0) revert NoBadDebt(collateral);
         if (amount > badDebtAmt) revert InsufficientFunds(badDebtAmt, amount);
-        uint256 collateralBalance = IERC20(collaretal).balanceOf(address(this));
+        uint256 collateralBalance = IERC20(collateral).balanceOf(address(this));
         collateralOut = (amount * collateralBalance) / badDebtAmt;
-        IERC20(collaretal).safeTransfer(recipient, collateralOut);
-        _badDebtMapping[collaretal] -= amount;
+        IERC20(collateral).safeTransfer(recipient, collateralOut);
+        _badDebtMapping[collateral] -= amount;
         _accretingPrincipal -= amount;
         _totalFt -= amount;
     }

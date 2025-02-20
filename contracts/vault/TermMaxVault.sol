@@ -384,10 +384,10 @@ contract TermMaxVault is
     /**
      * @inheritdoc ITermMaxVault
      */
-    function dealBadDebt(address collaretal, uint256 badDebtAmt, address recipient, address owner)
+    function dealBadDebt(address collateral, uint256 badDebtAmt, address recipient, address owner)
         external
         nonReentrant
-        returns (uint256 shares, uint256 collaretalOut)
+        returns (uint256 shares, uint256 collateralOut)
     {
         address caller = msg.sender;
         shares = previewWithdraw(badDebtAmt);
@@ -402,11 +402,11 @@ contract TermMaxVault is
 
         _burn(owner, shares);
 
-        collaretalOut = abi.decode(
-            _delegateCall(abi.encodeCall(IOrderManager.dealBadDebt, (recipient, collaretal, badDebtAmt))), (uint256)
+        collateralOut = abi.decode(
+            _delegateCall(abi.encodeCall(IOrderManager.dealBadDebt, (recipient, collateral, badDebtAmt))), (uint256)
         );
 
-        emit DealBadDebt(caller, recipient, collaretal, badDebtAmt, shares, collaretalOut);
+        emit DealBadDebt(caller, recipient, collateral, badDebtAmt, shares, collateralOut);
     }
 
     // Guardian functions
