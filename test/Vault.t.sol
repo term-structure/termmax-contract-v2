@@ -995,7 +995,6 @@ contract VaultTest is Test {
     }
 
     function testFixFindings101() public {
-
         vm.prank(curator);
         vault.createOrder(res.market, maxCapacity, 0, orderConfig.curveCuts);
         address lper = vm.randomAddress();
@@ -1012,7 +1011,6 @@ contract VaultTest is Test {
 
         vm.startPrank(lper);
         vault.withdraw(100 ether, lper, lper);
-
     }
 
     function _daysToMaturity(uint256 _now) internal view returns (uint256 daysToMaturity) {
