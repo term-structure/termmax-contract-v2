@@ -994,6 +994,27 @@ contract VaultTest is Test {
         vm.stopPrank();
     }
 
+    function testFixFindings101() public {
+
+        vm.prank(curator);
+        vault.createOrder(res.market, maxCapacity, 0, orderConfig.curveCuts);
+        address lper = vm.randomAddress();
+
+        res.debt.mint(lper, 100 ether);
+
+        // depositing funds for lp1
+        vm.startPrank(lper);
+        res.debt.approve(address(vault), 100 ether);
+        vault.deposit(100 ether, lper);
+        vm.stopPrank();
+
+        vm.warp(currentTime + 110 days);
+
+        vm.startPrank(lper);
+        vault.withdraw(100 ether, lper, lper);
+
+    }
+
     function _daysToMaturity(uint256 _now) internal view returns (uint256 daysToMaturity) {
         daysToMaturity = (res.market.config().maturity - _now + Constants.SECONDS_IN_DAY - 1) / Constants.SECONDS_IN_DAY;
     }
