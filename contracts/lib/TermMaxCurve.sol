@@ -4,7 +4,6 @@ pragma solidity ^0.8.0;
 import {Constants} from "./Constants.sol";
 import {MathLib, SafeCast} from "./MathLib.sol";
 import "../storage/TermMaxStorage.sol";
-import {console} from "forge-std/console.sol";
 
 /**
  * @title The TermMax curve library
@@ -77,7 +76,7 @@ library TermMaxCurve {
                     vXtReserve.toInt256(),
                     vFtReserve.toInt256(),
                     deltaXt.toInt256(),
-                    negDeltaFt.toInt256(),
+                    -negDeltaFt.toInt256(),
                     acc.toInt256()
                 );
                 (deltaXt, negDeltaFt) = _convertAndCheckDeltaValues(dX, nF);
@@ -121,7 +120,7 @@ library TermMaxCurve {
                     liqSquare.toInt256(),
                     vXtReserve.toInt256(),
                     vFtReserve.toInt256(),
-                    negDeltaXt.toInt256(),
+                    -negDeltaXt.toInt256(),
                     deltaFt.toInt256(),
                     acc.toInt256()
                 );
@@ -138,8 +137,6 @@ library TermMaxCurve {
 
     function _convertAndCheckDeltaValues(int256 negDeltaXt, int256 deltaFt) internal pure returns (uint256, uint256) {
         if (negDeltaXt < 0 || deltaFt < 0) {
-            console.log("negDeltaXt:", negDeltaXt);
-            console.log("deltaFt:", deltaFt);
             revert InsufficientLiquidity();
         }
         return (uint256(negDeltaXt), uint256(deltaFt));
@@ -268,12 +265,12 @@ library TermMaxCurve {
         int256 vLhsReserve,
         int256 vRhsReserve,
         int256 oriDeltaLhs,
-        int256 oriDeltaRhs, 
+        int256 oriDeltaRhs,
         int256 inputAmt
     ) internal pure returns (int256 deltaLhs, int256 negDeltaRhs) {
         // reference: Section 4.2.3, Section 4.2.4 in TermMax White Paper
-        int256 acc = (oriDeltaLhs + -oriDeltaRhs) - inputAmt;
-        int256 b = vLhsReserve + vRhsReserve - -acc;
+        int256 acc = (oriDeltaLhs - oriDeltaRhs) - inputAmt;
+        int256 b = vLhsReserve + vRhsReserve + acc;
         int256 c = vLhsReserve * acc;
 
         int256 segDeltaLhs = (MathLib.sqrt((b * b - 4 * c).toUint256()).toInt256() - b) / 2;
@@ -285,7 +282,7 @@ library TermMaxCurve {
         int256 liqSquare,
         int256 vlhsReserve,
         int256 vRhsReserve,
-        int256 oriDeltalhs, 
+        int256 oriDeltalhs,
         int256 oriDeltaRhs,
         int256 inputAmt
     ) internal pure returns (int256 negDeltalhs, int256 deltaRhs) {
@@ -299,7 +296,7 @@ library TermMaxCurve {
         int256 liqSquare,
         int256 vXtReserve,
         int256 vFtReserve,
-        int256 oriDeltaXt, 
+        int256 oriDeltaXt,
         int256 oriDeltaFt,
         int256 inputAmt
     ) internal pure returns (int256 negDeltaXt, int256 deltaFt) {
@@ -311,7 +308,7 @@ library TermMaxCurve {
         int256 vXtReserve,
         int256 vFtReserve,
         int256 oriDeltaXt,
-        int256 oriDeltaFt, 
+        int256 oriDeltaFt,
         int256 inputAmt
     ) internal pure returns (int256 deltaXt, int256 negDeltaFt) {
         (negDeltaFt, deltaXt) = buyTokenStepBase(liqSquare, vFtReserve, vXtReserve, oriDeltaFt, oriDeltaXt, inputAmt);
@@ -322,7 +319,7 @@ library TermMaxCurve {
         int256 vXtReserve,
         int256 vFtReserve,
         int256 oriDeltaXt,
-        int256 oriDeltaFt, 
+        int256 oriDeltaFt,
         int256 inputAmt
     ) internal pure returns (int256 deltaXt, int256 negDeltaFt) {
         (deltaXt, negDeltaFt) = sellTokenStepBase(0, vXtReserve, vFtReserve, oriDeltaXt, oriDeltaFt, inputAmt);
@@ -332,7 +329,7 @@ library TermMaxCurve {
         int256,
         int256 vXtReserve,
         int256 vFtReserve,
-        int256 oriDeltaXt, 
+        int256 oriDeltaXt,
         int256 oriDeltaFt,
         int256 inputAmt
     ) internal pure returns (int256 negDeltaXt, int256 deltaFt) {
@@ -343,7 +340,7 @@ library TermMaxCurve {
         int256,
         int256 vXtReserve,
         int256 vFtReserve,
-        int256 oriDeltaXt, 
+        int256 oriDeltaXt,
         int256 oriDeltaFt,
         int256 outputAmt
     ) internal pure returns (int256, int256) {
@@ -356,7 +353,7 @@ library TermMaxCurve {
         int256 vXtReserve,
         int256 vFtReserve,
         int256 oriDeltaXt,
-        int256 oriDeltaFt, 
+        int256 oriDeltaFt,
         int256 outputAmt
     ) internal pure returns (int256, int256) {
         (int256 negDeltaXt, int256 deltaFt) = sellFtStep(0, vXtReserve, vFtReserve, oriDeltaXt, oriDeltaFt, -outputAmt);
@@ -367,7 +364,7 @@ library TermMaxCurve {
         int256 liqSquare,
         int256 vXtReserve,
         int256 vFtReserve,
-        int256 oriDeltaXt, 
+        int256 oriDeltaXt,
         int256 oriDeltaFt,
         int256 outputAmt
     ) internal pure returns (int256, int256) {
@@ -381,7 +378,7 @@ library TermMaxCurve {
         int256 vXtReserve,
         int256 vFtReserve,
         int256 oriDeltaXt,
-        int256 oriDeltaFt, 
+        int256 oriDeltaFt,
         int256 outputAmt
     ) internal pure returns (int256, int256) {
         (int256 negDeltaXt, int256 deltaFt) =
