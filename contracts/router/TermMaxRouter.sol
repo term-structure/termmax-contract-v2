@@ -165,7 +165,7 @@ contract TermMaxRouter is
     ) external whenNotPaused returns (uint256 netTokenIn) {
         tokenIn.safeTransferFrom(msg.sender, address(this), maxTokenIn);
         netTokenIn = _swapTokenToExactToken(tokenIn, tokenOut, recipient, orders, tradingAmts, maxTokenIn, deadline);
-        tokenIn.safeTransfer(recipient, maxTokenIn - netTokenIn);
+        tokenIn.safeTransfer(msg.sender, maxTokenIn - netTokenIn);
         emit SwapTokenToExactToken(tokenIn, tokenOut, msg.sender, recipient, orders, tradingAmts, netTokenIn);
     }
 
