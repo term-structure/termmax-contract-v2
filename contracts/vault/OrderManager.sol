@@ -170,8 +170,9 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
             if (amountLeft == 0) break;
         }
         // deposit to lpers
-        _totalFt += amount;
-        _accretingPrincipal += amount;
+        uint256 aplifiedAmt = amount * Constants.DECIMAL_BASE_SQ;
+        _totalFt += aplifiedAmt;
+        _accretingPrincipal += aplifiedAmt;
     }
 
     /**
@@ -183,8 +184,9 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
         uint256 assetBalance = asset.balanceOf(address(this));
         if (assetBalance >= amount) {
             asset.safeTransfer(recipient, amount);
-            _totalFt -= amount;
-            _accretingPrincipal -= amount;
+            uint256 aplifiedAmt = amount * Constants.DECIMAL_BASE_SQ;
+            _totalFt -= aplifiedAmt;
+            _accretingPrincipal -= aplifiedAmt;
         } else {
             amountLeft -= assetBalance;
             uint256 length = _withdrawQueue.length;
@@ -230,17 +232,20 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
                 uint256 maxWithdraw = amount - amountLeft;
                 revert InsufficientFunds(maxWithdraw, amount);
             }
-
-            _totalFt -= amount;
-            _accretingPrincipal -= amount;
+            uint256 aplifiedAmt = amount * Constants.DECIMAL_BASE_SQ;
+            _totalFt -= aplifiedAmt;
+            _accretingPrincipal -= aplifiedAmt;
         }
     }
 
     function _withdrawPerformanceFee(IERC20 asset, address recipient, uint256 amount) internal {
-        if (amount > _performanceFee) revert InsufficientFunds(_performanceFee, amount);
+        uint256 aplifiedAmt = amount * Constants.DECIMAL_BASE_SQ;
+        if (aplifiedAmt > _performanceFee) {
+            revert InsufficientFunds(_performanceFee / Constants.DECIMAL_BASE_SQ, amount);
+        }
         asset.safeTransfer(recipient, amount);
-        _performanceFee -= amount;
-        _totalFt -= amount;
+        _performanceFee -= aplifiedAmt;
+        _totalFt -= aplifiedAmt;
 
         emit WithdrawPerformanceFee(msg.sender, recipient, amount);
     }
@@ -260,9 +265,11 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
         uint256 collateralBalance = IERC20(collateral).balanceOf(address(this));
         collateralOut = (amount * collateralBalance) / badDebtAmt;
         IERC20(collateral).safeTransfer(recipient, collateralOut);
+
         _badDebtMapping[collateral] -= amount;
-        _accretingPrincipal -= amount;
-        _totalFt -= amount;
+        uint256 aplifiedAmt = amount * Constants.DECIMAL_BASE_SQ;
+        _accretingPrincipal -= aplifiedAmt;
+        _totalFt -= aplifiedAmt;
     }
 
     function _burnFromOrder(ITermMaxOrder order, OrderInfo memory orderInfo, uint256 amount) internal {
@@ -363,22 +370,22 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
         uint256 ftChanges;
 
         if (deltaFt > 0) {
-            ftChanges = deltaFt.toUint256();
+            ftChanges = deltaFt.toUint256() * Constants.DECIMAL_BASE_SQ;
             _totalFt += ftChanges;
             uint256 deltaAnualizedInterest = (ftChanges * Constants.DAYS_IN_YEAR) / _daysToMaturity(maturity);
 
-            _maturityToInterest[maturity] += deltaAnualizedInterest.toUint128();
+            _maturityToInterest[maturity] += deltaAnualizedInterest;
 
             _annualizedInterest += deltaAnualizedInterest;
         } else {
-            ftChanges = (-deltaFt).toUint256();
+            ftChanges = (-deltaFt).toUint256() * Constants.DECIMAL_BASE_SQ;
             _totalFt -= ftChanges;
             uint256 deltaAnualizedInterest = (ftChanges * Constants.DAYS_IN_YEAR) / _daysToMaturity(maturity);
             if (_maturityToInterest[maturity] < deltaAnualizedInterest || _annualizedInterest < deltaAnualizedInterest)
             {
                 revert LockedFtGreaterThanTotalFt();
             }
-            _maturityToInterest[maturity] -= deltaAnualizedInterest.toUint128();
+            _maturityToInterest[maturity] -= deltaAnualizedInterest;
             _annualizedInterest -= deltaAnualizedInterest;
         }
         /// @dev Ensure that the total assets after the transaction are

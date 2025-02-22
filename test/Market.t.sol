@@ -388,10 +388,8 @@ contract MarketTest is Test {
         vm.assume(issueAmount >= 1);
         vm.assume(issueAmount < 9e20);
 
-        uint128 debt = uint128(
-            (issueAmount * Constants.DECIMAL_BASE)
-                / (Constants.DECIMAL_BASE - res.market.issueFtFeeRatio())
-        );
+        uint128 debt =
+            uint128((issueAmount * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - res.market.issueFtFeeRatio()));
 
         vm.startPrank(sender);
 

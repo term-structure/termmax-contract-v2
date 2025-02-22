@@ -187,28 +187,28 @@ contract TermMaxVault is
      * @inheritdoc ITermMaxVault
      */
     function totalFt() external view returns (uint256) {
-        return _totalFt;
+        return _totalFt / Constants.DECIMAL_BASE_SQ;
     }
 
     /**
      * @inheritdoc ITermMaxVault
      */
     function accretingPrincipal() external view returns (uint256) {
-        return _accretingPrincipal;
+        return _accretingPrincipal / Constants.DECIMAL_BASE_SQ;
     }
 
     /**
      * @inheritdoc ITermMaxVault
      */
     function annualizedInterest() external view returns (uint256) {
-        return _annualizedInterest;
+        return _annualizedInterest / Constants.DECIMAL_BASE_SQ;
     }
 
     /**
      * @inheritdoc ITermMaxVault
      */
     function performanceFee() external view returns (uint256) {
-        return _performanceFee;
+        return _performanceFee / Constants.DECIMAL_BASE_SQ;
     }
 
     /**
@@ -335,7 +335,7 @@ contract TermMaxVault is
      */
     function totalAssets() public view override(IERC4626, ERC4626Upgradeable) returns (uint256) {
         (uint256 previewPrincipal,) = _previewAccruedInterest();
-        return previewPrincipal;
+        return previewPrincipal / Constants.DECIMAL_BASE_SQ;
     }
 
     /**

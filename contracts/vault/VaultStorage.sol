@@ -54,5 +54,5 @@ contract VaultStorage {
     /// Etc. day 0 => day 1 => day 2 => day 3 => ...
     mapping(uint64 => uint64) internal _maturityMapping;
     /// @dev A mapping from maturity to its annualized interest
-    mapping(uint64 => uint128) internal _maturityToInterest;
+    mapping(uint64 => uint256) internal _maturityToInterest;
 }
