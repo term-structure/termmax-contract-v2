@@ -79,18 +79,25 @@ library TermMaxCurve {
                     -negDeltaFt.toInt256(),
                     acc.toInt256()
                 );
-                (deltaXt, negDeltaFt) = _convertAndCheckDeltaValues(dX, nF);
-            }
-            if (i < cuts.length - 1) {
-                if (oriXtReserve + deltaXt > cuts[i + 1].xtReserve) {
-                    deltaXt = cuts[i + 1].xtReserve - oriXtReserve;
-                    negDeltaFt = oriNegDeltaFt + vFtReserve - liqSquare / (vXtReserve + deltaXt);
-                    continue;
-                } else {
-                    break;
+
+                if (i != cuts.length - 1) {
+                    if ((dX < 0 || nF < 0) || oriXtReserve + dX.toUint256() > cuts[i + 1].xtReserve) {
+                        deltaXt = cuts[i + 1].xtReserve - oriXtReserve;
+                        negDeltaFt = oriNegDeltaFt + vFtReserve - liqSquare / (vXtReserve + deltaXt);
+                        continue;
+                    } else {
+                        unchecked {
+                            return (uint256(dX), uint256(nF));
+                        }
+                    }
+                } else if (dX >= 0 && nF >= 0) {
+                    unchecked {
+                        return (uint256(dX), uint256(nF));
+                    }
                 }
             }
         }
+        revert InsufficientLiquidity();
     }
 
     /// @notice Reverse iteration over curve cuts
@@ -124,22 +131,19 @@ library TermMaxCurve {
                     deltaFt.toInt256(),
                     acc.toInt256()
                 );
-                (negDeltaXt, deltaFt) = _convertAndCheckDeltaValues(nX, dF);
-            }
-            if (oriXtReserve < negDeltaXt + cuts[idx].xtReserve) {
-                negDeltaXt = oriXtReserve - cuts[idx].xtReserve;
-                deltaFt = liqSquare / (vXtReserve - negDeltaXt) - vFtReserve;
-            } else {
-                break;
-            }
-        }
-    }
 
-    function _convertAndCheckDeltaValues(int256 negDeltaXt, int256 deltaFt) internal pure returns (uint256, uint256) {
-        if (negDeltaXt < 0 || deltaFt < 0) {
-            revert InsufficientLiquidity();
+                if ((nX < 0 || dF < 0) || oriXtReserve < nX.toUint256() + cuts[idx].xtReserve) {
+                    negDeltaXt = oriXtReserve - cuts[idx].xtReserve;
+                    deltaFt = liqSquare / (vXtReserve - negDeltaXt) - vFtReserve;
+                    continue;
+                } else {
+                    unchecked {
+                        return (uint256(nX), uint256(dF));
+                    }
+                }
+            }
         }
-        return (uint256(negDeltaXt), uint256(deltaFt));
+        revert InsufficientLiquidity();
     }
 
     function buyExactXt(
