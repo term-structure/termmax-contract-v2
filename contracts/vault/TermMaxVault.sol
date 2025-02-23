@@ -320,6 +320,7 @@ contract TermMaxVault is
      * @dev See {IERC4626-maxDeposit}.
      */
     function maxDeposit(address) public view override(IERC4626, ERC4626Upgradeable) returns (uint256) {
+        if (paused()) return 0;
         return _maxCapacity - totalAssets();
     }
 
@@ -327,6 +328,7 @@ contract TermMaxVault is
      * @dev See {IERC4626-maxMint}.
      */
     function maxMint(address) public view override(IERC4626, ERC4626Upgradeable) returns (uint256) {
+        if (paused()) return 0;
         return convertToShares(maxDeposit(address(0)));
     }
 
