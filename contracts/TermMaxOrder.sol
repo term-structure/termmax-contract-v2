@@ -223,10 +223,15 @@ contract TermMaxOrder is
         CurveCuts memory oldCurveCuts = _orderConfig.curveCuts;
         if (keccak256(abi.encode(oldCurveCuts)) != newCurveCutsHash) {
             if (newCurveCuts.lendCurveCuts.length > 0) {
-                if (newCurveCuts.lendCurveCuts[0].xtReserve != 0) revert InvalidCurveCuts();
+                if (newCurveCuts.lendCurveCuts[0].liqSquare == 0 || newCurveCuts.lendCurveCuts[0].xtReserve != 0) {
+                    revert InvalidCurveCuts();
+                }
             }
             for (uint256 i = 1; i < newCurveCuts.lendCurveCuts.length; i++) {
-                if (newCurveCuts.lendCurveCuts[i].xtReserve <= newCurveCuts.lendCurveCuts[i - 1].xtReserve) {
+                if (
+                    newCurveCuts.lendCurveCuts[i].liqSquare == 0
+                        || newCurveCuts.lendCurveCuts[i].xtReserve <= newCurveCuts.lendCurveCuts[i - 1].xtReserve
+                ) {
                     revert InvalidCurveCuts();
                 }
                 if (
@@ -241,10 +246,15 @@ contract TermMaxOrder is
                 ) revert InvalidCurveCuts();
             }
             if (newCurveCuts.borrowCurveCuts.length > 0) {
-                if (newCurveCuts.borrowCurveCuts[0].xtReserve != 0) revert InvalidCurveCuts();
+                if (newCurveCuts.borrowCurveCuts[0].liqSquare == 0 || newCurveCuts.borrowCurveCuts[0].xtReserve != 0) {
+                    revert InvalidCurveCuts();
+                }
             }
             for (uint256 i = 1; i < newCurveCuts.borrowCurveCuts.length; i++) {
-                if (newCurveCuts.borrowCurveCuts[i].xtReserve <= newCurveCuts.borrowCurveCuts[i - 1].xtReserve) {
+                if (
+                    newCurveCuts.borrowCurveCuts[i].liqSquare == 0
+                        || newCurveCuts.borrowCurveCuts[i].xtReserve <= newCurveCuts.borrowCurveCuts[i - 1].xtReserve
+                ) {
                     revert InvalidCurveCuts();
                 }
                 if (

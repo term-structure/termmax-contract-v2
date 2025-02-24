@@ -66,6 +66,32 @@ contract OrderTest is Test {
         vm.stopPrank();
     }
 
+    function testInvalidCurveCuts() public {
+        vm.startPrank(maker);
+        {
+            OrderConfig memory newOrderConfig = orderConfig;
+            newOrderConfig.curveCuts.lendCurveCuts[0].liqSquare = 0;
+            vm.expectRevert(abi.encodeWithSelector(OrderErrors.InvalidCurveCuts.selector));
+            res.order.updateOrder(newOrderConfig, 0, 0);
+        }
+
+        {
+            OrderConfig memory newOrderConfig = orderConfig;
+            newOrderConfig.curveCuts.borrowCurveCuts[0].liqSquare = 0;
+            vm.expectRevert(abi.encodeWithSelector(OrderErrors.InvalidCurveCuts.selector));
+            res.order.updateOrder(newOrderConfig, 0, 0);
+        }
+
+        {
+            OrderConfig memory newOrderConfig = orderConfig;
+            newOrderConfig.curveCuts.borrowCurveCuts[1].liqSquare = 0;
+            vm.expectRevert(abi.encodeWithSelector(OrderErrors.InvalidCurveCuts.selector));
+            res.order.updateOrder(newOrderConfig, 0, 0);
+        }
+
+        vm.stopPrank();
+    }
+
     function testBuyFt() public {
         vm.startPrank(sender);
 
