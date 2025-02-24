@@ -122,7 +122,6 @@ contract RouterTest is Test {
     }
 
     function testSwapExactTokenToToken() public {
-        //TODO check output
         vm.startPrank(sender);
 
         uint128 amountIn = 100e8;
@@ -148,7 +147,6 @@ contract RouterTest is Test {
     }
 
     function testSwapTokenToExactToken() public {
-        //TODO check output
         vm.startPrank(sender);
 
         uint128 amountOut = 90e8;
@@ -598,5 +596,31 @@ contract RouterTest is Test {
         assertEq(order.maker(), maker);
         assertEq(res.ft.balanceOf(address(order)), ftToDeposit + debtTokenToDeposit);
         assertEq(res.xt.balanceOf(address(order)), xtToDeposit + debtTokenToDeposit);
+    }
+
+    function testOrdersAndAmtsLengthNotMatch() public {
+        vm.startPrank(sender);
+
+        uint128[] memory tradingAmts = new uint128[](2);
+        tradingAmts[0] = 45e8;
+        tradingAmts[1] = 45e8;
+        uint128 maxAmountIn = 100e8;
+
+        ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
+        orders[0] = res.order;
+
+        res.debt.mint(sender, maxAmountIn);
+        res.debt.approve(address(res.router), maxAmountIn);
+
+        vm.expectRevert(RouterErrors.OrdersAndAmtsLengthNotMatch.selector);
+        res.router.swapTokenToExactToken(
+            res.debt, res.ft, sender, orders, tradingAmts, maxAmountIn, block.timestamp + 1 hours
+        );
+
+        vm.expectRevert(RouterErrors.OrdersAndAmtsLengthNotMatch.selector);
+        res.router.swapExactTokenToToken(
+            res.debt, res.ft, sender, orders, tradingAmts, maxAmountIn, block.timestamp + 1 hours
+        );
+        vm.stopPrank();
     }
 }
