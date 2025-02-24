@@ -61,18 +61,6 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
         market = factory.createMarket(gtKey, deployParams, salt);
     }
 
-    /// @notice Deploy a new market and whitelist it
-    function createMarketAndWhitelist(
-        ITermMaxRouter router,
-        ITermMaxFactory factory,
-        bytes32 gtKey,
-        MarketInitialParams calldata deployParams,
-        uint256 salt
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) returns (address market) {
-        market = factory.createMarket(gtKey, deployParams, salt);
-        router.setMarketWhitelist(market, true);
-    }
-
     /// @notice Transfer ownable contract's ownership
     function transferOwnership(IOwnable entity, address to) external onlyRole(DEFAULT_ADMIN_ROLE) {
         entity.transferOwnership(to);
@@ -88,14 +76,6 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
         proxy.upgradeToAndCall(newImplementation, data);
-    }
-
-    /// @notice Set the market whitelist for router
-    function setMarketWhitelist(ITermMaxRouter router, address market, bool isWhitelist)
-        external
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
-        router.setMarketWhitelist(market, isWhitelist);
     }
 
     /// @notice Set the adapter whitelist for router

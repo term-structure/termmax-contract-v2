@@ -251,7 +251,6 @@ contract DeployBase is Script {
 
             TermMaxMarket market = TermMaxMarket(factory.createMarket(GT_ERC20, initialParams, config.salt));
             markets[i] = market;
-            router.setMarketWhitelist(address(market), true);
         }
     }
 
@@ -308,7 +307,6 @@ contract DeployBase is Script {
 
             TermMaxMarket market = TermMaxMarket(factory.createMarket(GT_ERC20, initialParams, config.salt));
             markets[i] = market;
-            router.setMarketWhitelist(address(market), true);
         }
     }
 

@@ -137,8 +137,6 @@ abstract contract GtBaseTest is ForkBaseTest {
 
         res.router = deployRouter(res.marketInitialParams.admin);
 
-        res.router.setMarketWhitelist(address(res.market), true);
-
         res.uniswapData = _readUniswapData(key);
         if (res.uniswapData.active) {
             res.router.setAdapterWhitelist(address(res.uniswapData.adapter), true);

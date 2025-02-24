@@ -71,33 +71,8 @@ contract RouterTest is Test {
         res.xt.transfer(address(res.order), amount);
 
         res.router = DeployUtils.deployRouter(deployer);
-        res.router.setMarketWhitelist(address(res.market), true);
         adapter = new MockSwapAdapter(pool);
-
         res.router.setAdapterWhitelist(address(adapter), true);
-
-        vm.stopPrank();
-    }
-
-    function testSetMarketWhitelist() public {
-        vm.startPrank(deployer);
-
-        address market = vm.randomAddress();
-        res.router.setMarketWhitelist(market, true);
-        assertTrue(res.router.marketWhitelist(market));
-
-        res.router.setMarketWhitelist(market, false);
-        assertFalse(res.router.marketWhitelist(market));
-
-        vm.stopPrank();
-    }
-
-    function testSetMarketWhitelistUnauthorized() public {
-        vm.startPrank(sender);
-
-        address market = vm.randomAddress();
-        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, address(sender)));
-        res.router.setMarketWhitelist(market, true);
 
         vm.stopPrank();
     }

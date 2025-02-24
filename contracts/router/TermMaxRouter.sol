@@ -47,31 +47,8 @@ contract TermMaxRouter is
     using TransferUtils for IERC20;
     using MathLib for uint256;
 
-    /// @notice whitelist mapping of market
-    mapping(address => bool) public marketWhitelist;
     /// @notice whitelist mapping of dapter
     mapping(address => bool) public adapterWhitelist;
-
-    /// @notice Check the market is whitelisted
-    modifier ensureMarketWhitelist(address market) {
-        if (!marketWhitelist[market]) {
-            revert MarketNotWhitelisted(market);
-        }
-        _;
-    }
-    /// @notice Check the GT is whitelisted
-
-    modifier ensureGtWhitelist(address gt) {
-        address market = IGearingToken(gt).marketAddr();
-        if (!marketWhitelist[market]) {
-            revert MarketNotWhitelisted(market);
-        }
-        (,, IGearingToken gt_,,) = ITermMaxMarket(market).tokens();
-        if (address(gt_) != gt) {
-            revert GtNotWhitelisted(gt);
-        }
-        _;
-    }
 
     function _authorizeUpgrade(address newImplementation) internal virtual override onlyOwner {}
 
@@ -79,14 +56,6 @@ contract TermMaxRouter is
         __UUPSUpgradeable_init();
         __Pausable_init();
         __Ownable_init(admin);
-    }
-
-    /**
-     * @inheritdoc ITermMaxRouter
-     */
-    function setMarketWhitelist(address market, bool isWhitelist) external onlyOwner {
-        marketWhitelist[market] = isWhitelist;
-        emit UpdateMarketWhiteList(market, isWhitelist);
     }
 
     /**
@@ -146,6 +115,7 @@ contract TermMaxRouter is
         uint128 minTokenOut,
         uint256 deadline
     ) internal returns (uint256 netTokenOut) {
+        if (orders.length != tradingAmts.length) revert OrdersAndAmtsLengthNotMatch();
         for (uint256 i = 0; i < orders.length; ++i) {
             ITermMaxOrder order = orders[i];
             tokenIn.safeIncreaseAllowance(address(order), tradingAmts[i]);
@@ -178,6 +148,7 @@ contract TermMaxRouter is
         uint128 maxTokenIn,
         uint256 deadline
     ) internal returns (uint256 netTokenIn) {
+        if (orders.length != tradingAmts.length) revert OrdersAndAmtsLengthNotMatch();
         for (uint256 i = 0; i < orders.length; ++i) {
             ITermMaxOrder order = orders[i];
             tokenIn.safeIncreaseAllowance(address(order), maxTokenIn);
@@ -202,7 +173,7 @@ contract TermMaxRouter is
         uint128[] memory amtsToSellTokens,
         uint128 minTokenOut,
         uint256 deadline
-    ) external whenNotPaused ensureMarketWhitelist(address(market)) returns (uint256 netTokenOut) {
+    ) external whenNotPaused returns (uint256 netTokenOut) {
         (IERC20 ft, IERC20 xt,,, IERC20 debtToken) = market.tokens();
         (uint256 maxBurn, IERC20 toenToSell) = ftInAmt > xtInAmt ? (xtInAmt, ft) : (ftInAmt, xt);
 
@@ -227,7 +198,7 @@ contract TermMaxRouter is
         uint128 maxLtv,
         SwapUnit[] memory units,
         uint256 deadline
-    ) external whenNotPaused ensureMarketWhitelist(address(market)) returns (uint256 gtId, uint256 netXtOut) {
+    ) external whenNotPaused returns (uint256 gtId, uint256 netXtOut) {
         (, IERC20 xt, IGearingToken gt,, IERC20 debtToken) = market.tokens();
         uint256 totalAmtToBuyXt = sum(amtsToBuyXt);
         debtToken.safeTransferFrom(msg.sender, address(this), tokenToSwap + totalAmtToBuyXt);
@@ -254,7 +225,7 @@ contract TermMaxRouter is
         uint128 tokenInAmt,
         uint128 maxLtv,
         SwapUnit[] memory units
-    ) external ensureMarketWhitelist(address(market)) whenNotPaused returns (uint256 gtId) {
+    ) external whenNotPaused returns (uint256 gtId) {
         (, IERC20 xt, IGearingToken gt,, IERC20 debtToken) = market.tokens();
         xt.safeTransferFrom(msg.sender, address(this), xtInAmt);
         xt.safeIncreaseAllowance(address(market), xtInAmt);
@@ -282,7 +253,7 @@ contract TermMaxRouter is
         uint128[] memory tokenAmtsWantBuy,
         uint128 maxDebtAmt,
         uint256 deadline
-    ) external ensureMarketWhitelist(address(market)) whenNotPaused returns (uint256) {
+    ) external whenNotPaused returns (uint256) {
         (IERC20 ft,, IGearingToken gt, address collateralAddr, IERC20 debtToken) = market.tokens();
         IERC20(collateralAddr).safeTransferFrom(msg.sender, address(this), collInAmt);
         IERC20(collateralAddr).safeIncreaseAllowance(address(gt), collInAmt);
@@ -303,7 +274,6 @@ contract TermMaxRouter is
 
     function borrowTokenFromCollateral(address recipient, ITermMaxMarket market, uint256 collInAmt, uint256 borrowAmt)
         external
-        ensureMarketWhitelist(address(market))
         whenNotPaused
         returns (uint256)
     {
@@ -332,7 +302,6 @@ contract TermMaxRouter is
 
     function borrowTokenFromGt(address recipient, ITermMaxMarket market, uint256 gtId, uint256 borrowAmt)
         external
-        ensureMarketWhitelist(address(market))
         whenNotPaused
     {
         (IERC20 ft, IERC20 xt, IGearingToken gt,,) = market.tokens();
@@ -368,7 +337,7 @@ contract TermMaxRouter is
         bool byDebtToken,
         SwapUnit[] memory units,
         uint256 deadline
-    ) external ensureMarketWhitelist(address(market)) whenNotPaused returns (uint256 netTokenOut) {
+    ) external whenNotPaused returns (uint256 netTokenOut) {
         (IERC20 ft,, IGearingToken gt,, IERC20 debtToken) = market.tokens();
         gt.safeTransferFrom(msg.sender, address(this), gtId, "");
         gt.flashRepay(gtId, byDebtToken, abi.encode(orders, amtsToBuyFt, ft, units, deadline));
@@ -387,7 +356,7 @@ contract TermMaxRouter is
         uint128[] memory ftAmtsWantBuy,
         uint128 maxTokenIn,
         uint256 deadline
-    ) external ensureMarketWhitelist(address(market)) whenNotPaused returns (uint256 returnAmt) {
+    ) external whenNotPaused returns (uint256 returnAmt) {
         (IERC20 ft,, IGearingToken gt,, IERC20 debtToken) = market.tokens();
 
         debtToken.safeTransferFrom(msg.sender, address(this), maxTokenIn);
@@ -417,7 +386,7 @@ contract TermMaxRouter is
         uint256 ftAmount,
         SwapUnit[] memory units,
         uint256 minTokenOut
-    ) external ensureMarketWhitelist(address(market)) whenNotPaused returns (uint256 netTokenOut) {
+    ) external whenNotPaused returns (uint256 netTokenOut) {
         (IERC20 ft,,, address collateralAddr, IERC20 debtToken) = market.tokens();
         ft.safeTransferFrom(msg.sender, address(this), ftAmount);
         ft.safeIncreaseAllowance(address(market), ftAmount);
@@ -443,7 +412,7 @@ contract TermMaxRouter is
         uint128 ftToDeposit,
         uint128 xtToDeposit,
         CurveCuts memory curveCuts
-    ) external ensureMarketWhitelist(address(market)) whenNotPaused returns (ITermMaxOrder order) {
+    ) external whenNotPaused returns (ITermMaxOrder order) {
         (IERC20 ft, IERC20 xt,,, IERC20 debtToken) = market.tokens();
         order = market.createOrder(maker, maxXtReserve, swapTrigger, curveCuts);
         if (debtTokenToDeposit > 0) {
@@ -464,7 +433,6 @@ contract TermMaxRouter is
     /// @dev Market flash leverage flashloan callback
     function executeOperation(address, IERC20, uint256 amount, bytes memory data)
         external
-        ensureMarketWhitelist(msg.sender)
         returns (bytes memory collateralData)
     {
         (address gt, uint256 tokenInAmt, SwapUnit[] memory units) = abi.decode(data, (address, uint256, SwapUnit[]));
@@ -501,7 +469,7 @@ contract TermMaxRouter is
         address,
         bytes memory collateralData,
         bytes memory callbackData
-    ) external override ensureGtWhitelist(msg.sender) {
+    ) external override {
         (
             ITermMaxOrder[] memory orders,
             uint128[] memory amtsToBuyFt,

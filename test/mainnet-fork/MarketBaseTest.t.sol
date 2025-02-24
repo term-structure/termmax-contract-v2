@@ -102,8 +102,6 @@ abstract contract MarketBaseTest is ForkBaseTest {
 
         res.router = deployRouter(res.marketInitialParams.admin);
 
-        res.router.setMarketWhitelist(address(res.market), true);
-
         res.orderInitialAmount = vm.parseJsonUint(jsonData, string.concat(key, ".orderInitialAmount"));
         deal(address(res.debtToken), res.marketInitialParams.admin, res.orderInitialAmount);
 
