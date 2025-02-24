@@ -86,14 +86,10 @@ library TermMaxCurve {
                         negDeltaFt = oriNegDeltaFt + vFtReserve - liqSquare / (vXtReserve + deltaXt);
                         continue;
                     } else {
-                        unchecked {
-                            return (uint256(dX), uint256(nF));
-                        }
-                    }
-                } else if (dX >= 0 && nF >= 0) {
-                    unchecked {
                         return (uint256(dX), uint256(nF));
                     }
+                } else if (dX >= 0 && nF >= 0) {
+                    return (uint256(dX), uint256(nF));
                 }
             }
         }
@@ -137,9 +133,7 @@ library TermMaxCurve {
                     deltaFt = liqSquare / (vXtReserve - negDeltaXt) - vFtReserve;
                     continue;
                 } else {
-                    unchecked {
-                        return (uint256(nX), uint256(dF));
-                    }
+                    return (uint256(nX), uint256(dF));
                 }
             }
         }
