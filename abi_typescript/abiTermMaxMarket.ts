@@ -97,11 +97,6 @@ export const abiTermMaxMarket = [
                 type: 'uint32',
                 internalType: 'uint32',
               },
-              {
-                name: 'redeemFeeRatio',
-                type: 'uint32',
-                internalType: 'uint32',
-              },
             ],
           },
         ],
@@ -265,11 +260,6 @@ export const abiTermMaxMarket = [
                   },
                   {
                     name: 'issueFtFeeRef',
-                    type: 'uint32',
-                    internalType: 'uint32',
-                  },
-                  {
-                    name: 'redeemFeeRatio',
                     type: 'uint32',
                     internalType: 'uint32',
                   },
@@ -618,11 +608,6 @@ export const abiTermMaxMarket = [
                 type: 'uint32',
                 internalType: 'uint32',
               },
-              {
-                name: 'redeemFeeRatio',
-                type: 'uint32',
-                internalType: 'uint32',
-              },
             ],
           },
         ],
@@ -672,11 +657,6 @@ export const abiTermMaxMarket = [
           },
           {
             name: 'issueFtFeeRef',
-            type: 'uint32',
-            internalType: 'uint32',
-          },
-          {
-            name: 'redeemFeeRatio',
             type: 'uint32',
             internalType: 'uint32',
           },
@@ -1007,12 +987,6 @@ export const abiTermMaxMarket = [
         internalType: 'uint128',
       },
       {
-        name: 'feeAmt',
-        type: 'uint128',
-        indexed: false,
-        internalType: 'uint128',
-      },
-      {
         name: 'deliveryData',
         type: 'bytes',
         indexed: false,
@@ -1073,11 +1047,6 @@ export const abiTermMaxMarket = [
               },
               {
                 name: 'issueFtFeeRef',
-                type: 'uint32',
-                internalType: 'uint32',
-              },
-              {
-                name: 'redeemFeeRatio',
                 type: 'uint32',
                 internalType: 'uint32',
               },
