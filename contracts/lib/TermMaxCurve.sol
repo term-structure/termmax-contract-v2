@@ -83,7 +83,7 @@ library TermMaxCurve {
                 if (i != cuts.length - 1) {
                     if ((dX < 0 || nF < 0) || oriXtReserve + dX.toUint256() > cuts[i + 1].xtReserve) {
                         deltaXt = cuts[i + 1].xtReserve - oriXtReserve;
-                        negDeltaFt = oriNegDeltaFt + vFtReserve - liqSquare / (vXtReserve + deltaXt);
+                        negDeltaFt = oriNegDeltaFt + vFtReserve - liqSquare / (vXtReserve + (cuts[i + 1].xtReserve - xtReserve));
                         continue;
                     } else {
                         return (uint256(dX), uint256(nF));
@@ -130,7 +130,7 @@ library TermMaxCurve {
 
                 if ((nX < 0 || dF < 0) || oriXtReserve < nX.toUint256() + cuts[idx].xtReserve) {
                     negDeltaXt = oriXtReserve - cuts[idx].xtReserve;
-                    deltaFt = liqSquare / (vXtReserve - negDeltaXt) - vFtReserve;
+                    deltaFt = liqSquare / (vXtReserve - (xtReserve - cuts[idx].xtReserve)) - vFtReserve;
                     continue;
                 } else {
                     return (uint256(nX), uint256(dF));
