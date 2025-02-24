@@ -1,0 +1,267 @@
+{
+    "currentTime": "1734786167",
+    "orderInitialAmount": "15000000000",
+    "marketConfig": {
+      "openTime": "1732194167",
+      "maturity": "1739970167",
+      "redeemFeeRatio": "0",
+      "issueFtFeeRatio": "1000000",
+      "issueFtFeeRef": "2000000",
+      "lendTakerFeeRatio": "1000000",
+      "borrowTakerFeeRatio": "2000000",
+      "lendMakerFeeRatio": "1000000",
+      "borrowMakerFeeRatio": "2000000"
+    },
+    "orderConfig": {
+      "maxXtReserve": "200000000000",
+      "gtId": "0",
+      "lendCurveCuts": {
+        "0": {
+          "xtReserve": "0",
+          "liqSquare": "1720698543067309478611255296",
+          "offset": "65587699743689"
+        },
+        "1": {
+          "xtReserve": "8200000000",
+          "liqSquare": "3651319143432037376",
+          "offset": "-5178652858"
+        },
+        "2": {
+          "xtReserve": "9000000000",
+          "liqSquare": "5325802973041830281718267904",
+          "offset": "145934293536729"
+        },
+        "3": {
+          "xtReserve": "38200000000",
+          "liqSquare": "1892116786719084032",
+          "offset": "-35449878222"
+        },
+        "4": {
+          "xtReserve": "39000000000",
+          "liqSquare": "53946010500510492131328",
+          "offset": "560444455487"
+        },
+        "5": {
+          "xtReserve": "39200000000",
+          "liqSquare": "1906257274019262464",
+          "offset": "-35635449514"
+        },
+        "length": 6
+      },
+      "borrowCurveCuts": {
+        "0": {
+          "xtReserve": "0",
+          "liqSquare": "1229565727541719128510300160",
+          "offset": "56149199769207"
+        },
+        "1": {
+          "xtReserve": "7200000000",
+          "liqSquare": "3309475930970303488",
+          "offset": "-4286605980"
+        },
+        "2": {
+          "xtReserve": "8000000000",
+          "liqSquare": "693199556046520867658661888",
+          "offset": "53734833258096"
+        },
+        "3": {
+          "xtReserve": "19200000000",
+          "liqSquare": "1607667291259545088",
+          "offset": "-16611743299"
+        },
+        "4": {
+          "xtReserve": "20000000000",
+          "liqSquare": "363179566917820071274348544",
+          "offset": "50905924418402"
+        },
+        "5": {
+          "xtReserve": "38200000000",
+          "liqSquare": "1470280664430855680",
+          "offset": "-34958934805"
+        },
+        "length": 6
+      }
+    },
+    "newOrderConfig": {
+      "maxXtReserve": "200000000000",
+      "gtId": "0",
+      "lendCurveCuts": {
+        "0": {
+          "liqSquare": "282439483191179444224",
+          "xtReserve": "0",
+          "offset": "26150962519"
+        },
+        "1": {
+          "liqSquare": "651598010195498500096",
+          "xtReserve": "7000000000",
+          "offset": "43352763587"
+        },
+        "2": {
+          "liqSquare": "1276732738657945911296",
+          "xtReserve": "23000000000",
+          "offset": "69879343738"
+        },
+        "length": 3
+      },
+      "borrowCurveCuts": {
+        "0": {
+          "liqSquare": "282439483191179444224",
+          "xtReserve": "0",
+          "offset": "26150962519"
+        },
+        "1": {
+          "liqSquare": "651598010195498500096",
+          "xtReserve": "7000000000",
+          "offset": "43352763587"
+        },
+        "2": {
+          "liqSquare": "1276732738657945911296",
+          "xtReserve": "23000000000",
+          "offset": "69879343738"
+        },
+        "length": 3
+      }
+    },
+    "expected": {
+      "testBuyFt": {
+        "contractState": {
+          "ftReserve": "14689062610",
+          "xtReserve": "25000000000"
+        },
+        "output": {
+          "netOut": "10301792173",
+          "fee": "9145217"
+        }
+      },
+      "testBuyXt": {
+        "contractState": {
+          "ftReserve": "15485294117",
+          "xtReserve": "5127322524"
+        },
+        "output": {
+          "netOut": "10372677476",
+          "fee": "14705883"
+        }
+      },
+      "testSellFt": {
+        "contractState": {
+          "ftReserve": "15091338006",
+          "xtReserve": "15112673387"
+        },
+        "output": {
+          "netOut": "9887326613",
+          "fee": "12190164"
+        }
+      },
+      "testSellXt": {
+        "contractState": {
+          "ftReserve": "15024959105",
+          "xtReserve": "15053204253"
+        },
+        "output": {
+          "netOut": "446795747",
+          "fee": "13539265"
+        }
+      },
+      "testBuyExactFt": {
+        "contractState": {
+          "ftReserve": "14695989572",
+          "xtReserve": "24704931055"
+        },
+        "output": {
+          "netOut": "9704931055",
+          "fee": "8941483"
+        }
+      },
+      "testBuyExactXt": {
+        "contractState": {
+          "ftReserve": "15462562589",
+          "xtReserve": "5476579638"
+        },
+        "output": {
+          "netOut": "476579638",
+          "fee": "14017049"
+        }
+      },
+      "testSellFtForExactToken": {
+        "contractState": {
+          "ftReserve": "15014546098",
+          "xtReserve": "17000000000"
+        },
+        "output": {
+          "netOut": "8335346625",
+          "fee": "9863137"
+        }
+      },
+      "testSellXtForExactToken": {
+        "contractState": {
+          "ftReserve": "15176203208",
+          "xtReserve": "11294082926"
+        },
+        "output": {
+          "netOut": "6466760402",
+          "fee": "9090909"
+        }
+      }
+    },
+    "maxInput": {
+      "buyFtMax": "185000000000",
+      "buyXtMax": "628891254",
+      "sellFtMax": "15628891254",
+      "sellXtMax": "185674853870",
+      "buyExactFtMax": "185674853870",
+      "buyExactXtMax": "15628891254",
+      "sellFtForExactTokenMax": "15000000000",
+      "sellXtForExactTokenMax": "265072336"
+    },
+    "priceData": {
+      "ETH_2000_DAI_1": {
+        "eth": {
+          "roundId": "1",
+          "answer": "200000000000",
+          "startedAt": "1730391800",
+          "updatedAt": "1730391900",
+          "answeredInRound": "0"
+        },
+        "dai": {
+          "roundId": "1",
+          "answer": "100000000",
+          "startedAt": "1730391800",
+          "updatedAt": "1730391900",
+          "answeredInRound": "0"
+        }
+      },
+      "ETH_1000_DAI_1": {
+        "eth": {
+          "roundId": "1",
+          "answer": "100000000000",
+          "startedAt": "1730391800",
+          "updatedAt": "1730391900",
+          "answeredInRound": "0"
+        },
+        "dai": {
+          "roundId": "1",
+          "answer": "100000000",
+          "startedAt": "1730391800",
+          "updatedAt": "1730391900",
+          "answeredInRound": "0"
+        }
+      },
+      "ETH_2000_PT_WEETH_1800": {
+        "eth": {
+          "roundId": "1",
+          "answer": "200000000000000000000",
+          "startedAt": "1730391800",
+          "updatedAt": "1730391900",
+          "answeredInRound": "0"
+        },
+        "ptWeeth": {
+          "roundId": "1",
+          "answer": "180000000000000000000",
+          "startedAt": "1730391800",
+          "updatedAt": "1730391900",
+          "answeredInRound": "0"
+        }
+      }
+    }
+  }

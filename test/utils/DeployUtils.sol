@@ -24,6 +24,17 @@ import "contracts/storage/TermMaxStorage.sol";
 library DeployUtils {
     bytes32 constant GT_ERC20 = keccak256("GearingTokenWithERC20");
 
+    struct SwapRange {
+        uint256 buyFtMax;
+        uint256 buyXtMax;
+        uint256 sellFtMax;
+        uint256 sellXtMax;
+        uint256 buyExactFtMax;
+        uint256 buyExactXtMax;
+        uint256 sellFtForExactTokenMax;
+        uint256 sellXtForExactTokenMax;
+    }
+
     struct Res {
         ITermMaxVault vault;
         IVaultFactory vaultFactory;
@@ -41,6 +52,7 @@ library DeployUtils {
         OracleAggregator oracle;
         MockERC20 collateral;
         MockERC20 debt;
+        SwapRange swapRange;
     }
 
     function deployMarket(address admin, MarketConfig memory marketConfig, uint32 maxLtv, uint32 liquidationLtv)
