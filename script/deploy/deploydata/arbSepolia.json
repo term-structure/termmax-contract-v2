@@ -1,147 +1,71 @@
 {
-  "configNum": "4",
+  "configNum": "2",
   "configs": {
     "configs_0": {
+      "salt": 0,
       "marketConfig": {
-        "openTime": "1735257600",
-        "maturity": "1735257600",
-        "initialLtv": "81000000",
-        "apr": "3000000",
-        "lsf": "2000000",
-        "lendFeeRatio": "5000000",
-        "borrowFeeRatio": "5000000",
-        "issueFtFeeRatio": "300000",
-        "lockingPercentage": "50000000",
-        "protocolFeeRatio": "20000000",
-        "minNLendFeeR": "20000",
-        "minNBorrowFeeR": "20000",
-        "redeemFeeRatio": "0",
-        "maxLtv": "82000000",
-        "liquidationLtv": "84000000",
-        "liquidatable": true,
-        "treasurer": "0x7ab945445958819a74b48e8Bd5F9E39ed74bdE9E"
+        "treasurer": "0x7ab945445958819a74b48e8Bd5F9E39ed74bdE9E",
+        "maturity": "1745539200",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "300000",
+        "borrowMakerFeeRatio": "3000000",
+        "issueFtFeeRatio": "10000000",
+        "issueFtFeeRef": "20000000",
+        "redeemFeeRatio": "0"
+      },
+      "loanConfig": {
+        "liquidationLtv": "94000000",
+        "maxLtv": "90000000",
+        "liquidatable": true
       },
       "underlyingConfig": {
-        "name": "Wrapped Ether",
+        "tokenAddr": "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1",
+        "name": "Wrapped ETH",
         "symbol": "WETH",
         "decimals": "18",
-        "mintAmt": "1000000000000000000000",
-        "initialPrice": "360000000000"
+        "initialPrice": "300000000000"
       },
       "collateralConfig": {
-        "name": "PT weETH 26DEC2024",
-        "symbol": "PT-weETH-26DEC2024",
+        "tokenAddr": "0x5979D7b546E38E414F7E9822514be443A4800529",
+        "name": "Wrapped liquid staked Ether 2.0",
+        "symbol": "wstETH",
         "decimals": "18",
-        "mintAmt": "1000000000000000000000",
-        "initialPrice": "349200000000",
+        "initialPrice": "360000000000",
         "gtKeyIdentifier": "GearingTokenWithERC20"
       }
     },
     "configs_1": {
+      "salt": 0,
       "marketConfig": {
-        "openTime": "1750982400",
-        "maturity": "1750982400",
-        "initialLtv": "81000000",
-        "apr": "3000000",
-        "lsf": "2000000",
-        "lendFeeRatio": "5000000",
-        "borrowFeeRatio": "5000000",
-        "issueFtFeeRatio": "300000",
-        "lockingPercentage": "50000000",
-        "protocolFeeRatio": "20000000",
-        "minNLendFeeR": "20000",
-        "minNBorrowFeeR": "20000",
-        "redeemFeeRatio": "0",
+        "treasurer": "0x7ab945445958819a74b48e8Bd5F9E39ed74bdE9E",
+        "maturity": "1745539200",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "300000",
+        "borrowMakerFeeRatio": "3000000",
+        "issueFtFeeRatio": "10000000",
+        "issueFtFeeRef": "20000000",
+        "redeemFeeRatio": "0"
+      },
+      "loanConfig": {
+        "liquidationLtv": "86000000",
         "maxLtv": "82000000",
-        "liquidationLtv": "84000000",
-        "liquidatable": true,
-        "treasurer": "0x7ab945445958819a74b48e8Bd5F9E39ed74bdE9E"
+        "liquidatable": true
       },
       "underlyingConfig": {
-        "name": "Wrapped Ether",
-        "symbol": "WETH",
-        "decimals": "18",
-        "mintAmt": "1000000000000000000000",
-        "initialPrice": "360000000000"
+        "tokenAddr": "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+        "name": "USD Coin",
+        "symbol": "USDC",
+        "decimals": "6",
+        "initialPrice": "100000000"
       },
       "collateralConfig": {
-        "name": "PT weETH 26JUN2025",
-        "symbol": "PT-weETH-26JUN2025",
-        "decimals": "18",
-        "mintAmt": "1000000000000000000000",
-        "initialPrice": "349200000000",
-        "gtKeyIdentifier": "GearingTokenWithERC20"
-      }
-    },
-    "configs_2": {
-      "marketConfig": {
-        "openTime": "1735257600",
-        "maturity": "1735257600",
-        "initialLtv": "91000000",
-        "apr": "3000000",
-        "lsf": "2000000",
-        "lendFeeRatio": "5000000",
-        "borrowFeeRatio": "5000000",
-        "issueFtFeeRatio": "300000",
-        "lockingPercentage": "50000000",
-        "protocolFeeRatio": "20000000",
-        "minNLendFeeR": "100000",
-        "minNBorrowFeeR": "100000",
-        "redeemFeeRatio": "0",
-        "maxLtv": "92000000",
-        "liquidationLtv": "94000000",
-        "liquidatable": true,
-        "treasurer": "0x7ab945445958819a74b48e8Bd5F9E39ed74bdE9E"
-      },
-      "underlyingConfig": {
-        "name": "Wrapped eETH",
-        "symbol": "weETH",
-        "decimals": "18",
-        "mintAmt": "1000000000000000000000",
-        "initialPrice": "360000000000"
-      },
-      "collateralConfig": {
-        "name": "PT weETH 26DEC2024",
-        "symbol": "PT-weETH-26DEC2024",
-        "decimals": "18",
-        "mintAmt": "1000000000000000000000",
-        "initialPrice": "349200000000",
-        "gtKeyIdentifier": "GearingTokenWithERC20"
-      }
-    },
-    "configs_3": {
-      "marketConfig": {
-        "openTime": "1750982400",
-        "maturity": "1750982400",
-        "initialLtv": "91000000",
-        "apr": "3000000",
-        "lsf": "2000000",
-        "lendFeeRatio": "5000000",
-        "borrowFeeRatio": "5000000",
-        "issueFtFeeRatio": "300000",
-        "lockingPercentage": "50000000",
-        "protocolFeeRatio": "20000000",
-        "minNLendFeeR": "100000",
-        "minNBorrowFeeR": "100000",
-        "redeemFeeRatio": "0",
-        "maxLtv": "92000000",
-        "liquidationLtv": "94000000",
-        "liquidatable": true,
-        "treasurer": "0x7ab945445958819a74b48e8Bd5F9E39ed74bdE9E"
-      },
-      "underlyingConfig": {
-        "name": "Wrapped eETH",
-        "symbol": "weETH",
-        "decimals": "18",
-        "mintAmt": "1000000000000000000000",
-        "initialPrice": "360000000000"
-      },
-      "collateralConfig": {
-        "name": "PT weETH 26JUN2025",
-        "symbol": "PT-weETH-26JUN2025",
-        "decimals": "18",
-        "mintAmt": "1000000000000000000000",
-        "initialPrice": "349200000000",
+        "tokenAddr": "0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f",
+        "name": "Wrapped BTC",
+        "symbol": "WBTC",
+        "decimals": "8",
+        "initialPrice": "9000000000000",
         "gtKeyIdentifier": "GearingTokenWithERC20"
       }
     }
