@@ -200,11 +200,10 @@ contract VaultTest is Test {
         assertEq(vault.marketWhitelist(market), true);
 
         vault.submitMarket(market, false);
-        assertEq(res.vault.marketWhitelist(market), false);
+        assertEq(vault.marketWhitelist(market), false);
 
         vm.stopPrank();
     }
-
 
     function testFail_SetMarketWhitelist() public {
         address market = address(0x123);
