@@ -397,9 +397,7 @@ contract TermMaxOrder is
         market.mint(address(this), debtTokenAmtIn);
         if (tokenOut == ft) {
             uint256 ftReserve = getTransientFtReserve();
-            if (ftReserve + debtTokenAmtIn < netOut + feeAmt) {
-                _issueFtToSelf(ftReserve + debtTokenAmtIn, netOut + feeAmt, config);
-            }
+            _issueFtToSelf(ftReserve + debtTokenAmtIn, netOut + feeAmt, config);
         }
 
         tokenOut.safeTransfer(recipient, netOut);
@@ -451,7 +449,7 @@ contract TermMaxOrder is
         tokenIn.safeTransferFrom(caller, address(this), tokenAmtIn);
         if (tokenIn == xt) {
             uint256 ftReserve = getTransientFtReserve();
-            if (ftReserve < netOut + feeAmt) _issueFtToSelf(ftReserve, netOut + feeAmt, config);
+            _issueFtToSelf(ftReserve, netOut + feeAmt, config);
         }
         ft.approve(address(market), netOut);
         xt.approve(address(market), netOut);
@@ -575,9 +573,7 @@ contract TermMaxOrder is
         market.mint(address(this), netTokenIn);
         if (tokenOut == ft) {
             uint256 ftReserve = getTransientFtReserve();
-            if (ftReserve + netTokenIn < tokenAmtOut + feeAmt) {
-                _issueFtToSelf(ftReserve + netTokenIn, tokenAmtOut + feeAmt, config);
-            }
+            _issueFtToSelf(ftReserve + netTokenIn, tokenAmtOut + feeAmt, config);
         }
 
         tokenOut.safeTransfer(recipient, tokenAmtOut);
@@ -658,7 +654,7 @@ contract TermMaxOrder is
         tokenIn.safeTransferFrom(caller, address(this), netTokenIn);
         if (tokenIn == xt) {
             uint256 ftReserve = getTransientFtReserve();
-            if (ftReserve < debtTokenAmtOut + feeAmt) _issueFtToSelf(ftReserve, debtTokenAmtOut + feeAmt, config);
+            _issueFtToSelf(ftReserve, debtTokenAmtOut + feeAmt, config);
         }
         ft.approve(address(market), debtTokenAmtOut);
         xt.approve(address(market), debtTokenAmtOut);
@@ -706,6 +702,7 @@ contract TermMaxOrder is
      * @notice This fuction will be triggered when ft reserve can not cover the output amount.
      */
     function _issueFtToSelf(uint256 ftReserve, uint256 targetFtReserve, OrderConfig memory config) internal {
+        if(ftReserve >= targetFtReserve) return;
         if (config.gtId == 0) revert CantNotIssueFtWithoutGt();
         uint256 ftAmtToIssue = ((targetFtReserve - ftReserve) * Constants.DECIMAL_BASE)
             / (Constants.DECIMAL_BASE - market.issueFtFeeRatio());
