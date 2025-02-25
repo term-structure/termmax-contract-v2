@@ -69,7 +69,6 @@ library TermMaxCurve {
             uint256 xtReserve = oriXtReserve + deltaXt;
             (uint256 liqSquare, uint256 vXtReserve, uint256 vFtReserve) =
                 calcIntervalProps(netInterestFactor, daysToMaturity, cuts[i], xtReserve);
-            uint256 oriNegDeltaFt = negDeltaFt;
             {
                 (int256 dX, int256 nF) = func(
                     liqSquare.toInt256(),
@@ -83,7 +82,7 @@ library TermMaxCurve {
                 if (i != cuts.length - 1) {
                     if ((dX < 0 || nF < 0) || oriXtReserve + dX.toUint256() > cuts[i + 1].xtReserve) {
                         deltaXt = cuts[i + 1].xtReserve - oriXtReserve;
-                        negDeltaFt = oriNegDeltaFt + vFtReserve - liqSquare / (vXtReserve + (cuts[i + 1].xtReserve - xtReserve));
+                        negDeltaFt += vFtReserve - liqSquare / (vXtReserve + (cuts[i + 1].xtReserve - xtReserve));
                         continue;
                     } else {
                         return (uint256(dX), uint256(nF));
@@ -130,7 +129,7 @@ library TermMaxCurve {
 
                 if ((nX < 0 || dF < 0) || oriXtReserve < nX.toUint256() + cuts[idx].xtReserve) {
                     negDeltaXt = oriXtReserve - cuts[idx].xtReserve;
-                    deltaFt = liqSquare / (vXtReserve - (xtReserve - cuts[idx].xtReserve)) - vFtReserve;
+                    deltaFt += liqSquare / (vXtReserve - (xtReserve - cuts[idx].xtReserve)) - vFtReserve;
                     continue;
                 } else {
                     return (uint256(nX), uint256(dF));
