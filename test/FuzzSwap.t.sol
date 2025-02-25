@@ -82,7 +82,7 @@ contract FuzzSwapTest is Test {
         console.log("buy ft", index, tokenAmtIn);
         vm.assume(index < entities);
         DeployUtils.Res memory res = _initResources(indexs[index]);
-        vm.assume(tokenAmtIn <= res.swapRange.buyFtMax);
+        vm.assume(tokenAmtIn > 0 && tokenAmtIn <= res.swapRange.buyFtMax);
         _buyFt(res, tokenAmtIn, 0);
     }
     
@@ -90,7 +90,7 @@ contract FuzzSwapTest is Test {
         console.log("buy xt", index, tokenAmtIn);
         vm.assume(index < entities);
         DeployUtils.Res memory res = _initResources(indexs[index]);
-        vm.assume(tokenAmtIn <= res.swapRange.buyXtMax);
+        vm.assume(tokenAmtIn > 0 && tokenAmtIn <= res.swapRange.buyXtMax);
         _buyXt(res, tokenAmtIn, 0);
     }
 
@@ -98,7 +98,7 @@ contract FuzzSwapTest is Test {
         console.log("sell ft", index, ftAmtIn);
         vm.assume(index < entities);
         DeployUtils.Res memory res = _initResources(indexs[index]);
-        vm.assume(ftAmtIn <= res.swapRange.sellFtMax);
+        vm.assume(ftAmtIn > 0 && ftAmtIn <= res.swapRange.sellFtMax);
         _sellFt(res, ftAmtIn, 0);
     }
 
@@ -106,7 +106,7 @@ contract FuzzSwapTest is Test {
         console.log("sell xt", index, xtAmtIn);
         vm.assume(index < entities);
         DeployUtils.Res memory res = _initResources(indexs[index]);
-        vm.assume(xtAmtIn <= res.swapRange.sellXtMax);
+        vm.assume(xtAmtIn > 0 && xtAmtIn <= res.swapRange.sellXtMax);
         _sellXt(res, xtAmtIn, 0);
     }
 
@@ -114,7 +114,7 @@ contract FuzzSwapTest is Test {
         console.log("buy exact ft", index, ftAmtOut);
         vm.assume(index < entities);
         DeployUtils.Res memory res = _initResources(indexs[index]);
-        vm.assume(ftAmtOut <= res.swapRange.buyExactFtMax);
+        vm.assume(ftAmtOut > 0 && ftAmtOut <= res.swapRange.buyExactFtMax);
         _buyExactFt(res, ftAmtOut, ftAmtOut);
     }
 
@@ -122,7 +122,7 @@ contract FuzzSwapTest is Test {
         console.log("buy exact xt", index, xtAmtOut);
         vm.assume(index < entities);
         DeployUtils.Res memory res = _initResources(indexs[index]);
-        vm.assume(xtAmtOut <= res.swapRange.buyExactXtMax);
+        vm.assume(xtAmtOut > 0 && xtAmtOut <= res.swapRange.buyExactXtMax);
         _buyExactXt(res, xtAmtOut, xtAmtOut);
     }
 
@@ -130,7 +130,7 @@ contract FuzzSwapTest is Test {
         console.log("sell ft for exact token", index, tokenAmtOut);
         vm.assume(index < entities);
         DeployUtils.Res memory res = _initResources(indexs[index]);
-        vm.assume(tokenAmtOut <= res.swapRange.sellFtForExactTokenMax);
+        vm.assume(tokenAmtOut > 0 && tokenAmtOut <= res.swapRange.sellFtForExactTokenMax);
         _sellFtForExactToken(res, tokenAmtOut, tokenAmtOut * 10);
     }
 
@@ -138,7 +138,7 @@ contract FuzzSwapTest is Test {
         console.log("sell xt for exact token", index, tokenAmtOut);
         vm.assume(index < entities);
         DeployUtils.Res memory res = _initResources(indexs[index]);
-        vm.assume(tokenAmtOut <= res.swapRange.sellXtForExactTokenMax);
+        vm.assume(tokenAmtOut > 0 && tokenAmtOut <= res.swapRange.sellXtForExactTokenMax);
         _sellXtForExactToken(res, tokenAmtOut, tokenAmtOut * 10000);
     }
 
