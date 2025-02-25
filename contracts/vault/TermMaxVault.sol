@@ -728,7 +728,7 @@ contract TermMaxVault is
         view
         returns (uint256, uint256)
     {
-        uint256 interest = (previewAnualizedInterest * (endTime - startTime)) / 365 days;
+        uint256 interest = (previewAnualizedInterest * (endTime - startTime)) / Constants.DAYS_IN_YEAR;
         uint256 performanceFeeToCurator = (interest * _performanceFeeRate) / Constants.DECIMAL_BASE;
         return (interest - performanceFeeToCurator, performanceFeeToCurator);
     }

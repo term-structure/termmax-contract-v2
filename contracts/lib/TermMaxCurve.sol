@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import {Constants} from "./Constants.sol";
 import {MathLib, SafeCast} from "./MathLib.sol";
-import "../storage/TermMaxStorage.sol";
+import {CurveCut} from "../storage/TermMaxStorage.sol";
 
 /**
  * @title The TermMax curve library
