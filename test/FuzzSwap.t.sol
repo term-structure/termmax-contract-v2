@@ -188,7 +188,7 @@ contract FuzzSwapTest is Test {
         vm.startPrank(taker);
         res.debt.mint(taker, maxTokenAmtIn);
         res.debt.approve(address(res.order), maxTokenAmtIn);
-        res.order.swapExactTokenToToken(res.debt, res.ft, taker, ftAmtOut, maxTokenAmtIn, block.timestamp + 1 hours);
+        res.order.swapTokenToExactToken(res.debt, res.ft, taker, ftAmtOut, maxTokenAmtIn, block.timestamp + 1 hours);
         vm.stopPrank();
     }
 
@@ -196,7 +196,7 @@ contract FuzzSwapTest is Test {
         vm.startPrank(taker);
         res.debt.mint(taker, maxTokenAmtIn);
         res.debt.approve(address(res.order), maxTokenAmtIn);
-        res.order.swapExactTokenToToken(res.debt, res.xt, taker, xtAmtOut, maxTokenAmtIn, block.timestamp + 1 hours);
+        res.order.swapTokenToExactToken(res.debt, res.xt, taker, xtAmtOut, maxTokenAmtIn, block.timestamp + 1 hours);
         vm.stopPrank();
     }
     
