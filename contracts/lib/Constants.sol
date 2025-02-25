@@ -19,5 +19,5 @@ library Constants {
     /// @notice Time required to activate the evacuation mode after the market paused
     uint256 constant WAITING_TIME_EVACUATION_ACTIVE = 7 days;
     /// @notice The limit of fee ratio
-    uint32 constant MAX_FEE_RATIO = 0.1e8;
+    uint32 constant MAX_FEE_RATIO = 0.2e8;
 }

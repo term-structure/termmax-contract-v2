@@ -23,23 +23,23 @@ import {Faucet} from "contracts/test/testnet/Faucet.sol";
 import {FaucetERC20} from "contracts/test/testnet/FaucetERC20.sol";
 import {DeployBase} from "../DeployBase.s.sol";
 
-contract DeloyMarketHolesky is DeployBase {
+contract DeloyMarketArbSepolia is DeployBase {
     // admin config
-    uint256 deployerPrivateKey = vm.envUint("HOLESKY_DEPLOYER_PRIVATE_KEY");
+    uint256 deployerPrivateKey = vm.envUint("ARB_SEPOLIA_DEPLOYER_PRIVATE_KEY");
     address deployerAddr = vm.addr(deployerPrivateKey);
-    address adminAddr = vm.envAddress("HOLESKY_ADMIN_ADDRESS");
-    address priceFeedOperatorAddr = vm.envAddress("HOLESKY_PRICE_FEED_OPERATOR_ADDRESS");
+    address adminAddr = vm.envAddress("ARB_SEPOLIA_ADMIN_ADDRESS");
+    address priceFeedOperatorAddr = vm.envAddress("ARB_SEPOLIA_PRICE_FEED_OPERATOR_ADDRESS");
 
     // address config
-    address factoryAddr = address(0xa991765a95D41F6b4A5a28EDF9C31bF083e1C166);
-    address oracleAddr = address(0x98948762d2b666ddf82fA94D047B34B006BC72A1);
-    address routerAddr = address(0xf56E3F4f7B7F973452f541C4999e6571c8732345);
-    address faucetAddr = address(0xe47C38A3377281eA5E0DF389F74a3355Bc5Aaf01);
+    address factoryAddr = address(0x5cB28BcB9dE6C10E85E1CBA8A4A59D82c5CD1630);
+    address oracleAddr = address(0x54505e5E2C23ad39ED06971A5d6410F501641F84);
+    address routerAddr = address(0xA3e778D80D04e304fefd613c2e1675eE056136cf);
+    address faucetAddr = address(0x05bC1c5c5Ede8722aAF89663F50a3148EaE69b21);
 
     function run() public {
         uint256 currentBlockNum = block.number;
         Faucet faucet = Faucet(faucetAddr);
-        string memory deployDataPath = string.concat(vm.projectRoot(), "/script/deploy/deploydata/holesky.json");
+        string memory deployDataPath = string.concat(vm.projectRoot(), "/script/deploy/deploydata/arbSepolia.json");
         vm.startBroadcast(deployerPrivateKey);
         (TermMaxMarket[] memory markets, JsonLoader.Config[] memory configs) = deployMarkets(
             factoryAddr, oracleAddr, routerAddr, faucetAddr, deployDataPath, adminAddr, priceFeedOperatorAddr
