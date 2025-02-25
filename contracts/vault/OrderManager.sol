@@ -319,9 +319,10 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
     /// @notice Distribute interest
     function _accruedInterest() internal {
         uint64 currentTime = block.timestamp.toUint64();
-
         uint256 lastTime = _lastUpdateTime;
+        if (currentTime == lastTime) return;
         uint64 recentMaturity = _maturityMapping[0];
+        if (recentMaturity == 0) return;
 
         while (recentMaturity != 0 && recentMaturity < currentTime) {
             // pop first maturity
@@ -370,7 +371,7 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
         uint256 ftChanges;
 
         if (deltaFt > 0) {
-            ftChanges = deltaFt.toUint256() * Constants.DECIMAL_BASE_SQ;
+            ftChanges = uint256(deltaFt) * Constants.DECIMAL_BASE_SQ;
             _totalFt += ftChanges;
             uint256 deltaAnualizedInterest = (ftChanges * Constants.DAYS_IN_YEAR) / _daysToMaturity(maturity);
 
@@ -378,7 +379,7 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
 
             _annualizedInterest += deltaAnualizedInterest;
         } else {
-            ftChanges = (-deltaFt).toUint256() * Constants.DECIMAL_BASE_SQ;
+            ftChanges = uint256(-deltaFt) * Constants.DECIMAL_BASE_SQ;
             _totalFt -= ftChanges;
             uint256 deltaAnualizedInterest = (ftChanges * Constants.DAYS_IN_YEAR) / _daysToMaturity(maturity);
             if (_maturityToInterest[maturity] < deltaAnualizedInterest || _annualizedInterest < deltaAnualizedInterest)
