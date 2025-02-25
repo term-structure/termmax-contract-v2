@@ -704,9 +704,9 @@ contract TermMaxOrder is
     function _issueFtToSelf(uint256 ftReserve, uint256 targetFtReserve, OrderConfig memory config) internal {
         if (ftReserve >= targetFtReserve) return;
         if (config.gtId == 0) revert CantNotIssueFtWithoutGt();
-        uint256 ftAmtToIssue = ((targetFtReserve - ftReserve) * Constants.DECIMAL_BASE)
+        uint256 debtAmtToIssue = ((targetFtReserve - ftReserve) * Constants.DECIMAL_BASE)
             / (Constants.DECIMAL_BASE - market.issueFtFeeRatio());
-        market.issueFtByExistedGt(address(this), (ftAmtToIssue).toUint128(), config.gtId);
+        market.issueFtByExistedGt(address(this), (debtAmtToIssue).toUint128(), config.gtId);
         setInitialFtReserve(targetFtReserve);
     }
 
