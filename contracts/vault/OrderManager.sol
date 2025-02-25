@@ -195,7 +195,7 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
             while (length > 0 && i < length) {
                 address order = _withdrawQueue[i];
                 OrderInfo memory orderInfo = _orderMapping[order];
-                if (block.timestamp > orderInfo.maturity + Constants.LIQUIDATION_WINDOW) {
+                if (block.timestamp >= orderInfo.maturity + Constants.LIQUIDATION_WINDOW) {
                     // redeem assets from expired order
                     uint256 totalRedeem = _redeemFromMarket(order, orderInfo);
                     length--;
