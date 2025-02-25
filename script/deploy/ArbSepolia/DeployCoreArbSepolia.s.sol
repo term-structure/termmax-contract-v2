@@ -6,6 +6,7 @@ import {console} from "forge-std/console.sol";
 import {TermMaxFactory} from "contracts/factory/TermMaxFactory.sol";
 import {ITermMaxFactory} from "contracts/factory/ITermMaxFactory.sol";
 import {ITermMaxRouter} from "contracts/router/ITermMaxRouter.sol";
+import {MarketViewer} from "contracts/router/MarketViewer.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {TermMaxMarket} from "contracts/TermMaxMarket.sol";
 import {MockERC20} from "contracts/test/MockERC20.sol";
@@ -37,6 +38,7 @@ contract DeployCoreArbSepolia is DeployBase {
             SwapAdapter swapAdapter,
             Faucet faucet
         ) = deployCore(adminAddr);
+        MarketViewer marketViewer = deployMarketViewer();
         vm.stopBroadcast();
 
         console.log("===== Git Info =====");
@@ -54,5 +56,7 @@ contract DeployCoreArbSepolia is DeployBase {
         console.log("Router deployed at:", address(router));
         console.log("SwapAdapter deployed at:", address(swapAdapter));
         console.log("Faucet deployed at:", address(faucet));
+        console.log("MarketViewer deployed at:", address(marketViewer));
+        console.log();
     }
 }
