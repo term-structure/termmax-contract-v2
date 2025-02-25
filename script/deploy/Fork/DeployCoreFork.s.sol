@@ -8,6 +8,7 @@ import {ITermMaxFactory} from "contracts/factory/ITermMaxFactory.sol";
 import {ITermMaxRouter} from "contracts/router/ITermMaxRouter.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {TermMaxMarket} from "contracts/TermMaxMarket.sol";
+import {MarketViewer} from "contracts/router/MarketViewer.sol";
 import {MockERC20} from "contracts/test/MockERC20.sol";
 import {MockPriceFeed} from "contracts/test/MockPriceFeed.sol";
 import {MockPriceFeed} from "contracts/test/MockPriceFeed.sol";
@@ -45,6 +46,7 @@ contract DeployCoreFork is DeployBase {
             OdosV2Adapter odosV2Adapter,
             PendleSwapV3Adapter pendleSwapV3Adapter
         ) = deployCoreMainnet(adminAddr, uniswapV3RouterAddr, odosV2RouterAddr, pendleSwapV3RouterAddr);
+        MarketViewer marketViewer = deployMarketViewer();
         vm.stopBroadcast();
 
         console.log("===== Git Info =====");
@@ -63,6 +65,7 @@ contract DeployCoreFork is DeployBase {
         console.log("UniswapV3Adapter deployed at:", address(uniswapV3Adapter));
         console.log("OdosV2Adapter deployed at:", address(odosV2Adapter));
         console.log("PendleSwapV3Adapter deployed at:", address(pendleSwapV3Adapter));
+        console.log("MarketViewer deployed at:", address(marketViewer));
         console.log();
     }
 }
