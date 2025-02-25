@@ -178,24 +178,33 @@ contract VaultTest is Test {
     }
 
     function testMarketWhitelist() public {
-        address market = address(0x123);
+        // check current timelock value
+        assertEq(vault.timelock(), 86400);
 
-        vm.prank(curator);
+        // submit market
+        vm.startPrank(curator);
+        address market = address(0x123);
+        vault.submitMarket(market, false);
+
+        assertEq(vault.marketWhitelist(market), false);
         vault.submitMarket(market, true);
 
-        // Should not be whitelisted before timelock
-        assertFalse(vault.marketWhitelist(market));
+        assertEq(vault.marketWhitelist(market), false);
 
-        // After timelock passes
-        vm.warp(block.timestamp + timelock + 1);
-        vm.prank(vm.randomAddress());
+        // The validAt of the newly submitted market is the current time, without timelock
+        PendingUint192 memory pendingMarket = vault.pendingMarkets(market);
+        assertEq(pendingMarket.validAt, block.timestamp + 86400);
+
+        vm.warp(block.timestamp + 86400 + 1);
         vault.acceptMarket(market);
-        assertTrue(vault.marketWhitelist(market));
+        assertEq(vault.marketWhitelist(market), true);
 
-        vm.prank(curator);
         vault.submitMarket(market, false);
-        assertFalse(vault.marketWhitelist(market));
+        assertEq(res.vault.marketWhitelist(market), false);
+
+        vm.stopPrank();
     }
+
 
     function testFail_SetMarketWhitelist() public {
         address market = address(0x123);

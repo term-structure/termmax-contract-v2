@@ -702,7 +702,7 @@ contract TermMaxOrder is
      * @notice This fuction will be triggered when ft reserve can not cover the output amount.
      */
     function _issueFtToSelf(uint256 ftReserve, uint256 targetFtReserve, OrderConfig memory config) internal {
-        if(ftReserve >= targetFtReserve) return;
+        if (ftReserve >= targetFtReserve) return;
         if (config.gtId == 0) revert CantNotIssueFtWithoutGt();
         uint256 ftAmtToIssue = ((targetFtReserve - ftReserve) * Constants.DECIMAL_BASE)
             / (Constants.DECIMAL_BASE - market.issueFtFeeRatio());

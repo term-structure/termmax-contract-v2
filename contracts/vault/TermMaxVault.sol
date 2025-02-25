@@ -501,7 +501,7 @@ contract TermMaxVault is
         if (!isWhitelisted) {
             _setMarketWhitelist(market, isWhitelisted);
         } else {
-            _pendingMarkets[market].update(uint184(_timelock), 0);
+            _pendingMarkets[market].update(0, _timelock);
             emit SubmitMarket(market, isWhitelisted);
         }
     }
