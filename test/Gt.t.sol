@@ -1035,6 +1035,7 @@ contract GtTest is Test {
     }
 
     function testLiquidateInWindowTime(uint16 exceedTime) public {
+        vm.assume(exceedTime < Constants.LIQUIDATION_WINDOW);
         uint256 liquidateTime = marketConfig.maturity + exceedTime;
         uint128 debtAmt = 1000e8;
         uint256 collateralAmt = 1e18;
