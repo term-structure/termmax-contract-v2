@@ -1319,4 +1319,18 @@ contract GtTest is Test {
         assertEq(res.debt.balanceOf(sender), debtAmt);
         vm.stopPrank();
     }
+
+    function testRepayZeroDebt() public {
+        uint256 collateralAmt = 1e18;
+        uint128 debtAmt = 0;
+        vm.startPrank(sender);
+        res.collateral.mint(sender, collateralAmt);
+        bytes memory collateralData = abi.encode(collateralAmt);
+        res.collateral.approve(address(res.gt), collateralAmt);
+        (uint256 gtId,) = res.market.issueFt(sender, debtAmt, collateralData);
+
+        res.gt.repay(gtId, 0, true);
+        assertEq(res.collateral.balanceOf(sender), collateralAmt);
+        vm.stopPrank();
+    }
 }
