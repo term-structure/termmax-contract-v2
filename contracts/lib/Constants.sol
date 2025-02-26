@@ -15,7 +15,7 @@ library Constants {
     /// @notice The seconds of one day
     uint256 constant SECONDS_IN_DAY = 1 days;
     /// @notice The window time left for the liquidation bot after the market expires
-    uint256 constant LIQUIDATION_WINDOW = 1 days;
+    uint256 constant LIQUIDATION_WINDOW = 2 hours;
     /// @notice The limit of fee ratio
     uint32 constant MAX_FEE_RATIO = 0.2e8;
 }

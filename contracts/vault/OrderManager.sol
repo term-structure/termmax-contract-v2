@@ -135,7 +135,7 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
             orderInfo.market.burn(address(this), withdrawChanges);
         } else {
             // deposit assets to order
-            uint256 depositChanges = changes.toUint256();
+            uint256 depositChanges = uint256(changes);
             asset.safeIncreaseAllowance(address(orderInfo.market), depositChanges);
             orderInfo.market.mint(address(order), depositChanges);
             // update curve cuts
@@ -323,8 +323,7 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
         if (currentTime == lastTime) return;
         uint64 recentMaturity = _maturityMapping[0];
         if (recentMaturity == 0) return;
-
-        while (recentMaturity != 0 && recentMaturity < currentTime) {
+        while (recentMaturity != 0 && recentMaturity <= currentTime) {
             // pop first maturity
             _maturityMapping.popWhenZeroAsRoot();
             _accruedPeriodInterest(lastTime, recentMaturity);
