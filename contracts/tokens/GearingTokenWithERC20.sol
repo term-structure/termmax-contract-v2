@@ -198,7 +198,11 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
 
         uint256 removedCollateralAmt = cEqualRepayAmt + rewardToLiquidator + rewardToProtocol;
 
-        removedCollateralAmt = removedCollateralAmt.min((collateralAmt * repayAmt) / loan.debtAmt);
+        if (loan.debtAmt == 0) {
+            removedCollateralAmt = 0;
+        } else {
+            removedCollateralAmt = removedCollateralAmt.min((collateralAmt * repayAmt) / loan.debtAmt);
+        }
 
         // Case 1: removed collateral can not cover repayAmt + rewardToLiquidator
         if (removedCollateralAmt <= cEqualRepayAmt + rewardToLiquidator) {

@@ -316,7 +316,7 @@ contract TermMaxMarket is
         // The proportion that user will get how many debtToken and collateral should be deliveried
         uint256 proportion = (ftAmount * Constants.DECIMAL_BASE_SQ) / ft.totalSupply();
 
-        bytes memory deliveryData = gt.delivery(proportion, caller);
+        bytes memory deliveryData = gt.delivery(proportion, recipient);
         // Transfer debtToken output
         debtTokenAmt += ((debtToken.balanceOf(address(this))) * proportion) / Constants.DECIMAL_BASE_SQ;
         debtToken.safeTransfer(recipient, debtTokenAmt);

@@ -384,24 +384,22 @@ contract MarketTest is Test {
         vm.stopPrank();
     }
 
-    function testFuzzIssueFtByExistedGtDebtAmount(uint256 ftReserve, uint256 targetFtReserve) public {
-        vm.assume(ftReserve >= 1e6 && ftReserve <= 1e24);
-        vm.assume(targetFtReserve >= ftReserve && targetFtReserve <= ftReserve + 1e24);
-        vm.assume(targetFtReserve - ftReserve >= 5e8);
+    function testFuzzIssueFtByExistedGtDebtAmount(uint256 issueAmount) public {
+        vm.assume(issueAmount >= 1);
+        vm.assume(issueAmount < 9e20);
 
-        uint128 debt = uint128(
-            ((targetFtReserve - ftReserve) * Constants.DECIMAL_BASE)
-                / (Constants.DECIMAL_BASE - res.market.issueFtFeeRatio())
-        );
+        uint128 debt =
+            uint128((issueAmount * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - res.market.issueFtFeeRatio()));
 
         vm.startPrank(sender);
 
         bytes memory collateralData = abi.encode(1e50);
         res.collateral.mint(sender, 1e50);
         res.collateral.approve(address(res.gt), 1e50);
-        (, uint128 ftOutAmt) = res.market.issueFt(sender, debt, collateralData);
+        res.market.issueFt(sender, 10e8, collateralData);
 
-        assertTrue(ftOutAmt == targetFtReserve - ftReserve);
+        uint128 ftOutAmt = res.market.issueFtByExistedGt(sender, debt, 1);
+        assertTrue(ftOutAmt == issueAmount);
         vm.stopPrank();
     }
 }

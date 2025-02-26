@@ -16,6 +16,7 @@ import {Constants} from "contracts/lib/Constants.sol";
 import {ArrayUtils} from "contracts/lib/ArrayUtils.sol";
 import {OrderConfig, CurveCuts} from "contracts/storage/TermMaxStorage.sol";
 import {MathLib} from "contracts/lib/MathLib.sol";
+import {LinkedList} from "contracts/lib/LinkedList.sol";
 import {IOrderManager} from "./IOrderManager.sol";
 import {ISwapCallback} from "contracts/ISwapCallback.sol";
 import {OrderInfo, VaultStorage} from "./VaultStorage.sol";
@@ -31,6 +32,7 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
     using TransferUtils for IERC20;
     using ArrayUtils for address[];
     using MathLib for uint256;
+    using LinkedList for mapping(uint64 => uint64);
 
     address private immutable ORDER_MANAGER_SINGLETON;
 
@@ -106,40 +108,8 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
         uint64 orderMaturity = market.config().maturity;
         _orderMapping[address(order)] =
             OrderInfo({market: market, ft: ft, xt: xt, maxSupply: maxSupply.toUint128(), maturity: orderMaturity});
-        _insertMaturity(orderMaturity);
-
+        _maturityMapping.insertWhenZeroAsRoot(orderMaturity);
         emit CreateOrder(msg.sender, address(market), address(order), maxSupply, initialReserve, curveCuts);
-    }
-
-    /**
-     * @notice Insert a maturity into the maturity linked list
-     * @param maturity The maturity to insert
-     */
-    function _insertMaturity(uint64 maturity) internal {
-        uint64 priorMaturity = _recentestMaturity;
-        if (_recentestMaturity == 0) {
-            _recentestMaturity = maturity;
-            return;
-        } else if (maturity < priorMaturity) {
-            _recentestMaturity = maturity;
-            _maturityMapping[maturity] = priorMaturity;
-            return;
-        }
-
-        uint64 nextMaturity = _maturityMapping[priorMaturity];
-        while (nextMaturity > 0) {
-            if (maturity < nextMaturity) {
-                _maturityMapping[maturity] = nextMaturity;
-                if (priorMaturity > 0) _maturityMapping[priorMaturity] = maturity;
-                return;
-            } else if (maturity == nextMaturity) {
-                break;
-            } else {
-                priorMaturity = nextMaturity;
-                nextMaturity = _maturityMapping[priorMaturity];
-            }
-        }
-        _maturityMapping[priorMaturity] = maturity;
     }
 
     function _updateOrder(
@@ -165,12 +135,11 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
             orderInfo.market.burn(address(this), withdrawChanges);
         } else {
             // deposit assets to order
-            uint256 depositChanges = changes.toUint256();
+            uint256 depositChanges = uint256(changes);
             asset.safeIncreaseAllowance(address(orderInfo.market), depositChanges);
             orderInfo.market.mint(address(order), depositChanges);
-            changes = 0;
-
-            order.updateOrder(newOrderConfig, changes, changes);
+            // update curve cuts
+            order.updateOrder(newOrderConfig, 0, 0);
         }
         _orderMapping[address(order)] = orderInfo;
         emit UpdateOrder(msg.sender, address(order), changes, maxSupply, curveCuts);
@@ -201,8 +170,9 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
             if (amountLeft == 0) break;
         }
         // deposit to lpers
-        _totalFt += amount;
-        _accretingPrincipal += amount;
+        uint256 aplifiedAmt = amount * Constants.DECIMAL_BASE_SQ;
+        _totalFt += aplifiedAmt;
+        _accretingPrincipal += aplifiedAmt;
     }
 
     /**
@@ -214,8 +184,9 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
         uint256 assetBalance = asset.balanceOf(address(this));
         if (assetBalance >= amount) {
             asset.safeTransfer(recipient, amount);
-            _totalFt -= amount;
-            _accretingPrincipal -= amount;
+            uint256 aplifiedAmt = amount * Constants.DECIMAL_BASE_SQ;
+            _totalFt -= aplifiedAmt;
+            _accretingPrincipal -= aplifiedAmt;
         } else {
             amountLeft -= assetBalance;
             uint256 length = _withdrawQueue.length;
@@ -224,7 +195,7 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
             while (length > 0 && i < length) {
                 address order = _withdrawQueue[i];
                 OrderInfo memory orderInfo = _orderMapping[order];
-                if (block.timestamp > orderInfo.maturity + Constants.LIQUIDATION_WINDOW) {
+                if (block.timestamp >= orderInfo.maturity + Constants.LIQUIDATION_WINDOW) {
                     // redeem assets from expired order
                     uint256 totalRedeem = _redeemFromMarket(order, orderInfo);
                     length--;
@@ -261,17 +232,20 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
                 uint256 maxWithdraw = amount - amountLeft;
                 revert InsufficientFunds(maxWithdraw, amount);
             }
-
-            _totalFt -= amount;
-            _accretingPrincipal -= amount;
+            uint256 aplifiedAmt = amount * Constants.DECIMAL_BASE_SQ;
+            _totalFt -= aplifiedAmt;
+            _accretingPrincipal -= aplifiedAmt;
         }
     }
 
     function _withdrawPerformanceFee(IERC20 asset, address recipient, uint256 amount) internal {
-        if (amount > _performanceFee) revert InsufficientFunds(_performanceFee, amount);
+        uint256 aplifiedAmt = amount * Constants.DECIMAL_BASE_SQ;
+        if (aplifiedAmt > _performanceFee) {
+            revert InsufficientFunds(_performanceFee / Constants.DECIMAL_BASE_SQ, amount);
+        }
         asset.safeTransfer(recipient, amount);
-        _performanceFee -= amount;
-        _totalFt -= amount;
+        _performanceFee -= aplifiedAmt;
+        _totalFt -= aplifiedAmt;
 
         emit WithdrawPerformanceFee(msg.sender, recipient, amount);
     }
@@ -279,21 +253,23 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
     /**
      * @inheritdoc IOrderManager
      */
-    function dealBadDebt(address recipient, address collaretal, uint256 amount)
+    function dealBadDebt(address recipient, address collateral, uint256 amount)
         external
         onlyProxy
         returns (uint256 collateralOut)
     {
         _accruedInterest();
-        uint256 badDebtAmt = _badDebtMapping[collaretal];
-        if (badDebtAmt == 0) revert NoBadDebt(collaretal);
+        uint256 badDebtAmt = _badDebtMapping[collateral];
+        if (badDebtAmt == 0) revert NoBadDebt(collateral);
         if (amount > badDebtAmt) revert InsufficientFunds(badDebtAmt, amount);
-        uint256 collateralBalance = IERC20(collaretal).balanceOf(address(this));
+        uint256 collateralBalance = IERC20(collateral).balanceOf(address(this));
         collateralOut = (amount * collateralBalance) / badDebtAmt;
-        IERC20(collaretal).safeTransfer(recipient, collateralOut);
-        _badDebtMapping[collaretal] -= amount;
-        _accretingPrincipal -= amount;
-        _totalFt -= amount;
+        IERC20(collateral).safeTransfer(recipient, collateralOut);
+
+        _badDebtMapping[collateral] -= amount;
+        uint256 aplifiedAmt = amount * Constants.DECIMAL_BASE_SQ;
+        _accretingPrincipal -= aplifiedAmt;
+        _totalFt -= aplifiedAmt;
     }
 
     function _burnFromOrder(ITermMaxOrder order, OrderInfo memory orderInfo, uint256 amount) internal {
@@ -307,13 +283,15 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
 
     function _redeemFromMarket(address order, OrderInfo memory orderInfo) internal returns (uint256 totalRedeem) {
         uint256 ftReserve = orderInfo.ft.balanceOf(order);
-        ITermMaxOrder(order).withdrawAssets(orderInfo.ft, address(this), ftReserve);
-        orderInfo.ft.safeIncreaseAllowance(address(orderInfo.market), ftReserve);
-        totalRedeem = orderInfo.market.redeem(ftReserve, address(this));
-        if (totalRedeem < ftReserve) {
-            // storage bad debt
-            (,,, address collateral,) = orderInfo.market.tokens();
-            _badDebtMapping[collateral] += ftReserve - totalRedeem;
+        if (ftReserve != 0) {
+            ITermMaxOrder(order).withdrawAssets(orderInfo.ft, address(this), ftReserve);
+            orderInfo.ft.safeIncreaseAllowance(address(orderInfo.market), ftReserve);
+            totalRedeem = orderInfo.market.redeem(ftReserve, address(this));
+            if (totalRedeem < ftReserve) {
+                // storage bad debt
+                (,,, address collateral,) = orderInfo.market.tokens();
+                _badDebtMapping[collateral] += ftReserve - totalRedeem;
+            }
         }
         emit RedeemOrder(msg.sender, order, ftReserve.toUint128(), totalRedeem.toUint128());
 
@@ -341,28 +319,27 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
     /// @notice Distribute interest
     function _accruedInterest() internal {
         uint64 currentTime = block.timestamp.toUint64();
-
         uint256 lastTime = _lastUpdateTime;
-        uint64 recentMaturity = _recentestMaturity;
-        if (lastTime == 0) {
-            lastTime = currentTime;
-        }
-        while (currentTime >= recentMaturity && recentMaturity != 0) {
+        if (currentTime == lastTime) return;
+        uint64 recentMaturity = _maturityMapping[0];
+        if (recentMaturity == 0) return;
+        while (recentMaturity != 0 && recentMaturity <= currentTime) {
+            // pop first maturity
+            _maturityMapping.popWhenZeroAsRoot();
             _accruedPeriodInterest(lastTime, recentMaturity);
+            // update last time
             lastTime = recentMaturity;
-            uint64 nextMaturity = _maturityMapping[recentMaturity];
-            delete _maturityMapping[recentMaturity];
             // update anualized interest
             _annualizedInterest -= _maturityToInterest[recentMaturity];
             delete _maturityToInterest[recentMaturity];
-            recentMaturity = nextMaturity;
+            // get next maturity
+            recentMaturity = _maturityMapping[0];
         }
+        // accrued interest for the remaining maturity
         if (recentMaturity > 0) {
             _accruedPeriodInterest(lastTime, currentTime);
-            _recentestMaturity = recentMaturity;
         } else {
             // all orders are expired
-            _recentestMaturity = 0;
             _annualizedInterest = 0;
         }
         _lastUpdateTime = currentTime;
@@ -393,22 +370,22 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
         uint256 ftChanges;
 
         if (deltaFt > 0) {
-            ftChanges = deltaFt.toUint256();
+            ftChanges = uint256(deltaFt) * Constants.DECIMAL_BASE_SQ;
             _totalFt += ftChanges;
             uint256 deltaAnualizedInterest = (ftChanges * Constants.DAYS_IN_YEAR) / _daysToMaturity(maturity);
 
-            _maturityToInterest[maturity] += deltaAnualizedInterest.toUint128();
+            _maturityToInterest[maturity] += deltaAnualizedInterest;
 
             _annualizedInterest += deltaAnualizedInterest;
         } else {
-            ftChanges = (-deltaFt).toUint256();
+            ftChanges = uint256(-deltaFt) * Constants.DECIMAL_BASE_SQ;
             _totalFt -= ftChanges;
             uint256 deltaAnualizedInterest = (ftChanges * Constants.DAYS_IN_YEAR) / _daysToMaturity(maturity);
             if (_maturityToInterest[maturity] < deltaAnualizedInterest || _annualizedInterest < deltaAnualizedInterest)
             {
                 revert LockedFtGreaterThanTotalFt();
             }
-            _maturityToInterest[maturity] -= deltaAnualizedInterest.toUint128();
+            _maturityToInterest[maturity] -= deltaAnualizedInterest;
             _annualizedInterest -= deltaAnualizedInterest;
         }
         /// @dev Ensure that the total assets after the transaction are

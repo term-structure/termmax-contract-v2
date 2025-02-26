@@ -178,23 +178,31 @@ contract VaultTest is Test {
     }
 
     function testMarketWhitelist() public {
-        address market = address(0x123);
+        // check current timelock value
+        assertEq(vault.timelock(), 86400);
 
-        vm.prank(curator);
+        // submit market
+        vm.startPrank(curator);
+        address market = address(0x123);
+        vault.submitMarket(market, false);
+
+        assertEq(vault.marketWhitelist(market), false);
         vault.submitMarket(market, true);
 
-        // Should not be whitelisted before timelock
-        assertFalse(vault.marketWhitelist(market));
+        assertEq(vault.marketWhitelist(market), false);
 
-        // After timelock passes
-        vm.warp(block.timestamp + timelock + 1);
-        vm.prank(vm.randomAddress());
+        // The validAt of the newly submitted market is the current time, without timelock
+        PendingUint192 memory pendingMarket = vault.pendingMarkets(market);
+        assertEq(pendingMarket.validAt, block.timestamp + 86400);
+
+        vm.warp(block.timestamp + 86400 + 1);
         vault.acceptMarket(market);
-        assertTrue(vault.marketWhitelist(market));
+        assertEq(vault.marketWhitelist(market), true);
 
-        vm.prank(curator);
         vault.submitMarket(market, false);
-        assertFalse(vault.marketWhitelist(market));
+        assertEq(vault.marketWhitelist(market), false);
+
+        vm.stopPrank();
     }
 
     function testFail_SetMarketWhitelist() public {
@@ -573,6 +581,7 @@ contract VaultTest is Test {
     function testRedeemCase2() public {
         vm.warp(currentTime + 2 days);
         buyXt(48.219178e8, 1000e8);
+
         vm.warp(currentTime + 4 days);
         address lper2 = vm.randomAddress();
         uint256 amount2 = 10000e8;
@@ -683,13 +692,14 @@ contract VaultTest is Test {
         vm.startPrank(taker);
         res.debt.approve(address(res.order), tokenAmtIn);
         vm.expectRevert(VaultErrors.LockedFtGreaterThanTotalFt.selector);
-        res.order.swapExactTokenToToken(res.debt, res.ft, taker, tokenAmtIn, ftAmtOut);
+        res.order.swapExactTokenToToken(res.debt, res.ft, taker, tokenAmtIn, ftAmtOut, block.timestamp + 1 hours);
         vm.stopPrank();
     }
 
     function testFail_LockedFtGreaterThanTotalFt() public {
         vm.warp(currentTime + 2 days);
         buyXt(48.219178e8, 1000e8);
+
         vm.warp(currentTime + 4 days);
         buyXt(48.219178e8, 1000e8);
         uint128 tokenAmtIn = 100e8;
@@ -699,7 +709,7 @@ contract VaultTest is Test {
         vm.startPrank(taker);
         res.debt.approve(address(res.order), tokenAmtIn);
         vm.expectRevert(VaultErrors.LockedFtGreaterThanTotalFt.selector);
-        res.order.swapExactTokenToToken(res.debt, res.ft, taker, tokenAmtIn, ftAmtOut);
+        res.order.swapExactTokenToToken(res.debt, res.ft, taker, tokenAmtIn, ftAmtOut, block.timestamp + 1 hours);
         vm.stopPrank();
     }
 
@@ -795,7 +805,9 @@ contract VaultTest is Test {
             res.debt.mint(taker, tokenAmtIn);
             vm.startPrank(taker);
             res.debt.approve(address(order2), tokenAmtIn);
-            ITermMaxOrder(order2).swapExactTokenToToken(res.debt, xt, taker, tokenAmtIn, 1000e8);
+            ITermMaxOrder(order2).swapExactTokenToToken(
+                res.debt, xt, taker, tokenAmtIn, 1000e8, block.timestamp + 1 hours
+            );
             vm.stopPrank();
         }
 
@@ -807,7 +819,9 @@ contract VaultTest is Test {
             res.debt.mint(taker, tokenAmtIn);
             vm.startPrank(taker);
             res.debt.approve(address(order2), tokenAmtIn);
-            ITermMaxOrder(order2).swapExactTokenToToken(res.debt, xt, taker, tokenAmtIn, 1000e8);
+            ITermMaxOrder(order2).swapExactTokenToToken(
+                res.debt, xt, taker, tokenAmtIn, 1000e8, block.timestamp + 1 hours
+            );
             vm.stopPrank();
         }
 
@@ -856,7 +870,7 @@ contract VaultTest is Test {
         LoanUtils.fastMintGt(res, borrower, 1000e8, 1e18);
         vm.stopPrank();
 
-        vm.warp(currentTime + 92 days);
+        vm.warp(marketConfig.maturity + 1 days);
 
         uint256 propotion = (res.ft.balanceOf(address(res.order)) * Constants.DECIMAL_BASE_SQ)
             / (res.ft.totalSupply() - res.ft.balanceOf(address(res.market)));
@@ -935,7 +949,7 @@ contract VaultTest is Test {
         res.debt.mint(taker, tokenAmtIn);
         vm.startPrank(taker);
         res.debt.approve(address(res.order), tokenAmtIn);
-        res.order.swapExactTokenToToken(res.debt, res.ft, taker, tokenAmtIn, ftAmtOut);
+        res.order.swapExactTokenToToken(res.debt, res.ft, taker, tokenAmtIn, ftAmtOut, block.timestamp + 1 hours);
         vm.stopPrank();
     }
 
@@ -944,7 +958,7 @@ contract VaultTest is Test {
         res.debt.mint(taker, tokenAmtIn);
         vm.startPrank(taker);
         res.debt.approve(address(res.order), tokenAmtIn);
-        res.order.swapExactTokenToToken(res.debt, res.xt, taker, tokenAmtIn, xtAmtOut);
+        res.order.swapExactTokenToToken(res.debt, res.xt, taker, tokenAmtIn, xtAmtOut, block.timestamp + 1 hours);
         vm.stopPrank();
     }
 
@@ -954,7 +968,7 @@ contract VaultTest is Test {
         res.ft.transfer(taker, ftAmtIn);
         vm.startPrank(taker);
         res.ft.approve(address(res.order), ftAmtIn);
-        res.order.swapExactTokenToToken(res.ft, res.debt, taker, ftAmtIn, tokenAmtOut);
+        res.order.swapExactTokenToToken(res.ft, res.debt, taker, ftAmtIn, tokenAmtOut, block.timestamp + 1 hours);
         vm.stopPrank();
     }
 
@@ -964,7 +978,7 @@ contract VaultTest is Test {
         res.xt.transfer(taker, xtAmtIn);
         vm.startPrank(taker);
         res.xt.approve(address(res.order), xtAmtIn);
-        res.order.swapExactTokenToToken(res.xt, res.debt, taker, xtAmtIn, tokenAmtOut);
+        res.order.swapExactTokenToToken(res.xt, res.debt, taker, xtAmtIn, tokenAmtOut, block.timestamp + 1 hours);
         vm.stopPrank();
     }
 
@@ -974,7 +988,7 @@ contract VaultTest is Test {
         res.ft.transfer(taker, ftAmtIn);
         vm.startPrank(taker);
         res.ft.approve(address(res.order), ftAmtIn);
-        res.order.swapExactTokenToToken(res.ft, res.xt, taker, ftAmtIn, xtAmtOut);
+        res.order.swapExactTokenToToken(res.ft, res.xt, taker, ftAmtIn, xtAmtOut, block.timestamp + 1 hours);
         vm.stopPrank();
     }
 
@@ -984,8 +998,27 @@ contract VaultTest is Test {
         res.xt.transfer(taker, xtAmtIn);
         vm.startPrank(taker);
         res.xt.approve(address(res.order), xtAmtIn);
-        res.order.swapExactTokenToToken(res.xt, res.ft, taker, xtAmtIn, ftAmtOut);
+        res.order.swapExactTokenToToken(res.xt, res.ft, taker, xtAmtIn, ftAmtOut, block.timestamp + 1 hours);
         vm.stopPrank();
+    }
+
+    function testFixFindings101() public {
+        vm.prank(curator);
+        vault.createOrder(res.market, maxCapacity, 0, orderConfig.curveCuts);
+        address lper = vm.randomAddress();
+
+        res.debt.mint(lper, 100 ether);
+
+        // depositing funds for lp1
+        vm.startPrank(lper);
+        res.debt.approve(address(vault), 100 ether);
+        vault.deposit(100 ether, lper);
+        vm.stopPrank();
+
+        vm.warp(currentTime + 110 days);
+
+        vm.startPrank(lper);
+        vault.withdraw(100 ether, lper, lper);
     }
 
     function _daysToMaturity(uint256 _now) internal view returns (uint256 daysToMaturity) {

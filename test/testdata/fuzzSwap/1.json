@@ -1,5 +1,6 @@
 {
-  "currentTime": "1734786167",
+  "currentTime": "1732194167",
+  "orderInitialAmount": "15000000000",
   "marketConfig": {
     "openTime": "1732194167",
     "maturity": "1739970167",
@@ -91,76 +92,6 @@
       "length": 3
     }
   },
-  "specOrderConfig": {
-    "maxXtReserve": "200000000000",
-    "gtId": "0",
-    "lendCurveCuts": {
-      "0": {
-        "xtReserve": "0",
-        "liqSquare": "1720698543067309478611255296",
-        "offset": "65587699743689"
-      },
-      "1": {
-        "xtReserve": "8200000000",
-        "liqSquare": "3651319143432037376",
-        "offset": "-5178652858"
-      },
-      "2": {
-        "xtReserve": "9000000000",
-        "liqSquare": "5325802973041830281718267904",
-        "offset": "145934293536729"
-      },
-      "3": {
-        "xtReserve": "38200000000",
-        "liqSquare": "1892116786719084032",
-        "offset": "-35449878222"
-      },
-      "4": {
-        "xtReserve": "39000000000",
-        "liqSquare": "53946010500510492131328",
-        "offset": "560444455487"
-      },
-      "5": {
-        "xtReserve": "39200000000",
-        "liqSquare": "1906257274019262464",
-        "offset": "-35635449514"
-      },
-      "length": 6
-    },
-    "borrowCurveCuts": {
-      "0": {
-        "xtReserve": "0",
-        "liqSquare": "1229565727541719128510300160",
-        "offset": "56149199769207"
-      },
-      "1": {
-        "xtReserve": "7200000000",
-        "liqSquare": "3309475930970303488",
-        "offset": "-4286605980"
-      },
-      "2": {
-        "xtReserve": "8000000000",
-        "liqSquare": "693199556046520867658661888",
-        "offset": "53734833258096"
-      },
-      "3": {
-        "xtReserve": "19200000000",
-        "liqSquare": "1607667291259545088",
-        "offset": "-16611743299"
-      },
-      "4": {
-        "xtReserve": "20000000000",
-        "liqSquare": "363179566917820071274348544",
-        "offset": "50905924418402"
-      },
-      "5": {
-        "xtReserve": "38200000000",
-        "liqSquare": "1470280664430855680",
-        "offset": "-34958934805"
-      },
-      "length": 6
-    }
-  },
   "expected": {
     "testBuyFt": {
       "contractState": {
@@ -242,6 +173,16 @@
         "fee": "9090909"
       }
     }
+  },
+  "maxInput": {
+    "buyFtMax": "185000000000",
+    "buyXtMax": "714875155",
+    "sellFtMax": "15714875155",
+    "sellXtMax": "186353449174",
+    "buyExactFtMax": "186353449173",
+    "buyExactXtMax": "15714875156",
+    "sellFtForExactTokenMax": "15000000000",
+    "sellXtForExactTokenMax": "1353449173"
   },
   "priceData": {
     "ETH_2000_DAI_1": {

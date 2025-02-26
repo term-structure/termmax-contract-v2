@@ -5,6 +5,7 @@ import "forge-std/Test.sol";
 import {StateChecker} from "./StateChecker.sol";
 import "contracts/storage/TermMaxStorage.sol";
 import {MockPriceFeed} from "contracts/test/MockPriceFeed.sol";
+import {DeployUtils} from "./DeployUtils.sol";
 
 library JSONLoader {
     Vm constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
@@ -78,6 +79,23 @@ library JSONLoader {
                     vm.parseInt(vm.parseJsonString(testdataJSON, string.concat(indexPath, ".offset")));
             }
         }
+    }
+
+    function getSwapRangeFromJson(string memory testdataJSON, string memory key)
+        internal
+        pure
+        returns (DeployUtils.SwapRange memory swapRange)
+    {
+        swapRange.buyFtMax = vm.parseUint(vm.parseJsonString(testdataJSON, string.concat(key, ".buyFtMax")));
+        swapRange.buyXtMax = vm.parseUint(vm.parseJsonString(testdataJSON, string.concat(key, ".buyXtMax")));
+        swapRange.sellFtMax = vm.parseUint(vm.parseJsonString(testdataJSON, string.concat(key, ".sellFtMax")));
+        swapRange.sellXtMax = vm.parseUint(vm.parseJsonString(testdataJSON, string.concat(key, ".sellXtMax")));
+        swapRange.buyExactFtMax = vm.parseUint(vm.parseJsonString(testdataJSON, string.concat(key, ".buyExactFtMax")));
+        swapRange.buyExactXtMax = vm.parseUint(vm.parseJsonString(testdataJSON, string.concat(key, ".buyExactXtMax")));
+        swapRange.sellFtForExactTokenMax =
+            vm.parseUint(vm.parseJsonString(testdataJSON, string.concat(key, ".sellFtForExactTokenMax")));
+        swapRange.sellXtForExactTokenMax =
+            vm.parseUint(vm.parseJsonString(testdataJSON, string.concat(key, ".sellXtForExactTokenMax")));
     }
 
     function getRoundDataFromJson(string memory testdataJSON, string memory key)
