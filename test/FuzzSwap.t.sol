@@ -85,7 +85,7 @@ contract FuzzSwapTest is Test {
         vm.assume(tokenAmtIn > 0 && tokenAmtIn <= res.swapRange.buyFtMax);
         _buyFt(res, tokenAmtIn, 0);
     }
-    
+
     function testBuyXt(uint256 index, uint128 tokenAmtIn) public {
         console.log("buy xt", index, tokenAmtIn);
         vm.assume(index < entities);
@@ -199,7 +199,7 @@ contract FuzzSwapTest is Test {
         res.order.swapTokenToExactToken(res.debt, res.xt, taker, xtAmtOut, maxTokenAmtIn, block.timestamp + 1 hours);
         vm.stopPrank();
     }
-    
+
     function _sellFtForExactToken(DeployUtils.Res memory res, uint128 tokenAmtOut, uint128 maxFtAmtIn) internal {
         vm.startPrank(taker);
         res.debt.mint(taker, maxFtAmtIn);
@@ -221,5 +221,4 @@ contract FuzzSwapTest is Test {
         res.order.swapTokenToExactToken(res.xt, res.debt, taker, tokenAmtOut, maxXtAmtIn, block.timestamp + 1 hours);
         vm.stopPrank();
     }
-
 }

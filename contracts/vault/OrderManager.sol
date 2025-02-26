@@ -302,7 +302,7 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
 
     /// @notice Calculate and distribute accrued the interest from start to end time
     function _accruedPeriodInterest(uint256 startTime, uint256 endTime) internal {
-        uint256 interest = (_annualizedInterest * (endTime - startTime)) / Constants.DAYS_IN_YEAR;
+        uint256 interest = (_annualizedInterest * (endTime - startTime)) / 365 days;
         uint256 _performanceFeeToCurator = (interest * _performanceFeeRate) / Constants.DECIMAL_BASE;
         // accrue interest
         _performanceFee += _performanceFeeToCurator;

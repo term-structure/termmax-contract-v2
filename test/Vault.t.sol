@@ -870,7 +870,7 @@ contract VaultTest is Test {
         LoanUtils.fastMintGt(res, borrower, 1000e8, 1e18);
         vm.stopPrank();
 
-        vm.warp(currentTime + 92 days);
+        vm.warp(marketConfig.maturity + 1 days);
 
         uint256 propotion = (res.ft.balanceOf(address(res.order)) * Constants.DECIMAL_BASE_SQ)
             / (res.ft.totalSupply() - res.ft.balanceOf(address(res.market)));
