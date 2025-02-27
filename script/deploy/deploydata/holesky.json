@@ -1,17 +1,17 @@
 {
-  "configNum": "8",
+  "configNum": "9",
   "configs": {
     "configs_0": {
       "salt": 0,
       "marketConfig": {
         "treasurer": "0x7ab945445958819a74b48e8Bd5F9E39ed74bdE9E",
-        "maturity": "1743120000",
+        "maturity": "1745539200",
         "lendTakerFeeRatio": "2000000",
         "lendMakerFeeRatio": "2000000",
         "borrowTakerFeeRatio": "300000",
         "borrowMakerFeeRatio": "3000000",
-        "issueFtFeeRatio": "200000",
-        "issueFtFeeRef": "4000000",
+        "issueFtFeeRatio": "10000000",
+        "issueFtFeeRef": "20000000",
         "redeemFeeRatio": "0"
       },
       "loanConfig": {
@@ -39,12 +39,12 @@
       "salt": 0,
       "marketConfig": {
         "treasurer": "0x7ab945445958819a74b48e8Bd5F9E39ed74bdE9E",
-        "maturity": "1743120000",
+        "maturity": "1745539200",
         "lendTakerFeeRatio": "2000000",
         "lendMakerFeeRatio": "2000000",
         "borrowTakerFeeRatio": "300000",
         "borrowMakerFeeRatio": "3000000",
-        "issueFtFeeRatio": "600000",
+        "issueFtFeeRatio": "10000000",
         "issueFtFeeRef": "20000000",
         "redeemFeeRatio": "0"
       },
@@ -73,12 +73,12 @@
       "salt": 0,
       "marketConfig": {
         "treasurer": "0x7ab945445958819a74b48e8Bd5F9E39ed74bdE9E",
-        "maturity": "1743120000",
+        "maturity": "1745539200",
         "lendTakerFeeRatio": "2000000",
         "lendMakerFeeRatio": "2000000",
         "borrowTakerFeeRatio": "300000",
         "borrowMakerFeeRatio": "3000000",
-        "issueFtFeeRatio": "600000",
+        "issueFtFeeRatio": "10000000",
         "issueFtFeeRef": "20000000",
         "redeemFeeRatio": "0"
       },
@@ -107,12 +107,12 @@
       "salt": 0,
       "marketConfig": {
         "treasurer": "0x7ab945445958819a74b48e8Bd5F9E39ed74bdE9E",
-        "maturity": "1743120000",
+        "maturity": "1748476800",
         "lendTakerFeeRatio": "2000000",
         "lendMakerFeeRatio": "2000000",
         "borrowTakerFeeRatio": "300000",
         "borrowMakerFeeRatio": "3000000",
-        "issueFtFeeRatio": "600000",
+        "issueFtFeeRatio": "10000000",
         "issueFtFeeRef": "20000000",
         "redeemFeeRatio": "0"
       },
@@ -133,7 +133,7 @@
         "name": "PT Ethena sUSDE 27MAR2025",
         "symbol": "PT-sUSDE-27MAR2025",
         "decimals": "18",
-        "initialPrice": "98190000",
+        "initialPrice": "96340000",
         "gtKeyIdentifier": "GearingTokenWithERC20"
       }
     },
@@ -141,12 +141,12 @@
       "salt": 0,
       "marketConfig": {
         "treasurer": "0x7ab945445958819a74b48e8Bd5F9E39ed74bdE9E",
-        "maturity": "1743120000",
+        "maturity": "1745539200",
         "lendTakerFeeRatio": "2000000",
         "lendMakerFeeRatio": "2000000",
         "borrowTakerFeeRatio": "300000",
         "borrowMakerFeeRatio": "3000000",
-        "issueFtFeeRatio": "600000",
+        "issueFtFeeRatio": "10000000",
         "issueFtFeeRef": "20000000",
         "redeemFeeRatio": "0"
       },
@@ -175,7 +175,7 @@
       "salt": 0,
       "marketConfig": {
         "treasurer": "0x7ab945445958819a74b48e8Bd5F9E39ed74bdE9E",
-        "maturity": "1740700800",
+        "maturity": "1742774400",
         "lendTakerFeeRatio": "2000000",
         "lendMakerFeeRatio": "2000000",
         "borrowTakerFeeRatio": "300000",
@@ -209,13 +209,13 @@
       "salt": 0,
       "marketConfig": {
         "treasurer": "0x7ab945445958819a74b48e8Bd5F9E39ed74bdE9E",
-        "maturity": "1743120000",
+        "maturity": "1745539200",
         "lendTakerFeeRatio": "2000000",
         "lendMakerFeeRatio": "2000000",
         "borrowTakerFeeRatio": "300000",
         "borrowMakerFeeRatio": "3000000",
-        "issueFtFeeRatio": "200000",
-        "issueFtFeeRef": "4000000",
+        "issueFtFeeRatio": "10000000",
+        "issueFtFeeRef": "20000000",
         "redeemFeeRatio": "0"
       },
       "loanConfig": {
@@ -243,13 +243,13 @@
       "salt": 0,
       "marketConfig": {
         "treasurer": "0x7ab945445958819a74b48e8Bd5F9E39ed74bdE9E",
-        "maturity": "1743120000",
+        "maturity": "1745539200",
         "lendTakerFeeRatio": "2000000",
         "lendMakerFeeRatio": "2000000",
         "borrowTakerFeeRatio": "300000",
         "borrowMakerFeeRatio": "3000000",
-        "issueFtFeeRatio": "200000",
-        "issueFtFeeRef": "4000000",
+        "issueFtFeeRatio": "10000000",
+        "issueFtFeeRef": "20000000",
         "redeemFeeRatio": "0"
       },
       "loanConfig": {
@@ -262,14 +262,48 @@
         "name": "Wrapped BTC",
         "symbol": "WBTC",
         "decimals": "8",
-        "initialPrice": "1000000000000"
+        "initialPrice": "10000000000000"
       },
       "collateralConfig": {
         "tokenAddr": "0x8236a87084f8B84306f72007F36F2618A5634494",
         "name": "Lombard Staked BTC",
         "symbol": "LBTC",
         "decimals": "8",
-        "initialPrice": "1000000000000",
+        "initialPrice": "10000000000000",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    },
+    "configs_8": {
+      "salt": 0,
+      "marketConfig": {
+        "treasurer": "0x7ab945445958819a74b48e8Bd5F9E39ed74bdE9E",
+        "maturity": "1745539200",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "300000",
+        "borrowMakerFeeRatio": "3000000",
+        "issueFtFeeRatio": "10000000",
+        "issueFtFeeRef": "20000000",
+        "redeemFeeRatio": "0"
+      },
+      "loanConfig": {
+        "liquidationLtv": "94000000",
+        "maxLtv": "92000000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+        "name": "Tether USD",
+        "symbol": "USDT",
+        "decimals": "6",
+        "initialPrice": "100000000"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0x90D2af7d622ca3141efA4d8f1F24d86E5974Cc8F",
+        "name": "Ethereal Pre-deposit Vault",
+        "symbol": "eUSDe",
+        "decimals": "18",
+        "initialPrice": "100000000",
         "gtKeyIdentifier": "GearingTokenWithERC20"
       }
     }

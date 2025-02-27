@@ -161,11 +161,6 @@ export const abiTermMaxOrder = [
                 type: 'uint32',
                 internalType: 'uint32',
               },
-              {
-                name: 'redeemFeeRatio',
-                type: 'uint32',
-                internalType: 'uint32',
-              },
             ],
           },
         ],
@@ -308,11 +303,6 @@ export const abiTermMaxOrder = [
               },
               {
                 name: 'issueFtFeeRef',
-                type: 'uint32',
-                internalType: 'uint32',
-              },
-              {
-                name: 'redeemFeeRatio',
                 type: 'uint32',
                 internalType: 'uint32',
               },
@@ -531,11 +521,6 @@ export const abiTermMaxOrder = [
             type: 'uint32',
             internalType: 'uint32',
           },
-          {
-            name: 'redeemFeeRatio',
-            type: 'uint32',
-            internalType: 'uint32',
-          },
         ],
       },
     ],
@@ -649,11 +634,6 @@ export const abiTermMaxOrder = [
               },
               {
                 name: 'issueFtFeeRef',
-                type: 'uint32',
-                internalType: 'uint32',
-              },
-              {
-                name: 'redeemFeeRatio',
                 type: 'uint32',
                 internalType: 'uint32',
               },
@@ -1012,11 +992,6 @@ export const abiTermMaxOrder = [
           },
           {
             name: 'issueFtFeeRef',
-            type: 'uint32',
-            internalType: 'uint32',
-          },
-          {
-            name: 'redeemFeeRatio',
             type: 'uint32',
             internalType: 'uint32',
           },
