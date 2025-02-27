@@ -137,8 +137,6 @@ abstract contract GtBaseTest is ForkBaseTest {
 
         res.router = deployRouter(res.marketInitialParams.admin);
 
-        res.router.setMarketWhitelist(address(res.market), true);
-
         res.uniswapData = _readUniswapData(key);
         if (res.uniswapData.active) {
             res.router.setAdapterWhitelist(address(res.uniswapData.adapter), true);
@@ -232,8 +230,9 @@ abstract contract GtBaseTest is ForkBaseTest {
         deal(address(res.collateral), taker, collInAmt);
         res.collateral.approve(address(res.router), collInAmt);
 
-        uint256 gtId =
-            res.router.borrowTokenFromCollateral(taker, res.market, collInAmt, orders, tokenAmtsWantBuy, maxDebtAmt);
+        uint256 gtId = res.router.borrowTokenFromCollateral(
+            taker, res.market, collInAmt, orders, tokenAmtsWantBuy, maxDebtAmt, block.timestamp + 1 hours
+        );
         (address owner, uint128 debtAmt,, bytes memory collateralData) = res.gt.loanInfo(gtId);
         assertEq(owner, taker);
         assertEq(collInAmt, abi.decode(collateralData, (uint256)));
@@ -306,7 +305,15 @@ abstract contract GtBaseTest is ForkBaseTest {
         amtsToBuyXt[0] = tokenAmtToBuyXt;
 
         (gtId,) = res.router.leverageFromToken(
-            taker, res.market, orders, amtsToBuyXt, minXTOut, tokenAmtIn, uint128(maxLtv), units
+            taker,
+            res.market,
+            orders,
+            amtsToBuyXt,
+            minXTOut,
+            tokenAmtIn,
+            uint128(maxLtv),
+            units,
+            block.timestamp + 1 hours
         );
 
         uint256 debtTokenBalanceAfterSwap = res.debtToken.balanceOf(taker);
@@ -335,8 +342,9 @@ abstract contract GtBaseTest is ForkBaseTest {
         uint128[] memory amtsToBuyFt = new uint128[](0);
         bool byDebtToken = true;
 
-        uint256 netTokenOut =
-            res.router.flashRepayFromColl(taker, res.market, gtId, orders, amtsToBuyFt, byDebtToken, units);
+        uint256 netTokenOut = res.router.flashRepayFromColl(
+            taker, res.market, gtId, orders, amtsToBuyFt, byDebtToken, units, block.timestamp + 1 hours
+        );
 
         uint256 debtTokenBalanceAfterRepay = res.debtToken.balanceOf(taker);
 
@@ -364,8 +372,9 @@ abstract contract GtBaseTest is ForkBaseTest {
         amtsToBuyFt[0] = debtAmt;
         bool byDebtToken = false;
 
-        uint256 netTokenOut =
-            res.router.flashRepayFromColl(taker, res.market, gtId, orders, amtsToBuyFt, byDebtToken, units);
+        uint256 netTokenOut = res.router.flashRepayFromColl(
+            taker, res.market, gtId, orders, amtsToBuyFt, byDebtToken, units, block.timestamp + 1 hours
+        );
 
         uint256 debtTokenBalanceAfterRepay = res.debtToken.balanceOf(taker);
 

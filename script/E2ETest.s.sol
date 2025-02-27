@@ -149,7 +149,7 @@ contract E2ETest is Script {
         lendAmt = lendAmt * 10 ** underlying.decimals();
         uint256 oriUnderlyingBalance = underlying.balanceOf(userAddr);
         underlying.approve(address(order), lendAmt);
-        order.swapExactTokenToToken(underlying, ft, userAddr, uint128(lendAmt), 0);
+        order.swapExactTokenToToken(underlying, ft, userAddr, uint128(lendAmt), 0, uint128(0));
         vm.stopBroadcast();
 
         (uint256 newFtReserve, uint256 newXtReserve) = order.tokenReserves();
@@ -192,8 +192,18 @@ contract E2ETest is Script {
         orders[0] = order;
         uint128[] memory ftAmtsToSell = new uint128[](1);
         ftAmtsToSell[0] = uint128(borrowAmt);
-        gtId =
-            router.borrowTokenFromCollateral(userAddr, market, collateralAmt, orders, ftAmtsToSell, uint128(maxDebtAmt));
+        SwapUnit[] memory units = new SwapUnit[](0);
+        (gtId,) = router.leverageFromToken(
+            userAddr,
+            market,
+            orders,
+            ftAmtsToSell,
+            uint128(0), // minXtOut
+            uint128(borrowAmt), // tokenToSwap
+            uint128(maxDebtAmt), // maxLtv
+            units,
+            block.timestamp
+        );
         vm.stopBroadcast();
 
         (uint256 newFtReserve, uint256 newXtReserve) = order.tokenReserves();
@@ -237,7 +247,9 @@ contract E2ETest is Script {
 
         vm.startBroadcast(userPrivateKey);
         underlying.approve(address(router), amtToBuyXt + tokenToSwap);
-        router.leverageFromToken(userAddr, market, orders, amtsToBuyXt, minXtOut, tokenToSwap, maxLtv, units);
+        (uint256 gtId,) = router.leverageFromToken(
+            userAddr, market, orders, amtsToBuyXt, minXtOut, tokenToSwap, maxLtv, units, block.timestamp + 1 hours
+        );
         vm.stopBroadcast();
 
         (uint256 newFtReserve, uint256 newXtReserve) = order.tokenReserves();

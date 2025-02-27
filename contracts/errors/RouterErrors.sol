@@ -2,6 +2,8 @@
 pragma solidity ^0.8.0;
 
 interface RouterErrors {
+    /// @notice Error for calling the orders and trading amts length not match
+    error OrdersAndAmtsLengthNotMatch();
     /// @notice Error for calling the market is not whitelisted
     error MarketNotWhitelisted(address market);
     /// @notice Error for calling the gt is not whitelisted

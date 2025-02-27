@@ -66,6 +66,32 @@ contract OrderTest is Test {
         vm.stopPrank();
     }
 
+    function testInvalidCurveCuts() public {
+        vm.startPrank(maker);
+        {
+            OrderConfig memory newOrderConfig = orderConfig;
+            newOrderConfig.curveCuts.lendCurveCuts[0].liqSquare = 0;
+            vm.expectRevert(abi.encodeWithSelector(OrderErrors.InvalidCurveCuts.selector));
+            res.order.updateOrder(newOrderConfig, 0, 0);
+        }
+
+        {
+            OrderConfig memory newOrderConfig = orderConfig;
+            newOrderConfig.curveCuts.borrowCurveCuts[0].liqSquare = 0;
+            vm.expectRevert(abi.encodeWithSelector(OrderErrors.InvalidCurveCuts.selector));
+            res.order.updateOrder(newOrderConfig, 0, 0);
+        }
+
+        {
+            OrderConfig memory newOrderConfig = orderConfig;
+            newOrderConfig.curveCuts.borrowCurveCuts[1].liqSquare = 0;
+            vm.expectRevert(abi.encodeWithSelector(OrderErrors.InvalidCurveCuts.selector));
+            res.order.updateOrder(newOrderConfig, 0, 0);
+        }
+
+        vm.stopPrank();
+    }
+
     function testBuyFt() public {
         vm.startPrank(sender);
 
@@ -82,7 +108,9 @@ contract OrderTest is Test {
         emit OrderEvents.SwapExactTokenToToken(
             res.debt, res.ft, sender, sender, underlyingAmtIn, uint128(actualOut), uint128(fee)
         );
-        uint256 netOut = res.order.swapExactTokenToToken(res.debt, res.ft, sender, underlyingAmtIn, minTokenOut);
+        uint256 netOut = res.order.swapExactTokenToToken(
+            res.debt, res.ft, sender, underlyingAmtIn, minTokenOut, block.timestamp + 1 hours
+        );
 
         StateChecker.checkOrderState(res, expectedState);
 
@@ -103,7 +131,9 @@ contract OrderTest is Test {
         res.debt.mint(sender, underlyingAmtIn);
         res.debt.approve(address(res.order), underlyingAmtIn);
         vm.expectRevert(abi.encodeWithSelector(OrderErrors.UnexpectedAmount.selector, minTokenOut, expectedNetOut));
-        res.order.swapExactTokenToToken(res.debt, res.ft, sender, underlyingAmtIn, minTokenOut);
+        res.order.swapExactTokenToToken(
+            res.debt, res.ft, sender, underlyingAmtIn, minTokenOut, block.timestamp + 1 hours
+        );
 
         vm.stopPrank();
     }
@@ -119,7 +149,9 @@ contract OrderTest is Test {
 
         vm.warp(res.market.config().maturity);
         vm.expectRevert(abi.encodeWithSelector(OrderErrors.TermIsNotOpen.selector));
-        res.order.swapExactTokenToToken(res.debt, res.ft, sender, underlyingAmtIn, minTokenOut);
+        res.order.swapExactTokenToToken(
+            res.debt, res.ft, sender, underlyingAmtIn, minTokenOut, block.timestamp + 1 hours
+        );
 
         vm.stopPrank();
     }
@@ -140,7 +172,9 @@ contract OrderTest is Test {
         emit OrderEvents.SwapExactTokenToToken(
             res.debt, res.xt, sender, sender, underlyingAmtIn, uint128(actualOut), uint128(fee)
         );
-        uint256 netOut = res.order.swapExactTokenToToken(res.debt, res.xt, sender, underlyingAmtIn, minTokenOut);
+        uint256 netOut = res.order.swapExactTokenToToken(
+            res.debt, res.xt, sender, underlyingAmtIn, minTokenOut, block.timestamp + 1 hours
+        );
 
         StateChecker.checkOrderState(res, expectedState);
 
@@ -161,7 +195,9 @@ contract OrderTest is Test {
         res.debt.mint(sender, underlyingAmtIn);
         res.debt.approve(address(res.order), underlyingAmtIn);
         vm.expectRevert(abi.encodeWithSelector(OrderErrors.UnexpectedAmount.selector, minTokenOut, expectedNetOut));
-        res.order.swapExactTokenToToken(res.debt, res.xt, sender, underlyingAmtIn, minTokenOut);
+        res.order.swapExactTokenToToken(
+            res.debt, res.xt, sender, underlyingAmtIn, minTokenOut, block.timestamp + 1 hours
+        );
 
         vm.stopPrank();
     }
@@ -173,8 +209,11 @@ contract OrderTest is Test {
         uint128 minFtOut = 0e8;
         res.debt.mint(sender, underlyingAmtInForBuyFt);
         res.debt.approve(address(res.order), underlyingAmtInForBuyFt);
-        uint128 ftAmtIn =
-            uint128(res.order.swapExactTokenToToken(res.debt, res.ft, sender, underlyingAmtInForBuyFt, minFtOut));
+        uint128 ftAmtIn = uint128(
+            res.order.swapExactTokenToToken(
+                res.debt, res.ft, sender, underlyingAmtInForBuyFt, minFtOut, block.timestamp + 1 hours
+            )
+        );
         uint128 minTokenOut = 0e8;
         res.ft.approve(address(res.order), ftAmtIn);
 
@@ -186,7 +225,8 @@ contract OrderTest is Test {
         emit OrderEvents.SwapExactTokenToToken(
             res.ft, res.debt, sender, sender, ftAmtIn, uint128(actualOut), uint128(fee)
         );
-        uint256 netOut = res.order.swapExactTokenToToken(res.ft, res.debt, sender, ftAmtIn, minTokenOut);
+        uint256 netOut =
+            res.order.swapExactTokenToToken(res.ft, res.debt, sender, ftAmtIn, minTokenOut, block.timestamp + 1 hours);
 
         StateChecker.checkOrderState(res, expectedState);
 
@@ -206,13 +246,16 @@ contract OrderTest is Test {
         uint128 minFtOut = 0e8;
         res.debt.mint(sender, underlyingAmtInForBuyFt);
         res.debt.approve(address(res.order), underlyingAmtInForBuyFt);
-        uint128 ftAmtIn =
-            uint128(res.order.swapExactTokenToToken(res.debt, res.ft, sender, underlyingAmtInForBuyFt, minFtOut));
+        uint128 ftAmtIn = uint128(
+            res.order.swapExactTokenToToken(
+                res.debt, res.ft, sender, underlyingAmtInForBuyFt, minFtOut, block.timestamp + 1 hours
+            )
+        );
         uint128 minTokenOut = expectedNetOut + 1;
 
         res.ft.approve(address(res.order), ftAmtIn);
         vm.expectRevert(abi.encodeWithSelector(OrderErrors.UnexpectedAmount.selector, minTokenOut, expectedNetOut));
-        res.order.swapExactTokenToToken(res.ft, res.debt, sender, ftAmtIn, minTokenOut);
+        res.order.swapExactTokenToToken(res.ft, res.debt, sender, ftAmtIn, minTokenOut, block.timestamp + 1 hours);
 
         vm.stopPrank();
     }
@@ -224,8 +267,11 @@ contract OrderTest is Test {
         uint128 minXTOut = 0e8;
         res.debt.mint(sender, underlyingAmtInForBuyXt);
         res.debt.approve(address(res.order), underlyingAmtInForBuyXt);
-        uint128 xtAmtIn =
-            uint128(res.order.swapExactTokenToToken(res.debt, res.xt, sender, underlyingAmtInForBuyXt, minXTOut));
+        uint128 xtAmtIn = uint128(
+            res.order.swapExactTokenToToken(
+                res.debt, res.xt, sender, underlyingAmtInForBuyXt, minXTOut, block.timestamp + 1 hours
+            )
+        );
         uint128 minTokenOut = 0e8;
         res.xt.approve(address(res.order), xtAmtIn);
 
@@ -237,7 +283,8 @@ contract OrderTest is Test {
         emit OrderEvents.SwapExactTokenToToken(
             res.xt, res.debt, sender, sender, xtAmtIn, uint128(actualOut), uint128(fee)
         );
-        uint256 netOut = res.order.swapExactTokenToToken(res.xt, res.debt, sender, xtAmtIn, minTokenOut);
+        uint256 netOut =
+            res.order.swapExactTokenToToken(res.xt, res.debt, sender, xtAmtIn, minTokenOut, block.timestamp + 1 hours);
 
         StateChecker.checkOrderState(res, expectedState);
 
@@ -257,13 +304,16 @@ contract OrderTest is Test {
         uint128 minXtOut = 0e8;
         res.debt.mint(sender, underlyingAmtInForBuyXt);
         res.debt.approve(address(res.order), underlyingAmtInForBuyXt);
-        uint128 xtAmtIn =
-            uint128(res.order.swapExactTokenToToken(res.debt, res.xt, sender, underlyingAmtInForBuyXt, minXtOut));
+        uint128 xtAmtIn = uint128(
+            res.order.swapExactTokenToToken(
+                res.debt, res.xt, sender, underlyingAmtInForBuyXt, minXtOut, block.timestamp + 1 hours
+            )
+        );
         uint128 minTokenOut = expectedNetOut + 1;
 
         res.xt.approve(address(res.order), xtAmtIn);
         vm.expectRevert(abi.encodeWithSelector(OrderErrors.UnexpectedAmount.selector, minTokenOut, expectedNetOut));
-        res.order.swapExactTokenToToken(res.xt, res.debt, sender, xtAmtIn, minTokenOut);
+        res.order.swapExactTokenToToken(res.xt, res.debt, sender, xtAmtIn, minTokenOut, block.timestamp + 1 hours);
 
         vm.stopPrank();
     }
@@ -283,7 +333,8 @@ contract OrderTest is Test {
         emit OrderEvents.SwapTokenToExactToken(
             res.debt, res.ft, sender, sender, ftOutAmt, uint128(actualIn), uint128(fee)
         );
-        uint256 netIn = res.order.swapTokenToExactToken(res.debt, res.ft, sender, ftOutAmt, maxTokenIn);
+        uint256 netIn =
+            res.order.swapTokenToExactToken(res.debt, res.ft, sender, ftOutAmt, maxTokenIn, block.timestamp + 1 hours);
 
         StateChecker.checkOrderState(res, expectedState);
 
@@ -309,7 +360,8 @@ contract OrderTest is Test {
         emit OrderEvents.SwapTokenToExactToken(
             res.debt, res.xt, sender, sender, xtOutAmt, uint128(actualIn), uint128(fee)
         );
-        uint256 netIn = res.order.swapTokenToExactToken(res.debt, res.xt, sender, xtOutAmt, maxTokenIn);
+        uint256 netIn =
+            res.order.swapTokenToExactToken(res.debt, res.xt, sender, xtOutAmt, maxTokenIn, block.timestamp + 1 hours);
 
         StateChecker.checkOrderState(res, expectedState);
 
@@ -326,8 +378,11 @@ contract OrderTest is Test {
         uint128 minFtOut = 0e8;
         res.debt.mint(sender, underlyingAmtInForBuyFt);
         res.debt.approve(address(res.order), underlyingAmtInForBuyFt);
-        uint128 maxTokenIn =
-            uint128(res.order.swapExactTokenToToken(res.debt, res.ft, sender, underlyingAmtInForBuyFt, minFtOut));
+        uint128 maxTokenIn = uint128(
+            res.order.swapExactTokenToToken(
+                res.debt, res.ft, sender, underlyingAmtInForBuyFt, minFtOut, block.timestamp + 1 hours
+            )
+        );
         uint128 debtOutAmt = 80e8;
         res.ft.approve(address(res.order), maxTokenIn);
 
@@ -339,7 +394,8 @@ contract OrderTest is Test {
         emit OrderEvents.SwapTokenToExactToken(
             res.ft, res.debt, sender, sender, debtOutAmt, uint128(actualIn), uint128(fee)
         );
-        uint256 netIn = res.order.swapTokenToExactToken(res.ft, res.debt, sender, debtOutAmt, maxTokenIn);
+        uint256 netIn =
+            res.order.swapTokenToExactToken(res.ft, res.debt, sender, debtOutAmt, maxTokenIn, block.timestamp + 1 hours);
 
         StateChecker.checkOrderState(res, expectedState);
 
@@ -357,8 +413,11 @@ contract OrderTest is Test {
         uint128 minFtOut = 0e8;
         res.debt.mint(sender, underlyingAmtInForBuyXt);
         res.debt.approve(address(res.order), underlyingAmtInForBuyXt);
-        uint128 maxTokenIn =
-            uint128(res.order.swapExactTokenToToken(res.debt, res.xt, sender, underlyingAmtInForBuyXt, minFtOut));
+        uint128 maxTokenIn = uint128(
+            res.order.swapExactTokenToToken(
+                res.debt, res.xt, sender, underlyingAmtInForBuyXt, minFtOut, block.timestamp + 1 hours
+            )
+        );
         uint128 debtOutAmt = 3e8;
         res.xt.approve(address(res.order), maxTokenIn);
 
@@ -370,7 +429,8 @@ contract OrderTest is Test {
         emit OrderEvents.SwapTokenToExactToken(
             res.xt, res.debt, sender, sender, debtOutAmt, uint128(actualIn), uint128(fee)
         );
-        uint256 netIn = res.order.swapTokenToExactToken(res.xt, res.debt, sender, debtOutAmt, maxTokenIn);
+        uint256 netIn =
+            res.order.swapTokenToExactToken(res.xt, res.debt, sender, debtOutAmt, maxTokenIn, block.timestamp + 1 hours);
 
         StateChecker.checkOrderState(res, expectedState);
 
@@ -389,7 +449,7 @@ contract OrderTest is Test {
 
         vm.warp(res.market.config().maturity);
         vm.expectRevert(abi.encodeWithSignature("TermIsNotOpen()"));
-        res.order.swapTokenToExactToken(res.debt, res.ft, sender, maxTokenOut, ftInAmt);
+        res.order.swapTokenToExactToken(res.debt, res.ft, sender, maxTokenOut, ftInAmt, block.timestamp + 1 hours);
     }
 
     function testIssueFtWhenSwap() public {
@@ -406,7 +466,30 @@ contract OrderTest is Test {
         vm.startPrank(sender);
         res.debt.mint(sender, maxTokenIn);
         res.debt.approve(address(res.order), maxTokenIn);
-        res.order.swapTokenToExactToken(res.debt, res.ft, sender, ftOutAmt, maxTokenIn);
+        res.order.swapTokenToExactToken(res.debt, res.ft, sender, ftOutAmt, maxTokenIn, block.timestamp + 1 hours);
+        assertEq(res.ft.balanceOf(sender), ftOutAmt);
+        (, uint128 debtAmt,,) = res.gt.loanInfo(gtId);
+        assertGt(debtAmt, 100e8);
+        vm.stopPrank();
+    }
+
+    function testIssueFtWhenNoAssets() public {
+        vm.startPrank(maker);
+        // Mint a GT
+        (uint256 gtId,) = LoanUtils.fastMintGt(res, maker, 100e8, 1e18);
+        res.gt.approve(address(res.order), gtId);
+        orderConfig.gtId = gtId;
+        res.order.updateOrder(orderConfig, -150e8, -150e8);
+        assert(res.ft.balanceOf(address(res.order)) == 0);
+        assert(res.xt.balanceOf(address(res.order)) == 0);
+        vm.stopPrank();
+
+        uint128 ftOutAmt = 151e8;
+        uint128 maxTokenIn = 150e8;
+        vm.startPrank(sender);
+        res.debt.mint(sender, maxTokenIn);
+        res.debt.approve(address(res.order), maxTokenIn);
+        res.order.swapTokenToExactToken(res.debt, res.ft, sender, ftOutAmt, maxTokenIn, block.timestamp + 1 hours);
         assertEq(res.ft.balanceOf(sender), ftOutAmt);
         (, uint128 debtAmt,,) = res.gt.loanInfo(gtId);
         assertGt(debtAmt, 100e8);
@@ -424,7 +507,7 @@ contract OrderTest is Test {
         res.debt.mint(sender, maxTokenIn);
         res.debt.approve(address(res.order), maxTokenIn);
         vm.expectRevert(abi.encodeWithSelector(OrderErrors.CantNotIssueFtWithoutGt.selector));
-        res.order.swapTokenToExactToken(res.debt, res.ft, sender, ftOutAmt, maxTokenIn);
+        res.order.swapTokenToExactToken(res.debt, res.ft, sender, ftOutAmt, maxTokenIn, block.timestamp + 1 hours);
         vm.stopPrank();
     }
 
@@ -498,7 +581,7 @@ contract OrderTest is Test {
 
         // Verify swaps are blocked when paused
         vm.expectRevert(abi.encodeWithSignature("EnforcedPause()"));
-        res.order.swapExactTokenToToken(res.ft, res.debt, sender, 1e8, 0);
+        res.order.swapExactTokenToToken(res.ft, res.debt, sender, 1e8, 0, block.timestamp + 1 hours);
 
         // Test unpause
         res.order.unpause();
@@ -521,13 +604,13 @@ contract OrderTest is Test {
 
         // Test same token swap
         vm.expectRevert(OrderErrors.CantSwapSameToken.selector);
-        res.order.swapExactTokenToToken(res.ft, res.ft, sender, 1e8, 0);
+        res.order.swapExactTokenToToken(res.ft, res.ft, sender, 1e8, 0, block.timestamp + 1 hours);
 
         IERC20 token0 = IERC20(vm.randomAddress());
         IERC20 token1 = IERC20(vm.randomAddress());
         // Test invalid token combination
         vm.expectRevert(abi.encodeWithSelector(OrderErrors.CantNotSwapToken.selector, token0, token1));
-        res.order.swapExactTokenToToken(token0, token1, sender, 1e8, 0);
+        res.order.swapExactTokenToToken(token0, token1, sender, 1e8, 0, block.timestamp + 1 hours);
 
         vm.stopPrank();
     }
@@ -593,7 +676,7 @@ contract OrderTest is Test {
         uint256 ftBalanceBefore = res.ft.balanceOf(address(res.order));
         uint256 xtBalanceBefore = res.xt.balanceOf(address(res.order));
         tokenIn.approve(address(res.order), swapAmt);
-        res.order.swapExactTokenToToken(tokenIn, tokenOut, sender, swapAmt, 0);
+        res.order.swapExactTokenToToken(tokenIn, tokenOut, sender, swapAmt, 0, block.timestamp + 1 hours);
 
         uint256 ftBalanceAfter = res.ft.balanceOf(address(res.order));
         uint256 xtBalanceAfter = res.xt.balanceOf(address(res.order));
@@ -654,7 +737,9 @@ contract OrderTest is Test {
         res.debt.approve(address(res.order), underlyingAmtIn);
 
         vm.expectRevert(abi.encodeWithSelector(OrderErrors.LendIsNotAllowed.selector));
-        res.order.swapExactTokenToToken(res.debt, res.ft, sender, underlyingAmtIn, minTokenOut);
+        res.order.swapExactTokenToToken(
+            res.debt, res.ft, sender, underlyingAmtIn, minTokenOut, block.timestamp + 1 hours
+        );
 
         vm.stopPrank();
     }
@@ -684,9 +769,60 @@ contract OrderTest is Test {
         res.debt.approve(address(res.order), underlyingAmtIn);
 
         vm.expectRevert(abi.encodeWithSelector(OrderErrors.BorrowIsNotAllowed.selector));
-        res.order.swapExactTokenToToken(res.debt, res.xt, sender, underlyingAmtIn, minTokenOut);
+        res.order.swapExactTokenToToken(
+            res.debt, res.xt, sender, underlyingAmtIn, minTokenOut, block.timestamp + 1 hours
+        );
 
         vm.stopPrank();
+    }
+
+    function testUtWhenDeadlineLessThanBlockTime() public {
+        vm.startPrank(sender);
+
+        uint128 swapAmt = 5e8;
+        IERC20 tokenIn = IERC20(address(res.debt));
+        IERC20 tokenOut = IERC20(address(res.xt));
+
+        // Set block timestamp
+        uint256 currentTime = 1000;
+        vm.warp(currentTime);
+
+        // Try to swap with deadline less than block time
+        uint256 pastDeadline = currentTime - 1;
+
+        tokenIn.approve(address(res.order), swapAmt);
+
+        vm.expectRevert(OrderErrors.DeadlineExpired.selector);
+        res.order.swapExactTokenToToken(tokenIn, tokenOut, sender, swapAmt, 0, pastDeadline);
+
+        vm.expectRevert(OrderErrors.DeadlineExpired.selector);
+        res.order.swapTokenToExactToken(tokenIn, tokenOut, sender, 1, swapAmt, pastDeadline);
+
+        vm.stopPrank();
+    }
+
+    function testAprWithoutCurve() public {
+        vm.startPrank(maker);
+        OrderConfig memory testOrderConfig = res.order.orderConfig();
+        testOrderConfig.curveCuts.lendCurveCuts = new CurveCut[](0);
+        testOrderConfig.curveCuts.borrowCurveCuts = new CurveCut[](0);
+
+        vm.expectEmit();
+        emit OrderEvents.UpdateOrder(
+            testOrderConfig.curveCuts,
+            0,
+            0,
+            testOrderConfig.gtId,
+            testOrderConfig.maxXtReserve,
+            ISwapCallback(address(0))
+        );
+        res.order.updateOrder(testOrderConfig, 0, 0);
+        vm.stopPrank();
+
+        (uint256 lendApr, uint256 borrowApr) = res.order.apr();
+
+        assert(lendApr == 0);
+        assert(borrowApr == type(uint256).max);
     }
 }
 

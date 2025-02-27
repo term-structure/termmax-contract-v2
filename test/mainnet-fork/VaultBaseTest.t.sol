@@ -238,7 +238,7 @@ abstract contract VaultBaseTest is ForkBaseTest {
         deal(address(res.debtToken), taker, tokenAmtIn);
         vm.startPrank(taker);
         res.debtToken.approve(address(res.order), tokenAmtIn);
-        res.order.swapExactTokenToToken(res.debtToken, res.xt, taker, tokenAmtIn, xtAmtOut);
+        res.order.swapExactTokenToToken(res.debtToken, res.xt, taker, tokenAmtIn, xtAmtOut, block.timestamp + 1 hours);
         vm.stopPrank();
     }
 }

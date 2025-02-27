@@ -164,7 +164,8 @@ contract E2ETest is Test {
             maxLtv,
             mintXtAmt,
             swapUnits,
-            config.lsf
+            config.lsf,
+            block.timestamp + 1 hours
         );
         console.log("xt amount with slippage:", netXtOut);
         (

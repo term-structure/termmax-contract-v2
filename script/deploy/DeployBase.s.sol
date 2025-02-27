@@ -9,6 +9,7 @@ import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IER
 import {TermMaxFactory} from "contracts/factory/TermMaxFactory.sol";
 import {ITermMaxFactory} from "contracts/factory/ITermMaxFactory.sol";
 import {TermMaxRouter} from "contracts/router/TermMaxRouter.sol";
+import {MarketViewer} from "contracts/router/MarketViewer.sol";
 import {ITermMaxRouter} from "contracts/router/ITermMaxRouter.sol";
 import {TermMaxMarket} from "contracts/TermMaxMarket.sol";
 import {TermMaxOrder} from "contracts/TermMaxOrder.sol";
@@ -251,7 +252,6 @@ contract DeployBase is Script {
 
             TermMaxMarket market = TermMaxMarket(factory.createMarket(GT_ERC20, initialParams, config.salt));
             markets[i] = market;
-            router.setMarketWhitelist(address(market), true);
         }
     }
 
@@ -308,7 +308,6 @@ contract DeployBase is Script {
 
             TermMaxMarket market = TermMaxMarket(factory.createMarket(GT_ERC20, initialParams, config.salt));
             markets[i] = market;
-            router.setMarketWhitelist(address(market), true);
         }
     }
 
@@ -335,6 +334,10 @@ contract DeployBase is Script {
             performanceFeeRate: performanceFeeRate
         });
         vault = TermMaxVault(vaultFactory.createVault(initialParams, 0));
+    }
+
+    function deployMarketViewer() public returns (MarketViewer marketViewer) {
+        marketViewer = new MarketViewer();
     }
 
     function getGitCommitHash() public returns (bytes memory) {

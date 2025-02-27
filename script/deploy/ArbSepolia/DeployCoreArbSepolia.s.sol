@@ -22,11 +22,11 @@ import {DeployBase} from "../DeployBase.s.sol";
 import {IOracle} from "contracts/oracle/IOracle.sol";
 import {VaultFactory, IVaultFactory} from "contracts/factory/VaultFactory.sol";
 
-contract DeployCoreHolesky is DeployBase {
+contract DeployCoreArbSepolia is DeployBase {
     // admin config
-    uint256 deployerPrivateKey = vm.envUint("HOLESKY_DEPLOYER_PRIVATE_KEY");
+    uint256 deployerPrivateKey = vm.envUint("ARB_SEPOLIA_DEPLOYER_PRIVATE_KEY");
     address deployerAddr = vm.addr(deployerPrivateKey);
-    address adminAddr = vm.envAddress("HOLESKY_ADMIN_ADDRESS");
+    address adminAddr = vm.envAddress("ARB_SEPOLIA_ADMIN_ADDRESS");
 
     function run() public {
         vm.startBroadcast(deployerPrivateKey);
