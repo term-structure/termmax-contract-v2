@@ -88,13 +88,14 @@ contract ForkTradingBot is MarketBaseTest {
         address recipent = vm.randomAddress();
         uint256 minIncome = 1;
         IERC20 tradeToken = res.ft;
+        uint256 deadline = block.timestamp + 1 hours;
         deal(recipent, 1e18);
         vm.startPrank(recipent);
         tradingBot.doTrade(
             address(res.debtToken),
             tradingAmts[0],
             borrowType,
-            abi.encode(minIncome, tradeToken, recipent, buyOrders, sellOrders, tradingAmts)
+            abi.encode(minIncome, tradeToken, recipent, buyOrders, sellOrders, tradingAmts, deadline)
         );
         vm.stopPrank();
     }
