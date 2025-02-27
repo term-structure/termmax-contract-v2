@@ -145,8 +145,8 @@ library MathLib {
 
     function plusInt256(uint256 a, int256 b) internal pure returns (uint256) {
         if (b < 0) {
-            return a - (-b).toUint256();
+            return a - uint256(-b);
         }
-        return a + b.toUint256();
+        return a + uint256(b);
     }
 }
