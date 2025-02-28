@@ -113,6 +113,16 @@ contract FuzzActionsTest is Test {
     function testActions() public {
         DeployUtils.Res memory res = _initResources();
         Action[] memory actions = _parseActions();
+        vm.startPrank(taker);
+        uint max128 = type(uint128).max;
+        res.debt.mint(taker, max128);
+        res.debt.approve(address(res.market), max128);
+        res.market.mint(taker, max128/2);
+        res.debt.approve(address(res.order), max128);
+        res.ft.approve(address(res.order), max128);
+        res.xt.approve(address(res.order), max128);
+        vm.stopPrank();
+
         for (uint256 i = 0; i < actions.length; i++) {
             _swapToken(res, actions[i]);
         }
@@ -165,12 +175,7 @@ contract FuzzActionsTest is Test {
         }
 
         vm.startPrank(taker);
-        res.debt.mint(taker, action.firstAmt);
-        if(address(tokenIn) != address(res.debt)) {
-            res.debt.approve(address(res.market), action.firstAmt);
-            res.market.mint(taker, action.firstAmt);
-        }
-        tokenIn.approve(address(res.order), type(uint128).max);
+
         uint256 netAmt;
         if(isExact) {
             netAmt = res.order.swapTokenToExactToken(tokenIn, tokenOut, taker, uint128(action.firstAmt), type(uint128).max, block.timestamp + 1 hours);
