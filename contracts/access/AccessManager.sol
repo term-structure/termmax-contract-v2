@@ -86,17 +86,15 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
         router.setAdapterWhitelist(adapter, isWhitelist);
     }
 
-    /// @notice Set the oracle
-    function setOracle(IOracle aggregator, address asset, IOracle.Oracle memory oracle)
+    function submitPendingOracle(IOracle aggregator, address asset, IOracle.Oracle memory oracle)
         external
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
-        aggregator.setOracle(asset, oracle);
+        aggregator.submitPendingOracle(asset, oracle);
     }
 
-    /// @notice Remove the oracle
-    function removeOracle(IOracle aggregator, address asset) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        aggregator.removeOracle(asset);
+    function acceptPendingOracle(IOracle aggregator, address asset) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        aggregator.acceptPendingOracle(asset);
     }
 
     /// @notice Update the market configuration
