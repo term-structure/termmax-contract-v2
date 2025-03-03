@@ -209,7 +209,7 @@ contract TermMaxRouter is
 
         gtId = market.leverageByXt(recipient, netXtOut.toUint128(), callbackData);
         (,, uint128 ltv, bytes memory collateralData) = gt.loanInfo(gtId);
-        if (ltv >= maxLtv) {
+        if (ltv > maxLtv) {
             revert LtvBiggerThanExpected(maxLtv, ltv);
         }
         emit IssueGt(market, gtId, msg.sender, recipient, tokenToSwap, netXtOut.toUint128(), ltv, collateralData);
@@ -236,7 +236,7 @@ contract TermMaxRouter is
         gtId = market.leverageByXt(recipient, xtInAmt.toUint128(), callbackData);
 
         (,, uint128 ltv, bytes memory collateralData) = gt.loanInfo(gtId);
-        if (ltv >= maxLtv) {
+        if (ltv > maxLtv) {
             revert LtvBiggerThanExpected(maxLtv, ltv);
         }
         emit IssueGt(market, gtId, msg.sender, recipient, tokenInAmt, xtInAmt, ltv, collateralData);

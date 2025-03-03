@@ -150,7 +150,7 @@ abstract contract AbstractGearingToken is
         LoanInfo memory loan = LoanInfo(debtAmt, collateralData);
         ValueAndPrice memory valueAndPrice = _getValueAndPrice(config, loan);
         uint128 ltv = _calculateLtv(valueAndPrice);
-        if (ltv >= config.loanConfig.maxLtv) {
+        if (ltv > config.loanConfig.maxLtv) {
             revert GtIsNotHealthy(0, to, ltv);
         }
         id = ++total;
@@ -175,7 +175,7 @@ abstract contract AbstractGearingToken is
 
         ValueAndPrice memory valueAndPrice = _getValueAndPrice(config, loan);
         uint128 ltv = _calculateLtv(valueAndPrice);
-        if (ltv >= config.loanConfig.maxLtv) {
+        if (ltv > config.loanConfig.maxLtv) {
             revert GtIsNotHealthy(id, msg.sender, ltv);
         }
         loanMapping[id] = loan;
@@ -302,7 +302,7 @@ abstract contract AbstractGearingToken is
 
         ValueAndPrice memory valueAndPrice = _getValueAndPrice(config, loan);
         uint128 ltv = _calculateLtv(valueAndPrice);
-        if (ltv >= config.loanConfig.maxLtv) {
+        if (ltv > config.loanConfig.maxLtv) {
             revert GtIsNotHealthy(id, msg.sender, ltv);
         }
         loanMapping[id] = loan;

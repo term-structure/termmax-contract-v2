@@ -193,8 +193,8 @@ contract GtTest is Test {
     }
 
     function testRevertByGtIsNotHealthyWhenIssueFt() public {
-        // debt 1780 USD collaretal 2000USD ltv 0.89
-        uint128 debtAmt = 1780e8;
+        // debt 1790 USD collaretal 2000USD ltv 0.891
+        uint128 debtAmt = 1790e8;
         uint256 collateralAmt = 1e18;
         res.collateral.mint(sender, collateralAmt);
 
@@ -672,7 +672,7 @@ contract GtTest is Test {
 
     function testRevertByGtIsNotHealthyWhenRemoveCollateral() public {
         // debt 1780 USD collaretal 2200USD
-        uint128 debtAmt = 1780e8;
+        uint128 debtAmt = 1790e8;
         uint256 collateralAmt = 1.1e18;
         uint256 removedCollateral = 0.1e18;
         vm.startPrank(sender);
