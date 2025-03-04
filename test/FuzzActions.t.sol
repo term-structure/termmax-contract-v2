@@ -61,8 +61,7 @@ contract FuzzActionsTest is Test {
 
     string path = string.concat(vm.projectRoot(), "/test/testdata/fuzzSwap/v2.json");
 
-    function setUp() public {
-    }
+    function setUp() public {}
 
     function _initResources() internal returns (DeployUtils.Res memory res) {
         uint32 maxLtv = 0.89e8;
@@ -80,9 +79,8 @@ contract FuzzActionsTest is Test {
 
         res.orderConfig = JSONLoader.getOrderConfigFromJson(testdata, ".orderConfig");
 
-        res.order = res.market.createOrder(
-            maker, res.orderConfig.maxXtReserve, ISwapCallback(address(0)), res.orderConfig.curveCuts
-        );
+        MockSwapCallback swapCallback = new MockSwapCallback(res.ft, res.xt);
+        res.order = res.market.createOrder(maker, res.orderConfig.maxXtReserve, swapCallback, res.orderConfig.curveCuts);
 
         uint256 ftReserve = vm.parseJsonUint(testdata, ".orderConfig.ftReserve");
         uint256 xtReserve = vm.parseJsonUint(testdata, ".orderConfig.xtReserve");
@@ -114,10 +112,10 @@ contract FuzzActionsTest is Test {
         DeployUtils.Res memory res = _initResources();
         Action[] memory actions = _parseActions();
         vm.startPrank(taker);
-        uint max128 = type(uint128).max;
+        uint256 max128 = type(uint128).max;
         res.debt.mint(taker, max128);
         res.debt.approve(address(res.market), max128);
-        res.market.mint(taker, max128/2);
+        res.market.mint(taker, max128 / 2);
         res.debt.approve(address(res.order), max128);
         res.ft.approve(address(res.order), max128);
         res.xt.approve(address(res.order), max128);
@@ -132,42 +130,42 @@ contract FuzzActionsTest is Test {
         IERC20 tokenIn;
         IERC20 tokenOut;
         bool isExact;
-        if (action.opType == uint(OpType.BUY_FT)) {
+        if (action.opType == uint256(OpType.BUY_FT)) {
             tokenIn = res.debt;
             tokenOut = res.ft;
             isExact = false;
             console.log("buy ft");
-        } else if (action.opType == uint(OpType.BUY_XT)) {
+        } else if (action.opType == uint256(OpType.BUY_XT)) {
             tokenIn = res.debt;
             tokenOut = res.xt;
             isExact = false;
             console.log("buy xt");
-        } else if (action.opType == uint(OpType.SELL_FT)) {
+        } else if (action.opType == uint256(OpType.SELL_FT)) {
             tokenIn = res.ft;
             tokenOut = res.debt;
             isExact = false;
             console.log("sell ft");
-        } else if (action.opType == uint(OpType.SELL_XT)) {
+        } else if (action.opType == uint256(OpType.SELL_XT)) {
             tokenIn = res.xt;
             tokenOut = res.debt;
             isExact = false;
             console.log("sell xt");
-        }else if (action.opType == uint(OpType.BUY_EXACT_FT)) {
+        } else if (action.opType == uint256(OpType.BUY_EXACT_FT)) {
             tokenIn = res.debt;
             tokenOut = res.ft;
             isExact = true;
             console.log("buy exact ft");
-        } else if (action.opType == uint(OpType.BUY_EXACT_XT)) {
+        } else if (action.opType == uint256(OpType.BUY_EXACT_XT)) {
             tokenIn = res.debt;
             tokenOut = res.xt;
             isExact = true;
             console.log("buy exact xt");
-        } else if (action.opType == uint(OpType.SELL_FT_FOR_EXACT_TOKEN)) {
+        } else if (action.opType == uint256(OpType.SELL_FT_FOR_EXACT_TOKEN)) {
             tokenIn = res.ft;
             tokenOut = res.debt;
             isExact = true;
             console.log("sell ft for exact token");
-        } else if (action.opType == uint(OpType.SELL_XT_FOR_EXACT_TOKEN)) {
+        } else if (action.opType == uint256(OpType.SELL_XT_FOR_EXACT_TOKEN)) {
             tokenIn = res.xt;
             tokenOut = res.debt;
             isExact = true;
@@ -177,14 +175,50 @@ contract FuzzActionsTest is Test {
         vm.startPrank(taker);
 
         uint256 netAmt;
-        if(isExact) {
-            netAmt = res.order.swapTokenToExactToken(tokenIn, tokenOut, taker, uint128(action.firstAmt), type(uint128).max, block.timestamp + 1 hours);
+        if (isExact) {
+            netAmt = res.order.swapTokenToExactToken(
+                tokenIn, tokenOut, taker, uint128(action.firstAmt), type(uint128).max, block.timestamp + 1 hours
+            );
         } else {
-            netAmt = res.order.swapExactTokenToToken(tokenIn, tokenOut, taker, uint128(action.firstAmt), 0, block.timestamp + 1 hours);
+            netAmt = res.order.swapExactTokenToToken(
+                tokenIn, tokenOut, taker, uint128(action.firstAmt), 0, block.timestamp + 1 hours
+            );
         }
         assertEq(netAmt, action.secondAmt, "net amt not as expected");
         assertEq(res.ft.balanceOf(address(res.order)), action.ftReserve);
         assertEq(res.xt.balanceOf(address(res.order)), action.xtReserve);
         vm.stopPrank();
+    }
+}
+
+// Mock contracts for testing
+contract MockSwapCallback is ISwapCallback {
+    using SafeCast for *;
+
+    int256 public deltaFt;
+    int256 public deltaXt;
+    int256 ftReserve;
+    int256 xtReserve;
+    IERC20 public ft;
+    IERC20 public xt;
+
+    constructor(IERC20 ft_, IERC20 xt_) {
+        ft = ft_;
+        xt = xt_;
+    }
+
+    function swapCallback(int256 deltaFt_, int256 deltaXt_) external override {
+        deltaFt = deltaFt_;
+        deltaXt = deltaXt_;
+        if (ftReserve == 0 || xtReserve == 0) {
+            ftReserve = ft.balanceOf(msg.sender).toInt256();
+            xtReserve = xt.balanceOf(msg.sender).toInt256();
+            return;
+        } else {
+            ftReserve += deltaFt;
+            xtReserve += deltaXt;
+            require(ftReserve == ft.balanceOf(msg.sender).toInt256(), "ft reserve not as expected");
+            require(xtReserve == xt.balanceOf(msg.sender).toInt256(), "xt reserve not as expected");
+        }
     }
 }

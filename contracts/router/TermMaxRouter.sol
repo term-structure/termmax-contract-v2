@@ -47,6 +47,11 @@ contract TermMaxRouter is
     using TransferUtils for IERC20;
     using MathLib for uint256;
 
+    enum FlashLoanType {
+        COLLATERAL,
+        DEBT
+    }
+
     /// @notice whitelist mapping of dapter
     mapping(address => bool) public adapterWhitelist;
 
@@ -204,12 +209,12 @@ contract TermMaxRouter is
         debtToken.safeTransferFrom(msg.sender, address(this), tokenToSwap + totalAmtToBuyXt);
         netXtOut = _swapExactTokenToToken(debtToken, xt, address(this), orders, amtsToBuyXt, minXtOut, deadline);
 
-        bytes memory callbackData = abi.encode(address(gt), tokenToSwap, units);
+        bytes memory callbackData = abi.encode(address(gt), tokenToSwap, units, FlashLoanType.DEBT);
         xt.safeIncreaseAllowance(address(market), netXtOut);
 
         gtId = market.leverageByXt(recipient, netXtOut.toUint128(), callbackData);
         (,, uint128 ltv, bytes memory collateralData) = gt.loanInfo(gtId);
-        if (ltv >= maxLtv) {
+        if (ltv > maxLtv) {
             revert LtvBiggerThanExpected(maxLtv, ltv);
         }
         emit IssueGt(market, gtId, msg.sender, recipient, tokenToSwap, netXtOut.toUint128(), ltv, collateralData);
@@ -232,14 +237,42 @@ contract TermMaxRouter is
 
         debtToken.safeTransferFrom(msg.sender, address(this), tokenInAmt);
 
-        bytes memory callbackData = abi.encode(address(gt), tokenInAmt, units);
+        bytes memory callbackData = abi.encode(address(gt), tokenInAmt, units, FlashLoanType.DEBT);
         gtId = market.leverageByXt(recipient, xtInAmt.toUint128(), callbackData);
 
         (,, uint128 ltv, bytes memory collateralData) = gt.loanInfo(gtId);
-        if (ltv >= maxLtv) {
+        if (ltv > maxLtv) {
             revert LtvBiggerThanExpected(maxLtv, ltv);
         }
         emit IssueGt(market, gtId, msg.sender, recipient, tokenInAmt, xtInAmt, ltv, collateralData);
+    }
+
+    /**
+     * @inheritdoc ITermMaxRouter
+     */
+    function leverageFromXtAndCollateral(
+        address recipient,
+        ITermMaxMarket market,
+        uint128 xtInAmt,
+        uint128 collateralInAmt,
+        uint128 maxLtv,
+        SwapUnit[] memory units
+    ) external whenNotPaused returns (uint256 gtId) {
+        (, IERC20 xt, IGearingToken gt, address collAddr,) = market.tokens();
+        IERC20 collateral = IERC20(collAddr);
+        xt.safeTransferFrom(msg.sender, address(this), xtInAmt);
+        xt.safeIncreaseAllowance(address(market), xtInAmt);
+
+        collateral.safeTransferFrom(msg.sender, address(this), collateralInAmt);
+
+        bytes memory callbackData = abi.encode(address(gt), 0, units, FlashLoanType.COLLATERAL);
+        gtId = market.leverageByXt(recipient, xtInAmt.toUint128(), callbackData);
+
+        (,, uint128 ltv, bytes memory collateralData) = gt.loanInfo(gtId);
+        if (ltv > maxLtv) {
+            revert LtvBiggerThanExpected(maxLtv, ltv);
+        }
+        emit IssueGt(market, gtId, msg.sender, recipient, 0, xtInAmt, ltv, collateralData);
     }
 
     /**
@@ -435,18 +468,28 @@ contract TermMaxRouter is
         external
         returns (bytes memory collateralData)
     {
-        (address gt, uint256 tokenInAmt, SwapUnit[] memory units) = abi.decode(data, (address, uint256, SwapUnit[]));
+        (address gt, uint256 tokenInAmt, SwapUnit[] memory units, FlashLoanType flashLoanType) =
+            abi.decode(data, (address, uint256, SwapUnit[], FlashLoanType));
         uint256 totalAmount = amount + tokenInAmt;
         collateralData = _doSwap(abi.encode(totalAmount), units);
         SwapUnit memory lastUnit = units[units.length - 1];
         if (!adapterWhitelist[lastUnit.adapter]) {
             revert AdapterNotWhitelisted(lastUnit.adapter);
         }
-        bytes memory approvalData =
-            abi.encodeCall(ISwapAdapter.approveOutputToken, (lastUnit.tokenOut, gt, collateralData));
-        (bool success, bytes memory returnData) = lastUnit.adapter.delegatecall(approvalData);
-        if (!success) {
-            revert ApproveTokenFailWhenSwap(lastUnit.tokenOut, returnData);
+
+        if (flashLoanType == FlashLoanType.COLLATERAL) {
+            IERC20 collateral = IERC20(lastUnit.tokenOut);
+            uint256 collateralBalance = collateral.balanceOf(address(this));
+            collateralData = _encodeAmount(collateralBalance);
+            // approve all collateral if fashloan type is collateral
+            collateral.safeIncreaseAllowance(gt, collateralBalance);
+        } else if (flashLoanType == FlashLoanType.DEBT) {
+            bytes memory approvalData =
+                abi.encodeCall(ISwapAdapter.approveOutputToken, (lastUnit.tokenOut, gt, collateralData));
+            (bool success, bytes memory returnData) = lastUnit.adapter.delegatecall(approvalData);
+            if (!success) {
+                revert ApproveTokenFailWhenSwap(lastUnit.tokenOut, returnData);
+            }
         }
     }
 
