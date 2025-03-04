@@ -264,6 +264,31 @@ contract RouterTest is Test {
         vm.stopPrank();
     }
 
+    function testLeverageFromCollateral() public {
+        vm.startPrank(sender);
+
+        uint128 xtAmt = 10e8;
+        uint128 collateralAmt = 0.5e18;
+        uint128 maxLtv = 0.8e8;
+        uint256 minCollAmt = 0.5e18;
+
+        deal(address(res.xt), sender, xtAmt);
+
+        SwapUnit[] memory units = new SwapUnit[](1);
+        units[0] = SwapUnit(address(adapter), address(res.debt), address(res.collateral), abi.encode(minCollAmt));
+
+        res.xt.approve(address(res.router), xtAmt);
+        res.collateral.mint(sender, collateralAmt);
+        res.collateral.approve(address(res.router), collateralAmt);
+
+        uint256 gtId = res.router.leverageFromXtAndCollateral(sender, res.market, xtAmt, collateralAmt, maxLtv, units);
+        (address owner, uint128 debtAmt,, bytes memory collateralData) = res.gt.loanInfo(gtId);
+        assertEq(owner, sender);
+        assertEq(minCollAmt + collateralAmt, abi.decode(collateralData, (uint256)));
+        assertEq(xtAmt, debtAmt);
+        vm.stopPrank();
+    }
+
     function testLeverage_LtvTooBigger() public {
         vm.startPrank(sender);
 

@@ -173,6 +173,16 @@ interface ITermMaxRouter {
         SwapUnit[] memory units
     ) external returns (uint256 gtId);
 
+
+    function leverageFromXtAndCollateral(
+        address recipient,
+        ITermMaxMarket market,
+        uint128 xtInAmt,
+        uint128 collateralInAmt,
+        uint128 maxLtv,
+        SwapUnit[] memory units
+    ) external returns (uint256 gtId);
+
     /**
      * @notice Borrows tokens using collateral
      * @dev Creates a collateralized debt position

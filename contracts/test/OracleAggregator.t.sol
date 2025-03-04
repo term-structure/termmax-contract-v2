@@ -10,12 +10,12 @@ contract OracleAggregatorTest is Test {
     OracleAggregator public oracleAggregator;
     MockPriceFeed public primaryFeed;
     MockPriceFeed public backupFeed;
-    
+
     address public constant OWNER = address(0x1);
     address public constant ASSET = address(0x2);
     uint256 public constant TIMELOCK = 1 days;
     uint32 public constant HEARTBEAT = 1 hours;
-    
+
     // Price feed configuration
     uint8 public constant DECIMALS = 8;
     int256 public constant INITIAL_PRICE = 3000e8;
@@ -38,23 +38,21 @@ contract OracleAggregatorTest is Test {
         primaryFeed.updateRoundData(roundData);
         backupFeed.updateRoundData(roundData);
         vm.stopPrank();
-        
+
         // Deploy OracleAggregator with owner and timelock
         vm.prank(OWNER);
         oracleAggregator = new OracleAggregator(OWNER, TIMELOCK);
     }
 
     function test_SubmitPendingOracle() public {
-        IOracle.Oracle memory oracle = IOracle.Oracle({
-            aggregator: primaryFeed,
-            backupAggregator: backupFeed,
-            heartbeat: HEARTBEAT
-        });
+        IOracle.Oracle memory oracle =
+            IOracle.Oracle({aggregator: primaryFeed, backupAggregator: backupFeed, heartbeat: HEARTBEAT});
 
         vm.prank(OWNER);
         oracleAggregator.submitPendingOracle(ASSET, oracle);
 
-        (AggregatorV3Interface aggregator, AggregatorV3Interface backupAgg, uint32 heartbeat) = oracleAggregator.oracles(ASSET);
+        (AggregatorV3Interface aggregator, AggregatorV3Interface backupAgg, uint32 heartbeat) =
+            oracleAggregator.oracles(ASSET);
         assertEq(address(aggregator), address(0), "Oracle should not be set yet");
         assertEq(address(backupAgg), address(0), "Backup oracle should not be set yet");
         assertEq(heartbeat, 0, "Heartbeat should not be set yet");
@@ -68,11 +66,8 @@ contract OracleAggregatorTest is Test {
 
     function test_AcceptPendingOracle() public {
         // Submit pending oracle
-        IOracle.Oracle memory oracle = IOracle.Oracle({
-            aggregator: primaryFeed,
-            backupAggregator: backupFeed,
-            heartbeat: HEARTBEAT
-        });
+        IOracle.Oracle memory oracle =
+            IOracle.Oracle({aggregator: primaryFeed, backupAggregator: backupFeed, heartbeat: HEARTBEAT});
 
         vm.prank(OWNER);
         oracleAggregator.submitPendingOracle(ASSET, oracle);
@@ -82,7 +77,8 @@ contract OracleAggregatorTest is Test {
 
         oracleAggregator.acceptPendingOracle(ASSET);
 
-        (AggregatorV3Interface aggregator, AggregatorV3Interface backupAgg, uint32 heartbeat) = oracleAggregator.oracles(ASSET);
+        (AggregatorV3Interface aggregator, AggregatorV3Interface backupAgg, uint32 heartbeat) =
+            oracleAggregator.oracles(ASSET);
         assertEq(address(aggregator), address(primaryFeed));
         assertEq(address(backupAgg), address(backupFeed));
         assertEq(heartbeat, HEARTBEAT);
@@ -97,17 +93,14 @@ contract OracleAggregatorTest is Test {
 
     function test_GetPrice_PrimaryOracle() public {
         // Setup oracle
-        IOracle.Oracle memory oracle = IOracle.Oracle({
-            aggregator: primaryFeed,
-            backupAggregator: backupFeed,
-            heartbeat: HEARTBEAT
-        });
+        IOracle.Oracle memory oracle =
+            IOracle.Oracle({aggregator: primaryFeed, backupAggregator: backupFeed, heartbeat: HEARTBEAT});
 
         vm.startPrank(OWNER);
         oracleAggregator.submitPendingOracle(ASSET, oracle);
         vm.warp(block.timestamp + TIMELOCK + 1);
         vm.stopPrank();
-        
+
         oracleAggregator.acceptPendingOracle(ASSET);
 
         // Update primary oracle timestamp to match current time
@@ -129,22 +122,19 @@ contract OracleAggregatorTest is Test {
 
     function test_GetPrice_FallbackToBackup() public {
         // Setup oracle
-        IOracle.Oracle memory oracle = IOracle.Oracle({
-            aggregator: primaryFeed,
-            backupAggregator: backupFeed,
-            heartbeat: HEARTBEAT
-        });
+        IOracle.Oracle memory oracle =
+            IOracle.Oracle({aggregator: primaryFeed, backupAggregator: backupFeed, heartbeat: HEARTBEAT});
 
         vm.startPrank(OWNER);
         oracleAggregator.submitPendingOracle(ASSET, oracle);
         vm.warp(block.timestamp + TIMELOCK + 1);
         vm.stopPrank();
-        
+
         oracleAggregator.acceptPendingOracle(ASSET);
 
         // Make primary oracle stale
         vm.warp(block.timestamp + HEARTBEAT + 1);
-        
+
         // Update backup price
         int256 backupPrice = 3100e8;
         MockPriceFeed.RoundData memory roundData = MockPriceFeed.RoundData({
@@ -165,17 +155,14 @@ contract OracleAggregatorTest is Test {
 
     function testFail_GetPrice_BothOraclesStale() public {
         // Setup oracle
-        IOracle.Oracle memory oracle = IOracle.Oracle({
-            aggregator: primaryFeed,
-            backupAggregator: backupFeed,
-            heartbeat: HEARTBEAT
-        });
+        IOracle.Oracle memory oracle =
+            IOracle.Oracle({aggregator: primaryFeed, backupAggregator: backupFeed, heartbeat: HEARTBEAT});
 
         vm.startPrank(OWNER);
         oracleAggregator.submitPendingOracle(ASSET, oracle);
         vm.warp(block.timestamp + TIMELOCK + 1);
         vm.stopPrank();
-        
+
         oracleAggregator.acceptPendingOracle(ASSET);
 
         // Make both oracles stale
@@ -186,11 +173,8 @@ contract OracleAggregatorTest is Test {
     }
 
     function testFail_SubmitPendingOracle_NotOwner() public {
-        IOracle.Oracle memory oracle = IOracle.Oracle({
-            aggregator: primaryFeed,
-            backupAggregator: backupFeed,
-            heartbeat: HEARTBEAT
-        });
+        IOracle.Oracle memory oracle =
+            IOracle.Oracle({aggregator: primaryFeed, backupAggregator: backupFeed, heartbeat: HEARTBEAT});
 
         vm.prank(address(0x3));
         oracleAggregator.submitPendingOracle(ASSET, oracle);
@@ -198,11 +182,8 @@ contract OracleAggregatorTest is Test {
 
     function testFail_AcceptPendingOracle_BeforeTimelock() public {
         // Submit pending oracle
-        IOracle.Oracle memory oracle = IOracle.Oracle({
-            aggregator: primaryFeed,
-            backupAggregator: backupFeed,
-            heartbeat: HEARTBEAT
-        });
+        IOracle.Oracle memory oracle =
+            IOracle.Oracle({aggregator: primaryFeed, backupAggregator: backupFeed, heartbeat: HEARTBEAT});
 
         vm.prank(OWNER);
         oracleAggregator.submitPendingOracle(ASSET, oracle);
@@ -213,29 +194,30 @@ contract OracleAggregatorTest is Test {
 
     function test_RemoveOracle() public {
         // First add an oracle
-        IOracle.Oracle memory oracle = IOracle.Oracle({
-            aggregator: primaryFeed,
-            backupAggregator: backupFeed,
-            heartbeat: HEARTBEAT
-        });
+        IOracle.Oracle memory oracle =
+            IOracle.Oracle({aggregator: primaryFeed, backupAggregator: backupFeed, heartbeat: HEARTBEAT});
 
         vm.startPrank(OWNER);
         oracleAggregator.submitPendingOracle(ASSET, oracle);
         vm.warp(block.timestamp + TIMELOCK + 1);
         vm.stopPrank();
-        
+
         oracleAggregator.acceptPendingOracle(ASSET);
 
         // Now remove it by submitting empty oracle
         vm.prank(OWNER);
-        oracleAggregator.submitPendingOracle(ASSET, IOracle.Oracle({
-            aggregator: AggregatorV3Interface(address(0)),
-            backupAggregator: AggregatorV3Interface(address(0)),
-            heartbeat: 0
-        }));
+        oracleAggregator.submitPendingOracle(
+            ASSET,
+            IOracle.Oracle({
+                aggregator: AggregatorV3Interface(address(0)),
+                backupAggregator: AggregatorV3Interface(address(0)),
+                heartbeat: 0
+            })
+        );
 
         // Verify oracle is removed
-        (AggregatorV3Interface aggregator, AggregatorV3Interface backupAgg, uint32 heartbeat) = oracleAggregator.oracles(ASSET);
+        (AggregatorV3Interface aggregator, AggregatorV3Interface backupAgg, uint32 heartbeat) =
+            oracleAggregator.oracles(ASSET);
         assertEq(address(aggregator), address(0));
         assertEq(address(backupAgg), address(0));
         assertEq(heartbeat, 0);
