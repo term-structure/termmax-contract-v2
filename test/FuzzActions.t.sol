@@ -207,18 +207,18 @@ contract MockSwapCallback is ISwapCallback {
         xt = xt_;
     }
 
-    function swapCallback(int256 deltaFt_, int256 deltaXt_) external override {
+    function swapCallback(uint256 ftReserve_, uint256 xtReserve_, int256 deltaFt_, int256 deltaXt_) external override {
         deltaFt = deltaFt_;
         deltaXt = deltaXt_;
         if (ftReserve == 0 || xtReserve == 0) {
-            ftReserve = ft.balanceOf(msg.sender).toInt256();
-            xtReserve = xt.balanceOf(msg.sender).toInt256();
+            ftReserve = int256(ftReserve_);
+            xtReserve = int256(xtReserve_);
             return;
         } else {
             ftReserve += deltaFt;
             xtReserve += deltaXt;
-            require(ftReserve == ft.balanceOf(msg.sender).toInt256(), "ft reserve not as expected");
-            require(xtReserve == xt.balanceOf(msg.sender).toInt256(), "xt reserve not as expected");
+            require(uint256(ftReserve) == ftReserve_, "ft reserve not as expected");
+            require(uint256(xtReserve) == xtReserve_, "xt reserve not as expected");
         }
     }
 }
