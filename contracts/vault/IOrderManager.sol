@@ -90,7 +90,9 @@ interface IOrderManager {
 
     /**
      * @notice Swaps callback to calculate interest
+     * @param ftReserve The reserve of the FT token
+     * @param xtReserve The reserve of the XT token
      * @param deltaFt The deltaFt of the swap
      */
-    function swapCallback(int256 deltaFt) external;
+    function swapCallback(uint256 ftReserve, uint256 xtReserve, int256 deltaFt) external;
 }
