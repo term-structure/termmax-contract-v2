@@ -173,7 +173,6 @@ interface ITermMaxRouter {
         SwapUnit[] memory units
     ) external returns (uint256 gtId);
 
-
     function leverageFromXtAndCollateral(
         address recipient,
         ITermMaxMarket market,
