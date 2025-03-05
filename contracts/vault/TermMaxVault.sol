@@ -321,6 +321,7 @@ contract TermMaxVault is
      */
     function maxDeposit(address) public view override(IERC4626, ERC4626Upgradeable) returns (uint256) {
         if (paused()) return 0;
+        if (totalAssets() >= _maxCapacity) return 0;
         return _maxCapacity - totalAssets();
     }
 

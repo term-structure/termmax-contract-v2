@@ -64,9 +64,9 @@ contract FuzzSwapTest is Test {
 
         res.orderConfig = JSONLoader.getOrderConfigFromJson(testdata, ".orderConfig");
 
-        res.order = res.market.createOrder(
-            maker, res.orderConfig.maxXtReserve, ISwapCallback(address(0)), res.orderConfig.curveCuts
-        );
+        MockSwapCallback swapCallback = new MockSwapCallback(res.ft, res.xt);
+
+        res.order = res.market.createOrder(maker, res.orderConfig.maxXtReserve, swapCallback, res.orderConfig.curveCuts);
 
         uint256 orderInitialAmount = vm.parseJsonUint(testdata, ".orderInitialAmount");
         res.debt.mint(admin, orderInitialAmount);
@@ -220,5 +220,37 @@ contract FuzzSwapTest is Test {
         res.xt.approve(address(res.order), maxXtAmtIn);
         res.order.swapTokenToExactToken(res.xt, res.debt, taker, tokenAmtOut, maxXtAmtIn, block.timestamp + 1 hours);
         vm.stopPrank();
+    }
+}
+
+// Mock contracts for testing
+contract MockSwapCallback is ISwapCallback {
+    using SafeCast for *;
+
+    int256 public deltaFt;
+    int256 public deltaXt;
+    int256 ftReserve;
+    int256 xtReserve;
+    IERC20 public ft;
+    IERC20 public xt;
+
+    constructor(IERC20 ft_, IERC20 xt_) {
+        ft = ft_;
+        xt = xt_;
+    }
+
+    function swapCallback(int256 deltaFt_, int256 deltaXt_) external override {
+        deltaFt = deltaFt_;
+        deltaXt = deltaXt_;
+        if (ftReserve == 0 || xtReserve == 0) {
+            ftReserve = ft.balanceOf(msg.sender).toInt256();
+            xtReserve = xt.balanceOf(msg.sender).toInt256();
+            return;
+        } else {
+            ftReserve += deltaFt;
+            xtReserve += deltaXt;
+            require(ftReserve == ft.balanceOf(msg.sender).toInt256(), "ft reserve not as expected");
+            require(xtReserve == xt.balanceOf(msg.sender).toInt256(), "xt reserve not as expected");
+        }
     }
 }
