@@ -713,6 +713,19 @@ contract VaultTest is Test {
         vm.stopPrank();
     }
 
+    function testOrderHasNegativeInterest() public {
+        vm.warp(currentTime + 2 days);
+        uint128 tokenAmtIn = 90e8;
+        uint128 ftAmtOut = 100e8;
+        address taker = vm.randomAddress();
+        res.debt.mint(taker, tokenAmtIn);
+        vm.startPrank(taker);
+        res.debt.approve(address(res.order), tokenAmtIn);
+        vm.expectRevert(VaultErrors.OrderHasNegativeInterest.selector);
+        res.order.swapExactTokenToToken(res.debt, res.ft, taker, tokenAmtIn, ftAmtOut, block.timestamp + 1 hours);
+        vm.stopPrank();
+    }
+
     function testRedeemFromMarket() public {
         vm.warp(currentTime + 2 days);
         buyXt(48.219178e8, 1000e8);
@@ -910,7 +923,7 @@ contract VaultTest is Test {
         vm.stopPrank();
     }
 
-    function testFail_BadDebt() public {
+    function testDealBadDebtRevert() public {
         vm.warp(currentTime + 2 days);
         buyXt(48.219178e8, 1000e8);
 
@@ -933,13 +946,13 @@ contract VaultTest is Test {
         vault.redeem(1000e8, lper2, lper2);
 
         uint256 badDebt = vault.badDebtMapping(address(res.collateral));
-        vm.expectRevert(abi.encodeWithSelector(VaultErrors.InsufficientFunds.selector, 1e18, badDebt));
-        vault.dealBadDebt(address(res.collateral), 1e18, lper2, lper2);
+        vm.expectRevert(abi.encodeWithSelector(VaultErrors.InsufficientFunds.selector, badDebt, 2000e8));
+        vault.dealBadDebt(address(res.collateral), 2000e8, lper2, lper2);
 
         vault.dealBadDebt(address(res.collateral), badDebt, lper2, lper2);
 
-        vm.expectRevert(VaultErrors.NoBadDebt.selector);
-        vault.dealBadDebt(address(res.collateral), 1e18, lper2, lper2);
+        vm.expectRevert(abi.encodeWithSelector(VaultErrors.NoBadDebt.selector, address(res.collateral)));
+        vault.dealBadDebt(address(res.collateral), 10e8, lper2, lper2);
 
         vm.stopPrank();
     }
