@@ -699,17 +699,17 @@ contract TermMaxVault is
             return (0, 0);
         }
         uint64 recentMaturity = _maturityMapping[0];
-        uint256 previewAnualizedInterest = _annualizedInterest;
+        uint256 previewAnnualizedInterest = _annualizedInterest;
         previewPrincipal = _accretingPrincipal;
         previewPerformanceFee = _performanceFee;
 
         while (currentTime >= recentMaturity && recentMaturity != 0) {
             (uint256 previewInterest, uint256 previewPerformanceFeeToCurator) =
-                _previewAccruedPeriodInterest(lastTime, recentMaturity, previewAnualizedInterest);
+                _previewAccruedPeriodInterest(lastTime, recentMaturity, previewAnnualizedInterest);
             lastTime = recentMaturity;
             uint64 nextMaturity = _maturityMapping[recentMaturity];
-            // update anualized interest
-            previewAnualizedInterest -= _maturityToInterest[recentMaturity];
+            // update annualized interest
+            previewAnnualizedInterest -= _maturityToInterest[recentMaturity];
 
             previewPerformanceFee += previewPerformanceFeeToCurator;
             previewPrincipal += previewInterest;
@@ -718,18 +718,18 @@ contract TermMaxVault is
         }
         if (recentMaturity > 0) {
             (uint256 previewInterest, uint256 previewPerformanceFeeToCurator) =
-                _previewAccruedPeriodInterest(lastTime, currentTime, previewAnualizedInterest);
+                _previewAccruedPeriodInterest(lastTime, currentTime, previewAnnualizedInterest);
             previewPerformanceFee += previewPerformanceFeeToCurator;
             previewPrincipal += previewInterest;
         }
     }
 
-    function _previewAccruedPeriodInterest(uint256 startTime, uint256 endTime, uint256 previewAnualizedInterest)
+    function _previewAccruedPeriodInterest(uint256 startTime, uint256 endTime, uint256 previewAnnualizedInterest)
         internal
         view
         returns (uint256, uint256)
     {
-        uint256 interest = (previewAnualizedInterest * (endTime - startTime)) / 365 days;
+        uint256 interest = (previewAnnualizedInterest * (endTime - startTime)) / 365 days;
         uint256 performanceFeeToCurator = (interest * _performanceFeeRate) / Constants.DECIMAL_BASE;
         return (interest - performanceFeeToCurator, performanceFeeToCurator);
     }
