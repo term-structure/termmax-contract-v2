@@ -328,9 +328,11 @@ contract TermMaxOrder is
         ft.safeTransfer(market.config().treasurer, feeAmt);
         /// @dev callback the changes of ft and xt reserve to trigger
         if (address(_orderConfig.swapTrigger) != address(0)) {
-            int256 deltaFt = ft.balanceOf(address(this)).toInt256() - getInitialFtReserve().toInt256();
-            int256 deltaXt = xt.balanceOf(address(this)).toInt256() - getInitialXtReserve().toInt256();
-            _orderConfig.swapTrigger.swapCallback(deltaFt, deltaXt);
+            uint256 ftReserve = ft.balanceOf(address(this));
+            uint256 xtReserve = xt.balanceOf(address(this));
+            int256 deltaFt = ftReserve.toInt256() - getInitialFtReserve().toInt256();
+            int256 deltaXt = xtReserve.toInt256() - getInitialXtReserve().toInt256();
+            _orderConfig.swapTrigger.swapCallback(ftReserve, xtReserve, deltaFt, deltaXt);
         }
         emit SwapExactTokenToToken(
             tokenIn, tokenOut, msg.sender, recipient, tokenAmtIn, netTokenOut.toUint128(), feeAmt.toUint128()
@@ -529,9 +531,11 @@ contract TermMaxOrder is
 
         /// @dev callback the changes of ft and xt reserve to trigger
         if (address(_orderConfig.swapTrigger) != address(0)) {
-            int256 deltaFt = ft.balanceOf(address(this)).toInt256() - getInitialFtReserve().toInt256();
-            int256 deltaXt = xt.balanceOf(address(this)).toInt256() - getInitialXtReserve().toInt256();
-            _orderConfig.swapTrigger.swapCallback(deltaFt, deltaXt);
+            uint256 ftReserve = ft.balanceOf(address(this));
+            uint256 xtReserve = xt.balanceOf(address(this));
+            int256 deltaFt = ftReserve.toInt256() - getInitialFtReserve().toInt256();
+            int256 deltaXt = xtReserve.toInt256() - getInitialXtReserve().toInt256();
+            _orderConfig.swapTrigger.swapCallback(ftReserve, xtReserve, deltaFt, deltaXt);
         }
         emit SwapTokenToExactToken(
             tokenIn, tokenOut, msg.sender, recipient, tokenAmtOut, netTokenIn.toUint128(), feeAmt.toUint128()
