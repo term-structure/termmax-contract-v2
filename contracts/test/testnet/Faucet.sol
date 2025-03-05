@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import {console} from "forge-std/console.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {FaucetERC20} from "./FaucetERC20.sol";
 import {MockPriceFeed} from "../MockPriceFeed.sol";
