@@ -184,9 +184,6 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
         uint256 assetBalance = asset.balanceOf(address(this));
         if (assetBalance >= amount) {
             asset.safeTransfer(recipient, amount);
-            uint256 amplifiedAmt = amount * Constants.DECIMAL_BASE_SQ;
-            _totalFt -= amplifiedAmt;
-            _accretingPrincipal -= amplifiedAmt;
         } else {
             amountLeft -= assetBalance;
             uint256 length = _withdrawQueue.length;
@@ -232,10 +229,10 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
                 uint256 maxWithdraw = amount - amountLeft;
                 revert InsufficientFunds(maxWithdraw, amount);
             }
-            uint256 amplifiedAmt = amount * Constants.DECIMAL_BASE_SQ;
+        }
+        uint256 amplifiedAmt = amount * Constants.DECIMAL_BASE_SQ;
             _totalFt -= amplifiedAmt;
             _accretingPrincipal -= amplifiedAmt;
-        }
     }
 
     function _withdrawPerformanceFee(IERC20 asset, address recipient, uint256 amount) internal {
