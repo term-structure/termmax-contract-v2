@@ -231,8 +231,8 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
             }
         }
         uint256 amplifiedAmt = amount * Constants.DECIMAL_BASE_SQ;
-            _totalFt -= amplifiedAmt;
-            _accretingPrincipal -= amplifiedAmt;
+        _totalFt -= amplifiedAmt;
+        _accretingPrincipal -= amplifiedAmt;
     }
 
     function _withdrawPerformanceFee(IERC20 asset, address recipient, uint256 amount) internal {
@@ -381,8 +381,9 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
             ftChanges = uint256(-deltaFt) * Constants.DECIMAL_BASE_SQ;
             _totalFt -= ftChanges;
             uint256 deltaAnnualizedInterest = (ftChanges * Constants.DAYS_IN_YEAR) / _daysToMaturity(maturity);
-            if (_maturityToInterest[maturity] < deltaAnnualizedInterest || _annualizedInterest < deltaAnnualizedInterest)
-            {
+            if (
+                _maturityToInterest[maturity] < deltaAnnualizedInterest || _annualizedInterest < deltaAnnualizedInterest
+            ) {
                 revert LockedFtGreaterThanTotalFt();
             }
             _maturityToInterest[maturity] -= deltaAnnualizedInterest;
