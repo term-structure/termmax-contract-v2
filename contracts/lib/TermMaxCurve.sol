@@ -80,14 +80,17 @@ library TermMaxCurve {
                 );
 
                 if (i != cuts.length - 1) {
-                    if ((dX.toUint256() < deltaXt || nF.toUint256() < negDeltaFt) || oriXtReserve + dX.toUint256() > cuts[i + 1].xtReserve) {
+                    if (
+                        (dX < deltaXt.toInt256() || nF < negDeltaFt.toInt256())
+                            || oriXtReserve + uint256(dX) > cuts[i + 1].xtReserve
+                    ) {
                         deltaXt = cuts[i + 1].xtReserve - oriXtReserve;
                         negDeltaFt += vFtReserve - liqSquare / (vXtReserve + (cuts[i + 1].xtReserve - xtReserve));
                         continue;
                     } else {
                         return (uint256(dX), uint256(nF));
                     }
-                } else if (dX.toUint256() >= deltaXt && nF.toUint256() >= negDeltaFt) {
+                } else if (dX >= deltaXt.toInt256() && nF >= negDeltaFt.toInt256()) {
                     return (uint256(dX), uint256(nF));
                 }
             }
@@ -127,7 +130,10 @@ library TermMaxCurve {
                     acc.toInt256()
                 );
 
-                if ((nX.toUint256() < negDeltaXt || dF.toUint256() < deltaFt) || oriXtReserve < nX.toUint256() + cuts[idx].xtReserve) {
+                if (
+                    (nX < negDeltaXt.toInt256() || dF < deltaFt.toInt256())
+                        || oriXtReserve < uint256(nX) + cuts[idx].xtReserve
+                ) {
                     negDeltaXt = oriXtReserve - cuts[idx].xtReserve;
                     deltaFt += liqSquare / (vXtReserve - (xtReserve - cuts[idx].xtReserve)) - vFtReserve;
                     continue;
