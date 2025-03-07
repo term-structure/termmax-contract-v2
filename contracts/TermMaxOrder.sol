@@ -267,18 +267,6 @@ contract TermMaxOrder is
                                 )
                         ) / Constants.DECIMAL_BASE
                 ) revert InvalidCurveCuts();
-                /*
-                    (xt' + beta') == (xt' + beta) * sqrt(L' ^ 2 / L ^ 2)
-                */
-                // if (
-                //     newCurveCuts.lendCurveCuts[i].xtReserve.plusInt256(newCurveCuts.lendCurveCuts[i].offset) !=
-                //     ((newCurveCuts.lendCurveCuts[i].xtReserve.plusInt256(newCurveCuts.lendCurveCuts[i - 1].offset)) *
-                //         MathLib.sqrt(
-                //             (newCurveCuts.lendCurveCuts[i].liqSquare * Constants.DECIMAL_BASE_SQ) /
-                //                 newCurveCuts.lendCurveCuts[i - 1].liqSquare
-                //         )) /
-                //         Constants.DECIMAL_BASE
-                // ) revert InvalidCurveCuts();
             }
             if (newCurveCuts.borrowCurveCuts.length > 0) {
                 if (newCurveCuts.borrowCurveCuts[0].liqSquare == 0 || newCurveCuts.borrowCurveCuts[0].xtReserve != 0) {
@@ -312,17 +300,6 @@ contract TermMaxOrder is
                                 )
                         ) / Constants.DECIMAL_BASE
                 ) revert InvalidCurveCuts();
-                // if (
-                //     newCurveCuts.borrowCurveCuts[i].xtReserve.plusInt256(newCurveCuts.borrowCurveCuts[i].offset) !=
-                //     ((
-                //         newCurveCuts.borrowCurveCuts[i].xtReserve.plusInt256(newCurveCuts.borrowCurveCuts[i - 1].offset)
-                //     ) *
-                //         MathLib.sqrt(
-                //             (newCurveCuts.borrowCurveCuts[i].liqSquare * Constants.DECIMAL_BASE_SQ) /
-                //                 newCurveCuts.borrowCurveCuts[i - 1].liqSquare
-                //         )) /
-                //         Constants.DECIMAL_BASE
-                // ) revert InvalidCurveCuts();
             }
             _orderConfig.curveCuts = newCurveCuts;
         }
