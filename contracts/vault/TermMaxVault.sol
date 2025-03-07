@@ -321,6 +321,7 @@ contract TermMaxVault is
      */
     function maxDeposit(address) public view override(IERC4626, ERC4626Upgradeable) returns (uint256) {
         if (paused()) return 0;
+        if (totalAssets() >= _maxCapacity) return 0;
         return _maxCapacity - totalAssets();
     }
 
@@ -698,17 +699,17 @@ contract TermMaxVault is
             return (0, 0);
         }
         uint64 recentMaturity = _maturityMapping[0];
-        uint256 previewAnualizedInterest = _annualizedInterest;
+        uint256 previewAnnualizedInterest = _annualizedInterest;
         previewPrincipal = _accretingPrincipal;
         previewPerformanceFee = _performanceFee;
 
         while (currentTime >= recentMaturity && recentMaturity != 0) {
             (uint256 previewInterest, uint256 previewPerformanceFeeToCurator) =
-                _previewAccruedPeriodInterest(lastTime, recentMaturity, previewAnualizedInterest);
+                _previewAccruedPeriodInterest(lastTime, recentMaturity, previewAnnualizedInterest);
             lastTime = recentMaturity;
             uint64 nextMaturity = _maturityMapping[recentMaturity];
-            // update anualized interest
-            previewAnualizedInterest -= _maturityToInterest[recentMaturity];
+            // update annualized interest
+            previewAnnualizedInterest -= _maturityToInterest[recentMaturity];
 
             previewPerformanceFee += previewPerformanceFeeToCurator;
             previewPrincipal += previewInterest;
@@ -717,25 +718,25 @@ contract TermMaxVault is
         }
         if (recentMaturity > 0) {
             (uint256 previewInterest, uint256 previewPerformanceFeeToCurator) =
-                _previewAccruedPeriodInterest(lastTime, currentTime, previewAnualizedInterest);
+                _previewAccruedPeriodInterest(lastTime, currentTime, previewAnnualizedInterest);
             previewPerformanceFee += previewPerformanceFeeToCurator;
             previewPrincipal += previewInterest;
         }
     }
 
-    function _previewAccruedPeriodInterest(uint256 startTime, uint256 endTime, uint256 previewAnualizedInterest)
+    function _previewAccruedPeriodInterest(uint256 startTime, uint256 endTime, uint256 previewAnnualizedInterest)
         internal
         view
         returns (uint256, uint256)
     {
-        uint256 interest = (previewAnualizedInterest * (endTime - startTime)) / 365 days;
+        uint256 interest = (previewAnnualizedInterest * (endTime - startTime)) / 365 days;
         uint256 performanceFeeToCurator = (interest * _performanceFeeRate) / Constants.DECIMAL_BASE;
         return (interest - performanceFeeToCurator, performanceFeeToCurator);
     }
 
     /// @notice Callback function for the swap
     /// @param deltaFt The change in the ft balance of the order
-    function swapCallback(int256 deltaFt, int256) external override {
-        _delegateCall(abi.encodeCall(IOrderManager.swapCallback, (deltaFt)));
+    function swapCallback(uint256 ftReserve, uint256 xtReserve, int256 deltaFt, int256) external override {
+        _delegateCall(abi.encodeCall(IOrderManager.swapCallback, (ftReserve, xtReserve, deltaFt)));
     }
 }

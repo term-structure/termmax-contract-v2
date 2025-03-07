@@ -156,10 +156,7 @@ abstract contract ForkBaseTest is Test {
     }
 
     function deployOracleAggregator(address admin) public returns (OracleAggregator oracle) {
-        OracleAggregator implementation = new OracleAggregator();
-        bytes memory data = abi.encodeCall(OracleAggregator.initialize, admin);
-        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), data);
-        oracle = OracleAggregator(address(proxy));
+        oracle = new OracleAggregator(admin, 0);
     }
 
     function deployMockPriceFeed(address admin) public returns (MockPriceFeed priceFeed) {

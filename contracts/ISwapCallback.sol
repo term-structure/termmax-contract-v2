@@ -9,8 +9,10 @@ pragma solidity ^0.8.0;
 interface ISwapCallback {
     /**
      * @notice Callback function called after a swap operation
+     * @param ftReserve The reserve of the FT token
+     * @param xtReserve The reserve of the XT token
      * @param deltaFt The change in FT token balance (positive for receiving, negative for paying)
      * @param deltaXt The change in XT token balance (positive for receiving, negative for paying)
      */
-    function swapCallback(int256 deltaFt, int256 deltaXt) external;
+    function swapCallback(uint256 ftReserve, uint256 xtReserve, int256 deltaFt, int256 deltaXt) external;
 }

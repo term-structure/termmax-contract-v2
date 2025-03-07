@@ -126,4 +126,9 @@ interface VaultErrors {
      * @param orderAddress The address of the duplicate order
      */
     error DuplicateOrder(address orderAddress);
+
+    /**
+     * @notice Error thrown when an order has negative interest
+     */
+    error OrderHasNegativeInterest();
 }

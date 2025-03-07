@@ -5,7 +5,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {PendingLib, PendingAddress, PendingUint192} from "contracts/lib/PendingLib.sol";
 import {ITermMaxMarket} from "contracts/ITermMaxMarket.sol";
-import {CurveCuts} from "contracts/storage/TermMaxStorage.sol";
+import {CurveCuts, OrderConfig} from "contracts/storage/TermMaxStorage.sol";
 import {VaultErrors} from "contracts/errors/VaultErrors.sol";
 import {VaultEvents} from "contracts/events/VaultEvents.sol";
 import {ITermMaxRouter} from "contracts/router/ITermMaxRouter.sol";
@@ -14,7 +14,6 @@ import {VaultConstants} from "contracts/lib/VaultConstants.sol";
 import {TransferUtils} from "contracts/lib/TransferUtils.sol";
 import {Constants} from "contracts/lib/Constants.sol";
 import {ArrayUtils} from "contracts/lib/ArrayUtils.sol";
-import {OrderConfig, CurveCuts} from "contracts/storage/TermMaxStorage.sol";
 import {MathLib} from "contracts/lib/MathLib.sol";
 import {LinkedList} from "contracts/lib/LinkedList.sol";
 import {IOrderManager} from "./IOrderManager.sol";
@@ -170,9 +169,9 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
             if (amountLeft == 0) break;
         }
         // deposit to lpers
-        uint256 aplifiedAmt = amount * Constants.DECIMAL_BASE_SQ;
-        _totalFt += aplifiedAmt;
-        _accretingPrincipal += aplifiedAmt;
+        uint256 amplifiedAmt = amount * Constants.DECIMAL_BASE_SQ;
+        _totalFt += amplifiedAmt;
+        _accretingPrincipal += amplifiedAmt;
     }
 
     /**
@@ -184,9 +183,6 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
         uint256 assetBalance = asset.balanceOf(address(this));
         if (assetBalance >= amount) {
             asset.safeTransfer(recipient, amount);
-            uint256 aplifiedAmt = amount * Constants.DECIMAL_BASE_SQ;
-            _totalFt -= aplifiedAmt;
-            _accretingPrincipal -= aplifiedAmt;
         } else {
             amountLeft -= assetBalance;
             uint256 length = _withdrawQueue.length;
@@ -209,7 +205,7 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
                         break;
                     }
                 } else if (block.timestamp < orderInfo.maturity) {
-                    // withraw ft and xt from order to burn
+                    // withdraw ft and xt from order to burn
                     uint256 maxWithdraw = orderInfo.xt.balanceOf(order).min(orderInfo.ft.balanceOf(order));
 
                     if (maxWithdraw < amountLeft) {
@@ -232,20 +228,20 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
                 uint256 maxWithdraw = amount - amountLeft;
                 revert InsufficientFunds(maxWithdraw, amount);
             }
-            uint256 aplifiedAmt = amount * Constants.DECIMAL_BASE_SQ;
-            _totalFt -= aplifiedAmt;
-            _accretingPrincipal -= aplifiedAmt;
         }
+        uint256 amplifiedAmt = amount * Constants.DECIMAL_BASE_SQ;
+        _totalFt -= amplifiedAmt;
+        _accretingPrincipal -= amplifiedAmt;
     }
 
     function _withdrawPerformanceFee(IERC20 asset, address recipient, uint256 amount) internal {
-        uint256 aplifiedAmt = amount * Constants.DECIMAL_BASE_SQ;
-        if (aplifiedAmt > _performanceFee) {
+        uint256 amplifiedAmt = amount * Constants.DECIMAL_BASE_SQ;
+        if (amplifiedAmt > _performanceFee) {
             revert InsufficientFunds(_performanceFee / Constants.DECIMAL_BASE_SQ, amount);
         }
         asset.safeTransfer(recipient, amount);
-        _performanceFee -= aplifiedAmt;
-        _totalFt -= aplifiedAmt;
+        _performanceFee -= amplifiedAmt;
+        _totalFt -= amplifiedAmt;
 
         emit WithdrawPerformanceFee(msg.sender, recipient, amount);
     }
@@ -267,9 +263,9 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
         IERC20(collateral).safeTransfer(recipient, collateralOut);
 
         _badDebtMapping[collateral] -= amount;
-        uint256 aplifiedAmt = amount * Constants.DECIMAL_BASE_SQ;
-        _accretingPrincipal -= aplifiedAmt;
-        _totalFt -= aplifiedAmt;
+        uint256 amplifiedAmt = amount * Constants.DECIMAL_BASE_SQ;
+        _accretingPrincipal -= amplifiedAmt;
+        _totalFt -= amplifiedAmt;
     }
 
     function _burnFromOrder(ITermMaxOrder order, OrderInfo memory orderInfo, uint256 amount) internal {
@@ -329,7 +325,7 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
             _accruedPeriodInterest(lastTime, recentMaturity);
             // update last time
             lastTime = recentMaturity;
-            // update anualized interest
+            // update annualized interest
             _annualizedInterest -= _maturityToInterest[recentMaturity];
             delete _maturityToInterest[recentMaturity];
             // get next maturity
@@ -357,7 +353,10 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
 
     /// @notice Callback function for the swap
     /// @param deltaFt The change in the ft balance of the order
-    function swapCallback(int256 deltaFt) external onlyProxy {
+    function swapCallback(uint256 ftReserve, uint256 xtReserve, int256 deltaFt) external onlyProxy {
+        if (ftReserve < xtReserve) {
+            revert OrderHasNegativeInterest();
+        }
         address orderAddress = msg.sender;
         /// @dev Check if the order is valid
         _checkOrder(orderAddress);
@@ -372,21 +371,22 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
         if (deltaFt > 0) {
             ftChanges = uint256(deltaFt) * Constants.DECIMAL_BASE_SQ;
             _totalFt += ftChanges;
-            uint256 deltaAnualizedInterest = (ftChanges * Constants.DAYS_IN_YEAR) / _daysToMaturity(maturity);
+            uint256 deltaAnnualizedInterest = (ftChanges * Constants.DAYS_IN_YEAR) / _daysToMaturity(maturity);
 
-            _maturityToInterest[maturity] += deltaAnualizedInterest;
+            _maturityToInterest[maturity] += deltaAnnualizedInterest;
 
-            _annualizedInterest += deltaAnualizedInterest;
+            _annualizedInterest += deltaAnnualizedInterest;
         } else {
             ftChanges = uint256(-deltaFt) * Constants.DECIMAL_BASE_SQ;
             _totalFt -= ftChanges;
-            uint256 deltaAnualizedInterest = (ftChanges * Constants.DAYS_IN_YEAR) / _daysToMaturity(maturity);
-            if (_maturityToInterest[maturity] < deltaAnualizedInterest || _annualizedInterest < deltaAnualizedInterest)
-            {
+            uint256 deltaAnnualizedInterest = (ftChanges * Constants.DAYS_IN_YEAR) / _daysToMaturity(maturity);
+            if (
+                _maturityToInterest[maturity] < deltaAnnualizedInterest || _annualizedInterest < deltaAnnualizedInterest
+            ) {
                 revert LockedFtGreaterThanTotalFt();
             }
-            _maturityToInterest[maturity] -= deltaAnualizedInterest;
-            _annualizedInterest -= deltaAnualizedInterest;
+            _maturityToInterest[maturity] -= deltaAnnualizedInterest;
+            _annualizedInterest -= deltaAnnualizedInterest;
         }
         /// @dev Ensure that the total assets after the transaction are
         ///greater than or equal to the principal and the allocated interest

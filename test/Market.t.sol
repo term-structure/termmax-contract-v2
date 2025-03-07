@@ -384,19 +384,20 @@ contract MarketTest is Test {
         vm.stopPrank();
     }
 
-    function testFuzzIssueFtByExistedGtDebtAmount(uint256 issueAmount) public {
+    function testFuzzIssueFtByExistedGtDebtAmount(uint128 issueAmount) public {
         vm.assume(issueAmount >= 1);
-        vm.assume(issueAmount < 9e20);
+        vm.assume(issueAmount <= type(uint64).max);
 
         uint128 debt =
             uint128((issueAmount * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - res.market.issueFtFeeRatio()));
 
         vm.startPrank(sender);
 
-        bytes memory collateralData = abi.encode(1e50);
-        res.collateral.mint(sender, 1e50);
-        res.collateral.approve(address(res.gt), 1e50);
-        res.market.issueFt(sender, 10e8, collateralData);
+        uint256 collateralAmt = type(uint128).max;
+        bytes memory collateralData = abi.encode(collateralAmt);
+        res.collateral.mint(sender, collateralAmt);
+        res.collateral.approve(address(res.gt), collateralAmt);
+        res.market.issueFt(sender, issueAmount, collateralData);
 
         uint128 ftOutAmt = res.market.issueFtByExistedGt(sender, debt, 1);
         assertTrue(ftOutAmt == issueAmount);

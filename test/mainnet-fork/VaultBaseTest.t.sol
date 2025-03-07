@@ -72,13 +72,15 @@ abstract contract VaultBaseTest is ForkBaseTest {
         res.oracle = deployOracleAggregator(res.marketInitialParams.admin);
         res.collateralPriceFeed = deployMockPriceFeed(res.marketInitialParams.admin);
         res.debtPriceFeed = deployMockPriceFeed(res.marketInitialParams.admin);
-        res.oracle.setOracle(
+        res.oracle.submitPendingOracle(
             address(res.marketInitialParams.collateral),
             IOracle.Oracle(res.collateralPriceFeed, res.collateralPriceFeed, 365 days)
         );
-        res.oracle.setOracle(
+        res.oracle.submitPendingOracle(
             address(res.marketInitialParams.debtToken), IOracle.Oracle(res.debtPriceFeed, res.debtPriceFeed, 365 days)
         );
+        res.oracle.acceptPendingOracle(address(res.marketInitialParams.collateral));
+        res.oracle.acceptPendingOracle(address(res.marketInitialParams.debtToken));
 
         res.marketInitialParams.marketConfig.maturity += uint64(block.timestamp);
         res.marketInitialParams.loanConfig.oracle = res.oracle;

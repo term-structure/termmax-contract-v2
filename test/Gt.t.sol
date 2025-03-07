@@ -168,7 +168,10 @@ contract GtTest is Test {
         res.collateral.mint(sender, collateralAmt);
 
         vm.prank(deployer);
-        res.oracle.setOracle(address(res.collateral), IOracle.Oracle(res.collateralOracle, res.collateralOracle, 3600));
+        res.oracle.submitPendingOracle(
+            address(res.collateral), IOracle.Oracle(res.collateralOracle, res.collateralOracle, 3600)
+        );
+        res.oracle.acceptPendingOracle(address(res.collateral));
         vm.warp(block.timestamp + 3600);
 
         vm.startPrank(sender);
@@ -180,10 +183,12 @@ contract GtTest is Test {
 
         vm.stopPrank();
 
-        vm.prank(deployer);
-        res.oracle.setOracle(
+        vm.startPrank(deployer);
+        res.oracle.submitPendingOracle(
             address(res.collateral), IOracle.Oracle(res.collateralOracle, res.collateralOracle, 365 days)
         );
+        res.oracle.acceptPendingOracle(address(res.collateral));
+        vm.stopPrank();
 
         vm.startPrank(sender);
         res.collateral.approve(address(res.gt), collateralAmt);
@@ -193,8 +198,8 @@ contract GtTest is Test {
     }
 
     function testRevertByGtIsNotHealthyWhenIssueFt() public {
-        // debt 1780 USD collaretal 2000USD ltv 0.89
-        uint128 debtAmt = 1780e8;
+        // debt 1790 USD collaretal 2000USD ltv 0.891
+        uint128 debtAmt = 1790e8;
         uint256 collateralAmt = 1e18;
         res.collateral.mint(sender, collateralAmt);
 
@@ -654,7 +659,11 @@ contract GtTest is Test {
         vm.stopPrank();
 
         vm.prank(deployer);
-        res.oracle.setOracle(address(res.collateral), IOracle.Oracle(res.collateralOracle, res.collateralOracle, 3600));
+        res.oracle.submitPendingOracle(
+            address(res.collateral), IOracle.Oracle(res.collateralOracle, res.collateralOracle, 3600)
+        );
+        vm.prank(deployer);
+        res.oracle.acceptPendingOracle(address(res.collateral));
         vm.warp(block.timestamp + 3600);
 
         vm.expectRevert(abi.encodeWithSelector(IOracle.OracleIsNotWorking.selector, address(res.collateral)));
@@ -662,9 +671,11 @@ contract GtTest is Test {
         res.gt.removeCollateral(gtId, abi.encode(removedCollateral));
 
         vm.prank(deployer);
-        res.oracle.setOracle(
+        res.oracle.submitPendingOracle(
             address(res.collateral), IOracle.Oracle(res.collateralOracle, res.collateralOracle, 365 days)
         );
+        vm.prank(deployer);
+        res.oracle.acceptPendingOracle(address(res.collateral));
 
         vm.prank(sender);
         res.gt.removeCollateral(gtId, abi.encode(removedCollateral));
@@ -672,7 +683,7 @@ contract GtTest is Test {
 
     function testRevertByGtIsNotHealthyWhenRemoveCollateral() public {
         // debt 1780 USD collaretal 2200USD
-        uint128 debtAmt = 1780e8;
+        uint128 debtAmt = 1790e8;
         uint256 collateralAmt = 1.1e18;
         uint256 removedCollateral = 0.1e18;
         vm.startPrank(sender);
@@ -1134,7 +1145,10 @@ contract GtTest is Test {
         vm.stopPrank();
 
         vm.prank(deployer);
-        res.oracle.setOracle(address(res.collateral), IOracle.Oracle(res.collateralOracle, res.collateralOracle, 3600));
+        res.oracle.submitPendingOracle(
+            address(res.collateral), IOracle.Oracle(res.collateralOracle, res.collateralOracle, 3600)
+        );
+        res.oracle.acceptPendingOracle(address(res.collateral));
 
         vm.warp(block.timestamp + 3600);
         address liquidator = vm.randomAddress();
