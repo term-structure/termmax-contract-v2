@@ -243,16 +243,42 @@ contract TermMaxOrder is
                 ) {
                     revert InvalidCurveCuts();
                 }
+                /*
+                    R := (x' + beta') ^ 2 * DECIMAL_BASE / (x' + beta) ^ 2
+                    L' ^ 2 := L ^ 2 * R / DECIMAL_BASE
+                */
                 if (
-                    newCurveCuts.lendCurveCuts[i].xtReserve.plusInt256(newCurveCuts.lendCurveCuts[i].offset)
+                    newCurveCuts.lendCurveCuts[i].liqSquare
                         != (
-                            (newCurveCuts.lendCurveCuts[i].xtReserve.plusInt256(newCurveCuts.lendCurveCuts[i - 1].offset))
-                                * MathLib.sqrt(
-                                    (newCurveCuts.lendCurveCuts[i].liqSquare * Constants.DECIMAL_BASE_SQ)
-                                        / newCurveCuts.lendCurveCuts[i - 1].liqSquare
+                            newCurveCuts.lendCurveCuts[i - 1].liqSquare
+                                * (
+                                    (
+                                        (
+                                            newCurveCuts.lendCurveCuts[i].xtReserve.plusInt256(
+                                                newCurveCuts.lendCurveCuts[i].offset
+                                            )
+                                        ) ** 2 * Constants.DECIMAL_BASE
+                                    )
+                                        / (
+                                            newCurveCuts.lendCurveCuts[i].xtReserve.plusInt256(
+                                                newCurveCuts.lendCurveCuts[i - 1].offset
+                                            ) ** 2
+                                        )
                                 )
                         ) / Constants.DECIMAL_BASE
                 ) revert InvalidCurveCuts();
+                /*
+                    (xt' + beta') == (xt' + beta) * sqrt(L' ^ 2 / L ^ 2)
+                */
+                // if (
+                //     newCurveCuts.lendCurveCuts[i].xtReserve.plusInt256(newCurveCuts.lendCurveCuts[i].offset) !=
+                //     ((newCurveCuts.lendCurveCuts[i].xtReserve.plusInt256(newCurveCuts.lendCurveCuts[i - 1].offset)) *
+                //         MathLib.sqrt(
+                //             (newCurveCuts.lendCurveCuts[i].liqSquare * Constants.DECIMAL_BASE_SQ) /
+                //                 newCurveCuts.lendCurveCuts[i - 1].liqSquare
+                //         )) /
+                //         Constants.DECIMAL_BASE
+                // ) revert InvalidCurveCuts();
             }
             if (newCurveCuts.borrowCurveCuts.length > 0) {
                 if (newCurveCuts.borrowCurveCuts[0].liqSquare == 0 || newCurveCuts.borrowCurveCuts[0].xtReserve != 0) {
@@ -267,19 +293,36 @@ contract TermMaxOrder is
                     revert InvalidCurveCuts();
                 }
                 if (
-                    newCurveCuts.borrowCurveCuts[i].xtReserve.plusInt256(newCurveCuts.borrowCurveCuts[i].offset)
+                    newCurveCuts.borrowCurveCuts[i].liqSquare
                         != (
-                            (
-                                newCurveCuts.borrowCurveCuts[i].xtReserve.plusInt256(
-                                    newCurveCuts.borrowCurveCuts[i - 1].offset
-                                )
-                            )
-                                * MathLib.sqrt(
-                                    (newCurveCuts.borrowCurveCuts[i].liqSquare * Constants.DECIMAL_BASE_SQ)
-                                        / newCurveCuts.borrowCurveCuts[i - 1].liqSquare
+                            newCurveCuts.borrowCurveCuts[i - 1].liqSquare
+                                * (
+                                    (
+                                        (
+                                            newCurveCuts.borrowCurveCuts[i].xtReserve.plusInt256(
+                                                newCurveCuts.borrowCurveCuts[i].offset
+                                            )
+                                        ) ** 2 * Constants.DECIMAL_BASE
+                                    )
+                                        / (
+                                            newCurveCuts.borrowCurveCuts[i].xtReserve.plusInt256(
+                                                newCurveCuts.borrowCurveCuts[i - 1].offset
+                                            ) ** 2
+                                        )
                                 )
                         ) / Constants.DECIMAL_BASE
                 ) revert InvalidCurveCuts();
+                // if (
+                //     newCurveCuts.borrowCurveCuts[i].xtReserve.plusInt256(newCurveCuts.borrowCurveCuts[i].offset) !=
+                //     ((
+                //         newCurveCuts.borrowCurveCuts[i].xtReserve.plusInt256(newCurveCuts.borrowCurveCuts[i - 1].offset)
+                //     ) *
+                //         MathLib.sqrt(
+                //             (newCurveCuts.borrowCurveCuts[i].liqSquare * Constants.DECIMAL_BASE_SQ) /
+                //                 newCurveCuts.borrowCurveCuts[i - 1].liqSquare
+                //         )) /
+                //         Constants.DECIMAL_BASE
+                // ) revert InvalidCurveCuts();
             }
             _orderConfig.curveCuts = newCurveCuts;
         }
