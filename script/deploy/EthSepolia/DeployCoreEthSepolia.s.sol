@@ -2,8 +2,8 @@
 pragma solidity ^0.8.27;
 
 import {Script} from "forge-std/Script.sol";
-import {console} from "forge-std/console.sol";
 import {VmSafe} from "forge-std/Vm.sol";
+import {console} from "forge-std/console.sol";
 import {TermMaxFactory} from "contracts/factory/TermMaxFactory.sol";
 import {ITermMaxFactory} from "contracts/factory/ITermMaxFactory.sol";
 import {ITermMaxRouter} from "contracts/router/ITermMaxRouter.sol";
@@ -23,13 +23,14 @@ import {DeployBase} from "../DeployBase.s.sol";
 import {IOracle} from "contracts/oracle/IOracle.sol";
 import {VaultFactory, IVaultFactory} from "contracts/factory/VaultFactory.sol";
 
-contract DeployCoreArbSepolia is DeployBase {
+contract DeployCoreEthSepolia is DeployBase {
     // admin config
-    uint256 deployerPrivateKey = vm.envUint("ARB_SEPOLIA_DEPLOYER_PRIVATE_KEY");
+    uint256 deployerPrivateKey = vm.envUint("ETH_SEPOLIA_DEPLOYER_PRIVATE_KEY");
     address deployerAddr = vm.addr(deployerPrivateKey);
-    address adminAddr = vm.envAddress("ARB_SEPOLIA_ADMIN_ADDRESS");
+    address adminAddr = vm.envAddress("ETH_SEPOLIA_ADMIN_ADDRESS");
 
     function run() public {
+        console.log("deployer balance: ", deployerAddr.balance);
         vm.startBroadcast(deployerPrivateKey);
         (
             ITermMaxFactory factory,
@@ -64,7 +65,7 @@ contract DeployCoreArbSepolia is DeployBase {
         string memory deploymentJson = string(
             abi.encodePacked(
                 "{\n",
-                '  "network": "arb-sepolia",\n',
+                '  "network": "eth-sepolia",\n',
                 '  "deployedAt": "',
                 vm.toString(block.timestamp),
                 '",\n',
@@ -108,7 +109,7 @@ contract DeployCoreArbSepolia is DeployBase {
         );
 
         // Create deployments directory if it doesn't exist
-        string memory deploymentsDir = string.concat(vm.projectRoot(), "/deployments/arb-sepolia");
+        string memory deploymentsDir = string.concat(vm.projectRoot(), "/deployments/eth-sepolia");
         if (vm.exists(deploymentsDir)) {
             // Directory exists, clean it by removing all files
             VmSafe.DirEntry[] memory files = vm.readDir(deploymentsDir);
@@ -120,7 +121,7 @@ contract DeployCoreArbSepolia is DeployBase {
             vm.createDir(deploymentsDir, true);
         }
 
-        string memory deploymentPath = string.concat(deploymentsDir, "/arb-sepolia-core.json");
+        string memory deploymentPath = string.concat(deploymentsDir, "/eth-sepolia-core.json");
         vm.writeFile(deploymentPath, deploymentJson);
         console.log("Deployment info written to:", deploymentPath);
     }

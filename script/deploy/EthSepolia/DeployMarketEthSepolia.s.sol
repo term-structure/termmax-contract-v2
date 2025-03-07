@@ -23,12 +23,12 @@ import {Faucet} from "contracts/test/testnet/Faucet.sol";
 import {FaucetERC20} from "contracts/test/testnet/FaucetERC20.sol";
 import {DeployBase} from "../DeployBase.s.sol";
 
-contract DeloyMarketHolesky is DeployBase {
+contract DeloyMarketEthSepolia is DeployBase {
     // admin config
-    uint256 deployerPrivateKey = vm.envUint("HOLESKY_DEPLOYER_PRIVATE_KEY");
+    uint256 deployerPrivateKey = vm.envUint("ETH_SEPOLIA_DEPLOYER_PRIVATE_KEY");
     address deployerAddr = vm.addr(deployerPrivateKey);
-    address adminAddr = vm.envAddress("HOLESKY_ADMIN_ADDRESS");
-    address priceFeedOperatorAddr = vm.envAddress("HOLESKY_PRICE_FEED_OPERATOR_ADDRESS");
+    address adminAddr = vm.envAddress("ETH_SEPOLIA_ADMIN_ADDRESS");
+    address priceFeedOperatorAddr = vm.envAddress("ETH_SEPOLIA_PRICE_FEED_OPERATOR_ADDRESS");
 
     address factoryAddr;
     address oracleAddr;
@@ -36,7 +36,7 @@ contract DeloyMarketHolesky is DeployBase {
     address faucetAddr;
 
     function loadAddressConfig() internal {
-        string memory deploymentPath = string.concat(vm.projectRoot(), "/deployments/eth-holesky/eth-holesky-core.json");
+        string memory deploymentPath = string.concat(vm.projectRoot(), "/deployments/eth-sepolia/eth-sepolia-core.json");
         string memory json = vm.readFile(deploymentPath);
 
         factoryAddr = vm.parseJsonAddress(json, ".contracts.factory");
@@ -56,7 +56,7 @@ contract DeloyMarketHolesky is DeployBase {
 
         uint256 currentBlockNum = block.number;
         Faucet faucet = Faucet(faucetAddr);
-        string memory deployDataPath = string.concat(vm.projectRoot(), "/script/deploy/deploydata/holesky.json");
+        string memory deployDataPath = string.concat(vm.projectRoot(), "/script/deploy/deploydata/ethSepolia.json");
         vm.startBroadcast(deployerPrivateKey);
         (TermMaxMarket[] memory markets, JsonLoader.Config[] memory configs) = deployMarkets(
             factoryAddr, oracleAddr, routerAddr, faucetAddr, deployDataPath, adminAddr, priceFeedOperatorAddr
@@ -119,7 +119,7 @@ contract DeloyMarketHolesky is DeployBase {
 
         // Write market config to JSON file
         string memory marketFileName = _getMarketFileName(collateralAddr, address(underlying), marketConfig.maturity);
-        string memory deploymentsDir = string.concat(vm.projectRoot(), "/deployments/eth-holesky");
+        string memory deploymentsDir = string.concat(vm.projectRoot(), "/deployments/eth-sepolia");
         if (!vm.exists(deploymentsDir)) {
             vm.createDir(deploymentsDir, true);
         }
@@ -140,7 +140,7 @@ contract DeloyMarketHolesky is DeployBase {
         returns (string memory)
     {
         return string.concat(
-            "eth-holesky-market-",
+            "eth-sepolia-market-",
             IERC20Metadata(collateralAddr).symbol(),
             "-",
             IERC20Metadata(underlyingAddr).symbol(),

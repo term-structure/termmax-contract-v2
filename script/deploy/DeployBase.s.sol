@@ -53,8 +53,11 @@ contract DeployBase is Script {
         vaultFactory = new VaultFactory(address(implementation));
     }
 
-    function deployOracleAggregator(address admin, uint256 timeLock) public returns (OracleAggregator oracle) {
-        oracle = new OracleAggregator(admin, timeLock);
+    function deployOracleAggregator(address admin) public returns (OracleAggregator oracle) {
+        OracleAggregator implementation = new OracleAggregator();
+        bytes memory data = abi.encodeCall(OracleAggregator.initialize, admin);
+        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), data);
+        oracle = OracleAggregator(address(proxy));
     }
 
     function deployRouter(address admin) public returns (TermMaxRouter router) {
@@ -82,7 +85,7 @@ contract DeployBase is Script {
         vaultFactory = deployVaultFactory();
 
         // deploy oracle aggregator
-        oracleAggregator = deployOracleAggregator(adminAddr, 1 days);
+        oracleAggregator = deployOracleAggregator(adminAddr);
 
         // deploy router
         router = deployRouter(adminAddr);
@@ -119,7 +122,7 @@ contract DeployBase is Script {
         vaultFactory = deployVaultFactory();
 
         // deploy oracle aggregator
-        oracleAggregator = deployOracleAggregator(adminAddr, 1 days);
+        oracleAggregator = deployOracleAggregator(adminAddr);
 
         // deploy router
         router = deployRouter(adminAddr);
@@ -181,7 +184,7 @@ contract DeployBase is Script {
                     })
                 );
                 collateralPriceFeed.transferOwnership(priceFeedOperatorAddr);
-                oracle.submitPendingOracle(
+                oracle.setOracle(
                     address(collateral), IOracle.Oracle(collateralPriceFeed, collateralPriceFeed, 365 days)
                 );
             } else {
@@ -208,7 +211,7 @@ contract DeployBase is Script {
                     })
                 );
                 underlyingPriceFeed.transferOwnership(priceFeedOperatorAddr);
-                oracle.submitPendingOracle(
+                oracle.setOracle(
                     address(underlying), IOracle.Oracle(underlyingPriceFeed, underlyingPriceFeed, 365 days)
                 );
             } else {
@@ -249,6 +252,7 @@ contract DeployBase is Script {
 
             TermMaxMarket market = TermMaxMarket(factory.createMarket(GT_ERC20, initialParams, config.salt));
             markets[i] = market;
+            router.setMarketWhitelist(address(market), true);
         }
     }
 
@@ -305,6 +309,7 @@ contract DeployBase is Script {
 
             TermMaxMarket market = TermMaxMarket(factory.createMarket(GT_ERC20, initialParams, config.salt));
             markets[i] = market;
+            router.setMarketWhitelist(address(market), true);
         }
     }
 

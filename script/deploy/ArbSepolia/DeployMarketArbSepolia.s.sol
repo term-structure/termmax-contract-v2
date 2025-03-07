@@ -30,13 +30,30 @@ contract DeloyMarketArbSepolia is DeployBase {
     address adminAddr = vm.envAddress("ARB_SEPOLIA_ADMIN_ADDRESS");
     address priceFeedOperatorAddr = vm.envAddress("ARB_SEPOLIA_PRICE_FEED_OPERATOR_ADDRESS");
 
-    // address config
-    address factoryAddr = address(0x5cB28BcB9dE6C10E85E1CBA8A4A59D82c5CD1630);
-    address oracleAddr = address(0x54505e5E2C23ad39ED06971A5d6410F501641F84);
-    address routerAddr = address(0xA3e778D80D04e304fefd613c2e1675eE056136cf);
-    address faucetAddr = address(0x05bC1c5c5Ede8722aAF89663F50a3148EaE69b21);
+    address factoryAddr;
+    address oracleAddr;
+    address routerAddr;
+    address faucetAddr;
+
+    function loadAddressConfig() internal {
+        string memory deploymentPath = string.concat(vm.projectRoot(), "/deployments/arb-sepolia/arb-sepolia-core.json");
+        string memory json = vm.readFile(deploymentPath);
+
+        factoryAddr = vm.parseJsonAddress(json, ".contracts.factory");
+        oracleAddr = vm.parseJsonAddress(json, ".contracts.oracleAggregator");
+        routerAddr = vm.parseJsonAddress(json, ".contracts.router");
+        faucetAddr = vm.parseJsonAddress(json, ".contracts.faucet");
+
+        console.log("Loaded addresses from deployment file:");
+        console.log("  Factory:", factoryAddr);
+        console.log("  Oracle:", oracleAddr);
+        console.log("  Router:", routerAddr);
+        console.log("  Faucet:", faucetAddr);
+    }
 
     function run() public {
+        loadAddressConfig();
+
         uint256 currentBlockNum = block.number;
         Faucet faucet = Faucet(faucetAddr);
         string memory deployDataPath = string.concat(vm.projectRoot(), "/script/deploy/deploydata/arbSepolia.json");
@@ -68,13 +85,12 @@ contract DeloyMarketArbSepolia is DeployBase {
         }
     }
 
-    function printMarketConfig(Faucet faucet, TermMaxMarket market, uint256 salt) public view {
+    function printMarketConfig(Faucet faucet, TermMaxMarket market, uint256 salt) public {
         MarketConfig memory marketConfig = market.config();
         (IMintableERC20 ft, IMintableERC20 xt, IGearingToken gt, address collateralAddr, IERC20 underlying) =
             market.tokens();
 
         Faucet.TokenConfig memory collateralConfig = faucet.getTokenConfig(faucet.getTokenId(collateralAddr));
-
         Faucet.TokenConfig memory underlyingConfig = faucet.getTokenConfig(faucet.getTokenId(address(underlying)));
 
         console.log("Market deployed at:", address(market));
@@ -100,5 +116,155 @@ contract DeloyMarketArbSepolia is DeployBase {
         console.log("Borrow Maker Fee Ratio:", marketConfig.feeConfig.borrowMakerFeeRatio);
         console.log("Issue FT Fee Ratio:", marketConfig.feeConfig.issueFtFeeRatio);
         console.log("Issue FT Fee Ref:", marketConfig.feeConfig.issueFtFeeRef);
+
+        // Write market config to JSON file
+        string memory marketFileName = _getMarketFileName(collateralAddr, address(underlying), marketConfig.maturity);
+        string memory deploymentsDir = string.concat(vm.projectRoot(), "/deployments/arb-sepolia");
+        if (!vm.exists(deploymentsDir)) {
+            vm.createDir(deploymentsDir, true);
+        }
+
+        string memory marketFilePath = string.concat(deploymentsDir, "/", marketFileName);
+        vm.writeFile(
+            marketFilePath,
+            _createMarketJson(
+                market, marketConfig, ft, xt, gt, collateralAddr, underlying, collateralConfig, underlyingConfig, salt
+            )
+        );
+        console.log("Market config written to:", marketFilePath);
+    }
+
+    function _getMarketFileName(address collateralAddr, address underlyingAddr, uint256 maturity)
+        internal
+        view
+        returns (string memory)
+    {
+        return string.concat(
+            "arb-sepolia-market-",
+            IERC20Metadata(collateralAddr).symbol(),
+            "-",
+            IERC20Metadata(underlyingAddr).symbol(),
+            "@",
+            vm.toString(maturity),
+            ".json"
+        );
+    }
+
+    function _createMarketJson(
+        TermMaxMarket market,
+        MarketConfig memory marketConfig,
+        IMintableERC20 ft,
+        IMintableERC20 xt,
+        IGearingToken gt,
+        address collateralAddr,
+        IERC20 underlying,
+        Faucet.TokenConfig memory collateralConfig,
+        Faucet.TokenConfig memory underlyingConfig,
+        uint256 salt
+    ) internal view returns (string memory) {
+        // Create JSON in parts to avoid stack too deep errors
+        string memory part1 = _createJsonPart1(market, collateralAddr, collateralConfig, underlying, underlyingConfig);
+
+        string memory part2 = _createJsonPart2(ft, xt, gt, marketConfig, salt);
+
+        return string.concat(part1, part2);
+    }
+
+    function _createJsonPart1(
+        TermMaxMarket market,
+        address collateralAddr,
+        Faucet.TokenConfig memory collateralConfig,
+        IERC20 underlying,
+        Faucet.TokenConfig memory underlyingConfig
+    ) internal view returns (string memory) {
+        return string(
+            abi.encodePacked(
+                "{\n",
+                '  "timestamp": "',
+                vm.toString(block.timestamp),
+                '",\n',
+                '  "market": "',
+                vm.toString(address(market)),
+                '",\n',
+                '  "collateral": {\n',
+                '    "address": "',
+                vm.toString(collateralAddr),
+                '",\n',
+                '    "symbol": "',
+                IERC20Metadata(collateralAddr).symbol(),
+                '",\n',
+                '    "priceFeed": "',
+                vm.toString(address(collateralConfig.priceFeedAddr)),
+                '"\n',
+                "  },\n",
+                '  "underlying": {\n',
+                '    "address": "',
+                vm.toString(address(underlying)),
+                '",\n',
+                '    "symbol": "',
+                IERC20Metadata(address(underlying)).symbol(),
+                '",\n',
+                '    "priceFeed": "',
+                vm.toString(address(underlyingConfig.priceFeedAddr)),
+                '"\n',
+                "  },\n"
+            )
+        );
+    }
+
+    function _createJsonPart2(
+        IMintableERC20 ft,
+        IMintableERC20 xt,
+        IGearingToken gt,
+        MarketConfig memory marketConfig,
+        uint256 salt
+    ) internal view returns (string memory) {
+        return string(
+            abi.encodePacked(
+                '  "tokens": {\n',
+                '    "ft": "',
+                vm.toString(address(ft)),
+                '",\n',
+                '    "xt": "',
+                vm.toString(address(xt)),
+                '",\n',
+                '    "gt": "',
+                vm.toString(address(gt)),
+                '"\n',
+                "  },\n",
+                '  "config": {\n',
+                '    "treasurer": "',
+                vm.toString(marketConfig.treasurer),
+                '",\n',
+                '    "maturity": "',
+                vm.toString(marketConfig.maturity),
+                '",\n',
+                '    "salt": "',
+                vm.toString(salt),
+                '",\n',
+                '    "fees": {\n',
+                '      "lendTakerFeeRatio": "',
+                vm.toString(marketConfig.feeConfig.lendTakerFeeRatio),
+                '",\n',
+                '      "lendMakerFeeRatio": "',
+                vm.toString(marketConfig.feeConfig.lendMakerFeeRatio),
+                '",\n',
+                '      "borrowTakerFeeRatio": "',
+                vm.toString(marketConfig.feeConfig.borrowTakerFeeRatio),
+                '",\n',
+                '      "borrowMakerFeeRatio": "',
+                vm.toString(marketConfig.feeConfig.borrowMakerFeeRatio),
+                '",\n',
+                '      "issueFtFeeRatio": "',
+                vm.toString(marketConfig.feeConfig.issueFtFeeRatio),
+                '",\n',
+                '      "issueFtFeeRef": "',
+                vm.toString(marketConfig.feeConfig.issueFtFeeRef),
+                '"\n',
+                "    }\n",
+                "  }\n",
+                "}"
+            )
+        );
     }
 }

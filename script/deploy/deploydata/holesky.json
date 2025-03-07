@@ -107,7 +107,7 @@
       "salt": 0,
       "marketConfig": {
         "treasurer": "0x7ab945445958819a74b48e8Bd5F9E39ed74bdE9E",
-        "maturity": "1748476800",
+        "maturity": "1748563200",
         "lendTakerFeeRatio": "2000000",
         "lendMakerFeeRatio": "2000000",
         "borrowTakerFeeRatio": "300000",
@@ -130,10 +130,10 @@
       },
       "collateralConfig": {
         "tokenAddr": "0xe00bd3df25fb187d6abbb620b3dfd19839947b81",
-        "name": "PT Ethena sUSDE 27MAR2025",
-        "symbol": "PT-sUSDE-27MAR2025",
+        "name": "PT Ethena sUSDE 29MAy2025",
+        "symbol": "PT-sUSDE-29MAY2025",
         "decimals": "18",
-        "initialPrice": "96340000",
+        "initialPrice": "96760000",
         "gtKeyIdentifier": "GearingTokenWithERC20"
       }
     },
@@ -194,14 +194,14 @@
         "name": "pufETH",
         "symbol": "pufETH",
         "decimals": "18",
-        "initialPrice": "320000000000"
+        "initialPrice": "220000000000"
       },
       "collateralConfig": {
         "tokenAddr": "0x9cfc9917c171a384c7168d3529fc7e851a2e0d6d",
         "name": "PT Puffer ETH 26JUN2025",
         "symbol": "PT-pufETH-26JUN2025",
         "decimals": "18",
-        "initialPrice": "315000000000",
+        "initialPrice": "220000000000",
         "gtKeyIdentifier": "GearingTokenWithERC20"
       }
     },
@@ -292,9 +292,9 @@
         "liquidatable": true
       },
       "underlyingConfig": {
-        "tokenAddr": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
-        "name": "Tether USD",
-        "symbol": "USDT",
+        "tokenAddr": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "name": "USD Coin",
+        "symbol": "USDC",
         "decimals": "6",
         "initialPrice": "100000000"
       },

@@ -3,6 +3,7 @@ pragma solidity ^0.8.27;
 
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
+import {VmSafe} from "forge-std/Vm.sol";
 import {TermMaxFactory} from "contracts/factory/TermMaxFactory.sol";
 import {ITermMaxFactory} from "contracts/factory/ITermMaxFactory.sol";
 import {ITermMaxRouter} from "contracts/router/ITermMaxRouter.sol";
@@ -58,5 +59,69 @@ contract DeployCoreHolesky is DeployBase {
         console.log("Faucet deployed at:", address(faucet));
         console.log("MarketViewer deployed at:", address(marketViewer));
         console.log();
+
+        // Write deployment results to a JSON file with timestamp
+        string memory deploymentJson = string(
+            abi.encodePacked(
+                "{\n",
+                '  "network": "eth-holesky",\n',
+                '  "deployedAt": "',
+                vm.toString(block.timestamp),
+                '",\n',
+                '  "gitBranch": "',
+                getGitBranch(),
+                '",\n',
+                '  "gitCommitHash": "0x',
+                vm.toString(getGitCommitHash()),
+                '",\n',
+                '  "deployer": "',
+                vm.toString(deployerAddr),
+                '",\n',
+                '  "admin": "',
+                vm.toString(adminAddr),
+                '",\n',
+                '  "contracts": {\n',
+                '    "factory": "',
+                vm.toString(address(factory)),
+                '",\n',
+                '    "vaultFactory": "',
+                vm.toString(address(vaultFactory)),
+                '",\n',
+                '    "oracleAggregator": "',
+                vm.toString(address(oracleAggregator)),
+                '",\n',
+                '    "router": "',
+                vm.toString(address(router)),
+                '",\n',
+                '    "swapAdapter": "',
+                vm.toString(address(swapAdapter)),
+                '",\n',
+                '    "faucet": "',
+                vm.toString(address(faucet)),
+                '",\n',
+                '    "marketViewer": "',
+                vm.toString(address(marketViewer)),
+                '"\n',
+                "  }\n",
+                "}"
+            )
+        );
+
+        // Create deployments directory if it doesn't exist
+        string memory deploymentsDir = string.concat(vm.projectRoot(), "/deployments/eth-holesky");
+        if (vm.exists(deploymentsDir)) {
+            // Directory exists, clean it by removing all files
+            VmSafe.DirEntry[] memory files = vm.readDir(deploymentsDir);
+            for (uint256 i = 0; i < files.length; i++) {
+                vm.removeFile(files[i].path);
+            }
+        } else {
+            // Directory doesn't exist, create it
+            vm.createDir(deploymentsDir, true);
+        }
+
+        string memory deploymentPath = string.concat(deploymentsDir, "/eth-holesky-core.json");
+        vm.writeFile(deploymentPath, deploymentJson);
+        console.log("Deployment info written to:", deploymentPath);
     }
 }
