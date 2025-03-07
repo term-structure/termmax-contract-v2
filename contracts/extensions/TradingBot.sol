@@ -60,11 +60,18 @@ contract TradingBot is IAaveFlashLoanCallback, IMorphoFlashLoanCallback {
         ) = abi.decode(data, (uint256, IERC20, address, ITermMaxOrder[], ITermMaxOrder[], uint128[], uint256));
         tradeToken.safeIncreaseAllowance(address(MORPHO), assets);
         token.safeIncreaseAllowance(address(termMaxRouter), assets);
-        uint256 cost =
-            termMaxRouter.swapTokenToExactToken(token, tradeToken, address(this), buyOrders, tradingAmts, assets, deadline);
+        uint256 cost = termMaxRouter.swapTokenToExactToken(
+            token, tradeToken, address(this), buyOrders, tradingAmts, assets, deadline
+        );
         tradeToken.safeIncreaseAllowance(address(termMaxRouter), _sumUint128Array(tradingAmts));
         uint256 income = termMaxRouter.swapExactTokenToToken(
-            tradeToken, token, address(this), sellOrders, tradingAmts, (cost + minIncome + premium).toUint128(), deadline
+            tradeToken,
+            token,
+            address(this),
+            sellOrders,
+            tradingAmts,
+            (cost + minIncome + premium).toUint128(),
+            deadline
         );
         income = income - cost - premium;
         token.safeTransfer(recipient, income);
