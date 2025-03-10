@@ -44,26 +44,40 @@ contract ForkLiquidationBot is GtBaseTest {
             }
             LiquidationBotConfig memory config = _readLiquidationBotConfig(tokenPair);
             if (config.morpho.active) {
-                _testLiquidate(res, config, LiquidationBot.BorrowType.MORPHO);
+                _testLiquidate(res, config, LiquidationBot.BorrowType.MORPHO, ITermMaxOrder(address(0)));
             }
         }
     }
 
-    // function testTradeWithAave() public {
-    //     for (uint256 i = 0; i < tokenPairs.length; i++) {
-    //         string memory tokenPair = tokenPairs[i];
-    //         GtTestRes memory res = _initializeGtTestRes(tokenPair);
-    //         if (!res.uniswapData.active || !res.pendleData.active) {
-    //             continue;
-    //         }
-    //         LiquidationBotConfig memory config = _readLiquidationBotConfig(tokenPair);
-    //         if (config.aave.active) {
-    //             // _testTradingBot(res, config, TradingBot.BorrowType.AAVE);
-    //         }
-    //     }
-    // }
+    function testTradeWithAave() public {
+        for (uint256 i = 0; i < tokenPairs.length; i++) {
+            string memory tokenPair = tokenPairs[i];
+            GtTestRes memory res = _initializeGtTestRes(tokenPair);
+            if (!res.uniswapData.active || !res.pendleData.active) {
+                continue;
+            }
+            LiquidationBotConfig memory config = _readLiquidationBotConfig(tokenPair);
+            if (config.aave.active) {
+                _testLiquidate(res, config, LiquidationBot.BorrowType.AAVE, ITermMaxOrder(address(0)));
+            }
+        }
+    }
 
-    function _testLiquidate(GtTestRes memory res, LiquidationBotConfig memory config, LiquidationBot.BorrowType borrowType)
+    function testLiquidateWithMorphoByFt() public {
+        for (uint256 i = 0; i < tokenPairs.length; i++) {
+            string memory tokenPair = tokenPairs[i];
+            GtTestRes memory res = _initializeGtTestRes(tokenPair);
+            if (!res.uniswapData.active || !res.pendleData.active) {
+                continue;
+            }
+            LiquidationBotConfig memory config = _readLiquidationBotConfig(tokenPair);
+            if (config.morpho.active) {
+                _testLiquidate(res, config, LiquidationBot.BorrowType.MORPHO, res.order);
+            }
+        }
+    }
+
+    function _testLiquidate(GtTestRes memory res, LiquidationBotConfig memory config, LiquidationBot.BorrowType borrowType, ITermMaxOrder order)
         internal
     {
         address borrower = vm.randomAddress();
@@ -109,7 +123,7 @@ contract ForkLiquidationBot is GtBaseTest {
             )
         );
         LiquidationBot.LiquidationParams memory liquidationParams = LiquidationBot.LiquidationParams(
-            res.gt, res.debtToken, res.collateral, gtId, debtAmt, IERC20(address(0)), ITermMaxOrder(address(0)), units
+            res.gt, res.debtToken, res.collateral, gtId, debtAmt, res.ft, order, units
         );
         liquidationBot.liquidate(liquidationParams, borrowType);
         console.log("income:", res.debtToken.balanceOf(liquidator));

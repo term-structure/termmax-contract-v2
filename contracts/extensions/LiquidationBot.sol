@@ -76,15 +76,15 @@ contract LiquidationBot is IAaveFlashLoanCallback, IMorphoFlashLoanCallback {
         internal
     {
         uint256 totalAssets;
-        if (address(params.ft) != address(0)) {
+        if (address(params.ft) != address(0) && address(params.order) != address(0)) {
             // liquidate by ft
-            params.debtToken.safeDecreaseAllowance(address(params.order), assets);
+            params.debtToken.safeIncreaseAllowance(address(params.order), assets);
             // get remaining assets
             totalAssets = assets
                 - params.order.swapTokenToExactToken(
                     params.debtToken, params.ft, address(this), assets, assets, block.timestamp
                 );
-            params.ft.safeIncreaseAllowance(address(params.order), assets);
+            params.ft.safeIncreaseAllowance(address(params.gt), assets);
             params.gt.liquidate(params.gtId, assets, false);
         } else {
             // liquidate by debt token
