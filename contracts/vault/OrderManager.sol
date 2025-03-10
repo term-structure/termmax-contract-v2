@@ -354,7 +354,7 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
 
     /// @notice Callback function for the swap
     /// @param deltaFt The change in the ft balance of the order
-    function swapCallback(uint256 ftReserve, uint256 xtReserve, int256 deltaFt) external onlyProxy {
+    function afterSwap(uint256 ftReserve, uint256 xtReserve, int256 deltaFt) external onlyProxy {
         if (ftReserve < xtReserve) {
             revert OrderHasNegativeInterest();
         }

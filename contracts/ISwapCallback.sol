@@ -14,5 +14,5 @@ interface ISwapCallback {
      * @param deltaFt The change in FT token balance (positive for receiving, negative for paying)
      * @param deltaXt The change in XT token balance (positive for receiving, negative for paying)
      */
-    function swapCallback(uint256 ftReserve, uint256 xtReserve, int256 deltaFt, int256 deltaXt) external;
+    function afterSwap(uint256 ftReserve, uint256 xtReserve, int256 deltaFt, int256 deltaXt) external;
 }
