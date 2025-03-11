@@ -79,6 +79,7 @@ abstract contract AbstractGearingToken is
         internal
         onlyInitializing
     {
+        if (config_.loanConfig.liquidationLtv <= config_.loanConfig.maxLtv) revert LiquidationLtvMustBeGreaterThanMaxLtv();
         __ERC721_init(name, symbol);
         __Ownable_init(msg.sender);
         _config = config_;

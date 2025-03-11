@@ -120,6 +120,39 @@ contract FactoryTest is Test {
         vm.stopPrank();
     }
 
+    function testLiquidationLtvMustBeGreaterThanMaxLtv() public {
+        vm.startPrank(deployer);
+        TermMaxFactory factory = DeployUtils.deployFactory(deployer);
+
+        MockERC20 collateral = new MockERC20("ETH", "ETH", 18);
+        MockERC20 debt = new MockERC20("DAI", "DAI", 8);
+
+        maxLtv = 3;
+        liquidationLtv = 2;
+
+        MarketInitialParams memory params = MarketInitialParams({
+            collateral: address(collateral),
+            debtToken: debt,
+            admin: deployer,
+            gtImplementation: address(0),
+            marketConfig: marketConfig,
+            loanConfig: LoanConfig({
+                maxLtv: maxLtv,
+                liquidationLtv: liquidationLtv,
+                liquidatable: true,
+                oracle: IOracle(vm.randomAddress())
+            }),
+            gtInitalParams: abi.encode(type(uint256).max),
+            tokenName: "test",
+            tokenSymbol: "test"
+        });
+
+        vm.expectRevert(abi.encodeWithSignature("LiquidationLtvMustBeGreaterThanMaxLtv()"));
+        factory.createMarket(DeployUtils.GT_ERC20, params, 0);
+
+        vm.stopPrank();
+    }
+
     function testRevertByCantNotFindGtImplementation() public {
         vm.startPrank(deployer);
         TermMaxFactory factory = DeployUtils.deployFactory(deployer);
