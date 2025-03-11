@@ -737,7 +737,7 @@ contract TermMaxVault is
 
     /// @notice Callback function for the swap
     /// @param deltaFt The change in the ft balance of the order
-    function swapCallback(uint256 ftReserve, uint256 xtReserve, int256 deltaFt, int256) external override {
-        _delegateCall(abi.encodeCall(IOrderManager.swapCallback, (ftReserve, xtReserve, deltaFt)));
+    function afterSwap(uint256 ftReserve, uint256 xtReserve, int256 deltaFt, int256) external override {
+        _delegateCall(abi.encodeCall(IOrderManager.afterSwap, (ftReserve, xtReserve, deltaFt)));
     }
 }

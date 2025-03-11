@@ -64,9 +64,9 @@ contract FuzzSwapTest is Test {
 
         res.orderConfig = JSONLoader.getOrderConfigFromJson(testdata, ".orderConfig");
 
-        MockSwapCallback swapCallback = new MockSwapCallback(res.ft, res.xt);
+        MockSwapCallback afterSwap = new MockSwapCallback(res.ft, res.xt);
 
-        res.order = res.market.createOrder(maker, res.orderConfig.maxXtReserve, swapCallback, res.orderConfig.curveCuts);
+        res.order = res.market.createOrder(maker, res.orderConfig.maxXtReserve, afterSwap, res.orderConfig.curveCuts);
 
         uint256 orderInitialAmount = vm.parseJsonUint(testdata, ".orderInitialAmount");
         res.debt.mint(admin, orderInitialAmount);
@@ -239,7 +239,7 @@ contract MockSwapCallback is ISwapCallback {
         xt = xt_;
     }
 
-    function swapCallback(uint256 ftReserve_, uint256 xtReserve_, int256 deltaFt_, int256 deltaXt_) external override {
+    function afterSwap(uint256 ftReserve_, uint256 xtReserve_, int256 deltaFt_, int256 deltaXt_) external override {
         deltaFt = deltaFt_;
         deltaXt = deltaXt_;
         if (ftReserve == 0 || xtReserve == 0) {
