@@ -185,8 +185,8 @@
         "redeemFeeRatio": "0"
       },
       "loanConfig": {
-        "liquidationLtv": "60000000",
-        "maxLtv": "70000000",
+        "liquidationLtv": "70000000",
+        "maxLtv": "60000000",
         "liquidatable": true
       },
       "underlyingConfig": {
