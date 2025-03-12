@@ -1,23 +1,3 @@
-// transformAbi.ts
-// import { readFileSync, writeFileSync } from 'fs';
-
-// const transformAbi = () => {
-//   const contractJson = JSON.parse(readFileSync('./out/Faucet.sol/Faucet.json', 'utf-8'));
-
-//   const formattedAbi = JSON.stringify(contractJson.abi, null, 2)
-//     .replace(/"(\w+)":/g, '$1:') // Remove quotes from keys
-//     .replace(/"/g, "'") // Replace double quotes with single quotes
-//     .replace(/([^,{[])(\n\s*[}\]])/g, '$1,$2')
-//     .replace(/(})(\n\s*])/g, '$1,$2');
-
-//   const tsContent = `export const abiFaucet = ${formattedAbi} as const;\n`;
-
-//   writeFileSync('./abiFaucet.ts', tsContent);
-//   console.log('ABI transformed successfully');
-// };
-
-// transformAbi();
-
 import { readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 
@@ -29,6 +9,7 @@ const contractFiles = [
   './out/GearingTokenWithERC20.sol/GearingTokenWithERC20.json',
   './out/TermMaxMarket.sol/TermMaxMarket.json',
   './out/TermMaxOrder.sol/TermMaxOrder.json',
+  './out/TermMaxVault.sol/TermMaxVault.json',
 ];
 
 const transformAbi = (filePath: string) => {
