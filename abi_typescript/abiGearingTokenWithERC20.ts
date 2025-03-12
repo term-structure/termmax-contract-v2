@@ -1386,6 +1386,11 @@ export const abiGearingTokenWithERC20 = [
   },
   {
     type: 'error',
+    name: 'LiquidationLtvMustBeGreaterThanMaxLtv',
+    inputs: [],
+  },
+  {
+    type: 'error',
     name: 'LtvIncreasedAfterLiquidation',
     inputs: [
       {
