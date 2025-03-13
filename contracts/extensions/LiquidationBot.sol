@@ -54,8 +54,22 @@ contract LiquidationBot is IAaveFlashLoanCallback, IMorphoFlashLoanCallback {
         MORPHO = _MORPHO;
     }
 
-    function simulateLiquidation(IGearingToken gt, uint256 id)
+    function simulateBatchLiquidation(IGearingToken[] calldata gt, uint256[] calldata id)
         external
+        view
+        returns (bool[] memory isLiquidable, uint128[] memory maxRepayAmt, uint256[] memory cToLiquidator, uint256[] memory incomeValue)
+    {
+        isLiquidable = new bool[](gt.length);
+        maxRepayAmt = new uint128[](gt.length);
+        cToLiquidator = new uint256[](gt.length);
+        incomeValue = new uint256[](gt.length);
+        for (uint256 i = 0; i < gt.length; i++) {
+            (isLiquidable[i], maxRepayAmt[i], cToLiquidator[i], incomeValue[i]) = simulateLiquidation(gt[i], id[i]);
+        }
+    }
+
+    function simulateLiquidation(IGearingToken gt, uint256 id)
+        public
         view
         returns (bool isLiquidable, uint128 maxRepayAmt, uint256 cToLiquidator, uint256 incomeValue)
     {
