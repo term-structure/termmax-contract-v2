@@ -77,9 +77,12 @@ contract ForkLiquidationBot is GtBaseTest {
         }
     }
 
-    function _testLiquidate(GtTestRes memory res, LiquidationBotConfig memory config, LiquidationBot.BorrowType borrowType, ITermMaxOrder order)
-        internal
-    {
+    function _testLiquidate(
+        GtTestRes memory res,
+        LiquidationBotConfig memory config,
+        LiquidationBot.BorrowType borrowType,
+        ITermMaxOrder order
+    ) internal {
         address borrower = vm.randomAddress();
 
         // mint gt
@@ -101,7 +104,10 @@ contract ForkLiquidationBot is GtBaseTest {
         address liquidator = vm.randomAddress();
         deal(liquidator, 1e18);
         vm.startPrank(liquidator);
-
+        {
+            //simulate liquidation result
+            
+        }
         SwapUnit[] memory units = new SwapUnit[](2);
         units[0] = SwapUnit(
             address(res.pendleData.adapter),
@@ -122,9 +128,8 @@ contract ForkLiquidationBot is GtBaseTest {
                 0
             )
         );
-        LiquidationBot.LiquidationParams memory liquidationParams = LiquidationBot.LiquidationParams(
-            res.gt, res.debtToken, res.collateral, gtId, debtAmt, res.ft, order, units
-        );
+        LiquidationBot.LiquidationParams memory liquidationParams =
+            LiquidationBot.LiquidationParams(res.gt, res.debtToken, res.collateral, gtId, debtAmt, res.ft, order, units);
         liquidationBot.liquidate(liquidationParams, borrowType);
         console.log("income:", res.debtToken.balanceOf(liquidator));
         vm.stopPrank();

@@ -5,13 +5,18 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {IFlashLoanAave, IAaveFlashLoanCallback} from "./IFlashLoanAave.sol";
 import {IFlashLoanMorpho, IMorphoFlashLoanCallback} from "./IFlashLoanMorpho.sol";
 import {TransferUtils, IERC20} from "contracts/lib/TransferUtils.sol";
-import {IGearingToken, GtConfig} from "contracts/tokens/IGearingToken.sol";
+import {IGearingToken, GtConfig, IERC20Metadata} from "contracts/tokens/IGearingToken.sol";
 import {ISwapAdapter, SwapUnit} from "contracts/router/ISwapAdapter.sol";
 import {ITermMaxOrder} from "contracts/ITermMaxOrder.sol";
+import {Constants} from "contracts/lib/Constants.sol";
+import {GearingTokenConstants} from "contracts/lib/GearingTokenConstants.sol";
+import {MathLib} from "contracts/lib/MathLib.sol";
+import {IOracle} from "contracts/oracle/IOracle.sol";
 
 contract LiquidationBot is IAaveFlashLoanCallback, IMorphoFlashLoanCallback {
     using TransferUtils for IERC20;
     using SafeCast for uint256;
+    using MathLib for *;
 
     error CannotLiquidate();
     error CollateralCannotCoverBorrow();
@@ -24,6 +29,12 @@ contract LiquidationBot is IAaveFlashLoanCallback, IMorphoFlashLoanCallback {
     enum BorrowType {
         AAVE,
         MORPHO
+    }
+
+    struct PriceInfo {
+        uint256 price;
+        uint256 priceDenominator;
+        uint256 tokenDenominator;
     }
 
     struct LiquidationParams {
@@ -41,6 +52,72 @@ contract LiquidationBot is IAaveFlashLoanCallback, IMorphoFlashLoanCallback {
         AAVE_POOL = _AAVE_POOL;
         AAVE_ADDRESSES_PROVIDER = _AAVE_ADDRESSES_PROVIDER;
         MORPHO = _MORPHO;
+    }
+
+    function simulateLiquidation(IGearingToken gt, uint256 id)
+        external
+        view
+        returns (bool isLiquidable, uint128 maxRepayAmt, uint256 cToLiquidator, uint256 incomeValue)
+    {
+        (, uint128 debtAmt, uint128 ltv, bytes memory collateralData) = gt.loanInfo(id);
+        if (ltv >= Constants.DECIMAL_BASE) {
+            return (false, 0, 0, 0);
+        }
+        (isLiquidable, maxRepayAmt) = gt.getLiquidationInfo(id);
+        if (isLiquidable) {
+            GtConfig memory gtConfig = gt.getGtConfig();
+            PriceInfo memory debtPriceInfo = _getPriceInfo(gtConfig.loanConfig.oracle, address(gtConfig.debtToken));
+            PriceInfo memory collateralPriceInfo = _getPriceInfo(gtConfig.loanConfig.oracle, gtConfig.collateral);
+            (cToLiquidator, incomeValue) =
+                _calcLiquidationResult(debtAmt, abi.decode(collateralData, (uint256)), maxRepayAmt, debtPriceInfo, collateralPriceInfo);
+        }
+    }
+
+    function _getPriceInfo(IOracle oracle, address asset) internal view returns (PriceInfo memory priceInfo) {
+        (uint256 price, uint8 decimals) = oracle.getPrice(asset);
+        priceInfo.price = price;
+        priceInfo.priceDenominator = 10 ** decimals;
+        priceInfo.tokenDenominator = 10 ** IERC20Metadata(asset).decimals();
+    }
+
+    function _calcLiquidationResult(
+        uint256 debtAmt,
+        uint256 collateralAmt,
+        uint256 repayAmt,
+        PriceInfo memory debtPriceInfo,
+        PriceInfo memory collateralPriceInfo
+    ) internal pure returns (uint256 cToLiquidator, uint256 incomeValue) {
+        uint256 ddPriceToCdPrice = (debtPriceInfo.price * collateralPriceInfo.priceDenominator * Constants.DECIMAL_BASE)
+            / (collateralPriceInfo.price * debtPriceInfo.priceDenominator);
+
+        // calculate the amount of collateral that is equivalent to repayAmt
+        // with debt to collateral price
+        uint256 cEqualRepayAmt = (repayAmt * ddPriceToCdPrice * collateralPriceInfo.tokenDenominator)
+            / (debtPriceInfo.tokenDenominator * Constants.DECIMAL_BASE);
+
+        uint256 rewardToLiquidator =
+            (cEqualRepayAmt * GearingTokenConstants.REWARD_TO_LIQUIDATOR) / Constants.DECIMAL_BASE;
+        uint256 rewardToProtocol = (cEqualRepayAmt * GearingTokenConstants.REWARD_TO_PROTOCOL) / Constants.DECIMAL_BASE;
+
+        uint256 removedCollateralAmt = cEqualRepayAmt + rewardToLiquidator + rewardToProtocol;
+
+        if (debtAmt == 0) {
+            removedCollateralAmt = 0;
+        } else {
+            removedCollateralAmt = removedCollateralAmt.min((collateralAmt * repayAmt) / debtAmt);
+        }
+
+        // Case 1: removed collateral can not cover repayAmt + rewardToLiquidator
+        if (removedCollateralAmt <= cEqualRepayAmt + rewardToLiquidator) {
+            cToLiquidator = removedCollateralAmt;
+        } else {
+            cToLiquidator = cEqualRepayAmt + rewardToLiquidator;
+        }
+        if (cToLiquidator > cEqualRepayAmt) {
+            uint256 income = cToLiquidator - cEqualRepayAmt;
+            incomeValue = income * collateralPriceInfo.price
+                / (collateralPriceInfo.priceDenominator * collateralPriceInfo.tokenDenominator);
+        }
     }
 
     function liquidate(LiquidationParams memory params, BorrowType borrowType) external {
