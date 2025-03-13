@@ -98,7 +98,7 @@ contract ForkLiquidationBot is GtBaseTest {
         (uint256 gtId,) = res.market.issueFt(borrower, debtAmt, abi.encode(collateralAmt));
         vm.stopPrank();
 
-        _updateCollateralPrice(res, 0.8e8);
+        _updateCollateralPrice(res, 0.85e8);
 
         // liquidate
         address liquidator = vm.randomAddress();
@@ -106,7 +106,10 @@ contract ForkLiquidationBot is GtBaseTest {
         vm.startPrank(liquidator);
         {
             //simulate liquidation result
-            
+            (, uint128 maxRepayAmt, uint256 cToLiquidator, uint256 incomeValue) = liquidationBot.simulateLiquidation(res.gt, gtId);
+            console.log("simulate--maxRepayAmt:", maxRepayAmt);
+            console.log("simulate--cToLiquidator:", cToLiquidator);
+            console.log("simulate--incomeValue:", incomeValue);
         }
         SwapUnit[] memory units = new SwapUnit[](2);
         units[0] = SwapUnit(

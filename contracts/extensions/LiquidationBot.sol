@@ -61,7 +61,7 @@ contract LiquidationBot is IAaveFlashLoanCallback, IMorphoFlashLoanCallback {
     {
         (, uint128 debtAmt, uint128 ltv, bytes memory collateralData) = gt.loanInfo(id);
         if (ltv >= Constants.DECIMAL_BASE) {
-            return (false, 0, 0, 0);
+            return (true, 0, 0, 0);
         }
         (isLiquidable, maxRepayAmt) = gt.getLiquidationInfo(id);
         if (isLiquidable) {
@@ -115,7 +115,7 @@ contract LiquidationBot is IAaveFlashLoanCallback, IMorphoFlashLoanCallback {
         }
         if (cToLiquidator > cEqualRepayAmt) {
             uint256 income = cToLiquidator - cEqualRepayAmt;
-            incomeValue = income * collateralPriceInfo.price
+            incomeValue = income * collateralPriceInfo.price * Constants.DECIMAL_BASE
                 / (collateralPriceInfo.priceDenominator * collateralPriceInfo.tokenDenominator);
         }
     }
