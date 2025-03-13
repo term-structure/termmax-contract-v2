@@ -52,7 +52,7 @@ contract TermMaxRouter is
         DEBT
     }
 
-    /// @notice whitelist mapping of dapter
+    /// @notice whitelist mapping of adapter
     mapping(address => bool) public adapterWhitelist;
 
     function _authorizeUpgrade(address newImplementation) internal virtual override onlyOwner {}
