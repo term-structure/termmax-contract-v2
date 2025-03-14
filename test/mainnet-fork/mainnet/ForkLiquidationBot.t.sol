@@ -106,7 +106,8 @@ contract ForkLiquidationBot is GtBaseTest {
         vm.startPrank(liquidator);
         {
             //simulate liquidation result
-            (, uint128 maxRepayAmt, uint256 cToLiquidator, uint256 incomeValue) = liquidationBot.simulateLiquidation(res.gt, gtId);
+            (, uint128 maxRepayAmt, uint256 cToLiquidator, uint256 incomeValue) =
+                liquidationBot.simulateLiquidation(res.gt, gtId);
             console.log("simulate--maxRepayAmt:", maxRepayAmt);
             console.log("simulate--cToLiquidator:", cToLiquidator);
             console.log("simulate--incomeValue:", incomeValue);

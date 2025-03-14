@@ -57,7 +57,12 @@ contract LiquidationBot is IAaveFlashLoanCallback, IMorphoFlashLoanCallback {
     function simulateBatchLiquidation(IGearingToken[] calldata gt, uint256[] calldata id)
         external
         view
-        returns (bool[] memory isLiquidable, uint128[] memory maxRepayAmt, uint256[] memory cToLiquidator, uint256[] memory incomeValue)
+        returns (
+            bool[] memory isLiquidable,
+            uint128[] memory maxRepayAmt,
+            uint256[] memory cToLiquidator,
+            uint256[] memory incomeValue
+        )
     {
         isLiquidable = new bool[](gt.length);
         maxRepayAmt = new uint128[](gt.length);
@@ -82,8 +87,9 @@ contract LiquidationBot is IAaveFlashLoanCallback, IMorphoFlashLoanCallback {
             GtConfig memory gtConfig = gt.getGtConfig();
             PriceInfo memory debtPriceInfo = _getPriceInfo(gtConfig.loanConfig.oracle, address(gtConfig.debtToken));
             PriceInfo memory collateralPriceInfo = _getPriceInfo(gtConfig.loanConfig.oracle, gtConfig.collateral);
-            (cToLiquidator, incomeValue) =
-                _calcLiquidationResult(debtAmt, abi.decode(collateralData, (uint256)), maxRepayAmt, debtPriceInfo, collateralPriceInfo);
+            (cToLiquidator, incomeValue) = _calcLiquidationResult(
+                debtAmt, abi.decode(collateralData, (uint256)), maxRepayAmt, debtPriceInfo, collateralPriceInfo
+            );
         }
     }
 
