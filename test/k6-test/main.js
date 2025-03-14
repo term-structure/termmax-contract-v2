@@ -32,11 +32,11 @@ export const options = {
       exec: 'loadingTest',
       stages: stages,
     },
-    loading_test_api: {
-      executor: 'ramping-vus',
-      exec: 'functionalTest',
-      stages: stages,
-    },
+    // loading_test_api: {
+    //   executor: 'ramping-vus',
+    //   exec: 'functionalTest',
+    //   stages: stages,
+    // },
   },
 };
 
