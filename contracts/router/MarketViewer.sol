@@ -4,6 +4,7 @@ pragma solidity ^0.8.27;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC721Enumerable} from "@openzeppelin/contracts/interfaces/IERC721Enumerable.sol";
 import {ITermMaxMarket} from "contracts/ITermMaxMarket.sol";
+import {ITermMaxOrder} from "contracts/ITermMaxOrder.sol";
 import {IMintableERC20} from "contracts/tokens/IMintableERC20.sol";
 import {IGearingToken} from "contracts/tokens/IGearingToken.sol";
 import {ITermMaxOrder} from "contracts/ITermMaxOrder.sol";
@@ -21,8 +22,6 @@ contract MarketViewer {
         uint256 collateralBalance;
         uint256 ftBalance;
         uint256 xtBalance;
-        uint256 lpFtBalance;
-        uint256 lpXtBalance;
         LoanPosition[] gtInfo;
     }
 
@@ -37,7 +36,7 @@ contract MarketViewer {
         FeeConfig feeConfig;
     }
 
-    function getPositionDetail(ITermMaxMarket market, address owner) external view returns (Position memory position) {
+    function getPositionDetail(ITermMaxMarket market, address owner) public view returns (Position memory position) {
         (IMintableERC20 ft, IMintableERC20 xt, IGearingToken gt, address collateral, IERC20 underlying) =
             market.tokens();
         position.underlyingBalance = underlying.balanceOf(owner);
@@ -56,6 +55,14 @@ contract MarketViewer {
             position.gtInfo[i].debtAmt = debtAmt;
             position.gtInfo[i].collateralAmt = _decodeAmount(collateralData);
         }
+    }
+
+    function getPositionDetails(ITermMaxMarket[] memory market, address owner) external view returns (Position[] memory) {
+        Position[] memory positions = new Position[](market.length);
+        for (uint256 i = 0; i < market.length; ++i) {
+            positions[i] = getPositionDetail(market[i], owner);
+        }
+        return positions;
     }
 
     function getAllLoanPosition(ITermMaxMarket market, address owner) external view returns (LoanPosition[] memory) {
