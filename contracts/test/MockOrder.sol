@@ -226,7 +226,8 @@ contract MockOrder is
         IERC20 tokenOut,
         address recipient,
         uint128 tokenAmtIn,
-        uint128 minTokenOut
+        uint128 minTokenOut,
+        uint256
     ) external override nonReentrant isOpen returns (uint256 netTokenOut) {
         if (tokenIn == tokenOut) revert CantSwapSameToken();
         uint256 feeAmt = 0;
@@ -249,9 +250,11 @@ contract MockOrder is
         netTokenOut = minTokenOut;
 
         if (address(_orderConfig.swapTrigger) != address(0)) {
-            int256 deltaFt = ft.balanceOf(address(this)).toInt256() - ftBlanceBefore.toInt256();
-            int256 deltaXt = xt.balanceOf(address(this)).toInt256() - xtBlanceBefore.toInt256();
-            _orderConfig.swapTrigger.swapCallback(deltaFt, deltaXt);
+            uint256 ftReserve = ft.balanceOf(address(this));
+            uint256 xtReserve = xt.balanceOf(address(this));
+            int256 deltaFt = ftReserve.toInt256() - ftBlanceBefore.toInt256();
+            int256 deltaXt = xtReserve.toInt256() - xtBlanceBefore.toInt256();
+            _orderConfig.swapTrigger.afterSwap(ftReserve, xtReserve, deltaFt, deltaXt);
         }
         emit SwapExactTokenToToken(
             tokenIn, tokenOut, msg.sender, recipient, tokenAmtIn, netTokenOut.toUint128(), feeAmt.toUint128()
@@ -263,7 +266,8 @@ contract MockOrder is
         IERC20 tokenOut,
         address recipient,
         uint128 tokenAmtOut,
-        uint128 maxTokenIn
+        uint128 maxTokenIn,
+        uint256
     ) external nonReentrant isOpen returns (uint256 netTokenIn) {
         if (tokenIn == tokenOut) revert CantSwapSameToken();
         uint256 feeAmt = 0;
@@ -285,9 +289,11 @@ contract MockOrder is
         netTokenIn = maxTokenIn;
 
         if (address(_orderConfig.swapTrigger) != address(0)) {
-            int256 deltaFt = ft.balanceOf(address(this)).toInt256() - ftBlanceBefore.toInt256();
-            int256 deltaXt = xt.balanceOf(address(this)).toInt256() - xtBlanceBefore.toInt256();
-            _orderConfig.swapTrigger.swapCallback(deltaFt, deltaXt);
+            uint256 ftReserve = ft.balanceOf(address(this));
+            uint256 xtReserve = xt.balanceOf(address(this));
+            int256 deltaFt = ftReserve.toInt256() - ftBlanceBefore.toInt256();
+            int256 deltaXt = xtReserve.toInt256() - xtBlanceBefore.toInt256();
+            _orderConfig.swapTrigger.afterSwap(ftReserve, xtReserve, deltaFt, deltaXt);
         }
         emit SwapTokenToExactToken(
             tokenIn, tokenOut, msg.sender, recipient, tokenAmtOut, netTokenIn.toUint128(), feeAmt.toUint128()

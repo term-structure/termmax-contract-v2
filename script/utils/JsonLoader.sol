@@ -9,6 +9,7 @@ library JsonLoader {
     using stdJson for string;
 
     struct UnderlyingConfig {
+        address tokenAddr;
         string name;
         string symbol;
         uint8 decimals;
@@ -17,6 +18,7 @@ library JsonLoader {
     }
 
     struct CollateralConfig {
+        address tokenAddr;
         string name;
         string symbol;
         uint8 decimals;
@@ -75,8 +77,6 @@ library JsonLoader {
             uint32(vm.parseUint(jsonData.readString(string.concat(marketConfigPrefix, ".issueFtFeeRatio"))));
         marketConfig.feeConfig.issueFtFeeRef =
             uint32(vm.parseUint(jsonData.readString(string.concat(marketConfigPrefix, ".issueFtFeeRef"))));
-        marketConfig.feeConfig.redeemFeeRatio =
-            uint32(vm.parseUint(jsonData.readString(string.concat(marketConfigPrefix, ".redeemFeeRatio"))));
 
         // read loan config
         string memory loanConfigPrefix = string.concat(configPrefix, ".loanConfig");
@@ -87,6 +87,7 @@ library JsonLoader {
 
         // read underlying config
         string memory underlyingConfigPrefix = string.concat(configPrefix, ".underlyingConfig");
+        underlyingConfig.tokenAddr = jsonData.readAddress(string.concat(underlyingConfigPrefix, ".tokenAddr"));
         underlyingConfig.name = jsonData.readString(string.concat(underlyingConfigPrefix, ".name"));
         underlyingConfig.symbol = jsonData.readString(string.concat(underlyingConfigPrefix, ".symbol"));
         underlyingConfig.decimals =
@@ -96,6 +97,7 @@ library JsonLoader {
 
         // read collateral config
         string memory collateralConfigPrefix = string.concat(configPrefix, ".collateralConfig");
+        collateralConfig.tokenAddr = jsonData.readAddress(string.concat(collateralConfigPrefix, ".tokenAddr"));
         collateralConfig.name = jsonData.readString(string.concat(collateralConfigPrefix, ".name"));
         collateralConfig.symbol = jsonData.readString(string.concat(collateralConfigPrefix, ".symbol"));
         collateralConfig.decimals =

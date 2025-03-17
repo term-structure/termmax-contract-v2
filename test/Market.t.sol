@@ -58,7 +58,6 @@ contract MarketTest is Test {
     function testUpdateMarketConfig() public {
         vm.startPrank(deployer);
         marketConfig.treasurer = vm.randomAddress();
-        marketConfig.feeConfig.redeemFeeRatio = 0.01e8;
         marketConfig.feeConfig.issueFtFeeRatio = 0.02e8;
         marketConfig.feeConfig.borrowTakerFeeRatio = 0.03e8;
         marketConfig.feeConfig.borrowMakerFeeRatio = 0.04e8;
@@ -71,7 +70,6 @@ contract MarketTest is Test {
 
         assertEq(res.market.config().treasurer, marketConfig.treasurer);
         assertEq(res.gt.getGtConfig().treasurer, marketConfig.treasurer);
-        assertEq(res.market.config().feeConfig.redeemFeeRatio, marketConfig.feeConfig.redeemFeeRatio);
         assertEq(res.market.config().feeConfig.issueFtFeeRatio, marketConfig.feeConfig.issueFtFeeRatio);
         assertEq(res.market.config().feeConfig.borrowTakerFeeRatio, marketConfig.feeConfig.borrowTakerFeeRatio);
         assertEq(res.market.config().feeConfig.borrowMakerFeeRatio, marketConfig.feeConfig.borrowMakerFeeRatio);
@@ -319,10 +317,6 @@ contract MarketTest is Test {
     }
 
     function testRedeem() public {
-        marketConfig.feeConfig.redeemFeeRatio = 0.01e8;
-        vm.prank(deployer);
-        res.market.updateMarketConfig(marketConfig);
-
         address bob = vm.randomAddress();
         address alice = vm.randomAddress();
 
@@ -352,19 +346,13 @@ contract MarketTest is Test {
         vm.startPrank(bob);
         res.ft.approve(address(res.market), depositAmt);
 
-        uint256 redeemFee = (marketConfig.feeConfig.redeemFeeRatio * (depositAmt - debtAmt)) / Constants.DECIMAL_BASE;
         vm.expectEmit();
         emit MarketEvents.Redeem(
-            bob,
-            bob,
-            uint128(Constants.DECIMAL_BASE_SQ),
-            uint128(depositAmt - debtAmt - redeemFee),
-            uint128(redeemFee),
-            abi.encode(collateralAmt)
+            bob, bob, uint128(Constants.DECIMAL_BASE_SQ), uint128(depositAmt - debtAmt), abi.encode(collateralAmt)
         );
         res.market.redeem(depositAmt, bob);
 
-        assertEq(res.debt.balanceOf(bob), depositAmt - debtAmt - redeemFee);
+        assertEq(res.debt.balanceOf(bob), depositAmt - debtAmt);
         assertEq(res.collateral.balanceOf(bob), collateralAmt);
         assertEq(res.debt.balanceOf(address(res.market)), 0);
         assertEq(res.ft.balanceOf(bob), 0);
@@ -393,6 +381,26 @@ contract MarketTest is Test {
         );
         res.market.redeem(depositAmt, sender);
 
+        vm.stopPrank();
+    }
+
+    function testFuzzIssueFtByExistedGtDebtAmount(uint128 issueAmount) public {
+        vm.assume(issueAmount >= 1);
+        vm.assume(issueAmount <= type(uint64).max);
+
+        uint128 debt =
+            uint128((issueAmount * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - res.market.issueFtFeeRatio()));
+
+        vm.startPrank(sender);
+
+        uint256 collateralAmt = type(uint128).max;
+        bytes memory collateralData = abi.encode(collateralAmt);
+        res.collateral.mint(sender, collateralAmt);
+        res.collateral.approve(address(res.gt), collateralAmt);
+        res.market.issueFt(sender, issueAmount, collateralData);
+
+        uint128 ftOutAmt = res.market.issueFtByExistedGt(sender, debt, 1);
+        assertTrue(ftOutAmt == issueAmount);
         vm.stopPrank();
     }
 }

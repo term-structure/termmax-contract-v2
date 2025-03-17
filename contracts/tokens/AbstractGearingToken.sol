@@ -79,6 +79,7 @@ abstract contract AbstractGearingToken is
         internal
         onlyInitializing
     {
+        if (config_.loanConfig.liquidationLtv <= config_.loanConfig.maxLtv) revert LiquidationLtvMustBeGreaterThanMaxLtv();
         __ERC721_init(name, symbol);
         __Ownable_init(msg.sender);
         _config = config_;
@@ -149,9 +150,8 @@ abstract contract AbstractGearingToken is
     {
         LoanInfo memory loan = LoanInfo(debtAmt, collateralData);
         ValueAndPrice memory valueAndPrice = _getValueAndPrice(config, loan);
-        _checkDebtValue(valueAndPrice);
         uint128 ltv = _calculateLtv(valueAndPrice);
-        if (ltv >= config.loanConfig.maxLtv) {
+        if (ltv > config.loanConfig.maxLtv) {
             revert GtIsNotHealthy(0, to, ltv);
         }
         id = ++total;
@@ -175,9 +175,8 @@ abstract contract AbstractGearingToken is
         loan.debtAmt += ftAmt.toUint128();
 
         ValueAndPrice memory valueAndPrice = _getValueAndPrice(config, loan);
-        _checkDebtValue(valueAndPrice);
         uint128 ltv = _calculateLtv(valueAndPrice);
-        if (ltv >= config.loanConfig.maxLtv) {
+        if (ltv > config.loanConfig.maxLtv) {
             revert GtIsNotHealthy(id, msg.sender, ltv);
         }
         loanMapping[id] = loan;
@@ -303,9 +302,8 @@ abstract contract AbstractGearingToken is
         _transferCollateral(msg.sender, collateralData);
 
         ValueAndPrice memory valueAndPrice = _getValueAndPrice(config, loan);
-        _checkDebtValue(valueAndPrice);
         uint128 ltv = _calculateLtv(valueAndPrice);
-        if (ltv >= config.loanConfig.maxLtv) {
+        if (ltv > config.loanConfig.maxLtv) {
             revert GtIsNotHealthy(id, msg.sender, ltv);
         }
         loanMapping[id] = loan;
@@ -423,7 +421,6 @@ abstract contract AbstractGearingToken is
                 valueAndPrice.collateralValue = _getCollateralValue(remainningC, valueAndPrice.collateralPriceData);
                 valueAndPrice.debtValueWithDecimals =
                     (loan.debtAmt * valueAndPrice.debtPrice) / valueAndPrice.debtDenominator;
-                _checkDebtValue(valueAndPrice);
                 uint128 ltvAfter = _calculateLtv(valueAndPrice);
                 if (ltvBefore < ltvAfter) {
                     revert LtvIncreasedAfterLiquidation(id, ltvBefore, ltvAfter);
@@ -533,12 +530,4 @@ abstract contract AbstractGearingToken is
 
     /// @notice Return the encoded price of collateral in USD
     function _getCollateralPriceData(GtConfig memory config) internal view virtual returns (bytes memory priceData);
-
-    function _checkDebtValue(ValueAndPrice memory valueAndPrice) internal pure {
-        uint256 debtValue =
-            (valueAndPrice.debtValueWithDecimals * Constants.DECIMAL_BASE) / valueAndPrice.priceDenominator;
-        if (debtValue < GearingTokenConstants.MINIMAL_DEBT_VALUE) {
-            revert DebtValueIsTooSmall(debtValue);
-        }
-    }
 }

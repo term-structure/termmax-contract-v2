@@ -28,22 +28,6 @@ interface ITermMaxRouter {
     function unpause() external;
 
     /**
-     * @notice View the market whitelist status
-     * @dev Used for controlling which markets can interact with the router
-     * @param market The market's address to check whitelist status for
-     * @return True if whitelisted, false otherwise
-     */
-    function marketWhitelist(address market) external view returns (bool);
-
-    /**
-     * @notice Set the market whitelist status
-     * @dev Used for controlling which markets can interact with the router
-     * @param market The market's address to set whitelist status for
-     * @param isWhitelist True to whitelist, false to remove from whitelist
-     */
-    function setMarketWhitelist(address market, bool isWhitelist) external;
-
-    /**
      * @notice View the adapter whitelist status
      * @dev Used for controlling which swap adapters can be used
      * @param adapter The adapter's address to check whitelist status for
@@ -83,6 +67,7 @@ interface ITermMaxRouter {
      * @param orders Array of orders to use for the swap path
      * @param tradingAmts Array of amounts to trade for each order
      * @param minTokenOut Minimum amount of output tokens to receive
+     * @param deadline The deadline timestamp for the transaction
      * @return netTokenOut Actual amount of output tokens received
      */
     function swapExactTokenToToken(
@@ -91,7 +76,8 @@ interface ITermMaxRouter {
         address recipient,
         ITermMaxOrder[] memory orders,
         uint128[] memory tradingAmts,
-        uint128 minTokenOut
+        uint128 minTokenOut,
+        uint256 deadline
     ) external returns (uint256 netTokenOut);
 
     /**
@@ -103,6 +89,7 @@ interface ITermMaxRouter {
      * @param orders Array of orders to use for the swap path
      * @param tradingAmts Array of amounts to trade for each order
      * @param maxTokenIn Maximum amount of input tokens to spend
+     * @param deadline The deadline timestamp for the transaction
      * @return netTokenIn Actual amount of input tokens spent
      */
     function swapTokenToExactToken(
@@ -111,7 +98,8 @@ interface ITermMaxRouter {
         address recipient,
         ITermMaxOrder[] memory orders,
         uint128[] memory tradingAmts,
-        uint128 maxTokenIn
+        uint128 maxTokenIn,
+        uint256 deadline
     ) external returns (uint256 netTokenIn);
 
     /**
@@ -124,6 +112,7 @@ interface ITermMaxRouter {
      * @param orders Array of orders to execute
      * @param amtsToSellTokens Array of amounts to sell for each order
      * @param minTokenOut Minimum amount of output tokens to receive
+     * @param deadline The deadline timestamp for the transaction
      * @return netTokenOut Actual amount of output tokens received
      */
     function sellTokens(
@@ -133,7 +122,8 @@ interface ITermMaxRouter {
         uint128 xtInAmt,
         ITermMaxOrder[] memory orders,
         uint128[] memory amtsToSellTokens,
-        uint128 minTokenOut
+        uint128 minTokenOut,
+        uint256 deadline
     ) external returns (uint256 netTokenOut);
 
     /**
@@ -147,6 +137,7 @@ interface ITermMaxRouter {
      * @param tokenToSwap Amount of tokens to swap
      * @param maxLtv Maximum loan-to-value ratio
      * @param units Array of swap units defining the swap path
+     * @param deadline The deadline timestamp for the transaction
      * @return gtId ID of the generated GT token
      * @return netXtOut Amount of XT tokens received
      */
@@ -158,7 +149,8 @@ interface ITermMaxRouter {
         uint128 minXtOut,
         uint128 tokenToSwap,
         uint128 maxLtv,
-        SwapUnit[] memory units
+        SwapUnit[] memory units,
+        uint256 deadline
     ) external returns (uint256 gtId, uint256 netXtOut);
 
     /**
@@ -181,6 +173,15 @@ interface ITermMaxRouter {
         SwapUnit[] memory units
     ) external returns (uint256 gtId);
 
+    function leverageFromXtAndCollateral(
+        address recipient,
+        ITermMaxMarket market,
+        uint128 xtInAmt,
+        uint128 collateralInAmt,
+        uint128 maxLtv,
+        SwapUnit[] memory units
+    ) external returns (uint256 gtId);
+
     /**
      * @notice Borrows tokens using collateral
      * @dev Creates a collateralized debt position
@@ -190,6 +191,7 @@ interface ITermMaxRouter {
      * @param orders Array of orders to execute
      * @param tokenAmtsWantBuy Array of token amounts to buy
      * @param maxDebtAmt Maximum amount of debt to take on
+     * @param deadline The deadline timestamp for the transaction
      * @return gtId ID of the generated GT token
      */
     function borrowTokenFromCollateral(
@@ -198,7 +200,8 @@ interface ITermMaxRouter {
         uint256 collInAmt,
         ITermMaxOrder[] memory orders,
         uint128[] memory tokenAmtsWantBuy,
-        uint128 maxDebtAmt
+        uint128 maxDebtAmt,
+        uint256 deadline
     ) external returns (uint256 gtId);
 
     /**
@@ -234,6 +237,7 @@ interface ITermMaxRouter {
      * @param amtsToBuyFt Array of amounts to buy for each order
      * @param byDebtToken Whether to repay debt using debt tokens
      * @param units Array of swap units defining the swap path
+     * @param deadline The deadline timestamp for the transaction
      * @return netTokenOut Actual amount of tokens received
      */
     function flashRepayFromColl(
@@ -243,7 +247,8 @@ interface ITermMaxRouter {
         ITermMaxOrder[] memory orders,
         uint128[] memory amtsToBuyFt,
         bool byDebtToken,
-        SwapUnit[] memory units
+        SwapUnit[] memory units,
+        uint256 deadline
     ) external returns (uint256 netTokenOut);
 
     /**
@@ -255,6 +260,7 @@ interface ITermMaxRouter {
      * @param orders Array of orders to execute
      * @param ftAmtsWantBuy Array of FT amounts to buy for each order
      * @param maxTokenIn Maximum amount of tokens to spend
+     * @param deadline The deadline timestamp for the transaction
      * @return returnAmt Actual amount of tokens returned
      */
     function repayByTokenThroughFt(
@@ -263,7 +269,8 @@ interface ITermMaxRouter {
         uint256 gtId,
         ITermMaxOrder[] memory orders,
         uint128[] memory ftAmtsWantBuy,
-        uint128 maxTokenIn
+        uint128 maxTokenIn,
+        uint256 deadline
     ) external returns (uint256 returnAmt);
 
     /**

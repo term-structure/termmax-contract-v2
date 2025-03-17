@@ -2,6 +2,8 @@
 pragma solidity ^0.8.0;
 
 interface RouterErrors {
+    /// @notice Error for calling the orders and trading amts length not match
+    error OrdersAndAmtsLengthNotMatch();
     /// @notice Error for calling the market is not whitelisted
     error MarketNotWhitelisted(address market);
     /// @notice Error for calling the gt is not whitelisted
@@ -18,4 +20,6 @@ interface RouterErrors {
     error InsufficientTokenOut(address token, uint256 expectedTokenOut, uint256 actualTokenOut);
     /// @notice Error for the token input is less than expected
     error InsufficientTokenIn(address token, uint256 expectedTokenIn, uint256 actualTokenIn);
+    /// @notice Error for the gt is not owned by the sender
+    error GtNotOwnedBySender();
 }

@@ -159,8 +159,7 @@ contract TermMaxMarket is
         if (
             fee.borrowTakerFeeRatio >= Constants.MAX_FEE_RATIO || fee.borrowMakerFeeRatio >= Constants.MAX_FEE_RATIO
                 || fee.lendTakerFeeRatio >= Constants.MAX_FEE_RATIO || fee.lendMakerFeeRatio >= Constants.MAX_FEE_RATIO
-                || fee.redeemFeeRatio >= Constants.MAX_FEE_RATIO || fee.issueFtFeeRatio >= Constants.MAX_FEE_RATIO
-                || fee.issueFtFeeRef > Constants.DECIMAL_BASE
+                || fee.issueFtFeeRatio >= Constants.MAX_FEE_RATIO || fee.issueFtFeeRef > Constants.DECIMAL_BASE
         ) revert FeeTooHigh();
     }
 
@@ -317,19 +316,11 @@ contract TermMaxMarket is
         // The proportion that user will get how many debtToken and collateral should be deliveried
         uint256 proportion = (ftAmount * Constants.DECIMAL_BASE_SQ) / ft.totalSupply();
 
-        bytes memory deliveryData = gt.delivery(proportion, caller);
+        bytes memory deliveryData = gt.delivery(proportion, recipient);
         // Transfer debtToken output
         debtTokenAmt += ((debtToken.balanceOf(address(this))) * proportion) / Constants.DECIMAL_BASE_SQ;
-        uint256 feeAmt;
-        if (mConfig.feeConfig.redeemFeeRatio > 0) {
-            feeAmt = (debtTokenAmt * mConfig.feeConfig.redeemFeeRatio) / Constants.DECIMAL_BASE;
-            debtToken.safeTransfer(mConfig.treasurer, feeAmt);
-            debtTokenAmt -= feeAmt;
-        }
         debtToken.safeTransfer(recipient, debtTokenAmt);
-        emit Redeem(
-            caller, recipient, proportion.toUint128(), debtTokenAmt.toUint128(), feeAmt.toUint128(), deliveryData
-        );
+        emit Redeem(caller, recipient, proportion.toUint128(), debtTokenAmt.toUint128(), deliveryData);
     }
 
     /**

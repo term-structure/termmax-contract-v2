@@ -31,10 +31,10 @@ interface IOrderManager {
     /**
      * @notice Deals bad debt
      * @param recipient The recipient of the collateral token
-     * @param collaretal The collateral token address
+     * @param collateral The collateral token address
      * @param amount The amount of bad debt to deal
      */
-    function dealBadDebt(address recipient, address collaretal, uint256 amount)
+    function dealBadDebt(address recipient, address collateral, uint256 amount)
         external
         returns (uint256 collateralOut);
 
@@ -78,6 +78,11 @@ interface IOrderManager {
     function withdrawAssets(IERC20 asset, address recipient, uint256 amount) external;
 
     /**
+     * @notice Accrues interest
+     */
+    function accruedInterest() external;
+
+    /**
      * @notice Redeems an order
      * @param order The order to redeem
      */
@@ -85,7 +90,9 @@ interface IOrderManager {
 
     /**
      * @notice Swaps callback to calculate interest
+     * @param ftReserve The reserve of the FT token
+     * @param xtReserve The reserve of the XT token
      * @param deltaFt The deltaFt of the swap
      */
-    function swapCallback(int256 deltaFt) external;
+    function afterSwap(uint256 ftReserve, uint256 xtReserve, int256 deltaFt) external;
 }

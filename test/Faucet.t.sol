@@ -17,7 +17,7 @@ contract FaucetTest is Test {
     function setUp() public {
         vm.startPrank(deployer);
         faucet = new Faucet(deployer);
-        faucet.setMintUsdValue(10000);
+        // faucet.setMintUsdValue(10000);
         string memory name = "TestToken";
         string memory symbol = "TT";
         uint8 decimals = 18;
@@ -25,7 +25,7 @@ contract FaucetTest is Test {
         priceFeed.updateRoundData(
             MockPriceFeed.RoundData({
                 roundId: 1,
-                answer: 10000000,
+                answer: 200000000,
                 startedAt: block.timestamp,
                 updatedAt: block.timestamp,
                 answeredInRound: 1
@@ -78,23 +78,47 @@ contract FaucetTest is Test {
     }
 
     function testBatchMint() public {
+        Faucet.TokenConfig memory tokenConfig = faucet.getTokenConfig(1);
+        uint256 oriBalance = FaucetERC20(tokenConfig.tokenAddr).balanceOf(user);
+
+        priceFeed = MockPriceFeed(tokenConfig.priceFeedAddr);
+        (, int256 answer,,,) = priceFeed.latestRoundData();
+        uint8 tokenDecimals = FaucetERC20(tokenConfig.tokenAddr).decimals();
+        uint8 priceFeedDecimals = priceFeed.decimals();
+        uint256 mintAmt = (faucet.mintUsdValue() * 10 ** (priceFeedDecimals + tokenDecimals)) / uint256(answer);
+
         vm.startPrank(user);
         faucet.batchMint();
         vm.stopPrank();
+
+        uint256 newBalance = FaucetERC20(tokenConfig.tokenAddr).balanceOf(user);
+        assertEq(newBalance, oriBalance + mintAmt);
     }
 
     function testDevBatchMint() public {
-        vm.startPrank(deployer);
         address to = vm.randomAddress();
+        Faucet.TokenConfig memory tokenConfig = faucet.getTokenConfig(1);
+        uint256 oriBalance = FaucetERC20(tokenConfig.tokenAddr).balanceOf(to);
+
+        priceFeed = MockPriceFeed(tokenConfig.priceFeedAddr);
+        (, int256 answer,,,) = priceFeed.latestRoundData();
+        uint8 tokenDecimals = FaucetERC20(tokenConfig.tokenAddr).decimals();
+        uint8 priceFeedDecimals = priceFeed.decimals();
+        uint256 mintAmt = (faucet.mintUsdValue() * 10 ** (priceFeedDecimals + tokenDecimals)) / uint256(answer);
+
+        vm.startPrank(deployer);
         faucet.devBatchMint(to);
         vm.stopPrank();
+
+        uint256 newBalance = FaucetERC20(tokenConfig.tokenAddr).balanceOf(to);
+        assertEq(newBalance, oriBalance + mintAmt);
     }
 
-    function testDevMint() public {
-        vm.startPrank(deployer);
-        address to = vm.randomAddress();
-        vm.stopPrank();
-    }
+    // function testDevMint() public {
+    //     vm.startPrank(deployer);
+    //     address to = vm.randomAddress();
+    //     vm.stopPrank();
+    // }
 
     // function testRevertAddTokenExisted() public {
     //     vm.startPrank(deployer);

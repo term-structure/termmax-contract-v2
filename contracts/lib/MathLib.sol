@@ -7,7 +7,10 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 /// @author Solady (https://github.com/vectorized/solady/blob/main/src/utils/FixedPointMathLib.sol)
 /// @author Modified from Solmate (https://github.com/transmissions11/solmate/blob/main/src/utils/FixedPointMathLib.sol)
 library MathLib {
+    using SafeCast for uint256;
+    using SafeCast for int256;
     /// @dev Returns the absolute value of `x`.
+
     function abs(int256 x) internal pure returns (uint256 z) {
         /// @solidity memory-safe-assembly
         assembly {
@@ -138,5 +141,12 @@ library MathLib {
     /// @notice Returns the smaller of two values
     function min(uint256 a, uint256 b) internal pure returns (uint256) {
         return a < b ? a : b;
+    }
+
+    function plusInt256(uint256 a, int256 b) internal pure returns (uint256) {
+        if (b < 0) {
+            return a - uint256(-b);
+        }
+        return a + uint256(b);
     }
 }

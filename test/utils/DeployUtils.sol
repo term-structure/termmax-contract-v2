@@ -24,6 +24,17 @@ import "contracts/storage/TermMaxStorage.sol";
 library DeployUtils {
     bytes32 constant GT_ERC20 = keccak256("GearingTokenWithERC20");
 
+    struct SwapRange {
+        uint256 buyFtMax;
+        uint256 buyXtMax;
+        uint256 sellFtMax;
+        uint256 sellXtMax;
+        uint256 buyExactFtMax;
+        uint256 buyExactXtMax;
+        uint256 sellFtForExactTokenMax;
+        uint256 sellXtForExactTokenMax;
+    }
+
     struct Res {
         ITermMaxVault vault;
         IVaultFactory vaultFactory;
@@ -41,6 +52,7 @@ library DeployUtils {
         OracleAggregator oracle;
         MockERC20 collateral;
         MockERC20 debt;
+        SwapRange swapRange;
     }
 
     function deployMarket(address admin, MarketConfig memory marketConfig, uint32 maxLtv, uint32 liquidationLtv)
@@ -54,12 +66,15 @@ library DeployUtils {
 
         res.debtOracle = new MockPriceFeed(admin);
         res.collateralOracle = new MockPriceFeed(admin);
-        res.oracle = deployOracle(admin);
+        res.oracle = deployOracle(admin, 0);
 
-        res.oracle.setOracle(address(res.debt), IOracle.Oracle(res.debtOracle, res.debtOracle, 365 days));
-        res.oracle.setOracle(
+        res.oracle.submitPendingOracle(address(res.debt), IOracle.Oracle(res.debtOracle, res.debtOracle, 365 days));
+        res.oracle.submitPendingOracle(
             address(res.collateral), IOracle.Oracle(res.collateralOracle, res.collateralOracle, 365 days)
         );
+
+        res.oracle.acceptPendingOracle(address(res.debt));
+        res.oracle.acceptPendingOracle(address(res.collateral));
 
         MockPriceFeed.RoundData memory roundData = MockPriceFeed.RoundData({
             roundId: 1,
@@ -103,12 +118,14 @@ library DeployUtils {
 
         res.debtOracle = new MockPriceFeed(admin);
         res.collateralOracle = new MockPriceFeed(admin);
-        res.oracle = deployOracle(admin);
+        res.oracle = deployOracle(admin, 0);
 
-        res.oracle.setOracle(address(res.debt), IOracle.Oracle(res.debtOracle, res.debtOracle, 365 days));
-        res.oracle.setOracle(
+        res.oracle.submitPendingOracle(address(res.debt), IOracle.Oracle(res.debtOracle, res.debtOracle, 365 days));
+        res.oracle.submitPendingOracle(
             address(res.collateral), IOracle.Oracle(res.collateralOracle, res.collateralOracle, 365 days)
         );
+        res.oracle.acceptPendingOracle(address(res.debt));
+        res.oracle.acceptPendingOracle(address(res.collateral));
 
         MockPriceFeed.RoundData memory roundData = MockPriceFeed.RoundData({
             roundId: 1,
@@ -148,12 +165,14 @@ library DeployUtils {
 
         res.debtOracle = new MockPriceFeed(admin);
         res.collateralOracle = new MockPriceFeed(admin);
-        res.oracle = deployOracle(admin);
+        res.oracle = deployOracle(admin, 0);
 
-        res.oracle.setOracle(address(res.debt), IOracle.Oracle(res.debtOracle, res.debtOracle, 365 days));
-        res.oracle.setOracle(
+        res.oracle.submitPendingOracle(address(res.debt), IOracle.Oracle(res.debtOracle, res.debtOracle, 365 days));
+        res.oracle.submitPendingOracle(
             address(res.collateral), IOracle.Oracle(res.collateralOracle, res.collateralOracle, 365 days)
         );
+        res.oracle.acceptPendingOracle(address(res.debt));
+        res.oracle.acceptPendingOracle(address(res.collateral));
 
         MockPriceFeed.RoundData memory roundData = MockPriceFeed.RoundData({
             roundId: 1,
@@ -206,11 +225,8 @@ library DeployUtils {
         factory = new TermMaxFactory(admin, address(m));
     }
 
-    function deployOracle(address admin) public returns (OracleAggregator oracle) {
-        OracleAggregator implementation = new OracleAggregator();
-        bytes memory data = abi.encodeCall(OracleAggregator.initialize, admin);
-        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), data);
-        oracle = OracleAggregator(address(proxy));
+    function deployOracle(address admin, uint256 timeLock) public returns (OracleAggregator oracle) {
+        oracle = new OracleAggregator(admin, timeLock);
     }
 
     function deployRouter(address admin) public returns (TermMaxRouter router) {

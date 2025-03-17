@@ -117,9 +117,7 @@ abstract contract TermMaxTestBase is Test {
         res.order = res.vault.createOrder(res.market, maxCapacity, 0, orderConfig.curveCuts);
 
         res.router = DeployUtils.deployRouter(admin);
-        res.router.setMarketWhitelist(address(res.market), true);
         adapter = new MockSwapAdapter(pool);
-
         res.router.setAdapterWhitelist(address(adapter), true);
         vm.stopPrank();
     }

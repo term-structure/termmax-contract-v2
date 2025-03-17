@@ -30,20 +30,30 @@ contract DeloyMarketHolesky is DeployBase {
     address adminAddr = vm.envAddress("HOLESKY_ADMIN_ADDRESS");
     address priceFeedOperatorAddr = vm.envAddress("HOLESKY_PRICE_FEED_OPERATOR_ADDRESS");
 
-    // address config
-    address factoryAddr = address(0x45588fA88635A1B37d69f34A03B7600406533EC8);
-    address oracleAddr = address(0x2FC5F74e16822AA820E677afD5e80b953ad995EE);
-    address routerAddr = address(0x959D4521BD48B6487D415Aad576Af2222ADB1a92);
-    address faucetAddr = address(0x5adA709210846DA33E3866490EAFB90B7ea96f7f);
+    address factoryAddr;
+    address oracleAddr;
+    address routerAddr;
+    address faucetAddr;
 
-    address[] devs = [
-        address(0x19A736387ea2F42AcAb1BC0FdE15e667e63ea9cC), // Sunny
-        address(0x9b1A93b6C9F275FE1720e18331315Ec35484a662), // Mingyu
-        address(0x86e59Ec7629b58E1575997B9dF9622a496f0b4Eb), // Garrick
-        address(0xE355d5D8aa52EF0FbbD037C4a3C5E6Fd659cf46B) // Aaron
-    ];
+    function loadAddressConfig() internal {
+        string memory deploymentPath = string.concat(vm.projectRoot(), "/deployments/eth-holesky/eth-holesky-core.json");
+        string memory json = vm.readFile(deploymentPath);
+
+        factoryAddr = vm.parseJsonAddress(json, ".contracts.factory");
+        oracleAddr = vm.parseJsonAddress(json, ".contracts.oracleAggregator");
+        routerAddr = vm.parseJsonAddress(json, ".contracts.router");
+        faucetAddr = vm.parseJsonAddress(json, ".contracts.faucet");
+
+        console.log("Loaded addresses from deployment file:");
+        console.log("  Factory:", factoryAddr);
+        console.log("  Oracle:", oracleAddr);
+        console.log("  Router:", routerAddr);
+        console.log("  Faucet:", faucetAddr);
+    }
 
     function run() public {
+        loadAddressConfig();
+
         uint256 currentBlockNum = block.number;
         Faucet faucet = Faucet(faucetAddr);
         string memory deployDataPath = string.concat(vm.projectRoot(), "/script/deploy/deploydata/holesky.json");
@@ -53,11 +63,6 @@ contract DeloyMarketHolesky is DeployBase {
         );
 
         console.log("Faucet token number:", faucet.tokenNum());
-
-        // for (uint i = 0; i < devs.length; i++) {
-        //     console.log("Mint faucet tokens to %s", devs[i]);
-        //     faucet.devBatchMint(devs[i]);
-        // }
 
         vm.stopBroadcast();
 
@@ -80,13 +85,12 @@ contract DeloyMarketHolesky is DeployBase {
         }
     }
 
-    function printMarketConfig(Faucet faucet, TermMaxMarket market, uint256 salt) public view {
+    function printMarketConfig(Faucet faucet, TermMaxMarket market, uint256 salt) public {
         MarketConfig memory marketConfig = market.config();
         (IMintableERC20 ft, IMintableERC20 xt, IGearingToken gt, address collateralAddr, IERC20 underlying) =
             market.tokens();
 
         Faucet.TokenConfig memory collateralConfig = faucet.getTokenConfig(faucet.getTokenId(collateralAddr));
-
         Faucet.TokenConfig memory underlyingConfig = faucet.getTokenConfig(faucet.getTokenId(address(underlying)));
 
         console.log("Market deployed at:", address(market));
@@ -112,6 +116,155 @@ contract DeloyMarketHolesky is DeployBase {
         console.log("Borrow Maker Fee Ratio:", marketConfig.feeConfig.borrowMakerFeeRatio);
         console.log("Issue FT Fee Ratio:", marketConfig.feeConfig.issueFtFeeRatio);
         console.log("Issue FT Fee Ref:", marketConfig.feeConfig.issueFtFeeRef);
-        console.log("Redeem FT Fee Ratio:", marketConfig.feeConfig.redeemFeeRatio);
+
+        // Write market config to JSON file
+        string memory marketFileName = _getMarketFileName(collateralAddr, address(underlying), marketConfig.maturity);
+        string memory deploymentsDir = string.concat(vm.projectRoot(), "/deployments/eth-holesky");
+        if (!vm.exists(deploymentsDir)) {
+            vm.createDir(deploymentsDir, true);
+        }
+
+        string memory marketFilePath = string.concat(deploymentsDir, "/", marketFileName);
+        vm.writeFile(
+            marketFilePath,
+            _createMarketJson(
+                market, marketConfig, ft, xt, gt, collateralAddr, underlying, collateralConfig, underlyingConfig, salt
+            )
+        );
+        console.log("Market config written to:", marketFilePath);
+    }
+
+    function _getMarketFileName(address collateralAddr, address underlyingAddr, uint256 maturity)
+        internal
+        view
+        returns (string memory)
+    {
+        return string.concat(
+            "eth-holesky-market-",
+            IERC20Metadata(collateralAddr).symbol(),
+            "-",
+            IERC20Metadata(underlyingAddr).symbol(),
+            "@",
+            vm.toString(maturity),
+            ".json"
+        );
+    }
+
+    function _createMarketJson(
+        TermMaxMarket market,
+        MarketConfig memory marketConfig,
+        IMintableERC20 ft,
+        IMintableERC20 xt,
+        IGearingToken gt,
+        address collateralAddr,
+        IERC20 underlying,
+        Faucet.TokenConfig memory collateralConfig,
+        Faucet.TokenConfig memory underlyingConfig,
+        uint256 salt
+    ) internal view returns (string memory) {
+        // Create JSON in parts to avoid stack too deep errors
+        string memory part1 = _createJsonPart1(market, collateralAddr, collateralConfig, underlying, underlyingConfig);
+
+        string memory part2 = _createJsonPart2(ft, xt, gt, marketConfig, salt);
+
+        return string.concat(part1, part2);
+    }
+
+    function _createJsonPart1(
+        TermMaxMarket market,
+        address collateralAddr,
+        Faucet.TokenConfig memory collateralConfig,
+        IERC20 underlying,
+        Faucet.TokenConfig memory underlyingConfig
+    ) internal view returns (string memory) {
+        return string(
+            abi.encodePacked(
+                "{\n",
+                '  "timestamp": "',
+                vm.toString(block.timestamp),
+                '",\n',
+                '  "market": "',
+                vm.toString(address(market)),
+                '",\n',
+                '  "collateral": {\n',
+                '    "address": "',
+                vm.toString(collateralAddr),
+                '",\n',
+                '    "symbol": "',
+                IERC20Metadata(collateralAddr).symbol(),
+                '",\n',
+                '    "priceFeed": "',
+                vm.toString(address(collateralConfig.priceFeedAddr)),
+                '"\n',
+                "  },\n",
+                '  "underlying": {\n',
+                '    "address": "',
+                vm.toString(address(underlying)),
+                '",\n',
+                '    "symbol": "',
+                IERC20Metadata(address(underlying)).symbol(),
+                '",\n',
+                '    "priceFeed": "',
+                vm.toString(address(underlyingConfig.priceFeedAddr)),
+                '"\n',
+                "  },\n"
+            )
+        );
+    }
+
+    function _createJsonPart2(
+        IMintableERC20 ft,
+        IMintableERC20 xt,
+        IGearingToken gt,
+        MarketConfig memory marketConfig,
+        uint256 salt
+    ) internal view returns (string memory) {
+        return string(
+            abi.encodePacked(
+                '  "tokens": {\n',
+                '    "ft": "',
+                vm.toString(address(ft)),
+                '",\n',
+                '    "xt": "',
+                vm.toString(address(xt)),
+                '",\n',
+                '    "gt": "',
+                vm.toString(address(gt)),
+                '"\n',
+                "  },\n",
+                '  "config": {\n',
+                '    "treasurer": "',
+                vm.toString(marketConfig.treasurer),
+                '",\n',
+                '    "maturity": "',
+                vm.toString(marketConfig.maturity),
+                '",\n',
+                '    "salt": "',
+                vm.toString(salt),
+                '",\n',
+                '    "fees": {\n',
+                '      "lendTakerFeeRatio": "',
+                vm.toString(marketConfig.feeConfig.lendTakerFeeRatio),
+                '",\n',
+                '      "lendMakerFeeRatio": "',
+                vm.toString(marketConfig.feeConfig.lendMakerFeeRatio),
+                '",\n',
+                '      "borrowTakerFeeRatio": "',
+                vm.toString(marketConfig.feeConfig.borrowTakerFeeRatio),
+                '",\n',
+                '      "borrowMakerFeeRatio": "',
+                vm.toString(marketConfig.feeConfig.borrowMakerFeeRatio),
+                '",\n',
+                '      "issueFtFeeRatio": "',
+                vm.toString(marketConfig.feeConfig.issueFtFeeRatio),
+                '",\n',
+                '      "issueFtFeeRef": "',
+                vm.toString(marketConfig.feeConfig.issueFtFeeRef),
+                '"\n',
+                "    }\n",
+                "  }\n",
+                "}"
+            )
+        );
     }
 }

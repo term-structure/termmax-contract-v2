@@ -13,7 +13,7 @@ import {ISwapCallback} from "../ISwapCallback.sol";
 struct CurveCut {
     uint256 xtReserve;
     uint256 liqSquare;
-    uint256 offset;
+    int256 offset;
 }
 
 struct FeeConfig {
@@ -35,9 +35,6 @@ struct FeeConfig {
     /// @notice The fee ref when issuing FT tokens by collateral
     ///         i.e. 0.01e8 means 1%
     uint32 issueFtFeeRef;
-    /// @notice The fee ratio when redeeming collateral
-    ///         i.e. 0.01e8 means 1%
-    uint32 redeemFeeRatio;
 }
 
 struct CurveCuts {

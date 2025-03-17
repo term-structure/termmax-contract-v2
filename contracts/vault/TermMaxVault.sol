@@ -28,12 +28,12 @@ import {Constants} from "contracts/lib/Constants.sol";
 import {ITermMaxVault} from "./ITermMaxVault.sol";
 
 contract TermMaxVault is
+    VaultStorage,
     ITermMaxVault,
     Ownable2StepUpgradeable,
     ReentrancyGuardUpgradeable,
     ERC4626Upgradeable,
     PausableUpgradeable,
-    VaultStorage,
     VaultErrors,
     VaultEvents,
     ISwapCallback
@@ -107,6 +107,7 @@ contract TermMaxVault is
 
     function _setPerformanceFeeRate(uint64 newPerformanceFeeRate) internal {
         if (newPerformanceFeeRate > VaultConstants.MAX_PERFORMANCE_FEE_RATE) revert PerformanceFeeRateExceeded();
+        _delegateCall(abi.encodeCall(IOrderManager.accruedInterest, ()));
         _performanceFeeRate = newPerformanceFeeRate;
     }
 
@@ -186,28 +187,28 @@ contract TermMaxVault is
      * @inheritdoc ITermMaxVault
      */
     function totalFt() external view returns (uint256) {
-        return _totalFt;
+        return _totalFt / Constants.DECIMAL_BASE_SQ;
     }
 
     /**
      * @inheritdoc ITermMaxVault
      */
     function accretingPrincipal() external view returns (uint256) {
-        return _accretingPrincipal;
+        return _accretingPrincipal / Constants.DECIMAL_BASE_SQ;
     }
 
     /**
      * @inheritdoc ITermMaxVault
      */
     function annualizedInterest() external view returns (uint256) {
-        return _annualizedInterest;
+        return _annualizedInterest / Constants.DECIMAL_BASE_SQ;
     }
 
     /**
      * @inheritdoc ITermMaxVault
      */
     function performanceFee() external view returns (uint256) {
-        return _performanceFee;
+        return _performanceFee / Constants.DECIMAL_BASE_SQ;
     }
 
     /**
@@ -242,7 +243,8 @@ contract TermMaxVault is
      * @inheritdoc ITermMaxVault
      */
     function apr() external view returns (uint256) {
-        return (_annualizedInterest * Constants.DECIMAL_BASE) / (_accretingPrincipal + _performanceFee);
+        if (_accretingPrincipal == 0) return 0;
+        return (_annualizedInterest * (Constants.DECIMAL_BASE - _performanceFeeRate)) / (_accretingPrincipal);
     }
 
     /**
@@ -304,7 +306,12 @@ contract TermMaxVault is
     /**
      * @inheritdoc ITermMaxVault
      */
-    function withdrawPerformanceFee(address recipient, uint256 amount) external onlyCuratorRole {
+    function withdrawPerformanceFee(address recipient, uint256 amount)
+        external
+        nonReentrant
+        whenNotPaused
+        onlyCuratorRole
+    {
         _delegateCall(abi.encodeCall(IOrderManager.withdrawPerformanceFee, (IERC20(asset()), recipient, amount)));
     }
 
@@ -314,6 +321,8 @@ contract TermMaxVault is
      * @dev See {IERC4626-maxDeposit}.
      */
     function maxDeposit(address) public view override(IERC4626, ERC4626Upgradeable) returns (uint256) {
+        if (paused()) return 0;
+        if (totalAssets() >= _maxCapacity) return 0;
         return _maxCapacity - totalAssets();
     }
 
@@ -321,6 +330,7 @@ contract TermMaxVault is
      * @dev See {IERC4626-maxMint}.
      */
     function maxMint(address) public view override(IERC4626, ERC4626Upgradeable) returns (uint256) {
+        if (paused()) return 0;
         return convertToShares(maxDeposit(address(0)));
     }
 
@@ -328,8 +338,8 @@ contract TermMaxVault is
      * @dev Get total assets, falling back to real assets if virtual assets exceed limit
      */
     function totalAssets() public view override(IERC4626, ERC4626Upgradeable) returns (uint256) {
-        (uint256 previewPrincipal, uint256 previewPerformanceFee) = _previewAccruedInterest();
-        return previewPrincipal + previewPerformanceFee;
+        (uint256 previewPrincipal,) = _previewAccruedInterest();
+        return previewPrincipal / Constants.DECIMAL_BASE_SQ;
     }
 
     /**
@@ -378,10 +388,10 @@ contract TermMaxVault is
     /**
      * @inheritdoc ITermMaxVault
      */
-    function dealBadDebt(address collaretal, uint256 badDebtAmt, address recipient, address owner)
+    function dealBadDebt(address collateral, uint256 badDebtAmt, address recipient, address owner)
         external
         nonReentrant
-        returns (uint256 shares, uint256 collaretalOut)
+        returns (uint256 shares, uint256 collateralOut)
     {
         address caller = msg.sender;
         shares = previewWithdraw(badDebtAmt);
@@ -396,11 +406,11 @@ contract TermMaxVault is
 
         _burn(owner, shares);
 
-        collaretalOut = abi.decode(
-            _delegateCall(abi.encodeCall(IOrderManager.dealBadDebt, (recipient, collaretal, badDebtAmt))), (uint256)
+        collateralOut = abi.decode(
+            _delegateCall(abi.encodeCall(IOrderManager.dealBadDebt, (recipient, collateral, badDebtAmt))), (uint256)
         );
 
-        emit DealBadDebt(caller, recipient, collaretal, badDebtAmt, shares, collaretalOut);
+        emit DealBadDebt(caller, recipient, collateral, badDebtAmt, shares, collateralOut);
     }
 
     // Guardian functions
@@ -455,7 +465,7 @@ contract TermMaxVault is
             emit SetPerformanceFeeRate(_msgSender(), newPerformanceFeeRate);
             return;
         } else {
-            _pendingPerformanceFeeRate.update(newPerformanceFeeRate, block.timestamp + _timelock);
+            _pendingPerformanceFeeRate.update(newPerformanceFeeRate, _timelock);
             emit SubmitPerformanceFeeRate(newPerformanceFeeRate);
         }
     }
@@ -493,7 +503,7 @@ contract TermMaxVault is
         if (!isWhitelisted) {
             _setMarketWhitelist(market, isWhitelisted);
         } else {
-            _pendingMarkets[market].update(uint184(block.timestamp + _timelock), 0);
+            _pendingMarkets[market].update(0, _timelock);
             emit SubmitMarket(market, isWhitelisted);
         }
     }
@@ -620,6 +630,15 @@ contract TermMaxVault is
     /**
      * @inheritdoc ITermMaxVault
      */
+    function revokePendingPerformanceFeeRate() external onlyGuardianRole {
+        delete _pendingPerformanceFeeRate;
+
+        emit RevokePendingPerformanceFeeRate(_msgSender());
+    }
+
+    /**
+     * @inheritdoc ITermMaxVault
+     */
     function acceptTimelock() external afterTimelock(_pendingTimelock.validAt) {
         _setTimelock(_pendingTimelock.value);
     }
@@ -652,6 +671,10 @@ contract TermMaxVault is
      */
     function pause() external onlyOwner {
         _pause();
+        // pause orders
+        for (uint256 i = 0; i < _supplyQueue.length; ++i) {
+            ITermMaxOrder(_supplyQueue[i]).pause();
+        }
     }
 
     /**
@@ -659,6 +682,10 @@ contract TermMaxVault is
      */
     function unpause() external onlyOwner {
         _unpause();
+        // unpause orders
+        for (uint256 i = 0; i < _supplyQueue.length; ++i) {
+            ITermMaxOrder(_supplyQueue[i]).unpause();
+        }
     }
 
     function _previewAccruedInterest()
@@ -672,18 +699,18 @@ contract TermMaxVault is
         if (lastTime == 0) {
             return (0, 0);
         }
-        uint64 recentMaturity = _recentestMaturity;
-        uint256 previewAnualizedInterest = _annualizedInterest;
+        uint64 recentMaturity = _maturityMapping[0];
+        uint256 previewAnnualizedInterest = _annualizedInterest;
         previewPrincipal = _accretingPrincipal;
         previewPerformanceFee = _performanceFee;
 
         while (currentTime >= recentMaturity && recentMaturity != 0) {
             (uint256 previewInterest, uint256 previewPerformanceFeeToCurator) =
-                _previewAccruedPeriodInterest(lastTime, recentMaturity, previewAnualizedInterest);
+                _previewAccruedPeriodInterest(lastTime, recentMaturity, previewAnnualizedInterest);
             lastTime = recentMaturity;
             uint64 nextMaturity = _maturityMapping[recentMaturity];
-            // update anualized interest
-            previewAnualizedInterest -= _maturityToInterest[recentMaturity];
+            // update annualized interest
+            previewAnnualizedInterest -= _maturityToInterest[recentMaturity];
 
             previewPerformanceFee += previewPerformanceFeeToCurator;
             previewPrincipal += previewInterest;
@@ -692,25 +719,25 @@ contract TermMaxVault is
         }
         if (recentMaturity > 0) {
             (uint256 previewInterest, uint256 previewPerformanceFeeToCurator) =
-                _previewAccruedPeriodInterest(lastTime, currentTime, previewAnualizedInterest);
+                _previewAccruedPeriodInterest(lastTime, currentTime, previewAnnualizedInterest);
             previewPerformanceFee += previewPerformanceFeeToCurator;
             previewPrincipal += previewInterest;
         }
     }
 
-    function _previewAccruedPeriodInterest(uint256 startTime, uint256 endTime, uint256 previewAnualizedInterest)
+    function _previewAccruedPeriodInterest(uint256 startTime, uint256 endTime, uint256 previewAnnualizedInterest)
         internal
         view
         returns (uint256, uint256)
     {
-        uint256 interest = (previewAnualizedInterest * (endTime - startTime)) / 365 days;
+        uint256 interest = (previewAnnualizedInterest * (endTime - startTime)) / 365 days;
         uint256 performanceFeeToCurator = (interest * _performanceFeeRate) / Constants.DECIMAL_BASE;
         return (interest - performanceFeeToCurator, performanceFeeToCurator);
     }
 
     /// @notice Callback function for the swap
     /// @param deltaFt The change in the ft balance of the order
-    function swapCallback(int256 deltaFt, int256) external override {
-        _delegateCall(abi.encodeCall(IOrderManager.swapCallback, (deltaFt)));
+    function afterSwap(uint256 ftReserve, uint256 xtReserve, int256 deltaFt, int256) external override {
+        _delegateCall(abi.encodeCall(IOrderManager.afterSwap, (ftReserve, xtReserve, deltaFt)));
     }
 }

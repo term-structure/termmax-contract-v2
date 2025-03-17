@@ -1,41 +1,95 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
+import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {AggregatorV3Interface, IOracle} from "./IOracle.sol";
 
-contract OracleAggregator is IOracle, UUPSUpgradeable, Ownable2StepUpgradeable {
+contract OracleAggregator is IOracle, Ownable2Step {
+    uint256 internal immutable _timeLock;
+
+    struct PendingOracle {
+        Oracle oracle;
+        uint64 validAt;
+    }
+
+    /// @notice Error thrown when the asset or oracle address is invalid
+    error InvalidAssetOrOracle();
+
+    /**
+     * @notice Error thrown when attempting to set a value that's already set
+     */
+    error AlreadySet();
+
+    /**
+     * @notice Error thrown when attempting to submit a change that's already pending
+     */
+    error AlreadyPending();
+
+    /**
+     * @notice Error thrown when trying to accept a change that has no pending value
+     */
+    error NoPendingValue();
+
+    /**
+     * @notice Error thrown when trying to accept a change before the timelock period has elapsed
+     */
+    error TimelockNotElapsed();
+
+    /// @notice Event emitted when the oracle of asset is updated
+    /// @param asset The address of the asset
+    /// @param aggregator The address of the aggregator
+    /// @param backupAggregator The address of the backup aggregator
+    /// @param heartbeat The heartbeat of the oracle
+    event UpdateOracle(
+        address indexed asset,
+        AggregatorV3Interface indexed aggregator,
+        AggregatorV3Interface indexed backupAggregator,
+        uint32 heartbeat
+    );
+
+    event SubmitPendingOracle(
+        address indexed asset,
+        AggregatorV3Interface indexed aggregator,
+        AggregatorV3Interface indexed backupAggregator,
+        uint32 heartbeat
+    );
+
+    event RevokePendingOracle(address indexed asset);
+
     /// @notice Oracles
     mapping(address => Oracle) public oracles;
 
-    function initialize(address _owner) external initializer {
-        __Ownable_init(_owner);
+    mapping(address => PendingOracle) public pendingOracles;
+
+    constructor(address _owner, uint256 timeLock) Ownable(_owner) {
+        _timeLock = timeLock;
     }
 
-    function _authorizeUpgrade(address newImplementation) internal virtual override onlyOwner {}
-
-    /**
-     * @inheritdoc IOracle
-     */
-    function setOracle(address asset, Oracle memory oracle) external onlyOwner {
-        if (
-            asset == address(0) || address(oracle.aggregator) == address(0)
-                || address(oracle.backupAggregator) == address(0)
-        ) {
-            revert InvalidAssetOrOracle();
-        }
-        oracles[asset] = oracle;
-        emit UpdateOracle(asset, oracle.aggregator, oracle.backupAggregator, oracle.heartbeat);
-    }
-
-    /// @notice Remove oracle
-    function removeOracle(address asset) external onlyOwner {
+    function submitPendingOracle(address asset, Oracle memory oracle) external onlyOwner {
         if (asset == address(0)) {
             revert InvalidAssetOrOracle();
         }
-        delete oracles[asset];
-        emit UpdateOracle(asset, AggregatorV3Interface(address(0)), AggregatorV3Interface(address(0)), 0);
+        if (address(oracle.aggregator) == address(0) && address(oracle.backupAggregator) == address(0)) {
+            delete oracles[asset];
+            emit UpdateOracle(asset, AggregatorV3Interface(address(0)), AggregatorV3Interface(address(0)), 0);
+            return;
+        }
+        pendingOracles[asset].oracle = oracle;
+        pendingOracles[asset].validAt = uint64(block.timestamp + _timeLock);
+        emit SubmitPendingOracle(asset, oracle.aggregator, oracle.backupAggregator, oracle.heartbeat);
+    }
+
+    function acceptPendingOracle(address asset) external {
+        if (pendingOracles[asset].validAt == 0) {
+            revert NoPendingValue();
+        }
+        if (block.timestamp < pendingOracles[asset].validAt) {
+            revert TimelockNotElapsed();
+        }
+        Oracle memory oracle = pendingOracles[asset].oracle;
+        oracles[asset] = oracle;
+        delete pendingOracles[asset];
+        emit UpdateOracle(asset, oracle.aggregator, oracle.backupAggregator, oracle.heartbeat);
     }
 
     /**

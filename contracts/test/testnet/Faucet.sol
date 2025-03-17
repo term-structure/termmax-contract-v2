@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import {console} from "forge-std/console.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {FaucetERC20} from "./FaucetERC20.sol";
 import {MockPriceFeed} from "../MockPriceFeed.sol";
@@ -67,8 +66,23 @@ contract Faucet is Ownable {
             TokenConfig memory tokenConfig = tokenConfigs[i];
             MockPriceFeed priceFeed = MockPriceFeed(tokenConfig.priceFeedAddr);
             (, int256 answer,,,) = priceFeed.latestRoundData();
-            uint8 decimals = priceFeed.decimals();
-            uint256 mintAmt = (mintUsdValue * 10 ** (decimals)) / uint256(answer);
+            uint8 tokenDecimals = FaucetERC20(tokenConfig.tokenAddr).decimals();
+            uint8 priceFeedDecimals = priceFeed.decimals();
+            uint256 mintAmt = (mintUsdValue * 10 ** (priceFeedDecimals + tokenDecimals)) / uint256(answer);
+            FaucetERC20(tokenConfig.tokenAddr).mint(msg.sender, mintAmt);
+        }
+    }
+
+    function batchMintWithValue(uint256 mintValue) public {
+        if (canOnlyMintOnce && isMinted[msg.sender]) revert OnlyMintOnce();
+        isMinted[msg.sender] = true;
+        for (uint256 i = 1; i < tokenNum + 1; i++) {
+            TokenConfig memory tokenConfig = tokenConfigs[i];
+            MockPriceFeed priceFeed = MockPriceFeed(tokenConfig.priceFeedAddr);
+            (, int256 answer,,,) = priceFeed.latestRoundData();
+            uint8 tokenDecimals = FaucetERC20(tokenConfig.tokenAddr).decimals();
+            uint8 priceFeedDecimals = priceFeed.decimals();
+            uint256 mintAmt = (mintValue * 10 ** (priceFeedDecimals + tokenDecimals)) / uint256(answer);
             FaucetERC20(tokenConfig.tokenAddr).mint(msg.sender, mintAmt);
         }
     }
@@ -78,8 +92,9 @@ contract Faucet is Ownable {
             TokenConfig memory tokenConfig = tokenConfigs[i];
             MockPriceFeed priceFeed = MockPriceFeed(tokenConfig.priceFeedAddr);
             (, int256 answer,,,) = priceFeed.latestRoundData();
-            uint8 decimals = priceFeed.decimals();
-            uint256 mintAmt = (mintUsdValue * 10 ** (decimals)) / uint256(answer);
+            uint8 tokenDecimals = FaucetERC20(tokenConfig.tokenAddr).decimals();
+            uint8 priceFeedDecimals = priceFeed.decimals();
+            uint256 mintAmt = (mintUsdValue * 10 ** (priceFeedDecimals + tokenDecimals)) / uint256(answer);
             FaucetERC20(tokenConfig.tokenAddr).mint(to, mintAmt);
         }
     }

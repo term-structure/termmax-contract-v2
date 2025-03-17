@@ -6,6 +6,12 @@
 
 TermMax Docs: https://docs.ts.finance/termmax
 
+### Install Dependencies
+```shell
+$ git submodule init
+$ git submodule update
+```
+
 ### Build
 
 ```shell

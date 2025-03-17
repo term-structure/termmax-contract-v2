@@ -69,7 +69,6 @@ contract AccessManagerTest is Test {
         res.xt.transfer(address(res.order), amount);
 
         res.router = DeployUtils.deployRouter(deployer);
-        res.router.setMarketWhitelist(address(res.market), true);
 
         AccessManager implementation = new AccessManager();
         bytes memory data = abi.encodeCall(AccessManager.initialize, deployer);
@@ -338,58 +337,6 @@ contract AccessManagerTest is Test {
         vm.stopPrank();
     }
 
-    function testMarketCreationAndWhitelisting() public {
-        vm.startPrank(deployer);
-
-        // Create market parameters
-        bytes32 gtKey = DeployUtils.GT_ERC20;
-        MarketInitialParams memory params = MarketInitialParams({
-            collateral: address(res.collateral),
-            debtToken: res.debt,
-            admin: deployer,
-            gtImplementation: address(0),
-            marketConfig: MarketConfig({
-                treasurer: treasurer,
-                maturity: uint64(block.timestamp + 365 days),
-                feeConfig: FeeConfig({
-                    lendTakerFeeRatio: 0.001e8,
-                    lendMakerFeeRatio: 0.001e8,
-                    borrowTakerFeeRatio: 0.001e8,
-                    borrowMakerFeeRatio: 0.001e8,
-                    issueFtFeeRatio: 0.001e8,
-                    issueFtFeeRef: 0.001e8,
-                    redeemFeeRatio: 0.001e8
-                })
-            }),
-            loanConfig: LoanConfig({oracle: res.oracle, liquidationLtv: 0.9e8, maxLtv: 0.85e8, liquidatable: true}),
-            gtInitalParams: abi.encode(type(uint256).max),
-            tokenName: "Test Market",
-            tokenSymbol: "TEST"
-        });
-
-        // Test market creation
-        address newMarket = manager.createMarket(res.factory, gtKey, params, 0);
-        assertTrue(newMarket != address(0));
-
-        // Test market creation and whitelisting
-        address newMarketWhitelisted = manager.createMarketAndWhitelist(res.router, res.factory, gtKey, params, 1);
-        assertTrue(newMarketWhitelisted != address(0));
-        assertTrue(TermMaxRouter(address(res.router)).marketWhitelist(newMarketWhitelisted));
-
-        vm.stopPrank();
-
-        // Test without DEFAULT_ADMIN_ROLE
-        address nonAdmin = vm.randomAddress();
-        vm.startPrank(nonAdmin);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector, nonAdmin, manager.DEFAULT_ADMIN_ROLE()
-            )
-        );
-        manager.createMarket(res.factory, gtKey, params, 2);
-        vm.stopPrank();
-    }
-
     function testUpgradeSubContract() public {
         vm.startPrank(deployer);
 
@@ -410,31 +357,6 @@ contract AccessManagerTest is Test {
             )
         );
         manager.upgradeSubContract(UUPSUpgradeable(address(res.router)), address(routerV2), "");
-        vm.stopPrank();
-    }
-
-    function testSetMarketWhitelist() public {
-        vm.startPrank(deployer);
-
-        // Test setting market whitelist
-        address newMarket = vm.randomAddress();
-        manager.setMarketWhitelist(res.router, newMarket, true);
-        assertTrue(res.router.marketWhitelist(newMarket));
-
-        manager.setMarketWhitelist(res.router, newMarket, false);
-        assertFalse(res.router.marketWhitelist(newMarket));
-
-        // Test without DEFAULT_ADMIN_ROLE
-        address nonAdmin = vm.randomAddress();
-        vm.stopPrank();
-
-        vm.startPrank(nonAdmin);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector, nonAdmin, manager.DEFAULT_ADMIN_ROLE()
-            )
-        );
-        manager.setMarketWhitelist(res.router, newMarket, true);
         vm.stopPrank();
     }
 
