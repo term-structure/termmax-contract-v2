@@ -216,14 +216,17 @@ contract TermMaxMarket is
     {
         xt.safeTransferFrom(loanReceiver, address(this), xtAmt);
 
-        // 1 xt -> 1 debtToken raised
-        uint128 debt = xtAmt;
-
         // Send debt to borrower
         debtToken.safeTransfer(loanReceiver, xtAmt);
         // Callback function
         bytes memory collateralData =
             IFlashLoanReceiver(loanReceiver).executeOperation(gtReceiver, debtToken, xtAmt, callbackData);
+
+        MarketConfig memory mConfig = _config;
+        uint128 leverageFee = ((xtAmt * issueFtFeeRatio()) / Constants.DECIMAL_BASE).toUint128();
+        ft.mint(mConfig.treasurer, leverageFee);
+
+        uint128 debt = xtAmt + leverageFee;
 
         // Mint GT
         gtId = gt.mint(loanReceiver, gtReceiver, debt, collateralData);
