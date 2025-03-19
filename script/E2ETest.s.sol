@@ -35,9 +35,9 @@ contract E2ETest is Script {
 
     // address config
     address faucetAddr = address(0xb927B74d5D9c3985D4DCdd62CbffEc66CF527fAa);
-    address routerAddr = address(0xbFccC3c7F739d4aE7CCf680b3fafcFB5Bdc4f842);
+    address routerAddr = address(0x04bab94F939654E3711778c25683bBB34bC1a514);
     address swapAdapter = address(0xC622E39c594570c731baCcDc2b6cD062EF941b06);
-    address marketAddr = address(0xD0586B5a5F97347C769983C404348346FE26f38e);
+    address marketAddr = address(0x10d9baa4A6475ee2b913755728342c7d40ce0A21);
     address orderAddr = address(0x550a95c76A929635E7836cBef401C378485f4422);
 
     Faucet faucet = Faucet(faucetAddr);
@@ -60,50 +60,50 @@ contract E2ETest is Script {
         // payable(userAddr).transfer(0.1 ether);
         // vm.stopBroadcast();
         (ft, xt, gt, collateralAddr, underlyingERC20) = market.tokens();
-        collateral = FaucetERC20(collateralAddr);
-        underlying = FaucetERC20(address(underlyingERC20));
-        underlyingPriceFeedAddr = faucet.getTokenConfig(faucet.getTokenId(address(underlying))).priceFeedAddr;
-        collateralPriceFeedAddr = faucet.getTokenConfig(faucet.getTokenId(address(collateral))).priceFeedAddr;
-        printMarketConfig();
-        mintDebtToken(deployerAddr, 100000);
-        depositIntoOrder(100000);
+        // collateral = FaucetERC20(collateralAddr);
+        // underlying = FaucetERC20(address(underlyingERC20));
+        // underlyingPriceFeedAddr = faucet.getTokenConfig(faucet.getTokenId(address(underlying))).priceFeedAddr;
+        // collateralPriceFeedAddr = faucet.getTokenConfig(faucet.getTokenId(address(collateral))).priceFeedAddr;
+        // printMarketConfig();
+        // mintDebtToken(deployerAddr, 100000);
+        // depositIntoOrder(100000);
         printUserPosition();
 
-        console.log("> Mint 21504 debt token");
-        mintDebtToken(userAddr, 21504);
-        printUserPosition();
+        // console.log('> Mint 21504 debt token');
+        // mintDebtToken(userAddr, 21504);
+        // printUserPosition();
 
-        console.log("> Mint 12100 collateral token");
-        mintCollateralToken(userAddr, 12100);
-        printUserPosition();
-        console.log("> Buy FT with 1000 debt token");
-        lendToOrder(1000);
-        printUserPosition();
+        // console.log('> Mint 12100 collateral token');
+        // mintCollateralToken(userAddr, 12100);
+        // printUserPosition();
+        // console.log('> Buy FT with 1000 debt token');
+        // lendToOrder(1000);
+        // printUserPosition();
 
-        console.log("> Borrow  8000 debt token with 12000 coll collateral token");
-        uint256 gtId = borrowFromOrder(12000, 8000, 8500);
-        printUserPosition();
+        // console.log('> Borrow  8000 debt token with 12000 coll collateral token');
+        // uint256 gtId = borrowFromOrder(12000, 8000, 8500);
+        // printUserPosition();
 
-        console.log("> Add 100 collateral");
-        addCollateral(gtId, 100);
-        printUserPosition();
+        // console.log('> Add 100 collateral');
+        // addCollateral(gtId, 100);
+        // printUserPosition();
 
-        console.log("> Remove 50 collateral");
-        removeCollateral(gtId, 50);
-        printUserPosition();
+        // console.log('> Remove 50 collateral');
+        // removeCollateral(gtId, 50);
+        // printUserPosition();
 
-        console.log("> Repay 500 debt token");
-        repay(gtId, 500, true);
-        printUserPosition();
+        // console.log('> Repay 500 debt token');
+        // repay(gtId, 500, true);
+        // printUserPosition();
 
-        address to = vm.randomAddress();
-        console.log("> Transfer GT to", to);
-        transferGT(gtId, to);
-        printUserPosition();
+        // address to = vm.randomAddress();
+        // console.log('> Transfer GT to', to);
+        // transferGT(gtId, to);
+        // printUserPosition();
 
-        console.log("> Buy XT with 4 debt token and do leverage with 20000 debt token");
-        leverageFromOrder(4, 0, 20000, 0.8e8);
-        printUserPosition();
+        // console.log('> Buy XT with 4 debt token and do leverage with 20000 debt token');
+        // leverageFromOrder(4, 0, 20000, 0.8e8);
+        // printUserPosition();
     }
 
     function mintDebtToken(address to, uint256 amount) public {
@@ -319,7 +319,7 @@ contract E2ETest is Script {
         console.log("User Addr:", userAddr);
         console.log("Market Addr:", address(market));
         (IERC20[4] memory tokens, uint256[4] memory balances, address gtAddr, uint256[] memory gtIds) =
-            router.assetsWithERC20Collateral(market, userAddr);
+            router.assetsWithERC20Collateral(market, address(0x2A58A3D405c527491Daae4C62561B949e7F87EFE));
         for (uint256 i = 0; i < tokens.length; i++) {
             console.log(IERC20Metadata(address(tokens[i])).symbol(), ":", balances[i]);
         }

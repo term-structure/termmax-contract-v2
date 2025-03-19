@@ -137,7 +137,6 @@ contract DeployBase is Script {
     function deployMarkets(
         address factoryAddr,
         address oracleAddr,
-        address routerAddr,
         address faucetAddr,
         string memory deployDataPath,
         address adminAddr,
@@ -145,7 +144,6 @@ contract DeployBase is Script {
     ) public returns (TermMaxMarket[] memory markets, JsonLoader.Config[] memory configs) {
         ITermMaxFactory factory = ITermMaxFactory(factoryAddr);
         IOracle oracle = IOracle(oracleAddr);
-        ITermMaxRouter router = ITermMaxRouter(routerAddr);
         Faucet faucet = Faucet(faucetAddr);
 
         string memory deployData = vm.readFile(deployDataPath);
@@ -258,13 +256,13 @@ contract DeployBase is Script {
     function deployMarketsMainnet(
         address factoryAddr,
         address oracleAddr,
-        address routerAddr,
+        // address routerAddr,
         string memory deployDataPath,
         address adminAddr
     ) public returns (TermMaxMarket[] memory markets, JsonLoader.Config[] memory configs) {
         ITermMaxFactory factory = ITermMaxFactory(factoryAddr);
         IOracle oracle = IOracle(oracleAddr);
-        ITermMaxRouter router = ITermMaxRouter(routerAddr);
+        // ITermMaxRouter router = ITermMaxRouter(routerAddr);
 
         string memory deployData = vm.readFile(deployDataPath);
 
@@ -357,5 +355,25 @@ contract DeployBase is Script {
         inputs[3] = "HEAD";
         bytes memory result = vm.ffi(inputs);
         return string(result);
+    }
+
+    // Helper function to convert string to uppercase
+    function toUpper(string memory str) internal pure returns (string memory) {
+        bytes memory bStr = bytes(str);
+        bytes memory bUpper = new bytes(bStr.length);
+        for (uint256 i = 0; i < bStr.length; i++) {
+            // Convert hyphen to underscore
+            if (bStr[i] == 0x2D) {
+                bUpper[i] = 0x5F; // '_'
+                continue;
+            }
+            // Convert lowercase to uppercase
+            if ((uint8(bStr[i]) >= 97) && (uint8(bStr[i]) <= 122)) {
+                bUpper[i] = bytes1(uint8(bStr[i]) - 32);
+            } else {
+                bUpper[i] = bStr[i];
+            }
+        }
+        return string(bUpper);
     }
 }
