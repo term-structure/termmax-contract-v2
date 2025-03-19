@@ -58,7 +58,7 @@ contract MarketTest is Test {
     function testUpdateMarketConfig() public {
         vm.startPrank(deployer);
         marketConfig.treasurer = vm.randomAddress();
-        marketConfig.feeConfig.issueFtFeeRatio = 0.02e8;
+        marketConfig.feeConfig.issueGtFeeRatio = 0.02e8;
         marketConfig.feeConfig.borrowTakerFeeRatio = 0.03e8;
         marketConfig.feeConfig.borrowMakerFeeRatio = 0.04e8;
         marketConfig.feeConfig.lendTakerFeeRatio = 0.05e8;
@@ -70,7 +70,7 @@ contract MarketTest is Test {
 
         assertEq(res.market.config().treasurer, marketConfig.treasurer);
         assertEq(res.gt.getGtConfig().treasurer, marketConfig.treasurer);
-        assertEq(res.market.config().feeConfig.issueFtFeeRatio, marketConfig.feeConfig.issueFtFeeRatio);
+        assertEq(res.market.config().feeConfig.issueGtFeeRatio, marketConfig.feeConfig.issueGtFeeRatio);
         assertEq(res.market.config().feeConfig.borrowTakerFeeRatio, marketConfig.feeConfig.borrowTakerFeeRatio);
         assertEq(res.market.config().feeConfig.borrowMakerFeeRatio, marketConfig.feeConfig.borrowMakerFeeRatio);
         assertEq(res.market.config().feeConfig.lendTakerFeeRatio, marketConfig.feeConfig.lendTakerFeeRatio);
@@ -168,7 +168,7 @@ contract MarketTest is Test {
         res.debt.approve(address(res.market), debtAmt);
         res.market.mint(sender, debtAmt);
 
-        uint256 fee = (res.market.issueFtFeeRatio() * debtAmt) / Constants.DECIMAL_BASE;
+        uint256 fee = (res.market.issueGtFeeRatio() * debtAmt) / Constants.DECIMAL_BASE;
         uint256 collateralAmt = 1e18;
         res.collateral.mint(sender, collateralAmt);
         res.collateral.approve(address(res.gt), collateralAmt);
@@ -204,7 +204,7 @@ contract MarketTest is Test {
         (uint256 gtId, uint128 ftOutAmt) = res.market.issueFt(sender, debtAmt, abi.encode(collateralAmt));
 
         uint128 debtAmt2 = debtAmt / 2;
-        uint256 fee = (res.market.issueFtFeeRatio() * debtAmt2) / Constants.DECIMAL_BASE;
+        uint256 fee = (res.market.issueGtFeeRatio() * debtAmt2) / Constants.DECIMAL_BASE;
         vm.expectEmit();
         emit MarketEvents.IssueFtByExistedGt(sender, sender, gtId, debtAmt2, uint128(debtAmt2 - fee), uint128(fee));
         uint256 ftOutAmt2 = res.market.issueFtByExistedGt(sender, debtAmt2, gtId);
@@ -258,7 +258,7 @@ contract MarketTest is Test {
             address(receiver),
             sender,
             1,
-            debtAmt + uint128(debtAmt * res.market.issueFtFeeRatio() / Constants.DECIMAL_BASE),
+            debtAmt + uint128(debtAmt * res.market.issueGtFeeRatio() / Constants.DECIMAL_BASE),
             abi.encode(collateralAmt)
         );
         receiver.leverageByXt(debtAmt, abi.encode(sender, collateralAmt));
@@ -271,7 +271,7 @@ contract MarketTest is Test {
         (address owner, uint128 dAmt,, bytes memory collateralData) = res.gt.loanInfo(1);
         assertEq(owner, sender);
 
-        assertEq(dAmt, debtAmt + uint128(debtAmt * res.market.issueFtFeeRatio() / Constants.DECIMAL_BASE));
+        assertEq(dAmt, debtAmt + uint128(debtAmt * res.market.issueGtFeeRatio() / Constants.DECIMAL_BASE));
 
         assertEq(abi.decode(collateralData, (uint256)), collateralAmt);
 
@@ -346,7 +346,7 @@ contract MarketTest is Test {
 
         res.xt.approve(address(receiver), debtAmt);
         receiver.leverageByXt(debtAmt, abi.encode(alice, collateralAmt));
-        uint128 leverageFee = uint128(debtAmt * res.market.issueFtFeeRatio() / Constants.DECIMAL_BASE);
+        uint128 leverageFee = uint128(debtAmt * res.market.issueGtFeeRatio() / Constants.DECIMAL_BASE);
         vm.stopPrank();
 
         vm.warp(marketConfig.maturity + Constants.LIQUIDATION_WINDOW);
@@ -399,7 +399,7 @@ contract MarketTest is Test {
         vm.assume(issueAmount <= type(uint64).max);
 
         uint128 debt =
-            uint128((issueAmount * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - res.market.issueFtFeeRatio()));
+            uint128((issueAmount * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - res.market.issueGtFeeRatio()));
 
         vm.startPrank(sender);
 

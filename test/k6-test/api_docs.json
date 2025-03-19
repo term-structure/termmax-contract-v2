@@ -2470,7 +2470,7 @@
           "borrowMakerFeeRatio": {
             "type": "string"
           },
-          "issueFtFeeRatio": {
+          "issueGtFeeRatio": {
             "type": "string"
           },
           "issueFtFeeRef": {
@@ -2485,7 +2485,7 @@
           "lendMakerFeeRatio",
           "borrowTakerFeeRatio",
           "borrowMakerFeeRatio",
-          "issueFtFeeRatio",
+          "issueGtFeeRatio",
           "issueFtFeeRef",
           "redeemFeeRatio"
         ]
