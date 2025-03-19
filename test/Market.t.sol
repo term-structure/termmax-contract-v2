@@ -254,7 +254,13 @@ contract MarketTest is Test {
         res.collateral.mint(address(receiver), collateralAmt);
 
         vm.expectEmit();
-        emit MarketEvents.MintGt(address(receiver), sender, 1, debtAmt, abi.encode(collateralAmt));
+        emit MarketEvents.MintGt(
+            address(receiver),
+            sender,
+            1,
+            debtAmt + uint128(debtAmt * res.market.issueFtFeeRatio() / Constants.DECIMAL_BASE),
+            abi.encode(collateralAmt)
+        );
         receiver.leverageByXt(debtAmt, abi.encode(sender, collateralAmt));
 
         assertEq(res.debt.balanceOf(sender), 0);
@@ -264,7 +270,8 @@ contract MarketTest is Test {
 
         (address owner, uint128 dAmt,, bytes memory collateralData) = res.gt.loanInfo(1);
         assertEq(owner, sender);
-        assertEq(dAmt, debtAmt);
+
+        assertEq(dAmt, debtAmt + uint128(debtAmt * res.market.issueFtFeeRatio() / Constants.DECIMAL_BASE));
 
         assertEq(abi.decode(collateralData, (uint256)), collateralAmt);
 
@@ -339,6 +346,7 @@ contract MarketTest is Test {
 
         res.xt.approve(address(receiver), debtAmt);
         receiver.leverageByXt(debtAmt, abi.encode(alice, collateralAmt));
+        uint128 leverageFee = uint128(debtAmt * res.market.issueFtFeeRatio() / Constants.DECIMAL_BASE);
         vm.stopPrank();
 
         vm.warp(marketConfig.maturity + Constants.LIQUIDATION_WINDOW);
@@ -347,14 +355,16 @@ contract MarketTest is Test {
         res.ft.approve(address(res.market), depositAmt);
 
         vm.expectEmit();
-        emit MarketEvents.Redeem(
-            bob, bob, uint128(Constants.DECIMAL_BASE_SQ), uint128(depositAmt - debtAmt), abi.encode(collateralAmt)
-        );
+        uint128 proportion = uint128(Constants.DECIMAL_BASE_SQ) * depositAmt / (depositAmt + leverageFee);
+        uint128 expectDebt = (depositAmt - debtAmt) * proportion / uint128(Constants.DECIMAL_BASE_SQ);
+        uint256 expectCollateral = collateralAmt * proportion / Constants.DECIMAL_BASE_SQ;
+        emit MarketEvents.Redeem(bob, bob, proportion, expectDebt, abi.encode(expectCollateral));
         res.market.redeem(depositAmt, bob);
 
-        assertEq(res.debt.balanceOf(bob), depositAmt - debtAmt);
-        assertEq(res.collateral.balanceOf(bob), collateralAmt);
-        assertEq(res.debt.balanceOf(address(res.market)), 0);
+        assertEq(res.debt.balanceOf(bob), expectDebt);
+        assertEq(res.collateral.balanceOf(bob), expectCollateral);
+        assertEq(res.debt.balanceOf(address(res.market)), (depositAmt - debtAmt) - expectDebt);
+        assertEq(res.collateral.balanceOf(address(res.gt)), collateralAmt - expectCollateral);
         assertEq(res.ft.balanceOf(bob), 0);
         vm.stopPrank();
     }
