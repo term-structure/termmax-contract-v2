@@ -10,7 +10,7 @@
         "lendMakerFeeRatio": "2000000",
         "borrowTakerFeeRatio": "300000",
         "borrowMakerFeeRatio": "3000000",
-        "issueFtFeeRatio": "10000000",
+        "issueGtFeeRatio": "10000000",
         "issueFtFeeRef": "20000000",
         "redeemFeeRatio": "0"
       },
@@ -44,7 +44,7 @@
         "lendMakerFeeRatio": "2000000",
         "borrowTakerFeeRatio": "300000",
         "borrowMakerFeeRatio": "3000000",
-        "issueFtFeeRatio": "10000000",
+        "issueGtFeeRatio": "10000000",
         "issueFtFeeRef": "20000000",
         "redeemFeeRatio": "0"
       },
@@ -78,7 +78,7 @@
         "lendMakerFeeRatio": "2000000",
         "borrowTakerFeeRatio": "300000",
         "borrowMakerFeeRatio": "3000000",
-        "issueFtFeeRatio": "10000000",
+        "issueGtFeeRatio": "10000000",
         "issueFtFeeRef": "20000000",
         "redeemFeeRatio": "0"
       },
@@ -112,7 +112,7 @@
         "lendMakerFeeRatio": "2000000",
         "borrowTakerFeeRatio": "300000",
         "borrowMakerFeeRatio": "3000000",
-        "issueFtFeeRatio": "10000000",
+        "issueGtFeeRatio": "10000000",
         "issueFtFeeRef": "20000000",
         "redeemFeeRatio": "0"
       },
@@ -146,7 +146,7 @@
         "lendMakerFeeRatio": "2000000",
         "borrowTakerFeeRatio": "300000",
         "borrowMakerFeeRatio": "3000000",
-        "issueFtFeeRatio": "10000000",
+        "issueGtFeeRatio": "10000000",
         "issueFtFeeRef": "20000000",
         "redeemFeeRatio": "0"
       },
@@ -180,7 +180,7 @@
         "lendMakerFeeRatio": "2000000",
         "borrowTakerFeeRatio": "300000",
         "borrowMakerFeeRatio": "3000000",
-        "issueFtFeeRatio": "10000000",
+        "issueGtFeeRatio": "10000000",
         "issueFtFeeRef": "20000000",
         "redeemFeeRatio": "0"
       },

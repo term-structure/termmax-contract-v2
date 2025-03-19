@@ -93,7 +93,7 @@ contract GtTest is Test {
 
         StateChecker.MarketState memory state = StateChecker.getMarketState(res);
 
-        uint256 issueFee = (debtAmt * res.market.issueFtFeeRatio()) / Constants.DECIMAL_BASE;
+        uint256 issueFee = (debtAmt * res.market.issueGtFeeRatio()) / Constants.DECIMAL_BASE;
         vm.expectEmit();
         emit MarketEvents.IssueFt(
             sender, sender, 1, debtAmt, uint128(debtAmt - issueFee), uint128(issueFee), collateralData
@@ -127,7 +127,7 @@ contract GtTest is Test {
         res.collateral.mint(address(flashLoanReceiver), collateralAmt);
 
         uint128 xtAmt = 90e8;
-        uint256 debtAmt = xtAmt + xtAmt * res.market.issueFtFeeRatio() / Constants.DECIMAL_BASE;
+        uint256 debtAmt = xtAmt + xtAmt * res.market.issueGtFeeRatio() / Constants.DECIMAL_BASE;
 
         uint128 debtAmtInForBuyXt = 5e8;
         uint128 minXTOut = 0e8;
@@ -246,7 +246,7 @@ contract GtTest is Test {
         res.collateral.mint(address(flashLoanReceiver), collateralAmt);
 
         uint128 xtAmt = 90e8;
-        uint256 debtAmt = xtAmt + xtAmt * res.market.issueFtFeeRatio() / Constants.DECIMAL_BASE;
+        uint256 debtAmt = xtAmt + xtAmt * res.market.issueGtFeeRatio() / Constants.DECIMAL_BASE;
 
         uint128 debtAmtInForBuyXt = 5e8;
         uint128 minXTOut = 0e8;

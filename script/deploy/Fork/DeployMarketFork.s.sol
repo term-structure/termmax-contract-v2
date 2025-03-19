@@ -100,7 +100,7 @@ contract DeloyMarketFork is DeployBase {
         console.log("Lend Maker Fee Ratio:", marketConfig.feeConfig.lendMakerFeeRatio);
         console.log("Borrow Taker Fee Ratio:", marketConfig.feeConfig.borrowTakerFeeRatio);
         console.log("Borrow Maker Fee Ratio:", marketConfig.feeConfig.borrowMakerFeeRatio);
-        console.log("Issue FT Fee Ratio:", marketConfig.feeConfig.issueFtFeeRatio);
+        console.log("Issue FT Fee Ratio:", marketConfig.feeConfig.issueGtFeeRatio);
         console.log("Issue FT Fee Ref:", marketConfig.feeConfig.issueFtFeeRef);
     }
 }

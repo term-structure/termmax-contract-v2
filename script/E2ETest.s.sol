@@ -185,7 +185,7 @@ contract E2ETest is Script {
 
         vm.startBroadcast(userPrivateKey);
         uint256 oriCollateralBalance = collateral.balanceOf(userAddr);
-        // uint256 fee = (market.issueFtFeeRatio() * maxDebtAmt) / Constants.DECIMAL_BASE;
+        // uint256 fee = (market.issueGtFeeRatio() * maxDebtAmt) / Constants.DECIMAL_BASE;
         // uint256 ftAmt = maxDebtAmt - fee;
         collateral.approve(address(router), collateralAmt);
         ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
@@ -309,7 +309,7 @@ contract E2ETest is Script {
         console.log("lendMakerFeeRatio:", config.feeConfig.lendMakerFeeRatio);
         console.log("borrowTakerFeeRatio:", config.feeConfig.borrowTakerFeeRatio);
         console.log("borrowMakerFeeRatio:", config.feeConfig.borrowMakerFeeRatio);
-        console.log("issueFtFeeRatio:", config.feeConfig.issueFtFeeRatio);
+        console.log("issueGtFeeRatio:", config.feeConfig.issueGtFeeRatio);
         console.log("issueFtFeeRef:", config.feeConfig.issueFtFeeRef);
         console.log("");
     }
