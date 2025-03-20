@@ -58,7 +58,7 @@ contract MarketTest is Test {
     function testUpdateMarketConfig() public {
         vm.startPrank(deployer);
         marketConfig.treasurer = vm.randomAddress();
-        marketConfig.feeConfig.issueGtFeeRatio = 0.02e8;
+        marketConfig.feeConfig.mintGtFeeRatio = 0.02e8;
         marketConfig.feeConfig.borrowTakerFeeRatio = 0.03e8;
         marketConfig.feeConfig.borrowMakerFeeRatio = 0.04e8;
         marketConfig.feeConfig.lendTakerFeeRatio = 0.05e8;
@@ -70,7 +70,7 @@ contract MarketTest is Test {
 
         assertEq(res.market.config().treasurer, marketConfig.treasurer);
         assertEq(res.gt.getGtConfig().treasurer, marketConfig.treasurer);
-        assertEq(res.market.config().feeConfig.issueGtFeeRatio, marketConfig.feeConfig.issueGtFeeRatio);
+        assertEq(res.market.config().feeConfig.mintGtFeeRatio, marketConfig.feeConfig.mintGtFeeRatio);
         assertEq(res.market.config().feeConfig.borrowTakerFeeRatio, marketConfig.feeConfig.borrowTakerFeeRatio);
         assertEq(res.market.config().feeConfig.borrowMakerFeeRatio, marketConfig.feeConfig.borrowMakerFeeRatio);
         assertEq(res.market.config().feeConfig.lendTakerFeeRatio, marketConfig.feeConfig.lendTakerFeeRatio);
@@ -168,7 +168,7 @@ contract MarketTest is Test {
         res.debt.approve(address(res.market), debtAmt);
         res.market.mint(sender, debtAmt);
 
-        uint256 fee = (res.market.issueGtFeeRatio() * debtAmt) / Constants.DECIMAL_BASE;
+        uint256 fee = (res.market.mintGtFeeRatio() * debtAmt) / Constants.DECIMAL_BASE;
         uint256 collateralAmt = 1e18;
         res.collateral.mint(sender, collateralAmt);
         res.collateral.approve(address(res.gt), collateralAmt);
@@ -204,7 +204,7 @@ contract MarketTest is Test {
         (uint256 gtId, uint128 ftOutAmt) = res.market.issueFt(sender, debtAmt, abi.encode(collateralAmt));
 
         uint128 debtAmt2 = debtAmt / 2;
-        uint256 fee = (res.market.issueGtFeeRatio() * debtAmt2) / Constants.DECIMAL_BASE;
+        uint256 fee = (res.market.mintGtFeeRatio() * debtAmt2) / Constants.DECIMAL_BASE;
         vm.expectEmit();
         emit MarketEvents.IssueFtByExistedGt(sender, sender, gtId, debtAmt2, uint128(debtAmt2 - fee), uint128(fee));
         uint256 ftOutAmt2 = res.market.issueFtByExistedGt(sender, debtAmt2, gtId);
@@ -238,42 +238,38 @@ contract MarketTest is Test {
     }
 
     function testLeverage() public {
-        uint128 debtAmt = 1000e8;
+        uint128 xtAmt = 1000e8;
         uint256 collateralAmt = 1e18;
         vm.startPrank(deployer);
-        res.debt.mint(deployer, debtAmt);
-        res.debt.approve(address(res.market), debtAmt);
-        res.market.mint(deployer, debtAmt);
-        res.xt.transfer(sender, debtAmt);
+        res.debt.mint(deployer, xtAmt);
+        res.debt.approve(address(res.market), xtAmt);
+        res.market.mint(deployer, xtAmt);
+        res.xt.transfer(sender, xtAmt);
         vm.stopPrank();
 
         vm.startPrank(sender);
         MockFlashLoanReceiver receiver = new MockFlashLoanReceiver(res.market);
-        res.xt.approve(address(receiver), debtAmt);
+        res.xt.approve(address(receiver), xtAmt);
 
         res.collateral.mint(address(receiver), collateralAmt);
 
+        uint256 debtAmt = xtAmt * Constants.DECIMAL_BASE / (Constants.DECIMAL_BASE - res.market.mintGtFeeRatio());
+
         vm.expectEmit();
-        emit MarketEvents.MintGt(
-            address(receiver),
-            sender,
-            1,
-            uint128(debtAmt * Constants.DECIMAL_BASE / (Constants.DECIMAL_BASE - res.market.issueGtFeeRatio())),
-            abi.encode(collateralAmt)
+        emit MarketEvents.LeverageByXt(
+            address(receiver), sender, 1, uint128(debtAmt), xtAmt, uint128(debtAmt - xtAmt), abi.encode(collateralAmt)
         );
-        receiver.leverageByXt(debtAmt, abi.encode(sender, collateralAmt));
+        receiver.leverageByXt(xtAmt, abi.encode(sender, collateralAmt));
 
         assertEq(res.debt.balanceOf(sender), 0);
         assertEq(res.debt.balanceOf(address(res.market)), 0);
-        assertEq(res.debt.balanceOf(address(receiver)), debtAmt);
+        assertEq(res.debt.balanceOf(address(receiver)), xtAmt);
         assertEq(res.xt.balanceOf(sender), 0);
 
         (address owner, uint128 dAmt,, bytes memory collateralData) = res.gt.loanInfo(1);
         assertEq(owner, sender);
 
-        assertEq(
-            dAmt, uint128(debtAmt * Constants.DECIMAL_BASE / (Constants.DECIMAL_BASE - res.market.issueGtFeeRatio()))
-        );
+        assertEq(dAmt, uint128(debtAmt));
 
         assertEq(abi.decode(collateralData, (uint256)), collateralAmt);
 
@@ -348,9 +344,8 @@ contract MarketTest is Test {
 
         res.xt.approve(address(receiver), debtAmt);
         receiver.leverageByXt(debtAmt, abi.encode(alice, collateralAmt));
-        uint128 leverageFee = uint128(
-            debtAmt * Constants.DECIMAL_BASE / (Constants.DECIMAL_BASE - res.market.issueGtFeeRatio())
-        ) - debtAmt;
+        uint128 leverageFee =
+            uint128(debtAmt * Constants.DECIMAL_BASE / (Constants.DECIMAL_BASE - res.market.mintGtFeeRatio())) - debtAmt;
         vm.stopPrank();
 
         vm.warp(marketConfig.maturity + Constants.LIQUIDATION_WINDOW);
@@ -403,7 +398,7 @@ contract MarketTest is Test {
         vm.assume(issueAmount <= type(uint64).max);
 
         uint128 debt =
-            uint128((issueAmount * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - res.market.issueGtFeeRatio()));
+            uint128((issueAmount * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - res.market.mintGtFeeRatio()));
 
         vm.startPrank(sender);
 

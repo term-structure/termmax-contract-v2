@@ -3,7 +3,7 @@
   "marketConfig": {
     "maturity": "1827683552",
     "redeemFeeRatio": "0",
-    "issueGtFeeRatio": "18524706",
+    "mintGtFeeRatio": "18524706",
     "issueFtFeeRef": "18725918",
     "lendTakerFeeRatio": "13151966",
     "borrowTakerFeeRatio": "3586502",

@@ -62,9 +62,9 @@ contract TermMaxMarket is
         _disableInitializers();
     }
 
-    function issueGtFeeRatio() public view override returns (uint256) {
+    function mintGtFeeRatio() public view override returns (uint256) {
         uint256 daysToMaturity = _daysToMaturity(_config.maturity);
-        return (daysToMaturity * uint256(_config.feeConfig.issueGtFeeRatio) * uint256(_config.feeConfig.issueFtFeeRef))
+        return (daysToMaturity * uint256(_config.feeConfig.mintGtFeeRatio) * uint256(_config.feeConfig.issueFtFeeRef))
             / (Constants.DAYS_IN_YEAR * Constants.DECIMAL_BASE + uint256(_config.feeConfig.issueFtFeeRef) * daysToMaturity);
     }
 
@@ -159,7 +159,7 @@ contract TermMaxMarket is
         if (
             fee.borrowTakerFeeRatio >= Constants.MAX_FEE_RATIO || fee.borrowMakerFeeRatio >= Constants.MAX_FEE_RATIO
                 || fee.lendTakerFeeRatio >= Constants.MAX_FEE_RATIO || fee.lendMakerFeeRatio >= Constants.MAX_FEE_RATIO
-                || fee.issueGtFeeRatio >= Constants.MAX_FEE_RATIO || fee.issueFtFeeRef > Constants.DECIMAL_BASE
+                || fee.mintGtFeeRatio >= Constants.MAX_FEE_RATIO || fee.issueFtFeeRef > Constants.DECIMAL_BASE
         ) revert FeeTooHigh();
     }
 
@@ -222,7 +222,7 @@ contract TermMaxMarket is
         bytes memory collateralData =
             IFlashLoanReceiver(loanReceiver).executeOperation(gtReceiver, debtToken, xtAmt, callbackData);
 
-        uint128 debt = ((xtAmt * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - issueGtFeeRatio())).toUint128();
+        uint128 debt = ((xtAmt * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - mintGtFeeRatio())).toUint128();
 
         MarketConfig memory mConfig = _config;
         uint128 leverageFee = debt - xtAmt;
@@ -232,7 +232,7 @@ contract TermMaxMarket is
         gtId = gt.mint(loanReceiver, gtReceiver, debt, collateralData);
 
         xt.burn(xtAmt);
-        emit MintGt(loanReceiver, gtReceiver, gtId, debt, collateralData);
+        emit LeverageByXt(loanReceiver, gtReceiver, gtId, debt, xtAmt, leverageFee, collateralData);
     }
 
     /**
@@ -256,7 +256,7 @@ contract TermMaxMarket is
         gtId = gt.mint(caller, recipient, debt, collateralData);
 
         MarketConfig memory mConfig = _config;
-        uint128 issueFee = ((debt * issueGtFeeRatio()) / Constants.DECIMAL_BASE).toUint128();
+        uint128 issueFee = ((debt * mintGtFeeRatio()) / Constants.DECIMAL_BASE).toUint128();
         // Mint ft amount = debt amount, send issueFee to treasurer and other to caller
         ft.mint(mConfig.treasurer, issueFee);
         ftOutAmt = debt - issueFee;
@@ -285,7 +285,7 @@ contract TermMaxMarket is
         gt.augmentDebt(caller, gtId, debt);
 
         MarketConfig memory mConfig = _config;
-        uint128 issueFee = ((debt * issueGtFeeRatio()) / Constants.DECIMAL_BASE).toUint128();
+        uint128 issueFee = ((debt * mintGtFeeRatio()) / Constants.DECIMAL_BASE).toUint128();
         // Mint ft amount = debt amount, send issueFee to treasurer and other to caller
         ft.mint(mConfig.treasurer, issueFee);
         ftOutAmt = debt - issueFee;

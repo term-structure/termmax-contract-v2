@@ -315,9 +315,8 @@ contract TermMaxRouter is
         IERC20(collateralAddr).safeTransferFrom(msg.sender, address(this), collInAmt);
         IERC20(collateralAddr).safeIncreaseAllowance(address(gt), collInAmt);
 
-        uint256 issueGtFeeRatio = market.issueGtFeeRatio();
-        uint128 debtAmt =
-            ((borrowAmt * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - issueGtFeeRatio)).toUint128();
+        uint256 mintGtFeeRatio = market.mintGtFeeRatio();
+        uint128 debtAmt = ((borrowAmt * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - mintGtFeeRatio)).toUint128();
 
         (uint256 gtId, uint128 ftOutAmt) = market.issueFt(address(this), debtAmt, _encodeAmount(collInAmt));
         borrowAmt = borrowAmt.min(ftOutAmt);
@@ -343,9 +342,8 @@ contract TermMaxRouter is
             revert GtNotOwnedBySender();
         }
 
-        uint256 issueGtFeeRatio = market.issueGtFeeRatio();
-        uint128 debtAmt =
-            ((borrowAmt * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - issueGtFeeRatio)).toUint128();
+        uint256 mintGtFeeRatio = market.mintGtFeeRatio();
+        uint128 debtAmt = ((borrowAmt * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - mintGtFeeRatio)).toUint128();
 
         uint256 ftOutAmt = market.issueFtByExistedGt(address(this), debtAmt, gtId);
         borrowAmt = borrowAmt.min(ftOutAmt);
