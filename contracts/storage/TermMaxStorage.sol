@@ -31,7 +31,7 @@ struct FeeConfig {
     uint32 borrowMakerFeeRatio;
     /// @notice The fee ratio when issuing GT tokens by collateral
     ///         i.e. 0.01e8 means 1%
-    uint32 issueGtFeeRatio;
+    uint32 mintGtFeeRatio;
     /// @notice The fee ref when issuing FT tokens by collateral
     ///         i.e. 0.01e8 means 1%
     uint32 issueFtFeeRef;

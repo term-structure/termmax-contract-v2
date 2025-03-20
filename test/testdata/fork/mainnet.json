@@ -16,7 +16,7 @@
     },
     "feeConfig": {
       "redeemFeeRatio": "0",
-      "issueGtFeeRatio": "1000000",
+      "mintGtFeeRatio": "1000000",
       "issueFtFeeRef": "2000000",
       "lendTakerFeeRatio": "1000000",
       "borrowTakerFeeRatio": "2000000",
