@@ -36,6 +36,7 @@ import {KyberswapV2Adapter} from "contracts/router/swapAdapters/KyberswapV2Adapt
 import {OdosV2Adapter} from "contracts/router/swapAdapters/OdosV2Adapter.sol";
 import {PendleSwapV3Adapter} from "contracts/router/swapAdapters/PendleSwapV3Adapter.sol";
 import {UniswapV3Adapter} from "contracts/router/swapAdapters/UniswapV3Adapter.sol";
+import {MorphoVaultAdapter} from "contracts/router/swapAdapters/MorphoVaultAdapter.sol";
 
 contract DeployBase is Script {
     bytes32 constant GT_ERC20 = keccak256("GearingTokenWithERC20");
@@ -72,7 +73,8 @@ contract DeployBase is Script {
             OracleAggregator oracleAggregator,
             TermMaxRouter router,
             SwapAdapter swapAdapter,
-            Faucet faucet
+            Faucet faucet,
+            MarketViewer marketViewer
         )
     {
         // deploy factory
@@ -93,13 +95,17 @@ contract DeployBase is Script {
 
         // deploy faucet
         faucet = new Faucet(adminAddr);
+
+        // deploy market viewer
+        marketViewer = deployMarketViewer();
     }
 
     function deployCoreMainnet(
         address adminAddr,
         address uniswapV3Router,
         address odosV2Router,
-        address pendleSwapV3Router
+        address pendleSwapV3Router,
+        uint256 oracleTimelock
     )
         public
         returns (
@@ -107,9 +113,11 @@ contract DeployBase is Script {
             VaultFactory vaultFactory,
             OracleAggregator oracleAggregator,
             TermMaxRouter router,
+            MarketViewer marketViewer,
             UniswapV3Adapter uniswapV3Adapter,
             OdosV2Adapter odosV2Adapter,
-            PendleSwapV3Adapter pendleSwapV3Adapter
+            PendleSwapV3Adapter pendleSwapV3Adapter,
+            MorphoVaultAdapter morphoVaultAdapter
         )
     {
         // deploy factory
@@ -119,19 +127,24 @@ contract DeployBase is Script {
         vaultFactory = deployVaultFactory();
 
         // deploy oracle aggregator
-        oracleAggregator = deployOracleAggregator(adminAddr, 0);
+        oracleAggregator = deployOracleAggregator(adminAddr, oracleTimelock);
 
         // deploy router
         router = deployRouter(adminAddr);
+
+        // deploy market viewer
+        marketViewer = deployMarketViewer();
 
         // deploy and whitelist swap adapter
         uniswapV3Adapter = new UniswapV3Adapter(address(uniswapV3Router));
         odosV2Adapter = new OdosV2Adapter(odosV2Router);
         pendleSwapV3Adapter = new PendleSwapV3Adapter(address(pendleSwapV3Router));
+        morphoVaultAdapter = new MorphoVaultAdapter();
 
         router.setAdapterWhitelist(address(uniswapV3Adapter), true);
         router.setAdapterWhitelist(address(odosV2Adapter), true);
         router.setAdapterWhitelist(address(pendleSwapV3Adapter), true);
+        router.setAdapterWhitelist(address(morphoVaultAdapter), true);
     }
 
     function deployMarkets(

@@ -21,6 +21,11 @@ import {Faucet} from "contracts/test/testnet/Faucet.sol";
 import {DeployBase} from "./DeployBase.s.sol";
 import {IOracle} from "contracts/oracle/IOracle.sol";
 import {VaultFactory, IVaultFactory} from "contracts/factory/VaultFactory.sol";
+import {KyberswapV2Adapter} from "contracts/router/swapAdapters/KyberswapV2Adapter.sol";
+import {OdosV2Adapter} from "contracts/router/swapAdapters/OdosV2Adapter.sol";
+import {PendleSwapV3Adapter} from "contracts/router/swapAdapters/PendleSwapV3Adapter.sol";
+import {UniswapV3Adapter} from "contracts/router/swapAdapters/UniswapV3Adapter.sol";
+import {MorphoVaultAdapter} from "contracts/router/swapAdapters/MorphoVaultAdapter.sol";
 
 contract DeployCore is DeployBase {
     // Network-specific config loaded from environment variables
@@ -28,6 +33,22 @@ contract DeployCore is DeployBase {
     uint256 deployerPrivateKey;
     address deployerAddr;
     address adminAddr;
+    address uniswapV3RouterAddr;
+    address odosV2RouterAddr;
+    address pendleSwapV3RouterAddr;
+    uint256 oracleTimelock;
+
+    ITermMaxFactory factory;
+    IVaultFactory vaultFactory;
+    IOracle oracleAggregator;
+    ITermMaxRouter router;
+    MarketViewer marketViewer;
+    UniswapV3Adapter uniswapV3Adapter;
+    OdosV2Adapter odosV2Adapter;
+    PendleSwapV3Adapter pendleSwapV3Adapter;
+    MorphoVaultAdapter morphoVaultAdapter;
+    SwapAdapter swapAdapter;
+    Faucet faucet;
 
     function setUp() public {
         // Load network from environment variable
@@ -41,6 +62,20 @@ contract DeployCore is DeployBase {
         deployerPrivateKey = vm.envUint(privateKeyVar);
         deployerAddr = vm.addr(deployerPrivateKey);
         adminAddr = vm.envAddress(adminVar);
+
+        if (
+            keccak256(abi.encodePacked(network)) == keccak256(abi.encodePacked("eth-mainnet"))
+                || keccak256(abi.encodePacked(network)) == keccak256(abi.encodePacked("arb-mainnet"))
+        ) {
+            string memory uniswapV3RouterVar = string.concat(networkUpper, "_UNISWAP_V3_ROUTER_ADDRESS");
+            string memory odosV2RouterVar = string.concat(networkUpper, "_ODOS_V2_ROUTER_ADDRESS");
+            string memory pendleSwapV3RouterVar = string.concat(networkUpper, "_PENDLE_SWAP_V3_ROUTER_ADDRESS");
+            string memory oracleTimelockVar = string.concat(networkUpper, "_ORACLE_TIMELock");
+            uniswapV3RouterAddr = vm.envAddress(uniswapV3RouterVar);
+            odosV2RouterAddr = vm.envAddress(odosV2RouterVar);
+            pendleSwapV3RouterAddr = vm.envAddress(pendleSwapV3RouterVar);
+            oracleTimelock = vm.envUint(oracleTimelockVar);
+        }
     }
 
     function run() public {
@@ -51,15 +86,26 @@ contract DeployCore is DeployBase {
         uint256 currentTimestamp = block.timestamp;
 
         vm.startBroadcast(deployerPrivateKey);
-        (
-            ITermMaxFactory factory,
-            IVaultFactory vaultFactory,
-            IOracle oracleAggregator,
-            ITermMaxRouter router,
-            SwapAdapter swapAdapter,
-            Faucet faucet
-        ) = deployCore(adminAddr);
-        MarketViewer marketViewer = deployMarketViewer();
+        if (
+            keccak256(abi.encodePacked(network)) == keccak256(abi.encodePacked("eth-mainnet"))
+                || keccak256(abi.encodePacked(network)) == keccak256(abi.encodePacked("arb-mainnet"))
+        ) {
+            (
+                factory,
+                vaultFactory,
+                oracleAggregator,
+                router,
+                marketViewer,
+                uniswapV3Adapter,
+                odosV2Adapter,
+                pendleSwapV3Adapter,
+                morphoVaultAdapter
+            ) = deployCoreMainnet(
+                adminAddr, uniswapV3RouterAddr, odosV2RouterAddr, pendleSwapV3RouterAddr, oracleTimelock
+            );
+        } else {
+            (factory, vaultFactory, oracleAggregator, router, swapAdapter, faucet, marketViewer) = deployCore(adminAddr);
+        }
         vm.stopBroadcast();
 
         console.log("===== Git Info =====");
