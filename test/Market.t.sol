@@ -258,7 +258,7 @@ contract MarketTest is Test {
             address(receiver),
             sender,
             1,
-            debtAmt + uint128(debtAmt * res.market.issueGtFeeRatio() / Constants.DECIMAL_BASE),
+            uint128(debtAmt * Constants.DECIMAL_BASE / (Constants.DECIMAL_BASE - res.market.issueGtFeeRatio())),
             abi.encode(collateralAmt)
         );
         receiver.leverageByXt(debtAmt, abi.encode(sender, collateralAmt));
@@ -271,7 +271,9 @@ contract MarketTest is Test {
         (address owner, uint128 dAmt,, bytes memory collateralData) = res.gt.loanInfo(1);
         assertEq(owner, sender);
 
-        assertEq(dAmt, debtAmt + uint128(debtAmt * res.market.issueGtFeeRatio() / Constants.DECIMAL_BASE));
+        assertEq(
+            dAmt, uint128(debtAmt * Constants.DECIMAL_BASE / (Constants.DECIMAL_BASE - res.market.issueGtFeeRatio()))
+        );
 
         assertEq(abi.decode(collateralData, (uint256)), collateralAmt);
 
@@ -346,7 +348,9 @@ contract MarketTest is Test {
 
         res.xt.approve(address(receiver), debtAmt);
         receiver.leverageByXt(debtAmt, abi.encode(alice, collateralAmt));
-        uint128 leverageFee = uint128(debtAmt * res.market.issueGtFeeRatio() / Constants.DECIMAL_BASE);
+        uint128 leverageFee = uint128(
+            debtAmt * Constants.DECIMAL_BASE / (Constants.DECIMAL_BASE - res.market.issueGtFeeRatio())
+        ) - debtAmt;
         vm.stopPrank();
 
         vm.warp(marketConfig.maturity + Constants.LIQUIDATION_WINDOW);

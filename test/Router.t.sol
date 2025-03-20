@@ -235,7 +235,7 @@ contract RouterTest is Test {
         (address owner, uint128 debtAmt,, bytes memory collateralData) = res.gt.loanInfo(gtId);
         assertEq(owner, sender);
         assertEq(minCollAmt, abi.decode(collateralData, (uint256)));
-        assertEq(netXtOut + netXtOut * res.market.issueGtFeeRatio() / Constants.DECIMAL_BASE, debtAmt);
+        assertEq(netXtOut * Constants.DECIMAL_BASE / (Constants.DECIMAL_BASE - res.market.issueGtFeeRatio()), debtAmt);
         vm.stopPrank();
     }
 
@@ -260,7 +260,9 @@ contract RouterTest is Test {
         (address owner, uint128 debtAmt,, bytes memory collateralData) = res.gt.loanInfo(gtId);
         assertEq(owner, sender);
         assertEq(minCollAmt, abi.decode(collateralData, (uint256)));
-        assertEq(xtAmt + uint128(xtAmt * res.market.issueGtFeeRatio() / Constants.DECIMAL_BASE), debtAmt);
+        assertEq(
+            uint128(xtAmt * Constants.DECIMAL_BASE / (Constants.DECIMAL_BASE - res.market.issueGtFeeRatio())), debtAmt
+        );
         vm.stopPrank();
     }
 
@@ -285,7 +287,9 @@ contract RouterTest is Test {
         (address owner, uint128 debtAmt,, bytes memory collateralData) = res.gt.loanInfo(gtId);
         assertEq(owner, sender);
         assertEq(minCollAmt + collateralAmt, abi.decode(collateralData, (uint256)));
-        assertEq(xtAmt + uint128(xtAmt * res.market.issueGtFeeRatio() / Constants.DECIMAL_BASE), debtAmt);
+        assertEq(
+            uint128(xtAmt * Constants.DECIMAL_BASE / (Constants.DECIMAL_BASE - res.market.issueGtFeeRatio())), debtAmt
+        );
         vm.stopPrank();
     }
 
@@ -297,7 +301,7 @@ contract RouterTest is Test {
         uint128 maxLtv = 0.1e2;
         uint256 minCollAmt = 1e18;
 
-        uint256 ltv = (xtAmt + xtAmt * res.market.issueGtFeeRatio() / Constants.DECIMAL_BASE) / 2000;
+        uint256 ltv = (xtAmt * Constants.DECIMAL_BASE / (Constants.DECIMAL_BASE - res.market.issueGtFeeRatio())) / 2000;
 
         deal(address(res.xt), sender, xtAmt);
 
