@@ -222,11 +222,11 @@ contract TermMaxMarket is
         bytes memory collateralData =
             IFlashLoanReceiver(loanReceiver).executeOperation(gtReceiver, debtToken, xtAmt, callbackData);
 
-        MarketConfig memory mConfig = _config;
-        uint128 leverageFee = ((xtAmt * issueGtFeeRatio()) / Constants.DECIMAL_BASE).toUint128();
-        ft.mint(mConfig.treasurer, leverageFee);
+        uint128 debt = ((xtAmt * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - issueGtFeeRatio())).toUint128();
 
-        uint128 debt = xtAmt + leverageFee;
+        MarketConfig memory mConfig = _config;
+        uint128 leverageFee = debt - xtAmt;
+        ft.mint(mConfig.treasurer, leverageFee);
 
         // Mint GT
         gtId = gt.mint(loanReceiver, gtReceiver, debt, collateralData);
