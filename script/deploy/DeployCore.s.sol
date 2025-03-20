@@ -70,7 +70,7 @@ contract DeployCore is DeployBase {
             string memory uniswapV3RouterVar = string.concat(networkUpper, "_UNISWAP_V3_ROUTER_ADDRESS");
             string memory odosV2RouterVar = string.concat(networkUpper, "_ODOS_V2_ROUTER_ADDRESS");
             string memory pendleSwapV3RouterVar = string.concat(networkUpper, "_PENDLE_SWAP_V3_ROUTER_ADDRESS");
-            string memory oracleTimelockVar = string.concat(networkUpper, "_ORACLE_TIMELock");
+            string memory oracleTimelockVar = string.concat(networkUpper, "_ORACLE_TIMELOCK");
             uniswapV3RouterAddr = vm.envAddress(uniswapV3RouterVar);
             odosV2RouterAddr = vm.envAddress(odosV2RouterVar);
             pendleSwapV3RouterAddr = vm.envAddress(pendleSwapV3RouterVar);
@@ -174,12 +174,30 @@ contract DeployCore is DeployBase {
                 '    "router": "',
                 vm.toString(address(router)),
                 '",\n',
-                '    "swapAdapter": "',
-                vm.toString(address(swapAdapter)),
-                '",\n',
-                '    "faucet": "',
-                vm.toString(address(faucet)),
-                '",\n',
+                '    "swapAdapter": ',
+                keccak256(abi.encodePacked(network)) == keccak256(abi.encodePacked("eth-mainnet"))
+                    || keccak256(abi.encodePacked(network)) == keccak256(abi.encodePacked("arb-mainnet"))
+                    ? string.concat(
+                        "{\n",
+                        '      "uniswapV3Adapter": "',
+                        vm.toString(address(uniswapV3Adapter)),
+                        '",\n',
+                        '      "odosV2Adapter": "',
+                        vm.toString(address(odosV2Adapter)),
+                        '",\n',
+                        '      "pendleSwapV3Adapter": "',
+                        vm.toString(address(pendleSwapV3Adapter)),
+                        '",\n',
+                        '      "morphoVaultAdapter": "',
+                        vm.toString(address(morphoVaultAdapter)),
+                        '"\n',
+                        "    },\n"
+                    )
+                    : string.concat('"', vm.toString(address(swapAdapter)), '",\n'),
+                keccak256(abi.encodePacked(network)) != keccak256(abi.encodePacked("eth-mainnet"))
+                    && keccak256(abi.encodePacked(network)) != keccak256(abi.encodePacked("arb-mainnet"))
+                    ? string.concat('    "faucet": "', vm.toString(address(faucet)), '",\n')
+                    : "",
                 '    "marketViewer": "',
                 vm.toString(address(marketViewer)),
                 '"\n',

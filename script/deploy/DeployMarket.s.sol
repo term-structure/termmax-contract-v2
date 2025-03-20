@@ -15,6 +15,7 @@ import {MarketConfig} from "contracts/storage/TermMaxStorage.sol";
 import {IMintableERC20} from "contracts/tokens/IMintableERC20.sol";
 import {IGearingToken} from "contracts/tokens/IGearingToken.sol";
 import {IOracle} from "contracts/oracle/IOracle.sol";
+import {OracleAggregator} from "contracts/oracle/OracleAggregator.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {MockSwapAdapter} from "contracts/test/MockSwapAdapter.sol";
@@ -22,6 +23,7 @@ import {JsonLoader} from "../utils/JsonLoader.sol";
 import {Faucet} from "contracts/test/testnet/Faucet.sol";
 import {FaucetERC20} from "contracts/test/testnet/FaucetERC20.sol";
 import {DeployBase} from "./DeployBase.s.sol";
+import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 
 contract DeloyMarket is DeployBase {
     // Network-specific config loaded from environment variables
@@ -29,12 +31,17 @@ contract DeloyMarket is DeployBase {
     uint256 deployerPrivateKey;
     address deployerAddr;
     address adminAddr;
+    address treasurerAddr;
+    uint256 collateralCapForGt;
     address priceFeedOperatorAddr;
 
     address factoryAddr;
     address oracleAddr;
     address routerAddr;
     address faucetAddr;
+    TermMaxMarket[] markets;
+    JsonLoader.Config[] configs;
+    Faucet faucet;
 
     function setUp() public {
         // Load network from environment variable
@@ -44,12 +51,19 @@ contract DeloyMarket is DeployBase {
         // Load network-specific configuration
         string memory privateKeyVar = string.concat(networkUpper, "_DEPLOYER_PRIVATE_KEY");
         string memory adminVar = string.concat(networkUpper, "_ADMIN_ADDRESS");
-        string memory priceFeedOperatorVar = string.concat(networkUpper, "_PRICE_FEED_OPERATOR_ADDRESS");
+        string memory treasurerVar = string.concat(networkUpper, "_TREASURER_ADDRESS");
 
         deployerPrivateKey = vm.envUint(privateKeyVar);
         deployerAddr = vm.addr(deployerPrivateKey);
         adminAddr = vm.envAddress(adminVar);
-        priceFeedOperatorAddr = vm.envAddress(priceFeedOperatorVar);
+        treasurerAddr = vm.envAddress(treasurerVar);
+        if (
+            keccak256(abi.encodePacked(network)) != keccak256(abi.encodePacked("eth-mainnet"))
+                && keccak256(abi.encodePacked(network)) != keccak256(abi.encodePacked("arb-mainnet"))
+        ) {
+            string memory priceFeedOperatorVar = string.concat(networkUpper, "_PRICE_FEED_OPERATOR_ADDRESS");
+            priceFeedOperatorAddr = vm.envAddress(priceFeedOperatorVar);
+        }
     }
 
     function loadAddressConfig() internal {
@@ -60,13 +74,12 @@ contract DeloyMarket is DeployBase {
         factoryAddr = vm.parseJsonAddress(json, ".contracts.factory");
         oracleAddr = vm.parseJsonAddress(json, ".contracts.oracleAggregator");
         routerAddr = vm.parseJsonAddress(json, ".contracts.router");
-        faucetAddr = vm.parseJsonAddress(json, ".contracts.faucet");
-
-        console.log("Loaded addresses from deployment file:");
-        console.log("  Factory:", factoryAddr);
-        console.log("  Oracle:", oracleAddr);
-        console.log("  Router:", routerAddr);
-        console.log("  Faucet:", faucetAddr);
+        if (
+            keccak256(abi.encodePacked(network)) != keccak256(abi.encodePacked("eth-mainnet"))
+                && keccak256(abi.encodePacked(network)) != keccak256(abi.encodePacked("arb-mainnet"))
+        ) {
+            faucetAddr = vm.parseJsonAddress(json, ".contracts.faucet");
+        }
     }
 
     function run() public {
@@ -74,14 +87,20 @@ contract DeloyMarket is DeployBase {
 
         uint256 currentBlockNum = block.number;
         uint256 currentTimestamp = block.timestamp;
-        Faucet faucet = Faucet(faucetAddr);
+        faucet = Faucet(faucetAddr);
         string memory deployDataPath = string.concat(vm.projectRoot(), "/script/deploy/deploydata/", network, ".json");
 
         vm.startBroadcast(deployerPrivateKey);
-        (TermMaxMarket[] memory markets, JsonLoader.Config[] memory configs) =
-            deployMarkets(factoryAddr, oracleAddr, faucetAddr, deployDataPath, adminAddr, priceFeedOperatorAddr);
-
-        console.log("Faucet token number:", faucet.tokenNum());
+        if (
+            keccak256(abi.encodePacked(network)) == keccak256(abi.encodePacked("eth-mainnet"))
+                || keccak256(abi.encodePacked(network)) == keccak256(abi.encodePacked("arb-mainnet"))
+        ) {
+            (markets, configs) = deployMarketsMainnet(factoryAddr, oracleAddr, deployDataPath, adminAddr, treasurerAddr);
+        } else {
+            (markets, configs) = deployMarkets(
+                factoryAddr, oracleAddr, faucetAddr, deployDataPath, adminAddr, treasurerAddr, priceFeedOperatorAddr
+            );
+        }
 
         vm.stopBroadcast();
 
@@ -98,32 +117,36 @@ contract DeloyMarket is DeployBase {
 
         console.log("===== Address Info =====");
         console.log("Deplyer:", deployerAddr);
-        console.log("Price Feed Operator:", priceFeedOperatorAddr);
+        if (
+            keccak256(abi.encodePacked(network)) != keccak256(abi.encodePacked("eth-mainnet"))
+                && keccak256(abi.encodePacked(network)) != keccak256(abi.encodePacked("arb-mainnet"))
+        ) {
+            console.log("Price Feed Operator:", priceFeedOperatorAddr);
+        }
         console.log("Deployed at block number:", currentBlockNum);
         console.log("");
 
         for (uint256 i = 0; i < markets.length; i++) {
             console.log("===== Market Info - %d =====", i);
-            printMarketConfig(faucet, markets[i], configs[i].salt);
+            printMarketConfig(markets[i], configs[i].salt);
             console.log("");
         }
     }
 
-    function printMarketConfig(Faucet faucet, TermMaxMarket market, uint256 salt) public {
+    function printMarketConfig(TermMaxMarket market, uint256 salt) public {
         MarketConfig memory marketConfig = market.config();
         (IMintableERC20 ft, IMintableERC20 xt, IGearingToken gt, address collateralAddr, IERC20 underlying) =
             market.tokens();
 
-        Faucet.TokenConfig memory collateralConfig = faucet.getTokenConfig(faucet.getTokenId(collateralAddr));
-        Faucet.TokenConfig memory underlyingConfig = faucet.getTokenConfig(faucet.getTokenId(address(underlying)));
+        OracleAggregator oracle = OracleAggregator(oracleAddr);
+        (AggregatorV3Interface collateralAggregator,,) = oracle.oracles(collateralAddr);
+        (AggregatorV3Interface underlyingAggregator,,) = oracle.oracles(address(underlying));
 
         console.log("Market deployed at:", address(market));
-        console.log("Collateral (%s) deployed at: %s", IERC20Metadata(collateralAddr).symbol(), address(collateralAddr));
-        console.log(
-            "Underlying (%s) deployed at: %s", IERC20Metadata(address(underlying)).symbol(), address(underlying)
-        );
-        console.log("Collateral price feed deployed at:", address(collateralConfig.priceFeedAddr));
-        console.log("Underlying price feed deployed at:", address(underlyingConfig.priceFeedAddr));
+        console.log("Collateral (%s) address: %s", IERC20Metadata(collateralAddr).symbol(), address(collateralAddr));
+        console.log("Underlying (%s) address: %s", IERC20Metadata(address(underlying)).symbol(), address(underlying));
+        console.log("Collateral price feed address:", address(collateralAggregator));
+        console.log("Underlying price feed address:", address(underlyingAggregator));
 
         console.log("FT deployed at:", address(ft));
         console.log("XT deployed at:", address(xt));
@@ -131,7 +154,7 @@ contract DeloyMarket is DeployBase {
 
         console.log();
 
-        console.log("Treasurer:", marketConfig.treasurer);
+        console.log("Treasurer:", treasurerAddr);
         console.log("Maturity:", marketConfig.maturity);
         console.log("Salt:", salt);
         console.log("Lend Taker Fee Ratio:", marketConfig.feeConfig.lendTakerFeeRatio);
@@ -152,7 +175,16 @@ contract DeloyMarket is DeployBase {
         vm.writeFile(
             marketFilePath,
             _createMarketJson(
-                market, marketConfig, ft, xt, gt, collateralAddr, underlying, collateralConfig, underlyingConfig, salt
+                market,
+                marketConfig,
+                ft,
+                xt,
+                gt,
+                collateralAddr,
+                underlying,
+                address(collateralAggregator),
+                address(underlyingAggregator),
+                salt
             )
         );
         console.log("Market config written to:", marketFilePath);
@@ -183,12 +215,13 @@ contract DeloyMarket is DeployBase {
         IGearingToken gt,
         address collateralAddr,
         IERC20 underlying,
-        Faucet.TokenConfig memory collateralConfig,
-        Faucet.TokenConfig memory underlyingConfig,
+        address collateralPriceFeedAddr,
+        address underlyingPriceFeedAddr,
         uint256 salt
     ) internal view returns (string memory) {
         // Create JSON in parts to avoid stack too deep errors
-        string memory part1 = _createJsonPart1(market, collateralAddr, collateralConfig, underlying, underlyingConfig);
+        string memory part1 =
+            _createJsonPart1(market, collateralAddr, collateralPriceFeedAddr, underlying, underlyingPriceFeedAddr);
 
         string memory part2 = _createJsonPart2(ft, xt, gt, marketConfig, salt);
 
@@ -198,9 +231,9 @@ contract DeloyMarket is DeployBase {
     function _createJsonPart1(
         TermMaxMarket market,
         address collateralAddr,
-        Faucet.TokenConfig memory collateralConfig,
+        address collateralPriceFeedAddr,
         IERC20 underlying,
-        Faucet.TokenConfig memory underlyingConfig
+        address underlyingPriceFeedAddr
     ) internal view returns (string memory) {
         return string(
             abi.encodePacked(
@@ -224,7 +257,7 @@ contract DeloyMarket is DeployBase {
                 IERC20Metadata(collateralAddr).symbol(),
                 '",\n',
                 '    "priceFeed": "',
-                vm.toString(address(collateralConfig.priceFeedAddr)),
+                vm.toString(collateralPriceFeedAddr),
                 '"\n',
                 "  },\n",
                 '  "underlying": {\n',
@@ -235,7 +268,7 @@ contract DeloyMarket is DeployBase {
                 IERC20Metadata(address(underlying)).symbol(),
                 '",\n',
                 '    "priceFeed": "',
-                vm.toString(address(underlyingConfig.priceFeedAddr)),
+                vm.toString(underlyingPriceFeedAddr),
                 '"\n',
                 "  },\n"
             )

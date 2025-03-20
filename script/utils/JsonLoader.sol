@@ -35,6 +35,7 @@ library JsonLoader {
         LoanConfig loanConfig;
         UnderlyingConfig underlyingConfig;
         CollateralConfig collateralConfig;
+        uint256 collateralCapForGt;
     }
 
     Vm constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
@@ -54,15 +55,18 @@ library JsonLoader {
         UnderlyingConfig memory underlyingConfig;
         CollateralConfig memory collateralConfig;
         uint256 salt;
-
+        uint256 collateralCapForGt;
         string memory configPrefix = string.concat(".configs", ".configs_", vm.toString(index));
 
         // read salt
         salt = uint256(vm.parseUint(jsonData.readString(string.concat(configPrefix, ".salt"))));
 
+        // read collateral cap for gt
+        collateralCapForGt =
+            uint256(vm.parseUint(jsonData.readString(string.concat(configPrefix, ".collateralCapForGt"))));
+
         // read market config
         string memory marketConfigPrefix = string.concat(configPrefix, ".marketConfig");
-        marketConfig.treasurer = vm.parseAddress(jsonData.readString(string.concat(marketConfigPrefix, ".treasurer")));
         marketConfig.maturity =
             uint64(vm.parseUint(jsonData.readString(string.concat(marketConfigPrefix, ".maturity"))));
         marketConfig.feeConfig.lendTakerFeeRatio =
@@ -114,6 +118,7 @@ library JsonLoader {
         );
         config.marketSymbol = config.marketName;
         config.salt = salt;
+        config.collateralCapForGt = collateralCapForGt;
 
         config.marketConfig = marketConfig;
         config.loanConfig = loanConfig;

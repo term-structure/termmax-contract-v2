@@ -153,6 +153,7 @@ contract DeployBase is Script {
         address faucetAddr,
         string memory deployDataPath,
         address adminAddr,
+        address treasurerAddr,
         address priceFeedOperatorAddr
     ) public returns (TermMaxMarket[] memory markets, JsonLoader.Config[] memory configs) {
         ITermMaxFactory factory = ITermMaxFactory(factoryAddr);
@@ -231,7 +232,7 @@ contract DeployBase is Script {
             }
 
             MarketConfig memory marketConfig = MarketConfig({
-                treasurer: config.marketConfig.treasurer,
+                treasurer: treasurerAddr,
                 maturity: config.marketConfig.maturity,
                 feeConfig: FeeConfig({
                     lendTakerFeeRatio: config.marketConfig.feeConfig.lendTakerFeeRatio,
@@ -269,13 +270,12 @@ contract DeployBase is Script {
     function deployMarketsMainnet(
         address factoryAddr,
         address oracleAddr,
-        // address routerAddr,
         string memory deployDataPath,
-        address adminAddr
+        address adminAddr,
+        address treasurerAddr
     ) public returns (TermMaxMarket[] memory markets, JsonLoader.Config[] memory configs) {
         ITermMaxFactory factory = ITermMaxFactory(factoryAddr);
         IOracle oracle = IOracle(oracleAddr);
-        // ITermMaxRouter router = ITermMaxRouter(routerAddr);
 
         string memory deployData = vm.readFile(deployDataPath);
 
@@ -287,7 +287,7 @@ contract DeployBase is Script {
             JsonLoader.Config memory config = configs[i];
 
             MarketConfig memory marketConfig = MarketConfig({
-                treasurer: config.marketConfig.treasurer,
+                treasurer: treasurerAddr,
                 maturity: config.marketConfig.maturity,
                 feeConfig: FeeConfig({
                     lendTakerFeeRatio: config.marketConfig.feeConfig.lendTakerFeeRatio,
@@ -312,7 +312,7 @@ contract DeployBase is Script {
                     maxLtv: config.loanConfig.maxLtv,
                     liquidatable: config.loanConfig.liquidatable
                 }),
-                gtInitalParams: abi.encode(type(uint256).max),
+                gtInitalParams: abi.encode(config.collateralCapForGt),
                 tokenName: config.marketName,
                 tokenSymbol: config.marketSymbol
             });
