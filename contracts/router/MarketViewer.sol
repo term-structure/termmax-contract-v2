@@ -57,7 +57,11 @@ contract MarketViewer {
         }
     }
 
-    function getPositionDetails(ITermMaxMarket[] memory market, address owner) external view returns (Position[] memory) {
+    function getPositionDetails(ITermMaxMarket[] memory market, address owner)
+        external
+        view
+        returns (Position[] memory)
+    {
         Position[] memory positions = new Position[](market.length);
         for (uint256 i = 0; i < market.length; ++i) {
             positions[i] = getPositionDetail(market[i], owner);

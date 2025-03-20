@@ -73,8 +73,8 @@ library JsonLoader {
             uint32(vm.parseUint(jsonData.readString(string.concat(marketConfigPrefix, ".borrowTakerFeeRatio"))));
         marketConfig.feeConfig.borrowMakerFeeRatio =
             uint32(vm.parseUint(jsonData.readString(string.concat(marketConfigPrefix, ".borrowMakerFeeRatio"))));
-        marketConfig.feeConfig.issueFtFeeRatio =
-            uint32(vm.parseUint(jsonData.readString(string.concat(marketConfigPrefix, ".issueFtFeeRatio"))));
+        marketConfig.feeConfig.mintGtFeeRatio =
+            uint32(vm.parseUint(jsonData.readString(string.concat(marketConfigPrefix, ".mintGtFeeRatio"))));
         marketConfig.feeConfig.issueFtFeeRef =
             uint32(vm.parseUint(jsonData.readString(string.concat(marketConfigPrefix, ".issueFtFeeRef"))));
 

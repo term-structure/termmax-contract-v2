@@ -138,7 +138,7 @@ contract DeloyMarket is DeployBase {
         console.log("Lend Maker Fee Ratio:", marketConfig.feeConfig.lendMakerFeeRatio);
         console.log("Borrow Taker Fee Ratio:", marketConfig.feeConfig.borrowTakerFeeRatio);
         console.log("Borrow Maker Fee Ratio:", marketConfig.feeConfig.borrowMakerFeeRatio);
-        console.log("Issue FT Fee Ratio:", marketConfig.feeConfig.issueFtFeeRatio);
+        console.log("Mint GT Fee Ratio:", marketConfig.feeConfig.mintGtFeeRatio);
         console.log("Issue FT Fee Ref:", marketConfig.feeConfig.issueFtFeeRef);
 
         // Write market config to JSON file
@@ -285,8 +285,8 @@ contract DeloyMarket is DeployBase {
                 '      "borrowMakerFeeRatio": "',
                 vm.toString(marketConfig.feeConfig.borrowMakerFeeRatio),
                 '",\n',
-                '      "issueFtFeeRatio": "',
-                vm.toString(marketConfig.feeConfig.issueFtFeeRatio),
+                '      "mintGtFeeRatio": "',
+                vm.toString(marketConfig.feeConfig.mintGtFeeRatio),
                 '",\n',
                 '      "issueFtFeeRef": "',
                 vm.toString(marketConfig.feeConfig.issueFtFeeRef),
