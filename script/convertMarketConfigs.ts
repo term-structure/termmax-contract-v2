@@ -42,18 +42,20 @@ const records = parse(csvContent, {
                 case 12: return 'liquidatable';
                 case 13: return 'underlyingTokenAddr';
                 case 14: return 'underlyingPriceFeedAddr';
-                case 15: return 'underlyingName';
-                case 16: return 'underlyingSymbol';
-                case 17: return 'underlyingDecimals';
-                case 18: return 'underlyingInitialPrice';
-                case 19: return 'collateralTokenAddr';
-                case 20: return 'collateralPriceFeedAddr';
-                case 21: return 'collateralName';
-                case 22: return 'collateralSymbol';
-                case 23: return 'collateralDecimals';
-                case 24: return 'collateralInitialPrice';
-                case 25: return 'gtKeyIdentifier';
-                // Skip the note column (26) by not mapping it
+                case 15: return 'underlyingHeartBeat';
+                case 16: return 'underlyingName';
+                case 17: return 'underlyingSymbol';
+                case 18: return 'underlyingDecimals';
+                case 19: return 'underlyingInitialPrice';
+                case 20: return 'collateralTokenAddr';
+                case 21: return 'collateralPriceFeedAddr';
+                case 22: return 'collateralHeartBeat';
+                case 23: return 'collateralName';
+                case 24: return 'collateralSymbol';
+                case 25: return 'collateralDecimals';
+                case 26: return 'collateralInitialPrice';
+                case 27: return 'gtKeyIdentifier';
+                // Skip the note column (28) by not mapping it
                 default: return `column${index}`;
             }
         });
@@ -112,6 +114,7 @@ records.forEach((record: any, index: number) => {
             underlyingConfig: {
                 tokenAddr: record['underlyingTokenAddr'] || '',
                 priceFeedAddr: record['underlyingPriceFeedAddr'] || '',
+                heartBeat: record['underlyingHeartBeat'] || '86400',
                 name: record['underlyingName'] || '',
                 symbol: record['underlyingSymbol'] || '',
                 decimals: record['underlyingDecimals'] || '',
@@ -120,6 +123,7 @@ records.forEach((record: any, index: number) => {
             collateralConfig: {
                 tokenAddr: record['collateralTokenAddr'] || '',
                 priceFeedAddr: record['collateralPriceFeedAddr'] || '',
+                heartBeat: record['collateralHeartBeat'] || '3600',
                 name: record['collateralName'] || '',
                 symbol: record['collateralSymbol'] || '',
                 decimals: record['collateralDecimals'] || '',
@@ -150,7 +154,9 @@ records.forEach((record: any, index: number) => {
             console.log('Price Feed Addresses:');
             console.log(`Underlying Price Feed: ${record['underlyingPriceFeedAddr']}`);
             console.log(`Collateral Price Feed: ${record['collateralPriceFeedAddr']}`);
-
+            console.log('Heartbeat Values:');
+            console.log(`Underlying Heartbeat: ${record['underlyingHeartBeat'] || '86400'} (default: 86400 if not specified)`);
+            console.log(`Collateral Heartbeat: ${record['collateralHeartBeat'] || '3600'} (default: 3600 if not specified)`);
         }
         const collateralCapAmt = BigInt(collateralCapForGt) / (BigInt(10) ** BigInt(parseInt(record['collateralDecimals'])));
         const collateralCapVault = BigInt(collateralCapForGt) * BigInt(parseInt(convertToBaseUnit(record['collateralInitialPrice']))) / (BigInt(10) ** BigInt(parseInt(record['collateralDecimals']))) / BigInt(10 ** 8);

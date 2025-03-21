@@ -142,11 +142,27 @@ contract DeloyMarket is DeployBase {
         (AggregatorV3Interface collateralAggregator,,) = oracle.oracles(collateralAddr);
         (AggregatorV3Interface underlyingAggregator,,) = oracle.oracles(address(underlying));
 
+        // Find matching config to get heartbeat values
+        uint32 collateralHeartbeat = 0;
+        uint32 underlyingHeartbeat = 0;
+        for (uint256 i = 0; i < configs.length; i++) {
+            if (
+                configs[i].collateralConfig.tokenAddr == collateralAddr
+                    && configs[i].underlyingConfig.tokenAddr == address(underlying)
+            ) {
+                collateralHeartbeat = uint32(configs[i].collateralConfig.heartBeat);
+                underlyingHeartbeat = uint32(configs[i].underlyingConfig.heartBeat);
+                break;
+            }
+        }
+
         console.log("Market deployed at:", address(market));
         console.log("Collateral (%s) address: %s", IERC20Metadata(collateralAddr).symbol(), address(collateralAddr));
         console.log("Underlying (%s) address: %s", IERC20Metadata(address(underlying)).symbol(), address(underlying));
         console.log("Collateral price feed address:", address(collateralAggregator));
+        console.log("Collateral heartbeat:", collateralHeartbeat);
         console.log("Underlying price feed address:", address(underlyingAggregator));
+        console.log("Underlying heartbeat:", underlyingHeartbeat);
 
         console.log("FT deployed at:", address(ft));
         console.log("XT deployed at:", address(xt));
@@ -219,9 +235,30 @@ contract DeloyMarket is DeployBase {
         address underlyingPriceFeedAddr,
         uint256 salt
     ) internal view returns (string memory) {
+        // Find matching config to get heartbeat values
+        uint32 collateralHeartbeat = 0;
+        uint32 underlyingHeartbeat = 0;
+        for (uint256 i = 0; i < configs.length; i++) {
+            if (
+                configs[i].collateralConfig.tokenAddr == collateralAddr
+                    && configs[i].underlyingConfig.tokenAddr == address(underlying)
+            ) {
+                collateralHeartbeat = uint32(configs[i].collateralConfig.heartBeat);
+                underlyingHeartbeat = uint32(configs[i].underlyingConfig.heartBeat);
+                break;
+            }
+        }
+
         // Create JSON in parts to avoid stack too deep errors
-        string memory part1 =
-            _createJsonPart1(market, collateralAddr, collateralPriceFeedAddr, underlying, underlyingPriceFeedAddr);
+        string memory part1 = _createJsonPart1(
+            market,
+            collateralAddr,
+            collateralPriceFeedAddr,
+            underlying,
+            underlyingPriceFeedAddr,
+            collateralHeartbeat,
+            underlyingHeartbeat
+        );
 
         string memory part2 = _createJsonPart2(ft, xt, gt, marketConfig, salt);
 
@@ -233,7 +270,9 @@ contract DeloyMarket is DeployBase {
         address collateralAddr,
         address collateralPriceFeedAddr,
         IERC20 underlying,
-        address underlyingPriceFeedAddr
+        address underlyingPriceFeedAddr,
+        uint32 collateralHeartbeat,
+        uint32 underlyingHeartbeat
     ) internal view returns (string memory) {
         return string(
             abi.encodePacked(
@@ -258,6 +297,9 @@ contract DeloyMarket is DeployBase {
                 '",\n',
                 '    "priceFeed": "',
                 vm.toString(collateralPriceFeedAddr),
+                '",\n',
+                '    "heartBeat": "',
+                vm.toString(collateralHeartbeat),
                 '"\n',
                 "  },\n",
                 '  "underlying": {\n',
@@ -269,6 +311,9 @@ contract DeloyMarket is DeployBase {
                 '",\n',
                 '    "priceFeed": "',
                 vm.toString(underlyingPriceFeedAddr),
+                '",\n',
+                '    "heartBeat": "',
+                vm.toString(underlyingHeartbeat),
                 '"\n',
                 "  },\n"
             )

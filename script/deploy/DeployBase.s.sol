@@ -37,6 +37,7 @@ import {OdosV2Adapter} from "contracts/router/swapAdapters/OdosV2Adapter.sol";
 import {PendleSwapV3Adapter} from "contracts/router/swapAdapters/PendleSwapV3Adapter.sol";
 import {UniswapV3Adapter} from "contracts/router/swapAdapters/UniswapV3Adapter.sol";
 import {MorphoVaultAdapter} from "contracts/router/swapAdapters/MorphoVaultAdapter.sol";
+import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 
 contract DeployBase is Script {
     bytes32 constant GT_ERC20 = keccak256("GearingTokenWithERC20");
@@ -195,7 +196,8 @@ contract DeployBase is Script {
                 collateralPriceFeed.transferOwnership(priceFeedOperatorAddr);
 
                 oracle.submitPendingOracle(
-                    address(collateral), IOracle.Oracle(collateralPriceFeed, collateralPriceFeed, 365 days)
+                    address(collateral),
+                    IOracle.Oracle(collateralPriceFeed, collateralPriceFeed, uint32(config.collateralConfig.heartBeat))
                 );
                 oracle.acceptPendingOracle(address(collateral));
             } else {
@@ -223,7 +225,8 @@ contract DeployBase is Script {
                 );
                 underlyingPriceFeed.transferOwnership(priceFeedOperatorAddr);
                 oracle.submitPendingOracle(
-                    address(underlying), IOracle.Oracle(underlyingPriceFeed, underlyingPriceFeed, 365 days)
+                    address(underlying),
+                    IOracle.Oracle(underlyingPriceFeed, underlyingPriceFeed, uint32(config.underlyingConfig.heartBeat))
                 );
                 oracle.acceptPendingOracle(address(underlying));
             } else {
@@ -275,7 +278,7 @@ contract DeployBase is Script {
         address treasurerAddr
     ) public returns (TermMaxMarket[] memory markets, JsonLoader.Config[] memory configs) {
         ITermMaxFactory factory = ITermMaxFactory(factoryAddr);
-        IOracle oracle = IOracle(oracleAddr);
+        OracleAggregator oracle = OracleAggregator(oracleAddr);
 
         string memory deployData = vm.readFile(deployDataPath);
 

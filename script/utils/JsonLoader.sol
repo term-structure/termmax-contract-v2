@@ -10,21 +10,25 @@ library JsonLoader {
 
     struct UnderlyingConfig {
         address tokenAddr;
+        address priceFeedAddr;
         string name;
         string symbol;
         uint8 decimals;
         uint256 mintAmt;
         int256 initialPrice;
+        uint256 heartBeat;
     }
 
     struct CollateralConfig {
         address tokenAddr;
+        address priceFeedAddr;
         string name;
         string symbol;
         uint8 decimals;
         uint256 mintAmt;
         int256 initialPrice;
         string gtKeyIdentifier;
+        uint256 heartBeat;
     }
 
     struct Config {
@@ -92,26 +96,30 @@ library JsonLoader {
         // read underlying config
         string memory underlyingConfigPrefix = string.concat(configPrefix, ".underlyingConfig");
         underlyingConfig.tokenAddr = jsonData.readAddress(string.concat(underlyingConfigPrefix, ".tokenAddr"));
+        underlyingConfig.priceFeedAddr = jsonData.readAddress(string.concat(underlyingConfigPrefix, ".priceFeedAddr"));
         underlyingConfig.name = jsonData.readString(string.concat(underlyingConfigPrefix, ".name"));
         underlyingConfig.symbol = jsonData.readString(string.concat(underlyingConfigPrefix, ".symbol"));
         underlyingConfig.decimals =
             uint8(vm.parseUint(jsonData.readString(string.concat(underlyingConfigPrefix, ".decimals"))));
         underlyingConfig.initialPrice =
             vm.parseInt(jsonData.readString(string.concat(underlyingConfigPrefix, ".initialPrice")));
+        underlyingConfig.heartBeat =
+            uint256(vm.parseUint(jsonData.readString(string.concat(underlyingConfigPrefix, ".heartBeat"))));
 
         // read collateral config
         string memory collateralConfigPrefix = string.concat(configPrefix, ".collateralConfig");
         collateralConfig.tokenAddr = jsonData.readAddress(string.concat(collateralConfigPrefix, ".tokenAddr"));
+        collateralConfig.priceFeedAddr = jsonData.readAddress(string.concat(collateralConfigPrefix, ".priceFeedAddr"));
         collateralConfig.name = jsonData.readString(string.concat(collateralConfigPrefix, ".name"));
         collateralConfig.symbol = jsonData.readString(string.concat(collateralConfigPrefix, ".symbol"));
-        collateralConfig.decimals =
-            uint8(vm.parseUint(jsonData.readString(string.concat(collateralConfigPrefix, ".decimals"))));
         collateralConfig.decimals =
             uint8(vm.parseUint(jsonData.readString(string.concat(collateralConfigPrefix, ".decimals"))));
         collateralConfig.initialPrice =
             vm.parseInt(jsonData.readString(string.concat(collateralConfigPrefix, ".initialPrice")));
         collateralConfig.gtKeyIdentifier =
             jsonData.readString(string.concat(collateralConfigPrefix, ".gtKeyIdentifier"));
+        collateralConfig.heartBeat =
+            uint256(vm.parseUint(jsonData.readString(string.concat(collateralConfigPrefix, ".heartBeat"))));
 
         config.marketName = string.concat(
             collateralConfig.symbol, "/", underlyingConfig.symbol, "-", vm.toString(marketConfig.maturity)
