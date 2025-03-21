@@ -11,7 +11,7 @@
         "borrowTakerFeeRatio": "3000000",
         "borrowMakerFeeRatio": "3000000",
         "mintGtFeeRatio": "1000000",
-        "issueFtFeeRef": "400000"
+        "mintGtFeeRef": "400000"
       },
       "loanConfig": {
         "liquidationLtv": "94000000",
@@ -48,7 +48,7 @@
         "borrowTakerFeeRatio": "3000000",
         "borrowMakerFeeRatio": "3000000",
         "mintGtFeeRatio": "1000000",
-        "issueFtFeeRef": "2000000"
+        "mintGtFeeRef": "2000000"
       },
       "loanConfig": {
         "liquidationLtv": "85000000",
@@ -65,7 +65,7 @@
       },
       "collateralConfig": {
         "tokenAddr": "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0",
-        "priceFeedAddr": "0x0000000000000000000000000000000000000000",
+        "priceFeedAddr": "0x164b276057258d81941e97B0a900D4C7B358bCe0",
         "name": "Wrapped liquid staked Ether 2.0",
         "symbol": "wstETH",
         "decimals": "18",
@@ -85,7 +85,7 @@
         "borrowTakerFeeRatio": "3000000",
         "borrowMakerFeeRatio": "3000000",
         "mintGtFeeRatio": "1000000",
-        "issueFtFeeRef": "2000000"
+        "mintGtFeeRef": "2000000"
       },
       "loanConfig": {
         "liquidationLtv": "90000000",
@@ -122,7 +122,7 @@
         "borrowTakerFeeRatio": "3000000",
         "borrowMakerFeeRatio": "3000000",
         "mintGtFeeRatio": "1000000",
-        "issueFtFeeRef": "2000000"
+        "mintGtFeeRef": "2000000"
       },
       "loanConfig": {
         "liquidationLtv": "90000000",
@@ -139,7 +139,7 @@
       },
       "collateralConfig": {
         "tokenAddr": "0xb7de5dFCb74d25c2f21841fbd6230355C50d9308",
-        "priceFeedAddr": "0x0000000000000000000000000000000000000000",
+        "priceFeedAddr": "0xa045936f495A6a5D43216b39D8e63B88f9b4e362",
         "name": "PT Ethena sUSDE 29MAY2025",
         "symbol": "PT-sUSDE-29MAY2025",
         "decimals": "18",
@@ -159,7 +159,7 @@
         "borrowTakerFeeRatio": "3000000",
         "borrowMakerFeeRatio": "3000000",
         "mintGtFeeRatio": "1000000",
-        "issueFtFeeRef": "2000000"
+        "mintGtFeeRef": "2000000"
       },
       "loanConfig": {
         "liquidationLtv": "80000000",
@@ -176,7 +176,7 @@
       },
       "collateralConfig": {
         "tokenAddr": "0xd63070114470f685b75B74D60EEc7c1113d33a3D",
-        "priceFeedAddr": "0x0000000000000000000000000000000000000000",
+        "priceFeedAddr": "0xb5e2c83CcA96c64e324E41753450ec716f138536",
         "name": "USUAL Boosted USDC",
         "symbol": "USUALUSDC+",
         "decimals": "18",
@@ -196,7 +196,7 @@
         "borrowTakerFeeRatio": "3000000",
         "borrowMakerFeeRatio": "3000000",
         "mintGtFeeRatio": "1000000",
-        "issueFtFeeRef": "400000"
+        "mintGtFeeRef": "400000"
       },
       "loanConfig": {
         "liquidationLtv": "80000000",
@@ -213,7 +213,7 @@
       },
       "collateralConfig": {
         "tokenAddr": "0x9a8bC3B04b7f3D87cfC09ba407dCED575f2d61D8",
-        "priceFeedAddr": "0x0000000000000000000000000000000000000000",
+        "priceFeedAddr": "0x0Af2a78e7ea6c978108d3a07a1F44338A7538DE1",
         "name": "MEV Capital wETH",
         "symbol": "MCwETH",
         "decimals": "18",
@@ -233,7 +233,7 @@
         "borrowTakerFeeRatio": "3000000",
         "borrowMakerFeeRatio": "3000000",
         "mintGtFeeRatio": "1000000",
-        "issueFtFeeRef": "400000"
+        "mintGtFeeRef": "400000"
       },
       "loanConfig": {
         "liquidationLtv": "94000000",
@@ -242,7 +242,7 @@
       },
       "underlyingConfig": {
         "tokenAddr": "0xD9A442856C234a39a81a089C06451EBAa4306a72",
-        "priceFeedAddr": "0xDe3f7Dd92C4701BCf59F47235bCb61e727c45f80",
+        "priceFeedAddr": "0x51C83235d75A0Fae696844a6A3D19dAeC4620236",
         "name": "pufETH",
         "symbol": "pufETH",
         "decimals": "18",
@@ -250,7 +250,7 @@
       },
       "collateralConfig": {
         "tokenAddr": "0x9cFc9917C171A384c7168D3529Fc7e851a2E0d6D",
-        "priceFeedAddr": "0x0000000000000000000000000000000000000000",
+        "priceFeedAddr": "0xfF301bC5d55A9ACD5f761e04f9aEF4A1E9062154",
         "name": "PT Puffer ETH 26JUN2025",
         "symbol": "PT-pufETH-26JUN2025",
         "decimals": "18",
@@ -270,7 +270,7 @@
         "borrowTakerFeeRatio": "3000000",
         "borrowMakerFeeRatio": "3000000",
         "mintGtFeeRatio": "1000000",
-        "issueFtFeeRef": "2000000"
+        "mintGtFeeRef": "2000000"
       },
       "loanConfig": {
         "liquidationLtv": "94000000",
@@ -287,7 +287,7 @@
       },
       "collateralConfig": {
         "tokenAddr": "0x90D2af7d622ca3141efA4d8f1F24d86E5974Cc8F",
-        "priceFeedAddr": "0xa569d910839Ae8865Da8F8e70FfFb0cBA869F961",
+        "priceFeedAddr": "0xB9F5F2E50f4Cd9ec3200F655371B35974BFbC3E9",
         "name": "Ethereal Pre-deposit Vault",
         "symbol": "eUSDe",
         "decimals": "18",
@@ -307,7 +307,7 @@
         "borrowTakerFeeRatio": "3000000",
         "borrowMakerFeeRatio": "3000000",
         "mintGtFeeRatio": "1000000",
-        "issueFtFeeRef": "400000"
+        "mintGtFeeRef": "400000"
       },
       "loanConfig": {
         "liquidationLtv": "94000000",
@@ -324,7 +324,7 @@
       },
       "collateralConfig": {
         "tokenAddr": "0xD9A442856C234a39a81a089C06451EBAa4306a72",
-        "priceFeedAddr": "0x0000000000000000000000000000000000000000",
+        "priceFeedAddr": "0x51C83235d75A0Fae696844a6A3D19dAeC4620236",
         "name": "pufETH",
         "symbol": "pufETH",
         "decimals": "18",
@@ -344,7 +344,7 @@
         "borrowTakerFeeRatio": "3000000",
         "borrowMakerFeeRatio": "3000000",
         "mintGtFeeRatio": "1000000",
-        "issueFtFeeRef": "2000000"
+        "mintGtFeeRef": "2000000"
       },
       "loanConfig": {
         "liquidationLtv": "94000000",
@@ -361,7 +361,7 @@
       },
       "collateralConfig": {
         "tokenAddr": "0x06B964d96f5dCF7Eae9d7C559B09EDCe244d4B8E",
-        "priceFeedAddr": "0x0000000000000000000000000000000000000000",
+        "priceFeedAddr": "0x07d1abdB4e85Ea581C55eb3C63CE1B734E1d3cfb",
         "name": "USUALX",
         "symbol": "Usualx",
         "decimals": "18",
@@ -381,7 +381,7 @@
         "borrowTakerFeeRatio": "3000000",
         "borrowMakerFeeRatio": "3000000",
         "mintGtFeeRatio": "1000000",
-        "issueFtFeeRef": "400000"
+        "mintGtFeeRef": "400000"
       },
       "loanConfig": {
         "liquidationLtv": "85000000",
@@ -418,7 +418,7 @@
         "borrowTakerFeeRatio": "3000000",
         "borrowMakerFeeRatio": "3000000",
         "mintGtFeeRatio": "1000000",
-        "issueFtFeeRef": "400000"
+        "mintGtFeeRef": "400000"
       },
       "loanConfig": {
         "liquidationLtv": "85000000",
@@ -455,7 +455,7 @@
         "borrowTakerFeeRatio": "3000000",
         "borrowMakerFeeRatio": "3000000",
         "mintGtFeeRatio": "1000000",
-        "issueFtFeeRef": "2000000"
+        "mintGtFeeRef": "2000000"
       },
       "loanConfig": {
         "liquidationLtv": "80000000",
