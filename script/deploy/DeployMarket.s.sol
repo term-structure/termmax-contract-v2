@@ -162,7 +162,7 @@ contract DeloyMarket is DeployBase {
         console.log("Borrow Taker Fee Ratio:", marketConfig.feeConfig.borrowTakerFeeRatio);
         console.log("Borrow Maker Fee Ratio:", marketConfig.feeConfig.borrowMakerFeeRatio);
         console.log("Mint GT Fee Ratio:", marketConfig.feeConfig.mintGtFeeRatio);
-        console.log("Issue FT Fee Ref:", marketConfig.feeConfig.issueFtFeeRef);
+        console.log("Issue FT Fee Ref:", marketConfig.feeConfig.mintGtFeeRef);
 
         // Write market config to JSON file
         string memory marketFileName = _getMarketFileName(collateralAddr, address(underlying), marketConfig.maturity);
@@ -321,8 +321,8 @@ contract DeloyMarket is DeployBase {
                 '      "mintGtFeeRatio": "',
                 vm.toString(marketConfig.feeConfig.mintGtFeeRatio),
                 '",\n',
-                '      "issueFtFeeRef": "',
-                vm.toString(marketConfig.feeConfig.issueFtFeeRef),
+                '      "mintGtFeeRef": "',
+                vm.toString(marketConfig.feeConfig.mintGtFeeRef),
                 '"\n',
                 "    }\n",
                 "  }\n",

@@ -355,7 +355,7 @@ contract E2ETest is Script {
         console.log("borrowTakerFeeRatio:", config.feeConfig.borrowTakerFeeRatio);
         console.log("borrowMakerFeeRatio:", config.feeConfig.borrowMakerFeeRatio);
         console.log("mintGtFeeRatio:", config.feeConfig.mintGtFeeRatio);
-        console.log("issueFtFeeRef:", config.feeConfig.issueFtFeeRef);
+        console.log("mintGtFeeRef:", config.feeConfig.mintGtFeeRef);
         console.log("");
     }
 

@@ -240,7 +240,7 @@ contract DeployBase is Script {
                     borrowTakerFeeRatio: config.marketConfig.feeConfig.borrowTakerFeeRatio,
                     borrowMakerFeeRatio: config.marketConfig.feeConfig.borrowMakerFeeRatio,
                     mintGtFeeRatio: config.marketConfig.feeConfig.mintGtFeeRatio,
-                    issueFtFeeRef: config.marketConfig.feeConfig.issueFtFeeRef
+                    mintGtFeeRef: config.marketConfig.feeConfig.mintGtFeeRef
                 })
             });
 
@@ -295,7 +295,7 @@ contract DeployBase is Script {
                     borrowTakerFeeRatio: config.marketConfig.feeConfig.borrowTakerFeeRatio,
                     borrowMakerFeeRatio: config.marketConfig.feeConfig.borrowMakerFeeRatio,
                     mintGtFeeRatio: config.marketConfig.feeConfig.mintGtFeeRatio,
-                    issueFtFeeRef: config.marketConfig.feeConfig.issueFtFeeRef
+                    mintGtFeeRef: config.marketConfig.feeConfig.mintGtFeeRef
                 })
             });
 
