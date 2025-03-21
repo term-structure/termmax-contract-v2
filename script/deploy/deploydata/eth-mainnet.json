@@ -69,7 +69,7 @@
       "collateralConfig": {
         "tokenAddr": "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0",
         "priceFeedAddr": "0x164b276057258d81941e97B0a900D4C7B358bCe0",
-        "heartBeat": "3600",
+        "heartBeat": "86400",
         "name": "Wrapped liquid staked Ether 2.0",
         "symbol": "wstETH",
         "decimals": "18",
@@ -146,7 +146,7 @@
       },
       "collateralConfig": {
         "tokenAddr": "0xb7de5dFCb74d25c2f21841fbd6230355C50d9308",
-        "priceFeedAddr": "0xa045936f495A6a5D43216b39D8e63B88f9b4e362",
+        "priceFeedAddr": "0x396167545D34974eBd7FaD55F60765702CfEfE84",
         "heartBeat": "86400",
         "name": "PT Ethena sUSDE 29MAY2025",
         "symbol": "PT-sUSDE-29MAY2025",
@@ -185,7 +185,7 @@
       },
       "collateralConfig": {
         "tokenAddr": "0xd63070114470f685b75B74D60EEc7c1113d33a3D",
-        "priceFeedAddr": "0xb5e2c83CcA96c64e324E41753450ec716f138536",
+        "priceFeedAddr": "0x7d0cB5b888753b963052D9840c8e2F6043872041",
         "heartBeat": "86400",
         "name": "USUAL Boosted USDC",
         "symbol": "USUALUSDC+",
@@ -224,7 +224,7 @@
       },
       "collateralConfig": {
         "tokenAddr": "0x9a8bC3B04b7f3D87cfC09ba407dCED575f2d61D8",
-        "priceFeedAddr": "0x0Af2a78e7ea6c978108d3a07a1F44338A7538DE1",
+        "priceFeedAddr": "0x3Baf2BB573fDCDC80A75ef7e8E6b0E33afFaAA98",
         "heartBeat": "3600",
         "name": "MEV Capital wETH",
         "symbol": "MCwETH",
@@ -254,8 +254,8 @@
       },
       "underlyingConfig": {
         "tokenAddr": "0xD9A442856C234a39a81a089C06451EBAa4306a72",
-        "priceFeedAddr": "0x51C83235d75A0Fae696844a6A3D19dAeC4620236",
-        "heartBeat": "3600",
+        "priceFeedAddr": "0x905c533A2a1CdBe7Ed0C5d189f8208F827794A8A",
+        "heartBeat": "86400",
         "name": "pufETH",
         "symbol": "pufETH",
         "decimals": "18",
@@ -263,8 +263,8 @@
       },
       "collateralConfig": {
         "tokenAddr": "0x9cFc9917C171A384c7168D3529Fc7e851a2E0d6D",
-        "priceFeedAddr": "0xfF301bC5d55A9ACD5f761e04f9aEF4A1E9062154",
-        "heartBeat": "3600",
+        "priceFeedAddr": "0xFcD1154a8C17CE581E7C6a50cfEc04a9ea72246E",
+        "heartBeat": "86400",
         "name": "PT Puffer ETH 26JUN2025",
         "symbol": "PT-pufETH-26JUN2025",
         "decimals": "18",
@@ -302,7 +302,7 @@
       },
       "collateralConfig": {
         "tokenAddr": "0x90D2af7d622ca3141efA4d8f1F24d86E5974Cc8F",
-        "priceFeedAddr": "0xB9F5F2E50f4Cd9ec3200F655371B35974BFbC3E9",
+        "priceFeedAddr": "0x5b6b4808DBDa552198c4Dfe6fABad6DA6397afd0",
         "heartBeat": "86400",
         "name": "Ethereal Pre-deposit Vault",
         "symbol": "eUSDe",
@@ -341,7 +341,7 @@
       },
       "collateralConfig": {
         "tokenAddr": "0xD9A442856C234a39a81a089C06451EBAa4306a72",
-        "priceFeedAddr": "0x51C83235d75A0Fae696844a6A3D19dAeC4620236",
+        "priceFeedAddr": "0x905c533A2a1CdBe7Ed0C5d189f8208F827794A8A",
         "heartBeat": "3600",
         "name": "pufETH",
         "symbol": "pufETH",
@@ -380,7 +380,7 @@
       },
       "collateralConfig": {
         "tokenAddr": "0x06B964d96f5dCF7Eae9d7C559B09EDCe244d4B8E",
-        "priceFeedAddr": "0x07d1abdB4e85Ea581C55eb3C63CE1B734E1d3cfb",
+        "priceFeedAddr": "0xA6C1665b4b2FC675957Cf99CCC1465e3C664A1B1",
         "heartBeat": "86400",
         "name": "USUALX",
         "symbol": "Usualx",

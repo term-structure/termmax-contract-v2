@@ -55,51 +55,26 @@ contract E2ETest is Script {
     address underlyingPriceFeedAddr;
 
     function run() public {
-        // list these token address in an array and remove the redundent ones
-        // 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2
-        // 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
-        // 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
-        // 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
-        // 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
-        // 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2
-        // 0xD9A442856C234a39a81a089C06451EBAa4306a72
-        // 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
-        // 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2
-        // 0xC4441c2BE5d8fA8126822B9929CA0b81Ea0DE38E
-        // 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
-        // 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
-        // 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
-        address[] memory tokens = new address[](8);
-        tokens[0] = address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
-        tokens[1] = address(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
-        tokens[2] = address(0xD9A442856C234a39a81a089C06451EBAa4306a72);
-        tokens[3] = address(0xC4441c2BE5d8fA8126822B9929CA0b81Ea0DE38E);
-        tokens[4] = address(0x9D39A5DE30e57443BfF2A8307A4256c8797A3497);
-        tokens[5] = address(0x90D2af7d622ca3141efA4d8f1F24d86E5974Cc8F);
-        tokens[6] = address(0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599);
-        tokens[7] = address(0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf);
-        address[] memory priceFeeds = new address[](8);
-        priceFeeds[0] = address(0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419);
-        priceFeeds[1] = address(0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6);
-        priceFeeds[2] = address(0xDe3f7Dd92C4701BCf59F47235bCb61e727c45f80);
-        priceFeeds[3] = address(0x2240AE461B34CC56D654ba5FA5830A243Ca54840);
-        priceFeeds[4] = address(0xFF3BC18cCBd5999CE63E788A1c250a88626aD099);
-        priceFeeds[5] = address(0xa569d910839Ae8865Da8F8e70FfFb0cBA869F961);
-        priceFeeds[6] = address(0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c);
-        priceFeeds[7] = address(0x2665701293fCbEB223D11A08D826563EDcCE423A);
+        address tokenAddr = address(0xE407D6b58f1BaB00DB15a6b164F6e882aB3bb939);
+        IOracle oracle = IOracle(address(0xFBc0A46463645de435012363354f24791789b4D7));
+        OracleAggregator oracleAggregator = OracleAggregator(address(0xFBc0A46463645de435012363354f24791789b4D7));
+        (AggregatorV3Interface aggregator, AggregatorV3Interface backupAggregator, uint32 heartbeat) =
+            oracleAggregator.oracles(tokenAddr);
+        console.log(IERC20Metadata(tokenAddr).symbol());
+        console.log(address(aggregator));
+        console.log(heartbeat);
+        AggregatorV3Interface priceFeed = AggregatorV3Interface(address(aggregator));
+        (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound) =
+            priceFeed.latestRoundData();
+        console.log(roundId);
+        console.log(answer);
+        console.log(startedAt);
+        console.log(updatedAt);
+        console.log(answeredInRound);
+        (uint256 price, uint8 decimals) = oracle.getPrice(tokenAddr);
+        console.log(price);
+        console.log(decimals);
 
-        for (uint256 i = 0; i < tokens.length; i++) {
-            IERC20Metadata token = IERC20Metadata(tokens[i]);
-            AggregatorV3Interface priceFeed = AggregatorV3Interface(priceFeeds[i]);
-            (, int256 price,,,) = priceFeed.latestRoundData();
-            console.log("Token address:", tokens[i]);
-            console.log("Token name:", token.name());
-            console.log("Token symbol:", token.symbol());
-            console.log("Token decimals:", token.decimals());
-            console.log("Price Feed address:", priceFeeds[i]);
-            console.log("Price Feed:", price);
-            console.log("");
-        }
         // (userAddr, userPrivateKey) = makeAddrAndKey("New User1");
         // vm.startBroadcast(deployerPrivateKey);
         // payable(userAddr).transfer(0.1 ether);

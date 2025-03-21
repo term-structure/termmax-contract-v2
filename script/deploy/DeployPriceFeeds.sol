@@ -8,7 +8,7 @@ import {PriceFeedFactory} from "contracts/extensions/PriceFeedFactory.sol";
 
 contract DeployPriceFeeds is Script {
     function run() public {
-        uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
+        uint256 deployerPrivateKey = vm.envUint("ETH_MAINNET_DEPLOYER_PRIVATE_KEY");
         vm.startBroadcast(deployerPrivateKey);
         PriceFeedFactory priceFeedFactory = new PriceFeedFactory();
 

@@ -16,7 +16,23 @@ contract AcceptOracles is Script {
     uint256 oracleAggregatorAdminPrivateKey;
     address oracleAggregatorAddr;
     JsonLoader.Config[] configs;
-    mapping(address => bool) tokenAccepted;
+    mapping(address => bool) tokenChecked;
+
+    // Track status of each oracle
+    struct PendingOracleStatus {
+        address tokenAddr;
+        string tokenSymbol;
+        address priceFeedAddr;
+        uint32 heartbeat;
+        uint64 validAt;
+        bool existsInConfig;
+        bool pendingOracleExists;
+        bool readyToAccept;
+        string statusMessage;
+    }
+
+    PendingOracleStatus[] public acceptedOracles;
+    PendingOracleStatus[] public notReadyOracles;
 
     function setUp() public {
         // Load network from environment variable
@@ -42,64 +58,207 @@ contract AcceptOracles is Script {
 
         OracleAggregator oracle = OracleAggregator(oracleAggregatorAddr);
 
-        vm.startBroadcast(oracleAggregatorAdminPrivateKey);
-
-        console.log("=== Accepting Pending Oracles ===");
+        console.log("=== Checking Pending Oracles ===");
         console.log("Oracle Aggregator Address:", oracleAggregatorAddr);
         console.log("Network:", network);
+        console.log("Current Block Timestamp:", block.timestamp);
         console.log("");
 
+        // First, check all oracles for their status
+        checkAllOracleStatus(oracle);
+
+        // Only broadcast if there are oracles to accept
+        if (acceptedOracles.length > 0) {
+            vm.startBroadcast(oracleAggregatorAdminPrivateKey);
+
+            // Process acceptances
+            for (uint256 i = 0; i < acceptedOracles.length; i++) {
+                PendingOracleStatus memory status = acceptedOracles[i];
+
+                // Get current oracle config before accepting
+                (AggregatorV3Interface currentAggregator,,) = oracle.oracles(status.tokenAddr);
+
+                // Accept the oracle
+                oracle.acceptPendingOracle(status.tokenAddr);
+
+                console.log("Accepted oracle for token:");
+                console.log("  Token Symbol:", status.tokenSymbol);
+                console.log("  Token Address:", status.tokenAddr);
+                console.log("  Previous Oracle:", address(currentAggregator));
+                console.log("  New Oracle:", status.priceFeedAddr);
+                console.log("  Heartbeat:", status.heartbeat);
+                console.log("--------------------------------");
+            }
+
+            vm.stopBroadcast();
+        }
+
+        // Print summary
+        console.log("");
+        console.log("=== Oracle Acceptance Summary ===");
+        console.log("Total tokens checked:", acceptedOracles.length + notReadyOracles.length);
+        console.log("Oracles accepted:", acceptedOracles.length);
+        console.log("Oracles not ready:", notReadyOracles.length);
+
+        if (notReadyOracles.length > 0) {
+            console.log("");
+            console.log("=== Oracles Not Ready for Acceptance ===");
+            for (uint256 i = 0; i < notReadyOracles.length; i++) {
+                PendingOracleStatus memory status = notReadyOracles[i];
+                console.log("%d. %s (%s)", i + 1, status.tokenSymbol, status.tokenAddr);
+                console.log("   Price Feed:", status.priceFeedAddr);
+                console.log("   Status:", status.statusMessage);
+
+                if (status.pendingOracleExists && status.validAt > 0) {
+                    uint256 timeRemaining = status.validAt > block.timestamp ? status.validAt - block.timestamp : 0;
+                    console.log("   Valid At:", status.validAt);
+                    console.log("   Time Remaining:", formatTimeDifference(timeRemaining));
+                    console.log("   Will be ready at:", formatTimestamp(status.validAt));
+                }
+                console.log("   ---");
+            }
+        }
+    }
+
+    function formatTimestamp(uint256 timestamp) internal pure returns (string memory) {
+        return vm.toString(timestamp);
+    }
+
+    function formatTimeDifference(uint256 timeDiff) internal pure returns (string memory) {
+        if (timeDiff < 60) {
+            return string(abi.encodePacked(vm.toString(timeDiff), " seconds"));
+        } else if (timeDiff < 3600) {
+            return string(abi.encodePacked(vm.toString(timeDiff / 60), " minutes"));
+        } else if (timeDiff < 86400) {
+            return string(abi.encodePacked(vm.toString(timeDiff / 3600), " hours"));
+        } else {
+            return string(abi.encodePacked(vm.toString(timeDiff / 86400), " days"));
+        }
+    }
+
+    function checkAllOracleStatus(OracleAggregator oracle) internal {
+        // Process all tokens from the config
         for (uint256 i; i < configs.length; i++) {
             JsonLoader.Config memory config = configs[i];
 
-            // Check for pending oracles on underlying token
-            (AggregatorV3Interface currentAggregator,,) = oracle.oracles(address(config.underlyingConfig.tokenAddr));
-            (IOracle.Oracle memory pendingOracle, uint64 validAt) =
-                oracle.pendingOracles(address(config.underlyingConfig.tokenAddr));
-
-            if (
-                !tokenAccepted[address(config.underlyingConfig.tokenAddr)]
-                    && address(pendingOracle.aggregator) != address(0)
-                    && address(pendingOracle.aggregator) == address(config.underlyingConfig.priceFeedAddr)
-                    && validAt <= block.timestamp
-            ) {
-                // Accept the pending oracle
-                oracle.acceptPendingOracle(address(config.underlyingConfig.tokenAddr));
-                tokenAccepted[address(config.underlyingConfig.tokenAddr)] = true;
-
-                console.log("Accepted oracle for underlying token:");
-                console.log("  Token:", IERC20Metadata(address(config.underlyingConfig.tokenAddr)).symbol());
-                console.log("  Previous Oracle:", address(currentAggregator));
-                console.log("  New Oracle:", address(pendingOracle.aggregator));
-                console.log("  Heartbeat:", pendingOracle.heartbeat);
-                console.log("--------------------------------");
+            // Check underlying token
+            if (!tokenChecked[config.underlyingConfig.tokenAddr]) {
+                checkAndReportOracleStatus(
+                    oracle,
+                    config.underlyingConfig.tokenAddr,
+                    config.underlyingConfig.priceFeedAddr,
+                    uint32(config.underlyingConfig.heartBeat),
+                    "underlying"
+                );
+                tokenChecked[config.underlyingConfig.tokenAddr] = true;
             }
 
-            // Check for pending oracles on collateral token
-            (currentAggregator,,) = oracle.oracles(address(config.collateralConfig.tokenAddr));
-            (pendingOracle, validAt) = oracle.pendingOracles(address(config.collateralConfig.tokenAddr));
-
-            if (
-                !tokenAccepted[address(config.collateralConfig.tokenAddr)]
-                    && address(pendingOracle.aggregator) != address(0)
-                    && address(pendingOracle.aggregator) == address(config.collateralConfig.priceFeedAddr)
-                    && validAt <= block.timestamp
-            ) {
-                // Accept the pending oracle
-                oracle.acceptPendingOracle(address(config.collateralConfig.tokenAddr));
-                tokenAccepted[address(config.collateralConfig.tokenAddr)] = true;
-
-                console.log("Accepted oracle for collateral token:");
-                console.log("  Token:", IERC20Metadata(address(config.collateralConfig.tokenAddr)).symbol());
-                console.log("  Previous Oracle:", address(currentAggregator));
-                console.log("  New Oracle:", address(pendingOracle.aggregator));
-                console.log("  Heartbeat:", pendingOracle.heartbeat);
-                console.log("--------------------------------");
+            // Check collateral token
+            if (!tokenChecked[config.collateralConfig.tokenAddr]) {
+                checkAndReportOracleStatus(
+                    oracle,
+                    config.collateralConfig.tokenAddr,
+                    config.collateralConfig.priceFeedAddr,
+                    uint32(config.collateralConfig.heartBeat),
+                    "collateral"
+                );
+                tokenChecked[config.collateralConfig.tokenAddr] = true;
             }
         }
-        vm.stopBroadcast();
+    }
 
-        console.log("");
-        console.log("Oracle acceptance process completed.");
+    function checkAndReportOracleStatus(
+        OracleAggregator oracle,
+        address tokenAddr,
+        address expectedPriceFeedAddr,
+        uint32 expectedHeartbeat,
+        string memory tokenType
+    ) internal {
+        // Create a new status entry
+        PendingOracleStatus memory status;
+        status.tokenAddr = tokenAddr;
+        status.priceFeedAddr = expectedPriceFeedAddr;
+        status.heartbeat = expectedHeartbeat;
+        status.existsInConfig = true;
+
+        // Get token symbol
+        try IERC20Metadata(tokenAddr).symbol() returns (string memory symbol) {
+            status.tokenSymbol = symbol;
+        } catch {
+            status.tokenSymbol = string(abi.encodePacked("Unknown ", tokenType));
+        }
+
+        // Check if there's a pending oracle
+        (IOracle.Oracle memory pendingOracle, uint64 validAt) = oracle.pendingOracles(tokenAddr);
+
+        // Get current oracle for comparison
+        (AggregatorV3Interface currentAggregator,,) = oracle.oracles(tokenAddr);
+
+        if (address(pendingOracle.aggregator) == address(0)) {
+            // No pending oracle exists
+            status.pendingOracleExists = false;
+            status.readyToAccept = false;
+            status.statusMessage = "No pending oracle exists";
+            notReadyOracles.push(status);
+        } else {
+            // A pending oracle exists
+            status.pendingOracleExists = true;
+            status.validAt = validAt;
+
+            // Check if it matches our expected price feed and is valid
+            if (address(pendingOracle.aggregator) != expectedPriceFeedAddr) {
+                status.readyToAccept = false;
+                status.statusMessage = string(
+                    abi.encodePacked(
+                        "Pending oracle doesn't match expected price feed. Found: ",
+                        vm.toString(address(pendingOracle.aggregator))
+                    )
+                );
+                notReadyOracles.push(status);
+            } else if (validAt > block.timestamp) {
+                // Timelock not yet elapsed
+                status.readyToAccept = false;
+                status.statusMessage = "Timelock period not yet elapsed";
+                notReadyOracles.push(status);
+            } else if (
+                address(currentAggregator) == expectedPriceFeedAddr && pendingOracle.heartbeat == expectedHeartbeat
+            ) {
+                // Get current heartbeat value
+                (,, uint32 currentHeartbeat) = oracle.oracles(tokenAddr);
+
+                // Oracle is already set correctly (both address and heartbeat)
+                if (currentHeartbeat == expectedHeartbeat) {
+                    status.readyToAccept = false;
+                    status.statusMessage = "Oracle is already configured with the correct values";
+                    notReadyOracles.push(status);
+                } else {
+                    // Only heartbeat needs updating
+                    status.readyToAccept = true;
+                    status.statusMessage = string(
+                        abi.encodePacked(
+                            "Heartbeat will be updated from ",
+                            vm.toString(currentHeartbeat),
+                            " to ",
+                            vm.toString(expectedHeartbeat)
+                        )
+                    );
+                    acceptedOracles.push(status);
+                }
+            } else {
+                // Oracle is ready to accept - this handles the case where the price feed address is different
+                status.readyToAccept = true;
+
+                // Add more detail to acceptance information
+                if (address(currentAggregator) != expectedPriceFeedAddr) {
+                    status.statusMessage = "Price feed address will be updated";
+                } else {
+                    // This branch should only be reached if there's some other condition
+                    status.statusMessage = "Oracle will be updated (other changes)";
+                }
+                acceptedOracles.push(status);
+                // Return here to avoid double-processing the same token
+                return;
+            }
+        }
     }
 }
