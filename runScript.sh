@@ -2,9 +2,9 @@
 
 # Check if required arguments are provided
 if [ "$#" -lt 2 ]; then
-    echo "Usage: $0 <network> <type> [options]"
+    echo "Usage: $0 <network> <script-name> [options]"
     echo "Supported networks: eth-sepolia, arb-sepolia, eth-mainnet, arb-mainnet"
-    echo "Deployment types: core, market, order, vault, oracles"
+    echo "Script name: Name of the script file without extension (e.g., SubmitOracles)"
     echo "Options:"
     echo "  --broadcast     Broadcast transactions (default: dry run)"
     echo "  --verify       Enable contract verification"
@@ -12,7 +12,7 @@ if [ "$#" -lt 2 ]; then
 fi
 
 NETWORK=$1
-TYPE=$2
+SCRIPT_NAME=$2
 shift 2  # Remove the first two arguments
 
 # Default options (dry run without verification)
@@ -40,23 +40,11 @@ done
 # Validate network
 case $NETWORK in
     "eth-sepolia"|"arb-sepolia"|"eth-mainnet"|"arb-mainnet")
-        echo "Deploying to $NETWORK..."
+        echo "Running on $NETWORK..."
         ;;
     *)
         echo "Unsupported network: $NETWORK"
         echo "Supported networks: eth-sepolia, arb-sepolia, eth-mainnet, arb-mainnet"
-        exit 1
-        ;;
-esac
-
-# Validate deployment type
-case $TYPE in
-    "core"|"market"|"order"|"vault"|"oracles")
-        echo "Deployment type: $TYPE"
-        ;;
-    *)
-        echo "Unsupported deployment type: $TYPE"
-        echo "Supported types: core, market, order, vault, oracles"
         exit 1
         ;;
 esac
@@ -106,8 +94,8 @@ if [ -z "$ADMIN_ADDRESS" ]; then
     exit 1
 fi
 
-# Check for Oracle Aggregator Admin Private Key when deploying oracles
-if [ "$TYPE" = "oracles" ] && [ -z "$ORACLE_AGGREGATOR_ADMIN_PRIVATE_KEY" ]; then
+# Check for Oracle Aggregator Admin Private Key when running SubmitOracles
+if [ "$SCRIPT_NAME" = "SubmitOracles" ] && [ -z "$ORACLE_AGGREGATOR_ADMIN_PRIVATE_KEY" ]; then
     echo "Error: Required environment variable $ORACLE_AGGREGATOR_ADMIN_PRIVATE_KEY_VAR is not set"
     echo "This private key is required for the SubmitOracles script to function correctly."
     exit 1
@@ -133,16 +121,12 @@ if [[ $NETWORK == *"mainnet"* ]]; then
     fi
 fi
 
-# Capitalize first letter of type for script name
-TYPE_CAPITALIZED="$(tr '[:lower:]' '[:upper:]' <<< ${TYPE:0:1})${TYPE:1}"
-
-echo "=== Deployment Configuration ==="
+echo "=== Script Configuration ==="
 echo "Network: $NETWORK"
-echo "Type: $TYPE"
-echo "Script: Deploy${TYPE_CAPITALIZED}.s.sol"
+echo "Script: $SCRIPT_NAME.s.sol"
 echo "RPC URL: $RPC_URL"
 echo "Admin Address: $ADMIN_ADDRESS"
-if [ "$TYPE" = "oracles" ]; then
+if [ "$SCRIPT_NAME" = "SubmitOracles" ]; then
     echo "Oracle Aggregator Admin: Using private key from $ORACLE_AGGREGATOR_ADMIN_PRIVATE_KEY_VAR"
 fi
 echo "Mode: ${BROADCAST:+Live Broadcast}${BROADCAST:-Dry Run}"
@@ -158,17 +142,34 @@ echo "==============================="
 # Export the network name for the Solidity script
 export NETWORK=$NETWORK
 
-# Run the deployment
-echo "Starting deployment..."
-SCRIPT_PATH="script/deploy/Deploy${TYPE_CAPITALIZED}.s.sol"
+# Run the script
+echo "Starting script execution..."
 
-if [ ! -f "$SCRIPT_PATH" ]; then
-    echo "Error: Script file not found: $SCRIPT_PATH"
+# Try to find the script in various locations
+SCRIPT_LOCATIONS=(
+    "script/deploy/${SCRIPT_NAME}.s.sol"
+    "script/${SCRIPT_NAME}.s.sol"
+    "script/utils/${SCRIPT_NAME}.s.sol"
+)
+
+SCRIPT_FOUND=false
+for SCRIPT_PATH in "${SCRIPT_LOCATIONS[@]}"; do
+    if [ -f "$SCRIPT_PATH" ]; then
+        SCRIPT_FOUND=true
+        break
+    fi
+done
+
+if [ "$SCRIPT_FOUND" = false ]; then
+    echo "Error: Script file not found. Searched in:"
+    for SCRIPT_PATH in "${SCRIPT_LOCATIONS[@]}"; do
+        echo "  - $SCRIPT_PATH"
+    done
     exit 1
 fi
 
 # Build the forge command
-if [ "$TYPE" = "oracles" ]; then
+if [ "$SCRIPT_NAME" = "SubmitOracles" ]; then
     FORGE_CMD="forge script $SCRIPT_PATH --private-key $ORACLE_AGGREGATOR_ADMIN_PRIVATE_KEY --rpc-url $RPC_URL"
 else
     FORGE_CMD="forge script $SCRIPT_PATH --rpc-url $RPC_URL"
@@ -187,18 +188,18 @@ fi
 echo "Executing: $FORGE_CMD"
 eval $FORGE_CMD
 
-# Check if deployment was successful
+# Check if execution was successful
 if [ $? -eq 0 ]; then
     if [ ! -z "$BROADCAST" ]; then
-        echo "✅ ${TYPE_CAPITALIZED} deployment to $NETWORK completed successfully!"
+        echo "✅ Script $SCRIPT_NAME executed successfully on $NETWORK (Broadcast mode)!"
     else
-        echo "✅ ${TYPE_CAPITALIZED} dry run on $NETWORK completed successfully!"
+        echo "✅ Script $SCRIPT_NAME dry run completed successfully on $NETWORK!"
     fi
 else
     if [ ! -z "$BROADCAST" ]; then
-        echo "❌ ${TYPE_CAPITALIZED} deployment to $NETWORK failed!"
+        echo "❌ Script $SCRIPT_NAME execution failed on $NETWORK (Broadcast mode)!"
     else
-        echo "❌ ${TYPE_CAPITALIZED} dry run on $NETWORK failed!"
+        echo "❌ Script $SCRIPT_NAME dry run failed on $NETWORK!"
     fi
     exit 1
-fi
+fi 
