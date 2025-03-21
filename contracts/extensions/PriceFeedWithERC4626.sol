@@ -6,8 +6,9 @@ import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {MathLib} from "contracts/lib/MathLib.sol";
 
-contract PriceFeedConverter is AggregatorV3Interface {
+contract PriceFeedWithERC4626 is AggregatorV3Interface {
     using MathLib for *;
+
     error GetRoundDataNotSupported();
 
     AggregatorV3Interface public immutable assetPriceFeed;
