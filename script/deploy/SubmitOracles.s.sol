@@ -45,7 +45,14 @@ contract SubmitOracles is Script {
         OracleAggregator oracle = OracleAggregator(oracleAggregatorAddr);
         for (uint256 i; i < configs.length; i++) {
             JsonLoader.Config memory config = configs[i];
-            if (!tokenSubmitted[address(config.underlyingConfig.tokenAddr)]) {
+            (AggregatorV3Interface aggregator,,) = oracle.oracles(address(config.underlyingConfig.tokenAddr));
+            if (
+                !tokenSubmitted[address(config.underlyingConfig.tokenAddr)]
+                    && (
+                        address(aggregator) == address(0)
+                            || address(aggregator) != address(config.underlyingConfig.priceFeedAddr)
+                    )
+            ) {
                 oracle.submitPendingOracle(
                     address(config.underlyingConfig.tokenAddr),
                     IOracle.Oracle(
@@ -63,7 +70,14 @@ contract SubmitOracles is Script {
                 console.log("Heartbeat: ", config.underlyingConfig.heartBeat);
                 console.log("--------------------------------");
             }
-            if (!tokenSubmitted[address(config.collateralConfig.tokenAddr)]) {
+            (aggregator,,) = oracle.oracles(address(config.collateralConfig.tokenAddr));
+            if (
+                !tokenSubmitted[address(config.collateralConfig.tokenAddr)]
+                    && (
+                        address(aggregator) == address(0)
+                            || address(aggregator) != address(config.collateralConfig.priceFeedAddr)
+                    )
+            ) {
                 oracle.submitPendingOracle(
                     address(config.collateralConfig.tokenAddr),
                     IOracle.Oracle(
