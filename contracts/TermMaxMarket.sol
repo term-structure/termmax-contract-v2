@@ -64,8 +64,8 @@ contract TermMaxMarket is
 
     function mintGtFeeRatio() public view override returns (uint256) {
         uint256 daysToMaturity = _daysToMaturity(_config.maturity);
-        return (daysToMaturity * uint256(_config.feeConfig.mintGtFeeRatio) * uint256(_config.feeConfig.issueFtFeeRef))
-            / (Constants.DAYS_IN_YEAR * Constants.DECIMAL_BASE + uint256(_config.feeConfig.issueFtFeeRef) * daysToMaturity);
+        return (daysToMaturity * uint256(_config.feeConfig.mintGtFeeRatio) * uint256(_config.feeConfig.mintGtFeeRef))
+            / (Constants.DAYS_IN_YEAR * Constants.DECIMAL_BASE + uint256(_config.feeConfig.mintGtFeeRef) * daysToMaturity);
     }
 
     /**
@@ -159,7 +159,7 @@ contract TermMaxMarket is
         if (
             fee.borrowTakerFeeRatio >= Constants.MAX_FEE_RATIO || fee.borrowMakerFeeRatio >= Constants.MAX_FEE_RATIO
                 || fee.lendTakerFeeRatio >= Constants.MAX_FEE_RATIO || fee.lendMakerFeeRatio >= Constants.MAX_FEE_RATIO
-                || fee.mintGtFeeRatio >= Constants.MAX_FEE_RATIO || fee.issueFtFeeRef > Constants.DECIMAL_BASE
+                || fee.mintGtFeeRatio >= Constants.MAX_FEE_RATIO || fee.mintGtFeeRef > Constants.DECIMAL_BASE
         ) revert FeeTooHigh();
     }
 

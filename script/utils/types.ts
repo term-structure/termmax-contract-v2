@@ -6,7 +6,7 @@ export interface MarketConfig {
     borrowTakerFeeRatio: string;
     borrowMakerFeeRatio: string;
     issueFtFeeRatio: string;
-    issueFtFeeRef: string;
+    mintGtFeeRef: string;
     redeemFeeRatio: string;
 }
 

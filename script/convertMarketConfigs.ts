@@ -36,7 +36,7 @@ const records = parse(csvContent, {
                 case 6: return 'borrowTakerFeeRatio';
                 case 7: return 'borrowMakerFeeRatio';
                 case 8: return 'issueFtFeeRatio';
-                case 9: return 'issueFtFeeRef';
+                case 9: return 'mintGtFeeRef';
                 case 10: return 'redeemFeeRatio';
                 case 11: return 'liquidationLtv';
                 case 12: return 'maxLtv';
@@ -86,7 +86,7 @@ records.forEach((record: any, index: number) => {
                 borrowTakerFeeRatio: record['borrowTakerFeeRatio'] || '',
                 borrowMakerFeeRatio: record['borrowMakerFeeRatio'] || '',
                 issueFtFeeRatio: record['issueFtFeeRatio'] || '',
-                issueFtFeeRef: record['issueFtFeeRef'] || '',
+                mintGtFeeRef: record['mintGtFeeRef'] || '',
                 redeemFeeRatio: record['redeemFeeRatio'] || '0'
             },
             loanConfig: {

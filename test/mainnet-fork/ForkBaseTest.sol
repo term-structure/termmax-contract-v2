@@ -77,8 +77,8 @@ abstract contract ForkBaseTest is Test {
 
         marketConfig.feeConfig.mintGtFeeRatio =
             uint32(vm.parseUint(vm.parseJsonString(jsonData, string.concat(key, ".feeConfig.mintGtFeeRatio"))));
-        marketConfig.feeConfig.issueFtFeeRef =
-            uint32(vm.parseUint(vm.parseJsonString(jsonData, string.concat(key, ".feeConfig.issueFtFeeRef"))));
+        marketConfig.feeConfig.mintGtFeeRef =
+            uint32(vm.parseUint(vm.parseJsonString(jsonData, string.concat(key, ".feeConfig.mintGtFeeRef"))));
         marketConfig.feeConfig.lendTakerFeeRatio =
             uint32(vm.parseUint(vm.parseJsonString(jsonData, string.concat(key, ".feeConfig.lendTakerFeeRatio"))));
         marketConfig.feeConfig.borrowTakerFeeRatio =

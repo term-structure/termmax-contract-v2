@@ -111,11 +111,11 @@ contract FactoryTest is Test {
         factory.createMarket(DeployUtils.GT_ERC20, params, 0);
 
         params.marketConfig.feeConfig.borrowTakerFeeRatio = 0;
-        params.marketConfig.feeConfig.issueFtFeeRef = uint32(Constants.DECIMAL_BASE + 1);
+        params.marketConfig.feeConfig.mintGtFeeRef = uint32(Constants.DECIMAL_BASE + 1);
         vm.expectRevert(abi.encodeWithSelector(MarketErrors.FeeTooHigh.selector));
         factory.createMarket(DeployUtils.GT_ERC20, params, 0);
 
-        params.marketConfig.feeConfig.issueFtFeeRef = 0;
+        params.marketConfig.feeConfig.mintGtFeeRef = 0;
         factory.createMarket(DeployUtils.GT_ERC20, params, 0);
         vm.stopPrank();
     }

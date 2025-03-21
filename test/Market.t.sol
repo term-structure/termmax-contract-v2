@@ -91,11 +91,11 @@ contract MarketTest is Test {
         vm.startPrank(deployer);
 
         MarketConfig memory newConfig = res.market.config();
-        newConfig.feeConfig.issueFtFeeRef = uint32(Constants.DECIMAL_BASE + 1);
+        newConfig.feeConfig.mintGtFeeRef = uint32(Constants.DECIMAL_BASE + 1);
         vm.expectRevert(abi.encodeWithSelector(MarketErrors.FeeTooHigh.selector));
         res.market.updateMarketConfig(newConfig);
 
-        newConfig.feeConfig.issueFtFeeRef = 0;
+        newConfig.feeConfig.mintGtFeeRef = 0;
         newConfig.feeConfig.borrowMakerFeeRatio = uint32(Constants.MAX_FEE_RATIO);
         vm.expectRevert(abi.encodeWithSelector(MarketErrors.FeeTooHigh.selector));
         res.market.updateMarketConfig(newConfig);

@@ -11,7 +11,7 @@
         "borrowTakerFeeRatio": "300000",
         "borrowMakerFeeRatio": "3000000",
         "issueGtFeeRatio": "10000000",
-        "issueFtFeeRef": "20000000",
+        "mintGtFeeRef": "20000000",
         "redeemFeeRatio": "0"
       },
       "loanConfig": {
@@ -45,7 +45,7 @@
         "borrowTakerFeeRatio": "300000",
         "borrowMakerFeeRatio": "3000000",
         "issueGtFeeRatio": "10000000",
-        "issueFtFeeRef": "20000000",
+        "mintGtFeeRef": "20000000",
         "redeemFeeRatio": "0"
       },
       "loanConfig": {
@@ -79,7 +79,7 @@
         "borrowTakerFeeRatio": "300000",
         "borrowMakerFeeRatio": "3000000",
         "issueGtFeeRatio": "10000000",
-        "issueFtFeeRef": "20000000",
+        "mintGtFeeRef": "20000000",
         "redeemFeeRatio": "0"
       },
       "loanConfig": {
@@ -113,7 +113,7 @@
         "borrowTakerFeeRatio": "300000",
         "borrowMakerFeeRatio": "3000000",
         "issueGtFeeRatio": "10000000",
-        "issueFtFeeRef": "20000000",
+        "mintGtFeeRef": "20000000",
         "redeemFeeRatio": "0"
       },
       "loanConfig": {
@@ -147,7 +147,7 @@
         "borrowTakerFeeRatio": "300000",
         "borrowMakerFeeRatio": "3000000",
         "issueGtFeeRatio": "10000000",
-        "issueFtFeeRef": "20000000",
+        "mintGtFeeRef": "20000000",
         "redeemFeeRatio": "0"
       },
       "loanConfig": {
@@ -181,7 +181,7 @@
         "borrowTakerFeeRatio": "300000",
         "borrowMakerFeeRatio": "3000000",
         "issueGtFeeRatio": "10000000",
-        "issueFtFeeRef": "20000000",
+        "mintGtFeeRef": "20000000",
         "redeemFeeRatio": "0"
       },
       "loanConfig": {

@@ -3,16 +3,15 @@
   "configs": {
     "configs_0": {
       "salt": 0,
+      "collateralCapForGt": "1000000000000000000000000",
       "marketConfig": {
-        "treasurer": "0x7ab945445958819a74b48e8Bd5F9E39ed74bdE9E",
         "maturity": "1745539200",
         "lendTakerFeeRatio": "2000000",
         "lendMakerFeeRatio": "2000000",
         "borrowTakerFeeRatio": "3000000",
         "borrowMakerFeeRatio": "3000000",
         "issueFtFeeRatio": "1000000",
-        "issueFtFeeRef": "2000000",
-        "redeemFeeRatio": "0"
+        "mintGtFeeRef": "2000000"
       },
       "loanConfig": {
         "liquidationLtv": "94000000",
@@ -37,16 +36,15 @@
     },
     "configs_1": {
       "salt": 0,
+      "collateralCapForGt": "1000000000000000000000000",
       "marketConfig": {
-        "treasurer": "0x7ab945445958819a74b48e8Bd5F9E39ed74bdE9E",
         "maturity": "1745539200",
         "lendTakerFeeRatio": "2000000",
         "lendMakerFeeRatio": "2000000",
         "borrowTakerFeeRatio": "3000000",
         "borrowMakerFeeRatio": "3000000",
         "issueFtFeeRatio": "1000000",
-        "issueFtFeeRef": "2000000",
-        "redeemFeeRatio": "0"
+        "mintGtFeeRef": "2000000"
       },
       "loanConfig": {
         "liquidationLtv": "85000000",
@@ -71,16 +69,15 @@
     },
     "configs_2": {
       "salt": 0,
+      "collateralCapForGt": "1000000000000000000000000",
       "marketConfig": {
-        "treasurer": "0x7ab945445958819a74b48e8Bd5F9E39ed74bdE9E",
         "maturity": "1745539200",
         "lendTakerFeeRatio": "2000000",
         "lendMakerFeeRatio": "2000000",
         "borrowTakerFeeRatio": "3000000",
         "borrowMakerFeeRatio": "3000000",
         "issueFtFeeRatio": "1000000",
-        "issueFtFeeRef": "2000000",
-        "redeemFeeRatio": "0"
+        "mintGtFeeRef": "2000000"
       },
       "loanConfig": {
         "liquidationLtv": "90000000",
@@ -105,16 +102,15 @@
     },
     "configs_3": {
       "salt": 0,
+      "collateralCapForGt": "1000000000000000000000000",
       "marketConfig": {
-        "treasurer": "0x7ab945445958819a74b48e8Bd5F9E39ed74bdE9E",
         "maturity": "1745539200",
         "lendTakerFeeRatio": "2000000",
         "lendMakerFeeRatio": "2000000",
         "borrowTakerFeeRatio": "3000000",
         "borrowMakerFeeRatio": "3000000",
         "issueFtFeeRatio": "1000000",
-        "issueFtFeeRef": "2000000",
-        "redeemFeeRatio": "0"
+        "mintGtFeeRef": "2000000"
       },
       "loanConfig": {
         "liquidationLtv": "90000000",
@@ -139,16 +135,15 @@
     },
     "configs_4": {
       "salt": 0,
+      "collateralCapForGt": "1000000000000000000000000",
       "marketConfig": {
-        "treasurer": "0x7ab945445958819a74b48e8Bd5F9E39ed74bdE9E",
         "maturity": "1745539200",
         "lendTakerFeeRatio": "2000000",
         "lendMakerFeeRatio": "2000000",
         "borrowTakerFeeRatio": "3000000",
         "borrowMakerFeeRatio": "3000000",
         "issueFtFeeRatio": "1000000",
-        "issueFtFeeRef": "2000000",
-        "redeemFeeRatio": "0"
+        "mintGtFeeRef": "2000000"
       },
       "loanConfig": {
         "liquidationLtv": "80000000",
@@ -173,16 +168,15 @@
     },
     "configs_5": {
       "salt": 0,
+      "collateralCapForGt": "1000000000000000000000000",
       "marketConfig": {
-        "treasurer": "0x7ab945445958819a74b48e8Bd5F9E39ed74bdE9E",
         "maturity": "1745539200",
         "lendTakerFeeRatio": "2000000",
         "lendMakerFeeRatio": "2000000",
         "borrowTakerFeeRatio": "3000000",
         "borrowMakerFeeRatio": "3000000",
         "issueFtFeeRatio": "1000000",
-        "issueFtFeeRef": "2000000",
-        "redeemFeeRatio": "0"
+        "mintGtFeeRef": "2000000"
       },
       "loanConfig": {
         "liquidationLtv": "80000000",
@@ -207,16 +201,15 @@
     },
     "configs_6": {
       "salt": 0,
+      "collateralCapForGt": "1000000000000000000000000",
       "marketConfig": {
-        "treasurer": "0x7ab945445958819a74b48e8Bd5F9E39ed74bdE9E",
         "maturity": "1745539200",
         "lendTakerFeeRatio": "2000000",
         "lendMakerFeeRatio": "2000000",
         "borrowTakerFeeRatio": "3000000",
         "borrowMakerFeeRatio": "3000000",
         "issueFtFeeRatio": "1000000",
-        "issueFtFeeRef": "2000000",
-        "redeemFeeRatio": "0"
+        "mintGtFeeRef": "2000000"
       },
       "loanConfig": {
         "liquidationLtv": "94000000",
@@ -241,16 +234,15 @@
     },
     "configs_7": {
       "salt": 0,
+      "collateralCapForGt": "1000000000000000000000000",
       "marketConfig": {
-        "treasurer": "0x7ab945445958819a74b48e8Bd5F9E39ed74bdE9E",
         "maturity": "1748476800",
         "lendTakerFeeRatio": "2000000",
         "lendMakerFeeRatio": "2000000",
         "borrowTakerFeeRatio": "3000000",
         "borrowMakerFeeRatio": "3000000",
         "issueFtFeeRatio": "1000000",
-        "issueFtFeeRef": "2000000",
-        "redeemFeeRatio": "0"
+        "mintGtFeeRef": "2000000"
       },
       "loanConfig": {
         "liquidationLtv": "94000000",
@@ -275,16 +267,15 @@
     },
     "configs_8": {
       "salt": 0,
+      "collateralCapForGt": "1000000000000000000000000",
       "marketConfig": {
-        "treasurer": "0x7ab945445958819a74b48e8Bd5F9E39ed74bdE9E",
         "maturity": "1745539200",
         "lendTakerFeeRatio": "2000000",
         "lendMakerFeeRatio": "2000000",
         "borrowTakerFeeRatio": "3000000",
         "borrowMakerFeeRatio": "3000000",
         "issueFtFeeRatio": "1000000",
-        "issueFtFeeRef": "2000000",
-        "redeemFeeRatio": "0"
+        "mintGtFeeRef": "2000000"
       },
       "loanConfig": {
         "liquidationLtv": "94000000",
@@ -309,16 +300,15 @@
     },
     "configs_9": {
       "salt": 0,
+      "collateralCapForGt": "1000000000000000000000000",
       "marketConfig": {
-        "treasurer": "0x7ab945445958819a74b48e8Bd5F9E39ed74bdE9E",
         "maturity": "1745539200",
         "lendTakerFeeRatio": "2000000",
         "lendMakerFeeRatio": "2000000",
         "borrowTakerFeeRatio": "3000000",
         "borrowMakerFeeRatio": "3000000",
         "issueFtFeeRatio": "1000000",
-        "issueFtFeeRef": "2000000",
-        "redeemFeeRatio": "0"
+        "mintGtFeeRef": "2000000"
       },
       "loanConfig": {
         "liquidationLtv": "94000000",
@@ -343,16 +333,15 @@
     },
     "configs_10": {
       "salt": 0,
+      "collateralCapForGt": "1000000000000000000000000",
       "marketConfig": {
-        "treasurer": "0x7ab945445958819a74b48e8Bd5F9E39ed74bdE9E",
         "maturity": "1750982400",
         "lendTakerFeeRatio": "2000000",
         "lendMakerFeeRatio": "2000000",
         "borrowTakerFeeRatio": "3000000",
         "borrowMakerFeeRatio": "3000000",
         "issueFtFeeRatio": "1000000",
-        "issueFtFeeRef": "2000000",
-        "redeemFeeRatio": "0"
+        "mintGtFeeRef": "2000000"
       },
       "loanConfig": {
         "liquidationLtv": "90000000",
@@ -377,16 +366,15 @@
     },
     "configs_11": {
       "salt": 0,
+      "collateralCapForGt": "1000000000000000000000000",
       "marketConfig": {
-        "treasurer": "0x7ab945445958819a74b48e8Bd5F9E39ed74bdE9E",
         "maturity": "1745539200",
         "lendTakerFeeRatio": "2000000",
         "lendMakerFeeRatio": "2000000",
         "borrowTakerFeeRatio": "3000000",
         "borrowMakerFeeRatio": "3000000",
         "issueFtFeeRatio": "1000000",
-        "issueFtFeeRef": "2000000",
-        "redeemFeeRatio": "0"
+        "mintGtFeeRef": "2000000"
       },
       "loanConfig": {
         "liquidationLtv": "94000000",
@@ -411,16 +399,15 @@
     },
     "configs_12": {
       "salt": 0,
+      "collateralCapForGt": "1000000000000000000000000",
       "marketConfig": {
-        "treasurer": "0x7ab945445958819a74b48e8Bd5F9E39ed74bdE9E",
         "maturity": "1745539200",
         "lendTakerFeeRatio": "2000000",
         "lendMakerFeeRatio": "2000000",
         "borrowTakerFeeRatio": "3000000",
         "borrowMakerFeeRatio": "3000000",
         "issueFtFeeRatio": "1000000",
-        "issueFtFeeRef": "2000000",
-        "redeemFeeRatio": "0"
+        "mintGtFeeRef": "2000000"
       },
       "loanConfig": {
         "liquidationLtv": "94000000",
@@ -445,16 +432,15 @@
     },
     "configs_13": {
       "salt": 0,
+      "collateralCapForGt": "1000000000000000000000000",
       "marketConfig": {
-        "treasurer": "0x7ab945445958819a74b48e8Bd5F9E39ed74bdE9E",
         "maturity": "1745539200",
         "lendTakerFeeRatio": "2000000",
         "lendMakerFeeRatio": "2000000",
         "borrowTakerFeeRatio": "3000000",
         "borrowMakerFeeRatio": "3000000",
         "issueFtFeeRatio": "1000000",
-        "issueFtFeeRef": "2000000",
-        "redeemFeeRatio": "0"
+        "mintGtFeeRef": "2000000"
       },
       "loanConfig": {
         "liquidationLtv": "94000000",

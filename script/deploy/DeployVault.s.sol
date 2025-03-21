@@ -29,7 +29,7 @@ import {VaultFactory, IVaultFactory} from "contracts/factory/VaultFactory.sol";
 
 contract DeloyVault is DeployBase {
     // Initialize vault configurations with a single USDC vault
-    address assetAddr = address(0x75cE5BcB2247c46464eF7296a07Dd3Cb96fD5F07);
+    address assetAddr = address(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
     address curator = address(0x2A58A3D405c527491Daae4C62561B949e7F87EFE);
     address guardian = address(0x2A58A3D405c527491Daae4C62561B949e7F87EFE);
     address allocator = address(0x2A58A3D405c527491Daae4C62561B949e7F87EFE);
@@ -110,7 +110,7 @@ contract DeloyVault is DeployBase {
             vaultConfig.performanceFeeRate
         );
 
-        vault.submitGuardian(vaultConfig.guardian); // need to accept guaridan after timelock
+        vault.submitGuardian(vaultConfig.guardian);
         vault.setIsAllocator(vaultConfig.allocator, true);
 
         writeDeploymentJson(currentBlockNum, currentTimestamp, vault, vaultConfig);
