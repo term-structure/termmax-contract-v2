@@ -18,7 +18,7 @@ The `deploy.sh` script is used for deploying core contracts and market component
   - Supported networks: `eth-sepolia`, `arb-sepolia`, `eth-mainnet`, `arb-mainnet`
   
 - `type`: Deployment type
-  - Supported types: `core`, `market`, `order`, `vault`, `oracles`
+  - Supported types: `core`, `market`, `order`, `vault`
   
 - `options`: Additional flags
   - `--broadcast`: Execute the transactions on-chain (default is dry-run)
@@ -32,19 +32,16 @@ The `deploy.sh` script is used for deploying core contracts and market component
 
 # Deploy market contracts on Arbitrum Sepolia
 ./deploy.sh arb-sepolia market --broadcast
-
-# Submit oracles on Ethereum Mainnet
-./deploy.sh eth-mainnet oracles --broadcast
 ```
 
-## RunScript.sh
+## Script.sh
 
-The `runScript.sh` utility is a more flexible script runner that can execute any Solidity script in the project.
+The `script.sh` utility is a more flexible script runner that can execute any Solidity script in the project.
 
 ### Usage
 
 ```bash
-./runScript.sh <network> <script-name> [options]
+./script.sh <network> <script-name> [options]
 ```
 
 ### Parameters
@@ -63,22 +60,25 @@ The `runScript.sh` utility is a more flexible script runner that can execute any
 
 ```bash
 # Run SubmitOracles script on Ethereum Sepolia (dry run)
-./runScript.sh eth-sepolia SubmitOracles
+./script.sh eth-sepolia SubmitOracles
 
 # Run SubmitOracles script on Arbitrum Mainnet and broadcast transactions
-./runScript.sh arb-mainnet SubmitOracles --broadcast
+./script.sh arb-mainnet SubmitOracles --broadcast
+
+# Run AcceptOracles script to accept pending oracles (after timelock period)
+./script.sh eth-mainnet AcceptOracles --broadcast
 
 # Run E2ETest script on Arbitrum Sepolia 
-./runScript.sh arb-sepolia E2ETest
+./script.sh arb-sepolia E2ETest
 ```
 
 ## Special Environment Variables
 
 Some scripts require specific environment variables:
 
-### SubmitOracles Script
+### SubmitOracles and AcceptOracles Scripts
 
-The `SubmitOracles` script requires an Oracle Aggregator Admin private key for each network:
+Both the `SubmitOracles` and `AcceptOracles` scripts require an Oracle Aggregator Admin private key for each network:
 
 ```bash
 # Required for eth-sepolia
@@ -96,6 +96,20 @@ ARB_MAINNET_ORACLE_AGGREGATOR_ADMIN_PRIVATE_KEY=your_oracle_admin_private_key_he
 
 This private key should belong to an account with admin privileges on the OracleAggregator contract.
 
+#### Oracle Submission Process
+
+The oracle update process consists of two steps:
+
+1. **Submit Oracles**: Use the `SubmitOracles` script to submit new price feed oracles to the OracleAggregator contract.
+   ```bash
+   ./script.sh eth-mainnet SubmitOracles --broadcast
+   ```
+
+2. **Accept Oracles**: After the timelock period, use the `AcceptOracles` script to accept the pending oracles.
+   ```bash
+   ./script.sh eth-mainnet AcceptOracles --broadcast
+   ```
+
 ## When to Use Each Script
 
 1. Use `deploy.sh` for standard deployment workflows:
@@ -103,11 +117,11 @@ This private key should belong to an account with admin privileges on the Oracle
    - Market components
    - Order contracts
    - Vault contracts
-
-2. Use `runScript.sh` for:
+ 
+2. Use `script.sh` for:
    - Non-standard deployment scripts
-   - Oracle submissions
+   - Oracle submissions and acceptance
    - Testing scripts
    - Other utility scripts
 
-Both scripts require appropriate environment variables to be set in the `.env` file (see `.env.example` for reference). 
+Both scripts require appropriate environment variables to be set in the `.env` file (see `.env.example` for reference).

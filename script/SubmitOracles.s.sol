@@ -6,9 +6,9 @@ import {console} from "forge-std/console.sol";
 import {IOracle} from "contracts/oracle/IOracle.sol";
 import {OracleAggregator} from "contracts/oracle/OracleAggregator.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {JsonLoader} from "../utils/JsonLoader.sol";
+import {JsonLoader} from "./utils/JsonLoader.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
-import {StringHelper} from "../utils/StringHelper.sol";
+import {StringHelper} from "./utils/StringHelper.sol";
 
 contract SubmitOracles is Script {
     // Network-specific config loaded from environment variables

@@ -4,7 +4,7 @@
 if [ "$#" -lt 2 ]; then
     echo "Usage: $0 <network> <type> [options]"
     echo "Supported networks: eth-sepolia, arb-sepolia, eth-mainnet, arb-mainnet"
-    echo "Deployment types: core, market, order, vault, oracles"
+    echo "Deployment types: core, market, order, vault"
     echo "Options:"
     echo "  --broadcast     Broadcast transactions (default: dry run)"
     echo "  --verify       Enable contract verification"
@@ -51,12 +51,12 @@ esac
 
 # Validate deployment type
 case $TYPE in
-    "core"|"market"|"order"|"vault"|"oracles")
+    "core"|"market"|"order"|"vault")
         echo "Deployment type: $TYPE"
         ;;
     *)
         echo "Unsupported deployment type: $TYPE"
-        echo "Supported types: core, market, order, vault, oracles"
+        echo "Supported types: core, market, order, vault"
         exit 1
         ;;
 esac
@@ -106,13 +106,6 @@ if [ -z "$ADMIN_ADDRESS" ]; then
     exit 1
 fi
 
-# Check for Oracle Aggregator Admin Private Key when deploying oracles
-if [ "$TYPE" = "oracles" ] && [ -z "$ORACLE_AGGREGATOR_ADMIN_PRIVATE_KEY" ]; then
-    echo "Error: Required environment variable $ORACLE_AGGREGATOR_ADMIN_PRIVATE_KEY_VAR is not set"
-    echo "This private key is required for the SubmitOracles script to function correctly."
-    exit 1
-fi
-
 # Check additional required variables for mainnet deployments
 if [[ $NETWORK == *"mainnet"* ]]; then
     if [ -z "${!UNISWAP_V3_ROUTER_VAR}" ]; then
@@ -140,11 +133,10 @@ echo "=== Deployment Configuration ==="
 echo "Network: $NETWORK"
 echo "Type: $TYPE"
 echo "Script: Deploy${TYPE_CAPITALIZED}.s.sol"
-echo "RPC URL: $RPC_URL"
+# Mask the RPC URL to avoid exposing API keys
+RPC_MASKED=$(echo "$RPC_URL" | sed -E 's/([a-zA-Z0-9]{4})[a-zA-Z0-9]*/\1*****/g')
+echo "RPC URL: $RPC_MASKED"
 echo "Admin Address: $ADMIN_ADDRESS"
-if [ "$TYPE" = "oracles" ]; then
-    echo "Oracle Aggregator Admin: Using private key from $ORACLE_AGGREGATOR_ADMIN_PRIVATE_KEY_VAR"
-fi
 echo "Mode: ${BROADCAST:+Live Broadcast}${BROADCAST:-Dry Run}"
 echo "Verification: ${VERIFY:+Enabled}${VERIFY:-Disabled}"
 if [[ $NETWORK == *"mainnet"* ]]; then
@@ -168,11 +160,7 @@ if [ ! -f "$SCRIPT_PATH" ]; then
 fi
 
 # Build the forge command
-if [ "$TYPE" = "oracles" ]; then
-    FORGE_CMD="forge script $SCRIPT_PATH --private-key $ORACLE_AGGREGATOR_ADMIN_PRIVATE_KEY --rpc-url $RPC_URL"
-else
-    FORGE_CMD="forge script $SCRIPT_PATH --rpc-url $RPC_URL"
-fi
+FORGE_CMD="forge script $SCRIPT_PATH --rpc-url $RPC_URL"
 
 # Add optional flags if specified
 if [ ! -z "$BROADCAST" ]; then
@@ -184,7 +172,7 @@ if [ ! -z "$VERIFY" ]; then
 fi
 
 # Execute the forge command
-echo "Executing: $FORGE_CMD"
+echo "Executing: $(echo "$FORGE_CMD" | sed -E 's/(--rpc-url )[^ ]*/\1[MASKED]/g')"
 eval $FORGE_CMD
 
 # Check if deployment was successful

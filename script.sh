@@ -94,10 +94,10 @@ if [ -z "$ADMIN_ADDRESS" ]; then
     exit 1
 fi
 
-# Check for Oracle Aggregator Admin Private Key when running SubmitOracles
-if [ "$SCRIPT_NAME" = "SubmitOracles" ] && [ -z "$ORACLE_AGGREGATOR_ADMIN_PRIVATE_KEY" ]; then
+# Check for Oracle Aggregator Admin Private Key when running SubmitOracles or AcceptOracles
+if [[ "$SCRIPT_NAME" = "SubmitOracles" || "$SCRIPT_NAME" = "AcceptOracles" ]] && [ -z "$ORACLE_AGGREGATOR_ADMIN_PRIVATE_KEY" ]; then
     echo "Error: Required environment variable $ORACLE_AGGREGATOR_ADMIN_PRIVATE_KEY_VAR is not set"
-    echo "This private key is required for the SubmitOracles script to function correctly."
+    echo "This private key is required for the $SCRIPT_NAME script to function correctly."
     exit 1
 fi
 
@@ -124,10 +124,12 @@ fi
 echo "=== Script Configuration ==="
 echo "Network: $NETWORK"
 echo "Script: $SCRIPT_NAME.s.sol"
-echo "RPC URL: $RPC_URL"
+# Mask the RPC URL to avoid exposing API keys
+RPC_MASKED=$(echo "$RPC_URL" | sed -E 's/([a-zA-Z0-9]{4})[a-zA-Z0-9]*/\1*****/g')
+echo "RPC URL: $RPC_MASKED"
 echo "Admin Address: $ADMIN_ADDRESS"
-if [ "$SCRIPT_NAME" = "SubmitOracles" ]; then
-    echo "Oracle Aggregator Admin: Using private key from $ORACLE_AGGREGATOR_ADMIN_PRIVATE_KEY_VAR"
+if [[ "$SCRIPT_NAME" = "SubmitOracles" || "$SCRIPT_NAME" = "AcceptOracles" ]]; then
+    echo "Oracle Aggregator Admin: Using private key from environment variable"
 fi
 echo "Mode: ${BROADCAST:+Live Broadcast}${BROADCAST:-Dry Run}"
 echo "Verification: ${VERIFY:+Enabled}${VERIFY:-Disabled}"
@@ -169,7 +171,7 @@ if [ "$SCRIPT_FOUND" = false ]; then
 fi
 
 # Build the forge command
-if [ "$SCRIPT_NAME" = "SubmitOracles" ]; then
+if [[ "$SCRIPT_NAME" = "SubmitOracles" || "$SCRIPT_NAME" = "AcceptOracles" ]]; then
     FORGE_CMD="forge script $SCRIPT_PATH --private-key $ORACLE_AGGREGATOR_ADMIN_PRIVATE_KEY --rpc-url $RPC_URL"
 else
     FORGE_CMD="forge script $SCRIPT_PATH --rpc-url $RPC_URL"
@@ -184,8 +186,9 @@ if [ ! -z "$VERIFY" ]; then
     FORGE_CMD="$FORGE_CMD $VERIFY"
 fi
 
-# Execute the forge command
-echo "Executing: $FORGE_CMD"
+# When printing the forge command, mask the private key and RPC URL
+MASKED_CMD=$(echo "$FORGE_CMD" | sed -E 's/(--private-key )[^ ]*/\1[MASKED]/g' | sed -E 's/(--rpc-url )[^ ]*/\1[MASKED]/g')
+echo "Executing: $MASKED_CMD"
 eval $FORGE_CMD
 
 # Check if execution was successful
