@@ -1,13 +1,11 @@
 export interface MarketConfig {
-    treasurer: string;
     maturity: string;
     lendTakerFeeRatio: string;
     lendMakerFeeRatio: string;
     borrowTakerFeeRatio: string;
     borrowMakerFeeRatio: string;
     issueFtFeeRatio: string;
-    mintGtFeeRef: string;
-    redeemFeeRatio: string;
+    issueFtFeeRef: string;
 }
 
 export interface LoanConfig {
@@ -18,6 +16,7 @@ export interface LoanConfig {
 
 export interface TokenConfig {
     tokenAddr: string;
+    priceFeedAddr: string;
     name: string;
     symbol: string;
     decimals: string;
@@ -30,6 +29,9 @@ export interface CollateralConfig extends TokenConfig {
 
 export interface MarketData {
     salt: number;
+    collateralCapForGt: string;
+    marketName?: string;
+    marketSymbol?: string;
     marketConfig: MarketConfig;
     loanConfig: LoanConfig;
     underlyingConfig: TokenConfig;

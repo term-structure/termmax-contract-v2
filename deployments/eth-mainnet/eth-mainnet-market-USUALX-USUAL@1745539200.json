@@ -1,0 +1,35 @@
+{
+  "blockInfo": {
+    "number": "22093135",
+    "timestamp": "1742544899"
+  },
+  "market": "0x380A2396D8b55cF15Ce7DcE270e43647608f9B56",
+  "collateral": {
+    "address": "0x06B964d96f5dCF7Eae9d7C559B09EDCe244d4B8E",
+    "symbol": "USUALX",
+    "priceFeed": "0x0000000000000000000000000000000000000000"
+  },
+  "underlying": {
+    "address": "0xC4441c2BE5d8fA8126822B9929CA0b81Ea0DE38E",
+    "symbol": "USUAL",
+    "priceFeed": "0x0000000000000000000000000000000000000000"
+  },
+  "tokens": {
+    "ft": "0x0fc17c6Cf73a2534Da267B132FaD36fBA31ebF01",
+    "xt": "0xAE30cb2bE034cb843db094597A57735a9AD58565",
+    "gt": "0x95F3154442532d5f14faEAF48BD635239B8C2ca8"
+  },
+  "config": {
+    "treasurer": "0x7ab945445958819a74b48e8Bd5F9E39ed74bdE9E",
+    "maturity": "1745539200",
+    "salt": "0",
+    "fees": {
+      "lendTakerFeeRatio": "2000000",
+      "lendMakerFeeRatio": "2000000",
+      "borrowTakerFeeRatio": "3000000",
+      "borrowMakerFeeRatio": "3000000",
+      "mintGtFeeRatio": "1000000",
+      "issueFtFeeRef": "2000000"
+    }
+  }
+}

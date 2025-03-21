@@ -126,8 +126,13 @@ contract DeployCore is DeployBase {
         console.log("VaultFactory deployed at:", address(vaultFactory));
         console.log("Oracle Aggregator deployed at:", address(oracleAggregator));
         console.log("Router deployed at:", address(router));
-        console.log("SwapAdapter deployed at:", address(swapAdapter));
-        console.log("Faucet deployed at:", address(faucet));
+        if (
+            keccak256(abi.encodePacked(network)) != keccak256(abi.encodePacked("eth-mainnet"))
+                && keccak256(abi.encodePacked(network)) != keccak256(abi.encodePacked("arb-mainnet"))
+        ) {
+            console.log("SwapAdapter deployed at:", address(swapAdapter));
+            console.log("Faucet deployed at:", address(faucet));
+        }
         console.log("MarketViewer deployed at:", address(marketViewer));
         console.log();
 

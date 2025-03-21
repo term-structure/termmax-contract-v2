@@ -1,0 +1,35 @@
+{
+  "blockInfo": {
+    "number": "22093135",
+    "timestamp": "1742544899"
+  },
+  "market": "0xdEaB716f6F58F0D691090228CE00215e13080fde",
+  "collateral": {
+    "address": "0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf",
+    "symbol": "cbBTC",
+    "priceFeed": "0x0000000000000000000000000000000000000000"
+  },
+  "underlying": {
+    "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+    "symbol": "USDC",
+    "priceFeed": "0x0000000000000000000000000000000000000000"
+  },
+  "tokens": {
+    "ft": "0x696539796dA391BD6D0c722B8D6e2D8Ee9b79B1D",
+    "xt": "0xA4789a5621a1DcDD546bdc4e3a118cd44Da6DEdD",
+    "gt": "0x68EbAf5Ac466F9d1f7600C7Dcebbbc4648FC3B97"
+  },
+  "config": {
+    "treasurer": "0x7ab945445958819a74b48e8Bd5F9E39ed74bdE9E",
+    "maturity": "1745539200",
+    "salt": "0",
+    "fees": {
+      "lendTakerFeeRatio": "2000000",
+      "lendMakerFeeRatio": "2000000",
+      "borrowTakerFeeRatio": "3000000",
+      "borrowMakerFeeRatio": "3000000",
+      "mintGtFeeRatio": "1000000",
+      "issueFtFeeRef": "400000"
+    }
+  }
+}

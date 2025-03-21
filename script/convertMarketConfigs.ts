@@ -29,29 +29,31 @@ const records = parse(csvContent, {
             switch (index) {
                 case 0: return 'marketType';
                 case 1: return 'salt';
-                case 2: return 'treasur';
+                case 2: return 'collateralCapForGt';
                 case 3: return 'maturity';
                 case 4: return 'lendTakerFeeRatio';
                 case 5: return 'lendMakerFeeRatio';
                 case 6: return 'borrowTakerFeeRatio';
                 case 7: return 'borrowMakerFeeRatio';
                 case 8: return 'issueFtFeeRatio';
-                case 9: return 'mintGtFeeRef';
-                case 10: return 'redeemFeeRatio';
-                case 11: return 'liquidationLtv';
-                case 12: return 'maxLtv';
-                case 13: return 'liquidatable';
-                case 14: return 'underlyingTokenAddr';
+                case 9: return 'issueFtFeeRef';
+                case 10: return 'liquidationLtv';
+                case 11: return 'maxLtv';
+                case 12: return 'liquidatable';
+                case 13: return 'underlyingTokenAddr';
+                case 14: return 'underlyingPriceFeedAddr';
                 case 15: return 'underlyingName';
                 case 16: return 'underlyingSymbol';
                 case 17: return 'underlyingDecimals';
                 case 18: return 'underlyingInitialPrice';
                 case 19: return 'collateralTokenAddr';
-                case 20: return 'collateralName';
-                case 21: return 'collateralSymbol';
-                case 22: return 'collateralDecimals';
-                case 23: return 'collateralInitialPrice';
-                case 24: return 'gtKeyIdentifier';
+                case 20: return 'collateralPriceFeedAddr';
+                case 21: return 'collateralName';
+                case 22: return 'collateralSymbol';
+                case 23: return 'collateralDecimals';
+                case 24: return 'collateralInitialPrice';
+                case 25: return 'gtKeyIdentifier';
+                // Skip the note column (26) by not mapping it
                 default: return `column${index}`;
             }
         });
@@ -67,27 +69,40 @@ const deployConfig: DeployConfig = {
     configs: {}
 };
 
+// Parse number with commas to a clean string
+function parseNumberWithCommas(value: string): string {
+    if (!value) return "1000000000000000000000000"; // Default value if empty
+    // Remove all commas and non-numeric characters except decimal point
+    return value.replace(/,/g, '').trim();
+}
+
 records.forEach((record: any, index: number) => {
     try {
-        console.log(`Processing record ${index + 1}...`);
-        
-        // Debug log
+        // console.log(`Processing record ${index + 1}...`);
+
+        // Debug log column names for the first record
         if (index === 0) {
             console.log('CSV Column Headers:', Object.keys(record));
         }
 
+        // Parse collateralCapForGt (remove commas)
+        const collateralCapForGt = parseNumberWithCommas(record['collateralCapForGt']);
+
+        // Use the gtKeyIdentifier directly from CSV
+        // Default to "GearingTokenWithERC20" if not provided
+        const gtKeyIdentifier = record['gtKeyIdentifier'] || "GearingTokenWithERC20";
+
         const marketData: MarketData = {
             salt: parseInt(record['salt'] || '0'),
+            collateralCapForGt: collateralCapForGt,
             marketConfig: {
-                treasurer: record['treasur']?.replace(/["""]/g, '') || '',
                 maturity: record['maturity'] || '',
                 lendTakerFeeRatio: record['lendTakerFeeRatio'] || '',
                 lendMakerFeeRatio: record['lendMakerFeeRatio'] || '',
                 borrowTakerFeeRatio: record['borrowTakerFeeRatio'] || '',
                 borrowMakerFeeRatio: record['borrowMakerFeeRatio'] || '',
                 issueFtFeeRatio: record['issueFtFeeRatio'] || '',
-                mintGtFeeRef: record['mintGtFeeRef'] || '',
-                redeemFeeRatio: record['redeemFeeRatio'] || '0'
+                issueFtFeeRef: record['issueFtFeeRef'] || ''
             },
             loanConfig: {
                 liquidationLtv: record['liquidationLtv'] || '',
@@ -96,6 +111,7 @@ records.forEach((record: any, index: number) => {
             },
             underlyingConfig: {
                 tokenAddr: record['underlyingTokenAddr'] || '',
+                priceFeedAddr: record['underlyingPriceFeedAddr'] || '',
                 name: record['underlyingName'] || '',
                 symbol: record['underlyingSymbol'] || '',
                 decimals: record['underlyingDecimals'] || '',
@@ -103,19 +119,45 @@ records.forEach((record: any, index: number) => {
             },
             collateralConfig: {
                 tokenAddr: record['collateralTokenAddr'] || '',
+                priceFeedAddr: record['collateralPriceFeedAddr'] || '',
                 name: record['collateralName'] || '',
                 symbol: record['collateralSymbol'] || '',
                 decimals: record['collateralDecimals'] || '',
                 initialPrice: convertToBaseUnit(record['collateralInitialPrice'] || '0'),
-                gtKeyIdentifier: record['gtKeyIdentifier'] || ''
+                gtKeyIdentifier: gtKeyIdentifier
             }
         };
+
+        // Add market name and symbol (derived from tokens)
+        const collateralSymbol = record['collateralSymbol'] || '';
+        const underlyingSymbol = record['underlyingSymbol'] || '';
+        const maturity = record['maturity'] || '';
+
+        // Convert timestamp to human readable date format (DDMMMYYYY)
+        const maturityDate = new Date(parseInt(maturity) * 1000);
+        const day = maturityDate.getUTCDate().toString().padStart(2, '0');
+        const month = maturityDate.toLocaleString('en-US', { month: 'short' }).toUpperCase();
+        const year = maturityDate.getUTCFullYear();
+        const formattedDate = `${day}${month}${year}`;
+
+        marketData.marketName = `${underlyingSymbol}/${collateralSymbol}-${formattedDate}`;
+        marketData.marketSymbol = `${underlyingSymbol}/${collateralSymbol}-${formattedDate}`;
 
         // Debug log for the first record
         if (index === 0) {
             console.log('First record data:', record);
             console.log('Processed market data:', marketData);
+            console.log('Price Feed Addresses:');
+            console.log(`Underlying Price Feed: ${record['underlyingPriceFeedAddr']}`);
+            console.log(`Collateral Price Feed: ${record['collateralPriceFeedAddr']}`);
+
         }
+        const collateralCapAmt = BigInt(collateralCapForGt) / (BigInt(10) ** BigInt(parseInt(record['collateralDecimals'])));
+        const collateralCapVault = BigInt(collateralCapForGt) * BigInt(parseInt(convertToBaseUnit(record['collateralInitialPrice']))) / (BigInt(10) ** BigInt(parseInt(record['collateralDecimals']))) / BigInt(10 ** 8);
+        console.log(`Collateral Symbol:`, record['collateralSymbol']);
+        console.log(`Collateral Initial Price:`, record['collateralInitialPrice']);
+        console.log(`Collateral Cap Amt:`, collateralCapAmt);
+        console.log(`Collateral Cap Vault: ${collateralCapVault}`);
 
         deployConfig.configs[`configs_${index}`] = marketData;
     } catch (error) {
