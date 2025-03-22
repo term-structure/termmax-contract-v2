@@ -36,6 +36,10 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
     bytes32 public constant CONFIGURATOR_ROLE = keccak256("CONFIGURATOR_ROLE");
     /// @notice Role to manage vault
     bytes32 public constant VAULT_ROLE = keccak256("VAULT_ROLE");
+    /// @notice Role to manage oracle
+    bytes32 public constant ORACLE_ROLE = keccak256("ORACLE_ROLE");
+    /// @notice Role to manage market
+    bytes32 public constant MARKET_ROLE = keccak256("MARKET_ROLE");
 
     function initialize(address admin) public initializer {
         __UUPSUpgradeable_init();
@@ -46,7 +50,7 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
     /// @notice Set GT implementation to the factory
     function setGtImplement(ITermMaxFactory factory, string memory gtImplementName, address gtImplement)
         external
-        onlyRole(DEFAULT_ADMIN_ROLE)
+        onlyRole(MARKET_ROLE)
     {
         factory.setGtImplement(gtImplementName, gtImplement);
     }
@@ -57,7 +61,7 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
         bytes32 gtKey,
         MarketInitialParams calldata deployParams,
         uint256 salt
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) returns (address market) {
+    ) external onlyRole(MARKET_ROLE) returns (address market) {
         market = factory.createMarket(gtKey, deployParams, salt);
     }
 
@@ -81,19 +85,19 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
     /// @notice Set the adapter whitelist for router
     function setAdapterWhitelist(ITermMaxRouter router, address adapter, bool isWhitelist)
         external
-        onlyRole(DEFAULT_ADMIN_ROLE)
+        onlyRole(MARKET_ROLE)
     {
         router.setAdapterWhitelist(adapter, isWhitelist);
     }
 
     function submitPendingOracle(IOracle aggregator, address asset, IOracle.Oracle memory oracle)
         external
-        onlyRole(DEFAULT_ADMIN_ROLE)
+        onlyRole(ORACLE_ROLE)
     {
         aggregator.submitPendingOracle(asset, oracle);
     }
 
-    function acceptPendingOracle(IOracle aggregator, address asset) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function acceptPendingOracle(IOracle aggregator, address asset) external onlyRole(ORACLE_ROLE) {
         aggregator.acceptPendingOracle(asset);
     }
 

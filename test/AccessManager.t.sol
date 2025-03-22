@@ -92,6 +92,8 @@ contract AccessManagerTest is Test {
         manager.grantRole(manager.CONFIGURATOR_ROLE(), deployer);
         manager.grantRole(manager.PAUSER_ROLE(), deployer);
         manager.grantRole(manager.VAULT_ROLE(), deployer);
+        manager.grantRole(manager.MARKET_ROLE(), deployer);
+        manager.grantRole(manager.ORACLE_ROLE(), deployer);
 
         vm.stopPrank();
     }
@@ -375,7 +377,7 @@ contract AccessManagerTest is Test {
         vm.startPrank(nonAdmin);
         vm.expectRevert(
             abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector, nonAdmin, manager.DEFAULT_ADMIN_ROLE()
+                IAccessControl.AccessControlUnauthorizedAccount.selector, nonAdmin, manager.MARKET_ROLE()
             )
         );
         manager.setGtImplement(res.factory, gtImplementName, newGtImplement);
