@@ -185,7 +185,7 @@ contract MarketViewer {
         vaultInfo.totalAssets = vault.totalAssets();
         vaultInfo.totalSupply = vault.totalSupply();
         vaultInfo.apr = vault.apr();
-        
+
         // Governance settings
         vaultInfo.guardian = vault.guardian();
         vaultInfo.curator = vault.curator();
@@ -193,27 +193,27 @@ contract MarketViewer {
         vaultInfo.maxDeposit = vault.maxDeposit(address(0));
 
         vaultInfo.idleFunds = asset.balanceOf(address(vault));
-        
+
         // Financial metrics
         vaultInfo.totalFt = vault.totalFt();
         vaultInfo.accretingPrincipal = vault.accretingPrincipal();
         vaultInfo.annualizedInterest = vault.annualizedInterest();
         vaultInfo.performanceFeeRate = vault.performanceFeeRate();
         vaultInfo.performanceFee = vault.performanceFee();
-        
+
         // Queue information
         uint256 supplyQueueLength = vault.supplyQueueLength();
         vaultInfo.supplyQueue = new address[](supplyQueueLength);
         for (uint256 i = 0; i < supplyQueueLength; i++) {
             vaultInfo.supplyQueue[i] = vault.supplyQueue(i);
         }
-        
+
         uint256 withdrawQueueLength = vault.withdrawQueueLength();
         vaultInfo.withdrawQueue = new address[](withdrawQueueLength);
         for (uint256 i = 0; i < withdrawQueueLength; i++) {
             vaultInfo.withdrawQueue[i] = vault.withdrawQueue(i);
         }
-        
+
         // Pending governance updates
         vaultInfo.pendingGuardian = vault.pendingGuardian();
         vaultInfo.pendingTimelock = vault.pendingTimelock();
@@ -223,7 +223,7 @@ contract MarketViewer {
         uint256 one = 10 ** vault.decimals();
         vaultInfo.convertToSharesPrice = vault.convertToShares(one);
     }
-    
+
     /**
      * @notice Get information about all orders in a vault
      * @param vault The TermMaxVault to query
@@ -232,13 +232,13 @@ contract MarketViewer {
     function getVaultOrdersInfo(ITermMaxVault vault) external view returns (OrderState[] memory) {
         uint256 supplyQueueLength = vault.supplyQueueLength();
         OrderState[] memory orderInfos = new OrderState[](supplyQueueLength);
-        
+
         for (uint256 i = 0; i < supplyQueueLength; i++) {
             address orderAddress = vault.supplyQueue(i);
             ITermMaxOrder order = ITermMaxOrder(orderAddress);
             orderInfos[i] = this.getOrderState(order);
         }
-        
+
         return orderInfos;
     }
 
