@@ -137,6 +137,8 @@ contract DeployBase is Script {
     {
         // deploy access manager
         accessManager = deployAccessManager(adminAddr);
+        accessManager.grantRole(accessManager.MARKET_ROLE(), adminAddr);
+        accessManager.grantRole(accessManager.ORACLE_ROLE(), adminAddr);
 
         // deploy factory
         factory = deployFactory(address(accessManager));

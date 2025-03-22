@@ -26,6 +26,7 @@ import {OdosV2Adapter} from "contracts/router/swapAdapters/OdosV2Adapter.sol";
 import {PendleSwapV3Adapter} from "contracts/router/swapAdapters/PendleSwapV3Adapter.sol";
 import {UniswapV3Adapter} from "contracts/router/swapAdapters/UniswapV3Adapter.sol";
 import {MorphoVaultAdapter} from "contracts/router/swapAdapters/MorphoVaultAdapter.sol";
+import {AccessManager} from "contracts/access/AccessManager.sol";
 
 contract DeployCore is DeployBase {
     // Network-specific config loaded from environment variables
