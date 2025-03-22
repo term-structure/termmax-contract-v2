@@ -38,6 +38,7 @@ import {PendleSwapV3Adapter} from "contracts/router/swapAdapters/PendleSwapV3Ada
 import {UniswapV3Adapter} from "contracts/router/swapAdapters/UniswapV3Adapter.sol";
 import {MorphoVaultAdapter} from "contracts/router/swapAdapters/MorphoVaultAdapter.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
+import {AccessManager} from "contracts/access/AccessManager.sol";
 
 contract DeployBase is Script {
     bytes32 constant GT_ERC20 = keccak256("GearingTokenWithERC20");
@@ -66,9 +67,18 @@ contract DeployBase is Script {
         router = TermMaxRouter(address(proxy));
     }
 
+    function deployAccessManager(address admin) public returns (AccessManager accessManager) {
+        AccessManager implementation = new AccessManager();
+        bytes memory data = abi.encodeCall(AccessManager.initialize, admin);
+        address proxy = address(new ERC1967Proxy(address(implementation), data));
+
+        accessManager = AccessManager(proxy);
+    }
+
     function deployCore(address adminAddr)
         public
         returns (
+            AccessManager accessManager,
             TermMaxFactory factory,
             VaultFactory vaultFactory,
             OracleAggregator oracleAggregator,
@@ -78,21 +88,24 @@ contract DeployBase is Script {
             MarketViewer marketViewer
         )
     {
+        // deploy access manager
+        accessManager = deployAccessManager(adminAddr);
+
         // deploy factory
-        factory = deployFactory(adminAddr);
+        factory = deployFactory(address(accessManager));
 
         // deploy vault factory
         vaultFactory = deployVaultFactory();
 
         // deploy oracle aggregator
-        oracleAggregator = deployOracleAggregator(adminAddr, 0);
+        oracleAggregator = deployOracleAggregator(address(accessManager), 0);
 
         // deploy router
-        router = deployRouter(adminAddr);
+        router = deployRouter(address(accessManager));
 
         // deploy swap adapter
         swapAdapter = new SwapAdapter(adminAddr);
-        router.setAdapterWhitelist(address(swapAdapter), true);
+        accessManager.setAdapterWhitelist(router, address(swapAdapter), true);
 
         // deploy faucet
         faucet = new Faucet(adminAddr);
@@ -110,6 +123,7 @@ contract DeployBase is Script {
     )
         public
         returns (
+            AccessManager accessManager,
             TermMaxFactory factory,
             VaultFactory vaultFactory,
             OracleAggregator oracleAggregator,
@@ -121,17 +135,20 @@ contract DeployBase is Script {
             MorphoVaultAdapter morphoVaultAdapter
         )
     {
+        // deploy access manager
+        accessManager = deployAccessManager(adminAddr);
+
         // deploy factory
-        factory = deployFactory(adminAddr);
+        factory = deployFactory(address(accessManager));
 
         // deploy vault factory
         vaultFactory = deployVaultFactory();
 
         // deploy oracle aggregator
-        oracleAggregator = deployOracleAggregator(adminAddr, oracleTimelock);
+        oracleAggregator = deployOracleAggregator(address(accessManager), oracleTimelock);
 
         // deploy router
-        router = deployRouter(adminAddr);
+        router = deployRouter(address(accessManager));
 
         // deploy market viewer
         marketViewer = deployMarketViewer();
@@ -142,10 +159,10 @@ contract DeployBase is Script {
         pendleSwapV3Adapter = new PendleSwapV3Adapter(address(pendleSwapV3Router));
         morphoVaultAdapter = new MorphoVaultAdapter();
 
-        router.setAdapterWhitelist(address(uniswapV3Adapter), true);
-        router.setAdapterWhitelist(address(odosV2Adapter), true);
-        router.setAdapterWhitelist(address(pendleSwapV3Adapter), true);
-        router.setAdapterWhitelist(address(morphoVaultAdapter), true);
+        accessManager.setAdapterWhitelist(router, address(uniswapV3Adapter), true);
+        accessManager.setAdapterWhitelist(router, address(odosV2Adapter), true);
+        accessManager.setAdapterWhitelist(router, address(pendleSwapV3Adapter), true);
+        accessManager.setAdapterWhitelist(router, address(morphoVaultAdapter), true);
     }
 
     function deployMarkets(

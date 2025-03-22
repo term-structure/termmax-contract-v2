@@ -38,6 +38,7 @@ contract DeployCore is DeployBase {
     address pendleSwapV3RouterAddr;
     uint256 oracleTimelock;
 
+    AccessManager accessManager;
     ITermMaxFactory factory;
     IVaultFactory vaultFactory;
     IOracle oracleAggregator;
@@ -91,6 +92,7 @@ contract DeployCore is DeployBase {
                 || keccak256(abi.encodePacked(network)) == keccak256(abi.encodePacked("arb-mainnet"))
         ) {
             (
+                accessManager,
                 factory,
                 vaultFactory,
                 oracleAggregator,
@@ -104,7 +106,8 @@ contract DeployCore is DeployBase {
                 adminAddr, uniswapV3RouterAddr, odosV2RouterAddr, pendleSwapV3RouterAddr, oracleTimelock
             );
         } else {
-            (factory, vaultFactory, oracleAggregator, router, swapAdapter, faucet, marketViewer) = deployCore(adminAddr);
+            (accessManager, factory, vaultFactory, oracleAggregator, router, swapAdapter, faucet, marketViewer) =
+                deployCore(adminAddr);
         }
         vm.stopBroadcast();
 
@@ -122,6 +125,7 @@ contract DeployCore is DeployBase {
         console.log("===== Core Info =====");
         console.log("Deployer:", deployerAddr);
         console.log("Admin:", adminAddr);
+        console.log("AccessManager deployed at:", address(accessManager));
         console.log("Factory deployed at:", address(factory));
         console.log("VaultFactory deployed at:", address(vaultFactory));
         console.log("Oracle Aggregator deployed at:", address(oracleAggregator));
@@ -167,6 +171,9 @@ contract DeployCore is DeployBase {
                 vm.toString(adminAddr),
                 '",\n',
                 '  "contracts": {\n',
+                '    "accessManager": "',
+                vm.toString(address(accessManager)),
+                '",\n',
                 '    "factory": "',
                 vm.toString(address(factory)),
                 '",\n',
