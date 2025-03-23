@@ -26,6 +26,7 @@ import {FaucetERC20} from "contracts/test/testnet/FaucetERC20.sol";
 import {DeployBase} from "./DeployBase.s.sol";
 import {ITermMaxVault, TermMaxVault} from "contracts/vault/TermMaxVault.sol";
 import {VaultFactory, IVaultFactory} from "contracts/factory/VaultFactory.sol";
+import {AccessManager} from "contracts/access/AccessManager.sol";
 
 contract DeloyVault is DeployBase {
     // Initialize vault configurations with a single USDC vault
@@ -42,8 +43,7 @@ contract DeloyVault is DeployBase {
     // Network-specific config loaded from environment variables
     string network;
     uint256 deployerPrivateKey;
-    address deployerAddr;
-    address adminAddr;
+    address accessManagerAddr;
 
     address vaultFactoryAddr;
 
@@ -83,13 +83,11 @@ contract DeloyVault is DeployBase {
 
         // Load network-specific configuration
         string memory privateKeyVar = string.concat(networkUpper, "_DEPLOYER_PRIVATE_KEY");
-        string memory adminVar = string.concat(networkUpper, "_ADMIN_ADDRESS");
 
         deployerPrivateKey = vm.envUint(privateKeyVar);
-        deployerAddr = vm.addr(deployerPrivateKey);
-        adminAddr = vm.envAddress(adminVar);
 
         string memory json = vm.readFile(coreContractPath);
+        accessManagerAddr = vm.parseJsonAddress(json, ".contracts.accessManager");
         vaultFactoryAddr = vm.parseJsonAddress(json, ".contracts.vaultFactory");
     }
 
@@ -100,7 +98,7 @@ contract DeloyVault is DeployBase {
         vm.startBroadcast(deployerPrivateKey);
         ITermMaxVault vault = deployVault(
             vaultFactoryAddr,
-            adminAddr,
+            accessManagerAddr,
             vaultConfig.curator,
             vaultConfig.timelock,
             vaultConfig.assetAddr,
@@ -110,8 +108,9 @@ contract DeloyVault is DeployBase {
             vaultConfig.performanceFeeRate
         );
 
-        vault.submitGuardian(vaultConfig.guardian);
-        vault.setIsAllocator(vaultConfig.allocator, true);
+        AccessManager accessManager = AccessManager(accessManagerAddr);
+        accessManager.submitVaultGuardian(vault, vaultConfig.guardian);
+        accessManager.setIsAllocatorForVault(vault, vaultConfig.allocator, true);
 
         writeDeploymentJson(currentBlockNum, currentTimestamp, vault, vaultConfig);
 
@@ -213,7 +212,7 @@ contract DeloyVault is DeployBase {
             vm.toString(config.timelock),
             ",\n",
             '    "admin": "',
-            vm.toString(adminAddr),
+            vm.toString(accessManagerAddr),
             '",\n',
             '    "curator": "',
             vm.toString(config.curator),

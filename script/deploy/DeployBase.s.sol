@@ -75,7 +75,7 @@ contract DeployBase is Script {
         accessManager = AccessManager(proxy);
     }
 
-    function deployCore(address adminAddr)
+    function deployCore(address deployerAddr, address adminAddr, uint256 oracleTimelock)
         public
         returns (
             AccessManager accessManager,
@@ -89,7 +89,12 @@ contract DeployBase is Script {
         )
     {
         // deploy access manager
-        accessManager = deployAccessManager(adminAddr);
+        accessManager = deployAccessManager(deployerAddr);
+        accessManager.grantRole(accessManager.DEFAULT_ADMIN_ROLE(), adminAddr);
+        accessManager.grantRole(accessManager.MARKET_ROLE(), deployerAddr);
+        accessManager.grantRole(accessManager.ORACLE_ROLE(), deployerAddr);
+        accessManager.grantRole(accessManager.VAULT_ROLE(), deployerAddr);
+        //! Admin needs to revoke deployer's role after deployment
 
         // deploy factory
         factory = deployFactory(address(accessManager));
@@ -98,7 +103,7 @@ contract DeployBase is Script {
         vaultFactory = deployVaultFactory();
 
         // deploy oracle aggregator
-        oracleAggregator = deployOracleAggregator(address(accessManager), 0);
+        oracleAggregator = deployOracleAggregator(address(accessManager), oracleTimelock);
 
         // deploy router
         router = deployRouter(address(accessManager));
@@ -108,13 +113,14 @@ contract DeployBase is Script {
         accessManager.setAdapterWhitelist(router, address(swapAdapter), true);
 
         // deploy faucet
-        faucet = new Faucet(adminAddr);
+        faucet = new Faucet(deployerAddr);
 
         // deploy market viewer
         marketViewer = deployMarketViewer();
     }
 
     function deployCoreMainnet(
+        address deployerAddr,
         address adminAddr,
         address uniswapV3Router,
         address odosV2Router,
@@ -136,9 +142,12 @@ contract DeployBase is Script {
         )
     {
         // deploy access manager
-        accessManager = deployAccessManager(adminAddr);
-        accessManager.grantRole(accessManager.MARKET_ROLE(), adminAddr);
-        accessManager.grantRole(accessManager.ORACLE_ROLE(), adminAddr);
+        accessManager = deployAccessManager(deployerAddr);
+        accessManager.grantRole(accessManager.DEFAULT_ADMIN_ROLE(), adminAddr);
+        accessManager.grantRole(accessManager.MARKET_ROLE(), deployerAddr);
+        accessManager.grantRole(accessManager.ORACLE_ROLE(), deployerAddr);
+        accessManager.grantRole(accessManager.VAULT_ROLE(), deployerAddr);
+        //! Admin needs to revoke deployer's role after deployment
 
         // deploy factory
         factory = deployFactory(address(accessManager));
@@ -168,6 +177,7 @@ contract DeployBase is Script {
     }
 
     function deployMarkets(
+        address accessManagerAddr,
         address factoryAddr,
         address oracleAddr,
         address faucetAddr,
@@ -177,6 +187,7 @@ contract DeployBase is Script {
         address priceFeedOperatorAddr
     ) public returns (TermMaxMarket[] memory markets, JsonLoader.Config[] memory configs) {
         ITermMaxFactory factory = ITermMaxFactory(factoryAddr);
+        AccessManager accessManager = AccessManager(accessManagerAddr);
         IOracle oracle = IOracle(oracleAddr);
         Faucet faucet = Faucet(faucetAddr);
 
@@ -214,11 +225,12 @@ contract DeployBase is Script {
                 );
                 collateralPriceFeed.transferOwnership(priceFeedOperatorAddr);
 
-                oracle.submitPendingOracle(
+                accessManager.submitPendingOracle(
+                    oracle,
                     address(collateral),
                     IOracle.Oracle(collateralPriceFeed, collateralPriceFeed, uint32(config.collateralConfig.heartBeat))
                 );
-                oracle.acceptPendingOracle(address(collateral));
+                accessManager.acceptPendingOracle(oracle, address(collateral));
             } else {
                 collateral = FaucetERC20(faucet.getTokenConfig(tokenId).tokenAddr);
                 collateralPriceFeed = MockPriceFeed(faucet.getTokenConfig(tokenId).priceFeedAddr);
@@ -243,11 +255,12 @@ contract DeployBase is Script {
                     })
                 );
                 underlyingPriceFeed.transferOwnership(priceFeedOperatorAddr);
-                oracle.submitPendingOracle(
+                accessManager.submitPendingOracle(
+                    oracle,
                     address(underlying),
                     IOracle.Oracle(underlyingPriceFeed, underlyingPriceFeed, uint32(config.underlyingConfig.heartBeat))
                 );
-                oracle.acceptPendingOracle(address(underlying));
+                accessManager.acceptPendingOracle(oracle, address(underlying));
             } else {
                 underlying = FaucetERC20(faucet.getTokenConfig(tokenId).tokenAddr);
                 underlyingPriceFeed = MockPriceFeed(faucet.getTokenConfig(tokenId).priceFeedAddr);
@@ -284,12 +297,14 @@ contract DeployBase is Script {
                 tokenSymbol: config.marketSymbol
             });
 
-            TermMaxMarket market = TermMaxMarket(factory.createMarket(GT_ERC20, initialParams, config.salt));
+            TermMaxMarket market =
+                TermMaxMarket(accessManager.createMarket(factory, GT_ERC20, initialParams, config.salt));
             markets[i] = market;
         }
     }
 
     function deployMarketsMainnet(
+        address accessManagerAddr,
         address factoryAddr,
         address oracleAddr,
         string memory deployDataPath,
@@ -338,15 +353,16 @@ contract DeployBase is Script {
                 tokenName: config.marketName,
                 tokenSymbol: config.marketSymbol
             });
-
-            TermMaxMarket market = TermMaxMarket(factory.createMarket(GT_ERC20, initialParams, config.salt));
+            AccessManager accessManager = AccessManager(accessManagerAddr);
+            TermMaxMarket market =
+                TermMaxMarket(accessManager.createMarket(factory, GT_ERC20, initialParams, config.salt));
             markets[i] = market;
         }
     }
 
     function deployVault(
         address factoryAddr,
-        address admin,
+        address accessManagerAddr,
         address curator,
         uint256 timelock,
         address assetAddr,
@@ -357,7 +373,7 @@ contract DeployBase is Script {
     ) public returns (TermMaxVault vault) {
         VaultFactory vaultFactory = VaultFactory(factoryAddr);
         VaultInitialParams memory initialParams = VaultInitialParams({
-            admin: admin,
+            admin: accessManagerAddr,
             curator: curator,
             timelock: timelock,
             asset: IERC20(assetAddr),
