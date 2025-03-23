@@ -18,7 +18,7 @@ The `deploy.sh` script is used for deploying core contracts and market component
   - Supported networks: `eth-sepolia`, `arb-sepolia`, `eth-mainnet`, `arb-mainnet`
   
 - `type`: Deployment type
-  - Supported types: `core`, `market`, `order`, `vault`
+  - Supported types: `access-manager`, `core`, `market`, `order`, `vault`
   
 - `options`: Additional flags
   - `--broadcast`: Execute the transactions on-chain (default is dry-run)
@@ -27,6 +27,12 @@ The `deploy.sh` script is used for deploying core contracts and market component
 ### Examples
 
 ```bash
+# Dry run AccessManager deployment on Ethereum Sepolia
+./deploy.sh eth-sepolia access-manager
+
+# Deploy AccessManager on Ethereum Mainnet
+./deploy.sh eth-mainnet access-manager --broadcast
+
 # Dry run core deployment on Ethereum Sepolia
 ./deploy.sh eth-sepolia core
 
@@ -59,6 +65,15 @@ The `script.sh` utility is a more flexible script runner that can execute any So
 ### Examples
 
 ```bash
+# Deploy AccessManager contract on Ethereum Sepolia (dry run)
+./script.sh eth-sepolia DeployAccessManager
+
+# Deploy AccessManager contract on Ethereum Mainnet and broadcast transactions
+./script.sh eth-mainnet DeployAccessManager --broadcast
+
+# Grant roles to deployer address after AccessManager deployment
+./script.sh eth-mainnet GrantRoles --broadcast
+
 # Run SubmitOracles script on Ethereum Sepolia (dry run)
 ./script.sh eth-sepolia SubmitOracles
 
@@ -75,6 +90,30 @@ The `script.sh` utility is a more flexible script runner that can execute any So
 ## Special Environment Variables
 
 Some scripts require specific environment variables:
+
+### GrantRoles Script
+
+The `GrantRoles` script requires the admin's private key and the deployer's address for each network:
+
+```bash
+# Required for eth-sepolia
+ETH_SEPOLIA_ADMIN_PRIVATE_KEY=your_admin_private_key_here
+ETH_SEPOLIA_DEPLOYER_ADDRESS=your_deployer_address_here
+
+# Required for eth-mainnet
+ETH_MAINNET_ADMIN_PRIVATE_KEY=your_admin_private_key_here
+ETH_MAINNET_DEPLOYER_ADDRESS=your_deployer_address_here
+
+# Required for arb-sepolia
+ARB_SEPOLIA_ADMIN_PRIVATE_KEY=your_admin_private_key_here
+ARB_SEPOLIA_DEPLOYER_ADDRESS=your_deployer_address_here
+
+# Required for arb-mainnet
+ARB_MAINNET_ADMIN_PRIVATE_KEY=your_admin_private_key_here
+ARB_MAINNET_DEPLOYER_ADDRESS=your_deployer_address_here
+```
+
+The admin private key should belong to the account that was specified as the initial admin during AccessManager deployment.
 
 ### SubmitOracles and AcceptOracles Scripts
 
@@ -125,3 +164,32 @@ The oracle update process consists of two steps:
    - Other utility scripts
 
 Both scripts require appropriate environment variables to be set in the `.env` file (see `.env.example` for reference).
+
+## Deployment Sequence
+
+The correct deployment sequence is:
+
+1. **Deploy AccessManager**: First, deploy the AccessManager which will manage permissions for all contracts.
+   ```bash
+   ./deploy.sh <network> access-manager --broadcast
+   ```
+   This creates a `<network>-access-manager.json` file containing the AccessManager address.
+
+2. **Grant Roles to Deployer**: Use the admin account to grant necessary roles to the deployer address.
+   ```bash
+   ./script.sh <network> GrantRoles --broadcast
+   ```
+   This grants MARKET_ROLE, ORACLE_ROLE, VAULT_ROLE, and CONFIGURATOR_ROLE to the deployer address.
+
+3. **Deploy Core Contracts**: Next, deploy the core contracts which will read the AccessManager address from the file.
+   ```bash
+   ./deploy.sh <network> core --broadcast
+   ```
+   This creates a `<network>-core.json` file containing all core contract addresses.
+
+4. **Deploy Market Contracts**: Finally, deploy the market contracts which read from both JSON files.
+   ```bash
+   ./deploy.sh <network> market --broadcast
+   ```
+
+Following this sequence ensures that contracts are deployed with the correct dependency chain and permissions setup.
