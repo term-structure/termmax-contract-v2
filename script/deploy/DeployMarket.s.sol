@@ -68,11 +68,15 @@ contract DeloyMarket is DeployBase {
     }
 
     function loadAddressConfig() internal {
-        string memory deploymentPath =
-            string.concat(vm.projectRoot(), "/deployments/", network, "/", network, "-core.json");
-        string memory json = vm.readFile(deploymentPath);
-
+        string memory accessManagerPath =
+            string.concat(vm.projectRoot(), "/deployments/", network, "/", network, "-access-manager.json");
+        string memory json = vm.readFile(accessManagerPath);
         accessManagerAddr = vm.parseJsonAddress(json, ".contracts.accessManager");
+
+        string memory corePath =
+            string.concat(vm.projectRoot(), "/deployments/", network, "/", network, "-core.json");
+        json = vm.readFile(corePath);
+
         factoryAddr = vm.parseJsonAddress(json, ".contracts.factory");
         oracleAddr = vm.parseJsonAddress(json, ".contracts.oracleAggregator");
         routerAddr = vm.parseJsonAddress(json, ".contracts.router");
@@ -97,9 +101,8 @@ contract DeloyMarket is DeployBase {
             keccak256(abi.encodePacked(network)) == keccak256(abi.encodePacked("eth-mainnet"))
                 || keccak256(abi.encodePacked(network)) == keccak256(abi.encodePacked("arb-mainnet"))
         ) {
-            (markets, configs) = deployMarketsMainnet(
-                accessManagerAddr, factoryAddr, oracleAddr, deployDataPath, adminAddr, treasurerAddr
-            );
+            (markets, configs) =
+                deployMarketsMainnet(accessManagerAddr, factoryAddr, oracleAddr, deployDataPath, treasurerAddr);
         } else {
             (markets, configs) = deployMarkets(
                 accessManagerAddr,
@@ -107,7 +110,6 @@ contract DeloyMarket is DeployBase {
                 oracleAddr,
                 faucetAddr,
                 deployDataPath,
-                adminAddr,
                 treasurerAddr,
                 priceFeedOperatorAddr
             );

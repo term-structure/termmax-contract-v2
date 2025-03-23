@@ -9,12 +9,14 @@ import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IER
 import {JsonLoader} from "./utils/JsonLoader.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {StringHelper} from "./utils/StringHelper.sol";
+import {AccessManager} from "contracts/access/AccessManager.sol";
 
 contract SubmitOracles is Script {
     // Network-specific config loaded from environment variables
     string network;
     uint256 oracleAggregatorAdminPrivateKey;
     address oracleAggregatorAddr;
+    address accessManagerAddr;
     JsonLoader.Config[] configs;
     mapping(address => bool) tokenSubmitted;
 
@@ -26,9 +28,13 @@ contract SubmitOracles is Script {
         string memory privateKeyVar = string.concat(networkUpper, "_ORACLE_AGGREGATOR_ADMIN_PRIVATE_KEY");
         oracleAggregatorAdminPrivateKey = vm.envUint(privateKeyVar);
 
-        string memory deploymentPath =
-            string.concat(vm.projectRoot(), "/deployments/", network, "/", network, "-core.json");
-        string memory json = vm.readFile(deploymentPath);
+        string memory accessManagerPath =
+            string.concat(vm.projectRoot(), "/deployments/", network, "/", network, "-access-manager.json");
+        string memory json = vm.readFile(accessManagerPath);
+        accessManagerAddr = vm.parseJsonAddress(json, ".contracts.accessManager");
+
+        string memory corePath = string.concat(vm.projectRoot(), "/deployments/", network, "/", network, "-core.json");
+        json = vm.readFile(corePath);
 
         oracleAggregatorAddr = vm.parseJsonAddress(json, ".contracts.oracleAggregator");
     }
@@ -42,6 +48,7 @@ contract SubmitOracles is Script {
 
         configs = JsonLoader.getConfigsFromJson(deployData);
 
+        AccessManager accessManager = AccessManager(accessManagerAddr);
         OracleAggregator oracle = OracleAggregator(oracleAggregatorAddr);
         for (uint256 i; i < configs.length; i++) {
             JsonLoader.Config memory config = configs[i];
@@ -53,7 +60,8 @@ contract SubmitOracles is Script {
                             || address(aggregator) != address(config.underlyingConfig.priceFeedAddr)
                     )
             ) {
-                oracle.submitPendingOracle(
+                accessManager.submitPendingOracle(
+                    oracle,
                     address(config.underlyingConfig.tokenAddr),
                     IOracle.Oracle(
                         AggregatorV3Interface(config.underlyingConfig.priceFeedAddr),
@@ -78,7 +86,8 @@ contract SubmitOracles is Script {
                             || address(aggregator) != address(config.collateralConfig.priceFeedAddr)
                     )
             ) {
-                oracle.submitPendingOracle(
+                accessManager.submitPendingOracle(
+                    oracle,
                     address(config.collateralConfig.tokenAddr),
                     IOracle.Oracle(
                         AggregatorV3Interface(config.collateralConfig.priceFeedAddr),

@@ -34,6 +34,7 @@ contract DeployCore is DeployBase {
     uint256 deployerPrivateKey;
     address deployerAddr;
     address adminAddr;
+    address accessManagerAddr;
     address uniswapV3RouterAddr;
     address odosV2RouterAddr;
     address pendleSwapV3RouterAddr;
@@ -78,6 +79,11 @@ contract DeployCore is DeployBase {
             pendleSwapV3RouterAddr = vm.envAddress(pendleSwapV3RouterVar);
             oracleTimelock = vm.envUint(oracleTimelockVar);
         }
+
+        string memory deploymentPath =
+            string.concat(vm.projectRoot(), "/deployments/", network, "/", network, "-access-manager.json");
+        string memory json = vm.readFile(deploymentPath);
+        accessManagerAddr = vm.parseJsonAddress(json, ".contracts.accessManager");
     }
 
     function run() public {
@@ -93,7 +99,6 @@ contract DeployCore is DeployBase {
                 || keccak256(abi.encodePacked(network)) == keccak256(abi.encodePacked("arb-mainnet"))
         ) {
             (
-                accessManager,
                 factory,
                 vaultFactory,
                 oracleAggregator,
@@ -104,11 +109,11 @@ contract DeployCore is DeployBase {
                 pendleSwapV3Adapter,
                 morphoVaultAdapter
             ) = deployCoreMainnet(
-                deployerAddr, adminAddr, uniswapV3RouterAddr, odosV2RouterAddr, pendleSwapV3RouterAddr, oracleTimelock
+                accessManagerAddr, uniswapV3RouterAddr, odosV2RouterAddr, pendleSwapV3RouterAddr, oracleTimelock
             );
         } else {
-            (accessManager, factory, vaultFactory, oracleAggregator, router, swapAdapter, faucet, marketViewer) =
-                deployCore(deployerAddr, adminAddr, oracleTimelock);
+            (factory, vaultFactory, oracleAggregator, router, swapAdapter, faucet, marketViewer) =
+                deployCore(deployerAddr, accessManagerAddr, oracleTimelock);
         }
         vm.stopBroadcast();
 
@@ -126,7 +131,6 @@ contract DeployCore is DeployBase {
         console.log("===== Core Info =====");
         console.log("Deployer:", deployerAddr);
         console.log("Admin:", adminAddr);
-        console.log("AccessManager deployed at:", address(accessManager));
         console.log("Factory deployed at:", address(factory));
         console.log("VaultFactory deployed at:", address(vaultFactory));
         console.log("Oracle Aggregator deployed at:", address(oracleAggregator));
@@ -172,9 +176,6 @@ contract DeployCore is DeployBase {
                 vm.toString(adminAddr),
                 '",\n',
                 '  "contracts": {\n',
-                '    "accessManager": "',
-                vm.toString(address(accessManager)),
-                '",\n',
                 '    "factory": "',
                 vm.toString(address(factory)),
                 '",\n',
@@ -221,13 +222,7 @@ contract DeployCore is DeployBase {
 
         // Create deployments directory if it doesn't exist
         string memory deploymentsDir = string.concat(vm.projectRoot(), "/deployments/", network);
-        if (vm.exists(deploymentsDir)) {
-            // Directory exists, clean it by removing all files
-            VmSafe.DirEntry[] memory files = vm.readDir(deploymentsDir);
-            for (uint256 i = 0; i < files.length; i++) {
-                vm.removeFile(files[i].path);
-            }
-        } else {
+        if (!vm.exists(deploymentsDir)) {
             // Directory doesn't exist, create it
             vm.createDir(deploymentsDir, true);
         }

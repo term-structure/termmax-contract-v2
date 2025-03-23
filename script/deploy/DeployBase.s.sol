@@ -75,10 +75,9 @@ contract DeployBase is Script {
         accessManager = AccessManager(proxy);
     }
 
-    function deployCore(address deployerAddr, address adminAddr, uint256 oracleTimelock)
+    function deployCore(address deployerAddr, address accessManagerAddr, uint256 oracleTimelock)
         public
         returns (
-            AccessManager accessManager,
             TermMaxFactory factory,
             VaultFactory vaultFactory,
             OracleAggregator oracleAggregator,
@@ -89,12 +88,7 @@ contract DeployBase is Script {
         )
     {
         // deploy access manager
-        accessManager = deployAccessManager(deployerAddr);
-        accessManager.grantRole(accessManager.DEFAULT_ADMIN_ROLE(), adminAddr);
-        accessManager.grantRole(accessManager.MARKET_ROLE(), deployerAddr);
-        accessManager.grantRole(accessManager.ORACLE_ROLE(), deployerAddr);
-        accessManager.grantRole(accessManager.VAULT_ROLE(), deployerAddr);
-        //! Admin needs to revoke deployer's role after deployment
+        AccessManager accessManager = AccessManager(accessManagerAddr);
 
         // deploy factory
         factory = deployFactory(address(accessManager));
@@ -109,7 +103,7 @@ contract DeployBase is Script {
         router = deployRouter(address(accessManager));
 
         // deploy swap adapter
-        swapAdapter = new SwapAdapter(adminAddr);
+        swapAdapter = new SwapAdapter(deployerAddr);
         accessManager.setAdapterWhitelist(router, address(swapAdapter), true);
 
         // deploy faucet
@@ -120,8 +114,7 @@ contract DeployBase is Script {
     }
 
     function deployCoreMainnet(
-        address deployerAddr,
-        address adminAddr,
+        address accessManagerAddr,
         address uniswapV3Router,
         address odosV2Router,
         address pendleSwapV3Router,
@@ -129,7 +122,6 @@ contract DeployBase is Script {
     )
         public
         returns (
-            AccessManager accessManager,
             TermMaxFactory factory,
             VaultFactory vaultFactory,
             OracleAggregator oracleAggregator,
@@ -142,12 +134,7 @@ contract DeployBase is Script {
         )
     {
         // deploy access manager
-        accessManager = deployAccessManager(deployerAddr);
-        accessManager.grantRole(accessManager.DEFAULT_ADMIN_ROLE(), adminAddr);
-        accessManager.grantRole(accessManager.MARKET_ROLE(), deployerAddr);
-        accessManager.grantRole(accessManager.ORACLE_ROLE(), deployerAddr);
-        accessManager.grantRole(accessManager.VAULT_ROLE(), deployerAddr);
-        //! Admin needs to revoke deployer's role after deployment
+        AccessManager accessManager = AccessManager(accessManagerAddr);
 
         // deploy factory
         factory = deployFactory(address(accessManager));
@@ -182,7 +169,6 @@ contract DeployBase is Script {
         address oracleAddr,
         address faucetAddr,
         string memory deployDataPath,
-        address adminAddr,
         address treasurerAddr,
         address priceFeedOperatorAddr
     ) public returns (TermMaxMarket[] memory markets, JsonLoader.Config[] memory configs) {
@@ -283,7 +269,7 @@ contract DeployBase is Script {
             MarketInitialParams memory initialParams = MarketInitialParams({
                 collateral: address(collateral),
                 debtToken: IERC20Metadata(address(underlying)),
-                admin: adminAddr,
+                admin: accessManagerAddr,
                 gtImplementation: address(0),
                 marketConfig: marketConfig,
                 loanConfig: LoanConfig({
@@ -308,7 +294,6 @@ contract DeployBase is Script {
         address factoryAddr,
         address oracleAddr,
         string memory deployDataPath,
-        address adminAddr,
         address treasurerAddr
     ) public returns (TermMaxMarket[] memory markets, JsonLoader.Config[] memory configs) {
         ITermMaxFactory factory = ITermMaxFactory(factoryAddr);
@@ -340,7 +325,7 @@ contract DeployBase is Script {
             MarketInitialParams memory initialParams = MarketInitialParams({
                 collateral: config.collateralConfig.tokenAddr,
                 debtToken: IERC20Metadata(config.underlyingConfig.tokenAddr),
-                admin: adminAddr,
+                admin: accessManagerAddr,
                 gtImplementation: address(0),
                 marketConfig: marketConfig,
                 loanConfig: LoanConfig({
