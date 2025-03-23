@@ -4,8 +4,8 @@ export interface MarketConfig {
     lendMakerFeeRatio: string;
     borrowTakerFeeRatio: string;
     borrowMakerFeeRatio: string;
-    issueFtFeeRatio: string;
-    issueFtFeeRef: string;
+    mintGtFeeRatio: string;
+    mintGtFeeRef: string;
 }
 
 export interface LoanConfig {

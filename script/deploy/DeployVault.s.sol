@@ -30,7 +30,7 @@ import {AccessManager} from "contracts/access/AccessManager.sol";
 
 contract DeloyVault is DeployBase {
     // Initialize vault configurations with a single USDC vault
-    address assetAddr = address(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
+    address assetAddr = address(0xaf88d065e77c8cC2239327C5EDb3A432268e5831);
     address curator = address(0x2A58A3D405c527491Daae4C62561B949e7F87EFE);
     address guardian = address(0x2A58A3D405c527491Daae4C62561B949e7F87EFE);
     address allocator = address(0x2A58A3D405c527491Daae4C62561B949e7F87EFE);
@@ -78,6 +78,10 @@ contract DeloyVault is DeployBase {
 
         // Load network from environment variable
         network = vm.envString("NETWORK");
+        string memory accessManagerPath =
+            string.concat(vm.projectRoot(), "/deployments/", network, "/", network, "-access-manager.json");
+        string memory json = vm.readFile(accessManagerPath);
+        accessManagerAddr = vm.parseJsonAddress(json, ".contracts.accessManager");
         coreContractPath = string.concat(vm.projectRoot(), "/deployments/", network, "/", network, "-core.json");
         string memory networkUpper = toUpper(network);
 
@@ -86,8 +90,7 @@ contract DeloyVault is DeployBase {
 
         deployerPrivateKey = vm.envUint(privateKeyVar);
 
-        string memory json = vm.readFile(coreContractPath);
-        accessManagerAddr = vm.parseJsonAddress(json, ".contracts.accessManager");
+        json = vm.readFile(coreContractPath);
         vaultFactoryAddr = vm.parseJsonAddress(json, ".contracts.vaultFactory");
     }
 

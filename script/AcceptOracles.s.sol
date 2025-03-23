@@ -14,7 +14,7 @@ import {AccessManager} from "contracts/access/AccessManager.sol";
 contract AcceptOracles is Script {
     // Network-specific config loaded from environment variables
     string network;
-    uint256 oracleAggregatorAdminPrivateKey;
+    uint256 deployerPrivateKey;
     address oracleAggregatorAddr;
     address accessManagerAddr;
     JsonLoader.Config[] configs;
@@ -41,8 +41,8 @@ contract AcceptOracles is Script {
         network = vm.envString("NETWORK");
         string memory networkUpper = StringHelper.toUpper(network);
         // Load network-specific configuration
-        string memory privateKeyVar = string.concat(networkUpper, "_ORACLE_AGGREGATOR_ADMIN_PRIVATE_KEY");
-        oracleAggregatorAdminPrivateKey = vm.envUint(privateKeyVar);
+        string memory privateKeyVar = string.concat(networkUpper, "_DEPLOYER_PRIVATE_KEY");
+        deployerPrivateKey = vm.envUint(privateKeyVar);
 
         string memory accessManagerPath =
             string.concat(vm.projectRoot(), "/deployments/", network, "/", network, "-access-manager.json");
@@ -76,7 +76,7 @@ contract AcceptOracles is Script {
 
         // Only broadcast if there are oracles to accept
         if (acceptedOracles.length > 0) {
-            vm.startBroadcast(oracleAggregatorAdminPrivateKey);
+            vm.startBroadcast(deployerPrivateKey);
 
             // Process acceptances
             for (uint256 i = 0; i < acceptedOracles.length; i++) {

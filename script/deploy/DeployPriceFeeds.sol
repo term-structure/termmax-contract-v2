@@ -60,6 +60,16 @@ contract DeployPriceFeeds is Script {
         }
 
         {
+            address gtWETHVault = 0x2371e134e3455e0593363cBF89d3b6cf53740618;
+            address wethToUsd = 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419;
+            AggregatorV3Interface gtWETHFeed =
+                AggregatorV3Interface(priceFeedFactory.createPriceFeedWithERC4626(wethToUsd, gtWETHVault));
+            (, int256 answer,,,) = gtWETHFeed.latestRoundData();
+            console.log("gtWETH price feed address", address(gtWETHFeed));
+            console.log("gtWETH last answer", answer);
+        }
+
+        {
             address PT_pufETH_26JUN2025_market = 0x58612beB0e8a126735b19BB222cbC7fC2C162D2a;
             AggregatorV3Interface ptFeed = AggregatorV3Interface(
                 priceFeedFactory.createPTWithPriceFeed(
