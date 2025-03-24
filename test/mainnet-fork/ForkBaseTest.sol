@@ -52,9 +52,10 @@ abstract contract ForkBaseTest is Test {
     function _getDataPath() internal view virtual returns (string memory);
 
     function _readTokenPairs() internal {
-        uint256 len = vm.parseJsonUint(jsonData, ".tokenPairs.length");
-        for (uint256 i = 0; i < len; i++) {
-            tokenPairs.push(vm.parseJsonString(jsonData, string.concat(".tokenPairs.", vm.toString(i))));
+        // uint256 len = vm.parseJsonUint(jsonData, ".tokenPairs.length");
+        string[] memory _tokenPairs = vm.parseJsonStringArray(jsonData, ".tokenPairs");
+        for (uint256 i = 0; i < _tokenPairs.length; i++) {
+            tokenPairs.push(_tokenPairs[i]);
         }
     }
 
