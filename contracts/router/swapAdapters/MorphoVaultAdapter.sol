@@ -15,7 +15,6 @@ contract MorphoVaultAdapter is ERC20SwapAdapter {
         Redeem
     }
 
-    error LessThanMinTokenOut(uint256 actual, uint256 expected);
     error InvalidAction();
 
     constructor() {}
