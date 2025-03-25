@@ -28,162 +28,81 @@ contract ForkGt is GtBaseTest {
         }
     }
 
-    function testLeverageFromXtWithUniswapAndPendle() public {
+    function testLeverageFromXt() public {
         for (uint256 i = 0; i < tokenPairs.length; i++) {
             string memory tokenPair = tokenPairs[i];
             GtTestRes memory res = _initializeGtTestRes(tokenPair);
-            if (!res.uniswapData.active || !res.pendleData.active) {
-                continue;
+            if (res.swapData.tokenType == TokenType.General) {
+                res.swapData.leverageUnits[0].adapter = res.swapAdapters.odosAdapter;
+            } else if (res.swapData.tokenType == TokenType.Pendle) {
+                res.swapData.leverageUnits[1].adapter = res.swapAdapters.pendleAdapter;
+                res.swapData.leverageUnits[0].adapter = res.swapAdapters.odosAdapter;
+            } else if (res.swapData.tokenType == TokenType.Morpho) {
+                res.swapData.leverageUnits[1].adapter = res.swapAdapters.morphoAdapter;
+                res.swapData.leverageUnits[0].adapter = res.swapAdapters.odosAdapter;
             }
+            
             address taker = vm.randomAddress();
 
-            SwapUnit[] memory units = new SwapUnit[](2);
-
-            units[0] = SwapUnit(
-                address(res.uniswapData.adapter),
-                address(res.marketInitialParams.debtToken),
-                res.pendleData.underlying,
-                abi.encode(
-                    abi.encodePacked(
-                        address(res.marketInitialParams.debtToken), res.uniswapData.poolFee, res.pendleData.underlying
-                    ),
-                    block.timestamp + 3600,
-                    0
-                )
-            );
-            units[1] = SwapUnit(
-                address(res.pendleData.adapter),
-                res.pendleData.underlying,
-                res.marketInitialParams.collateral,
-                abi.encode(res.pendleData.pendleMarket, 0)
-            );
-
-            _testLeverageFromXt(
-                res,
-                taker,
-                res.uniswapData.leverageAmountData.debtAmt,
-                res.uniswapData.leverageAmountData.swapAmtIn,
-                units
-            );
+            _testLeverageFromXt(res, taker, res.swapData.debtAmt, res.swapData.swapAmtIn, res.swapData.leverageUnits);
         }
     }
 
-    function testLeverageFromXtWithOdosAndPendle() public {
+    function testFlashRepay() public {
         for (uint256 i = 0; i < tokenPairs.length; i++) {
             string memory tokenPair = tokenPairs[i];
             GtTestRes memory res = _initializeGtTestRes(tokenPair);
-            if (!res.odosData.active || !res.pendleData.active) {
-                continue;
+            if (res.swapData.tokenType == TokenType.General) {
+                res.swapData.leverageUnits[0].adapter = res.swapAdapters.odosAdapter;
+                res.swapData.flashRepayUnits[0].adapter = res.swapAdapters.odosAdapter;
+            } else if (res.swapData.tokenType == TokenType.Pendle) {
+                res.swapData.leverageUnits[1].adapter = res.swapAdapters.pendleAdapter;
+                res.swapData.leverageUnits[0].adapter = res.swapAdapters.odosAdapter;
+
+                res.swapData.flashRepayUnits[0].adapter = res.swapAdapters.pendleAdapter;
+                res.swapData.flashRepayUnits[1].adapter = res.swapAdapters.odosAdapter;
+            } else if (res.swapData.tokenType == TokenType.Morpho) {
+                res.swapData.leverageUnits[1].adapter = res.swapAdapters.morphoAdapter;
+                res.swapData.leverageUnits[0].adapter = res.swapAdapters.odosAdapter;
+
+                res.swapData.flashRepayUnits[0].adapter = res.swapAdapters.morphoAdapter;
+                res.swapData.flashRepayUnits[1].adapter = res.swapAdapters.odosAdapter;
             }
+
             address taker = vm.randomAddress();
-
-            // Note: reference Odos docs: https://docs.odos.xyz/build/api-docs
-            IOdosRouterV2.swapTokenInfo memory swapTokenInfoParam = IOdosRouterV2.swapTokenInfo(
-                address(res.marketInitialParams.debtToken),
-                res.odosData.leverageAmountData.swapAmtIn,
-                res.odosData.odosInputReceiver,
-                res.pendleData.underlying,
-                res.odosData.outputQuote,
-                res.odosData.outputMin,
-                res.odosData.router
+            uint256 gtId = _testLeverageFromXt(
+                res, taker, res.swapData.debtAmt, res.swapData.swapAmtIn, res.swapData.leverageUnits
             );
-            bytes memory odosSwapData = abi.encode(
-                swapTokenInfoParam, res.odosData.odosPath, res.odosData.odosExecutor, res.odosData.odosReferralCode
-            );
-
-            SwapUnit[] memory units = new SwapUnit[](2);
-
-            units[0] = SwapUnit(
-                address(res.odosData.adapter),
-                address(res.marketInitialParams.debtToken),
-                res.pendleData.underlying,
-                odosSwapData
-            );
-            units[1] = SwapUnit(
-                address(res.pendleData.adapter),
-                res.pendleData.underlying,
-                res.marketInitialParams.collateral,
-                abi.encode(res.pendleData.pendleMarket, 0)
-            );
-
-            _testLeverageFromXt(
-                res, taker, res.odosData.leverageAmountData.debtAmt, res.odosData.leverageAmountData.swapAmtIn, units
-            );
+            _testFlashRepay(res, gtId, taker, res.swapData.flashRepayUnits);
         }
     }
 
-    function testFashRepayWithUniswapAndPendle() public {
+    function testFlashRepayByFt() public {
         for (uint256 i = 0; i < tokenPairs.length; i++) {
             string memory tokenPair = tokenPairs[i];
             GtTestRes memory res = _initializeGtTestRes(tokenPair);
-            if (!res.uniswapData.active || !res.pendleData.active) {
-                continue;
+            if (res.swapData.tokenType == TokenType.General) {
+                res.swapData.leverageUnits[0].adapter = res.swapAdapters.odosAdapter;
+                res.swapData.flashRepayUnits[0].adapter = res.swapAdapters.odosAdapter;
+            } else if (res.swapData.tokenType == TokenType.Pendle) {
+                res.swapData.leverageUnits[1].adapter = res.swapAdapters.pendleAdapter;
+                res.swapData.leverageUnits[0].adapter = res.swapAdapters.odosAdapter;
+
+                res.swapData.flashRepayUnits[0].adapter = res.swapAdapters.pendleAdapter;
+                res.swapData.flashRepayUnits[1].adapter = res.swapAdapters.odosAdapter;
+            } else if (res.swapData.tokenType == TokenType.Morpho) {
+                res.swapData.leverageUnits[1].adapter = res.swapAdapters.morphoAdapter;
+                res.swapData.leverageUnits[0].adapter = res.swapAdapters.odosAdapter;
+
+                res.swapData.flashRepayUnits[0].adapter = res.swapAdapters.morphoAdapter;
+                res.swapData.flashRepayUnits[1].adapter = res.swapAdapters.odosAdapter;
             }
+
             address taker = vm.randomAddress();
-
-            uint128 debtAmt = uint128(res.orderInitialAmount / 20);
-            uint128 collateralAmt = uint128(res.orderInitialAmount / 10);
-            uint256 gtId = _fastLoan(res, taker, debtAmt, collateralAmt);
-
-            SwapUnit[] memory units = new SwapUnit[](2);
-            units[0] = SwapUnit(
-                address(res.pendleData.adapter),
-                res.marketInitialParams.collateral,
-                res.pendleData.underlying,
-                abi.encode(res.pendleData.pendleMarket, 0)
+            uint256 gtId = _testLeverageFromXt(
+                res, taker, res.swapData.debtAmt, res.swapData.swapAmtIn, res.swapData.leverageUnits
             );
-
-            units[1] = SwapUnit(
-                address(res.uniswapData.adapter),
-                res.pendleData.underlying,
-                address(res.marketInitialParams.debtToken),
-                abi.encode(
-                    abi.encodePacked(
-                        res.pendleData.underlying, res.uniswapData.poolFee, address(res.marketInitialParams.debtToken)
-                    ),
-                    block.timestamp + 3600,
-                    0
-                )
-            );
-
-            _testFlashRepay(res, gtId, taker, units);
-        }
-    }
-
-    function testFashRepayByFtWithUniswapAndPendle() public {
-        for (uint256 i = 0; i < tokenPairs.length; i++) {
-            string memory tokenPair = tokenPairs[i];
-            GtTestRes memory res = _initializeGtTestRes(tokenPair);
-            if (!res.uniswapData.active || !res.pendleData.active) {
-                continue;
-            }
-            address taker = vm.randomAddress();
-
-            uint128 debtAmt = uint128(res.orderInitialAmount / 20);
-            uint128 collateralAmt = uint128(res.orderInitialAmount / 10);
-            uint256 gtId = _fastLoan(res, taker, debtAmt, collateralAmt);
-
-            SwapUnit[] memory units = new SwapUnit[](2);
-            units[0] = SwapUnit(
-                address(res.pendleData.adapter),
-                res.marketInitialParams.collateral,
-                res.pendleData.underlying,
-                abi.encode(res.pendleData.pendleMarket, 0)
-            );
-
-            units[1] = SwapUnit(
-                address(res.uniswapData.adapter),
-                res.pendleData.underlying,
-                address(res.marketInitialParams.debtToken),
-                abi.encode(
-                    abi.encodePacked(
-                        res.pendleData.underlying, res.uniswapData.poolFee, address(res.marketInitialParams.debtToken)
-                    ),
-                    block.timestamp + 3600,
-                    0
-                )
-            );
-            _testFlashRepayByFt(res, gtId, debtAmt, taker, units);
+            _testFlashRepayByFt(res, gtId, taker, res.swapData.flashRepayUnits);
         }
     }
 

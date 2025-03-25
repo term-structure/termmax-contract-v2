@@ -23,10 +23,18 @@ contract PendleSwapV3Adapter is ERC20SwapAdapter, PendleHelper {
         override
         returns (uint256 tokenOutAmt)
     {
-        (address ptMarketAddr, uint256 minTokenOut) = abi.decode(swapData, (address, uint256));
+        (address ptMarketAddr, uint256 inAmount, uint256 minTokenOut) =
+            abi.decode(swapData, (address, uint256, uint256));
         IPMarket market = IPMarket(ptMarketAddr);
 
         (, IPPrincipalToken PT,) = market.readTokens();
+        IERC20(tokenIn).approve(address(router), amount);
+
+        /**
+         * Note: Scaling Input/Output amount
+         */
+        minTokenOut = (minTokenOut * amount) / inAmount;
+
         if (tokenOut == PT) {
             IERC20(tokenIn).approve(address(router), amount);
             (tokenOutAmt,,) = router.swapExactTokenForPt(

@@ -25,7 +25,12 @@ contract MorphoVaultAdapter is ERC20SwapAdapter {
         override
         returns (uint256 tokenOutAmt)
     {
-        (Action action, uint256 minTokenOut) = abi.decode(swapData, (Action, uint256));
+        (Action action, uint256 inAmount, uint256 minTokenOut) = abi.decode(swapData, (Action, uint256, uint256));
+        /**
+         * Note: Scaling Input/Output amount
+         */
+        minTokenOut = (minTokenOut * amount) / inAmount;
+
         if (action == Action.Deposit) {
             tokenIn.approve(address(tokenOut), amount);
             tokenOutAmt = IERC4626(address(tokenOut)).deposit(amount, address(this));
