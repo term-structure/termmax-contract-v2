@@ -7,7 +7,6 @@ import {ITermMaxMarket} from "contracts/ITermMaxMarket.sol";
 import {ITermMaxOrder} from "contracts/ITermMaxOrder.sol";
 import {IMintableERC20} from "contracts/tokens/IMintableERC20.sol";
 import {IGearingToken} from "contracts/tokens/IGearingToken.sol";
-import {ITermMaxOrder} from "contracts/ITermMaxOrder.sol";
 import {OrderConfig, CurveCuts, FeeConfig, GtConfig} from "contracts/storage/TermMaxStorage.sol";
 import {ITermMaxVault} from "contracts/vault/ITermMaxVault.sol";
 import {OrderInfo} from "contracts/vault/VaultStorage.sol";
@@ -21,7 +20,7 @@ contract MarketViewer {
     }
 
     struct LoanPositionV2 {
-        address owners;
+        address owner;
         uint256 loanId;
         uint256 collateralAmt;
         uint256 debtAmt;
@@ -91,14 +90,23 @@ contract MarketViewer {
 
         IERC721Enumerable gtNft = IERC721Enumerable(address(gt));
         uint256 balance = gtNft.balanceOf(owner);
-        position.gtInfo = new LoanPosition[](balance);
+        LoanPosition[] memory gtInfos  = new LoanPosition[](balance);
 
+        uint256 validPositions = 0;
         for (uint256 i = 0; i < balance; ++i) {
             uint256 loanId = gtNft.tokenOfOwnerByIndex(owner, i);
-            position.gtInfo[i].loanId = loanId;
-            (, uint128 debtAmt,, bytes memory collateralData) = gt.loanInfo(loanId);
-            position.gtInfo[i].debtAmt = debtAmt;
-            position.gtInfo[i].collateralAmt = _decodeAmount(collateralData);
+            try gt.loanInfo(loanId) returns (address, uint128 debtAmt, uint128, bytes memory collateralData) {
+                gtInfos[validPositions].loanId = loanId;
+                gtInfos[validPositions].debtAmt = debtAmt;
+                gtInfos[validPositions].collateralAmt = _decodeAmount(collateralData);
+                validPositions++;
+            } catch {
+                // Skip this loan ID if loanInfo call fails
+            }
+        }
+        position.gtInfo = new LoanPosition[](validPositions);
+        for (uint256 i = 0; i < validPositions; i++) {
+            position.gtInfo[i] = gtInfos[i];
         }
     }
 
@@ -117,13 +125,24 @@ contract MarketViewer {
     function getAllLoanPosition(ITermMaxMarket market, address owner) external view returns (LoanPosition[] memory) {
         (,, IGearingToken gt,,) = market.tokens();
         uint256 balance = gt.balanceOf(owner);
-        LoanPosition[] memory loanPositions = new LoanPosition[](balance);
+        LoanPosition[] memory loanPositionsTmp = new LoanPosition[](balance);
+        
+        uint256 validPositions = 0;
         for (uint256 i = 0; i < balance; ++i) {
             uint256 loanId = gt.tokenOfOwnerByIndex(owner, i);
-            (, uint128 debtAmt,, bytes memory collateralData) = gt.loanInfo(loanId);
-            loanPositions[i].loanId = loanId;
-            loanPositions[i].debtAmt = debtAmt;
-            loanPositions[i].collateralAmt = _decodeAmount(collateralData);
+            try gt.loanInfo(loanId) returns (address, uint128 debtAmt, uint128, bytes memory collateralData) {
+                loanPositionsTmp[validPositions].loanId = loanId;
+                loanPositionsTmp[validPositions].debtAmt = debtAmt;
+                loanPositionsTmp[validPositions].collateralAmt = _decodeAmount(collateralData);
+                validPositions++;
+            } catch {
+                // Skip this loan ID if loanInfo call fails
+            }
+        }
+
+        LoanPosition[] memory loanPositions = new LoanPosition[](validPositions);
+        for (uint256 i = 0; i < validPositions; i++) {
+            loanPositions[i] = loanPositionsTmp[i];
         }
         return loanPositions;
     }
@@ -132,19 +151,31 @@ contract MarketViewer {
         (,, IGearingToken gtNft,,) = market.tokens();
         GtConfig memory config = gtNft.getGtConfig();
         uint256 supply = gtNft.totalSupply();
-        LoanPositionV2[] memory loanPositions = new LoanPositionV2[](supply);
+        LoanPositionV2[] memory loanPositionsTmp = new LoanPositionV2[](supply);
+        
+        uint256 validPositions = 0;
         for (uint256 i = 0; i < supply; ++i) {
             uint256 loanId = gtNft.tokenByIndex(i);
-            (address owner, uint128 debtAmt, uint128 ltv, bytes memory collateralData) = gtNft.loanInfo(loanId);
-            (bool isLiquidable, uint128 maxRepayAmt) = gtNft.getLiquidationInfo(loanId);
-            loanPositions[i].loanId = loanId;
-            loanPositions[i].debtAmt = debtAmt;
-            loanPositions[i].collateralAmt = _decodeAmount(collateralData);
-            loanPositions[i].owners = gtNft.ownerOf(loanId);
-            loanPositions[i].ltv = ltv;
-            loanPositions[i].isHealthy = ltv >= config.loanConfig.liquidationLtv;
-            loanPositions[i].isLiquidable = isLiquidable;
-            loanPositions[i].maxRepayAmt = maxRepayAmt;
+            try gtNft.loanInfo(loanId) returns (address owner, uint128 debtAmt, uint128 ltv, bytes memory collateralData) {
+                (bool isLiquidable, uint128 maxRepayAmt) = gtNft.getLiquidationInfo(loanId);
+                
+                loanPositionsTmp[validPositions].loanId = loanId;
+                loanPositionsTmp[validPositions].debtAmt = debtAmt;
+                loanPositionsTmp[validPositions].collateralAmt = _decodeAmount(collateralData);
+                loanPositionsTmp[validPositions].owner = owner;
+                loanPositionsTmp[validPositions].ltv = ltv;
+                loanPositionsTmp[validPositions].isHealthy = ltv >= config.loanConfig.liquidationLtv;
+                loanPositionsTmp[validPositions].isLiquidable = isLiquidable;
+                loanPositionsTmp[validPositions].maxRepayAmt = maxRepayAmt;
+                validPositions++;
+            } catch {
+                // Skip this loan ID if loanInfo call fails
+            }
+        }
+        
+        LoanPositionV2[] memory loanPositions = new LoanPositionV2[](validPositions);
+        for (uint256 i = 0; i < validPositions; i++) {
+            loanPositions[i] = loanPositionsTmp[i];
         }
         return loanPositions;
     }
@@ -156,9 +187,14 @@ contract MarketViewer {
         (OrderConfig memory orderConfig) = order.orderConfig();
         (uint256 ftReserve, uint256 xtReserve) = order.tokenReserves();
         if (orderConfig.gtId != 0) {
-            (, uint128 debtAmt,, bytes memory collateralData) = gt.loanInfo(orderConfig.gtId);
-            orderState.collateralReserve = _decodeAmount(collateralData);
-            orderState.debtReserve = debtAmt;
+            try gt.loanInfo(orderConfig.gtId) returns (address, uint128 debtAmt, uint128, bytes memory collateralData) {
+                orderState.collateralReserve = _decodeAmount(collateralData);
+                orderState.debtReserve = debtAmt;
+            } catch {
+                // If loan info is unavailable, set defaults
+                orderState.collateralReserve = 0;
+                orderState.debtReserve = 0;
+            }
         }
 
         orderState.ftReserve = ftReserve;
