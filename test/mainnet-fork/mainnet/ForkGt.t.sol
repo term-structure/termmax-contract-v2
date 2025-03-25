@@ -35,13 +35,21 @@ contract ForkGt is GtBaseTest {
             if (res.swapData.tokenType == TokenType.General) {
                 res.swapData.leverageUnits[0].adapter = res.swapAdapters.odosAdapter;
             } else if (res.swapData.tokenType == TokenType.Pendle) {
-                res.swapData.leverageUnits[1].adapter = res.swapAdapters.pendleAdapter;
-                res.swapData.leverageUnits[0].adapter = res.swapAdapters.odosAdapter;
+                if (res.swapData.leverageUnits.length == 1) {
+                    res.swapData.leverageUnits[0].adapter = res.swapAdapters.pendleAdapter;
+                } else {
+                    res.swapData.leverageUnits[1].adapter = res.swapAdapters.pendleAdapter;
+                    res.swapData.leverageUnits[0].adapter = res.swapAdapters.odosAdapter;
+                }
             } else if (res.swapData.tokenType == TokenType.Morpho) {
-                res.swapData.leverageUnits[1].adapter = res.swapAdapters.morphoAdapter;
-                res.swapData.leverageUnits[0].adapter = res.swapAdapters.odosAdapter;
+                if (res.swapData.leverageUnits.length == 1) {
+                    res.swapData.leverageUnits[0].adapter = res.swapAdapters.morphoAdapter;
+                } else {
+                    res.swapData.leverageUnits[1].adapter = res.swapAdapters.morphoAdapter;
+                    res.swapData.leverageUnits[0].adapter = res.swapAdapters.odosAdapter;
+                }
             }
-            
+
             address taker = vm.randomAddress();
 
             _testLeverageFromXt(res, taker, res.swapData.debtAmt, res.swapData.swapAmtIn, res.swapData.leverageUnits);
@@ -56,17 +64,27 @@ contract ForkGt is GtBaseTest {
                 res.swapData.leverageUnits[0].adapter = res.swapAdapters.odosAdapter;
                 res.swapData.flashRepayUnits[0].adapter = res.swapAdapters.odosAdapter;
             } else if (res.swapData.tokenType == TokenType.Pendle) {
-                res.swapData.leverageUnits[1].adapter = res.swapAdapters.pendleAdapter;
-                res.swapData.leverageUnits[0].adapter = res.swapAdapters.odosAdapter;
+                if (res.swapData.leverageUnits.length == 1) {
+                    res.swapData.leverageUnits[0].adapter = res.swapAdapters.pendleAdapter;
+                    res.swapData.flashRepayUnits[0].adapter = res.swapAdapters.pendleAdapter;
+                } else {
+                    res.swapData.leverageUnits[1].adapter = res.swapAdapters.pendleAdapter;
+                    res.swapData.leverageUnits[0].adapter = res.swapAdapters.odosAdapter;
 
-                res.swapData.flashRepayUnits[0].adapter = res.swapAdapters.pendleAdapter;
-                res.swapData.flashRepayUnits[1].adapter = res.swapAdapters.odosAdapter;
+                    res.swapData.flashRepayUnits[0].adapter = res.swapAdapters.pendleAdapter;
+                    res.swapData.flashRepayUnits[1].adapter = res.swapAdapters.odosAdapter;
+                }
             } else if (res.swapData.tokenType == TokenType.Morpho) {
-                res.swapData.leverageUnits[1].adapter = res.swapAdapters.morphoAdapter;
-                res.swapData.leverageUnits[0].adapter = res.swapAdapters.odosAdapter;
+                if (res.swapData.leverageUnits.length == 1) {
+                    res.swapData.leverageUnits[0].adapter = res.swapAdapters.morphoAdapter;
+                    res.swapData.flashRepayUnits[0].adapter = res.swapAdapters.morphoAdapter;
+                } else {
+                    res.swapData.leverageUnits[1].adapter = res.swapAdapters.morphoAdapter;
+                    res.swapData.leverageUnits[0].adapter = res.swapAdapters.odosAdapter;
 
-                res.swapData.flashRepayUnits[0].adapter = res.swapAdapters.morphoAdapter;
-                res.swapData.flashRepayUnits[1].adapter = res.swapAdapters.odosAdapter;
+                    res.swapData.flashRepayUnits[0].adapter = res.swapAdapters.morphoAdapter;
+                    res.swapData.flashRepayUnits[1].adapter = res.swapAdapters.odosAdapter;
+                }
             }
 
             address taker = vm.randomAddress();
@@ -85,17 +103,27 @@ contract ForkGt is GtBaseTest {
                 res.swapData.leverageUnits[0].adapter = res.swapAdapters.odosAdapter;
                 res.swapData.flashRepayUnits[0].adapter = res.swapAdapters.odosAdapter;
             } else if (res.swapData.tokenType == TokenType.Pendle) {
-                res.swapData.leverageUnits[1].adapter = res.swapAdapters.pendleAdapter;
-                res.swapData.leverageUnits[0].adapter = res.swapAdapters.odosAdapter;
+                if (res.swapData.leverageUnits.length == 1) {
+                    res.swapData.leverageUnits[0].adapter = res.swapAdapters.pendleAdapter;
+                    res.swapData.flashRepayUnits[0].adapter = res.swapAdapters.pendleAdapter;
+                } else {
+                    res.swapData.leverageUnits[1].adapter = res.swapAdapters.pendleAdapter;
+                    res.swapData.leverageUnits[0].adapter = res.swapAdapters.odosAdapter;
 
-                res.swapData.flashRepayUnits[0].adapter = res.swapAdapters.pendleAdapter;
-                res.swapData.flashRepayUnits[1].adapter = res.swapAdapters.odosAdapter;
+                    res.swapData.flashRepayUnits[0].adapter = res.swapAdapters.pendleAdapter;
+                    res.swapData.flashRepayUnits[1].adapter = res.swapAdapters.odosAdapter;
+                }
             } else if (res.swapData.tokenType == TokenType.Morpho) {
-                res.swapData.leverageUnits[1].adapter = res.swapAdapters.morphoAdapter;
-                res.swapData.leverageUnits[0].adapter = res.swapAdapters.odosAdapter;
+                if (res.swapData.leverageUnits.length == 1) {
+                    res.swapData.leverageUnits[0].adapter = res.swapAdapters.morphoAdapter;
+                    res.swapData.flashRepayUnits[0].adapter = res.swapAdapters.morphoAdapter;
+                } else {
+                    res.swapData.leverageUnits[1].adapter = res.swapAdapters.morphoAdapter;
+                    res.swapData.leverageUnits[0].adapter = res.swapAdapters.odosAdapter;
 
-                res.swapData.flashRepayUnits[0].adapter = res.swapAdapters.morphoAdapter;
-                res.swapData.flashRepayUnits[1].adapter = res.swapAdapters.odosAdapter;
+                    res.swapData.flashRepayUnits[0].adapter = res.swapAdapters.morphoAdapter;
+                    res.swapData.flashRepayUnits[1].adapter = res.swapAdapters.odosAdapter;
+                }
             }
 
             address taker = vm.randomAddress();
