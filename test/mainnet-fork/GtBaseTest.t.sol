@@ -20,6 +20,7 @@ import {TermMaxRouter, ISwapAdapter, ITermMaxRouter, SwapUnit, RouterErrors} fro
 import {UniswapV3Adapter, ERC20SwapAdapter} from "contracts/router/swapAdapters/UniswapV3Adapter.sol";
 import {PendleSwapV3Adapter} from "contracts/router/swapAdapters/PendleSwapV3Adapter.sol";
 import {OdosV2Adapter, IOdosRouterV2} from "contracts/router/swapAdapters/OdosV2Adapter.sol";
+import {MorphoVaultAdapter} from "contracts/router/swapAdapters/MorphoVaultAdapter.sol";
 import {TermMaxOrder, ITermMaxOrder} from "contracts/TermMaxOrder.sol";
 import {ForkBaseTest} from "./ForkBaseTest.sol";
 import {RouterEvents} from "contracts/events/RouterEvents.sol";
@@ -27,38 +28,25 @@ import {MockFlashLoanReceiver} from "contracts/test/MockFlashLoanReceiver.sol";
 import "contracts/storage/TermMaxStorage.sol";
 
 abstract contract GtBaseTest is ForkBaseTest {
-    struct LeverageAmountData {
+    enum TokenType {
+        General,
+        Pendle,
+        Morpho
+    }
+
+    struct SwapData {
         uint128 debtAmt;
         uint128 swapAmtIn;
+        TokenType tokenType;
+        SwapUnit[] leverageUnits;
+        SwapUnit[] flashRepayUnits;
     }
 
-    struct UniswapData {
-        address router;
-        UniswapV3Adapter adapter;
-        bool active;
-        uint24 poolFee;
-        LeverageAmountData leverageAmountData;
-    }
-
-    struct PendleSwapData {
-        address router;
-        PendleSwapV3Adapter adapter;
-        bool active;
-        address underlying;
-        address pendleMarket;
-    }
-
-    struct OdosSwapData {
-        address router;
-        OdosV2Adapter adapter;
-        bool active;
-        address odosInputReceiver;
-        uint256 outputQuote;
-        uint256 outputMin;
-        address odosExecutor;
-        bytes odosPath;
-        uint32 odosReferralCode;
-        LeverageAmountData leverageAmountData;
+    struct SwapAdapters {
+        address uniswapAdapter;
+        address pendleAdapter;
+        address odosAdapter;
+        address morphoAdapter;
     }
 
     struct GtTestRes {
@@ -79,9 +67,8 @@ abstract contract GtBaseTest is ForkBaseTest {
         ITermMaxRouter router;
         uint256 maxXtReserve;
         address maker;
-        UniswapData uniswapData;
-        PendleSwapData pendleData;
-        OdosSwapData odosData;
+        SwapData swapData;
+        SwapAdapters swapAdapters;
     }
 
     function _initializeGtTestRes(string memory key) internal returns (GtTestRes memory) {
@@ -138,20 +125,18 @@ abstract contract GtBaseTest is ForkBaseTest {
         res.order =
             res.market.createOrder(res.maker, res.maxXtReserve, ISwapCallback(address(0)), res.orderConfig.curveCuts);
 
+        res.swapAdapters.uniswapAdapter =
+            address(new UniswapV3Adapter(vm.parseJsonAddress(jsonData, ".routers.uniswapRouter")));
+        res.swapAdapters.pendleAdapter =
+            address(new PendleSwapV3Adapter(vm.parseJsonAddress(jsonData, ".routers.pendleRouter")));
+        res.swapAdapters.odosAdapter = address(new OdosV2Adapter(vm.parseJsonAddress(jsonData, ".routers.odosRouter")));
+        res.swapAdapters.morphoAdapter = address(new MorphoVaultAdapter());
         res.router = deployRouter(res.marketInitialParams.admin);
-
-        res.uniswapData = _readUniswapData(key);
-        if (res.uniswapData.active) {
-            res.router.setAdapterWhitelist(address(res.uniswapData.adapter), true);
-        }
-        res.pendleData = _readPendleSwapData(key);
-        if (res.pendleData.active) {
-            res.router.setAdapterWhitelist(address(res.pendleData.adapter), true);
-        }
-        res.odosData = _readOdosSwapData(key);
-        if (res.odosData.active) {
-            res.router.setAdapterWhitelist(address(res.odosData.adapter), true);
-        }
+        res.router.setAdapterWhitelist(res.swapAdapters.uniswapAdapter, true);
+        res.router.setAdapterWhitelist(res.swapAdapters.pendleAdapter, true);
+        res.router.setAdapterWhitelist(res.swapAdapters.odosAdapter, true);
+        res.router.setAdapterWhitelist(res.swapAdapters.morphoAdapter, true);
+        res.swapData = _readSwapData(key);
 
         res.orderInitialAmount = vm.parseJsonUint(jsonData, string.concat(key, ".orderInitialAmount"));
         deal(address(res.debtToken), res.marketInitialParams.admin, res.orderInitialAmount);
@@ -164,47 +149,25 @@ abstract contract GtBaseTest is ForkBaseTest {
         return res;
     }
 
-    function _readUniswapData(string memory key) internal returns (UniswapData memory data) {
-        data.active = vm.parseJsonBool(jsonData, string.concat(key, ".routers.uniswap.active"));
-        if (data.active) {
-            data.router = vm.parseJsonAddress(jsonData, string.concat(key, ".routers.uniswap.address"));
-            data.adapter = new UniswapV3Adapter(data.router);
-            data.poolFee = uint24(vm.parseJsonUint(jsonData, string.concat(key, ".routers.uniswap.poolFee")));
-            data.leverageAmountData.debtAmt =
-                uint128(vm.parseJsonUint(jsonData, string.concat(key, ".routers.uniswap.leverage.debtAmt")));
-            data.leverageAmountData.swapAmtIn =
-                uint128(vm.parseJsonUint(jsonData, string.concat(key, ".routers.uniswap.leverage.swapAmtIn")));
+    function _readSwapData(string memory key) internal returns (SwapData memory data) {
+        data.tokenType = TokenType(vm.parseJsonUint(jsonData, string.concat(key, ".swapData.tokenType")));
+        data.debtAmt = uint128(vm.parseJsonUint(jsonData, string.concat(key, ".swapData.debtAmt")));
+        data.swapAmtIn = uint128(vm.parseJsonUint(jsonData, string.concat(key, ".swapData.swapAmtIn")));
+
+        uint256 length = vm.parseJsonUint(jsonData, string.concat(key, ".swapData.length"));
+        data.leverageUnits = new SwapUnit[](length);
+        data.flashRepayUnits = new SwapUnit[](length);
+        for (uint256 i = 0; i < length; i++) {
+            data.leverageUnits[i] = _readSwapUnit(string.concat(key, ".swapData.leverageUnits.", vm.toString(i)));
+            data.flashRepayUnits[i] = _readSwapUnit(string.concat(key, ".swapData.flashRepayUnits.", vm.toString(i)));
         }
     }
 
-    function _readPendleSwapData(string memory key) internal returns (PendleSwapData memory data) {
-        data.active = vm.parseJsonBool(jsonData, string.concat(key, ".routers.pendle.active"));
-        if (data.active) {
-            data.router = vm.parseJsonAddress(jsonData, string.concat(key, ".routers.pendle.address"));
-            data.adapter = new PendleSwapV3Adapter(data.router);
-            data.pendleMarket = vm.parseJsonAddress(jsonData, string.concat(key, ".routers.pendle.market"));
-            data.underlying = vm.parseJsonAddress(jsonData, string.concat(key, ".routers.pendle.underlying"));
-        }
-    }
-
-    function _readOdosSwapData(string memory key) internal returns (OdosSwapData memory data) {
-        data.active = vm.parseJsonBool(jsonData, string.concat(key, ".routers.odos.active"));
-        if (data.active) {
-            data.router = vm.parseJsonAddress(jsonData, string.concat(key, ".routers.odos.address"));
-            data.adapter = new OdosV2Adapter(data.router);
-
-            data.odosInputReceiver = vm.parseJsonAddress(jsonData, string.concat(key, ".routers.odos.inputReceiver"));
-            data.outputQuote = vm.parseJsonUint(jsonData, string.concat(key, ".routers.odos.outputQuote"));
-            data.outputMin = vm.parseJsonUint(jsonData, string.concat(key, ".routers.odos.outputMin"));
-            data.odosExecutor = vm.parseJsonAddress(jsonData, string.concat(key, ".routers.odos.executor"));
-            data.odosPath = vm.parseJsonBytes(jsonData, string.concat(key, ".routers.odos.path"));
-            data.odosReferralCode = uint32(vm.parseJsonUint(jsonData, string.concat(key, ".routers.odos.referralCode")));
-
-            data.leverageAmountData.debtAmt =
-                uint128(vm.parseJsonUint(jsonData, string.concat(key, ".routers.odos.leverage.debtAmt")));
-            data.leverageAmountData.swapAmtIn =
-                uint128(vm.parseJsonUint(jsonData, string.concat(key, ".routers.odos.leverage.swapAmtIn")));
-        }
+    function _readSwapUnit(string memory key) internal view returns (SwapUnit memory data) {
+        data.adapter = vm.parseJsonAddress(jsonData, string.concat(key, ".adapter"));
+        data.tokenIn = vm.parseJsonAddress(jsonData, string.concat(key, ".tokenIn"));
+        data.tokenOut = vm.parseJsonAddress(jsonData, string.concat(key, ".tokenOut"));
+        data.swapData = vm.parseJsonBytes(jsonData, string.concat(key, ".swapData"));
     }
 
     function _updateCollateralPrice(GtTestRes memory res, int256 price) internal {
@@ -356,13 +319,7 @@ abstract contract GtBaseTest is ForkBaseTest {
         vm.stopPrank();
     }
 
-    function _testFlashRepayByFt(
-        GtTestRes memory res,
-        uint256 gtId,
-        uint128 debtAmt,
-        address taker,
-        SwapUnit[] memory units
-    ) internal {
+    function _testFlashRepayByFt(GtTestRes memory res, uint256 gtId, address taker, SwapUnit[] memory units) internal {
         deal(taker, 1e18);
 
         vm.startPrank(taker);
@@ -372,6 +329,8 @@ abstract contract GtBaseTest is ForkBaseTest {
         ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
         orders[0] = res.order;
         uint128[] memory amtsToBuyFt = new uint128[](1);
+
+        (, uint128 debtAmt,,) = res.gt.loanInfo(gtId);
         amtsToBuyFt[0] = debtAmt;
         bool byDebtToken = false;
 

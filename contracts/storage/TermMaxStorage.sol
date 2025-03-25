@@ -29,12 +29,12 @@ struct FeeConfig {
     /// @notice The borrowing fee ratio for maker
     ///         i.e. 0.01e8 means 1%
     uint32 borrowMakerFeeRatio;
-    /// @notice The fee ratio when issuing FT tokens by collateral
+    /// @notice The fee ratio when minting GT tokens by collateral
     ///         i.e. 0.01e8 means 1%
-    uint32 issueFtFeeRatio;
-    /// @notice The fee ref when issuing FT tokens by collateral
+    uint32 mintGtFeeRatio;
+    /// @notice The fee ref when minting GT tokens by collateral
     ///         i.e. 0.01e8 means 1%
-    uint32 issueFtFeeRef;
+    uint32 mintGtFeeRef;
 }
 
 struct CurveCuts {

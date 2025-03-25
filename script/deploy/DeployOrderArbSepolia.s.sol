@@ -20,10 +20,10 @@ import {IOracle} from "contracts/oracle/IOracle.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {MockSwapAdapter} from "contracts/test/MockSwapAdapter.sol";
-import {JsonLoader} from "../../utils/JsonLoader.sol";
+import {JsonLoader} from "../utils/JsonLoader.sol";
 import {Faucet} from "contracts/test/testnet/Faucet.sol";
 import {FaucetERC20} from "contracts/test/testnet/FaucetERC20.sol";
-import {DeployBase} from "../DeployBase.s.sol";
+import {DeployBase} from "./DeployBase.s.sol";
 
 contract DeloyOrderArbSepolia is DeployBase {
     // admin config

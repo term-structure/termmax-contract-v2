@@ -36,6 +36,9 @@ import {KyberswapV2Adapter} from "contracts/router/swapAdapters/KyberswapV2Adapt
 import {OdosV2Adapter} from "contracts/router/swapAdapters/OdosV2Adapter.sol";
 import {PendleSwapV3Adapter} from "contracts/router/swapAdapters/PendleSwapV3Adapter.sol";
 import {UniswapV3Adapter} from "contracts/router/swapAdapters/UniswapV3Adapter.sol";
+import {MorphoVaultAdapter} from "contracts/router/swapAdapters/MorphoVaultAdapter.sol";
+import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
+import {AccessManager} from "contracts/access/AccessManager.sol";
 
 contract DeployBase is Script {
     bytes32 constant GT_ERC20 = keccak256("GearingTokenWithERC20");
@@ -64,7 +67,15 @@ contract DeployBase is Script {
         router = TermMaxRouter(address(proxy));
     }
 
-    function deployCore(address adminAddr)
+    function deployAccessManager(address admin) public returns (AccessManager accessManager) {
+        AccessManager implementation = new AccessManager();
+        bytes memory data = abi.encodeCall(AccessManager.initialize, admin);
+        address proxy = address(new ERC1967Proxy(address(implementation), data));
+
+        accessManager = AccessManager(proxy);
+    }
+
+    function deployCore(address deployerAddr, address accessManagerAddr, uint256 oracleTimelock)
         public
         returns (
             TermMaxFactory factory,
@@ -72,34 +83,42 @@ contract DeployBase is Script {
             OracleAggregator oracleAggregator,
             TermMaxRouter router,
             SwapAdapter swapAdapter,
-            Faucet faucet
+            Faucet faucet,
+            MarketViewer marketViewer
         )
     {
+        // deploy access manager
+        AccessManager accessManager = AccessManager(accessManagerAddr);
+
         // deploy factory
-        factory = deployFactory(adminAddr);
+        factory = deployFactory(address(accessManager));
 
         // deploy vault factory
         vaultFactory = deployVaultFactory();
 
         // deploy oracle aggregator
-        oracleAggregator = deployOracleAggregator(adminAddr, 0);
+        oracleAggregator = deployOracleAggregator(address(accessManager), oracleTimelock);
 
         // deploy router
-        router = deployRouter(adminAddr);
+        router = deployRouter(address(accessManager));
 
         // deploy swap adapter
-        swapAdapter = new SwapAdapter(adminAddr);
-        router.setAdapterWhitelist(address(swapAdapter), true);
+        swapAdapter = new SwapAdapter(deployerAddr);
+        accessManager.setAdapterWhitelist(router, address(swapAdapter), true);
 
         // deploy faucet
-        faucet = new Faucet(adminAddr);
+        faucet = new Faucet(deployerAddr);
+
+        // deploy market viewer
+        marketViewer = deployMarketViewer();
     }
 
     function deployCoreMainnet(
-        address adminAddr,
+        address accessManagerAddr,
         address uniswapV3Router,
         address odosV2Router,
-        address pendleSwapV3Router
+        address pendleSwapV3Router,
+        uint256 oracleTimelock
     )
         public
         returns (
@@ -107,45 +126,55 @@ contract DeployBase is Script {
             VaultFactory vaultFactory,
             OracleAggregator oracleAggregator,
             TermMaxRouter router,
+            MarketViewer marketViewer,
             UniswapV3Adapter uniswapV3Adapter,
             OdosV2Adapter odosV2Adapter,
-            PendleSwapV3Adapter pendleSwapV3Adapter
+            PendleSwapV3Adapter pendleSwapV3Adapter,
+            MorphoVaultAdapter morphoVaultAdapter
         )
     {
+        // deploy access manager
+        AccessManager accessManager = AccessManager(accessManagerAddr);
+
         // deploy factory
-        factory = deployFactory(adminAddr);
+        factory = deployFactory(address(accessManager));
 
         // deploy vault factory
         vaultFactory = deployVaultFactory();
 
         // deploy oracle aggregator
-        oracleAggregator = deployOracleAggregator(adminAddr, 0);
+        oracleAggregator = deployOracleAggregator(address(accessManager), oracleTimelock);
 
         // deploy router
-        router = deployRouter(adminAddr);
+        router = deployRouter(address(accessManager));
+
+        // deploy market viewer
+        marketViewer = deployMarketViewer();
 
         // deploy and whitelist swap adapter
         uniswapV3Adapter = new UniswapV3Adapter(address(uniswapV3Router));
         odosV2Adapter = new OdosV2Adapter(odosV2Router);
         pendleSwapV3Adapter = new PendleSwapV3Adapter(address(pendleSwapV3Router));
+        morphoVaultAdapter = new MorphoVaultAdapter();
 
-        router.setAdapterWhitelist(address(uniswapV3Adapter), true);
-        router.setAdapterWhitelist(address(odosV2Adapter), true);
-        router.setAdapterWhitelist(address(pendleSwapV3Adapter), true);
+        accessManager.setAdapterWhitelist(router, address(uniswapV3Adapter), true);
+        accessManager.setAdapterWhitelist(router, address(odosV2Adapter), true);
+        accessManager.setAdapterWhitelist(router, address(pendleSwapV3Adapter), true);
+        accessManager.setAdapterWhitelist(router, address(morphoVaultAdapter), true);
     }
 
     function deployMarkets(
+        address accessManagerAddr,
         address factoryAddr,
         address oracleAddr,
-        address routerAddr,
         address faucetAddr,
         string memory deployDataPath,
-        address adminAddr,
+        address treasurerAddr,
         address priceFeedOperatorAddr
     ) public returns (TermMaxMarket[] memory markets, JsonLoader.Config[] memory configs) {
         ITermMaxFactory factory = ITermMaxFactory(factoryAddr);
+        AccessManager accessManager = AccessManager(accessManagerAddr);
         IOracle oracle = IOracle(oracleAddr);
-        ITermMaxRouter router = ITermMaxRouter(routerAddr);
         Faucet faucet = Faucet(faucetAddr);
 
         string memory deployData = vm.readFile(deployDataPath);
@@ -182,10 +211,12 @@ contract DeployBase is Script {
                 );
                 collateralPriceFeed.transferOwnership(priceFeedOperatorAddr);
 
-                oracle.submitPendingOracle(
-                    address(collateral), IOracle.Oracle(collateralPriceFeed, collateralPriceFeed, 365 days)
+                accessManager.submitPendingOracle(
+                    oracle,
+                    address(collateral),
+                    IOracle.Oracle(collateralPriceFeed, collateralPriceFeed, uint32(config.collateralConfig.heartBeat))
                 );
-                oracle.acceptPendingOracle(address(collateral));
+                accessManager.acceptPendingOracle(oracle, address(collateral));
             } else {
                 collateral = FaucetERC20(faucet.getTokenConfig(tokenId).tokenAddr);
                 collateralPriceFeed = MockPriceFeed(faucet.getTokenConfig(tokenId).priceFeedAddr);
@@ -210,25 +241,27 @@ contract DeployBase is Script {
                     })
                 );
                 underlyingPriceFeed.transferOwnership(priceFeedOperatorAddr);
-                oracle.submitPendingOracle(
-                    address(underlying), IOracle.Oracle(underlyingPriceFeed, underlyingPriceFeed, 365 days)
+                accessManager.submitPendingOracle(
+                    oracle,
+                    address(underlying),
+                    IOracle.Oracle(underlyingPriceFeed, underlyingPriceFeed, uint32(config.underlyingConfig.heartBeat))
                 );
-                oracle.acceptPendingOracle(address(underlying));
+                accessManager.acceptPendingOracle(oracle, address(underlying));
             } else {
                 underlying = FaucetERC20(faucet.getTokenConfig(tokenId).tokenAddr);
                 underlyingPriceFeed = MockPriceFeed(faucet.getTokenConfig(tokenId).priceFeedAddr);
             }
 
             MarketConfig memory marketConfig = MarketConfig({
-                treasurer: config.marketConfig.treasurer,
+                treasurer: treasurerAddr,
                 maturity: config.marketConfig.maturity,
                 feeConfig: FeeConfig({
                     lendTakerFeeRatio: config.marketConfig.feeConfig.lendTakerFeeRatio,
                     lendMakerFeeRatio: config.marketConfig.feeConfig.lendMakerFeeRatio,
                     borrowTakerFeeRatio: config.marketConfig.feeConfig.borrowTakerFeeRatio,
                     borrowMakerFeeRatio: config.marketConfig.feeConfig.borrowMakerFeeRatio,
-                    issueFtFeeRatio: config.marketConfig.feeConfig.issueFtFeeRatio,
-                    issueFtFeeRef: config.marketConfig.feeConfig.issueFtFeeRef
+                    mintGtFeeRatio: config.marketConfig.feeConfig.mintGtFeeRatio,
+                    mintGtFeeRef: config.marketConfig.feeConfig.mintGtFeeRef
                 })
             });
 
@@ -236,7 +269,7 @@ contract DeployBase is Script {
             MarketInitialParams memory initialParams = MarketInitialParams({
                 collateral: address(collateral),
                 debtToken: IERC20Metadata(address(underlying)),
-                admin: adminAddr,
+                admin: accessManagerAddr,
                 gtImplementation: address(0),
                 marketConfig: marketConfig,
                 loanConfig: LoanConfig({
@@ -250,21 +283,21 @@ contract DeployBase is Script {
                 tokenSymbol: config.marketSymbol
             });
 
-            TermMaxMarket market = TermMaxMarket(factory.createMarket(GT_ERC20, initialParams, config.salt));
+            TermMaxMarket market =
+                TermMaxMarket(accessManager.createMarket(factory, GT_ERC20, initialParams, config.salt));
             markets[i] = market;
         }
     }
 
     function deployMarketsMainnet(
+        address accessManagerAddr,
         address factoryAddr,
         address oracleAddr,
-        address routerAddr,
         string memory deployDataPath,
-        address adminAddr
+        address treasurerAddr
     ) public returns (TermMaxMarket[] memory markets, JsonLoader.Config[] memory configs) {
         ITermMaxFactory factory = ITermMaxFactory(factoryAddr);
-        IOracle oracle = IOracle(oracleAddr);
-        ITermMaxRouter router = ITermMaxRouter(routerAddr);
+        OracleAggregator oracle = OracleAggregator(oracleAddr);
 
         string memory deployData = vm.readFile(deployDataPath);
 
@@ -276,15 +309,15 @@ contract DeployBase is Script {
             JsonLoader.Config memory config = configs[i];
 
             MarketConfig memory marketConfig = MarketConfig({
-                treasurer: config.marketConfig.treasurer,
+                treasurer: treasurerAddr,
                 maturity: config.marketConfig.maturity,
                 feeConfig: FeeConfig({
                     lendTakerFeeRatio: config.marketConfig.feeConfig.lendTakerFeeRatio,
                     lendMakerFeeRatio: config.marketConfig.feeConfig.lendMakerFeeRatio,
                     borrowTakerFeeRatio: config.marketConfig.feeConfig.borrowTakerFeeRatio,
                     borrowMakerFeeRatio: config.marketConfig.feeConfig.borrowMakerFeeRatio,
-                    issueFtFeeRatio: config.marketConfig.feeConfig.issueFtFeeRatio,
-                    issueFtFeeRef: config.marketConfig.feeConfig.issueFtFeeRef
+                    mintGtFeeRatio: config.marketConfig.feeConfig.mintGtFeeRatio,
+                    mintGtFeeRef: config.marketConfig.feeConfig.mintGtFeeRef
                 })
             });
 
@@ -292,7 +325,7 @@ contract DeployBase is Script {
             MarketInitialParams memory initialParams = MarketInitialParams({
                 collateral: config.collateralConfig.tokenAddr,
                 debtToken: IERC20Metadata(config.underlyingConfig.tokenAddr),
-                admin: adminAddr,
+                admin: accessManagerAddr,
                 gtImplementation: address(0),
                 marketConfig: marketConfig,
                 loanConfig: LoanConfig({
@@ -301,19 +334,20 @@ contract DeployBase is Script {
                     maxLtv: config.loanConfig.maxLtv,
                     liquidatable: config.loanConfig.liquidatable
                 }),
-                gtInitalParams: abi.encode(type(uint256).max),
+                gtInitalParams: abi.encode(config.collateralCapForGt),
                 tokenName: config.marketName,
                 tokenSymbol: config.marketSymbol
             });
-
-            TermMaxMarket market = TermMaxMarket(factory.createMarket(GT_ERC20, initialParams, config.salt));
+            AccessManager accessManager = AccessManager(accessManagerAddr);
+            TermMaxMarket market =
+                TermMaxMarket(accessManager.createMarket(factory, GT_ERC20, initialParams, config.salt));
             markets[i] = market;
         }
     }
 
     function deployVault(
         address factoryAddr,
-        address admin,
+        address accessManagerAddr,
         address curator,
         uint256 timelock,
         address assetAddr,
@@ -324,7 +358,7 @@ contract DeployBase is Script {
     ) public returns (TermMaxVault vault) {
         VaultFactory vaultFactory = VaultFactory(factoryAddr);
         VaultInitialParams memory initialParams = VaultInitialParams({
-            admin: admin,
+            admin: accessManagerAddr,
             curator: curator,
             timelock: timelock,
             asset: IERC20(assetAddr),
@@ -357,5 +391,25 @@ contract DeployBase is Script {
         inputs[3] = "HEAD";
         bytes memory result = vm.ffi(inputs);
         return string(result);
+    }
+
+    // Helper function to convert string to uppercase
+    function toUpper(string memory str) internal pure returns (string memory) {
+        bytes memory bStr = bytes(str);
+        bytes memory bUpper = new bytes(bStr.length);
+        for (uint256 i = 0; i < bStr.length; i++) {
+            // Convert hyphen to underscore
+            if (bStr[i] == 0x2D) {
+                bUpper[i] = 0x5F; // '_'
+                continue;
+            }
+            // Convert lowercase to uppercase
+            if ((uint8(bStr[i]) >= 97) && (uint8(bStr[i]) <= 122)) {
+                bUpper[i] = bytes1(uint8(bStr[i]) - 32);
+            } else {
+                bUpper[i] = bStr[i];
+            }
+        }
+        return string(bUpper);
     }
 }

@@ -52,9 +52,10 @@ abstract contract ForkBaseTest is Test {
     function _getDataPath() internal view virtual returns (string memory);
 
     function _readTokenPairs() internal {
-        uint256 len = vm.parseJsonUint(jsonData, ".tokenPairs.length");
-        for (uint256 i = 0; i < len; i++) {
-            tokenPairs.push(vm.parseJsonString(jsonData, string.concat(".tokenPairs.", vm.toString(i))));
+        // uint256 len = vm.parseJsonUint(jsonData, ".tokenPairs.length");
+        string[] memory _tokenPairs = vm.parseJsonStringArray(jsonData, ".tokenPairs");
+        for (uint256 i = 0; i < _tokenPairs.length; i++) {
+            tokenPairs.push(string.concat(".", _tokenPairs[i]));
         }
     }
 
@@ -75,10 +76,10 @@ abstract contract ForkBaseTest is Test {
 
         MarketConfig memory marketConfig;
 
-        marketConfig.feeConfig.issueFtFeeRatio =
-            uint32(vm.parseUint(vm.parseJsonString(jsonData, string.concat(key, ".feeConfig.issueFtFeeRatio"))));
-        marketConfig.feeConfig.issueFtFeeRef =
-            uint32(vm.parseUint(vm.parseJsonString(jsonData, string.concat(key, ".feeConfig.issueFtFeeRef"))));
+        marketConfig.feeConfig.mintGtFeeRatio =
+            uint32(vm.parseUint(vm.parseJsonString(jsonData, string.concat(key, ".feeConfig.mintGtFeeRatio"))));
+        marketConfig.feeConfig.mintGtFeeRef =
+            uint32(vm.parseUint(vm.parseJsonString(jsonData, string.concat(key, ".feeConfig.mintGtFeeRef"))));
         marketConfig.feeConfig.lendTakerFeeRatio =
             uint32(vm.parseUint(vm.parseJsonString(jsonData, string.concat(key, ".feeConfig.lendTakerFeeRatio"))));
         marketConfig.feeConfig.borrowTakerFeeRatio =

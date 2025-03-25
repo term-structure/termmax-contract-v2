@@ -54,7 +54,7 @@ interface ITermMaxMarket {
         returns (uint256 gtId, uint128 ftOutAmt);
 
     /// @notice Return the issue fee ratio
-    function issueFtFeeRatio() external view returns (uint256);
+    function mintGtFeeRatio() external view returns (uint256);
 
     /// @notice Using collateral to issue FT tokens.
     ///         Caller will get FT(bond) tokens equal to the debt amount subtract issue fee

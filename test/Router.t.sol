@@ -235,7 +235,7 @@ contract RouterTest is Test {
         (address owner, uint128 debtAmt,, bytes memory collateralData) = res.gt.loanInfo(gtId);
         assertEq(owner, sender);
         assertEq(minCollAmt, abi.decode(collateralData, (uint256)));
-        assertEq(netXtOut, debtAmt);
+        assertEq(netXtOut * Constants.DECIMAL_BASE / (Constants.DECIMAL_BASE - res.market.mintGtFeeRatio()), debtAmt);
         vm.stopPrank();
     }
 
@@ -260,7 +260,9 @@ contract RouterTest is Test {
         (address owner, uint128 debtAmt,, bytes memory collateralData) = res.gt.loanInfo(gtId);
         assertEq(owner, sender);
         assertEq(minCollAmt, abi.decode(collateralData, (uint256)));
-        assertEq(xtAmt, debtAmt);
+        assertEq(
+            uint128(xtAmt * Constants.DECIMAL_BASE / (Constants.DECIMAL_BASE - res.market.mintGtFeeRatio())), debtAmt
+        );
         vm.stopPrank();
     }
 
@@ -285,7 +287,9 @@ contract RouterTest is Test {
         (address owner, uint128 debtAmt,, bytes memory collateralData) = res.gt.loanInfo(gtId);
         assertEq(owner, sender);
         assertEq(minCollAmt + collateralAmt, abi.decode(collateralData, (uint256)));
-        assertEq(xtAmt, debtAmt);
+        assertEq(
+            uint128(xtAmt * Constants.DECIMAL_BASE / (Constants.DECIMAL_BASE - res.market.mintGtFeeRatio())), debtAmt
+        );
         vm.stopPrank();
     }
 
@@ -297,7 +301,7 @@ contract RouterTest is Test {
         uint128 maxLtv = 0.1e2;
         uint256 minCollAmt = 1e18;
 
-        uint256 ltv = xtAmt / 2000;
+        uint256 ltv = (xtAmt * Constants.DECIMAL_BASE / (Constants.DECIMAL_BASE - res.market.mintGtFeeRatio())) / 2000;
 
         deal(address(res.xt), sender, xtAmt);
 
@@ -323,7 +327,7 @@ contract RouterTest is Test {
         uint128 borrowAmt = 80e8;
         uint128 maxDebtAmt = 100e8;
 
-        // uint fee = (res.market.issueFtFeeRatio() * maxDebtAmt) / Constants.DECIMAL_BASE;
+        // uint fee = (res.market.mintGtFeeRatio() * maxDebtAmt) / Constants.DECIMAL_BASE;
         // uint ftAmt = maxDebtAmt - fee;
 
         ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
@@ -364,9 +368,9 @@ contract RouterTest is Test {
 
         res.xt.approve(address(res.router), borrowAmt);
 
-        uint256 issueFtFeeRatio = res.market.issueFtFeeRatio();
+        uint256 mintGtFeeRatio = res.market.mintGtFeeRatio();
         uint128 previewDebtAmt =
-            ((borrowAmt * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - issueFtFeeRatio)).toUint128();
+            ((borrowAmt * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - mintGtFeeRatio)).toUint128();
 
         vm.expectEmit();
         emit RouterEvents.Borrow(res.market, 1, sender, sender, collInAmt, previewDebtAmt, borrowAmt);
@@ -396,9 +400,9 @@ contract RouterTest is Test {
         res.xt.approve(address(res.router), borrowAmt);
         res.gt.approve(address(res.router), gtId);
 
-        uint256 issueFtFeeRatio = res.market.issueFtFeeRatio();
+        uint256 mintGtFeeRatio = res.market.mintGtFeeRatio();
         uint128 previewDebtAmt =
-            ((borrowAmt * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - issueFtFeeRatio)).toUint128();
+            ((borrowAmt * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - mintGtFeeRatio)).toUint128();
 
         vm.expectEmit();
         emit RouterEvents.Borrow(res.market, 1, sender, sender, 0, previewDebtAmt, borrowAmt);
@@ -427,8 +431,8 @@ contract RouterTest is Test {
         res.xt.approve(address(res.router), borrowAmt);
         res.gt.approve(address(res.router), gtId);
 
-        uint256 issueFtFeeRatio = res.market.issueFtFeeRatio();
-        ((borrowAmt * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - issueFtFeeRatio)).toUint128();
+        uint256 mintGtFeeRatio = res.market.mintGtFeeRatio();
+        ((borrowAmt * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - mintGtFeeRatio)).toUint128();
         vm.stopPrank();
 
         vm.expectRevert(abi.encodeWithSelector(RouterErrors.GtNotOwnedBySender.selector));

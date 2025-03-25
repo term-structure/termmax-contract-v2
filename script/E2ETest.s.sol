@@ -35,9 +35,9 @@ contract E2ETest is Script {
 
     // address config
     address faucetAddr = address(0xb927B74d5D9c3985D4DCdd62CbffEc66CF527fAa);
-    address routerAddr = address(0xbFccC3c7F739d4aE7CCf680b3fafcFB5Bdc4f842);
+    address routerAddr = address(0x04bab94F939654E3711778c25683bBB34bC1a514);
     address swapAdapter = address(0xC622E39c594570c731baCcDc2b6cD062EF941b06);
-    address marketAddr = address(0xD0586B5a5F97347C769983C404348346FE26f38e);
+    address marketAddr = address(0x10d9baa4A6475ee2b913755728342c7d40ce0A21);
     address orderAddr = address(0x550a95c76A929635E7836cBef401C378485f4422);
 
     Faucet faucet = Faucet(faucetAddr);
@@ -55,55 +55,75 @@ contract E2ETest is Script {
     address underlyingPriceFeedAddr;
 
     function run() public {
+        address tokenAddr = address(0xE407D6b58f1BaB00DB15a6b164F6e882aB3bb939);
+        IOracle oracle = IOracle(address(0xFBc0A46463645de435012363354f24791789b4D7));
+        OracleAggregator oracleAggregator = OracleAggregator(address(0xFBc0A46463645de435012363354f24791789b4D7));
+        (AggregatorV3Interface aggregator, AggregatorV3Interface backupAggregator, uint32 heartbeat) =
+            oracleAggregator.oracles(tokenAddr);
+        console.log(IERC20Metadata(tokenAddr).symbol());
+        console.log(address(aggregator));
+        console.log(heartbeat);
+        AggregatorV3Interface priceFeed = AggregatorV3Interface(address(aggregator));
+        (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound) =
+            priceFeed.latestRoundData();
+        console.log(roundId);
+        console.log(answer);
+        console.log(startedAt);
+        console.log(updatedAt);
+        console.log(answeredInRound);
+        (uint256 price, uint8 decimals) = oracle.getPrice(tokenAddr);
+        console.log(price);
+        console.log(decimals);
+
         // (userAddr, userPrivateKey) = makeAddrAndKey("New User1");
         // vm.startBroadcast(deployerPrivateKey);
         // payable(userAddr).transfer(0.1 ether);
         // vm.stopBroadcast();
-        (ft, xt, gt, collateralAddr, underlyingERC20) = market.tokens();
-        collateral = FaucetERC20(collateralAddr);
-        underlying = FaucetERC20(address(underlyingERC20));
-        underlyingPriceFeedAddr = faucet.getTokenConfig(faucet.getTokenId(address(underlying))).priceFeedAddr;
-        collateralPriceFeedAddr = faucet.getTokenConfig(faucet.getTokenId(address(collateral))).priceFeedAddr;
-        printMarketConfig();
-        mintDebtToken(deployerAddr, 100000);
-        depositIntoOrder(100000);
-        printUserPosition();
+        // (ft, xt, gt, collateralAddr, underlyingERC20) = market.tokens();
+        // collateral = FaucetERC20(collateralAddr);
+        // underlying = FaucetERC20(address(underlyingERC20));
+        // underlyingPriceFeedAddr = faucet.getTokenConfig(faucet.getTokenId(address(underlying))).priceFeedAddr;
+        // collateralPriceFeedAddr = faucet.getTokenConfig(faucet.getTokenId(address(collateral))).priceFeedAddr;
+        // printMarketConfig();
+        // mintDebtToken(deployerAddr, 100000);
+        // depositIntoOrder(100000);
+        // printUserPosition();
 
-        console.log("> Mint 21504 debt token");
-        mintDebtToken(userAddr, 21504);
-        printUserPosition();
+        // console.log('> Mint 21504 debt token');
+        // mintDebtToken(userAddr, 21504);
+        // printUserPosition();
 
-        console.log("> Mint 12100 collateral token");
-        mintCollateralToken(userAddr, 12100);
-        printUserPosition();
-        console.log("> Buy FT with 1000 debt token");
-        lendToOrder(1000);
-        printUserPosition();
+        // console.log('> Mint 12100 collateral token');
+        // mintCollateralToken(userAddr, 12100);
+        // printUserPosition();
+        // console.log('> Buy FT with 1000 debt token');
+        // lendToOrder(1000);
+        // printUserPosition();
 
-        console.log("> Borrow  8000 debt token with 12000 coll collateral token");
-        uint256 gtId = borrowFromOrder(12000, 8000, 8500);
-        printUserPosition();
+        // console.log('> Borrow  8000 debt token with 12000 coll collateral token');
+        // uint256 gtId = borrowFromOrder(12000, 8000, 8500);
+        // printUserPosition();
 
-        console.log("> Add 100 collateral");
-        addCollateral(gtId, 100);
-        printUserPosition();
+        // console.log('> Add 100 collateral');
+        // addCollateral(gtId, 100);
+        // printUserPosition();
 
-        console.log("> Remove 50 collateral");
-        removeCollateral(gtId, 50);
-        printUserPosition();
+        // console.log('> Remove 50 collateral');
+        // removeCollateral(gtId, 50);
+        // printUserPosition();
 
-        console.log("> Repay 500 debt token");
-        repay(gtId, 500, true);
-        printUserPosition();
+        // console.log('> Repay 500 debt token');
+        // repay(gtId, 500, true);
+        // printUserPosition();
 
-        address to = vm.randomAddress();
-        console.log("> Transfer GT to", to);
-        transferGT(gtId, to);
-        printUserPosition();
+        // address to = vm.randomAddress();
+        // console.log('> Transfer GT to', to);
+        // transferGT(gtId, to);
+        // printUserPosition();
 
-        console.log("> Buy XT with 4 debt token and do leverage with 20000 debt token");
-        leverageFromOrder(4, 0, 20000, 0.8e8);
-        printUserPosition();
+        // console.log('> Buy XT with 4 debt token and do leverage with 20000 debt token');
+        // leverageFromOrder(4, 0, 20000, 0.8e8);
+        // printUserPosition();
     }
 
     function mintDebtToken(address to, uint256 amount) public {
@@ -185,7 +205,7 @@ contract E2ETest is Script {
 
         vm.startBroadcast(userPrivateKey);
         uint256 oriCollateralBalance = collateral.balanceOf(userAddr);
-        // uint256 fee = (market.issueFtFeeRatio() * maxDebtAmt) / Constants.DECIMAL_BASE;
+        // uint256 fee = (market.issueGtFeeRatio() * maxDebtAmt) / Constants.DECIMAL_BASE;
         // uint256 ftAmt = maxDebtAmt - fee;
         collateral.approve(address(router), collateralAmt);
         ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
@@ -309,8 +329,8 @@ contract E2ETest is Script {
         console.log("lendMakerFeeRatio:", config.feeConfig.lendMakerFeeRatio);
         console.log("borrowTakerFeeRatio:", config.feeConfig.borrowTakerFeeRatio);
         console.log("borrowMakerFeeRatio:", config.feeConfig.borrowMakerFeeRatio);
-        console.log("issueFtFeeRatio:", config.feeConfig.issueFtFeeRatio);
-        console.log("issueFtFeeRef:", config.feeConfig.issueFtFeeRef);
+        console.log("mintGtFeeRatio:", config.feeConfig.mintGtFeeRatio);
+        console.log("mintGtFeeRef:", config.feeConfig.mintGtFeeRef);
         console.log("");
     }
 
@@ -319,7 +339,7 @@ contract E2ETest is Script {
         console.log("User Addr:", userAddr);
         console.log("Market Addr:", address(market));
         (IERC20[4] memory tokens, uint256[4] memory balances, address gtAddr, uint256[] memory gtIds) =
-            router.assetsWithERC20Collateral(market, userAddr);
+            router.assetsWithERC20Collateral(market, address(0x2A58A3D405c527491Daae4C62561B949e7F87EFE));
         for (uint256 i = 0; i < tokens.length; i++) {
             console.log(IERC20Metadata(address(tokens[i])).symbol(), ":", balances[i]);
         }

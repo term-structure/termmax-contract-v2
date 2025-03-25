@@ -697,7 +697,7 @@ contract TermMaxVault is
 
         uint256 lastTime = _lastUpdateTime;
         if (lastTime == 0) {
-            return (0, 0);
+            return (_accretingPrincipal, _performanceFee);
         }
         uint64 recentMaturity = _maturityMapping[0];
         uint256 previewAnnualizedInterest = _annualizedInterest;

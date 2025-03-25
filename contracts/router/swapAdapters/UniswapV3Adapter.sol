@@ -23,8 +23,13 @@ contract UniswapV3Adapter is ERC20SwapAdapter {
         returns (uint256 tokenOutAmt)
     {
         IERC20(tokenIn).approve(address(router), amount);
-        (bytes memory path, uint256 deadline, uint256 amountOutMinimum) =
-            abi.decode(swapData, (bytes, uint256, uint256));
+        (bytes memory path, uint256 deadline, uint256 inAmount, uint256 amountOutMinimum) =
+            abi.decode(swapData, (bytes, uint256, uint256, uint256));
+        /**
+         * Note: Scaling Input/Output amount
+         */
+        amountOutMinimum = (amountOutMinimum * amount) / inAmount;
+
         tokenOutAmt = router.exactInput(
             ISwapRouter.ExactInputParams({
                 path: path,

@@ -756,7 +756,7 @@ contract TermMaxOrder is
         if (ftReserve >= targetFtReserve) return;
         if (config.gtId == 0) revert CantNotIssueFtWithoutGt();
         uint256 debtAmtToIssue = ((targetFtReserve - ftReserve) * Constants.DECIMAL_BASE)
-            / (Constants.DECIMAL_BASE - market.issueFtFeeRatio());
+            / (Constants.DECIMAL_BASE - market.mintGtFeeRatio());
         market.issueFtByExistedGt(address(this), (debtAmtToIssue).toUint128(), config.gtId);
         setInitialFtReserve(targetFtReserve);
     }

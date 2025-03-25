@@ -551,6 +551,34 @@ contract VaultTest is Test {
         vm.stopPrank();
     }
 
+    function testDepositWhenNoOrders() public {
+        initialParams.name = "Vault-DAI2";
+        initialParams.symbol = "Vault-DAI2";
+        ITermMaxVault vault2 = DeployUtils.deployVault(initialParams);
+        vm.startPrank(deployer);
+        uint256 amount = 10000e8;
+        res.debt.mint(deployer, amount);
+        res.debt.approve(address(vault2), amount);
+        uint256 share = vault2.previewDeposit(amount);
+        vault2.deposit(amount, deployer);
+        assertEq(vault2.balanceOf(deployer), share);
+        assertEq(vault2.totalFt(), amount);
+        assertEq(vault2.totalAssets(), amount);
+        assertEq(vault2.totalSupply(), share);
+        vm.stopPrank();
+
+        vm.startPrank(lper);
+        res.debt.mint(lper, amount);
+        res.debt.approve(address(vault2), amount);
+        uint256 share2 = vault2.previewDeposit(amount);
+        vault2.deposit(amount, lper);
+        assertEq(vault2.balanceOf(lper), share2);
+        assertEq(vault2.totalFt(), amount + amount);
+        assertEq(vault2.totalAssets(), amount + amount);
+        assertEq(vault2.totalSupply(), share + share2);
+        vm.stopPrank();
+    }
+
     function testRedeem() public {
         vm.warp(currentTime + 2 days);
         buyXt(48.219178e8, 1000e8);

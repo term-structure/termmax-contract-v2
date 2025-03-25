@@ -57,13 +57,17 @@ interface MarketEvents {
      * @param gtReceiver The address receiving the Gearing Token
      * @param gtId The ID of the Gearing Token
      * @param debtAmt The amount of debt in underlying token
+     * @param xtAmt The amount of XT token
+     * @param fee The amount of minting gt fee, unit by FT token
      * @param collateralData The encoded collateral data
      */
-    event MintGt(
+    event LeverageByXt(
         address indexed loanReceiver,
         address indexed gtReceiver,
         uint256 indexed gtId,
         uint128 debtAmt,
+        uint256 xtAmt,
+        uint128 fee,
         bytes collateralData
     );
 
@@ -74,7 +78,7 @@ interface MarketEvents {
      * @param gtId The ID of the Gearing Token
      * @param debtAmt The amount of debt in underlying token
      * @param ftAmt The amount of FT issued
-     * @param issueFee The amount of issuing fee, unit by FT token
+     * @param fee The amount of minting gt fee, unit by FT token
      * @param collateralData The encoded collateral data
      */
     event IssueFt(
@@ -83,7 +87,7 @@ interface MarketEvents {
         uint256 indexed gtId,
         uint128 debtAmt,
         uint128 ftAmt,
-        uint128 issueFee,
+        uint128 fee,
         bytes collateralData
     );
 
