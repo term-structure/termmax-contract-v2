@@ -35,6 +35,7 @@ contract DeloyMarket is DeployBase {
     uint256 collateralCapForGt;
     address priceFeedOperatorAddr;
 
+    address accessManagerAddr;
     address factoryAddr;
     address oracleAddr;
     address routerAddr;
@@ -67,9 +68,14 @@ contract DeloyMarket is DeployBase {
     }
 
     function loadAddressConfig() internal {
-        string memory deploymentPath =
+        string memory accessManagerPath =
+            string.concat(vm.projectRoot(), "/deployments/", network, "/", network, "-access-manager.json");
+        string memory json = vm.readFile(accessManagerPath);
+        accessManagerAddr = vm.parseJsonAddress(json, ".contracts.accessManager");
+
+        string memory corePath =
             string.concat(vm.projectRoot(), "/deployments/", network, "/", network, "-core.json");
-        string memory json = vm.readFile(deploymentPath);
+        json = vm.readFile(corePath);
 
         factoryAddr = vm.parseJsonAddress(json, ".contracts.factory");
         oracleAddr = vm.parseJsonAddress(json, ".contracts.oracleAggregator");
@@ -95,10 +101,17 @@ contract DeloyMarket is DeployBase {
             keccak256(abi.encodePacked(network)) == keccak256(abi.encodePacked("eth-mainnet"))
                 || keccak256(abi.encodePacked(network)) == keccak256(abi.encodePacked("arb-mainnet"))
         ) {
-            (markets, configs) = deployMarketsMainnet(factoryAddr, oracleAddr, deployDataPath, adminAddr, treasurerAddr);
+            (markets, configs) =
+                deployMarketsMainnet(accessManagerAddr, factoryAddr, oracleAddr, deployDataPath, treasurerAddr);
         } else {
             (markets, configs) = deployMarkets(
-                factoryAddr, oracleAddr, faucetAddr, deployDataPath, adminAddr, treasurerAddr, priceFeedOperatorAddr
+                accessManagerAddr,
+                factoryAddr,
+                oracleAddr,
+                faucetAddr,
+                deployDataPath,
+                treasurerAddr,
+                priceFeedOperatorAddr
             );
         }
 
@@ -128,41 +141,23 @@ contract DeloyMarket is DeployBase {
 
         for (uint256 i = 0; i < markets.length; i++) {
             console.log("===== Market Info - %d =====", i);
-            printMarketConfig(markets[i], configs[i].salt);
+            printMarketConfig(markets[i], configs[i]);
             console.log("");
         }
     }
 
-    function printMarketConfig(TermMaxMarket market, uint256 salt) public {
+    function printMarketConfig(TermMaxMarket market, JsonLoader.Config memory config) public {
         MarketConfig memory marketConfig = market.config();
         (IMintableERC20 ft, IMintableERC20 xt, IGearingToken gt, address collateralAddr, IERC20 underlying) =
             market.tokens();
 
-        OracleAggregator oracle = OracleAggregator(oracleAddr);
-        (AggregatorV3Interface collateralAggregator,,) = oracle.oracles(collateralAddr);
-        (AggregatorV3Interface underlyingAggregator,,) = oracle.oracles(address(underlying));
-
-        // Find matching config to get heartbeat values
-        uint32 collateralHeartbeat = 0;
-        uint32 underlyingHeartbeat = 0;
-        for (uint256 i = 0; i < configs.length; i++) {
-            if (
-                configs[i].collateralConfig.tokenAddr == collateralAddr
-                    && configs[i].underlyingConfig.tokenAddr == address(underlying)
-            ) {
-                collateralHeartbeat = uint32(configs[i].collateralConfig.heartBeat);
-                underlyingHeartbeat = uint32(configs[i].underlyingConfig.heartBeat);
-                break;
-            }
-        }
-
         console.log("Market deployed at:", address(market));
         console.log("Collateral (%s) address: %s", IERC20Metadata(collateralAddr).symbol(), address(collateralAddr));
         console.log("Underlying (%s) address: %s", IERC20Metadata(address(underlying)).symbol(), address(underlying));
-        console.log("Collateral price feed address:", address(collateralAggregator));
-        console.log("Collateral heartbeat:", collateralHeartbeat);
-        console.log("Underlying price feed address:", address(underlyingAggregator));
-        console.log("Underlying heartbeat:", underlyingHeartbeat);
+        console.log("Collateral price feed address:", config.collateralConfig.priceFeedAddr);
+        console.log("Collateral heartbeat:", config.collateralConfig.heartBeat);
+        console.log("Underlying price feed address:", config.underlyingConfig.priceFeedAddr);
+        console.log("Underlying heartbeat:", config.underlyingConfig.heartBeat);
 
         console.log("FT deployed at:", address(ft));
         console.log("XT deployed at:", address(xt));
@@ -172,7 +167,7 @@ contract DeloyMarket is DeployBase {
 
         console.log("Treasurer:", treasurerAddr);
         console.log("Maturity:", marketConfig.maturity);
-        console.log("Salt:", salt);
+        console.log("Salt:", config.salt);
         console.log("Lend Taker Fee Ratio:", marketConfig.feeConfig.lendTakerFeeRatio);
         console.log("Lend Maker Fee Ratio:", marketConfig.feeConfig.lendMakerFeeRatio);
         console.log("Borrow Taker Fee Ratio:", marketConfig.feeConfig.borrowTakerFeeRatio);
@@ -198,9 +193,11 @@ contract DeloyMarket is DeployBase {
                 gt,
                 collateralAddr,
                 underlying,
-                address(collateralAggregator),
-                address(underlyingAggregator),
-                salt
+                config.collateralConfig.priceFeedAddr,
+                uint32(config.collateralConfig.heartBeat),
+                config.underlyingConfig.priceFeedAddr,
+                uint32(config.underlyingConfig.heartBeat),
+                config.salt
             )
         );
         console.log("Market config written to:", marketFilePath);
@@ -232,23 +229,11 @@ contract DeloyMarket is DeployBase {
         address collateralAddr,
         IERC20 underlying,
         address collateralPriceFeedAddr,
+        uint32 collateralHeartbeat,
         address underlyingPriceFeedAddr,
+        uint32 underlyingHeartbeat,
         uint256 salt
     ) internal view returns (string memory) {
-        // Find matching config to get heartbeat values
-        uint32 collateralHeartbeat = 0;
-        uint32 underlyingHeartbeat = 0;
-        for (uint256 i = 0; i < configs.length; i++) {
-            if (
-                configs[i].collateralConfig.tokenAddr == collateralAddr
-                    && configs[i].underlyingConfig.tokenAddr == address(underlying)
-            ) {
-                collateralHeartbeat = uint32(configs[i].collateralConfig.heartBeat);
-                underlyingHeartbeat = uint32(configs[i].underlyingConfig.heartBeat);
-                break;
-            }
-        }
-
         // Create JSON in parts to avoid stack too deep errors
         string memory part1 = _createJsonPart1(
             market,

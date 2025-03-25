@@ -9,12 +9,14 @@ import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IER
 import {JsonLoader} from "./utils/JsonLoader.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {StringHelper} from "./utils/StringHelper.sol";
+import {AccessManager} from "contracts/access/AccessManager.sol";
 
 contract AcceptOracles is Script {
     // Network-specific config loaded from environment variables
     string network;
-    uint256 oracleAggregatorAdminPrivateKey;
+    uint256 deployerPrivateKey;
     address oracleAggregatorAddr;
+    address accessManagerAddr;
     JsonLoader.Config[] configs;
     mapping(address => bool) tokenChecked;
 
@@ -39,12 +41,16 @@ contract AcceptOracles is Script {
         network = vm.envString("NETWORK");
         string memory networkUpper = StringHelper.toUpper(network);
         // Load network-specific configuration
-        string memory privateKeyVar = string.concat(networkUpper, "_ORACLE_AGGREGATOR_ADMIN_PRIVATE_KEY");
-        oracleAggregatorAdminPrivateKey = vm.envUint(privateKeyVar);
+        string memory privateKeyVar = string.concat(networkUpper, "_DEPLOYER_PRIVATE_KEY");
+        deployerPrivateKey = vm.envUint(privateKeyVar);
 
-        string memory deploymentPath =
-            string.concat(vm.projectRoot(), "/deployments/", network, "/", network, "-core.json");
-        string memory json = vm.readFile(deploymentPath);
+        string memory accessManagerPath =
+            string.concat(vm.projectRoot(), "/deployments/", network, "/", network, "-access-manager.json");
+        string memory json = vm.readFile(accessManagerPath);
+        accessManagerAddr = vm.parseJsonAddress(json, ".contracts.accessManager");
+
+        string memory corePath = string.concat(vm.projectRoot(), "/deployments/", network, "/", network, "-core.json");
+        json = vm.readFile(corePath);
 
         oracleAggregatorAddr = vm.parseJsonAddress(json, ".contracts.oracleAggregator");
     }
@@ -56,6 +62,7 @@ contract AcceptOracles is Script {
 
         configs = JsonLoader.getConfigsFromJson(deployData);
 
+        AccessManager accessManager = AccessManager(accessManagerAddr);
         OracleAggregator oracle = OracleAggregator(oracleAggregatorAddr);
 
         console.log("=== Checking Pending Oracles ===");
@@ -69,7 +76,7 @@ contract AcceptOracles is Script {
 
         // Only broadcast if there are oracles to accept
         if (acceptedOracles.length > 0) {
-            vm.startBroadcast(oracleAggregatorAdminPrivateKey);
+            vm.startBroadcast(deployerPrivateKey);
 
             // Process acceptances
             for (uint256 i = 0; i < acceptedOracles.length; i++) {
@@ -79,7 +86,7 @@ contract AcceptOracles is Script {
                 (AggregatorV3Interface currentAggregator,,) = oracle.oracles(status.tokenAddr);
 
                 // Accept the oracle
-                oracle.acceptPendingOracle(status.tokenAddr);
+                accessManager.acceptPendingOracle(oracle, status.tokenAddr);
 
                 console.log("Accepted oracle for token:");
                 console.log("  Token Symbol:", status.tokenSymbol);

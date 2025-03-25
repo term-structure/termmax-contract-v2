@@ -26,10 +26,11 @@ import {FaucetERC20} from "contracts/test/testnet/FaucetERC20.sol";
 import {DeployBase} from "./DeployBase.s.sol";
 import {ITermMaxVault, TermMaxVault} from "contracts/vault/TermMaxVault.sol";
 import {VaultFactory, IVaultFactory} from "contracts/factory/VaultFactory.sol";
+import {AccessManager} from "contracts/access/AccessManager.sol";
 
 contract DeloyVault is DeployBase {
     // Initialize vault configurations with a single USDC vault
-    address assetAddr = address(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
+    address assetAddr = address(0xaf88d065e77c8cC2239327C5EDb3A432268e5831);
     address curator = address(0x2A58A3D405c527491Daae4C62561B949e7F87EFE);
     address guardian = address(0x2A58A3D405c527491Daae4C62561B949e7F87EFE);
     address allocator = address(0x2A58A3D405c527491Daae4C62561B949e7F87EFE);
@@ -42,8 +43,7 @@ contract DeloyVault is DeployBase {
     // Network-specific config loaded from environment variables
     string network;
     uint256 deployerPrivateKey;
-    address deployerAddr;
-    address adminAddr;
+    address accessManagerAddr;
 
     address vaultFactoryAddr;
 
@@ -78,18 +78,19 @@ contract DeloyVault is DeployBase {
 
         // Load network from environment variable
         network = vm.envString("NETWORK");
+        string memory accessManagerPath =
+            string.concat(vm.projectRoot(), "/deployments/", network, "/", network, "-access-manager.json");
+        string memory json = vm.readFile(accessManagerPath);
+        accessManagerAddr = vm.parseJsonAddress(json, ".contracts.accessManager");
         coreContractPath = string.concat(vm.projectRoot(), "/deployments/", network, "/", network, "-core.json");
         string memory networkUpper = toUpper(network);
 
         // Load network-specific configuration
         string memory privateKeyVar = string.concat(networkUpper, "_DEPLOYER_PRIVATE_KEY");
-        string memory adminVar = string.concat(networkUpper, "_ADMIN_ADDRESS");
 
         deployerPrivateKey = vm.envUint(privateKeyVar);
-        deployerAddr = vm.addr(deployerPrivateKey);
-        adminAddr = vm.envAddress(adminVar);
 
-        string memory json = vm.readFile(coreContractPath);
+        json = vm.readFile(coreContractPath);
         vaultFactoryAddr = vm.parseJsonAddress(json, ".contracts.vaultFactory");
     }
 
@@ -100,7 +101,7 @@ contract DeloyVault is DeployBase {
         vm.startBroadcast(deployerPrivateKey);
         ITermMaxVault vault = deployVault(
             vaultFactoryAddr,
-            adminAddr,
+            accessManagerAddr,
             vaultConfig.curator,
             vaultConfig.timelock,
             vaultConfig.assetAddr,
@@ -110,8 +111,9 @@ contract DeloyVault is DeployBase {
             vaultConfig.performanceFeeRate
         );
 
-        vault.submitGuardian(vaultConfig.guardian);
-        vault.setIsAllocator(vaultConfig.allocator, true);
+        AccessManager accessManager = AccessManager(accessManagerAddr);
+        accessManager.submitVaultGuardian(vault, vaultConfig.guardian);
+        accessManager.setIsAllocatorForVault(vault, vaultConfig.allocator, true);
 
         writeDeploymentJson(currentBlockNum, currentTimestamp, vault, vaultConfig);
 
@@ -213,7 +215,7 @@ contract DeloyVault is DeployBase {
             vm.toString(config.timelock),
             ",\n",
             '    "admin": "',
-            vm.toString(adminAddr),
+            vm.toString(accessManagerAddr),
             '",\n',
             '    "curator": "',
             vm.toString(config.curator),

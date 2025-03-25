@@ -38,6 +38,7 @@ import {PendleSwapV3Adapter} from "contracts/router/swapAdapters/PendleSwapV3Ada
 import {UniswapV3Adapter} from "contracts/router/swapAdapters/UniswapV3Adapter.sol";
 import {MorphoVaultAdapter} from "contracts/router/swapAdapters/MorphoVaultAdapter.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
+import {AccessManager} from "contracts/access/AccessManager.sol";
 
 contract DeployBase is Script {
     bytes32 constant GT_ERC20 = keccak256("GearingTokenWithERC20");
@@ -66,7 +67,15 @@ contract DeployBase is Script {
         router = TermMaxRouter(address(proxy));
     }
 
-    function deployCore(address adminAddr)
+    function deployAccessManager(address admin) public returns (AccessManager accessManager) {
+        AccessManager implementation = new AccessManager();
+        bytes memory data = abi.encodeCall(AccessManager.initialize, admin);
+        address proxy = address(new ERC1967Proxy(address(implementation), data));
+
+        accessManager = AccessManager(proxy);
+    }
+
+    function deployCore(address deployerAddr, address accessManagerAddr, uint256 oracleTimelock)
         public
         returns (
             TermMaxFactory factory,
@@ -78,31 +87,34 @@ contract DeployBase is Script {
             MarketViewer marketViewer
         )
     {
+        // deploy access manager
+        AccessManager accessManager = AccessManager(accessManagerAddr);
+
         // deploy factory
-        factory = deployFactory(adminAddr);
+        factory = deployFactory(address(accessManager));
 
         // deploy vault factory
         vaultFactory = deployVaultFactory();
 
         // deploy oracle aggregator
-        oracleAggregator = deployOracleAggregator(adminAddr, 0);
+        oracleAggregator = deployOracleAggregator(address(accessManager), oracleTimelock);
 
         // deploy router
-        router = deployRouter(adminAddr);
+        router = deployRouter(address(accessManager));
 
         // deploy swap adapter
-        swapAdapter = new SwapAdapter(adminAddr);
-        router.setAdapterWhitelist(address(swapAdapter), true);
+        swapAdapter = new SwapAdapter(deployerAddr);
+        accessManager.setAdapterWhitelist(router, address(swapAdapter), true);
 
         // deploy faucet
-        faucet = new Faucet(adminAddr);
+        faucet = new Faucet(deployerAddr);
 
         // deploy market viewer
         marketViewer = deployMarketViewer();
     }
 
     function deployCoreMainnet(
-        address adminAddr,
+        address accessManagerAddr,
         address uniswapV3Router,
         address odosV2Router,
         address pendleSwapV3Router,
@@ -121,17 +133,20 @@ contract DeployBase is Script {
             MorphoVaultAdapter morphoVaultAdapter
         )
     {
+        // deploy access manager
+        AccessManager accessManager = AccessManager(accessManagerAddr);
+
         // deploy factory
-        factory = deployFactory(adminAddr);
+        factory = deployFactory(address(accessManager));
 
         // deploy vault factory
         vaultFactory = deployVaultFactory();
 
         // deploy oracle aggregator
-        oracleAggregator = deployOracleAggregator(adminAddr, oracleTimelock);
+        oracleAggregator = deployOracleAggregator(address(accessManager), oracleTimelock);
 
         // deploy router
-        router = deployRouter(adminAddr);
+        router = deployRouter(address(accessManager));
 
         // deploy market viewer
         marketViewer = deployMarketViewer();
@@ -142,22 +157,23 @@ contract DeployBase is Script {
         pendleSwapV3Adapter = new PendleSwapV3Adapter(address(pendleSwapV3Router));
         morphoVaultAdapter = new MorphoVaultAdapter();
 
-        router.setAdapterWhitelist(address(uniswapV3Adapter), true);
-        router.setAdapterWhitelist(address(odosV2Adapter), true);
-        router.setAdapterWhitelist(address(pendleSwapV3Adapter), true);
-        router.setAdapterWhitelist(address(morphoVaultAdapter), true);
+        accessManager.setAdapterWhitelist(router, address(uniswapV3Adapter), true);
+        accessManager.setAdapterWhitelist(router, address(odosV2Adapter), true);
+        accessManager.setAdapterWhitelist(router, address(pendleSwapV3Adapter), true);
+        accessManager.setAdapterWhitelist(router, address(morphoVaultAdapter), true);
     }
 
     function deployMarkets(
+        address accessManagerAddr,
         address factoryAddr,
         address oracleAddr,
         address faucetAddr,
         string memory deployDataPath,
-        address adminAddr,
         address treasurerAddr,
         address priceFeedOperatorAddr
     ) public returns (TermMaxMarket[] memory markets, JsonLoader.Config[] memory configs) {
         ITermMaxFactory factory = ITermMaxFactory(factoryAddr);
+        AccessManager accessManager = AccessManager(accessManagerAddr);
         IOracle oracle = IOracle(oracleAddr);
         Faucet faucet = Faucet(faucetAddr);
 
@@ -195,11 +211,12 @@ contract DeployBase is Script {
                 );
                 collateralPriceFeed.transferOwnership(priceFeedOperatorAddr);
 
-                oracle.submitPendingOracle(
+                accessManager.submitPendingOracle(
+                    oracle,
                     address(collateral),
                     IOracle.Oracle(collateralPriceFeed, collateralPriceFeed, uint32(config.collateralConfig.heartBeat))
                 );
-                oracle.acceptPendingOracle(address(collateral));
+                accessManager.acceptPendingOracle(oracle, address(collateral));
             } else {
                 collateral = FaucetERC20(faucet.getTokenConfig(tokenId).tokenAddr);
                 collateralPriceFeed = MockPriceFeed(faucet.getTokenConfig(tokenId).priceFeedAddr);
@@ -224,11 +241,12 @@ contract DeployBase is Script {
                     })
                 );
                 underlyingPriceFeed.transferOwnership(priceFeedOperatorAddr);
-                oracle.submitPendingOracle(
+                accessManager.submitPendingOracle(
+                    oracle,
                     address(underlying),
                     IOracle.Oracle(underlyingPriceFeed, underlyingPriceFeed, uint32(config.underlyingConfig.heartBeat))
                 );
-                oracle.acceptPendingOracle(address(underlying));
+                accessManager.acceptPendingOracle(oracle, address(underlying));
             } else {
                 underlying = FaucetERC20(faucet.getTokenConfig(tokenId).tokenAddr);
                 underlyingPriceFeed = MockPriceFeed(faucet.getTokenConfig(tokenId).priceFeedAddr);
@@ -251,7 +269,7 @@ contract DeployBase is Script {
             MarketInitialParams memory initialParams = MarketInitialParams({
                 collateral: address(collateral),
                 debtToken: IERC20Metadata(address(underlying)),
-                admin: adminAddr,
+                admin: accessManagerAddr,
                 gtImplementation: address(0),
                 marketConfig: marketConfig,
                 loanConfig: LoanConfig({
@@ -265,16 +283,17 @@ contract DeployBase is Script {
                 tokenSymbol: config.marketSymbol
             });
 
-            TermMaxMarket market = TermMaxMarket(factory.createMarket(GT_ERC20, initialParams, config.salt));
+            TermMaxMarket market =
+                TermMaxMarket(accessManager.createMarket(factory, GT_ERC20, initialParams, config.salt));
             markets[i] = market;
         }
     }
 
     function deployMarketsMainnet(
+        address accessManagerAddr,
         address factoryAddr,
         address oracleAddr,
         string memory deployDataPath,
-        address adminAddr,
         address treasurerAddr
     ) public returns (TermMaxMarket[] memory markets, JsonLoader.Config[] memory configs) {
         ITermMaxFactory factory = ITermMaxFactory(factoryAddr);
@@ -306,7 +325,7 @@ contract DeployBase is Script {
             MarketInitialParams memory initialParams = MarketInitialParams({
                 collateral: config.collateralConfig.tokenAddr,
                 debtToken: IERC20Metadata(config.underlyingConfig.tokenAddr),
-                admin: adminAddr,
+                admin: accessManagerAddr,
                 gtImplementation: address(0),
                 marketConfig: marketConfig,
                 loanConfig: LoanConfig({
@@ -319,15 +338,16 @@ contract DeployBase is Script {
                 tokenName: config.marketName,
                 tokenSymbol: config.marketSymbol
             });
-
-            TermMaxMarket market = TermMaxMarket(factory.createMarket(GT_ERC20, initialParams, config.salt));
+            AccessManager accessManager = AccessManager(accessManagerAddr);
+            TermMaxMarket market =
+                TermMaxMarket(accessManager.createMarket(factory, GT_ERC20, initialParams, config.salt));
             markets[i] = market;
         }
     }
 
     function deployVault(
         address factoryAddr,
-        address admin,
+        address accessManagerAddr,
         address curator,
         uint256 timelock,
         address assetAddr,
@@ -338,7 +358,7 @@ contract DeployBase is Script {
     ) public returns (TermMaxVault vault) {
         VaultFactory vaultFactory = VaultFactory(factoryAddr);
         VaultInitialParams memory initialParams = VaultInitialParams({
-            admin: admin,
+            admin: accessManagerAddr,
             curator: curator,
             timelock: timelock,
             asset: IERC20(assetAddr),

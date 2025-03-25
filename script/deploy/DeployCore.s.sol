@@ -26,6 +26,7 @@ import {OdosV2Adapter} from "contracts/router/swapAdapters/OdosV2Adapter.sol";
 import {PendleSwapV3Adapter} from "contracts/router/swapAdapters/PendleSwapV3Adapter.sol";
 import {UniswapV3Adapter} from "contracts/router/swapAdapters/UniswapV3Adapter.sol";
 import {MorphoVaultAdapter} from "contracts/router/swapAdapters/MorphoVaultAdapter.sol";
+import {AccessManager} from "contracts/access/AccessManager.sol";
 
 contract DeployCore is DeployBase {
     // Network-specific config loaded from environment variables
@@ -33,11 +34,13 @@ contract DeployCore is DeployBase {
     uint256 deployerPrivateKey;
     address deployerAddr;
     address adminAddr;
+    address accessManagerAddr;
     address uniswapV3RouterAddr;
     address odosV2RouterAddr;
     address pendleSwapV3RouterAddr;
     uint256 oracleTimelock;
 
+    AccessManager accessManager;
     ITermMaxFactory factory;
     IVaultFactory vaultFactory;
     IOracle oracleAggregator;
@@ -76,6 +79,11 @@ contract DeployCore is DeployBase {
             pendleSwapV3RouterAddr = vm.envAddress(pendleSwapV3RouterVar);
             oracleTimelock = vm.envUint(oracleTimelockVar);
         }
+
+        string memory deploymentPath =
+            string.concat(vm.projectRoot(), "/deployments/", network, "/", network, "-access-manager.json");
+        string memory json = vm.readFile(deploymentPath);
+        accessManagerAddr = vm.parseJsonAddress(json, ".contracts.accessManager");
     }
 
     function run() public {
@@ -101,10 +109,11 @@ contract DeployCore is DeployBase {
                 pendleSwapV3Adapter,
                 morphoVaultAdapter
             ) = deployCoreMainnet(
-                adminAddr, uniswapV3RouterAddr, odosV2RouterAddr, pendleSwapV3RouterAddr, oracleTimelock
+                accessManagerAddr, uniswapV3RouterAddr, odosV2RouterAddr, pendleSwapV3RouterAddr, oracleTimelock
             );
         } else {
-            (factory, vaultFactory, oracleAggregator, router, swapAdapter, faucet, marketViewer) = deployCore(adminAddr);
+            (factory, vaultFactory, oracleAggregator, router, swapAdapter, faucet, marketViewer) =
+                deployCore(deployerAddr, accessManagerAddr, oracleTimelock);
         }
         vm.stopBroadcast();
 
@@ -213,13 +222,7 @@ contract DeployCore is DeployBase {
 
         // Create deployments directory if it doesn't exist
         string memory deploymentsDir = string.concat(vm.projectRoot(), "/deployments/", network);
-        if (vm.exists(deploymentsDir)) {
-            // Directory exists, clean it by removing all files
-            VmSafe.DirEntry[] memory files = vm.readDir(deploymentsDir);
-            for (uint256 i = 0; i < files.length; i++) {
-                vm.removeFile(files[i].path);
-            }
-        } else {
+        if (!vm.exists(deploymentsDir)) {
             // Directory doesn't exist, create it
             vm.createDir(deploymentsDir, true);
         }

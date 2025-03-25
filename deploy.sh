@@ -4,7 +4,7 @@
 if [ "$#" -lt 2 ]; then
     echo "Usage: $0 <network> <type> [options]"
     echo "Supported networks: eth-sepolia, arb-sepolia, eth-mainnet, arb-mainnet"
-    echo "Deployment types: core, market, order, vault"
+    echo "Deployment types: access-manager, core, market, order, vault"
     echo "Options:"
     echo "  --broadcast     Broadcast transactions (default: dry run)"
     echo "  --verify       Enable contract verification"
@@ -51,12 +51,12 @@ esac
 
 # Validate deployment type
 case $TYPE in
-    "core"|"market"|"order"|"vault")
+    "access-manager"|"core"|"market"|"order"|"vault")
         echo "Deployment type: $TYPE"
         ;;
     *)
         echo "Unsupported deployment type: $TYPE"
-        echo "Supported types: core, market, order, vault"
+        echo "Supported types: access-manager, core, market, order, vault"
         exit 1
         ;;
 esac
@@ -75,7 +75,6 @@ fi
 RPC_URL_VAR="${NETWORK_UPPER}_RPC_URL"
 DEPLOYER_PRIVATE_KEY_VAR="${NETWORK_UPPER}_DEPLOYER_PRIVATE_KEY"
 ADMIN_ADDRESS_VAR="${NETWORK_UPPER}_ADMIN_ADDRESS"
-ORACLE_AGGREGATOR_ADMIN_PRIVATE_KEY_VAR="${NETWORK_UPPER}_ORACLE_AGGREGATOR_ADMIN_PRIVATE_KEY"
 
 # Additional variables for mainnet deployments
 if [[ $NETWORK == *"mainnet"* ]]; then
@@ -127,12 +126,17 @@ if [[ $NETWORK == *"mainnet"* ]]; then
 fi
 
 # Capitalize first letter of type for script name
-TYPE_CAPITALIZED="$(tr '[:lower:]' '[:upper:]' <<< ${TYPE:0:1})${TYPE:1}"
+if [ "$TYPE" = "access-manager" ]; then
+    SCRIPT_NAME="DeployAccessManager"
+else
+    TYPE_CAPITALIZED="$(tr '[:lower:]' '[:upper:]' <<< ${TYPE:0:1})${TYPE:1}"
+    SCRIPT_NAME="Deploy${TYPE_CAPITALIZED}"
+fi
 
 echo "=== Deployment Configuration ==="
 echo "Network: $NETWORK"
 echo "Type: $TYPE"
-echo "Script: Deploy${TYPE_CAPITALIZED}.s.sol"
+echo "Script: ${SCRIPT_NAME}.s.sol"
 # Mask the RPC URL to avoid exposing API keys
 RPC_MASKED=$(echo "$RPC_URL" | sed -E 's/([a-zA-Z0-9]{4})[a-zA-Z0-9]*/\1*****/g')
 echo "RPC URL: $RPC_MASKED"
@@ -152,7 +156,7 @@ export NETWORK=$NETWORK
 
 # Run the deployment
 echo "Starting deployment..."
-SCRIPT_PATH="script/deploy/Deploy${TYPE_CAPITALIZED}.s.sol"
+SCRIPT_PATH="script/deploy/${SCRIPT_NAME}.s.sol"
 
 if [ ! -f "$SCRIPT_PATH" ]; then
     echo "Error: Script file not found: $SCRIPT_PATH"

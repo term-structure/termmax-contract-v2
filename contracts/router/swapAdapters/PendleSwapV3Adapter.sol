@@ -3,7 +3,7 @@ pragma solidity ^0.8.27;
 
 import {PendleHelper} from "../../extensions/PendleHelper.sol";
 import {IPAllActionV3} from "@pendle/core-v2/contracts/interfaces/IPAllActionV3.sol";
-import {IPMarket, IPPrincipalToken} from "@pendle/core-v2/contracts/interfaces/IPMarket.sol";
+import {IPMarket, IPPrincipalToken, IPYieldToken} from "@pendle/core-v2/contracts/interfaces/IPMarket.sol";
 import "./ERC20SwapAdapter.sol";
 /**
  * @title TermMax PendleSwapV3Adapter
@@ -36,6 +36,7 @@ contract PendleSwapV3Adapter is ERC20SwapAdapter, PendleHelper {
         minTokenOut = (minTokenOut * amount) / inAmount;
 
         if (tokenOut == PT) {
+            IERC20(tokenIn).approve(address(router), amount);
             (tokenOutAmt,,) = router.swapExactTokenForPt(
                 address(this),
                 address(market),
@@ -45,13 +46,23 @@ contract PendleSwapV3Adapter is ERC20SwapAdapter, PendleHelper {
                 emptyLimit
             );
         } else {
-            (tokenOutAmt,,) = router.swapExactPtForToken(
-                address(this),
-                address(market),
-                amount,
-                createTokenOutputStruct(address(tokenOut), minTokenOut),
-                emptyLimit
-            );
+            if (PT.isExpired()) {
+                IPYieldToken YT = IPYieldToken(PT.YT());
+                IERC20(tokenIn).transfer(address(YT), amount);
+                tokenOutAmt = IPYieldToken(YT).redeemPY(address(this));
+                if (tokenOutAmt < minTokenOut) {
+                    revert LessThanMinTokenOut(tokenOutAmt, minTokenOut);
+                }
+            } else {
+                IERC20(tokenIn).approve(address(router), amount);
+                (tokenOutAmt,,) = router.swapExactPtForToken(
+                    address(this),
+                    address(market),
+                    amount,
+                    createTokenOutputStruct(address(tokenOut), minTokenOut),
+                    emptyLimit
+                );
+            }
         }
     }
 }

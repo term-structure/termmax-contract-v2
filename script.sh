@@ -63,7 +63,6 @@ fi
 RPC_URL_VAR="${NETWORK_UPPER}_RPC_URL"
 DEPLOYER_PRIVATE_KEY_VAR="${NETWORK_UPPER}_DEPLOYER_PRIVATE_KEY"
 ADMIN_ADDRESS_VAR="${NETWORK_UPPER}_ADMIN_ADDRESS"
-ORACLE_AGGREGATOR_ADMIN_PRIVATE_KEY_VAR="${NETWORK_UPPER}_ORACLE_AGGREGATOR_ADMIN_PRIVATE_KEY"
 
 # Additional variables for mainnet deployments
 if [[ $NETWORK == *"mainnet"* ]]; then
@@ -76,7 +75,6 @@ fi
 RPC_URL="${!RPC_URL_VAR}"
 DEPLOYER_PRIVATE_KEY="${!DEPLOYER_PRIVATE_KEY_VAR}"
 ADMIN_ADDRESS="${!ADMIN_ADDRESS_VAR}"
-ORACLE_AGGREGATOR_ADMIN_PRIVATE_KEY="${!ORACLE_AGGREGATOR_ADMIN_PRIVATE_KEY_VAR}"
 
 # Check required environment variables
 if [ -z "$RPC_URL" ]; then
@@ -91,13 +89,6 @@ fi
 
 if [ -z "$ADMIN_ADDRESS" ]; then
     echo "Error: Required environment variable $ADMIN_ADDRESS_VAR is not set"
-    exit 1
-fi
-
-# Check for Oracle Aggregator Admin Private Key when running SubmitOracles or AcceptOracles
-if [[ "$SCRIPT_NAME" = "SubmitOracles" || "$SCRIPT_NAME" = "AcceptOracles" ]] && [ -z "$ORACLE_AGGREGATOR_ADMIN_PRIVATE_KEY" ]; then
-    echo "Error: Required environment variable $ORACLE_AGGREGATOR_ADMIN_PRIVATE_KEY_VAR is not set"
-    echo "This private key is required for the $SCRIPT_NAME script to function correctly."
     exit 1
 fi
 
@@ -172,7 +163,7 @@ fi
 
 # Build the forge command
 if [[ "$SCRIPT_NAME" = "SubmitOracles" || "$SCRIPT_NAME" = "AcceptOracles" ]]; then
-    FORGE_CMD="forge script $SCRIPT_PATH --private-key $ORACLE_AGGREGATOR_ADMIN_PRIVATE_KEY --rpc-url $RPC_URL"
+    FORGE_CMD="forge script $SCRIPT_PATH --private-key $DEPLOYER_PRIVATE_KEY --rpc-url $RPC_URL"
 else
     FORGE_CMD="forge script $SCRIPT_PATH --rpc-url $RPC_URL"
 fi
