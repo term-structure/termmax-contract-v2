@@ -4,7 +4,7 @@
 
 ## Documentation
 
-TermMax Docs: https://docs.ts.finance/termmax
+TermMax Docs: https://docs.ts.finance/
 
 ### Install Dependencies
 ```shell
