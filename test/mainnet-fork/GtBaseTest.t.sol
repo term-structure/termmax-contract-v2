@@ -42,6 +42,13 @@ abstract contract GtBaseTest is ForkBaseTest {
         SwapUnit[] flashRepayUnits;
     }
 
+    struct SwapAdapters {
+        address uniswapAdapter;
+        address pendleAdapter;
+        address odosAdapter;
+        address morphoAdapter;
+    }
+
     struct GtTestRes {
         uint256 blockNumber;
         uint256 orderInitialAmount;
@@ -61,12 +68,8 @@ abstract contract GtBaseTest is ForkBaseTest {
         uint256 maxXtReserve;
         address maker;
         SwapData swapData;
+        SwapAdapters swapAdapters;
     }
-
-    address uniswapAdapter;
-    address pendleAdapter;
-    address odosAdapter;
-    address morphoAdapter;
 
     function _initializeGtTestRes(string memory key) internal returns (GtTestRes memory) {
         GtTestRes memory res;
@@ -122,11 +125,17 @@ abstract contract GtBaseTest is ForkBaseTest {
         res.order =
             res.market.createOrder(res.maker, res.maxXtReserve, ISwapCallback(address(0)), res.orderConfig.curveCuts);
 
+        res.swapAdapters.uniswapAdapter =
+            address(new UniswapV3Adapter(vm.parseJsonAddress(jsonData, ".routers.uniswapRouter")));
+        res.swapAdapters.pendleAdapter =
+            address(new PendleSwapV3Adapter(vm.parseJsonAddress(jsonData, ".routers.pendleRouter")));
+        res.swapAdapters.odosAdapter = address(new OdosV2Adapter(vm.parseJsonAddress(jsonData, ".routers.odosRouter")));
+        res.swapAdapters.morphoAdapter = address(new MorphoVaultAdapter());
         res.router = deployRouter(res.marketInitialParams.admin);
-        res.router.setAdapterWhitelist(uniswapAdapter, true);
-        res.router.setAdapterWhitelist(pendleAdapter, true);
-        res.router.setAdapterWhitelist(odosAdapter, true);
-        res.router.setAdapterWhitelist(morphoAdapter, true);
+        res.router.setAdapterWhitelist(res.swapAdapters.uniswapAdapter, true);
+        res.router.setAdapterWhitelist(res.swapAdapters.pendleAdapter, true);
+        res.router.setAdapterWhitelist(res.swapAdapters.odosAdapter, true);
+        res.router.setAdapterWhitelist(res.swapAdapters.morphoAdapter, true);
         res.swapData = _readSwapData(key);
 
         res.orderInitialAmount = vm.parseJsonUint(jsonData, string.concat(key, ".orderInitialAmount"));
@@ -147,12 +156,14 @@ abstract contract GtBaseTest is ForkBaseTest {
 
         uint256 length = vm.parseJsonUint(jsonData, string.concat(key, ".swapData.length"));
         data.leverageUnits = new SwapUnit[](length);
+        data.flashRepayUnits = new SwapUnit[](length);
         for (uint256 i = 0; i < length; i++) {
             data.leverageUnits[i] = _readSwapUnit(string.concat(key, ".swapData.leverageUnits.", vm.toString(i)));
+            data.flashRepayUnits[i] = _readSwapUnit(string.concat(key, ".swapData.flashRepayUnits.", vm.toString(i)));
         }
     }
 
-    function _readSwapUnit(string memory key) internal returns (SwapUnit memory data) {
+    function _readSwapUnit(string memory key) internal view returns (SwapUnit memory data) {
         data.adapter = vm.parseJsonAddress(jsonData, string.concat(key, ".adapter"));
         data.tokenIn = vm.parseJsonAddress(jsonData, string.concat(key, ".tokenIn"));
         data.tokenOut = vm.parseJsonAddress(jsonData, string.concat(key, ".tokenOut"));
@@ -308,13 +319,7 @@ abstract contract GtBaseTest is ForkBaseTest {
         vm.stopPrank();
     }
 
-    function _testFlashRepayByFt(
-        GtTestRes memory res,
-        uint256 gtId,
-        uint128 debtAmt,
-        address taker,
-        SwapUnit[] memory units
-    ) internal {
+    function _testFlashRepayByFt(GtTestRes memory res, uint256 gtId, address taker, SwapUnit[] memory units) internal {
         deal(taker, 1e18);
 
         vm.startPrank(taker);
@@ -324,6 +329,8 @@ abstract contract GtBaseTest is ForkBaseTest {
         ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
         orders[0] = res.order;
         uint128[] memory amtsToBuyFt = new uint128[](1);
+
+        (, uint128 debtAmt,,) = res.gt.loanInfo(gtId);
         amtsToBuyFt[0] = debtAmt;
         bool byDebtToken = false;
 

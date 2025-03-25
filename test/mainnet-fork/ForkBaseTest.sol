@@ -55,7 +55,7 @@ abstract contract ForkBaseTest is Test {
         // uint256 len = vm.parseJsonUint(jsonData, ".tokenPairs.length");
         string[] memory _tokenPairs = vm.parseJsonStringArray(jsonData, ".tokenPairs");
         for (uint256 i = 0; i < _tokenPairs.length; i++) {
-            tokenPairs.push(_tokenPairs[i]);
+            tokenPairs.push(string.concat(".", _tokenPairs[i]));
         }
     }
 

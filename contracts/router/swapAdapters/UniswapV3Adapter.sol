@@ -29,7 +29,7 @@ contract UniswapV3Adapter is ERC20SwapAdapter {
          * Note: Scaling Input/Output amount
          */
         amountOutMinimum = (amountOutMinimum * amount) / inAmount;
-        
+
         tokenOutAmt = router.exactInput(
             ISwapRouter.ExactInputParams({
                 path: path,
