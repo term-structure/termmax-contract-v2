@@ -25,7 +25,7 @@ import {KyberswapV2Adapter} from "contracts/router/swapAdapters/KyberswapV2Adapt
 import {OdosV2Adapter} from "contracts/router/swapAdapters/OdosV2Adapter.sol";
 import {PendleSwapV3Adapter} from "contracts/router/swapAdapters/PendleSwapV3Adapter.sol";
 import {UniswapV3Adapter} from "contracts/router/swapAdapters/UniswapV3Adapter.sol";
-import {MorphoVaultAdapter} from "contracts/router/swapAdapters/MorphoVaultAdapter.sol";
+import {ERC4626VaultAdapter} from "contracts/router/swapAdapters/ERC4626VaultAdapter.sol";
 import {AccessManager} from "contracts/access/AccessManager.sol";
 
 contract DeployCore is DeployBase {
@@ -49,7 +49,7 @@ contract DeployCore is DeployBase {
     UniswapV3Adapter uniswapV3Adapter;
     OdosV2Adapter odosV2Adapter;
     PendleSwapV3Adapter pendleSwapV3Adapter;
-    MorphoVaultAdapter morphoVaultAdapter;
+    ERC4626VaultAdapter vaultAdapter;
     SwapAdapter swapAdapter;
     Faucet faucet;
 
@@ -107,7 +107,7 @@ contract DeployCore is DeployBase {
                 uniswapV3Adapter,
                 odosV2Adapter,
                 pendleSwapV3Adapter,
-                morphoVaultAdapter
+                vaultAdapter
             ) = deployCoreMainnet(
                 accessManagerAddr, uniswapV3RouterAddr, odosV2RouterAddr, pendleSwapV3RouterAddr, oracleTimelock
             );
@@ -202,8 +202,8 @@ contract DeployCore is DeployBase {
                         '      "pendleSwapV3Adapter": "',
                         vm.toString(address(pendleSwapV3Adapter)),
                         '",\n',
-                        '      "morphoVaultAdapter": "',
-                        vm.toString(address(morphoVaultAdapter)),
+                        '      "ERC4626VaultAdapter": "',
+                        vm.toString(address(vaultAdapter)),
                         '"\n',
                         "    },\n"
                     )

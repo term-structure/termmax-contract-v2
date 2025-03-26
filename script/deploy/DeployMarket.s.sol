@@ -73,8 +73,7 @@ contract DeloyMarket is DeployBase {
         string memory json = vm.readFile(accessManagerPath);
         accessManagerAddr = vm.parseJsonAddress(json, ".contracts.accessManager");
 
-        string memory corePath =
-            string.concat(vm.projectRoot(), "/deployments/", network, "/", network, "-core.json");
+        string memory corePath = string.concat(vm.projectRoot(), "/deployments/", network, "/", network, "-core.json");
         json = vm.readFile(corePath);
 
         factoryAddr = vm.parseJsonAddress(json, ".contracts.factory");

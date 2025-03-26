@@ -6,10 +6,10 @@ import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
- * @title TermMax MorphoVaultAdapter
+ * @title TermMax ERC4626VaultAdapter
  * @author Term Structure Labs
  */
-contract MorphoVaultAdapter is ERC20SwapAdapter {
+contract ERC4626VaultAdapter is ERC20SwapAdapter {
     enum Action {
         Deposit,
         Redeem
