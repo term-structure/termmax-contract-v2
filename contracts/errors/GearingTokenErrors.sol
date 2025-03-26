@@ -41,4 +41,8 @@ interface GearingTokenErrors {
     /// @param id The id of Gearing Token
     /// @param caller The caller
     error AuthorizationFailed(uint256 id, address caller);
+    /**
+     * @notice Error thrown when the liquidation LTV is less than the max LTV
+     */
+    error LiquidationLtvMustBeGreaterThanMaxLtv();
 }

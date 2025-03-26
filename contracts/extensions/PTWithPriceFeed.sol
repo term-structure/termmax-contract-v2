@@ -42,14 +42,14 @@ contract PTWithPriceFeed is AggregatorV3Interface {
      * @param duration The TWAP duration
      * @param priceFeed The price feed interface
      */
-    constructor(PendlePYLpOracle pendlePYLpOracle, IPMarket market, uint32 duration, AggregatorV3Interface priceFeed) {
-        (, int256 answer,,,) = priceFeed.latestRoundData();
+    constructor(address pendlePYLpOracle, address market, uint32 duration, address priceFeed) {
+        (, int256 answer,,,) = AggregatorV3Interface(priceFeed).latestRoundData();
         if (answer == 0) revert PriceIsZero();
 
-        PY_LP_ORACLE = pendlePYLpOracle;
-        MARKET = market;
+        PY_LP_ORACLE = PendlePYLpOracle(pendlePYLpOracle);
+        MARKET = IPMarket(market);
         DURATION = duration;
-        PRICE_FEED = priceFeed;
+        PRICE_FEED = AggregatorV3Interface(priceFeed);
 
         if (!_oracleIsReady()) revert OracleIsNotReady();
     }

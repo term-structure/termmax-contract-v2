@@ -147,6 +147,11 @@ export const abiTermMaxRouter = [
         type: 'uint128',
         internalType: 'uint128',
       },
+      {
+        name: 'deadline',
+        type: 'uint256',
+        internalType: 'uint256',
+      },
     ],
     outputs: [
       {
@@ -413,6 +418,11 @@ export const abiTermMaxRouter = [
           },
         ],
       },
+      {
+        name: 'deadline',
+        type: 'uint256',
+        internalType: 'uint256',
+      },
     ],
     outputs: [
       {
@@ -502,6 +512,11 @@ export const abiTermMaxRouter = [
           },
         ],
       },
+      {
+        name: 'deadline',
+        type: 'uint256',
+        internalType: 'uint256',
+      },
     ],
     outputs: [
       {
@@ -585,22 +600,69 @@ export const abiTermMaxRouter = [
   },
   {
     type: 'function',
-    name: 'marketWhitelist',
+    name: 'leverageFromXtAndCollateral',
     inputs: [
       {
-        name: '',
+        name: 'recipient',
         type: 'address',
         internalType: 'address',
+      },
+      {
+        name: 'market',
+        type: 'address',
+        internalType: 'contract ITermMaxMarket',
+      },
+      {
+        name: 'xtInAmt',
+        type: 'uint128',
+        internalType: 'uint128',
+      },
+      {
+        name: 'collateralInAmt',
+        type: 'uint128',
+        internalType: 'uint128',
+      },
+      {
+        name: 'maxLtv',
+        type: 'uint128',
+        internalType: 'uint128',
+      },
+      {
+        name: 'units',
+        type: 'tuple[]',
+        internalType: 'struct SwapUnit[]',
+        components: [
+          {
+            name: 'adapter',
+            type: 'address',
+            internalType: 'address',
+          },
+          {
+            name: 'tokenIn',
+            type: 'address',
+            internalType: 'address',
+          },
+          {
+            name: 'tokenOut',
+            type: 'address',
+            internalType: 'address',
+          },
+          {
+            name: 'swapData',
+            type: 'bytes',
+            internalType: 'bytes',
+          },
+        ],
       },
     ],
     outputs: [
       {
-        name: '',
-        type: 'bool',
-        internalType: 'bool',
+        name: 'gtId',
+        type: 'uint256',
+        internalType: 'uint256',
       },
     ],
-    stateMutability: 'view',
+    stateMutability: 'nonpayable',
   },
   {
     type: 'function',
@@ -797,6 +859,11 @@ export const abiTermMaxRouter = [
         type: 'uint128',
         internalType: 'uint128',
       },
+      {
+        name: 'deadline',
+        type: 'uint256',
+        internalType: 'uint256',
+      },
     ],
     outputs: [
       {
@@ -846,6 +913,11 @@ export const abiTermMaxRouter = [
         type: 'uint128',
         internalType: 'uint128',
       },
+      {
+        name: 'deadline',
+        type: 'uint256',
+        internalType: 'uint256',
+      },
     ],
     outputs: [
       {
@@ -862,24 +934,6 @@ export const abiTermMaxRouter = [
     inputs: [
       {
         name: 'adapter',
-        type: 'address',
-        internalType: 'address',
-      },
-      {
-        name: 'isWhitelist',
-        type: 'bool',
-        internalType: 'bool',
-      },
-    ],
-    outputs: [],
-    stateMutability: 'nonpayable',
-  },
-  {
-    type: 'function',
-    name: 'setMarketWhitelist',
-    inputs: [
-      {
-        name: 'market',
         type: 'address',
         internalType: 'address',
       },
@@ -926,6 +980,11 @@ export const abiTermMaxRouter = [
         type: 'uint128',
         internalType: 'uint128',
       },
+      {
+        name: 'deadline',
+        type: 'uint256',
+        internalType: 'uint256',
+      },
     ],
     outputs: [
       {
@@ -969,6 +1028,11 @@ export const abiTermMaxRouter = [
         name: 'maxTokenIn',
         type: 'uint128',
         internalType: 'uint128',
+      },
+      {
+        name: 'deadline',
+        type: 'uint256',
+        internalType: 'uint256',
       },
     ],
     outputs: [
@@ -1745,6 +1809,11 @@ export const abiTermMaxRouter = [
   {
     type: 'error',
     name: 'NotInitializing',
+    inputs: [],
+  },
+  {
+    type: 'error',
+    name: 'OrdersAndAmtsLengthNotMatch',
     inputs: [],
   },
   {

@@ -395,6 +395,11 @@ export const abiTermMaxOrder = [
         type: 'uint128',
         internalType: 'uint128',
       },
+      {
+        name: 'deadline',
+        type: 'uint256',
+        internalType: 'uint256',
+      },
     ],
     outputs: [
       {
@@ -433,6 +438,11 @@ export const abiTermMaxOrder = [
         name: 'maxTokenIn',
         type: 'uint128',
         internalType: 'uint128',
+      },
+      {
+        name: 'deadline',
+        type: 'uint256',
+        internalType: 'uint256',
       },
     ],
     outputs: [
@@ -1169,6 +1179,11 @@ export const abiTermMaxOrder = [
   },
   {
     type: 'error',
+    name: 'DeadlineExpired',
+    inputs: [],
+  },
+  {
+    type: 'error',
     name: 'EnforcedPause',
     inputs: [],
   },
@@ -1197,6 +1212,11 @@ export const abiTermMaxOrder = [
         internalType: 'uint256',
       },
     ],
+  },
+  {
+    type: 'error',
+    name: 'InsufficientLiquidity',
+    inputs: [],
   },
   {
     type: 'error',

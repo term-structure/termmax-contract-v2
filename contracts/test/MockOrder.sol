@@ -254,7 +254,7 @@ contract MockOrder is
             uint256 xtReserve = xt.balanceOf(address(this));
             int256 deltaFt = ftReserve.toInt256() - ftBlanceBefore.toInt256();
             int256 deltaXt = xtReserve.toInt256() - xtBlanceBefore.toInt256();
-            _orderConfig.swapTrigger.swapCallback(ftReserve, xtReserve, deltaFt, deltaXt);
+            _orderConfig.swapTrigger.afterSwap(ftReserve, xtReserve, deltaFt, deltaXt);
         }
         emit SwapExactTokenToToken(
             tokenIn, tokenOut, msg.sender, recipient, tokenAmtIn, netTokenOut.toUint128(), feeAmt.toUint128()
@@ -293,7 +293,7 @@ contract MockOrder is
             uint256 xtReserve = xt.balanceOf(address(this));
             int256 deltaFt = ftReserve.toInt256() - ftBlanceBefore.toInt256();
             int256 deltaXt = xtReserve.toInt256() - xtBlanceBefore.toInt256();
-            _orderConfig.swapTrigger.swapCallback(ftReserve, xtReserve, deltaFt, deltaXt);
+            _orderConfig.swapTrigger.afterSwap(ftReserve, xtReserve, deltaFt, deltaXt);
         }
         emit SwapTokenToExactToken(
             tokenIn, tokenOut, msg.sender, recipient, tokenAmtOut, netTokenIn.toUint128(), feeAmt.toUint128()

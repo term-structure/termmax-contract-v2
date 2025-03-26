@@ -831,7 +831,7 @@ contract MockSwapCallback is ISwapCallback {
     int256 public deltaFt;
     int256 public deltaXt;
 
-    function swapCallback(uint256, uint256, int256 deltaFt_, int256 deltaXt_) external override {
+    function afterSwap(uint256, uint256, int256 deltaFt_, int256 deltaXt_) external override {
         deltaFt = deltaFt_;
         deltaXt = deltaXt_;
     }

@@ -92,6 +92,8 @@ contract AccessManagerTest is Test {
         manager.grantRole(manager.CONFIGURATOR_ROLE(), deployer);
         manager.grantRole(manager.PAUSER_ROLE(), deployer);
         manager.grantRole(manager.VAULT_ROLE(), deployer);
+        manager.grantRole(manager.MARKET_ROLE(), deployer);
+        manager.grantRole(manager.ORACLE_ROLE(), deployer);
 
         vm.stopPrank();
     }
@@ -361,24 +363,139 @@ contract AccessManagerTest is Test {
     }
 
     function testSetGtImplement() public {
-        vm.startPrank(deployer);
-
-        // Test setting GT implementation
-        address newGtImplement = vm.randomAddress();
+        address newImplement = vm.randomAddress();
         string memory gtImplementName = "TestGT";
-        manager.setGtImplement(res.factory, gtImplementName, newGtImplement);
 
-        // Test without DEFAULT_ADMIN_ROLE
-        address nonAdmin = vm.randomAddress();
-        vm.stopPrank();
-
-        vm.startPrank(nonAdmin);
+        // Test that non-market role cannot set GT implement
+        vm.startPrank(sender);
         vm.expectRevert(
             abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector, nonAdmin, manager.DEFAULT_ADMIN_ROLE()
+                IAccessControl.AccessControlUnauthorizedAccount.selector, sender, manager.MARKET_ROLE()
             )
         );
-        manager.setGtImplement(res.factory, gtImplementName, newGtImplement);
+        manager.setGtImplement(ITermMaxFactory(address(res.factory)), gtImplementName, newImplement);
+        vm.stopPrank();
+
+        // Test that market role can set GT implement
+        vm.startPrank(deployer);
+        manager.setGtImplement(ITermMaxFactory(address(res.factory)), gtImplementName, newImplement);
+        assertEq(res.factory.gtImplements(keccak256(abi.encodePacked(gtImplementName))), newImplement);
+        vm.stopPrank();
+    }
+
+    function testCreateMarket() public {
+        bytes32 gtKey = keccak256("TestGT");
+        MarketInitialParams memory params = MarketInitialParams({
+            collateral: address(res.collateral),
+            debtToken: IERC20Metadata(address(res.debt)),
+            admin: address(manager),
+            gtImplementation: address(0),
+            marketConfig: marketConfig,
+            loanConfig: LoanConfig({oracle: IOracle(address(0)), liquidatable: true, liquidationLtv: 0.9e8, maxLtv: 0.85e8}),
+            gtInitalParams: abi.encode(1e18),
+            tokenName: "Test Market",
+            tokenSymbol: "Test"
+        });
+        uint256 salt = 123;
+
+        // Test that non-market role cannot create market
+        vm.startPrank(sender);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector, sender, manager.MARKET_ROLE()
+            )
+        );
+        manager.createMarket(ITermMaxFactory(address(res.factory)), gtKey, params, salt);
+        vm.stopPrank();
+
+        // Test that market role can create market
+        vm.startPrank(deployer);
+        address newMarket = manager.createMarket(
+            ITermMaxFactory(address(res.factory)), keccak256("GearingTokenWithERC20"), params, salt
+        );
+        assertTrue(newMarket != address(0));
+        vm.stopPrank();
+    }
+
+    function testSetAdapterWhitelist() public {
+        address adapter = vm.randomAddress();
+
+        // Test that non-market role cannot set adapter whitelist
+        vm.startPrank(sender);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector, sender, manager.MARKET_ROLE()
+            )
+        );
+        manager.setAdapterWhitelist(ITermMaxRouter(address(res.router)), adapter, true);
+        vm.stopPrank();
+
+        // Test that market role can set adapter whitelist
+        vm.startPrank(deployer);
+        manager.setAdapterWhitelist(ITermMaxRouter(address(res.router)), adapter, true);
+        assertTrue(res.router.adapterWhitelist(adapter));
+
+        // Test setting adapter whitelist to false
+        manager.setAdapterWhitelist(ITermMaxRouter(address(res.router)), adapter, false);
+        assertFalse(res.router.adapterWhitelist(adapter));
+        vm.stopPrank();
+    }
+
+    function testSubmitAndAcceptPendingOracle() public {
+        address asset = address(res.collateral);
+        IOracle.Oracle memory oracle = IOracle.Oracle({
+            aggregator: AggregatorV3Interface(address(new MockPriceFeed(sender))),
+            backupAggregator: AggregatorV3Interface(address(new MockPriceFeed(sender))),
+            heartbeat: 3600
+        });
+
+        // Test that non-oracle role cannot submit pending oracle
+        vm.startPrank(sender);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector, sender, manager.ORACLE_ROLE()
+            )
+        );
+        manager.submitPendingOracle(IOracle(address(res.oracle)), asset, oracle);
+        vm.stopPrank();
+
+        // Test that oracle role can submit pending oracle
+        vm.startPrank(deployer);
+        manager.submitPendingOracle(IOracle(address(res.oracle)), asset, oracle);
+
+        // Test that non-oracle role cannot accept pending oracle
+        vm.stopPrank();
+        vm.startPrank(sender);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector, sender, manager.ORACLE_ROLE()
+            )
+        );
+        manager.acceptPendingOracle(IOracle(address(res.oracle)), asset);
+        vm.stopPrank();
+
+        // Test that oracle role can accept pending oracle
+        vm.startPrank(deployer);
+        manager.acceptPendingOracle(IOracle(address(res.oracle)), asset);
+        vm.stopPrank();
+    }
+
+    function testUpdateGtConfig() public {
+        bytes memory configData = abi.encode(1234);
+
+        // Test that non-configurator role cannot update GT config
+        vm.startPrank(sender);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector, sender, manager.CONFIGURATOR_ROLE()
+            )
+        );
+        manager.updateGtConfig(ITermMaxMarket(address(res.market)), configData);
+        vm.stopPrank();
+
+        // Test that configurator role can update GT config
+        vm.startPrank(deployer);
+        manager.updateGtConfig(ITermMaxMarket(address(res.market)), configData);
         vm.stopPrank();
     }
 

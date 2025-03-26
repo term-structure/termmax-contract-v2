@@ -330,30 +330,39 @@ contract TermMaxOrder is
         if (tokenIn == tokenOut) revert CantSwapSameToken();
         OrderConfig memory config = _orderConfig;
         uint256 feeAmt;
-        // Store ft and xt reserve before swap
-        setInitialFtReserve(ft.balanceOf(address(this)));
-        setInitialXtReserve(xt.balanceOf(address(this)));
-        if (tokenIn == ft && tokenOut == debtToken) {
-            (netTokenOut, feeAmt) = _sellFt(tokenAmtIn, minTokenOut, msg.sender, recipient, config);
-        } else if (tokenIn == xt && tokenOut == debtToken) {
-            (netTokenOut, feeAmt) = _sellXt(tokenAmtIn, minTokenOut, msg.sender, recipient, config);
-        } else if (tokenIn == debtToken && tokenOut == ft) {
-            (netTokenOut, feeAmt) = _buyFt(tokenAmtIn, minTokenOut, msg.sender, recipient, config);
-        } else if (tokenIn == debtToken && tokenOut == xt) {
-            (netTokenOut, feeAmt) = _buyXt(tokenAmtIn, minTokenOut, msg.sender, recipient, config);
+        if (tokenAmtIn != 0) {
+            // Store ft and xt reserve before swap
+            setInitialFtReserve(ft.balanceOf(address(this)));
+            setInitialXtReserve(xt.balanceOf(address(this)));
+            if (tokenIn == ft && tokenOut == debtToken) {
+                (netTokenOut, feeAmt) = _sellFt(tokenAmtIn, minTokenOut, msg.sender, recipient, config);
+            } else if (tokenIn == xt && tokenOut == debtToken) {
+                (netTokenOut, feeAmt) = _sellXt(tokenAmtIn, minTokenOut, msg.sender, recipient, config);
+            } else if (tokenIn == debtToken && tokenOut == ft) {
+                (netTokenOut, feeAmt) = _buyFt(tokenAmtIn, minTokenOut, msg.sender, recipient, config);
+            } else if (tokenIn == debtToken && tokenOut == xt) {
+                (netTokenOut, feeAmt) = _buyXt(tokenAmtIn, minTokenOut, msg.sender, recipient, config);
+            } else {
+                revert CantNotSwapToken(tokenIn, tokenOut);
+            }
+            // transfer fee to treasurer
+            ft.safeTransfer(market.config().treasurer, feeAmt);
+            /// @dev callback the changes of ft and xt reserve to trigger
+            if (address(_orderConfig.swapTrigger) != address(0)) {
+                uint256 ftReserve = ft.balanceOf(address(this));
+                uint256 xtReserve = xt.balanceOf(address(this));
+                int256 deltaFt = ftReserve.toInt256() - getInitialFtReserve().toInt256();
+                int256 deltaXt = xtReserve.toInt256() - getInitialXtReserve().toInt256();
+                _orderConfig.swapTrigger.afterSwap(ftReserve, xtReserve, deltaFt, deltaXt);
+            }
         } else {
-            revert CantNotSwapToken(tokenIn, tokenOut);
+            if (address(_orderConfig.swapTrigger) != address(0)) {
+                uint256 ftReserve = ft.balanceOf(address(this));
+                uint256 xtReserve = xt.balanceOf(address(this));
+                _orderConfig.swapTrigger.afterSwap(ftReserve, xtReserve, 0, 0);
+            }
         }
-        // transfer fee to treasurer
-        ft.safeTransfer(market.config().treasurer, feeAmt);
-        /// @dev callback the changes of ft and xt reserve to trigger
-        if (address(_orderConfig.swapTrigger) != address(0)) {
-            uint256 ftReserve = ft.balanceOf(address(this));
-            uint256 xtReserve = xt.balanceOf(address(this));
-            int256 deltaFt = ftReserve.toInt256() - getInitialFtReserve().toInt256();
-            int256 deltaXt = xtReserve.toInt256() - getInitialXtReserve().toInt256();
-            _orderConfig.swapTrigger.swapCallback(ftReserve, xtReserve, deltaFt, deltaXt);
-        }
+
         emit SwapExactTokenToToken(
             tokenIn, tokenOut, msg.sender, recipient, tokenAmtIn, netTokenOut.toUint128(), feeAmt.toUint128()
         );
@@ -531,32 +540,41 @@ contract TermMaxOrder is
         if (tokenIn == tokenOut) revert CantSwapSameToken();
         OrderConfig memory config = _orderConfig;
         uint256 feeAmt;
-        // Storage current ft and xt reserve
-        setInitialFtReserve(ft.balanceOf(address(this)));
-        setInitialXtReserve(xt.balanceOf(address(this)));
+        if (tokenAmtOut != 0 && maxTokenIn != 0) {
+            // Storage current ft and xt reserve
+            setInitialFtReserve(ft.balanceOf(address(this)));
+            setInitialXtReserve(xt.balanceOf(address(this)));
 
-        if (tokenIn == debtToken && tokenOut == ft) {
-            (netTokenIn, feeAmt) = _buyExactFt(tokenAmtOut, maxTokenIn, msg.sender, recipient, config);
-        } else if (tokenIn == debtToken && tokenOut == xt) {
-            (netTokenIn, feeAmt) = _buyExactXt(tokenAmtOut, maxTokenIn, msg.sender, recipient, config);
-        } else if (tokenIn == ft && tokenOut == debtToken) {
-            (netTokenIn, feeAmt) = _sellFtForExactToken(tokenAmtOut, maxTokenIn, msg.sender, recipient, config);
-        } else if (tokenIn == xt && tokenOut == debtToken) {
-            (netTokenIn, feeAmt) = _sellXtForExactToken(tokenAmtOut, maxTokenIn, msg.sender, recipient, config);
+            if (tokenIn == debtToken && tokenOut == ft) {
+                (netTokenIn, feeAmt) = _buyExactFt(tokenAmtOut, maxTokenIn, msg.sender, recipient, config);
+            } else if (tokenIn == debtToken && tokenOut == xt) {
+                (netTokenIn, feeAmt) = _buyExactXt(tokenAmtOut, maxTokenIn, msg.sender, recipient, config);
+            } else if (tokenIn == ft && tokenOut == debtToken) {
+                (netTokenIn, feeAmt) = _sellFtForExactToken(tokenAmtOut, maxTokenIn, msg.sender, recipient, config);
+            } else if (tokenIn == xt && tokenOut == debtToken) {
+                (netTokenIn, feeAmt) = _sellXtForExactToken(tokenAmtOut, maxTokenIn, msg.sender, recipient, config);
+            } else {
+                revert CantNotSwapToken(tokenIn, tokenOut);
+            }
+            // transfer fee to treasurer
+            ft.safeTransfer(market.config().treasurer, feeAmt);
+
+            /// @dev callback the changes of ft and xt reserve to trigger
+            if (address(_orderConfig.swapTrigger) != address(0)) {
+                uint256 ftReserve = ft.balanceOf(address(this));
+                uint256 xtReserve = xt.balanceOf(address(this));
+                int256 deltaFt = ftReserve.toInt256() - getInitialFtReserve().toInt256();
+                int256 deltaXt = xtReserve.toInt256() - getInitialXtReserve().toInt256();
+                _orderConfig.swapTrigger.afterSwap(ftReserve, xtReserve, deltaFt, deltaXt);
+            }
         } else {
-            revert CantNotSwapToken(tokenIn, tokenOut);
+            if (address(_orderConfig.swapTrigger) != address(0)) {
+                uint256 ftReserve = ft.balanceOf(address(this));
+                uint256 xtReserve = xt.balanceOf(address(this));
+                _orderConfig.swapTrigger.afterSwap(ftReserve, xtReserve, 0, 0);
+            }
         }
-        // transfer fee to treasurer
-        ft.safeTransfer(market.config().treasurer, feeAmt);
 
-        /// @dev callback the changes of ft and xt reserve to trigger
-        if (address(_orderConfig.swapTrigger) != address(0)) {
-            uint256 ftReserve = ft.balanceOf(address(this));
-            uint256 xtReserve = xt.balanceOf(address(this));
-            int256 deltaFt = ftReserve.toInt256() - getInitialFtReserve().toInt256();
-            int256 deltaXt = xtReserve.toInt256() - getInitialXtReserve().toInt256();
-            _orderConfig.swapTrigger.swapCallback(ftReserve, xtReserve, deltaFt, deltaXt);
-        }
         emit SwapTokenToExactToken(
             tokenIn, tokenOut, msg.sender, recipient, tokenAmtOut, netTokenIn.toUint128(), feeAmt.toUint128()
         );
@@ -738,7 +756,7 @@ contract TermMaxOrder is
         if (ftReserve >= targetFtReserve) return;
         if (config.gtId == 0) revert CantNotIssueFtWithoutGt();
         uint256 debtAmtToIssue = ((targetFtReserve - ftReserve) * Constants.DECIMAL_BASE)
-            / (Constants.DECIMAL_BASE - market.issueFtFeeRatio());
+            / (Constants.DECIMAL_BASE - market.mintGtFeeRatio());
         market.issueFtByExistedGt(address(this), (debtAmtToIssue).toUint128(), config.gtId);
         setInitialFtReserve(targetFtReserve);
     }

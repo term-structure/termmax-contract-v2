@@ -1,0 +1,4126 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/": {
+      "get": {
+        "operationId": "AppController_getRoot",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "The health check"
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "operationId": "AppController_getHealth",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Health check"
+          }
+        }
+      }
+    },
+    "/error": {
+      "get": {
+        "operationId": "AppController_getError",
+        "parameters": [],
+        "responses": {
+          "500": {
+            "description": "The error"
+          }
+        }
+      }
+    },
+    "/market/config/general": {
+      "get": {
+        "operationId": "MarketController_getGlobalConfig",
+        "parameters": [
+          {
+            "name": "chainId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The config data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GlobalContractConfigResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "market"
+        ]
+      }
+    },
+    "/market/data": {
+      "get": {
+        "operationId": "MarketController_getMarketData",
+        "parameters": [
+          {
+            "name": "chainId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tags",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": [
+                "leverage"
+              ],
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "leverage",
+                  "lend",
+                  "borrow",
+                  "stables",
+                  "btc",
+                  "pendle",
+                  "etherfi",
+                  "eth",
+                  "rwa"
+                ]
+              }
+            }
+          },
+          {
+            "name": "marketAddress",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "includeInactive",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "orderAddress",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "minLowCapacityValue",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": 10000,
+              "type": "string"
+            }
+          },
+          {
+            "name": "apySort",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "maturitySort",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "take",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The whole data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TermMaxConfigResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "market"
+        ]
+      }
+    },
+    "/market/config/list": {
+      "get": {
+        "operationId": "MarketController_getMarketList",
+        "parameters": [
+          {
+            "name": "chainId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tags",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": [
+                "leverage"
+              ],
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "leverage",
+                  "lend",
+                  "borrow",
+                  "stables",
+                  "btc",
+                  "pendle",
+                  "etherfi",
+                  "eth",
+                  "rwa"
+                ]
+              }
+            }
+          },
+          {
+            "name": "marketAddress",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "includeInactive",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "orderAddress",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "minLowCapacityValue",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": 10000,
+              "type": "string"
+            }
+          },
+          {
+            "name": "apySort",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "maturitySort",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "take",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The config data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TermMaxConfigResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "market"
+        ]
+      }
+    },
+    "/market/config/asset/list": {
+      "get": {
+        "operationId": "MarketController_getAssetConfigs",
+        "parameters": [
+          {
+            "name": "chainId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "marketAddress",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The config data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetConfigsResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "market"
+        ]
+      }
+    },
+    "/market/config/asset/item": {
+      "get": {
+        "operationId": "MarketController_getAssetConfigItem",
+        "parameters": [
+          {
+            "name": "chainId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "assetAddress",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The config data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetConfigItemResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "market"
+        ]
+      }
+    },
+    "/market/config/gt/list": {
+      "get": {
+        "operationId": "MarketController_getGtConfigs",
+        "parameters": [
+          {
+            "name": "chainId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tags",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": [
+                "leverage"
+              ],
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "leverage",
+                  "lend",
+                  "borrow",
+                  "stables",
+                  "btc",
+                  "pendle",
+                  "etherfi",
+                  "eth",
+                  "rwa"
+                ]
+              }
+            }
+          },
+          {
+            "name": "marketAddress",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "includeInactive",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The config data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GtConfigsResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "market"
+        ]
+      }
+    },
+    "/market/config/gt/item": {
+      "get": {
+        "operationId": "MarketController_getGtConfigItem",
+        "parameters": [
+          {
+            "name": "chainId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tags",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": [
+                "leverage"
+              ],
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "leverage",
+                  "lend",
+                  "borrow",
+                  "stables",
+                  "btc",
+                  "pendle",
+                  "etherfi",
+                  "eth",
+                  "rwa"
+                ]
+              }
+            }
+          },
+          {
+            "name": "marketAddress",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "includeInactive",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "orderAddress",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The config data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GtConfigItemResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "market"
+        ]
+      }
+    },
+    "/market/config/market/list": {
+      "get": {
+        "operationId": "MarketController_getMarketConfig",
+        "parameters": [
+          {
+            "name": "chainId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tags",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": [
+                "leverage"
+              ],
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "leverage",
+                  "lend",
+                  "borrow",
+                  "stables",
+                  "btc",
+                  "pendle",
+                  "etherfi",
+                  "eth",
+                  "rwa"
+                ]
+              }
+            }
+          },
+          {
+            "name": "marketAddress",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "includeInactive",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The config data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarketConfigsResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "market"
+        ]
+      }
+    },
+    "/market/config/market/item": {
+      "get": {
+        "operationId": "MarketController_getMarketItemConfig",
+        "parameters": [
+          {
+            "name": "chainId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "marketAddress",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The config data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarketConfigItemResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "market"
+        ]
+      }
+    },
+    "/market/config/order/list": {
+      "get": {
+        "operationId": "MarketController_getOrderConfigs",
+        "parameters": [
+          {
+            "name": "chainId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tags",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": [
+                "leverage"
+              ],
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "leverage",
+                  "lend",
+                  "borrow",
+                  "stables",
+                  "btc",
+                  "pendle",
+                  "etherfi",
+                  "eth",
+                  "rwa"
+                ]
+              }
+            }
+          },
+          {
+            "name": "marketAddress",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "includeInactive",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The config data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderConfigsResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "market"
+        ]
+      }
+    },
+    "/market/config/order/item": {
+      "get": {
+        "operationId": "MarketController_getOrderConfigItem",
+        "parameters": [
+          {
+            "name": "chainId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "orderAddress",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The config data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderConfigItemResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "market"
+        ]
+      }
+    },
+    "/market/info/orders": {
+      "get": {
+        "operationId": "MarketController_getOrderInfoList",
+        "parameters": [
+          {
+            "name": "chainId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tags",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": [
+                "leverage"
+              ],
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "leverage",
+                  "lend",
+                  "borrow",
+                  "stables",
+                  "btc",
+                  "pendle",
+                  "etherfi",
+                  "eth",
+                  "rwa"
+                ]
+              }
+            }
+          },
+          {
+            "name": "marketAddress",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "makerAddress",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The config data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderInfoListResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "market"
+        ]
+      }
+    },
+    "/market/info/order": {
+      "get": {
+        "operationId": "MarketController_getOrderInfoItem",
+        "parameters": [
+          {
+            "name": "chainId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "orderAddress",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The config data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderInfoResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "market"
+        ]
+      }
+    },
+    "/market/info/prices": {
+      "get": {
+        "operationId": "MarketController_getPriceInfoList",
+        "parameters": [
+          {
+            "name": "chainId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tags",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": [
+                "leverage"
+              ],
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "leverage",
+                  "lend",
+                  "borrow",
+                  "stables",
+                  "btc",
+                  "pendle",
+                  "etherfi",
+                  "eth",
+                  "rwa"
+                ]
+              }
+            }
+          },
+          {
+            "name": "marketAddress",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "includeInactive",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The price data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenPriceListResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "market"
+        ]
+      }
+    },
+    "/market/info/price": {
+      "get": {
+        "operationId": "MarketController_getPriceInfoItem",
+        "parameters": [
+          {
+            "name": "chainId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "assetAddress",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "orderAddress",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The price data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenPriceResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "market"
+        ]
+      }
+    },
+    "/market/info/order-parmas": {
+      "get": {
+        "operationId": "MarketController_getOrderParams",
+        "parameters": [
+          {
+            "name": "chainId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tags",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": [
+                "leverage"
+              ],
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "leverage",
+                  "lend",
+                  "borrow",
+                  "stables",
+                  "btc",
+                  "pendle",
+                  "etherfi",
+                  "eth",
+                  "rwa"
+                ]
+              }
+            }
+          },
+          {
+            "name": "marketAddress",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "includeInactive",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderInfoResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "market"
+        ]
+      }
+    },
+    "/contract/flashRepayFromColl": {
+      "post": {
+        "operationId": "ContractController_flashRepayFromColl",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/flashRepayFromCollDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The leverage market info",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/flashRepayFromCollResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "contract"
+        ]
+      }
+    },
+    "/contract/leverageFromToken": {
+      "post": {
+        "operationId": "ContractController_getLeverageFromTokenData",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LeverageFromTokenDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The leverage market info",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeverageFromTokenResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "contract"
+        ]
+      }
+    },
+    "/contract/LeverageFromXt": {
+      "post": {
+        "operationId": "ContractController_getLeverageFromXtData",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LeverageFromXtDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The leverage market info",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeverageFromXtResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "contract"
+        ]
+      }
+    },
+    "/contract/borrowTokenFromCollateral": {
+      "post": {
+        "operationId": "ContractController_getLeverageFromToken",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/borrowTokenFromCollateralDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BorrowTokenFromCollateralResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "contract"
+        ]
+      }
+    },
+    "/dashboard/position/summary": {
+      "get": {
+        "operationId": "DashboardController_getAssetsPosition",
+        "parameters": [
+          {
+            "name": "chainId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "userAddress",
+            "required": true,
+            "in": "query",
+            "description": "User address",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "marketAddress",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The lp position list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PositionSummaryResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "dashboard"
+        ]
+      }
+    },
+    "/dashboard/position/total-usd-value": {
+      "get": {
+        "operationId": "DashboardController_getTotalUsdValue",
+        "parameters": [
+          {
+            "name": "chainId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "userAddress",
+            "required": true,
+            "in": "query",
+            "description": "User address",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "marketAddress",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The total usd value",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TotalUsdValueResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "dashboard"
+        ]
+      }
+    },
+    "/admin/icons": {
+      "get": {
+        "operationId": "AdminController_getIcons",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "The icon paths"
+          }
+        },
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "x-api-key": []
+          }
+        ]
+      }
+    },
+    "/admin/reset/sync-event": {
+      "post": {
+        "operationId": "AdminController_resetSyncEvent",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Reset sync event"
+          }
+        },
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "x-api-key": []
+          }
+        ]
+      }
+    },
+    "/admin/config/asset-icon/update": {
+      "post": {
+        "operationId": "AdminController_updateAssetIcon",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminAssetIconUpdateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The market detail"
+          }
+        },
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "x-api-key": []
+          }
+        ]
+      }
+    },
+    "/admin/config/asset-icon/force-refresh": {
+      "post": {
+        "operationId": "AdminController_forceRefreshIcons",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChainDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The market detail"
+          }
+        },
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "x-api-key": []
+          }
+        ]
+      }
+    },
+    "/admin/config/price-source/upsert": {
+      "post": {
+        "operationId": "AdminController_createPriceSource",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminPriceSourceUpsertDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The market detail"
+          }
+        },
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "x-api-key": []
+          }
+        ]
+      }
+    },
+    "/admin/config/market/tags/edit": {
+      "post": {
+        "operationId": "AdminController_editMarketTags",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminMarketTagsUpdateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The market detail"
+          }
+        },
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "x-api-key": []
+          }
+        ]
+      }
+    },
+    "/admin/toggle-job": {
+      "post": {
+        "operationId": "AdminController_toggleJob",
+        "parameters": [
+          {
+            "name": "isEnabled",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Stop all job"
+          }
+        },
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "x-api-key": []
+          }
+        ]
+      }
+    },
+    "/admin/reset-db": {
+      "post": {
+        "operationId": "AdminController_resetDb",
+        "parameters": [
+          {
+            "name": "chainId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Stop all job"
+          }
+        },
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "x-api-key": []
+          }
+        ]
+      }
+    },
+    "/maker/order/default-order-params": {
+      "get": {
+        "operationId": "MakerController_getDefaultOrderParams",
+        "parameters": [
+          {
+            "name": "chainId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "typ",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "hybrid",
+              "enum": [
+                "lend",
+                "borrow",
+                "hybrid"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "marketAddress",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DefaultOrderParamsResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "maker"
+        ]
+      }
+    },
+    "/maker/order/create-order-history": {
+      "get": {
+        "operationId": "MakerController_createOrderHistory",
+        "parameters": [
+          {
+            "name": "chainId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "makerAddress",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateOrderHistoryResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "maker"
+        ]
+      }
+    },
+    "/maker/order/create-order-tx": {
+      "get": {
+        "operationId": "MakerController_createOrderTx",
+        "parameters": [
+          {
+            "name": "chainId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "txHash",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "data"
+          }
+        },
+        "tags": [
+          "maker"
+        ]
+      }
+    },
+    "/maker/order/update-order-history": {
+      "get": {
+        "operationId": "MakerController_updateOrderHistory",
+        "parameters": [
+          {
+            "name": "chainId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "orderAddress",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateOrderHistoryResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "maker"
+        ]
+      }
+    },
+    "/maker/order/update-order": {
+      "get": {
+        "operationId": "MakerController_updateOrder",
+        "parameters": [
+          {
+            "name": "chainId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "txHash",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "orderAddress",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "data"
+          }
+        },
+        "tags": [
+          "maker"
+        ]
+      }
+    },
+    "/maker/order/debug-create-history": {
+      "get": {
+        "operationId": "MakerController_debugCreateHistory",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "data"
+          }
+        },
+        "tags": [
+          "maker"
+        ]
+      }
+    },
+    "/taker/order/buy-ft": {
+      "get": {
+        "operationId": "TakerController_getLendOrder",
+        "parameters": [
+          {
+            "name": "chainId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "marketAddress",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "minTakerLendAmount",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "minTakerBorrowAmount",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TakerOrderResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "taker"
+        ]
+      }
+    },
+    "/taker/order/buy-xt": {
+      "get": {
+        "operationId": "TakerController_getBorrowOrder",
+        "parameters": [
+          {
+            "name": "chainId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "marketAddress",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "minTakerLendAmount",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "minTakerBorrowAmount",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TakerOrderResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "taker"
+        ]
+      }
+    },
+    "/taker/order/sell-ft": {
+      "get": {
+        "operationId": "TakerController_sellFt",
+        "parameters": [
+          {
+            "name": "chainId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "marketAddress",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "minTakerLendAmount",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "minTakerBorrowAmount",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TakerOrderResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "taker"
+        ]
+      }
+    },
+    "/taker/order/sell-xt": {
+      "get": {
+        "operationId": "TakerController_sellXt",
+        "parameters": [
+          {
+            "name": "chainId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "marketAddress",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "minTakerLendAmount",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "minTakerBorrowAmount",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TakerOrderResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "taker"
+        ]
+      }
+    },
+    "/taker/order/aggregator/buy-ft": {
+      "get": {
+        "operationId": "TakerController_aggregateBuyFt",
+        "parameters": [
+          {
+            "name": "chainId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "marketAddress",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "minTakerLendAmount",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "minTakerBorrowAmount",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TakerOrderResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "taker"
+        ]
+      }
+    },
+    "/taker/order/aggregator/sell-ft": {
+      "get": {
+        "operationId": "TakerController_aggregateSellFt",
+        "parameters": [
+          {
+            "name": "chainId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "marketAddress",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "minTakerLendAmount",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "minTakerBorrowAmount",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TakerOrderResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "taker"
+        ]
+      }
+    },
+    "/taker/order/aggregator/buy-xt": {
+      "get": {
+        "operationId": "TakerController_aggregateBuyXt",
+        "parameters": [
+          {
+            "name": "chainId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "marketAddress",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "minTakerLendAmount",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "minTakerBorrowAmount",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TakerOrderResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "taker"
+        ]
+      }
+    },
+    "/taker/order/aggregator/sell-xt": {
+      "get": {
+        "operationId": "TakerController_aggregateSellXt",
+        "parameters": [
+          {
+            "name": "chainId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "marketAddress",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "minTakerLendAmount",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "minTakerBorrowAmount",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TakerOrderResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "taker"
+        ]
+      }
+    },
+    "/admin/chain-config": {
+      "get": {
+        "operationId": "ChainConfigController_getAllChainConfigs",
+        "summary": "Get all chain configurations",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "admin/chain-config"
+        ],
+        "security": [
+          {
+            "x-api-key": []
+          }
+        ]
+      }
+    },
+    "/admin/chain-config/enabled": {
+      "get": {
+        "operationId": "ChainConfigController_getEnabledChainIds",
+        "summary": "Get all enabled chain IDs",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "admin/chain-config"
+        ],
+        "security": [
+          {
+            "x-api-key": []
+          }
+        ]
+      }
+    },
+    "/admin/chain-config/{chainId}": {
+      "get": {
+        "operationId": "ChainConfigController_getChainConfig",
+        "summary": "Get chain configuration by ID",
+        "parameters": [
+          {
+            "name": "chainId",
+            "required": true,
+            "in": "path",
+            "description": "The chain ID to get",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "admin/chain-config"
+        ],
+        "security": [
+          {
+            "x-api-key": []
+          }
+        ]
+      },
+      "put": {
+        "operationId": "ChainConfigController_updateChainConfig",
+        "summary": "Update chain configuration",
+        "parameters": [
+          {
+            "name": "chainId",
+            "required": true,
+            "in": "path",
+            "description": "The chain ID to update",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "admin/chain-config"
+        ],
+        "security": [
+          {
+            "x-api-key": []
+          }
+        ]
+      }
+    },
+    "/admin/cache/refresh": {
+      "post": {
+        "operationId": "CacheController_refreshCache",
+        "summary": "Manually refresh asset price cache for specific markets and orders",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshCacheDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "admin/cache"
+        ],
+        "security": [
+          {
+            "x-api-key": []
+          }
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "TermMax API",
+    "description": "TermMax API",
+    "version": "1.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "x-api-key": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-api-key"
+      }
+    },
+    "schemas": {
+      "GlobalContractConfig": {
+        "type": "object",
+        "properties": {
+          "confirmedBlocks": {
+            "type": "number"
+          },
+          "syncEventSyBatchBlocks": {
+            "type": "number"
+          },
+          "routerStartBlock": {
+            "type": "number"
+          },
+          "routerAddress": {
+            "type": "string"
+          },
+          "mockSwapAdapter": {
+            "type": "string"
+          },
+          "faucetAddress": {
+            "type": "string"
+          },
+          "oracleAggregator": {
+            "type": "string"
+          },
+          "OdosV2Adapter": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "confirmedBlocks",
+          "syncEventSyBatchBlocks",
+          "routerStartBlock",
+          "routerAddress"
+        ]
+      },
+      "GlobalContractConfigResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object"
+          },
+          "data": {
+            "$ref": "#/components/schemas/GlobalContractConfig"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "AssetConfigItem": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "BASIC",
+              "FT",
+              "XT"
+            ],
+            "example": "BASIC"
+          },
+          "contractAddress": {
+            "type": "string"
+          },
+          "icon": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "issuer": {
+            "type": "string"
+          },
+          "symbol": {
+            "type": "string"
+          },
+          "decimals": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "type",
+          "contractAddress",
+          "icon",
+          "name",
+          "displayName",
+          "issuer",
+          "symbol",
+          "decimals"
+        ]
+      },
+      "GtConfigItem": {
+        "type": "object",
+        "properties": {
+          "contractAddress": {
+            "type": "string"
+          },
+          "icon": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "issuer": {
+            "type": "string"
+          },
+          "symbol": {
+            "type": "string"
+          },
+          "maxLtv": {
+            "type": "string"
+          },
+          "liquidationLtv": {
+            "type": "string"
+          },
+          "liquidatable": {
+            "type": "boolean"
+          },
+          "oracleAddress": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "contractAddress",
+          "icon",
+          "name",
+          "displayName",
+          "issuer",
+          "symbol",
+          "maxLtv",
+          "liquidationLtv",
+          "liquidatable",
+          "oracleAddress"
+        ]
+      },
+      "MarketContractsConfigItem": {
+        "type": "object",
+        "properties": {
+          "routerAddr": {
+            "type": "string"
+          },
+          "marketAddr": {
+            "type": "string"
+          },
+          "underlyingAddr": {
+            "type": "string"
+          },
+          "collateralAddr": {
+            "type": "string"
+          },
+          "ftAddr": {
+            "type": "string"
+          },
+          "xtAddr": {
+            "type": "string"
+          },
+          "gtAddr": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "routerAddr",
+          "marketAddr",
+          "underlyingAddr",
+          "collateralAddr",
+          "ftAddr",
+          "xtAddr",
+          "gtAddr"
+        ]
+      },
+      "FeeConfigItem": {
+        "type": "object",
+        "properties": {
+          "lendTakerFeeRatio": {
+            "type": "string"
+          },
+          "lendMakerFeeRatio": {
+            "type": "string"
+          },
+          "borrowTakerFeeRatio": {
+            "type": "string"
+          },
+          "borrowMakerFeeRatio": {
+            "type": "string"
+          },
+          "mintGtFeeRatio": {
+            "type": "string"
+          },
+          "mintGtFeeRef": {
+            "type": "string"
+          },
+          "redeemFeeRatio": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "lendTakerFeeRatio",
+          "lendMakerFeeRatio",
+          "borrowTakerFeeRatio",
+          "borrowMakerFeeRatio",
+          "mintGtFeeRatio",
+          "mintGtFeeRef",
+          "redeemFeeRatio"
+        ]
+      },
+      "MarketConfigItem": {
+        "type": "object",
+        "properties": {
+          "contracts": {
+            "$ref": "#/components/schemas/MarketContractsConfigItem"
+          },
+          "symbol": {
+            "type": "string"
+          },
+          "isFixed": {
+            "type": "boolean"
+          },
+          "openTime": {
+            "type": "string"
+          },
+          "maturity": {
+            "type": "string"
+          },
+          "treasurer": {
+            "type": "string"
+          },
+          "defaultFeeConfig": {
+            "$ref": "#/components/schemas/FeeConfigItem"
+          }
+        },
+        "required": [
+          "contracts",
+          "symbol",
+          "isFixed",
+          "openTime",
+          "maturity",
+          "treasurer",
+          "defaultFeeConfig"
+        ]
+      },
+      "OrderContractsConfigItem": {
+        "type": "object",
+        "properties": {
+          "orderAddr": {
+            "type": "string"
+          },
+          "routerAddr": {
+            "type": "string"
+          },
+          "marketAddr": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "orderAddr",
+          "routerAddr",
+          "marketAddr"
+        ]
+      },
+      "IncentiveDetailItem": {
+        "type": "object",
+        "properties": {
+          "apr": {
+            "type": "number"
+          },
+          "apy": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "apr",
+          "apy"
+        ]
+      },
+      "IncentiveItem": {
+        "type": "object",
+        "properties": {
+          "ft": {
+            "$ref": "#/components/schemas/IncentiveDetailItem"
+          },
+          "xt": {
+            "$ref": "#/components/schemas/IncentiveDetailItem"
+          }
+        },
+        "required": [
+          "ft"
+        ]
+      },
+      "OrderConfigItem": {
+        "type": "object",
+        "properties": {
+          "contracts": {
+            "$ref": "#/components/schemas/OrderContractsConfigItem"
+          },
+          "symbol": {
+            "type": "string"
+          },
+          "issuer": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "introduction": {
+            "type": "string"
+          },
+          "incentive": {
+            "$ref": "#/components/schemas/IncentiveItem"
+          }
+        },
+        "required": [
+          "contracts",
+          "symbol",
+          "issuer",
+          "tags",
+          "introduction",
+          "incentive"
+        ]
+      },
+      "CurveCutItem": {
+        "type": "object",
+        "properties": {
+          "liqSquare": {
+            "type": "string"
+          },
+          "xtReserve": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "liqSquare",
+          "xtReserve",
+          "offset"
+        ]
+      },
+      "OrderContractStateItem": {
+        "type": "object",
+        "properties": {
+          "collateralReserve": {
+            "type": "string"
+          },
+          "debtReserve": {
+            "type": "string"
+          },
+          "ftReserve": {
+            "type": "string"
+          },
+          "xtReserve": {
+            "type": "string"
+          },
+          "maxXtReserve": {
+            "type": "string"
+          },
+          "lendCurve": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CurveCutItem"
+            }
+          },
+          "borrowCurve": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CurveCutItem"
+            }
+          },
+          "feeConfig": {
+            "$ref": "#/components/schemas/FeeConfigItem"
+          },
+          "gtId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "collateralReserve",
+          "debtReserve",
+          "ftReserve",
+          "xtReserve",
+          "maxXtReserve",
+          "lendCurve",
+          "borrowCurve",
+          "feeConfig",
+          "gtId"
+        ]
+      },
+      "OrderStatisticInfoItem": {
+        "type": "object",
+        "properties": {
+          "oneDayVolume": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "oneDayVolume"
+        ]
+      },
+      "OrderInfoItem": {
+        "type": "object",
+        "properties": {
+          "orderAddress": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "contractState": {
+            "$ref": "#/components/schemas/OrderContractStateItem"
+          },
+          "statistics": {
+            "$ref": "#/components/schemas/OrderStatisticInfoItem"
+          },
+          "incentive": {
+            "$ref": "#/components/schemas/IncentiveItem"
+          }
+        },
+        "required": [
+          "orderAddress",
+          "tags",
+          "contractState",
+          "statistics",
+          "incentive"
+        ]
+      },
+      "OrderTermTokenPriceItem": {
+        "type": "object",
+        "properties": {
+          "assetAddress": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "number"
+          },
+          "priceDecimals": {
+            "type": "number"
+          },
+          "price": {
+            "type": "string"
+          },
+          "apr": {
+            "type": "number"
+          },
+          "apy": {
+            "type": "number"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "BASIC",
+              "FT",
+              "XT"
+            ],
+            "example": "BASIC"
+          },
+          "symbol": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "assetDecimals": {
+            "type": "number"
+          },
+          "orderAddress": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "assetAddress",
+          "timestamp",
+          "priceDecimals",
+          "price",
+          "type",
+          "symbol",
+          "name",
+          "assetDecimals",
+          "orderAddress"
+        ]
+      },
+      "TermAssetPriceItem": {
+        "type": "object",
+        "properties": {
+          "ft": {
+            "$ref": "#/components/schemas/OrderTermTokenPriceItem"
+          },
+          "xt": {
+            "$ref": "#/components/schemas/OrderTermTokenPriceItem"
+          }
+        }
+      },
+      "TokenPriceItem": {
+        "type": "object",
+        "properties": {
+          "assetAddress": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "number"
+          },
+          "priceDecimals": {
+            "type": "number"
+          },
+          "price": {
+            "type": "string"
+          },
+          "apr": {
+            "type": "number"
+          },
+          "apy": {
+            "type": "number"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "BASIC",
+              "FT",
+              "XT"
+            ],
+            "example": "BASIC"
+          },
+          "symbol": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "assetDecimals": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "assetAddress",
+          "timestamp",
+          "priceDecimals",
+          "price",
+          "type",
+          "symbol",
+          "name",
+          "assetDecimals"
+        ]
+      },
+      "BaseAssetPriceItem": {
+        "type": "object",
+        "properties": {
+          "underlying": {
+            "$ref": "#/components/schemas/TokenPriceItem"
+          },
+          "collateral": {
+            "$ref": "#/components/schemas/TokenPriceItem"
+          },
+          "gt": {
+            "$ref": "#/components/schemas/GtConfigItem"
+          }
+        },
+        "required": [
+          "underlying",
+          "collateral",
+          "gt"
+        ]
+      },
+      "OrderAssetPriceItem": {
+        "type": "object",
+        "properties": {
+          "term": {
+            "$ref": "#/components/schemas/TermAssetPriceItem"
+          },
+          "base": {
+            "$ref": "#/components/schemas/BaseAssetPriceItem"
+          }
+        },
+        "required": [
+          "term",
+          "base"
+        ]
+      },
+      "OrderDataItem": {
+        "type": "object",
+        "properties": {
+          "targetMinReserve": {
+            "type": "string"
+          },
+          "marketConfig": {
+            "$ref": "#/components/schemas/MarketConfigItem"
+          },
+          "orderInfo": {
+            "$ref": "#/components/schemas/OrderInfoItem"
+          },
+          "orderConfig": {
+            "$ref": "#/components/schemas/OrderConfigItem"
+          },
+          "priceInfo": {
+            "$ref": "#/components/schemas/OrderAssetPriceItem"
+          },
+          "metadata": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "targetMinReserve",
+          "marketConfig",
+          "orderInfo",
+          "orderConfig",
+          "priceInfo"
+        ]
+      },
+      "TermMaxConfigItem": {
+        "type": "object",
+        "properties": {
+          "network": {
+            "type": "string"
+          },
+          "chainId": {
+            "type": "number"
+          },
+          "assetConfigs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AssetConfigItem"
+            }
+          },
+          "gtConfigs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GtConfigItem"
+            }
+          },
+          "markets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MarketConfigItem"
+            }
+          },
+          "orderConfigs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrderConfigItem"
+            }
+          },
+          "globalConfig": {
+            "$ref": "#/components/schemas/GlobalContractConfig"
+          },
+          "orders": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrderDataItem"
+            }
+          }
+        },
+        "required": [
+          "network",
+          "chainId",
+          "assetConfigs",
+          "gtConfigs",
+          "markets",
+          "orderConfigs",
+          "globalConfig"
+        ]
+      },
+      "TermMaxConfigResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object"
+          },
+          "data": {
+            "$ref": "#/components/schemas/TermMaxConfigItem"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "AssetConfigsResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AssetConfigItem"
+            }
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "AssetConfigItemResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object"
+          },
+          "data": {
+            "$ref": "#/components/schemas/AssetConfigItem"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "GtConfigsResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GtConfigItem"
+            }
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "GtConfigItemResponseDto": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object"
+          },
+          "data": {
+            "$ref": "#/components/schemas/GtConfigItem"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "MarketConfigsResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MarketConfigItem"
+            }
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "MarketConfigItemResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object"
+          },
+          "data": {
+            "$ref": "#/components/schemas/MarketConfigItem"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "OrderConfigsResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrderConfigItem"
+            }
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "OrderConfigItemResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object"
+          },
+          "data": {
+            "$ref": "#/components/schemas/OrderConfigItem"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "OrderInfoListResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrderInfoItem"
+            }
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "OrderInfoResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object"
+          },
+          "data": {
+            "$ref": "#/components/schemas/OrderInfoItem"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "TokenPriceListResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TokenPriceItem"
+            }
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "TokenPriceResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object"
+          },
+          "data": {
+            "$ref": "#/components/schemas/TokenPriceItem"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "flashRepayFromCollDto": {
+        "type": "object",
+        "properties": {
+          "chainId": {
+            "type": "number"
+          },
+          "receiver": {
+            "type": "string"
+          },
+          "marketAddress": {
+            "type": "string"
+          },
+          "gtId": {
+            "type": "string"
+          },
+          "orders": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "amtsToBuyFt": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "byDebtToken": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "chainId",
+          "receiver",
+          "marketAddress",
+          "gtId",
+          "orders",
+          "amtsToBuyFt",
+          "byDebtToken"
+        ]
+      },
+      "SwapDataItem": {
+        "type": "object",
+        "properties": {
+          "adapter": {
+            "type": "string"
+          },
+          "tokenIn": {
+            "type": "string"
+          },
+          "tokenOut": {
+            "type": "string"
+          },
+          "swapData": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "adapter",
+          "tokenIn",
+          "tokenOut",
+          "swapData"
+        ]
+      },
+      "flashRepayFromCollParams": {
+        "type": "object",
+        "properties": {
+          "recipient": {
+            "type": "string"
+          },
+          "market": {
+            "type": "string"
+          },
+          "gtId": {
+            "type": "string"
+          },
+          "orders": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "amtsToBuyFt": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "byDebtToken": {
+            "type": "boolean"
+          },
+          "units": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SwapDataItem"
+            }
+          }
+        },
+        "required": [
+          "recipient",
+          "market",
+          "gtId",
+          "orders",
+          "amtsToBuyFt",
+          "byDebtToken",
+          "units"
+        ]
+      },
+      "ContractParamsForPriceInfo": {
+        "type": "object",
+        "properties": {
+          "underlying": {
+            "$ref": "#/components/schemas/TokenPriceItem"
+          },
+          "collateral": {
+            "$ref": "#/components/schemas/TokenPriceItem"
+          }
+        },
+        "required": [
+          "underlying",
+          "collateral"
+        ]
+      },
+      "flashRepayFromCollResponseItem": {
+        "type": "object",
+        "properties": {
+          "to": {
+            "type": "string"
+          },
+          "functionName": {
+            "type": "string"
+          },
+          "params": {
+            "$ref": "#/components/schemas/flashRepayFromCollParams"
+          },
+          "price": {
+            "$ref": "#/components/schemas/ContractParamsForPriceInfo"
+          },
+          "calldata": {
+            "type": "string"
+          },
+          "abi": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "to",
+          "functionName",
+          "params",
+          "price",
+          "calldata",
+          "abi"
+        ]
+      },
+      "flashRepayFromCollResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object"
+          },
+          "data": {
+            "$ref": "#/components/schemas/flashRepayFromCollResponseItem"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "LeverageFromTokenDto": {
+        "type": "object",
+        "properties": {
+          "chainId": {
+            "type": "number",
+            "default": 31339
+          },
+          "receiver": {
+            "type": "string",
+            "default": "0xfC1231Bb12Ef99B6D0d2cAf7314B76D072DbE79f"
+          },
+          "marketAddress": {
+            "type": "string",
+            "default": "0xfC1231Bb12Ef99B6D0d2cAf7314B76D072DbE79f"
+          },
+          "orders": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "amtsToBuyXt": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "minXtOut": {
+            "type": "string",
+            "default": "1000000000000000000"
+          },
+          "tokenToSwap": {
+            "type": "string",
+            "default": "1000000000000000000"
+          },
+          "maxLtv": {
+            "type": "string",
+            "default": "860000"
+          }
+        },
+        "required": [
+          "chainId",
+          "receiver",
+          "marketAddress",
+          "orders",
+          "amtsToBuyXt",
+          "minXtOut",
+          "tokenToSwap",
+          "maxLtv"
+        ]
+      },
+      "LeverageFromTokenParams": {
+        "type": "object",
+        "properties": {
+          "recipient": {
+            "type": "string"
+          },
+          "market": {
+            "type": "string"
+          },
+          "orders": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "amtsToBuyXt": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "minXtOut": {
+            "type": "string",
+            "default": "1000000000000000000"
+          },
+          "tokenToSwap": {
+            "type": "string",
+            "default": "1000000000000000000"
+          },
+          "maxLtv": {
+            "type": "string",
+            "default": "860000"
+          },
+          "units": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SwapDataItem"
+            }
+          }
+        },
+        "required": [
+          "recipient",
+          "market",
+          "orders",
+          "amtsToBuyXt",
+          "minXtOut",
+          "tokenToSwap",
+          "maxLtv",
+          "units"
+        ]
+      },
+      "LeverageFromTokenResponseItem": {
+        "type": "object",
+        "properties": {
+          "to": {
+            "type": "string"
+          },
+          "functionName": {
+            "type": "string"
+          },
+          "params": {
+            "$ref": "#/components/schemas/LeverageFromTokenParams"
+          },
+          "calldata": {
+            "type": "string"
+          },
+          "abi": {
+            "type": "object"
+          },
+          "price": {
+            "$ref": "#/components/schemas/ContractParamsForPriceInfo"
+          }
+        },
+        "required": [
+          "to",
+          "functionName",
+          "params",
+          "calldata",
+          "abi",
+          "price"
+        ]
+      },
+      "LeverageFromTokenResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object"
+          },
+          "data": {
+            "$ref": "#/components/schemas/LeverageFromTokenResponseItem"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "LeverageFromXtDto": {
+        "type": "object",
+        "properties": {
+          "chainId": {
+            "type": "number"
+          },
+          "marketAddress": {
+            "type": "string"
+          },
+          "receiver": {
+            "type": "string"
+          },
+          "xtInAmt": {
+            "type": "string"
+          },
+          "tokenInAmt": {
+            "type": "string"
+          },
+          "maxLtv": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "chainId",
+          "marketAddress",
+          "receiver",
+          "xtInAmt",
+          "tokenInAmt",
+          "maxLtv"
+        ]
+      },
+      "LeverageFromXtParams": {
+        "type": "object",
+        "properties": {
+          "receiver": {
+            "type": "string"
+          },
+          "market": {
+            "type": "string"
+          },
+          "xtInAmt": {
+            "type": "string"
+          },
+          "tokenInAmt": {
+            "type": "string"
+          },
+          "maxLtv": {
+            "type": "string"
+          },
+          "units": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SwapDataItem"
+            }
+          }
+        },
+        "required": [
+          "receiver",
+          "market",
+          "xtInAmt",
+          "tokenInAmt",
+          "maxLtv",
+          "units"
+        ]
+      },
+      "LeverageFromXtResponseItem": {
+        "type": "object",
+        "properties": {
+          "to": {
+            "type": "string"
+          },
+          "functionName": {
+            "type": "string"
+          },
+          "params": {
+            "$ref": "#/components/schemas/LeverageFromXtParams"
+          },
+          "expectCollateralAmount": {
+            "type": "string"
+          },
+          "calldata": {
+            "type": "string"
+          },
+          "abi": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "to",
+          "functionName",
+          "params",
+          "expectCollateralAmount",
+          "calldata",
+          "abi"
+        ]
+      },
+      "LeverageFromXtResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object"
+          },
+          "data": {
+            "$ref": "#/components/schemas/LeverageFromXtResponseItem"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "borrowTokenFromCollateralDto": {
+        "type": "object",
+        "properties": {
+          "chainId": {
+            "type": "number"
+          },
+          "recipient": {
+            "type": "string"
+          },
+          "marketAddress": {
+            "type": "string"
+          },
+          "orders": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "collInAmt": {
+            "type": "string"
+          },
+          "maxDebtAmt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "chainId",
+          "recipient",
+          "marketAddress",
+          "orders",
+          "collInAmt",
+          "maxDebtAmt"
+        ]
+      },
+      "BorrowTokenFromCollateralParams": {
+        "type": "object",
+        "properties": {
+          "recipient": {
+            "type": "string"
+          },
+          "market": {
+            "type": "string"
+          },
+          "collInAmt": {
+            "type": "string"
+          },
+          "orders": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "tokenAmtsWantBuy": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "maxDebtAmt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "recipient",
+          "market",
+          "collInAmt",
+          "orders",
+          "tokenAmtsWantBuy",
+          "maxDebtAmt"
+        ]
+      },
+      "BorrowTokenFromCollateralItem": {
+        "type": "object",
+        "properties": {
+          "to": {
+            "type": "string"
+          },
+          "functionName": {
+            "type": "string"
+          },
+          "params": {
+            "$ref": "#/components/schemas/BorrowTokenFromCollateralParams"
+          },
+          "expectCollateralAmount": {
+            "type": "string"
+          },
+          "calldata": {
+            "type": "string"
+          },
+          "abi": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "to",
+          "functionName",
+          "params",
+          "expectCollateralAmount",
+          "calldata",
+          "abi"
+        ]
+      },
+      "BorrowTokenFromCollateralResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object"
+          },
+          "data": {
+            "$ref": "#/components/schemas/BorrowTokenFromCollateralItem"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "MarketGtAmtParamsDto": {
+        "type": "object",
+        "properties": {
+          "loanId": {
+            "type": "string"
+          },
+          "collateralAmt": {
+            "type": "string"
+          },
+          "debtAmt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "loanId",
+          "collateralAmt",
+          "debtAmt"
+        ]
+      },
+      "MarketPositionParamsDto": {
+        "type": "object",
+        "properties": {
+          "userAddress": {
+            "type": "string"
+          },
+          "underlyingBalance": {
+            "type": "string"
+          },
+          "collateralBalance": {
+            "type": "string"
+          },
+          "ftBalance": {
+            "type": "string"
+          },
+          "xtBalance": {
+            "type": "string"
+          },
+          "gtInfo": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MarketGtAmtParamsDto"
+            }
+          }
+        },
+        "required": [
+          "userAddress",
+          "underlyingBalance",
+          "collateralBalance",
+          "ftBalance",
+          "xtBalance",
+          "gtInfo"
+        ]
+      },
+      "PositionSummaryItem": {
+        "type": "object",
+        "properties": {
+          "marketAddress": {
+            "type": "string"
+          },
+          "marketConfig": {
+            "$ref": "#/components/schemas/MarketConfigItem"
+          },
+          "position": {
+            "$ref": "#/components/schemas/MarketPositionParamsDto"
+          }
+        },
+        "required": [
+          "marketAddress",
+          "marketConfig",
+          "position"
+        ]
+      },
+      "PositionSummaryResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PositionSummaryItem"
+            }
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "TotalUsdValueItem": {
+        "type": "object",
+        "properties": {
+          "totalUsdValue": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "totalUsdValue"
+        ]
+      },
+      "TotalUsdValueResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object"
+          },
+          "data": {
+            "$ref": "#/components/schemas/TotalUsdValueItem"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "AdminAssetIconUpdateDto": {
+        "type": "object",
+        "properties": {
+          "chainId": {
+            "type": "string"
+          },
+          "assetAddress": {
+            "type": "string"
+          },
+          "icon": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "chainId",
+          "assetAddress",
+          "icon"
+        ]
+      },
+      "ChainDto": {
+        "type": "object",
+        "properties": {
+          "chainId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "chainId"
+        ]
+      },
+      "AdminPriceSourceUpsertDto": {
+        "type": "object",
+        "properties": {
+          "chainId": {
+            "type": "number"
+          },
+          "assetAddress": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "fromPriceSourceName": {
+            "type": "string"
+          },
+          "fromApySourceName": {
+            "type": "string"
+          },
+          "fromAprSourceName": {
+            "type": "string"
+          },
+          "maturityTimestamp": {
+            "type": "number"
+          },
+          "priceFeedAddress": {
+            "type": "string"
+          },
+          "priceFeedDecimals": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "chainId",
+          "assetAddress",
+          "name"
+        ]
+      },
+      "AdminMarketTagsUpdateDto": {
+        "type": "object",
+        "properties": {
+          "chainId": {
+            "type": "string"
+          },
+          "marketAddress": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "chainId",
+          "marketAddress",
+          "tags"
+        ]
+      },
+      "DefaultOrderParamsItem": {
+        "type": "object",
+        "properties": {
+          "orderInfo": {
+            "$ref": "#/components/schemas/OrderInfoItem"
+          },
+          "marketConfig": {
+            "$ref": "#/components/schemas/MarketConfigItem"
+          }
+        },
+        "required": [
+          "orderInfo",
+          "marketConfig"
+        ]
+      },
+      "DefaultOrderParamsResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/DefaultOrderParamsItem"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "OrderCreateHistoryItem": {
+        "type": "object",
+        "properties": {
+          "chainId": {
+            "type": "number"
+          },
+          "txHash": {
+            "type": "string"
+          },
+          "senderAddress": {
+            "type": "string"
+          },
+          "marketAddress": {
+            "type": "string"
+          },
+          "makerAddress": {
+            "type": "string"
+          },
+          "blockNumber": {
+            "type": "number"
+          },
+          "orderInfo": {
+            "$ref": "#/components/schemas/OrderInfoItem"
+          },
+          "marketConfig": {
+            "$ref": "#/components/schemas/MarketConfigItem"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "confirmed",
+              "failed"
+            ],
+            "default": "confirmed"
+          },
+          "updateAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "chainId",
+          "txHash",
+          "senderAddress",
+          "marketAddress",
+          "makerAddress",
+          "blockNumber",
+          "orderInfo",
+          "marketConfig",
+          "status",
+          "updateAt"
+        ]
+      },
+      "CreateOrderHistoryResponseDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrderCreateHistoryItem"
+            }
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "OrderUpdateHistoryItem": {
+        "type": "object",
+        "properties": {
+          "chainId": {
+            "type": "number"
+          },
+          "txHash": {
+            "type": "string"
+          },
+          "senderAddress": {
+            "type": "string"
+          },
+          "marketAddress": {
+            "type": "string"
+          },
+          "makerAddress": {
+            "type": "string"
+          },
+          "blockNumber": {
+            "type": "number"
+          },
+          "action": {
+            "type": "string"
+          },
+          "params": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "updateAt": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "confirmed",
+              "failed"
+            ],
+            "default": "pending"
+          }
+        },
+        "required": [
+          "chainId",
+          "txHash",
+          "senderAddress",
+          "marketAddress",
+          "makerAddress",
+          "blockNumber",
+          "action",
+          "params",
+          "updateAt",
+          "status"
+        ]
+      },
+      "UpdateOrderHistoryResponseDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrderUpdateHistoryItem"
+            }
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "TakerOrderItem": {
+        "type": "object",
+        "properties": {
+          "orderConfig": {
+            "$ref": "#/components/schemas/OrderConfigItem"
+          },
+          "orderInfo": {
+            "$ref": "#/components/schemas/OrderInfoItem"
+          }
+        },
+        "required": [
+          "orderConfig",
+          "orderInfo"
+        ]
+      },
+      "TakerOrderResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object"
+          },
+          "data": {
+            "$ref": "#/components/schemas/TakerOrderItem"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "RefreshCacheDto": {
+        "type": "object",
+        "properties": {
+          "chainId": {
+            "type": "object",
+            "description": "The blockchain chain ID",
+            "example": "1"
+          },
+          "orderAddresses": {
+            "description": "The order addresses",
+            "example": [
+              "0x1234567890123456789012345678901234567890"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "marketAddresses": {
+            "description": "The market addresses",
+            "example": [
+              "0x1234567890123456789012345678901234567890"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "chainId",
+          "orderAddresses",
+          "marketAddresses"
+        ]
+      }
+    }
+  }
+}

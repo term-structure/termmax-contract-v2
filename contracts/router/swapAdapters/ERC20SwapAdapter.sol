@@ -15,6 +15,9 @@ abstract contract ERC20SwapAdapter is ISwapAdapter {
     /// @notice Error for partial swap
     error ERC20InvalidPartialSwap(uint256 expectedTradeAmt, uint256 actualTradeAmt);
 
+    /// @notice Error for less than min token out
+    error LessThanMinTokenOut(uint256 actual, uint256 expected);
+
     /**
      * @inheritdoc ISwapAdapter
      */

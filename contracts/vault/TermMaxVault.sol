@@ -243,6 +243,7 @@ contract TermMaxVault is
      * @inheritdoc ITermMaxVault
      */
     function apr() external view returns (uint256) {
+        if (_accretingPrincipal == 0) return 0;
         return (_annualizedInterest * (Constants.DECIMAL_BASE - _performanceFeeRate)) / (_accretingPrincipal);
     }
 
@@ -696,7 +697,7 @@ contract TermMaxVault is
 
         uint256 lastTime = _lastUpdateTime;
         if (lastTime == 0) {
-            return (0, 0);
+            return (_accretingPrincipal, _performanceFee);
         }
         uint64 recentMaturity = _maturityMapping[0];
         uint256 previewAnnualizedInterest = _annualizedInterest;
@@ -736,7 +737,7 @@ contract TermMaxVault is
 
     /// @notice Callback function for the swap
     /// @param deltaFt The change in the ft balance of the order
-    function swapCallback(uint256 ftReserve, uint256 xtReserve, int256 deltaFt, int256) external override {
-        _delegateCall(abi.encodeCall(IOrderManager.swapCallback, (ftReserve, xtReserve, deltaFt)));
+    function afterSwap(uint256 ftReserve, uint256 xtReserve, int256 deltaFt, int256) external override {
+        _delegateCall(abi.encodeCall(IOrderManager.afterSwap, (ftReserve, xtReserve, deltaFt)));
     }
 }
