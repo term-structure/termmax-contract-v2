@@ -20,7 +20,7 @@ import {TermMaxRouter, ISwapAdapter, ITermMaxRouter, SwapUnit, RouterErrors} fro
 import {UniswapV3Adapter, ERC20SwapAdapter} from "contracts/router/swapAdapters/UniswapV3Adapter.sol";
 import {PendleSwapV3Adapter} from "contracts/router/swapAdapters/PendleSwapV3Adapter.sol";
 import {OdosV2Adapter, IOdosRouterV2} from "contracts/router/swapAdapters/OdosV2Adapter.sol";
-import {MorphoVaultAdapter} from "contracts/router/swapAdapters/MorphoVaultAdapter.sol";
+import {ERC4626VaultAdapter} from "contracts/router/swapAdapters/ERC4626VaultAdapter.sol";
 import {TermMaxOrder, ITermMaxOrder} from "contracts/TermMaxOrder.sol";
 import {ForkBaseTest} from "./ForkBaseTest.sol";
 import {RouterEvents} from "contracts/events/RouterEvents.sol";
@@ -46,7 +46,7 @@ abstract contract GtBaseTest is ForkBaseTest {
         address uniswapAdapter;
         address pendleAdapter;
         address odosAdapter;
-        address morphoAdapter;
+        address vaultAdapter;
     }
 
     struct GtTestRes {
@@ -130,12 +130,12 @@ abstract contract GtBaseTest is ForkBaseTest {
         res.swapAdapters.pendleAdapter =
             address(new PendleSwapV3Adapter(vm.parseJsonAddress(jsonData, ".routers.pendleRouter")));
         res.swapAdapters.odosAdapter = address(new OdosV2Adapter(vm.parseJsonAddress(jsonData, ".routers.odosRouter")));
-        res.swapAdapters.morphoAdapter = address(new MorphoVaultAdapter());
+        res.swapAdapters.vaultAdapter = address(new ERC4626VaultAdapter());
         res.router = deployRouter(res.marketInitialParams.admin);
         res.router.setAdapterWhitelist(res.swapAdapters.uniswapAdapter, true);
         res.router.setAdapterWhitelist(res.swapAdapters.pendleAdapter, true);
         res.router.setAdapterWhitelist(res.swapAdapters.odosAdapter, true);
-        res.router.setAdapterWhitelist(res.swapAdapters.morphoAdapter, true);
+        res.router.setAdapterWhitelist(res.swapAdapters.vaultAdapter, true);
         res.swapData = _readSwapData(key);
 
         res.orderInitialAmount = vm.parseJsonUint(jsonData, string.concat(key, ".orderInitialAmount"));

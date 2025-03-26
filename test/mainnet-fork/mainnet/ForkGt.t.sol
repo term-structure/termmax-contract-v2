@@ -43,9 +43,9 @@ contract ForkGt is GtBaseTest {
                 }
             } else if (res.swapData.tokenType == TokenType.Morpho) {
                 if (res.swapData.leverageUnits.length == 1) {
-                    res.swapData.leverageUnits[0].adapter = res.swapAdapters.morphoAdapter;
+                    res.swapData.leverageUnits[0].adapter = res.swapAdapters.vaultAdapter;
                 } else {
-                    res.swapData.leverageUnits[1].adapter = res.swapAdapters.morphoAdapter;
+                    res.swapData.leverageUnits[1].adapter = res.swapAdapters.vaultAdapter;
                     res.swapData.leverageUnits[0].adapter = res.swapAdapters.odosAdapter;
                 }
             }
@@ -76,13 +76,13 @@ contract ForkGt is GtBaseTest {
                 }
             } else if (res.swapData.tokenType == TokenType.Morpho) {
                 if (res.swapData.leverageUnits.length == 1) {
-                    res.swapData.leverageUnits[0].adapter = res.swapAdapters.morphoAdapter;
-                    res.swapData.flashRepayUnits[0].adapter = res.swapAdapters.morphoAdapter;
+                    res.swapData.leverageUnits[0].adapter = res.swapAdapters.vaultAdapter;
+                    res.swapData.flashRepayUnits[0].adapter = res.swapAdapters.vaultAdapter;
                 } else {
-                    res.swapData.leverageUnits[1].adapter = res.swapAdapters.morphoAdapter;
+                    res.swapData.leverageUnits[1].adapter = res.swapAdapters.vaultAdapter;
                     res.swapData.leverageUnits[0].adapter = res.swapAdapters.odosAdapter;
 
-                    res.swapData.flashRepayUnits[0].adapter = res.swapAdapters.morphoAdapter;
+                    res.swapData.flashRepayUnits[0].adapter = res.swapAdapters.vaultAdapter;
                     res.swapData.flashRepayUnits[1].adapter = res.swapAdapters.odosAdapter;
                 }
             }
@@ -115,13 +115,13 @@ contract ForkGt is GtBaseTest {
                 }
             } else if (res.swapData.tokenType == TokenType.Morpho) {
                 if (res.swapData.leverageUnits.length == 1) {
-                    res.swapData.leverageUnits[0].adapter = res.swapAdapters.morphoAdapter;
-                    res.swapData.flashRepayUnits[0].adapter = res.swapAdapters.morphoAdapter;
+                    res.swapData.leverageUnits[0].adapter = res.swapAdapters.vaultAdapter;
+                    res.swapData.flashRepayUnits[0].adapter = res.swapAdapters.vaultAdapter;
                 } else {
-                    res.swapData.leverageUnits[1].adapter = res.swapAdapters.morphoAdapter;
+                    res.swapData.leverageUnits[1].adapter = res.swapAdapters.vaultAdapter;
                     res.swapData.leverageUnits[0].adapter = res.swapAdapters.odosAdapter;
 
-                    res.swapData.flashRepayUnits[0].adapter = res.swapAdapters.morphoAdapter;
+                    res.swapData.flashRepayUnits[0].adapter = res.swapAdapters.vaultAdapter;
                     res.swapData.flashRepayUnits[1].adapter = res.swapAdapters.odosAdapter;
                 }
             }
