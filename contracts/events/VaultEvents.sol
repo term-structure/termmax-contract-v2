@@ -30,9 +30,8 @@ interface VaultEvents {
     /**
      * @notice Emitted when a market's whitelist status is proposed
      * @param market The address of the market
-     * @param isWhitelisted Whether the market should be whitelisted
      */
-    event SubmitMarket(address indexed market, bool isWhitelisted);
+    event SubmitMarketToWhitelist(address indexed market);
 
     /**
      * @notice Emitted when a pending market whitelist change is revoked
