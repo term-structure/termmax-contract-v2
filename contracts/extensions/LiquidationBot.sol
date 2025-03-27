@@ -12,6 +12,7 @@ import {Constants} from "contracts/lib/Constants.sol";
 import {GearingTokenConstants} from "contracts/lib/GearingTokenConstants.sol";
 import {MathLib} from "contracts/lib/MathLib.sol";
 import {IOracle} from "contracts/oracle/IOracle.sol";
+import {console} from "forge-std/console.sol";
 
 contract LiquidationBot is IAaveFlashLoanCallback, IMorphoFlashLoanCallback {
     using TransferUtils for IERC20;
@@ -107,13 +108,15 @@ contract LiquidationBot is IAaveFlashLoanCallback, IMorphoFlashLoanCallback {
         PriceInfo memory debtPriceInfo,
         PriceInfo memory collateralPriceInfo
     ) internal pure returns (uint256 cToLiquidator, uint256 incomeValue) {
-        uint256 ddPriceToCdPrice = (debtPriceInfo.price * collateralPriceInfo.priceDenominator * Constants.DECIMAL_BASE)
-            / (collateralPriceInfo.price * debtPriceInfo.priceDenominator);
+        uint256 ddPriceToCdPrice = (
+            debtPriceInfo.price * collateralPriceInfo.priceDenominator * Constants.DECIMAL_BASE_SQ
+                + collateralPriceInfo.price * debtPriceInfo.priceDenominator - 1
+        ) / (collateralPriceInfo.price * debtPriceInfo.priceDenominator);
 
         // calculate the amount of collateral that is equivalent to repayAmt
         // with debt to collateral price
         uint256 cEqualRepayAmt = (repayAmt * ddPriceToCdPrice * collateralPriceInfo.tokenDenominator)
-            / (debtPriceInfo.tokenDenominator * Constants.DECIMAL_BASE);
+            / (debtPriceInfo.tokenDenominator * Constants.DECIMAL_BASE_SQ);
 
         uint256 rewardToLiquidator =
             (cEqualRepayAmt * GearingTokenConstants.REWARD_TO_LIQUIDATOR) / Constants.DECIMAL_BASE;

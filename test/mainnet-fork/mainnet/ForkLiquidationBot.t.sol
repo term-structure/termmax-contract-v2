@@ -39,9 +39,6 @@ contract ForkLiquidationBot is GtBaseTest {
         for (uint256 i = 0; i < tokenPairs.length; i++) {
             string memory tokenPair = tokenPairs[i];
             GtTestRes memory res = _initializeGtTestRes(tokenPair);
-            if (!res.uniswapData.active || !res.pendleData.active) {
-                continue;
-            }
             LiquidationBotConfig memory config = _readLiquidationBotConfig(tokenPair);
             if (config.morpho.active) {
                 _testLiquidate(res, config, LiquidationBot.BorrowType.MORPHO, ITermMaxOrder(address(0)));
@@ -53,9 +50,6 @@ contract ForkLiquidationBot is GtBaseTest {
         for (uint256 i = 0; i < tokenPairs.length; i++) {
             string memory tokenPair = tokenPairs[i];
             GtTestRes memory res = _initializeGtTestRes(tokenPair);
-            if (!res.uniswapData.active || !res.pendleData.active) {
-                continue;
-            }
             LiquidationBotConfig memory config = _readLiquidationBotConfig(tokenPair);
             if (config.aave.active) {
                 _testLiquidate(res, config, LiquidationBot.BorrowType.AAVE, ITermMaxOrder(address(0)));
@@ -63,19 +57,16 @@ contract ForkLiquidationBot is GtBaseTest {
         }
     }
 
-    function testLiquidateWithMorphoByFt() public {
-        for (uint256 i = 0; i < tokenPairs.length; i++) {
-            string memory tokenPair = tokenPairs[i];
-            GtTestRes memory res = _initializeGtTestRes(tokenPair);
-            if (!res.uniswapData.active || !res.pendleData.active) {
-                continue;
-            }
-            LiquidationBotConfig memory config = _readLiquidationBotConfig(tokenPair);
-            if (config.morpho.active) {
-                _testLiquidate(res, config, LiquidationBot.BorrowType.MORPHO, res.order);
-            }
-        }
-    }
+    // function testLiquidateWithMorphoByFt() public {
+    //     for (uint256 i = 0; i < tokenPairs.length; i++) {
+    //         string memory tokenPair = tokenPairs[i];
+    //         GtTestRes memory res = _initializeGtTestRes(tokenPair);
+    //         LiquidationBotConfig memory config = _readLiquidationBotConfig(tokenPair);
+    //         if (config.morpho.active) {
+    //             _testLiquidate(res, config, LiquidationBot.BorrowType.MORPHO, res.order);
+    //         }
+    //     }
+    // }
 
     function _testLiquidate(
         GtTestRes memory res,
@@ -83,57 +74,78 @@ contract ForkLiquidationBot is GtBaseTest {
         LiquidationBot.BorrowType borrowType,
         ITermMaxOrder order
     ) internal {
+        {
+            if (res.swapData.tokenType == TokenType.General) {
+                res.swapData.leverageUnits[0].adapter = res.swapAdapters.odosAdapter;
+                res.swapData.flashRepayUnits[0].adapter = res.swapAdapters.odosAdapter;
+            } else if (res.swapData.tokenType == TokenType.Pendle) {
+                if (res.swapData.leverageUnits.length == 1) {
+                    res.swapData.leverageUnits[0].adapter = res.swapAdapters.pendleAdapter;
+                    res.swapData.flashRepayUnits[0].adapter = res.swapAdapters.pendleAdapter;
+                } else {
+                    res.swapData.leverageUnits[1].adapter = res.swapAdapters.pendleAdapter;
+                    res.swapData.leverageUnits[0].adapter = res.swapAdapters.odosAdapter;
+
+                    res.swapData.flashRepayUnits[0].adapter = res.swapAdapters.pendleAdapter;
+                    res.swapData.flashRepayUnits[1].adapter = res.swapAdapters.odosAdapter;
+                }
+            } else if (res.swapData.tokenType == TokenType.Morpho) {
+                if (res.swapData.leverageUnits.length == 1) {
+                    res.swapData.leverageUnits[0].adapter = res.swapAdapters.vaultAdapter;
+                    res.swapData.flashRepayUnits[0].adapter = res.swapAdapters.vaultAdapter;
+                } else {
+                    res.swapData.leverageUnits[1].adapter = res.swapAdapters.vaultAdapter;
+                    res.swapData.leverageUnits[0].adapter = res.swapAdapters.odosAdapter;
+
+                    res.swapData.flashRepayUnits[0].adapter = res.swapAdapters.vaultAdapter;
+                    res.swapData.flashRepayUnits[1].adapter = res.swapAdapters.odosAdapter;
+                }
+            }
+        }
         address borrower = vm.randomAddress();
 
         // mint gt
         deal(borrower, 1e18);
-        vm.startPrank(borrower);
         LiquidationBot liquidationBot = new LiquidationBot(
             IFlashLoanAave(config.aave.pool), config.aave.addressProvider, IFlashLoanMorpho(config.morpho.morpho)
         );
-        uint256 collateralAmt = 100e8;
-        uint128 debtAmt = 80e8;
-        deal(address(res.collateral), borrower, collateralAmt);
-        res.collateral.approve(address(res.gt), collateralAmt);
-        (uint256 gtId,) = res.market.issueFt(borrower, debtAmt, abi.encode(collateralAmt));
-        vm.stopPrank();
+        uint256 gtId =
+            _testLeverageFromXt(res, borrower, res.swapData.debtAmt, res.swapData.swapAmtIn, res.swapData.leverageUnits);
 
-        _updateCollateralPrice(res, 0.85e8);
+        // vm.warp(res.marketInitialParams.marketConfig.maturity + 1);
+        MockPriceFeed.RoundData memory roundData = MockPriceFeed.RoundData({
+            roundId: 1,
+            answer: 0.5e8,
+            startedAt: block.timestamp,
+            updatedAt: block.timestamp,
+            answeredInRound: 1
+        });
+        vm.prank(res.marketInitialParams.admin);
+        res.collateralPriceFeed.updateRoundData(roundData);
+
+        roundData.answer = 1e8;
+        vm.prank(res.marketInitialParams.admin);
+        res.debtPriceFeed.updateRoundData(roundData);
 
         // liquidate
         address liquidator = vm.randomAddress();
         deal(liquidator, 1e18);
         vm.startPrank(liquidator);
-        {
-            //simulate liquidation result
-            (, uint128 maxRepayAmt, uint256 cToLiquidator, uint256 incomeValue) =
-                liquidationBot.simulateLiquidation(res.gt, gtId);
-            console.log("simulate--maxRepayAmt:", maxRepayAmt);
-            console.log("simulate--cToLiquidator:", cToLiquidator);
-            console.log("simulate--incomeValue:", incomeValue);
-        }
-        SwapUnit[] memory units = new SwapUnit[](2);
-        units[0] = SwapUnit(
-            address(res.pendleData.adapter),
-            res.marketInitialParams.collateral,
-            res.pendleData.underlying,
-            abi.encode(res.pendleData.pendleMarket, 0)
-        );
 
-        units[1] = SwapUnit(
-            address(res.uniswapData.adapter),
-            res.pendleData.underlying,
-            address(res.marketInitialParams.debtToken),
-            abi.encode(
-                abi.encodePacked(
-                    res.pendleData.underlying, res.uniswapData.poolFee, address(res.marketInitialParams.debtToken)
-                ),
-                block.timestamp + 3600,
-                0
-            )
+        (, uint128 debtAmt, uint128 ltv, bytes memory collateralData) = res.gt.loanInfo(gtId);
+        console.log("debtAmt:", debtAmt);
+        console.log("ltv:", ltv);
+        console.log("collateralData:", abi.decode(collateralData, (uint256)));
+
+        //simulate liquidation result
+        (, uint128 maxRepayAmt, uint256 cToLiquidator, uint256 incomeValue) =
+            liquidationBot.simulateLiquidation(res.gt, gtId);
+        console.log("simulate--maxRepayAmt:", maxRepayAmt);
+        console.log("simulate--cToLiquidator:", cToLiquidator);
+        console.log("simulate--incomeValue:", incomeValue);
+        LiquidationBot.LiquidationParams memory liquidationParams = LiquidationBot.LiquidationParams(
+            res.gt, res.debtToken, res.collateral, gtId, maxRepayAmt, res.ft, order, res.swapData.flashRepayUnits
         );
-        LiquidationBot.LiquidationParams memory liquidationParams =
-            LiquidationBot.LiquidationParams(res.gt, res.debtToken, res.collateral, gtId, debtAmt, res.ft, order, units);
         liquidationBot.liquidate(liquidationParams, borrowType);
         console.log("income:", res.debtToken.balanceOf(liquidator));
         vm.stopPrank();
