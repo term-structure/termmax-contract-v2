@@ -181,19 +181,19 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
          * DPD := debt token price decimal (valueAndPrice.priceDenominator)
          * CP := collateral token price (collateralPrice)
          * CPD := collateral token price decimal (cPriceDenominator)
+         * SD := scaling decimal = DPD * CPD * 10
          * The value of 1(decimal) debt token / The value of 1(decimal) collateral token
-         *     ddPriceToCdPrice = roundUp((DP/DPD) / (CP/CPD) = (DP*CPD) / (CP*DPD))
-         *     
+         *     ddPriceToCdPrice = roundUp((DP/DPD) / (CP/CPD) = (DP*CPD*SD) / (CP*DPD))
+         *                       = roundUp((DP*CPD*CPD*10) / CP)
          */
         uint256 ddPriceToCdPrice = (
-            valueAndPrice.debtPrice * cPriceDenominator * Constants.DECIMAL_BASE_SQ
-                + collateralPrice * valueAndPrice.priceDenominator - 1
-        ) / (collateralPrice * valueAndPrice.priceDenominator);
+            valueAndPrice.debtPrice * cPriceDenominator * cPriceDenominator * 10 + collateralPrice - 1
+        ) / collateralPrice;
 
         // calculate the amount of collateral that is equivalent to repayAmt
         // with debt to collateral price
         uint256 cEqualRepayAmt = (repayAmt * ddPriceToCdPrice * cTokenDenominator)
-            / (valueAndPrice.debtDenominator * Constants.DECIMAL_BASE_SQ);
+            / (valueAndPrice.debtDenominator * cPriceDenominator * valueAndPrice.priceDenominator * 10);
 
         uint256 rewardToLiquidator =
             (cEqualRepayAmt * GearingTokenConstants.REWARD_TO_LIQUIDATOR) / Constants.DECIMAL_BASE;
