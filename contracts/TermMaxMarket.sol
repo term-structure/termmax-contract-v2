@@ -317,12 +317,7 @@ contract TermMaxMarket is
 
         deliveryData = gt.previewDelivery(proportion);
 
-        debtTokenAmt += ((debtToken.balanceOf(address(this))) * proportion) / Constants.DECIMAL_BASE_SQ;
-    }
-
-    function _previewRedeem(uint256 ftAmount) internal view returns (uint256 debtTokenAmt, bytes memory deliveryData) {
-        debtTokenAmt = ftAmount;
-        deliveryData = gt.previewDelivery(debtTokenAmt);
+        debtTokenAmt = ((debtToken.balanceOf(address(this))) * proportion) / Constants.DECIMAL_BASE_SQ;
     }
 
     /**
