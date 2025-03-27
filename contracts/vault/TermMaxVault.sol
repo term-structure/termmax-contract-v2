@@ -380,7 +380,11 @@ contract TermMaxVault is
     function _delegateCall(bytes memory data) internal returns (bytes memory) {
         (bool success, bytes memory returnData) = ORDER_MANAGER_SINGLETON.delegatecall(data);
         if (!success) {
-            revert(string(returnData));
+            assembly {
+                let ptr := add(returnData, 0x20)
+                let len := mload(returnData)
+                revert(ptr, len)
+            }
         }
         return returnData;
     }
