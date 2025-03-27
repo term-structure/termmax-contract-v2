@@ -440,7 +440,7 @@ contract TermMaxVault is
             // Safe "unchecked" cast because newTimelock <= MAX_TIMELOCK.
             _pendingTimelock.update(uint184(newTimelock), _timelock);
 
-            emit SubmitTimelock(newTimelock);
+            emit SubmitTimelock(newTimelock, _pendingTimelock.validAt);
         }
     }
 
@@ -470,7 +470,7 @@ contract TermMaxVault is
             return;
         } else {
             _pendingPerformanceFeeRate.update(newPerformanceFeeRate, _timelock);
-            emit SubmitPerformanceFeeRate(newPerformanceFeeRate);
+            emit SubmitPerformanceFeeRate(newPerformanceFeeRate, _pendingPerformanceFeeRate.validAt);
         }
     }
 
@@ -485,8 +485,7 @@ contract TermMaxVault is
             _setGuardian(newGuardian);
         } else {
             _pendingGuardian.update(newGuardian, _timelock);
-
-            emit SubmitGuardian(newGuardian);
+            emit SubmitGuardian(newGuardian, _pendingGuardian.validAt);
         }
     }
 
@@ -508,7 +507,7 @@ contract TermMaxVault is
             _setMarketWhitelist(market, isWhitelisted);
         } else {
             _pendingMarkets[market].update(0, _timelock);
-            emit SubmitMarketToWhitelist(market);
+            emit SubmitMarketToWhitelist(market, _pendingMarkets[market].validAt);
         }
     }
 

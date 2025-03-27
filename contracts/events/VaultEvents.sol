@@ -11,8 +11,9 @@ interface VaultEvents {
     /**
      * @notice Emitted when a new guardian is proposed
      * @param newGuardian The address of the proposed guardian
+     * @param validAt The timestamp when the guardian change will take effect
      */
-    event SubmitGuardian(address newGuardian);
+    event SubmitGuardian(address newGuardian, uint64 validAt);
 
     /**
      * @notice Emitted when the vault capacity is updated
@@ -30,8 +31,9 @@ interface VaultEvents {
     /**
      * @notice Emitted when a market's whitelist status is proposed
      * @param market The address of the market
+     * @param validAt The timestamp when the market whitelist change will take effect
      */
-    event SubmitMarketToWhitelist(address indexed market);
+    event SubmitMarketToWhitelist(address indexed market, uint64 validAt);
 
     /**
      * @notice Emitted when a pending market whitelist change is revoked
@@ -50,8 +52,9 @@ interface VaultEvents {
     /**
      * @notice Emitted when a new performance fee rate is proposed
      * @param newPerformanceFeeRate The proposed performance fee rate
+     * @param validAt The timestamp when the performance fee rate change will take effect
      */
-    event SubmitPerformanceFeeRate(uint256 newPerformanceFeeRate);
+    event SubmitPerformanceFeeRate(uint256 newPerformanceFeeRate, uint64 validAt);
 
     /**
      * @notice Emitted when a market's whitelist status is updated
@@ -129,8 +132,9 @@ interface VaultEvents {
     /**
      * @notice Emitted when a new timelock is proposed
      * @param newTimelock The proposed timelock value
+     * @param validAt The timestamp when the timelock change will take effect
      */
-    event SubmitTimelock(uint256 newTimelock);
+    event SubmitTimelock(uint256 newTimelock, uint64 validAt);
 
     /**
      * @notice Emitted when the timelock is updated

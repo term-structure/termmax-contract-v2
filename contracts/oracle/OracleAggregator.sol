@@ -51,7 +51,8 @@ contract OracleAggregator is IOracle, Ownable2Step {
         address indexed asset,
         AggregatorV3Interface indexed aggregator,
         AggregatorV3Interface indexed backupAggregator,
-        uint32 heartbeat
+        uint32 heartbeat,
+        uint64 validAt
     );
 
     event RevokePendingOracle(address indexed asset);
@@ -75,8 +76,9 @@ contract OracleAggregator is IOracle, Ownable2Step {
             return;
         }
         pendingOracles[asset].oracle = oracle;
-        pendingOracles[asset].validAt = uint64(block.timestamp + _timeLock);
-        emit SubmitPendingOracle(asset, oracle.aggregator, oracle.backupAggregator, oracle.heartbeat);
+        uint64 validAt = uint64(block.timestamp + _timeLock);
+        pendingOracles[asset].validAt = validAt;
+        emit SubmitPendingOracle(asset, oracle.aggregator, oracle.backupAggregator, oracle.heartbeat, validAt);
     }
 
     function acceptPendingOracle(address asset) external {
