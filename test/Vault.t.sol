@@ -712,30 +712,31 @@ contract VaultTest is Test {
         vm.stopPrank();
     }
 
-    function testFail_AnulizedInterestLessThanZero() public {
+    function testAnulizedInterestLessThanZero() public {
         uint128 tokenAmtIn = 100e8;
         uint128 ftAmtOut = 100e8;
         address taker = vm.randomAddress();
         res.debt.mint(taker, tokenAmtIn);
         vm.startPrank(taker);
         res.debt.approve(address(res.order), tokenAmtIn);
-        vm.expectRevert(VaultErrors.LockedFtGreaterThanTotalFt.selector);
+        vm.expectRevert(VaultErrors.OrderHasNegativeInterest.selector);
         res.order.swapExactTokenToToken(res.debt, res.ft, taker, tokenAmtIn, ftAmtOut, block.timestamp + 1 hours);
         vm.stopPrank();
     }
 
-    function testFail_LockedFtGreaterThanTotalFt() public {
+    function testLockedFtGreaterThanTotalFt() public {
         vm.warp(currentTime + 2 days);
-        buyXt(48.219178e8, 1000e8);
+        buyXt(50e8, 1000e8);
 
         vm.warp(currentTime + 4 days);
-        buyXt(48.219178e8, 1000e8);
-        uint128 tokenAmtIn = 100e8;
-        uint128 ftAmtOut = 100e8;
+        uint128 tokenAmtIn = 80e8;
+        uint128 ftAmtOut = 130e8;
+
         address taker = vm.randomAddress();
         res.debt.mint(taker, tokenAmtIn);
         vm.startPrank(taker);
         res.debt.approve(address(res.order), tokenAmtIn);
+
         vm.expectRevert(VaultErrors.LockedFtGreaterThanTotalFt.selector);
         res.order.swapExactTokenToToken(res.debt, res.ft, taker, tokenAmtIn, ftAmtOut, block.timestamp + 1 hours);
         vm.stopPrank();
