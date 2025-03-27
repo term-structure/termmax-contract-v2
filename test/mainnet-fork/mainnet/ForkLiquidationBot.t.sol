@@ -120,12 +120,13 @@ contract ForkLiquidationBot is GtBaseTest {
             updatedAt: block.timestamp,
             answeredInRound: 1
         });
-        vm.prank(res.marketInitialParams.admin);
-        res.collateralPriceFeed.updateRoundData(roundData);
+        vm.warp(res.marketInitialParams.marketConfig.maturity + 1);
+        // vm.prank(res.marketInitialParams.admin);
+        // res.collateralPriceFeed.updateRoundData(roundData);
 
-        roundData.answer = 1e8;
-        vm.prank(res.marketInitialParams.admin);
-        res.debtPriceFeed.updateRoundData(roundData);
+        // roundData.answer = 1e8;
+        // vm.prank(res.marketInitialParams.admin);
+        // res.debtPriceFeed.updateRoundData(roundData);
 
         // liquidate
         address liquidator = vm.randomAddress();
