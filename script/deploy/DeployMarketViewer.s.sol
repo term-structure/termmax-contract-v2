@@ -4,11 +4,25 @@ pragma solidity ^0.8.27;
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
 import {MarketViewer} from "../../contracts/router/MarketViewer.sol";
+import {StringHelper} from "../utils/StringHelper.sol";
 
 contract DeployMarketViewer is Script {
-    // deployer config
-    uint256 deployerPrivateKey = vm.envUint("ARB_SEPOLIA_DEPLOYER_PRIVATE_KEY");
-    address deployerAddr = vm.addr(deployerPrivateKey);
+    // Network-specific config loaded from environment variables
+    string network;
+    uint256 deployerPrivateKey;
+    address deployerAddr;
+
+    function setUp() public {
+        // Load network from environment variable
+        network = vm.envString("NETWORK");
+        string memory networkUpper = StringHelper.toUpper(network);
+
+        // Load network-specific configuration
+        string memory privateKeyVar = string.concat(networkUpper, "_DEPLOYER_PRIVATE_KEY");
+
+        deployerPrivateKey = vm.envUint(privateKeyVar);
+        deployerAddr = vm.addr(deployerPrivateKey);
+    }
 
     function run() public {
         vm.startBroadcast(deployerPrivateKey);

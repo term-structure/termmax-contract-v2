@@ -25,13 +25,15 @@ import {FaucetERC20} from "../contracts/test/testnet/FaucetERC20.sol";
 import {MockPriceFeed} from "../contracts/test/MockPriceFeed.sol";
 import {SwapUnit} from "../contracts/router/ISwapAdapter.sol";
 import {MarketConfig} from "../contracts/storage/TermMaxStorage.sol";
+import {StringHelper} from "./utils/StringHelper.sol";
 
 contract E2ETest is Script {
-    // deployer config
-    uint256 deployerPrivateKey = vm.envUint("ARB_SEPOLIA_DEPLOYER_PRIVATE_KEY");
-    address deployerAddr = vm.addr(deployerPrivateKey);
-    address userAddr = deployerAddr;
-    uint256 userPrivateKey = deployerPrivateKey;
+    // Network-specific config loaded from environment variables
+    string network;
+    uint256 deployerPrivateKey;
+    address deployerAddr;
+    address userAddr;
+    uint256 userPrivateKey;
 
     // address config
     address faucetAddr = address(0xb927B74d5D9c3985D4DCdd62CbffEc66CF527fAa);
@@ -53,6 +55,20 @@ contract E2ETest is Script {
     FaucetERC20 underlying;
     address collateralPriceFeedAddr;
     address underlyingPriceFeedAddr;
+
+    function setUp() public {
+        // Load network from environment variable
+        network = vm.envString("NETWORK");
+        string memory networkUpper = StringHelper.toUpper(network);
+
+        // Load network-specific configuration
+        string memory privateKeyVar = string.concat(networkUpper, "_DEPLOYER_PRIVATE_KEY");
+
+        deployerPrivateKey = vm.envUint(privateKeyVar);
+        deployerAddr = vm.addr(deployerPrivateKey);
+        userAddr = deployerAddr;
+        userPrivateKey = deployerPrivateKey;
+    }
 
     function run() public {
         address tokenAddr = address(0xE407D6b58f1BaB00DB15a6b164F6e882aB3bb939);

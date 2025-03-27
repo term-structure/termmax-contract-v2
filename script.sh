@@ -2,18 +2,41 @@
 
 # Check if required arguments are provided
 if [ "$#" -lt 2 ]; then
-    echo "Usage: $0 <network> <script-name> [options]"
+    echo "Usage: $0 <network> <command> [options]"
     echo "Supported networks: eth-sepolia, arb-sepolia, eth-mainnet, arb-mainnet"
-    echo "Script name: Name of the script file without extension (e.g., SubmitOracles)"
+    echo ""
+    echo "Commands:"
+    echo "  1. Deployment Commands:"
+    echo "     - deploy:access-manager  - Deploy Access Manager contract"
+    echo "     - deploy:core            - Deploy Core contracts"
+    echo "     - deploy:market          - Deploy Market contracts"
+    echo "     - deploy:order           - Deploy Order contracts"
+    echo "     - deploy:vault           - Deploy Vault contracts"
+    echo ""
+    echo "  2. Script Commands:"
+    echo "     - script:<script-name>   - Run a custom script (e.g., script:GrantRoles, script:SubmitOracles)"
+    echo ""
     echo "Options:"
     echo "  --broadcast     Broadcast transactions (default: dry run)"
-    echo "  --verify       Enable contract verification"
+    echo "  --verify        Enable contract verification"
     exit 1
 fi
 
 NETWORK=$1
-SCRIPT_NAME=$2
+COMMAND=$2
 shift 2  # Remove the first two arguments
+
+# Parse the command to determine if it's a deployment or a script
+if [[ "$COMMAND" == deploy:* ]]; then
+    OPERATION="deploy"
+    TYPE=${COMMAND#deploy:}
+elif [[ "$COMMAND" == script:* ]]; then
+    OPERATION="script"
+    SCRIPT_NAME=${COMMAND#script:}
+else
+    echo "Error: Invalid command format. Must be either 'deploy:<type>' or 'script:<script-name>'"
+    exit 1
+fi
 
 # Default options (dry run without verification)
 BROADCAST=""
@@ -48,6 +71,20 @@ case $NETWORK in
         exit 1
         ;;
 esac
+
+# If deploying, validate deployment type
+if [ "$OPERATION" = "deploy" ]; then
+    case $TYPE in
+        "access-manager"|"core"|"market"|"order"|"vault")
+            echo "Deployment type: $TYPE"
+            ;;
+        *)
+            echo "Unsupported deployment type: $TYPE"
+            echo "Supported deployment types: access-manager, core, market, order, vault"
+            exit 1
+            ;;
+    esac
+fi
 
 # Convert network name to uppercase with underscores for env vars
 NETWORK_UPPER=$(echo $NETWORK | tr '[:lower:]' '[:upper:]' | tr '-' '_')
@@ -112,18 +149,70 @@ if [[ $NETWORK == *"mainnet"* ]]; then
     fi
 fi
 
-echo "=== Script Configuration ==="
+# Determine the script path and name
+if [ "$OPERATION" = "deploy" ]; then
+    # Capitalize first letter of type for script name
+    if [ "$TYPE" = "access-manager" ]; then
+        SCRIPT_NAME="DeployAccessManager"
+    else
+        TYPE_CAPITALIZED="$(tr '[:lower:]' '[:upper:]' <<< ${TYPE:0:1})${TYPE:1}"
+        SCRIPT_NAME="Deploy${TYPE_CAPITALIZED}"
+    fi
+    
+    # Define a fixed script path for deployments
+    SCRIPT_PATH="script/deploy/${SCRIPT_NAME}.s.sol"
+    
+    # Check if the script exists
+    if [ ! -f "$SCRIPT_PATH" ]; then
+        echo "Error: Deployment script not found: $SCRIPT_PATH"
+        exit 1
+    fi
+else
+    # For custom scripts, try multiple locations
+    SCRIPT_LOCATIONS=(
+        "script/deploy/${SCRIPT_NAME}.s.sol"
+        "script/${SCRIPT_NAME}.s.sol"
+        "script/utils/${SCRIPT_NAME}.s.sol"
+    )
+
+    SCRIPT_FOUND=false
+    for POTENTIAL_SCRIPT_PATH in "${SCRIPT_LOCATIONS[@]}"; do
+        if [ -f "$POTENTIAL_SCRIPT_PATH" ]; then
+            SCRIPT_PATH=$POTENTIAL_SCRIPT_PATH
+            SCRIPT_FOUND=true
+            break
+        fi
+    done
+
+    if [ "$SCRIPT_FOUND" = false ]; then
+        echo "Error: Script file not found. Searched in:"
+        for POTENTIAL_SCRIPT_PATH in "${SCRIPT_LOCATIONS[@]}"; do
+            echo "  - $POTENTIAL_SCRIPT_PATH"
+        done
+        exit 1
+    fi
+fi
+
+# Configuration summary
+echo "=== Configuration ==="
+if [ "$OPERATION" = "deploy" ]; then
+    echo "Operation: Deployment"
+    echo "Type: $TYPE"
+else 
+    echo "Operation: Script Execution"
+fi
 echo "Network: $NETWORK"
 echo "Script: $SCRIPT_NAME.s.sol"
+echo "Path: $SCRIPT_PATH"
+
 # Mask the RPC URL to avoid exposing API keys
 RPC_MASKED=$(echo "$RPC_URL" | sed -E 's/([a-zA-Z0-9]{4})[a-zA-Z0-9]*/\1*****/g')
 echo "RPC URL: $RPC_MASKED"
 echo "Admin Address: $ADMIN_ADDRESS"
-if [[ "$SCRIPT_NAME" = "SubmitOracles" || "$SCRIPT_NAME" = "AcceptOracles" ]]; then
-    echo "Oracle Aggregator Admin: Using private key from environment variable"
-fi
+
 echo "Mode: ${BROADCAST:+Live Broadcast}${BROADCAST:-Dry Run}"
 echo "Verification: ${VERIFY:+Enabled}${VERIFY:-Disabled}"
+
 if [[ $NETWORK == *"mainnet"* ]]; then
     echo "Uniswap V3 Router: ${!UNISWAP_V3_ROUTER_VAR}"
     echo "Odos V2 Router: ${!ODOS_V2_ROUTER_VAR}"
@@ -136,37 +225,15 @@ echo "==============================="
 export NETWORK=$NETWORK
 
 # Run the script
-echo "Starting script execution..."
-
-# Try to find the script in various locations
-SCRIPT_LOCATIONS=(
-    "script/deploy/${SCRIPT_NAME}.s.sol"
-    "script/${SCRIPT_NAME}.s.sol"
-    "script/utils/${SCRIPT_NAME}.s.sol"
-)
-
-SCRIPT_FOUND=false
-for SCRIPT_PATH in "${SCRIPT_LOCATIONS[@]}"; do
-    if [ -f "$SCRIPT_PATH" ]; then
-        SCRIPT_FOUND=true
-        break
-    fi
-done
-
-if [ "$SCRIPT_FOUND" = false ]; then
-    echo "Error: Script file not found. Searched in:"
-    for SCRIPT_PATH in "${SCRIPT_LOCATIONS[@]}"; do
-        echo "  - $SCRIPT_PATH"
-    done
-    exit 1
+if [ "$OPERATION" = "deploy" ]; then
+    echo "Starting deployment..."
+else
+    echo "Starting script execution..."
 fi
 
 # Build the forge command
-if [[ "$SCRIPT_NAME" = "SubmitOracles" || "$SCRIPT_NAME" = "AcceptOracles" ]]; then
-    FORGE_CMD="forge script $SCRIPT_PATH --private-key $DEPLOYER_PRIVATE_KEY --rpc-url $RPC_URL"
-else
-    FORGE_CMD="forge script $SCRIPT_PATH --rpc-url $RPC_URL"
-fi
+# All scripts, including SubmitOracles and AcceptOracles, use the DEPLOYER_PRIVATE_KEY
+FORGE_CMD="forge script $SCRIPT_PATH --private-key $DEPLOYER_PRIVATE_KEY --rpc-url $RPC_URL"
 
 # Add optional flags if specified
 if [ ! -z "$BROADCAST" ]; then
@@ -185,15 +252,31 @@ eval $FORGE_CMD
 # Check if execution was successful
 if [ $? -eq 0 ]; then
     if [ ! -z "$BROADCAST" ]; then
-        echo "✅ Script $SCRIPT_NAME executed successfully on $NETWORK (Broadcast mode)!"
+        if [ "$OPERATION" = "deploy" ]; then
+            echo "✅ ${TYPE} deployment to $NETWORK completed successfully!"
+        else
+            echo "✅ Script $SCRIPT_NAME executed successfully on $NETWORK (Broadcast mode)!"
+        fi
     else
-        echo "✅ Script $SCRIPT_NAME dry run completed successfully on $NETWORK!"
+        if [ "$OPERATION" = "deploy" ]; then
+            echo "✅ ${TYPE} dry run on $NETWORK completed successfully!"
+        else
+            echo "✅ Script $SCRIPT_NAME dry run completed successfully on $NETWORK!"
+        fi
     fi
 else
     if [ ! -z "$BROADCAST" ]; then
-        echo "❌ Script $SCRIPT_NAME execution failed on $NETWORK (Broadcast mode)!"
+        if [ "$OPERATION" = "deploy" ]; then
+            echo "❌ ${TYPE} deployment to $NETWORK failed!"
+        else
+            echo "❌ Script $SCRIPT_NAME execution failed on $NETWORK (Broadcast mode)!"
+        fi
     else
-        echo "❌ Script $SCRIPT_NAME dry run failed on $NETWORK!"
+        if [ "$OPERATION" = "deploy" ]; then
+            echo "❌ ${TYPE} dry run on $NETWORK failed!"
+        else
+            echo "❌ Script $SCRIPT_NAME dry run failed on $NETWORK!"
+        fi
     fi
     exit 1
 fi 
