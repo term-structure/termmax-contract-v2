@@ -282,7 +282,7 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
         if (ftReserve != 0) {
             ITermMaxOrder(order).withdrawAssets(orderInfo.ft, address(this), ftReserve);
             orderInfo.ft.safeIncreaseAllowance(address(orderInfo.market), ftReserve);
-            totalRedeem = orderInfo.market.redeem(ftReserve, address(this));
+            (totalRedeem,) = orderInfo.market.redeem(ftReserve, address(this));
             if (totalRedeem < ftReserve) {
                 // storage bad debt
                 (,,, address collateral,) = orderInfo.market.tokens();

@@ -297,11 +297,51 @@ contract TermMaxMarket is
     /**
      * @inheritdoc ITermMaxMarket
      */
-    function redeem(uint256 ftAmount, address recipient) external virtual override nonReentrant returns (uint256) {
+    function previewRedeem(uint256 ftAmount)
+        external
+        view
+        override
+        returns (uint256 debtTokenAmt, bytes memory deliveryData)
+    {
+        MarketConfig memory mConfig = _config;
+        {
+            uint256 liquidationDeadline =
+                gt.liquidatable() ? mConfig.maturity + Constants.LIQUIDATION_WINDOW : mConfig.maturity;
+            if (block.timestamp < liquidationDeadline) {
+                revert CanNotRedeemBeforeFinalLiquidationDeadline(liquidationDeadline);
+            }
+        }
+
+        // The proportion that user will get how many debtToken and collateral should be deliveried
+        uint256 proportion = (ftAmount * Constants.DECIMAL_BASE_SQ) / (ft.totalSupply() - ft.balanceOf(address(this)));
+
+        deliveryData = gt.previewDelivery(proportion);
+
+        debtTokenAmt += ((debtToken.balanceOf(address(this))) * proportion) / Constants.DECIMAL_BASE_SQ;
+    }
+
+    function _previewRedeem(uint256 ftAmount) internal view returns (uint256 debtTokenAmt, bytes memory deliveryData) {
+        debtTokenAmt = ftAmount;
+        deliveryData = gt.previewDelivery(debtTokenAmt);
+    }
+
+    /**
+     * @inheritdoc ITermMaxMarket
+     */
+    function redeem(uint256 ftAmount, address recipient)
+        external
+        virtual
+        override
+        nonReentrant
+        returns (uint256, bytes memory)
+    {
         return _redeem(msg.sender, recipient, ftAmount);
     }
 
-    function _redeem(address caller, address recipient, uint256 ftAmount) internal returns (uint256 debtTokenAmt) {
+    function _redeem(address caller, address recipient, uint256 ftAmount)
+        internal
+        returns (uint256 debtTokenAmt, bytes memory deliveryData)
+    {
         MarketConfig memory mConfig = _config;
         {
             uint256 liquidationDeadline =
@@ -319,7 +359,7 @@ contract TermMaxMarket is
         // The proportion that user will get how many debtToken and collateral should be deliveried
         uint256 proportion = (ftAmount * Constants.DECIMAL_BASE_SQ) / ft.totalSupply();
 
-        bytes memory deliveryData = gt.delivery(proportion, recipient);
+        deliveryData = gt.delivery(proportion, recipient);
         // Transfer debtToken output
         debtTokenAmt += ((debtToken.balanceOf(address(this))) * proportion) / Constants.DECIMAL_BASE_SQ;
         debtToken.safeTransfer(recipient, debtTokenAmt);

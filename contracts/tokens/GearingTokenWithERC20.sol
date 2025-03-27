@@ -45,7 +45,7 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
         }
     }
 
-    function _delivery(uint256 proportion) internal virtual override returns (bytes memory deliveryData) {
+    function _delivery(uint256 proportion) internal view virtual override returns (bytes memory deliveryData) {
         uint256 collateralReserve = IERC20(_config.collateral).balanceOf(address(this));
         uint256 amount = (collateralReserve * proportion) / Constants.DECIMAL_BASE_SQ;
         deliveryData = abi.encode(amount);
