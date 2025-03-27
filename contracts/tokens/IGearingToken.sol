@@ -107,6 +107,11 @@ interface IGearingToken is IERC721Enumerable {
     /// @param  byDebtToken Repay using debtToken token or bonds token
     function liquidate(uint256 id, uint128 repayAmt, bool byDebtToken) external;
 
+    /// @notice Preview the delivery data
+    /// @param  proportion The proportion of collateral that should be obtained
+    /// @return deliveryData The delivery data
+    function previewDelivery(uint256 proportion) external view returns (bytes memory deliveryData);
+
     /// @notice Deilivery outstanding debts after maturity
     /// @param  proportion The proportion of collateral that should be obtained
     /// @param  to The address receiving collateral token

@@ -353,12 +353,12 @@ contract MarketTest is Test {
         vm.startPrank(bob);
         res.ft.approve(address(res.market), depositAmt);
 
+        (uint256 expectDebt, bytes memory collateralData) = res.market.previewRedeem(depositAmt);
         vm.expectEmit();
         uint128 proportion = uint128(Constants.DECIMAL_BASE_SQ) * depositAmt / (depositAmt + leverageFee);
-        uint128 expectDebt = (depositAmt - debtAmt) * proportion / uint128(Constants.DECIMAL_BASE_SQ);
-        uint256 expectCollateral = collateralAmt * proportion / Constants.DECIMAL_BASE_SQ;
-        emit MarketEvents.Redeem(bob, bob, proportion, expectDebt, abi.encode(expectCollateral));
+        emit MarketEvents.Redeem(bob, bob, proportion, uint128(expectDebt), collateralData);
         res.market.redeem(depositAmt, bob);
+        uint256 expectCollateral = abi.decode(collateralData, (uint256));
 
         assertEq(res.debt.balanceOf(bob), expectDebt);
         assertEq(res.collateral.balanceOf(bob), expectCollateral);

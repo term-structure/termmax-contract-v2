@@ -602,6 +602,45 @@ contract RouterTest is Test {
         vm.stopPrank();
     }
 
+    function testSwapUnitsIsEmpty() public {
+        address bob = vm.randomAddress();
+        address alice = vm.randomAddress();
+
+        uint128 depositAmt = 1000e8;
+        uint128 debtAmt = 100e8;
+        uint256 collateralAmt = 1e18;
+
+        vm.startPrank(bob);
+        res.debt.mint(bob, depositAmt);
+        res.debt.approve(address(res.market), depositAmt);
+        res.market.mint(bob, depositAmt);
+
+        res.xt.transfer(alice, debtAmt);
+        vm.stopPrank();
+
+        vm.startPrank(alice);
+
+        MockFlashLoanReceiver receiver = new MockFlashLoanReceiver(res.market);
+        res.collateral.mint(address(receiver), collateralAmt);
+
+        res.xt.approve(address(receiver), debtAmt);
+        receiver.leverageByXt(debtAmt, abi.encode(alice, collateralAmt));
+        vm.stopPrank();
+
+        vm.warp(marketConfig.maturity + Constants.LIQUIDATION_WINDOW);
+
+        vm.startPrank(bob);
+
+        uint256 minDebtOutAmt = 1000e8;
+        SwapUnit[] memory units = new SwapUnit[](0);
+        res.ft.approve(address(res.router), depositAmt);
+
+        vm.expectRevert(abi.encodeWithSelector(RouterErrors.SwapUnitsIsEmpty.selector));
+        res.router.redeemAndSwap(bob, res.market, depositAmt, units, minDebtOutAmt);
+
+        vm.stopPrank();
+    }
+
     function testCreateOrderAndDeposit() public {
         vm.startPrank(sender);
 

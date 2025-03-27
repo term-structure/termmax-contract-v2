@@ -36,7 +36,7 @@ import {KyberswapV2Adapter} from "contracts/router/swapAdapters/KyberswapV2Adapt
 import {OdosV2Adapter} from "contracts/router/swapAdapters/OdosV2Adapter.sol";
 import {PendleSwapV3Adapter} from "contracts/router/swapAdapters/PendleSwapV3Adapter.sol";
 import {UniswapV3Adapter} from "contracts/router/swapAdapters/UniswapV3Adapter.sol";
-import {MorphoVaultAdapter} from "contracts/router/swapAdapters/MorphoVaultAdapter.sol";
+import {ERC4626VaultAdapter} from "contracts/router/swapAdapters/ERC4626VaultAdapter.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {AccessManager} from "contracts/access/AccessManager.sol";
 
@@ -130,7 +130,7 @@ contract DeployBase is Script {
             UniswapV3Adapter uniswapV3Adapter,
             OdosV2Adapter odosV2Adapter,
             PendleSwapV3Adapter pendleSwapV3Adapter,
-            MorphoVaultAdapter morphoVaultAdapter
+            ERC4626VaultAdapter vaultAdapter
         )
     {
         // deploy access manager
@@ -155,12 +155,12 @@ contract DeployBase is Script {
         uniswapV3Adapter = new UniswapV3Adapter(address(uniswapV3Router));
         odosV2Adapter = new OdosV2Adapter(odosV2Router);
         pendleSwapV3Adapter = new PendleSwapV3Adapter(address(pendleSwapV3Router));
-        morphoVaultAdapter = new MorphoVaultAdapter();
+        vaultAdapter = new ERC4626VaultAdapter();
 
         accessManager.setAdapterWhitelist(router, address(uniswapV3Adapter), true);
         accessManager.setAdapterWhitelist(router, address(odosV2Adapter), true);
         accessManager.setAdapterWhitelist(router, address(pendleSwapV3Adapter), true);
-        accessManager.setAdapterWhitelist(router, address(morphoVaultAdapter), true);
+        accessManager.setAdapterWhitelist(router, address(vaultAdapter), true);
     }
 
     function deployMarkets(

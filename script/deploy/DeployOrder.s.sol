@@ -26,7 +26,7 @@ import {FaucetERC20} from "contracts/test/testnet/FaucetERC20.sol";
 import {DeployBase} from "./DeployBase.s.sol";
 import {StringHelper} from "../utils/StringHelper.sol";
 
-contract DeloyOrderArbSepolia is DeployBase {
+contract DeployOrder is DeployBase {
     // Network-specific config loaded from environment variables
     string network;
     uint256 deployerPrivateKey;
@@ -34,8 +34,8 @@ contract DeloyOrderArbSepolia is DeployBase {
     address adminAddr;
     address priceFeedOperatorAddr;
 
-    // address config
-    address marketAddr = address(0xD0586B5a5F97347C769983C404348346FE26f38e);
+    // address config - should be set in the setup function based on the network
+    address marketAddr;
 
     function setUp() public {
         // Load network from environment variable
@@ -51,6 +51,30 @@ contract DeloyOrderArbSepolia is DeployBase {
         deployerAddr = vm.addr(deployerPrivateKey);
         adminAddr = vm.envAddress(adminVar);
         priceFeedOperatorAddr = vm.envAddress(priceFeedOperatorVar);
+
+        // Set market address based on network
+        if (keccak256(abi.encodePacked(network)) == keccak256(abi.encodePacked("arb-sepolia"))) {
+            marketAddr = address(0xD0586B5a5F97347C769983C404348346FE26f38e);
+        } else {
+            // For other networks, the market address should be provided via environment
+            // or read from deployment JSON files
+            string memory marketAddressVar = string.concat(networkUpper, "_MARKET_ADDRESS");
+            try vm.envAddress(marketAddressVar) returns (address addr) {
+                marketAddr = addr;
+            } catch {
+                // Try to load from deployment files
+                try vm.readFile(string.concat(vm.projectRoot(), "/deployments/", network, "/", network, "-market.json"))
+                returns (string memory json) {
+                    try vm.parseJsonAddress(json, ".contracts.market") returns (address addr) {
+                        marketAddr = addr;
+                    } catch {
+                        revert("Market address not found in environment or deployment files");
+                    }
+                } catch {
+                    revert("Market address not found in environment and market deployment file not found");
+                }
+            }
+        }
     }
 
     function run() public {
@@ -91,6 +115,8 @@ contract DeloyOrderArbSepolia is DeployBase {
         console.log();
 
         console.log("===== Order Info =====");
+        console.log("Network:", network);
+        console.log("Market Address:", marketAddr);
         console.log("Order Maker:", deployerAddr);
         console.log("Order Address:", address(order));
         console.log("Deployed at block number:", currentBlockNum);

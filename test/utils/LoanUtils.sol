@@ -45,9 +45,9 @@ library LoanUtils {
         uint256 uDecimals = 10 ** res.debt.decimals();
 
         uint256 udPriceToCdPrice =
-            (uPrice.toUint256() * cpDecimals * Constants.DECIMAL_BASE) / (cPrice.toUint256() * upDecimals);
+            (uPrice.toUint256() * cpDecimals * cpDecimals * 10 + cPrice.toUint256() - 1) / (cPrice.toUint256());
 
-        uint256 cEqualRepayAmt = (repayAmt * udPriceToCdPrice * cDecimals) / (uDecimals * Constants.DECIMAL_BASE);
+        uint256 cEqualRepayAmt = (repayAmt * udPriceToCdPrice * cDecimals) / (uDecimals * cpDecimals * upDecimals * 10);
 
         uint256 rewardToLiquidator = (cEqualRepayAmt * REWARD_TO_LIQUIDATOR) / Constants.DECIMAL_BASE;
         uint256 rewardToProtocol = (cEqualRepayAmt * REWARD_TO_PROTOCOL) / Constants.DECIMAL_BASE;

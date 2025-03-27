@@ -464,6 +464,13 @@ abstract contract AbstractGearingToken is
     /**
      * @inheritdoc IGearingToken
      */
+    function previewDelivery(uint256 proportion) external view override returns (bytes memory deliveryData) {
+        deliveryData = _delivery(proportion);
+    }
+
+    /**
+     * @inheritdoc IGearingToken
+     */
     function delivery(uint256 proportion, address to)
         external
         override
@@ -475,7 +482,7 @@ abstract contract AbstractGearingToken is
         _transferCollateral(to, deliveryData);
     }
 
-    function _delivery(uint256 proportion) internal virtual returns (bytes memory deliveryData);
+    function _delivery(uint256 proportion) internal view virtual returns (bytes memory deliveryData);
 
     function _getValueAndPrice(GtConfig memory config, LoanInfo memory loan)
         internal

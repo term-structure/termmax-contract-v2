@@ -1134,6 +1134,58 @@ contract GtTest is Test {
         assert(maxRepayAmt == 0);
     }
 
+    function testLiquidateWithDecimalsExceed8() public {
+        uint128 debtAmt = 1e8;
+        uint256 collateralAmt = 1.01e18;
+
+        vm.startPrank(sender);
+
+        (uint256 gtId,) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
+        vm.stopPrank();
+        vm.startPrank(deployer);
+        // update oracle
+        MockPriceFeed.RoundData memory data = JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_1000_DAI_1.eth");
+        data.answer = 1e18; // eth price 1e8
+        res.collateralOracle.updateRoundData(data);
+        data.answer = 1e8; // dai price 1e18
+        res.debtOracle.updateRoundData(data);
+        vm.stopPrank();
+
+        vm.warp(marketConfig.maturity + 1);
+
+        address liquidator = vm.randomAddress();
+        vm.startPrank(liquidator);
+
+        res.debt.mint(liquidator, debtAmt);
+        res.debt.approve(address(res.gt), debtAmt);
+
+        uint256 senderCBalanceBefore = res.collateral.balanceOf(sender);
+        StateChecker.MarketState memory state = StateChecker.getMarketState(res);
+
+        vm.expectEmit();
+        (uint256 cToLiquidator, uint256 cToTreasurer, uint256 remainningC) =
+            LoanUtils.calcLiquidationResult(res, debtAmt, collateralAmt, debtAmt);
+        emit GearingTokenEvents.Liquidate(
+            gtId,
+            liquidator,
+            debtAmt,
+            true,
+            abi.encode(cToLiquidator),
+            abi.encode(cToTreasurer),
+            abi.encode(remainningC)
+        );
+
+        res.gt.liquidate(gtId, debtAmt, true);
+        state.collateralReserve -= collateralAmt;
+        state.debtReserve += debtAmt;
+        StateChecker.checkMarketState(res, state);
+
+        assert(res.collateral.balanceOf(marketConfig.treasurer) == cToTreasurer);
+        assert(res.collateral.balanceOf(liquidator) == cToLiquidator);
+        assert(res.collateral.balanceOf(sender) == remainningC + senderCBalanceBefore);
+        vm.stopPrank();
+    }
+
     function testLiquidateWhenOracleOutdated() public {
         uint128 debtAmt = 1000e8;
         uint256 collateralAmt = 1e18;

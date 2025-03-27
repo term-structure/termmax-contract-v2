@@ -45,7 +45,7 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
         }
     }
 
-    function _delivery(uint256 proportion) internal virtual override returns (bytes memory deliveryData) {
+    function _delivery(uint256 proportion) internal view virtual override returns (bytes memory deliveryData) {
         uint256 collateralReserve = IERC20(_config.collateral).balanceOf(address(this));
         uint256 amount = (collateralReserve * proportion) / Constants.DECIMAL_BASE_SQ;
         deliveryData = abi.encode(amount);
@@ -181,16 +181,19 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
          * DPD := debt token price decimal (valueAndPrice.priceDenominator)
          * CP := collateral token price (collateralPrice)
          * CPD := collateral token price decimal (cPriceDenominator)
+         * SD := scaling decimal = DPD * CPD * 10
          * The value of 1(decimal) debt token / The value of 1(decimal) collateral token
-         *     ddPriceToCdPrice = (DP/DPD) / (CP/CPD) = (DP*CPD) / (CP*DPD)
+         *     ddPriceToCdPrice = roundUp((DP/DPD) / (CP/CPD) = (DP*CPD*SD) / (CP*DPD))
+         *                       = roundUp((DP*CPD*CPD*10) / CP)
          */
-        uint256 ddPriceToCdPrice = (valueAndPrice.debtPrice * cPriceDenominator * Constants.DECIMAL_BASE)
-            / (collateralPrice * valueAndPrice.priceDenominator);
+        uint256 ddPriceToCdPrice = (
+            valueAndPrice.debtPrice * cPriceDenominator * cPriceDenominator * 10 + collateralPrice - 1
+        ) / collateralPrice;
 
         // calculate the amount of collateral that is equivalent to repayAmt
         // with debt to collateral price
-        uint256 cEqualRepayAmt =
-            (repayAmt * ddPriceToCdPrice * cTokenDenominator) / (valueAndPrice.debtDenominator * Constants.DECIMAL_BASE);
+        uint256 cEqualRepayAmt = (repayAmt * ddPriceToCdPrice * cTokenDenominator)
+            / (valueAndPrice.debtDenominator * cPriceDenominator * valueAndPrice.priceDenominator * 10);
 
         uint256 rewardToLiquidator =
             (cEqualRepayAmt * GearingTokenConstants.REWARD_TO_LIQUIDATOR) / Constants.DECIMAL_BASE;

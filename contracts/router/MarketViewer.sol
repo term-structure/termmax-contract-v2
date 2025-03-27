@@ -12,6 +12,11 @@ import {ITermMaxVault} from "contracts/vault/ITermMaxVault.sol";
 import {OrderInfo} from "contracts/vault/VaultStorage.sol";
 import {PendingAddress, PendingUint192} from "contracts/lib/PendingLib.sol";
 
+
+interface IPausable {
+    function paused() external view returns (bool);
+}
+
 contract MarketViewer {
     struct LoanPosition {
         uint256 loanId;
@@ -78,6 +83,7 @@ contract MarketViewer {
         PendingUint192 pendingPerformanceFeeRate;
         uint256 maxMint; // maxMint(address(0))
         uint256 convertToSharesPrice; // convertToShares(One)
+        bool isPaused;
     }
 
     function getPositionDetail(ITermMaxMarket market, address owner) public view returns (Position memory position) {
@@ -258,6 +264,7 @@ contract MarketViewer {
         vaultInfo.maxMint = vault.maxMint(address(0));
         uint256 one = 10 ** vault.decimals();
         vaultInfo.convertToSharesPrice = vault.convertToShares(one);
+        vaultInfo.isPaused = IPausable(address(vault)).paused();
     }
 
     /**
@@ -276,6 +283,14 @@ contract MarketViewer {
         }
 
         return orderInfos;
+    }
+
+    function getVaultPendingMarkets(ITermMaxVault vault, address[] calldata markets) external view returns (PendingUint192[] memory) {
+        PendingUint192[] memory pendingMarkets = new PendingUint192[](markets.length);
+        for (uint256 i = 0; i < markets.length; i++) {
+            pendingMarkets[i] = vault.pendingMarkets(markets[i]);
+        }
+        return pendingMarkets;
     }
 
     function _decodeAmount(bytes memory collateralData) internal pure returns (uint256) {

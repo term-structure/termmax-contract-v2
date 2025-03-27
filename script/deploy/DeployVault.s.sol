@@ -34,10 +34,10 @@ contract DeloyVault is DeployBase {
     address curator = address(0x2A58A3D405c527491Daae4C62561B949e7F87EFE);
     address guardian = address(0x2A58A3D405c527491Daae4C62561B949e7F87EFE);
     address allocator = address(0x2A58A3D405c527491Daae4C62561B949e7F87EFE);
-    string name = "VAULT-USDC";
-    string symbol = "VAULT-USDC";
+    string name = "TermMax Pre-Deposit-USDC";
+    string symbol = "TermMax Pre-Deposit-USDC";
     uint256 timelock = 1;
-    uint256 maxCapacity = type(uint128).max;
+    uint256 maxCapacity = 500e18;
     uint64 performanceFeeRate = 0.1e8;
 
     // Network-specific config loaded from environment variables

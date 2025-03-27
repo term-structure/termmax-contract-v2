@@ -417,21 +417,18 @@ contract TermMaxRouter is
         uint256 ftAmount,
         SwapUnit[] memory units,
         uint256 minTokenOut
-    ) external whenNotPaused returns (uint256 netTokenOut) {
+    ) external whenNotPaused returns (uint256) {
         (IERC20 ft,,, address collateralAddr, IERC20 debtToken) = market.tokens();
         ft.safeTransferFrom(msg.sender, address(this), ftAmount);
         ft.safeIncreaseAllowance(address(market), ftAmount);
-        market.redeem(ftAmount, address(this));
-        uint256 deliveredAmt = IERC20(collateralAddr).balanceOf(address(this));
-        if (deliveredAmt > 0) {
-            _doSwap(_encodeAmount(deliveredAmt), units);
+        (uint256 redeemedAmt, bytes memory collateralData) = market.redeem(ftAmount, address(this));
+        redeemedAmt += _decodeAmount(_doSwap(collateralData, units));
+        if (redeemedAmt < minTokenOut) {
+            revert InsufficientTokenOut(address(debtToken), redeemedAmt, minTokenOut);
         }
-        netTokenOut = debtToken.balanceOf(address(this));
-        if (netTokenOut < minTokenOut) {
-            revert InsufficientTokenOut(address(debtToken), netTokenOut, minTokenOut);
-        }
-        debtToken.safeTransfer(recipient, netTokenOut);
-        emit RedeemAndSwap(market, ftAmount, msg.sender, recipient, netTokenOut);
+        debtToken.safeTransfer(recipient, redeemedAmt);
+        emit RedeemAndSwap(market, ftAmount, msg.sender, recipient, redeemedAmt);
+        return redeemedAmt;
     }
 
     function createOrderAndDeposit(
@@ -471,9 +468,6 @@ contract TermMaxRouter is
         uint256 totalAmount = amount + tokenInAmt;
         collateralData = _doSwap(abi.encode(totalAmount), units);
         SwapUnit memory lastUnit = units[units.length - 1];
-        if (!adapterWhitelist[lastUnit.adapter]) {
-            revert AdapterNotWhitelisted(lastUnit.adapter);
-        }
 
         if (flashLoanType == FlashLoanType.COLLATERAL) {
             IERC20 collateral = IERC20(lastUnit.tokenOut);
@@ -529,6 +523,9 @@ contract TermMaxRouter is
     }
 
     function _doSwap(bytes memory inputData, SwapUnit[] memory units) internal returns (bytes memory outData) {
+        if (units.length == 0) {
+            revert SwapUnitsIsEmpty();
+        }
         for (uint256 i = 0; i < units.length; ++i) {
             if (!adapterWhitelist[units[i].adapter]) {
                 revert AdapterNotWhitelisted(units[i].adapter);
