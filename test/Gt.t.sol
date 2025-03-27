@@ -1145,11 +1145,14 @@ contract GtTest is Test {
         vm.startPrank(deployer);
         // update oracle
         MockPriceFeed.RoundData memory data = JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_1000_DAI_1.eth");
-        data.answer = 1e8; // eth price 1e8
+        data.answer = 1e18; // eth price 1e8
         res.collateralOracle.updateRoundData(data);
-        data.answer = 1e18; // dai price 1e18
+        data.answer = 1e8; // dai price 1e18
         res.debtOracle.updateRoundData(data);
         vm.stopPrank();
+
+        vm.warp(marketConfig.maturity + 1);
+
         address liquidator = vm.randomAddress();
         vm.startPrank(liquidator);
 
