@@ -281,7 +281,7 @@ interface ITermMaxRouter {
      * @param ftAmount Amount of FT tokens to redeem
      * @param units Array of swap units defining the swap path
      * @param minTokenOut Minimum amount of output tokens to receive
-     * @return netTokenOut Actual amount of output tokens received
+     * @return redeemedAmt Actual amount of output tokens received
      */
     function redeemAndSwap(
         address recipient,
@@ -289,7 +289,7 @@ interface ITermMaxRouter {
         uint256 ftAmount,
         SwapUnit[] memory units,
         uint256 minTokenOut
-    ) external returns (uint256 netTokenOut);
+    ) external returns (uint256 redeemedAmt);
 
     /**
      * @notice Creates an order and deposits tokens

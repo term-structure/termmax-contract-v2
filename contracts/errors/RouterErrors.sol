@@ -22,4 +22,6 @@ interface RouterErrors {
     error InsufficientTokenIn(address token, uint256 expectedTokenIn, uint256 actualTokenIn);
     /// @notice Error for the gt is not owned by the sender
     error GtNotOwnedBySender();
+    /// @notice Error for the swap units is empty
+    error SwapUnitsIsEmpty();
 }
