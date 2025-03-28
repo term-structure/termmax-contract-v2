@@ -266,6 +266,11 @@ export const abiGearingTokenWithERC20 = [
         internalType: 'bool',
       },
       {
+        name: 'ltv',
+        type: 'uint128',
+        internalType: 'uint128',
+      },
+      {
         name: 'maxRepayAmt',
         type: 'uint128',
         internalType: 'uint128',
@@ -437,11 +442,6 @@ export const abiGearingTokenWithERC20 = [
         internalType: 'uint128',
       },
       {
-        name: 'ltv',
-        type: 'uint128',
-        internalType: 'uint128',
-      },
-      {
         name: 'collateralData',
         type: 'bytes',
         internalType: 'bytes',
@@ -556,6 +556,25 @@ export const abiGearingTokenWithERC20 = [
         name: '',
         type: 'address',
         internalType: 'address',
+      },
+    ],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    name: 'previewDelivery',
+    inputs: [
+      {
+        name: 'proportion',
+        type: 'uint256',
+        internalType: 'uint256',
+      },
+    ],
+    outputs: [
+      {
+        name: 'deliveryData',
+        type: 'bytes',
+        internalType: 'bytes',
       },
     ],
     stateMutability: 'view',

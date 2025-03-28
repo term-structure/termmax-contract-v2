@@ -88,12 +88,12 @@ export const abiTermMaxMarket = [
                 internalType: 'uint32',
               },
               {
-                name: 'issueFtFeeRatio',
+                name: 'mintGtFeeRatio',
                 type: 'uint32',
                 internalType: 'uint32',
               },
               {
-                name: 'issueFtFeeRef',
+                name: 'mintGtFeeRef',
                 type: 'uint32',
                 internalType: 'uint32',
               },
@@ -254,12 +254,12 @@ export const abiTermMaxMarket = [
                     internalType: 'uint32',
                   },
                   {
-                    name: 'issueFtFeeRatio',
+                    name: 'mintGtFeeRatio',
                     type: 'uint32',
                     internalType: 'uint32',
                   },
                   {
-                    name: 'issueFtFeeRef',
+                    name: 'mintGtFeeRef',
                     type: 'uint32',
                     internalType: 'uint32',
                   },
@@ -380,19 +380,6 @@ export const abiTermMaxMarket = [
   },
   {
     type: 'function',
-    name: 'issueFtFeeRatio',
-    inputs: [],
-    outputs: [
-      {
-        name: '',
-        type: 'uint256',
-        internalType: 'uint256',
-      },
-    ],
-    stateMutability: 'view',
-  },
-  {
-    type: 'function',
     name: 'leverageByXt',
     inputs: [
       {
@@ -440,6 +427,19 @@ export const abiTermMaxMarket = [
   },
   {
     type: 'function',
+    name: 'mintGtFeeRatio',
+    inputs: [],
+    outputs: [
+      {
+        name: '',
+        type: 'uint256',
+        internalType: 'uint256',
+      },
+    ],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
     name: 'owner',
     inputs: [],
     outputs: [
@@ -466,6 +466,30 @@ export const abiTermMaxMarket = [
   },
   {
     type: 'function',
+    name: 'previewRedeem',
+    inputs: [
+      {
+        name: 'ftAmount',
+        type: 'uint256',
+        internalType: 'uint256',
+      },
+    ],
+    outputs: [
+      {
+        name: 'debtTokenAmt',
+        type: 'uint256',
+        internalType: 'uint256',
+      },
+      {
+        name: 'deliveryData',
+        type: 'bytes',
+        internalType: 'bytes',
+      },
+    ],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
     name: 'redeem',
     inputs: [
       {
@@ -484,6 +508,11 @@ export const abiTermMaxMarket = [
         name: '',
         type: 'uint256',
         internalType: 'uint256',
+      },
+      {
+        name: '',
+        type: 'bytes',
+        internalType: 'bytes',
       },
     ],
     stateMutability: 'nonpayable',
@@ -599,12 +628,12 @@ export const abiTermMaxMarket = [
                 internalType: 'uint32',
               },
               {
-                name: 'issueFtFeeRatio',
+                name: 'mintGtFeeRatio',
                 type: 'uint32',
                 internalType: 'uint32',
               },
               {
-                name: 'issueFtFeeRef',
+                name: 'mintGtFeeRef',
                 type: 'uint32',
                 internalType: 'uint32',
               },
@@ -651,12 +680,12 @@ export const abiTermMaxMarket = [
             internalType: 'uint32',
           },
           {
-            name: 'issueFtFeeRatio',
+            name: 'mintGtFeeRatio',
             type: 'uint32',
             internalType: 'uint32',
           },
           {
-            name: 'issueFtFeeRef',
+            name: 'mintGtFeeRef',
             type: 'uint32',
             internalType: 'uint32',
           },
@@ -758,7 +787,7 @@ export const abiTermMaxMarket = [
         internalType: 'uint128',
       },
       {
-        name: 'issueFee',
+        name: 'fee',
         type: 'uint128',
         indexed: false,
         internalType: 'uint128',
@@ -811,6 +840,55 @@ export const abiTermMaxMarket = [
         type: 'uint128',
         indexed: false,
         internalType: 'uint128',
+      },
+    ],
+    anonymous: false,
+  },
+  {
+    type: 'event',
+    name: 'LeverageByXt',
+    inputs: [
+      {
+        name: 'loanReceiver',
+        type: 'address',
+        indexed: true,
+        internalType: 'address',
+      },
+      {
+        name: 'gtReceiver',
+        type: 'address',
+        indexed: true,
+        internalType: 'address',
+      },
+      {
+        name: 'gtId',
+        type: 'uint256',
+        indexed: true,
+        internalType: 'uint256',
+      },
+      {
+        name: 'debtAmt',
+        type: 'uint128',
+        indexed: false,
+        internalType: 'uint128',
+      },
+      {
+        name: 'xtAmt',
+        type: 'uint256',
+        indexed: false,
+        internalType: 'uint256',
+      },
+      {
+        name: 'fee',
+        type: 'uint128',
+        indexed: false,
+        internalType: 'uint128',
+      },
+      {
+        name: 'collateralData',
+        type: 'bytes',
+        indexed: false,
+        internalType: 'bytes',
       },
     ],
     anonymous: false,
@@ -879,43 +957,6 @@ export const abiTermMaxMarket = [
         type: 'uint256',
         indexed: false,
         internalType: 'uint256',
-      },
-    ],
-    anonymous: false,
-  },
-  {
-    type: 'event',
-    name: 'MintGt',
-    inputs: [
-      {
-        name: 'loanReceiver',
-        type: 'address',
-        indexed: true,
-        internalType: 'address',
-      },
-      {
-        name: 'gtReceiver',
-        type: 'address',
-        indexed: true,
-        internalType: 'address',
-      },
-      {
-        name: 'gtId',
-        type: 'uint256',
-        indexed: true,
-        internalType: 'uint256',
-      },
-      {
-        name: 'debtAmt',
-        type: 'uint128',
-        indexed: false,
-        internalType: 'uint128',
-      },
-      {
-        name: 'collateralData',
-        type: 'bytes',
-        indexed: false,
-        internalType: 'bytes',
       },
     ],
     anonymous: false,
@@ -1041,12 +1082,12 @@ export const abiTermMaxMarket = [
                 internalType: 'uint32',
               },
               {
-                name: 'issueFtFeeRatio',
+                name: 'mintGtFeeRatio',
                 type: 'uint32',
                 internalType: 'uint32',
               },
               {
-                name: 'issueFtFeeRef',
+                name: 'mintGtFeeRef',
                 type: 'uint32',
                 internalType: 'uint32',
               },

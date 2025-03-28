@@ -152,12 +152,12 @@ export const abiTermMaxOrder = [
                 internalType: 'uint32',
               },
               {
-                name: 'issueFtFeeRatio',
+                name: 'mintGtFeeRatio',
                 type: 'uint32',
                 internalType: 'uint32',
               },
               {
-                name: 'issueFtFeeRef',
+                name: 'mintGtFeeRef',
                 type: 'uint32',
                 internalType: 'uint32',
               },
@@ -297,12 +297,12 @@ export const abiTermMaxOrder = [
                 internalType: 'uint32',
               },
               {
-                name: 'issueFtFeeRatio',
+                name: 'mintGtFeeRatio',
                 type: 'uint32',
                 internalType: 'uint32',
               },
               {
-                name: 'issueFtFeeRef',
+                name: 'mintGtFeeRef',
                 type: 'uint32',
                 internalType: 'uint32',
               },
@@ -522,12 +522,12 @@ export const abiTermMaxOrder = [
             internalType: 'uint32',
           },
           {
-            name: 'issueFtFeeRatio',
+            name: 'mintGtFeeRatio',
             type: 'uint32',
             internalType: 'uint32',
           },
           {
-            name: 'issueFtFeeRef',
+            name: 'mintGtFeeRef',
             type: 'uint32',
             internalType: 'uint32',
           },
@@ -638,12 +638,12 @@ export const abiTermMaxOrder = [
                 internalType: 'uint32',
               },
               {
-                name: 'issueFtFeeRatio',
+                name: 'mintGtFeeRatio',
                 type: 'uint32',
                 internalType: 'uint32',
               },
               {
-                name: 'issueFtFeeRef',
+                name: 'mintGtFeeRef',
                 type: 'uint32',
                 internalType: 'uint32',
               },
@@ -996,12 +996,12 @@ export const abiTermMaxOrder = [
             internalType: 'uint32',
           },
           {
-            name: 'issueFtFeeRatio',
+            name: 'mintGtFeeRatio',
             type: 'uint32',
             internalType: 'uint32',
           },
           {
-            name: 'issueFtFeeRef',
+            name: 'mintGtFeeRef',
             type: 'uint32',
             internalType: 'uint32',
           },
