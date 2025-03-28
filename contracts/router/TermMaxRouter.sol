@@ -468,6 +468,9 @@ contract TermMaxRouter is
         uint256 totalAmount = amount + tokenInAmt;
         collateralData = _doSwap(abi.encode(totalAmount), units);
         SwapUnit memory lastUnit = units[units.length - 1];
+        if (!adapterWhitelist[lastUnit.adapter]) {
+            revert AdapterNotWhitelisted(lastUnit.adapter);
+        }
 
         if (flashLoanType == FlashLoanType.COLLATERAL) {
             IERC20 collateral = IERC20(lastUnit.tokenOut);
