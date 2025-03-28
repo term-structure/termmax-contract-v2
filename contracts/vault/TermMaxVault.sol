@@ -106,7 +106,6 @@ contract TermMaxVault is
     }
 
     function _setPerformanceFeeRate(uint64 newPerformanceFeeRate) internal {
-        if (newPerformanceFeeRate > VaultConstants.MAX_PERFORMANCE_FEE_RATE) revert PerformanceFeeRateExceeded();
         _delegateCall(abi.encodeCall(IOrderManager.accruedInterest, ()));
         _performanceFeeRate = newPerformanceFeeRate;
     }
@@ -464,6 +463,7 @@ contract TermMaxVault is
     function submitPerformanceFeeRate(uint184 newPerformanceFeeRate) external onlyCuratorRole {
         if (newPerformanceFeeRate == _performanceFeeRate) revert AlreadySet();
         if (_pendingPerformanceFeeRate.validAt != 0) revert AlreadyPending();
+        if (newPerformanceFeeRate > VaultConstants.MAX_PERFORMANCE_FEE_RATE) revert PerformanceFeeRateExceeded();
         if (newPerformanceFeeRate < _performanceFeeRate) {
             _setPerformanceFeeRate(uint256(newPerformanceFeeRate).toUint64());
             emit SetPerformanceFeeRate(_msgSender(), newPerformanceFeeRate);
