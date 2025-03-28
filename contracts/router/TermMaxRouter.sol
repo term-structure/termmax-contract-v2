@@ -213,7 +213,8 @@ contract TermMaxRouter is
         xt.safeIncreaseAllowance(address(market), netXtOut);
 
         gtId = market.leverageByXt(recipient, netXtOut.toUint128(), callbackData);
-        (,, uint128 ltv, bytes memory collateralData) = gt.loanInfo(gtId);
+        (,, bytes memory collateralData) = gt.loanInfo(gtId);
+        (, uint128 ltv,) = gt.getLiquidationInfo(gtId);
         if (ltv > maxLtv) {
             revert LtvBiggerThanExpected(maxLtv, ltv);
         }
@@ -240,7 +241,8 @@ contract TermMaxRouter is
         bytes memory callbackData = abi.encode(address(gt), tokenInAmt, units, FlashLoanType.DEBT);
         gtId = market.leverageByXt(recipient, xtInAmt.toUint128(), callbackData);
 
-        (,, uint128 ltv, bytes memory collateralData) = gt.loanInfo(gtId);
+        (,, bytes memory collateralData) = gt.loanInfo(gtId);
+        (, uint128 ltv,) = gt.getLiquidationInfo(gtId);
         if (ltv > maxLtv) {
             revert LtvBiggerThanExpected(maxLtv, ltv);
         }
@@ -268,7 +270,8 @@ contract TermMaxRouter is
         bytes memory callbackData = abi.encode(address(gt), 0, units, FlashLoanType.COLLATERAL);
         gtId = market.leverageByXt(recipient, xtInAmt.toUint128(), callbackData);
 
-        (,, uint128 ltv, bytes memory collateralData) = gt.loanInfo(gtId);
+        (,, bytes memory collateralData) = gt.loanInfo(gtId);
+        (, uint128 ltv,) = gt.getLiquidationInfo(gtId);
         if (ltv > maxLtv) {
             revert LtvBiggerThanExpected(maxLtv, ltv);
         }
@@ -394,7 +397,7 @@ contract TermMaxRouter is
         uint256 netCost =
             _swapTokenToExactToken(debtToken, ft, address(this), orders, ftAmtsWantBuy, maxTokenIn, deadline);
         uint256 totalFtAmt = sum(ftAmtsWantBuy);
-        (, uint128 repayAmt,,) = gt.loanInfo(gtId);
+        (, uint128 repayAmt,) = gt.loanInfo(gtId);
 
         if (totalFtAmt < repayAmt) {
             repayAmt = totalFtAmt.toUint128();

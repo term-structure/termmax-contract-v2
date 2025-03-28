@@ -199,7 +199,7 @@ abstract contract GtBaseTest is ForkBaseTest {
         uint256 gtId = res.router.borrowTokenFromCollateral(
             taker, res.market, collInAmt, orders, tokenAmtsWantBuy, maxDebtAmt, block.timestamp + 1 hours
         );
-        (address owner, uint128 debtAmt,, bytes memory collateralData) = res.gt.loanInfo(gtId);
+        (address owner, uint128 debtAmt, bytes memory collateralData) = res.gt.loanInfo(gtId);
         assertEq(owner, taker);
         assertEq(collInAmt, abi.decode(collateralData, (uint256)));
         assertLe(debtAmt, maxDebtAmt);
@@ -330,7 +330,7 @@ abstract contract GtBaseTest is ForkBaseTest {
         orders[0] = res.order;
         uint128[] memory amtsToBuyFt = new uint128[](1);
 
-        (, uint128 debtAmt,,) = res.gt.loanInfo(gtId);
+        (, uint128 debtAmt,) = res.gt.loanInfo(gtId);
         amtsToBuyFt[0] = debtAmt;
         bool byDebtToken = false;
 
@@ -352,7 +352,7 @@ abstract contract GtBaseTest is ForkBaseTest {
         deal(liquidator, 1e18);
         vm.startPrank(liquidator);
 
-        (, uint128 debtAmt,,) = res.gt.loanInfo(gtId);
+        (, uint128 debtAmt,) = res.gt.loanInfo(gtId);
 
         deal(address(res.debtToken), liquidator, debtAmt);
         res.debtToken.approve(address(res.gt), debtAmt);

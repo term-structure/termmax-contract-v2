@@ -12,7 +12,6 @@ import {ITermMaxVault} from "contracts/vault/ITermMaxVault.sol";
 import {OrderInfo} from "contracts/vault/VaultStorage.sol";
 import {PendingAddress, PendingUint192} from "contracts/lib/PendingLib.sol";
 
-
 interface IPausable {
     function paused() external view returns (bool);
 }
@@ -96,12 +95,12 @@ contract MarketViewer {
 
         IERC721Enumerable gtNft = IERC721Enumerable(address(gt));
         uint256 balance = gtNft.balanceOf(owner);
-        LoanPosition[] memory gtInfos  = new LoanPosition[](balance);
+        LoanPosition[] memory gtInfos = new LoanPosition[](balance);
 
         uint256 validPositions = 0;
         for (uint256 i = 0; i < balance; ++i) {
             uint256 loanId = gtNft.tokenOfOwnerByIndex(owner, i);
-            try gt.loanInfo(loanId) returns (address, uint128 debtAmt, uint128, bytes memory collateralData) {
+            try gt.loanInfo(loanId) returns (address, uint128 debtAmt, bytes memory collateralData) {
                 gtInfos[validPositions].loanId = loanId;
                 gtInfos[validPositions].debtAmt = debtAmt;
                 gtInfos[validPositions].collateralAmt = _decodeAmount(collateralData);
@@ -132,11 +131,11 @@ contract MarketViewer {
         (,, IGearingToken gt,,) = market.tokens();
         uint256 balance = gt.balanceOf(owner);
         LoanPosition[] memory loanPositionsTmp = new LoanPosition[](balance);
-        
+
         uint256 validPositions = 0;
         for (uint256 i = 0; i < balance; ++i) {
             uint256 loanId = gt.tokenOfOwnerByIndex(owner, i);
-            try gt.loanInfo(loanId) returns (address, uint128 debtAmt, uint128, bytes memory collateralData) {
+            try gt.loanInfo(loanId) returns (address, uint128 debtAmt, bytes memory collateralData) {
                 loanPositionsTmp[validPositions].loanId = loanId;
                 loanPositionsTmp[validPositions].debtAmt = debtAmt;
                 loanPositionsTmp[validPositions].collateralAmt = _decodeAmount(collateralData);
@@ -158,27 +157,26 @@ contract MarketViewer {
         GtConfig memory config = gtNft.getGtConfig();
         uint256 supply = gtNft.totalSupply();
         LoanPositionV2[] memory loanPositionsTmp = new LoanPositionV2[](supply);
-        
+
         uint256 validPositions = 0;
         for (uint256 i = 0; i < supply; ++i) {
             uint256 loanId = gtNft.tokenByIndex(i);
-            try gtNft.loanInfo(loanId) returns (address owner, uint128 debtAmt, uint128 ltv, bytes memory collateralData) {
-                (bool isLiquidable, uint128 maxRepayAmt) = gtNft.getLiquidationInfo(loanId);
-                
-                loanPositionsTmp[validPositions].loanId = loanId;
-                loanPositionsTmp[validPositions].debtAmt = debtAmt;
-                loanPositionsTmp[validPositions].collateralAmt = _decodeAmount(collateralData);
-                loanPositionsTmp[validPositions].owner = owner;
+            (address owner, uint128 debtAmt, bytes memory collateralData) = gtNft.loanInfo(loanId);
+            loanPositionsTmp[validPositions].loanId = loanId;
+            loanPositionsTmp[validPositions].debtAmt = debtAmt;
+            loanPositionsTmp[validPositions].collateralAmt = _decodeAmount(collateralData);
+            loanPositionsTmp[validPositions].owner = owner;
+            try gtNft.getLiquidationInfo(loanId) returns (bool isLiquidable, uint128 ltv, uint128 maxRepayAmt) {
                 loanPositionsTmp[validPositions].ltv = ltv;
                 loanPositionsTmp[validPositions].isHealthy = ltv >= config.loanConfig.liquidationLtv;
                 loanPositionsTmp[validPositions].isLiquidable = isLiquidable;
                 loanPositionsTmp[validPositions].maxRepayAmt = maxRepayAmt;
-                validPositions++;
             } catch {
-                // Skip this loan ID if loanInfo call fails
+                // Skip this loan ID if getLiquidationInfo call fails
             }
+            validPositions++;
         }
-        
+
         LoanPositionV2[] memory loanPositions = new LoanPositionV2[](validPositions);
         for (uint256 i = 0; i < validPositions; i++) {
             loanPositions[i] = loanPositionsTmp[i];
@@ -193,14 +191,9 @@ contract MarketViewer {
         (OrderConfig memory orderConfig) = order.orderConfig();
         (uint256 ftReserve, uint256 xtReserve) = order.tokenReserves();
         if (orderConfig.gtId != 0) {
-            try gt.loanInfo(orderConfig.gtId) returns (address, uint128 debtAmt, uint128, bytes memory collateralData) {
-                orderState.collateralReserve = _decodeAmount(collateralData);
-                orderState.debtReserve = debtAmt;
-            } catch {
-                // If loan info is unavailable, set defaults
-                orderState.collateralReserve = 0;
-                orderState.debtReserve = 0;
-            }
+            (, uint128 debtAmt, bytes memory collateralData) = gt.loanInfo(orderConfig.gtId);
+            orderState.collateralReserve = _decodeAmount(collateralData);
+            orderState.debtReserve = debtAmt;
         }
 
         orderState.ftReserve = ftReserve;
@@ -285,7 +278,11 @@ contract MarketViewer {
         return orderInfos;
     }
 
-    function getVaultPendingMarkets(ITermMaxVault vault, address[] calldata markets) external view returns (PendingUint192[] memory) {
+    function getVaultPendingMarkets(ITermMaxVault vault, address[] calldata markets)
+        external
+        view
+        returns (PendingUint192[] memory)
+    {
         PendingUint192[] memory pendingMarkets = new PendingUint192[](markets.length);
         for (uint256 i = 0; i < markets.length; i++) {
             pendingMarkets[i] = vault.pendingMarkets(markets[i]);
