@@ -2,9 +2,9 @@
 pragma solidity ^0.8.27;
 
 import {Test} from "forge-std/Test.sol";
-import {OracleAggregator} from "../oracle/OracleAggregator.sol";
-import {AggregatorV3Interface, IOracle} from "../oracle/IOracle.sol";
-import {MockPriceFeed} from "./MockPriceFeed.sol";
+import {OracleAggregator} from "../contracts/oracle/OracleAggregator.sol";
+import {AggregatorV3Interface, IOracle} from "../contracts/oracle/IOracle.sol";
+import {MockPriceFeed} from "../contracts/test/MockPriceFeed.sol";
 
 contract OracleAggregatorTest is Test {
     OracleAggregator public oracleAggregator;
@@ -153,7 +153,7 @@ contract OracleAggregatorTest is Test {
         assertEq(decimals, DECIMALS);
     }
 
-    function testFail_GetPrice_BothOraclesStale() public {
+    function test_RevertGetPrice_BothOraclesStale() public {
         // Setup oracle
         IOracle.Oracle memory oracle =
             IOracle.Oracle({aggregator: primaryFeed, backupAggregator: backupFeed, heartbeat: HEARTBEAT});
@@ -168,26 +168,28 @@ contract OracleAggregatorTest is Test {
         // Make both oracles stale
         vm.warp(block.timestamp + HEARTBEAT + 1);
 
+        vm.expectRevert(abi.encodeWithSignature("OracleIsNotWorking(address)", ASSET));
         // Should revert
         oracleAggregator.getPrice(ASSET);
     }
 
-    function testFail_SubmitPendingOracle_NotOwner() public {
+    function test_RevertSubmitPendingOracle_NotOwner() public {
         IOracle.Oracle memory oracle =
             IOracle.Oracle({aggregator: primaryFeed, backupAggregator: backupFeed, heartbeat: HEARTBEAT});
 
         vm.prank(address(0x3));
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", address(0x3)));
         oracleAggregator.submitPendingOracle(ASSET, oracle);
     }
 
-    function testFail_AcceptPendingOracle_BeforeTimelock() public {
+    function test_RevertAcceptPendingOracle_BeforeTimelock() public {
         // Submit pending oracle
         IOracle.Oracle memory oracle =
             IOracle.Oracle({aggregator: primaryFeed, backupAggregator: backupFeed, heartbeat: HEARTBEAT});
 
         vm.prank(OWNER);
         oracleAggregator.submitPendingOracle(ASSET, oracle);
-
+        vm.expectRevert(abi.encodeWithSignature("TimelockNotElapsed()"));
         // Try to accept before timelock expires
         oracleAggregator.acceptPendingOracle(ASSET);
     }

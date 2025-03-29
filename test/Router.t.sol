@@ -232,7 +232,7 @@ contract RouterTest is Test {
         (uint256 gtId, uint256 netXtOut) = res.router.leverageFromToken(
             sender, res.market, orders, amtsToBuyXt, minXtOut, tokenToSwap, maxLtv, units, block.timestamp
         );
-        (address owner, uint128 debtAmt,, bytes memory collateralData) = res.gt.loanInfo(gtId);
+        (address owner, uint128 debtAmt, bytes memory collateralData) = res.gt.loanInfo(gtId);
         assertEq(owner, sender);
         assertEq(minCollAmt, abi.decode(collateralData, (uint256)));
         assertEq(netXtOut * Constants.DECIMAL_BASE / (Constants.DECIMAL_BASE - res.market.mintGtFeeRatio()), debtAmt);
@@ -257,7 +257,7 @@ contract RouterTest is Test {
         res.debt.approve(address(res.router), tokenToSwap);
 
         uint256 gtId = res.router.leverageFromXt(sender, res.market, xtAmt, tokenToSwap, maxLtv, units);
-        (address owner, uint128 debtAmt,, bytes memory collateralData) = res.gt.loanInfo(gtId);
+        (address owner, uint128 debtAmt, bytes memory collateralData) = res.gt.loanInfo(gtId);
         assertEq(owner, sender);
         assertEq(minCollAmt, abi.decode(collateralData, (uint256)));
         assertEq(
@@ -284,7 +284,7 @@ contract RouterTest is Test {
         res.collateral.approve(address(res.router), collateralAmt);
 
         uint256 gtId = res.router.leverageFromXtAndCollateral(sender, res.market, xtAmt, collateralAmt, maxLtv, units);
-        (address owner, uint128 debtAmt,, bytes memory collateralData) = res.gt.loanInfo(gtId);
+        (address owner, uint128 debtAmt, bytes memory collateralData) = res.gt.loanInfo(gtId);
         assertEq(owner, sender);
         assertEq(minCollAmt + collateralAmt, abi.decode(collateralData, (uint256)));
         assertEq(
@@ -344,7 +344,7 @@ contract RouterTest is Test {
             sender, res.market, collInAmt, orders, tokenAmtsWantBuy, maxDebtAmt, block.timestamp + 1 hours
         );
 
-        (address owner, uint128 debtAmt,, bytes memory collateralData) = res.gt.loanInfo(gtId);
+        (address owner, uint128 debtAmt, bytes memory collateralData) = res.gt.loanInfo(gtId);
         assertEq(owner, sender);
         assertEq(collInAmt, abi.decode(collateralData, (uint256)));
         assert(debtAmt <= maxDebtAmt);
@@ -376,7 +376,7 @@ contract RouterTest is Test {
         emit RouterEvents.Borrow(res.market, 1, sender, sender, collInAmt, previewDebtAmt, borrowAmt);
 
         uint256 gtId = res.router.borrowTokenFromCollateral(sender, res.market, collInAmt, borrowAmt);
-        (address owner, uint128 debtAmt,, bytes memory collateralData) = res.gt.loanInfo(gtId);
+        (address owner, uint128 debtAmt, bytes memory collateralData) = res.gt.loanInfo(gtId);
         assertEq(owner, sender);
         assertEq(collInAmt, abi.decode(collateralData, (uint256)));
         assert(previewDebtAmt == debtAmt);
@@ -409,7 +409,7 @@ contract RouterTest is Test {
 
         res.router.borrowTokenFromGt(sender, res.market, gtId, borrowAmt);
 
-        (, uint128 dAmt,,) = res.gt.loanInfo(gtId);
+        (, uint128 dAmt,) = res.gt.loanInfo(gtId);
         assert(dAmt == 100e8 + previewDebtAmt);
         assertEq(res.debt.balanceOf(sender), borrowAmt);
 
@@ -545,7 +545,7 @@ contract RouterTest is Test {
         assertEq(res.debt.balanceOf(sender), returnAmt);
         assertEq(res.collateral.balanceOf(sender), 0);
 
-        (address owner, uint128 dAmt,, bytes memory collateralData) = res.gt.loanInfo(gtId);
+        (address owner, uint128 dAmt, bytes memory collateralData) = res.gt.loanInfo(gtId);
         assertEq(owner, sender);
         assertEq(collateralAmt, abi.decode(collateralData, (uint256)));
         assertEq(dAmt, debtAmt / 2);

@@ -811,7 +811,7 @@ export const abiTermMaxRouter = [
     ],
     outputs: [
       {
-        name: 'netTokenOut',
+        name: '',
         type: 'uint256',
         internalType: 'uint256',
       },
@@ -1880,6 +1880,11 @@ export const abiTermMaxRouter = [
         internalType: 'bytes',
       },
     ],
+  },
+  {
+    type: 'error',
+    name: 'SwapUnitsIsEmpty',
+    inputs: [],
   },
   {
     type: 'error',

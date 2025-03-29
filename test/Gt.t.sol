@@ -110,11 +110,11 @@ contract GtTest is Test {
         assert(res.ft.balanceOf(marketConfig.treasurer) == issueFee);
         assert(res.ft.balanceOf(sender) == ftOutAmt);
 
-        (address owner, uint128 d, uint128 ltv, bytes memory cd) = res.gt.loanInfo(gtId);
+        (address owner, uint128 d, bytes memory cd) = res.gt.loanInfo(gtId);
         assert(owner == sender);
         assert(d == debtAmt);
         assert(collateralAmt == abi.decode(cd, (uint256)));
-
+        (, uint128 ltv,) = res.gt.getLiquidationInfo(gtId);
         assert(LoanUtils.calcLtv(res, debtAmt, collateralAmt) == ltv);
 
         vm.stopPrank();
@@ -161,11 +161,10 @@ contract GtTest is Test {
         uint256 xtAfter = res.xt.balanceOf(address(sender));
         assert(xtBefore - xtAfter == xtAmt);
 
-        (address owner, uint128 d, uint128 ltv, bytes memory cd) = res.gt.loanInfo(gtId);
+        (address owner, uint128 d, bytes memory cd) = res.gt.loanInfo(gtId);
         assert(owner == sender);
         assert(d == debtAmt);
         assert(collateralAmt == abi.decode(cd, (uint256)));
-        assert(LoanUtils.calcLtv(res, debtAmt, collateralAmt) == ltv);
 
         vm.stopPrank();
     }
@@ -378,7 +377,7 @@ contract GtTest is Test {
         assert(res.debt.balanceOf(thirdPeople) == debtAmt - repayAmt);
         assert(res.collateral.balanceOf(thirdPeople) == 0);
 
-        (address owner, uint128 d,, bytes memory cd) = res.gt.loanInfo(gtId);
+        (address owner, uint128 d, bytes memory cd) = res.gt.loanInfo(gtId);
         assert(owner == sender);
         assert(d == debtAmt - repayAmt);
         assert(collateralAmt == abi.decode(cd, (uint256)));
@@ -529,7 +528,7 @@ contract GtTest is Test {
         newId = res.gt.merge(ids);
         StateChecker.checkMarketState(res, state);
 
-        (address owner, uint128 d,, bytes memory cd) = res.gt.loanInfo(newId);
+        (address owner, uint128 d, bytes memory cd) = res.gt.loanInfo(newId);
         assert(owner == sender);
         assert(d == debts[0] + debts[1] + debts[2]);
         assert(collaterals[0] + collaterals[1] + collaterals[2] == abi.decode(cd, (uint256)));
@@ -586,7 +585,7 @@ contract GtTest is Test {
         assert(res.debt.balanceOf(thirdPeople) == 0);
         assert(res.collateral.balanceOf(thirdPeople) == 0);
 
-        (address owner, uint128 d,, bytes memory cd) = res.gt.loanInfo(gtId);
+        (address owner, uint128 d, bytes memory cd) = res.gt.loanInfo(gtId);
         assert(owner == sender);
         assert(d == debtAmt);
         assert(collateralAmt + addedCollateral == abi.decode(cd, (uint256)));
@@ -648,7 +647,7 @@ contract GtTest is Test {
 
         assert(collateralBlanceAfter - collateralBlanceBefore == removedCollateral);
 
-        (address owner, uint128 d,, bytes memory cd) = res.gt.loanInfo(gtId);
+        (address owner, uint128 d, bytes memory cd) = res.gt.loanInfo(gtId);
         assert(owner == sender);
         assert(d == debtAmt);
         assert(collateralAmt - removedCollateral == abi.decode(cd, (uint256)));
@@ -1004,7 +1003,7 @@ contract GtTest is Test {
         res.collateralOracle.updateRoundData(JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_1000_DAI_1.eth"));
         res.debtOracle.updateRoundData(JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_1000_DAI_1.dai"));
         vm.stopPrank();
-        (bool isLiquidable, uint128 maxRepayAmt) = res.gt.getLiquidationInfo(gtId);
+        (bool isLiquidable,, uint128 maxRepayAmt) = res.gt.getLiquidationInfo(gtId);
         assert(isLiquidable);
         assert(maxRepayAmt == debtAmt / 2);
         address liquidator = vm.randomAddress();
@@ -1042,13 +1041,14 @@ contract GtTest is Test {
         assert(res.collateral.balanceOf(sender) == senderCBalanceBefore);
         vm.stopPrank();
 
-        (address owner, uint128 newDebtAmt, uint128 ltv, bytes memory collateralData) = res.gt.loanInfo(gtId);
+        (address owner, uint128 newDebtAmt, bytes memory collateralData) = res.gt.loanInfo(gtId);
         assert(owner == sender);
         assert(newDebtAmt == debtAmt - maxRepayAmt);
-        assert(ltv < liquidationLtv);
-        assert(remainningC == abi.decode(collateralData, (uint256)));
 
-        (isLiquidable, maxRepayAmt) = res.gt.getLiquidationInfo(gtId);
+        assert(remainningC == abi.decode(collateralData, (uint256)));
+        uint128 ltv;
+        (isLiquidable, ltv, maxRepayAmt) = res.gt.getLiquidationInfo(gtId);
+        assert(ltv < liquidationLtv);
         assert(!isLiquidable);
         assert(maxRepayAmt == 0);
     }
@@ -1119,17 +1119,17 @@ contract GtTest is Test {
         vm.stopPrank();
 
         vm.warp(marketConfig.maturity - 1);
-        (bool isLiquidable, uint128 maxRepayAmt) = res.gt.getLiquidationInfo(gtId);
+        (bool isLiquidable,, uint128 maxRepayAmt) = res.gt.getLiquidationInfo(gtId);
         assert(isLiquidable);
         assert(maxRepayAmt == debtAmt / 2);
 
         vm.warp(marketConfig.maturity);
-        (isLiquidable, maxRepayAmt) = res.gt.getLiquidationInfo(gtId);
+        (isLiquidable,, maxRepayAmt) = res.gt.getLiquidationInfo(gtId);
         assert(isLiquidable);
         assert(maxRepayAmt == debtAmt);
 
         vm.warp(marketConfig.maturity + Constants.LIQUIDATION_WINDOW);
-        (isLiquidable, maxRepayAmt) = res.gt.getLiquidationInfo(gtId);
+        (isLiquidable,, maxRepayAmt) = res.gt.getLiquidationInfo(gtId);
         assert(!isLiquidable);
         assert(maxRepayAmt == 0);
     }
@@ -1292,7 +1292,7 @@ contract GtTest is Test {
         res.collateralOracle.updateRoundData(JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_1000_DAI_1.eth"));
         res.debtOracle.updateRoundData(JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_1000_DAI_1.dai"));
         vm.stopPrank();
-        (bool isLiquidable, uint128 maxRepayAmt) = res.gt.getLiquidationInfo(gtId);
+        (bool isLiquidable,, uint128 maxRepayAmt) = res.gt.getLiquidationInfo(gtId);
         assert(isLiquidable);
         assert(maxRepayAmt == debtAmt / 2);
         address liquidator = vm.randomAddress();

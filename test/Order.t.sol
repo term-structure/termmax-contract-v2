@@ -468,7 +468,7 @@ contract OrderTest is Test {
         res.debt.approve(address(res.order), maxTokenIn);
         res.order.swapTokenToExactToken(res.debt, res.ft, sender, ftOutAmt, maxTokenIn, block.timestamp + 1 hours);
         assertEq(res.ft.balanceOf(sender), ftOutAmt);
-        (, uint128 debtAmt,,) = res.gt.loanInfo(gtId);
+        (, uint128 debtAmt,) = res.gt.loanInfo(gtId);
         assertGt(debtAmt, 100e8);
         vm.stopPrank();
     }
@@ -491,7 +491,7 @@ contract OrderTest is Test {
         res.debt.approve(address(res.order), maxTokenIn);
         res.order.swapTokenToExactToken(res.debt, res.ft, sender, ftOutAmt, maxTokenIn, block.timestamp + 1 hours);
         assertEq(res.ft.balanceOf(sender), ftOutAmt);
-        (, uint128 debtAmt,,) = res.gt.loanInfo(gtId);
+        (, uint128 debtAmt,) = res.gt.loanInfo(gtId);
         assertGt(debtAmt, 100e8);
         vm.stopPrank();
     }

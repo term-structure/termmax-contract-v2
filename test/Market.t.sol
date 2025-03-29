@@ -185,7 +185,7 @@ contract MarketTest is Test {
         assertEq(res.collateral.balanceOf(address(res.gt)), collateralAmt);
         assertEq(res.debt.balanceOf(address(res.market)), debtAmt);
 
-        (address owner, uint128 dAmt,, bytes memory collateralData) = res.gt.loanInfo(gtId);
+        (address owner, uint128 dAmt, bytes memory collateralData) = res.gt.loanInfo(gtId);
         assertEq(owner, sender);
         assertEq(dAmt, debtAmt);
 
@@ -210,7 +210,7 @@ contract MarketTest is Test {
         uint256 ftOutAmt2 = res.market.issueFtByExistedGt(sender, debtAmt2, gtId);
 
         assertEq(res.ft.balanceOf(sender), ftOutAmt + ftOutAmt2);
-        (address owner, uint128 dAmt,, bytes memory collateralData) = res.gt.loanInfo(gtId);
+        (address owner, uint128 dAmt, bytes memory collateralData) = res.gt.loanInfo(gtId);
         assertEq(owner, sender);
         assertEq(dAmt, debtAmt + debtAmt2);
         assertEq(abi.decode(collateralData, (uint256)), collateralAmt);
@@ -266,7 +266,7 @@ contract MarketTest is Test {
         assertEq(res.debt.balanceOf(address(receiver)), xtAmt);
         assertEq(res.xt.balanceOf(sender), 0);
 
-        (address owner, uint128 dAmt,, bytes memory collateralData) = res.gt.loanInfo(1);
+        (address owner, uint128 dAmt, bytes memory collateralData) = res.gt.loanInfo(1);
         assertEq(owner, sender);
 
         assertEq(dAmt, uint128(debtAmt));

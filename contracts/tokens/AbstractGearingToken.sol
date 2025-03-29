@@ -193,13 +193,12 @@ abstract contract AbstractGearingToken is
         external
         view
         override
-        returns (address owner, uint128 debtAmt, uint128 ltv, bytes memory collateralData)
+        returns (address owner, uint128 debtAmt, bytes memory collateralData)
     {
         owner = ownerOf(id);
         LoanInfo memory loan = loanMapping[id];
         debtAmt = loan.debtAmt;
         collateralData = loan.collateralData;
-        ltv = _calculateLtv(_getValueAndPrice(_config, loan));
     }
 
     function _burnInternal(uint256 id) internal {
@@ -341,10 +340,14 @@ abstract contract AbstractGearingToken is
     /**
      * @inheritdoc IGearingToken
      */
-    function getLiquidationInfo(uint256 id) external view returns (bool isLiquidable, uint128 maxRepayAmt) {
+    function getLiquidationInfo(uint256 id)
+        external
+        view
+        returns (bool isLiquidable, uint128 ltv, uint128 maxRepayAmt)
+    {
         LoanInfo memory loan = loanMapping[id];
         GtConfig memory config = _config;
-        (isLiquidable, maxRepayAmt,,) = _getLiquidationInfo(loan, config);
+        (isLiquidable, maxRepayAmt, ltv,) = _getLiquidationInfo(loan, config);
     }
 
     function _getLiquidationInfo(LoanInfo memory loan, GtConfig memory config)

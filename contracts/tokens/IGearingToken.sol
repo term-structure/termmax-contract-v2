@@ -55,12 +55,8 @@ interface IGearingToken is IERC721Enumerable {
     /// @param  id The id of Gearing Token
     /// @return owner The owner of Gearing Token
     /// @return debtAmt The amount of debt, unit by debtToken token
-    /// @return ltv The loan to collateral
     /// @return collateralData The encoded data of collateral
-    function loanInfo(uint256 id)
-        external
-        view
-        returns (address owner, uint128 debtAmt, uint128 ltv, bytes memory collateralData);
+    function loanInfo(uint256 id) external view returns (address owner, uint128 debtAmt, bytes memory collateralData);
 
     /// @notice Merge multiple Gearing Tokens into one
     /// @param  ids The array of Gearing Tokens to be merged
@@ -94,8 +90,12 @@ interface IGearingToken is IERC721Enumerable {
     /// @notice Return the liquidation info of the loan
     /// @param  id The id of the G-token
     /// @return isLiquidable Whether the loan is liquidable
+    /// @return ltv The loan to collateral
     /// @return maxRepayAmt The maximum amount of the debt to be repaid
-    function getLiquidationInfo(uint256 id) external view returns (bool isLiquidable, uint128 maxRepayAmt);
+    function getLiquidationInfo(uint256 id)
+        external
+        view
+        returns (bool isLiquidable, uint128 ltv, uint128 maxRepayAmt);
 
     /// @notice Liquidate the loan when its ltv bigger than liquidationLtv or expired.
     ///         The ltv can not inscrease after liquidation.

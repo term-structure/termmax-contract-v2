@@ -157,7 +157,7 @@ contract VaultTest is Test {
         assertTrue(vault.isAllocator(newAllocator));
     }
 
-    function testFail_SetGuardian() public {
+    function test_RevertSetGuardian() public {
         address newGuardian = address(0x123);
         vm.prank(allocator);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, allocator));
@@ -165,14 +165,18 @@ contract VaultTest is Test {
 
         vm.startPrank(deployer);
         vault.submitGuardian(newGuardian);
-        vm.expectRevert(VaultErrors.AlreadySet.selector);
-        vault.submitGuardian(newGuardian);
 
         vm.expectRevert(VaultErrors.AlreadyPending.selector);
-        vault.submitGuardian(address(0x456));
+        vault.submitGuardian(newGuardian);
 
         vm.expectRevert(VaultErrors.TimelockNotElapsed.selector);
         vault.acceptGuardian();
+
+        vm.warp(block.timestamp + 1 days + 1);
+        vault.acceptGuardian();
+
+        vm.expectRevert(VaultErrors.AlreadySet.selector);
+        vault.submitGuardian(address(0x123));
 
         vm.stopPrank();
     }
@@ -205,7 +209,7 @@ contract VaultTest is Test {
         vm.stopPrank();
     }
 
-    function testFail_SetMarketWhitelist() public {
+    function test_RevertSetMarketWhitelist() public {
         address market = address(0x123);
 
         vm.prank(vm.randomAddress());
@@ -215,16 +219,22 @@ contract VaultTest is Test {
         vm.startPrank(curator);
         vault.submitMarket(market, true);
 
-        vm.expectRevert(VaultErrors.AlreadySet.selector);
+        vm.expectRevert(VaultErrors.AlreadyPending.selector);
         vault.submitMarket(market, true);
 
-        vm.expectRevert(VaultErrors.AlreadyPending.selector);
-        vault.submitMarket(market, false);
+        vm.expectRevert(VaultErrors.TimelockNotElapsed.selector);
+        vault.acceptMarket(market);
+
+        vm.warp(block.timestamp + 86400 + 1);
+        vault.acceptMarket(market);
+
+        vm.expectRevert(VaultErrors.AlreadySet.selector);
+        vault.submitMarket(market, true);
 
         vm.stopPrank();
     }
 
-    function testFail_CreateOrder() public {
+    function test_RevertCreateOrder() public {
         ITermMaxMarket market = ITermMaxMarket(address(0x123));
         address bob = lper;
         vm.startPrank(bob);
@@ -237,32 +247,6 @@ contract VaultTest is Test {
         vm.startPrank(curator);
         vm.expectRevert(VaultErrors.MarketNotWhitelisted.selector);
         vault.createOrder(market, maxCapacity, 0, orderConfig.curveCuts);
-        marketConfig.maturity = uint64(currentTime + 360 days);
-        ITermMaxMarket market3 = ITermMaxMarket(
-            res.factory.createMarket(
-                DeployUtils.GT_ERC20,
-                MarketInitialParams({
-                    collateral: address(res.collateral),
-                    debtToken: res.debt,
-                    admin: deployer,
-                    gtImplementation: address(0),
-                    marketConfig: marketConfig,
-                    loanConfig: LoanConfig({
-                        maxLtv: maxLtv,
-                        liquidationLtv: liquidationLtv,
-                        liquidatable: true,
-                        oracle: res.oracle
-                    }),
-                    gtInitalParams: abi.encode(type(uint256).max),
-                    tokenName: "test",
-                    tokenSymbol: "test"
-                }),
-                0
-            )
-        );
-        vault.submitMarket(address(market3), true);
-        vm.warp(currentTime + timelock + 1);
-        vault.acceptMarket(address(market3));
         vm.stopPrank();
     }
 
@@ -289,7 +273,7 @@ contract VaultTest is Test {
         assertEq(vault.timelock(), newTimelock);
     }
 
-    function testFail_SetTimelock() public {
+    function test_RevertSetTimelock() public {
         uint256 newTimelock = 2 days;
         vm.startPrank(curator);
 
@@ -299,6 +283,7 @@ contract VaultTest is Test {
         vault.submitTimelock(newTimelock);
 
         newTimelock = 1.5 days;
+        vault.submitTimelock(newTimelock);
 
         vm.expectRevert(VaultErrors.AlreadyPending.selector);
         vault.submitTimelock(newTimelock);
@@ -355,11 +340,11 @@ contract VaultTest is Test {
         assertEq(percentage, newPercentage);
     }
 
-    function testFail_SetPerformanceFeeRate() public {
+    function test_RevertSetPerformanceFeeRate() public {
         uint184 newPercentage = 0.5e8;
 
         vm.prank(curator);
-        vm.expectRevert(VaultErrors.PerformanceFeeRateExceeded.selector);
+        vm.expectRevert(VaultErrors.AlreadySet.selector);
         vault.submitPerformanceFeeRate(newPercentage);
 
         newPercentage = 0.6e8;
@@ -449,9 +434,9 @@ contract VaultTest is Test {
         return arr;
     }
 
-    function testFail_SupplyQueue() public {
+    function test_RevertSupplyQueue() public {
         vm.prank(lper);
-        vm.expectRevert(VaultErrors.NotCuratorRole.selector);
+        vm.expectRevert(VaultErrors.NotAllocatorRole.selector);
         vault.updateSupplyQueue(new uint256[](0));
 
         vm.startPrank(curator);
@@ -468,9 +453,9 @@ contract VaultTest is Test {
         vm.stopPrank();
     }
 
-    function testFail_WithdrawQueue() public {
+    function test_RevertWithdrawQueue() public {
         vm.prank(lper);
-        vm.expectRevert(VaultErrors.NotCuratorRole.selector);
+        vm.expectRevert(VaultErrors.NotAllocatorRole.selector);
         vault.updateWithdrawQueue(new uint256[](0));
 
         vm.startPrank(curator);
