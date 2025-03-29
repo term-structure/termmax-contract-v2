@@ -2,9 +2,9 @@
 pragma solidity ^0.8.27;
 
 import {Test} from "forge-std/Test.sol";
-import {OracleAggregator} from "../oracle/OracleAggregator.sol";
-import {AggregatorV3Interface, IOracle} from "../oracle/IOracle.sol";
-import {MockPriceFeed} from "./MockPriceFeed.sol";
+import {OracleAggregator} from "../contracts/oracle/OracleAggregator.sol";
+import {AggregatorV3Interface, IOracle} from "../contracts/oracle/IOracle.sol";
+import {MockPriceFeed} from "../contracts/test/MockPriceFeed.sol";
 
 contract OracleAggregatorTest is Test {
     OracleAggregator public oracleAggregator;
