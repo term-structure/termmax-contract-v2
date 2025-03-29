@@ -113,7 +113,7 @@ contract DeployCore is DeployBase {
             );
         } else {
             (factory, vaultFactory, oracleAggregator, router, swapAdapter, faucet, marketViewer) =
-                deployCore(deployerAddr, accessManagerAddr, oracleTimelock);
+                deployCore(deployerAddr, accessManagerAddr, 0);
         }
         vm.stopBroadcast();
 
