@@ -13,12 +13,17 @@ contract DeployPriceFeedsArb is Script {
         PriceFeedFactory priceFeedFactory = new PriceFeedFactory();
 
         console.log("PriceFeedFactory deployed at", address(priceFeedFactory));
-
+        // pendle deployment: https://github.com/pendle-finance/pendle-core-v2-public/blob/main/deployments/42161-core.json
         address pendlePYLpOracle = 0x9a9Fa8338dd5E5B2188006f1Cd2Ef26d921650C2;
         address weEthOracle;
         {
+            // chainlink(wstETH/ETH): https://data.chain.link/feeds/arbitrum/mainnet/wsteth-eth
+            // heartBeat: 86400 (24hr)
             address wstEthToEth = 0xb523AE262D20A936BC152e6023996e46FDC2A95D;
+            // chainlink(ETH/USD): https://data.chain.link/feeds/arbitrum/mainnet/eth-usd
+            // heartBeat: 86400 (24hr)
             address ethToUsd = 0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612;
+            // new price feed heartBeat = max(86400, 86400) = 86400 (24hr)
             AggregatorV3Interface wstEthFeed =
                 AggregatorV3Interface(priceFeedFactory.createPriceFeedConverter(wstEthToEth, ethToUsd));
             (, int256 answer,,,) = wstEthFeed.latestRoundData();
@@ -27,8 +32,13 @@ contract DeployPriceFeedsArb is Script {
         }
 
         {
+            // chainlink(weETH/ETH): https://data.chain.link/feeds/arbitrum/mainnet/weeth-eth
+            // heartBeat: 86400 (24hr)
             address weEthToEth = 0xE141425bc1594b8039De6390db1cDaf4397EA22b;
+            // chainlink(ETH/USD): https://data.chain.link/feeds/arbitrum/mainnet/eth-usd
+            // heartBeat: 86400 (24hr)
             address ethToUsd = 0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612;
+            // new price feed heartBeat = max(86400, 86400) = 86400 (24hr)
             AggregatorV3Interface weEthFeed =
                 AggregatorV3Interface(priceFeedFactory.createPriceFeedConverter(weEthToEth, ethToUsd));
             (, int256 answer,,,) = weEthFeed.latestRoundData();
@@ -38,8 +48,10 @@ contract DeployPriceFeedsArb is Script {
         }
 
         {
+            // pendle(PT-weETH 26JUN2025): https://app.pendle.finance/trade/markets/0xbf5e60ddf654085f80dae9dd33ec0e345773e1f8/swap?view=pt&chain=arbitrum&tab=info
             address PT_weETH_26JUN2025_market = 0xBf5E60ddf654085F80DAe9DD33Ec0E345773E1F8;
-
+            // weETH/USD heartBeat: 86400 (24hr)
+            // new price feed heartBeat = max(86400) = 86400 (24hr)
             AggregatorV3Interface ptFeed = AggregatorV3Interface(
                 priceFeedFactory.createPTWithPriceFeed(pendlePYLpOracle, PT_weETH_26JUN2025_market, 900, weEthOracle)
             );

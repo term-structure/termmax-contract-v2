@@ -13,12 +13,17 @@ contract DeployPriceFeeds is Script {
         PriceFeedFactory priceFeedFactory = new PriceFeedFactory();
 
         console.log("PriceFeedFactory deployed at", address(priceFeedFactory));
-
+        // pendle deployments: https://github.com/pendle-finance/pendle-core-v2-public/blob/main/deployments/1-core.json
         address pendlePYLpOracle = 0x9a9Fa8338dd5E5B2188006f1Cd2Ef26d921650C2;
         address pufferEthOracle;
         {
-            address pufferEthToEth = 0x76A495b0bFfb53ef3F0E94ef0763e03cE410835C;
+            // chainlink(pufETH/ETH): https://data.chain.link/feeds/ethereum/mainnet/pufeth-eth
+            // heartBeat: 86400 (24hr)
+            address pufferEthToEth = 0xDe3f7Dd92C4701BCf59F47235bCb61e727c45f80;
+            // chainlink(ETH/USD): https://data.chain.link/feeds/ethereum/mainnet/eth-usd
+            // heartBeat: 3600 (1hr)
             address ethToUsd = 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419;
+            // new price feed heartBeat = max(3600, 86400) = 86400 (24hr)
             AggregatorV3Interface pufferEthFeed =
                 AggregatorV3Interface(priceFeedFactory.createPriceFeedConverter(pufferEthToEth, ethToUsd));
             (, int256 answer,,,) = pufferEthFeed.latestRoundData();
@@ -28,9 +33,12 @@ contract DeployPriceFeeds is Script {
         }
 
         {
+            // pendle(PT-sUSDe 29MAY2025): https://app.pendle.finance/trade/markets/0xb162b764044697cf03617c2efbcb1f42e31e4766/swap?view=pt&chain=ethereum&tab=info
             address pt_market = 0xB162B764044697cf03617C2EFbcB1f42e31E4766;
+            // chainlink(sUSDe/USD): https://data.chain.link/feeds/ethereum/mainnet/susde-usd
+            // heartBeat: 86400 (24hr)
             address susdeToUsd = 0xFF3BC18cCBd5999CE63E788A1c250a88626aD099;
-
+            // new price feed heartBeat = max(86400) = 86400 (24hr)
             AggregatorV3Interface ptFeed = AggregatorV3Interface(
                 priceFeedFactory.createPTWithPriceFeed(pendlePYLpOracle, pt_market, 900, susdeToUsd)
             );
@@ -40,8 +48,12 @@ contract DeployPriceFeeds is Script {
         }
 
         {
+            // morpho(USUALUSDC+): https://app.morpho.org/ethereum/vault/0xd63070114470f685b75B74D60EEc7c1113d33a3D/mev-capital-usual-usdc
             address USUALUSDCPlusVault = 0xd63070114470f685b75B74D60EEc7c1113d33a3D;
-            address usdcToUsd = 0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6;
+            // chainlink(USDC/USD): https://data.chain.link/feeds/ethereum/mainnet/usdc-usd-svr
+            // heartBeat: 86400  (24hr)
+            address usdcToUsd = 0xfB6471ACD42c91FF265344Ff73E88353521d099F;
+            // new price feed heartBeat = max(86400) = 86400 (24hr)
             AggregatorV3Interface usdcPlusFeed =
                 AggregatorV3Interface(priceFeedFactory.createPriceFeedWithERC4626(usdcToUsd, USUALUSDCPlusVault));
             (, int256 answer,,,) = usdcPlusFeed.latestRoundData();
@@ -50,8 +62,12 @@ contract DeployPriceFeeds is Script {
         }
 
         {
+            // morpho(MC-wETH): https://app.morpho.org/ethereum/vault/0x9a8bC3B04b7f3D87cfC09ba407dCED575f2d61D8/mev-capital-weth
             address MCwETHVault = 0x9a8bC3B04b7f3D87cfC09ba407dCED575f2d61D8;
+            // chainlink(ETH/USD): https://data.chain.link/feeds/ethereum/mainnet/eth-usd
+            // heartBeat: 3600 (1hr)
             address wethToUsd = 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419;
+            // new price feed heartBeat = max(3600) = 3600 (1hr)
             AggregatorV3Interface wethFeed =
                 AggregatorV3Interface(priceFeedFactory.createPriceFeedWithERC4626(wethToUsd, MCwETHVault));
             (, int256 answer,,,) = wethFeed.latestRoundData();
@@ -60,8 +76,12 @@ contract DeployPriceFeeds is Script {
         }
 
         {
+            // morpho(gtWETH): https://app.morpho.org/ethereum/vault/0x2371e134e3455e0593363cBF89d3b6cf53740618/gauntlet-weth-prime
             address gtWETHVault = 0x2371e134e3455e0593363cBF89d3b6cf53740618;
+            // chainlink(ETH/USD): https://data.chain.link/feeds/ethereum/mainnet/eth-usd
+            // heartBeat: 3600 (1hr)
             address wethToUsd = 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419;
+            // new price feed heartBeat = max(3600) = 3600 (1hr)
             AggregatorV3Interface gtWETHFeed =
                 AggregatorV3Interface(priceFeedFactory.createPriceFeedWithERC4626(wethToUsd, gtWETHVault));
             (, int256 answer,,,) = gtWETHFeed.latestRoundData();
@@ -70,7 +90,10 @@ contract DeployPriceFeeds is Script {
         }
 
         {
+            // pendle(PT-pufETH 26JUN2025): https://app.pendle.finance/trade/markets/0x58612beb0e8a126735b19bb222cbc7fc2c162d2a/swap?view=pt&chain=ethereum&tab=info
             address PT_pufETH_26JUN2025_market = 0x58612beB0e8a126735b19BB222cbC7fC2C162D2a;
+            // pufETH/USD heartBeat: 86400 (24hr)
+            // new price feed heartBeat = max(86400) = 86400 (24hr)
             AggregatorV3Interface ptFeed = AggregatorV3Interface(
                 priceFeedFactory.createPTWithPriceFeed(
                     pendlePYLpOracle, PT_pufETH_26JUN2025_market, 900, pufferEthOracle
@@ -82,8 +105,12 @@ contract DeployPriceFeeds is Script {
         }
 
         {
+            // etherscan(eUSDe): https://etherscan.io/token/0x90d2af7d622ca3141efa4d8f1f24d86e5974cc8f#readContract
             address eUSDeVault = 0x90D2af7d622ca3141efA4d8f1F24d86E5974Cc8F;
+            // chainlink(eUSDe/USD): https://data.chain.link/feeds/ethereum/mainnet/usde-usd
+            // heartBeat: 86400 (24hr)
             address usdeToUsd = 0xa569d910839Ae8865Da8F8e70FfFb0cBA869F961;
+            // new price feed heartBeat = max(86400) = 86400 (24hr)
             AggregatorV3Interface usdeFeed =
                 AggregatorV3Interface(priceFeedFactory.createPriceFeedWithERC4626(usdeToUsd, eUSDeVault));
             (, int256 answer,,,) = usdeFeed.latestRoundData();
@@ -92,8 +119,12 @@ contract DeployPriceFeeds is Script {
         }
 
         {
+            // pendle(PT-USD0PlusPlus 26JUN2025): https://app.pendle.finance/trade/markets/0x048680f64d6dff1748ba6d9a01f578433787e24b/swap?view=pt&chain=ethereum&tab=info
             address PT_USD0PlusPlus_26JUN2025_market = 0x048680F64d6DFf1748ba6D9a01F578433787e24B;
+            // Usual Docs: https://tech.usual.money/smart-contracts/contract-deployments
+            //! heartBeat: 86400 (24hr) not sure
             address usd0PlusPlusToUsd = 0xFC9e30Cf89f8A00dba3D34edf8b65BCDAdeCC1cB;
+            // new price feed heartBeat = max(86400) = 86400 (24hr)
             AggregatorV3Interface usd0PlusPlusFeed = AggregatorV3Interface(
                 priceFeedFactory.createPTWithPriceFeed(
                     pendlePYLpOracle, PT_USD0PlusPlus_26JUN2025_market, 900, usd0PlusPlusToUsd
@@ -105,8 +136,12 @@ contract DeployPriceFeeds is Script {
         }
 
         {
+            // UpShift USDC(upUSDC): https://app.upshift.finance/pools/1/0x80E1048eDE66ec4c364b4F22C8768fc657FF6A42
             address upUSDCVault = 0x80E1048eDE66ec4c364b4F22C8768fc657FF6A42;
-            address usdcToUsd = 0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6;
+            // chainlink(USDC/USD): https://data.chain.link/feeds/ethereum/mainnet/usdc-usd-svr
+            // heartBeat: 86400 (24hr)
+            address usdcToUsd = 0xfB6471ACD42c91FF265344Ff73E88353521d099F;
+            // new price feed heartBeat = max(86400) = 86400 (24hr)
             AggregatorV3Interface usdcFeed =
                 AggregatorV3Interface(priceFeedFactory.createPriceFeedWithERC4626(usdcToUsd, upUSDCVault));
             (, int256 answer,,,) = usdcFeed.latestRoundData();
@@ -115,8 +150,12 @@ contract DeployPriceFeeds is Script {
         }
 
         {
+            // Usual(usualx): https://tech.usual.money/smart-contracts/contract-deployments
             address usualxVault = 0x06B964d96f5dCF7Eae9d7C559B09EDCe244d4B8E;
+            // Redstone (USUAL/USD): https://app.redstone.finance/app/feeds/?search=USUAL&page=1&sortBy=popularity&sortDesc=false&perPage=32
+            // heartBeat: 86400 (24hr)
             address usualToUsd = 0x2240AE461B34CC56D654ba5FA5830A243Ca54840;
+            // new price feed heartBeat = max(86400) = 86400 (24hr)
             AggregatorV3Interface usualFeed =
                 AggregatorV3Interface(priceFeedFactory.createPriceFeedWithERC4626(usualToUsd, usualxVault));
             (, int256 answer,,,) = usualFeed.latestRoundData();

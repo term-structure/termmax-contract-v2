@@ -73,7 +73,7 @@ const deployConfig: DeployConfig = {
 
 // Parse number with commas to a clean string
 function parseNumberWithCommas(value: string): string {
-    if (!value) return "1000000000000000000000000"; // Default value if empty
+    if (!value) return ""; // Return empty string instead of default value
     // Remove all commas and non-numeric characters except decimal point
     return value.replace(/,/g, '').trim();
 }
@@ -158,8 +158,8 @@ records.forEach((record: any, index: number) => {
             console.log(`Underlying Heartbeat: ${record['underlyingHeartBeat'] || '86400'} (default: 86400 if not specified)`);
             console.log(`Collateral Heartbeat: ${record['collateralHeartBeat'] || '3600'} (default: 3600 if not specified)`);
         }
-        const collateralCapAmt = BigInt(collateralCapForGt) / (BigInt(10) ** BigInt(parseInt(record['collateralDecimals'])));
-        const collateralCapVault = BigInt(collateralCapForGt) * BigInt(parseInt(convertToBaseUnit(record['collateralInitialPrice']))) / (BigInt(10) ** BigInt(parseInt(record['collateralDecimals']))) / BigInt(10 ** 8);
+        const collateralCapAmt = BigInt(collateralCapForGt || '0') / (BigInt(10) ** BigInt(parseInt(record['collateralDecimals'] || '18')));
+        const collateralCapVault = BigInt(collateralCapForGt || '0') * BigInt(parseInt(convertToBaseUnit(record['collateralInitialPrice'] || '0'))) / (BigInt(10) ** BigInt(parseInt(record['collateralDecimals'] || '18'))) / BigInt(10 ** 8);
         console.log(`Collateral Symbol:`, record['collateralSymbol']);
         console.log(`Collateral Initial Price:`, record['collateralInitialPrice']);
         console.log(`Collateral Cap Amt:`, collateralCapAmt);
@@ -205,4 +205,4 @@ fs.writeFileSync(
     'utf-8'
 );
 
-console.log(`Conversion complete. Output written to ${outputJsonPath}`); 
+console.log(`Conversion complete. Output written to ${outputJsonPath}`);
