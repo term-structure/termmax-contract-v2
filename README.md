@@ -5,6 +5,7 @@
 ## Documentation
 
 TermMax Docs: https://docs.ts.finance/
+Bounty plan: https://immunefi.com/bug-bounty/termstructurelabs/information/
 
 ### Install Dependencies
 ```shell
