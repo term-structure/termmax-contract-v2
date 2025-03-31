@@ -19,6 +19,8 @@ if [ "$#" -lt 2 ]; then
     echo "Options:"
     echo "  --broadcast     Broadcast transactions (default: dry run)"
     echo "  --verify        Enable contract verification"
+    echo "  --tenderly      Enable verification on Tenderly"
+    echo "  --debug         Show complete command with sensitive information (for debugging)"
     exit 1
 fi
 
@@ -41,6 +43,8 @@ fi
 # Default options (dry run without verification)
 BROADCAST=""
 VERIFY=""
+TENDERLY=""
+DEBUG=""
 
 # Parse remaining options
 while [[ $# -gt 0 ]]; do
@@ -51,6 +55,14 @@ while [[ $# -gt 0 ]]; do
             ;;
         --verify)
             VERIFY="--verify"
+            shift
+            ;;
+        --tenderly)
+            TENDERLY="yes"
+            shift
+            ;;
+        --debug)
+            DEBUG="yes"
             shift
             ;;
         *)
@@ -127,6 +139,19 @@ fi
 if [ -z "$ADMIN_ADDRESS" ]; then
     echo "Error: Required environment variable $ADMIN_ADDRESS_VAR is not set"
     exit 1
+fi
+
+# Check Tenderly environment variables if --tenderly is specified
+if [ ! -z "$TENDERLY" ]; then
+    if [ -z "$TENDERLY_VERIFIER_URL" ]; then
+        echo "Error: Required environment variable TENDERLY_VERIFIER_URL is not set"
+        exit 1
+    fi
+    
+    if [ -z "$TENDERLY_ACCESS_KEY" ]; then
+        echo "Error: Required environment variable TENDERLY_ACCESS_KEY is not set"
+        exit 1
+    fi
 fi
 
 # Check additional required variables for mainnet deployments
@@ -212,6 +237,8 @@ echo "Admin Address: $ADMIN_ADDRESS"
 
 echo "Mode: ${BROADCAST:+Live Broadcast}${BROADCAST:-Dry Run}"
 echo "Verification: ${VERIFY:+Enabled}${VERIFY:-Disabled}"
+echo "Tenderly Verification: ${TENDERLY:+Enabled}${TENDERLY:-Disabled}"
+echo "Debug Mode: ${DEBUG:+Enabled}${DEBUG:-Disabled}"
 
 if [[ $NETWORK == *"mainnet"* ]]; then
     echo "Uniswap V3 Router: ${!UNISWAP_V3_ROUTER_VAR}"
@@ -238,44 +265,56 @@ FORGE_CMD="forge script $SCRIPT_PATH --private-key $DEPLOYER_PRIVATE_KEY --rpc-u
 # Add optional flags if specified
 if [ ! -z "$BROADCAST" ]; then
     FORGE_CMD="$FORGE_CMD $BROADCAST --slow"
+    
+    # Add Tenderly verification if specified
+    if [ ! -z "$TENDERLY" ]; then
+        FORGE_CMD="$FORGE_CMD --verifier-url $TENDERLY_VERIFIER_URL --etherscan-api-key $TENDERLY_ACCESS_KEY"
+    fi
 fi
 
 if [ ! -z "$VERIFY" ]; then
     FORGE_CMD="$FORGE_CMD $VERIFY"
 fi
 
-# When printing the forge command, mask the private key and RPC URL
-MASKED_CMD=$(echo "$FORGE_CMD" | sed -E 's/(--private-key )[^ ]*/\1[MASKED]/g' | sed -E 's/(--rpc-url )[^ ]*/\1[MASKED]/g')
-echo "Executing: $MASKED_CMD"
+# When printing the forge command, check if debug mode is enabled
+if [ ! -z "$DEBUG" ]; then
+    echo "WARNING: Debug mode enabled. Displaying complete command with sensitive information:"
+    echo "Executing: $FORGE_CMD"
+else
+    # Mask sensitive information in normal mode
+    MASKED_CMD=$(echo "$FORGE_CMD" | sed -E 's/(--private-key )[^ ]*/\1[MASKED]/g' | sed -E 's/(--rpc-url )[^ ]*/\1[MASKED]/g' | sed -E 's/(--verifier-url )[^ ]*/\1[MASKED]/g' | sed -E 's/(--etherscan-api-key )[^ ]*/\1[MASKED]/g')
+    echo "Executing: $MASKED_CMD"
+fi
+
 eval $FORGE_CMD
 
 # Check if execution was successful
 if [ $? -eq 0 ]; then
     if [ ! -z "$BROADCAST" ]; then
         if [ "$OPERATION" = "deploy" ]; then
-            echo "✅ ${TYPE} deployment to $NETWORK completed successfully!"
+            echo "[SUCCESS] ${TYPE} deployment to $NETWORK completed successfully!"
         else
-            echo "✅ Script $SCRIPT_NAME executed successfully on $NETWORK (Broadcast mode)!"
+            echo "[SUCCESS] Script $SCRIPT_NAME executed successfully on $NETWORK (Broadcast mode)!"
         fi
     else
         if [ "$OPERATION" = "deploy" ]; then
-            echo "✅ ${TYPE} dry run on $NETWORK completed successfully!"
+            echo "[SUCCESS] ${TYPE} dry run on $NETWORK completed successfully!"
         else
-            echo "✅ Script $SCRIPT_NAME dry run completed successfully on $NETWORK!"
+            echo "[SUCCESS] Script $SCRIPT_NAME dry run completed successfully on $NETWORK!"
         fi
     fi
 else
     if [ ! -z "$BROADCAST" ]; then
         if [ "$OPERATION" = "deploy" ]; then
-            echo "❌ ${TYPE} deployment to $NETWORK failed!"
+            echo "[ERROR] ${TYPE} deployment to $NETWORK failed!"
         else
-            echo "❌ Script $SCRIPT_NAME execution failed on $NETWORK (Broadcast mode)!"
+            echo "[ERROR] Script $SCRIPT_NAME execution failed on $NETWORK (Broadcast mode)!"
         fi
     else
         if [ "$OPERATION" = "deploy" ]; then
-            echo "❌ ${TYPE} dry run on $NETWORK failed!"
+            echo "[ERROR] ${TYPE} dry run on $NETWORK failed!"
         else
-            echo "❌ Script $SCRIPT_NAME dry run failed on $NETWORK!"
+            echo "[ERROR] Script $SCRIPT_NAME dry run failed on $NETWORK!"
         fi
     fi
     exit 1
