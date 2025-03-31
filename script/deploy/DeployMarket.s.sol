@@ -24,6 +24,7 @@ import {Faucet} from "contracts/test/testnet/Faucet.sol";
 import {FaucetERC20} from "contracts/test/testnet/FaucetERC20.sol";
 import {DeployBase} from "./DeployBase.s.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
+import {StringHelper} from "../utils/StringHelper.sol";
 
 contract DeloyMarket is DeployBase {
     // Network-specific config loaded from environment variables
@@ -151,6 +152,8 @@ contract DeloyMarket is DeployBase {
             market.tokens();
 
         console.log("Market deployed at:", address(market));
+        console.log("Market name:", config.marketName);
+        console.log("Market symbol:", config.marketSymbol);
         console.log("Collateral (%s) address: %s", IERC20Metadata(collateralAddr).symbol(), address(collateralAddr));
         console.log("Underlying (%s) address: %s", IERC20Metadata(address(underlying)).symbol(), address(underlying));
         console.log("Collateral price feed address:", config.collateralConfig.priceFeedAddr);
@@ -165,7 +168,7 @@ contract DeloyMarket is DeployBase {
         console.log();
 
         console.log("Treasurer:", treasurerAddr);
-        console.log("Maturity:", marketConfig.maturity);
+        console.log("Maturity:", StringHelper.convertTimestampToDateString(marketConfig.maturity));
         console.log("Salt:", config.salt);
         console.log("Lend Taker Fee Ratio:", marketConfig.feeConfig.lendTakerFeeRatio);
         console.log("Lend Maker Fee Ratio:", marketConfig.feeConfig.lendMakerFeeRatio);
@@ -196,7 +199,8 @@ contract DeloyMarket is DeployBase {
                 uint32(config.collateralConfig.heartBeat),
                 config.underlyingConfig.priceFeedAddr,
                 uint32(config.underlyingConfig.heartBeat),
-                config.salt
+                config.salt,
+                config.marketSymbol
             )
         );
         console.log("Market config written to:", marketFilePath);
@@ -210,11 +214,11 @@ contract DeloyMarket is DeployBase {
         return string.concat(
             network,
             "-market-",
-            IERC20Metadata(collateralAddr).symbol(),
-            "-",
             IERC20Metadata(underlyingAddr).symbol(),
+            "-",
+            IERC20Metadata(collateralAddr).symbol(),
             "@",
-            vm.toString(maturity),
+            StringHelper.convertTimestampToDateString(maturity),
             ".json"
         );
     }
@@ -231,7 +235,8 @@ contract DeloyMarket is DeployBase {
         uint32 collateralHeartbeat,
         address underlyingPriceFeedAddr,
         uint32 underlyingHeartbeat,
-        uint256 salt
+        uint256 salt,
+        string memory marketSymbol
     ) internal view returns (string memory) {
         // Create JSON in parts to avoid stack too deep errors
         string memory part1 = _createJsonPart1(
@@ -244,7 +249,7 @@ contract DeloyMarket is DeployBase {
             underlyingHeartbeat
         );
 
-        string memory part2 = _createJsonPart2(ft, xt, gt, marketConfig, salt);
+        string memory part2 = _createJsonPart2(ft, xt, gt, marketConfig, salt, marketSymbol);
 
         return string.concat(part1, part2);
     }
@@ -309,7 +314,8 @@ contract DeloyMarket is DeployBase {
         IMintableERC20 xt,
         IGearingToken gt,
         MarketConfig memory marketConfig,
-        uint256 salt
+        uint256 salt,
+        string memory marketSymbol
     ) internal pure returns (string memory) {
         return string(
             abi.encodePacked(
@@ -325,11 +331,14 @@ contract DeloyMarket is DeployBase {
                 '"\n',
                 "  },\n",
                 '  "config": {\n',
+                '    "marketSymbol": "',
+                marketSymbol,
+                '",\n',
                 '    "treasurer": "',
                 vm.toString(marketConfig.treasurer),
                 '",\n',
                 '    "maturity": "',
-                vm.toString(marketConfig.maturity),
+                StringHelper.convertTimestampToDateString(marketConfig.maturity),
                 '",\n',
                 '    "salt": "',
                 vm.toString(salt),

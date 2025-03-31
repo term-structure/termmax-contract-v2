@@ -69,6 +69,10 @@ library JsonLoader {
         collateralCapForGt =
             uint256(vm.parseUint(jsonData.readString(string.concat(configPrefix, ".collateralCapForGt"))));
 
+        // read market name and symbol
+        config.marketName = jsonData.readString(string.concat(configPrefix, ".marketName"));
+        config.marketSymbol = jsonData.readString(string.concat(configPrefix, ".marketSymbol"));
+
         // read market config
         string memory marketConfigPrefix = string.concat(configPrefix, ".marketConfig");
         marketConfig.maturity =
@@ -121,10 +125,6 @@ library JsonLoader {
         collateralConfig.heartBeat =
             uint256(vm.parseUint(jsonData.readString(string.concat(collateralConfigPrefix, ".heartBeat"))));
 
-        config.marketName = string.concat(
-            collateralConfig.symbol, "/", underlyingConfig.symbol, "-", vm.toString(marketConfig.maturity)
-        );
-        config.marketSymbol = config.marketName;
         config.salt = salt;
         config.collateralCapForGt = collateralCapForGt;
 
