@@ -2,7 +2,9 @@
 pragma solidity ^0.8.27;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {IERC721Enumerable} from "@openzeppelin/contracts/interfaces/IERC721Enumerable.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {ITermMaxMarket} from "contracts/ITermMaxMarket.sol";
 import {ITermMaxOrder} from "contracts/ITermMaxOrder.sol";
 import {IMintableERC20} from "contracts/tokens/IMintableERC20.sol";
@@ -11,12 +13,14 @@ import {OrderConfig, CurveCuts, FeeConfig, GtConfig} from "contracts/storage/Ter
 import {ITermMaxVault} from "contracts/vault/ITermMaxVault.sol";
 import {OrderInfo} from "contracts/vault/VaultStorage.sol";
 import {PendingAddress, PendingUint192} from "contracts/lib/PendingLib.sol";
+import {OracleAggregator} from "contracts/oracle/OracleAggregator.sol";
 
 interface IPausable {
     function paused() external view returns (bool);
 }
 
 contract MarketViewer {
+    using Math for uint256;
     struct LoanPosition {
         uint256 loanId;
         uint256 collateralAmt;
@@ -40,6 +44,12 @@ contract MarketViewer {
         uint256 ftBalance;
         uint256 xtBalance;
         LoanPosition[] gtInfo;
+    }
+    
+    struct VaultPosition {
+        uint256 balance;
+        uint256 toAssetBalance;
+        uint256 usdValue;
     }
 
     struct OrderState {
@@ -182,6 +192,23 @@ contract MarketViewer {
             loanPositions[i] = loanPositionsTmp[i];
         }
         return loanPositions;
+    }
+
+    function getVaultBalance(address user, ITermMaxVault[] memory vaults, OracleAggregator oracleAggregator) external view returns (VaultPosition[] memory) {
+        VaultPosition[] memory vaultPositions = new VaultPosition[](vaults.length);
+        for (uint256 i = 0; i < vaults.length; i++) {
+            address asset = vaults[i].asset();
+            uint256 balance = vaults[i].balanceOf(user);
+            vaultPositions[i].balance = balance;
+            vaultPositions[i].toAssetBalance = vaults[i].convertToAssets(balance);
+            try oracleAggregator.getPrice(asset) returns (uint256 price, uint8) {
+                uint8 assetDecimals = IERC20Metadata(asset).decimals();
+                vaultPositions[i].usdValue = vaultPositions[i].toAssetBalance.mulDiv(price, 10 ** assetDecimals);
+            } catch {
+                vaultPositions[i].usdValue = 0;
+            }
+        }
+        return vaultPositions;
     }
 
     function getOrderState(ITermMaxOrder order) external view returns (OrderState memory orderState) {

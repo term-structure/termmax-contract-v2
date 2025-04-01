@@ -144,8 +144,8 @@ records.forEach((record: any, index: number) => {
         const year = maturityDate.getUTCFullYear();
         const formattedDate = `${day}${month}${year}`;
 
-        marketData.marketName = `${underlyingSymbol}/${collateralSymbol}-${formattedDate}`;
-        marketData.marketSymbol = `${underlyingSymbol}/${collateralSymbol}-${formattedDate}`;
+        marketData.marketName = `${underlyingSymbol}/${collateralSymbol}@${formattedDate}`;
+        marketData.marketSymbol = `${underlyingSymbol}/${collateralSymbol}@${formattedDate}`;
 
         // Debug log for the first record
         if (index === 0) {
