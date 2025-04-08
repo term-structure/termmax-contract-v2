@@ -145,11 +145,11 @@ contract VaultTest is Test {
         vm.stopPrank();
 
         // Test revoke guardian
-        newGuardian = address(0x456);
+        address nextGuardian = address(0x456);
         vm.prank(deployer);
-        vault.submitGuardian(newGuardian);
+        vault.submitGuardian(nextGuardian);
 
-        vm.prank(guardian);
+        vm.prank(newGuardian);
         vault.revokePendingGuardian();
         assertEq(vault.pendingGuardian().value, address(0));
 
