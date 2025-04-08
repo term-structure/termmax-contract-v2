@@ -258,6 +258,22 @@ contract AccessManagerTest is Test {
         );
         manager.setCuratorForVault(ITermMaxVault(address(vault)), newCurator);
         vm.stopPrank();
+
+        // Test that non-vault role cannot set allocator
+        address allocator = vm.randomAddress();
+        vm.startPrank(allocator);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector, allocator, manager.VAULT_ROLE()
+            )
+        );
+        manager.setIsAllocatorForVault(ITermMaxVault(address(vault)), allocator, true);
+        vm.stopPrank();
+
+        // Test that vault role can set allocator
+        vm.prank(deployer);
+        manager.setIsAllocatorForVault(ITermMaxVault(address(vault)), allocator, true);
+        assertTrue(vault.isAllocator(allocator));
     }
 
     function testRevokeVaultPendingValues() public {
@@ -520,5 +536,18 @@ contract AccessManagerTest is Test {
         OrderConfig memory updatedConfig = res.order.orderConfig();
         assertEq(updatedConfig.feeConfig.lendTakerFeeRatio, newFeeConfig.lendTakerFeeRatio);
         assertEq(updatedConfig.feeConfig.borrowTakerFeeRatio, newFeeConfig.borrowTakerFeeRatio);
+    }
+
+    function testUpdateMarketConfig() public {
+        // Get new market config from testdata
+        MarketConfig memory newMarketConfig = marketConfig;
+        newMarketConfig.treasurer = address(0x123);
+        // Test that configurator role can update market config
+        vm.prank(deployer);
+        manager.updateMarketConfig(res.market, newMarketConfig);
+
+        // Verify market config was updated
+        MarketConfig memory updatedConfig = res.market.config();
+        assertEq(updatedConfig.treasurer, newMarketConfig.treasurer);
     }
 }
