@@ -41,3 +41,7 @@ ignition/deployments/chain-31337
 
 # log
 /log
+
+# Soldeer
+/dependencies
+soldeer.lock

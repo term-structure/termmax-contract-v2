@@ -13,8 +13,7 @@ Bounty plan: https://immunefi.com/bug-bounty/termstructurelabs/information/
 
 ### Install Dependencies
 ```shell
-$ git submodule init
-$ git submodule update
+$ forge soldeer update
 ```
 
 ### Build

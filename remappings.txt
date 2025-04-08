@@ -1,0 +1,8 @@
+@chainlink/contracts/=dependencies/@chainlink-contracts-1.2.0/
+@morpho/=dependencies/metamorpho-1.0.0/
+@openzeppelin/contracts-upgradeable/=dependencies/@openzeppelin-contracts-upgradeable-5.2.0/
+@openzeppelin/contracts/=dependencies/@openzeppelin-contracts-5.2.0/
+@pendle/core-v2/=dependencies/pendle-core-v2-1.0.0/
+@uniswap/v3-core/=dependencies/@uniswap-v3-core-1.0.2-solc-0.8-simulate/
+@uniswap/v3-periphery/=dependencies/@uniswap-v3-periphery-1.4.4/
+forge-std/=dependencies/forge-std-1.9.6/src/
