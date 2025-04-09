@@ -18,7 +18,7 @@ import {MockERC20, ERC20} from "contracts/test/MockERC20.sol";
 import {MockPriceFeed} from "contracts/test/MockPriceFeed.sol";
 import {TermMaxVault} from "contracts/vault/TermMaxVault.sol";
 import {VaultErrors, VaultEvents, ITermMaxVault} from "contracts/vault/TermMaxVault.sol";
-import {OrderManager} from "contracts/vault/OrderManager.sol";
+import {OrderManager, OrderInfo} from "contracts/vault/OrderManager.sol";
 import {VaultConstants} from "contracts/lib/VaultConstants.sol";
 import {PendingAddress, PendingUint192} from "contracts/lib/PendingLib.sol";
 import "contracts/storage/TermMaxStorage.sol";
@@ -144,6 +144,15 @@ contract VaultTest is Test {
         assertEq(vault.guardian(), newGuardian);
         vm.stopPrank();
 
+        // Test revoke guardian
+        address nextGuardian = address(0x456);
+        vm.prank(deployer);
+        vault.submitGuardian(nextGuardian);
+
+        vm.prank(newGuardian);
+        vault.revokePendingGuardian();
+        assertEq(vault.pendingGuardian().value, address(0));
+
         // Test curator role
         vm.prank(deployer);
         address newCurator = address(0x456);
@@ -205,8 +214,16 @@ contract VaultTest is Test {
 
         vault.submitMarket(market, false);
         assertEq(vault.marketWhitelist(market), false);
-
         vm.stopPrank();
+
+        // Test revoke market
+        address newMarket = address(0x456);
+        vm.prank(curator);
+        vault.submitMarket(newMarket, true);
+
+        vm.prank(guardian);
+        vault.revokePendingMarket(newMarket);
+        assertEq(vault.pendingMarkets(newMarket).validAt, 0);
     }
 
     function test_RevertSetMarketWhitelist() public {
@@ -271,6 +288,15 @@ contract VaultTest is Test {
         vm.prank(vm.randomAddress());
         vault.acceptTimelock();
         assertEq(vault.timelock(), newTimelock);
+
+        // revoke
+        vm.warp(currentTime + 3 days);
+        vm.prank(curator);
+        vault.submitTimelock(1 days);
+        vm.prank(guardian);
+        vault.revokePendingTimelock();
+        pendingTimelock = vault.pendingTimelock();
+        assertEq(uint256(pendingTimelock.value), 0);
     }
 
     function test_RevertSetTimelock() public {
@@ -377,6 +403,11 @@ contract VaultTest is Test {
         vm.startPrank(curator);
         for (uint256 i = 1; i < orderCount; i++) {
             address order = address(vault.createOrder(res.market, maxCapacity, 0, orderConfig.curveCuts));
+            OrderInfo memory orderInfo = vault.orderMapping(order);
+            assertEq(address(orderInfo.market), address(res.market));
+            assertEq(orderInfo.maturity, res.market.config().maturity);
+            assertEq(address(orderInfo.ft), address(res.ft));
+            assertEq(address(orderInfo.xt), address(res.xt));
             supplyQueue[i] = order;
             assertEq(vault.supplyQueue(i), order);
         }

@@ -630,19 +630,6 @@ contract OrderTest is Test {
         res.market.mint(address(res.order), 150e8);
         vm.stopPrank();
 
-        (uint256 lendApr, uint256 borrowApr) = res.order.apr();
-        uint256 apr;
-
-        if (isBuy && isFt) {
-            apr = borrowApr;
-        } else if (isBuy && !isFt) {
-            apr = lendApr;
-        } else if (!isBuy && isFt) {
-            apr = lendApr;
-        } else if (!isBuy && !isFt) {
-            apr = borrowApr;
-        }
-
         vm.startPrank(sender);
 
         res.debt.mint(sender, swapAmt * 2);
@@ -823,6 +810,28 @@ contract OrderTest is Test {
 
         assert(lendApr == 0);
         assert(borrowApr == type(uint256).max);
+    }
+
+    function testAprWithCurve() public {
+        vm.startPrank(maker);
+        OrderConfig memory testOrderConfig = res.order.orderConfig();
+        testOrderConfig.curveCuts.lendCurveCuts = new CurveCut[](0);
+
+        res.order.updateOrder(testOrderConfig, 0, 0);
+
+        (uint256 lendApr, uint256 borrowApr) = res.order.apr();
+
+        assert(lendApr == 0);
+
+        testOrderConfig = res.order.orderConfig();
+        testOrderConfig.curveCuts.borrowCurveCuts = new CurveCut[](0);
+        res.order.updateOrder(testOrderConfig, 0, 0);
+
+        (lendApr, borrowApr) = res.order.apr();
+
+        assert(borrowApr == type(uint256).max);
+
+        vm.stopPrank();
     }
 }
 
