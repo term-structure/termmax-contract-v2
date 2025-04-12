@@ -16,14 +16,10 @@ abstract contract PendleHelper {
 
     /// @notice create a simple TokenInput struct without using any aggregators. For more info please refer to
     /// IPAllActionTypeV3.sol
-    function createTokenInputStruct(address tokenIn, uint256 netTokenIn) internal view returns (TokenInput memory) {
-        return TokenInput({
-            tokenIn: tokenIn,
-            netTokenIn: netTokenIn,
-            tokenMintSy: tokenIn,
-            pendleSwap: address(0),
-            swapData: emptySwap
-        });
+    function createTokenInputStruct(address tokenIn, uint256 netTokenIn) internal view returns (TokenInput memory input) {
+        input.tokenIn = tokenIn;
+        input.netTokenIn = netTokenIn;
+        input.tokenMintSy = tokenIn;
     }
 
     /// @notice create a simple TokenOutput struct without using any aggregators. For more info please refer to
@@ -31,14 +27,10 @@ abstract contract PendleHelper {
     function createTokenOutputStruct(address tokenOut, uint256 minTokenOut)
         internal
         view
-        returns (TokenOutput memory)
+        returns (TokenOutput memory output)
     {
-        return TokenOutput({
-            tokenOut: tokenOut,
-            minTokenOut: minTokenOut,
-            tokenRedeemSy: tokenOut,
-            pendleSwap: address(0),
-            swapData: emptySwap
-        });
+        output.tokenOut = tokenOut;
+        output.minTokenOut = minTokenOut;
+        output.tokenRedeemSy = tokenOut;
     }
 }

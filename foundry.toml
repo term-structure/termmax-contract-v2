@@ -40,7 +40,7 @@ forge-std = "1.9.6"
 "@chainlink-contracts" = "1.2.0"
 "@uniswap-v3-core" = "1.0.2-solc-0.8-simulate"
 "@uniswap-v3-periphery" = "1.4.4"
-pendle-core-v2 = { version = "1.0.0", git = "https://github.com/pendle-finance/pendle-core-v2-public.git", rev = "d6126bde7bbd9da521f16d561931ddf90515bf69" }
+pendle-core-v2 = { version = "1.0.0", git = "https://github.com/pendle-finance/pendle-core-v2-public.git", rev = "d3dafee28062c7ee14bc2471fa0d6b4a4bc2569f" }
 metamorpho = { version = "1.0.0", git = "https://github.com/morpho-org/metamorpho.git", rev = "00da9ad27da8051bce663eeac02f3b9c0c0aa8d8" }
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
