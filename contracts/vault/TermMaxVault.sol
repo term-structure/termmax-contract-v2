@@ -193,7 +193,8 @@ contract TermMaxVault is
      * @inheritdoc ITermMaxVault
      */
     function accretingPrincipal() external view returns (uint256) {
-        return _accretingPrincipal / Constants.DECIMAL_BASE_SQ;
+        (uint256 ap,) = _previewAccruedInterest();
+        return ap / Constants.DECIMAL_BASE_SQ;
     }
 
     /**
@@ -207,7 +208,8 @@ contract TermMaxVault is
      * @inheritdoc ITermMaxVault
      */
     function performanceFee() external view returns (uint256) {
-        return _performanceFee / Constants.DECIMAL_BASE_SQ;
+        (, uint256 pf) = _previewAccruedInterest();
+        return pf / Constants.DECIMAL_BASE_SQ;
     }
 
     /**

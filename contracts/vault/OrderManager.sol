@@ -394,5 +394,4 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
         ///greater than or equal to the principal and the allocated interest
         _checkLockedFt();
     }
-
 }
