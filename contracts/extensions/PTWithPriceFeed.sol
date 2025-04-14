@@ -2,8 +2,8 @@
 pragma solidity ^0.8.27;
 
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
-import {PendlePYLpOracle} from "@pendle/core-v2/contracts/oracles/PendlePYLpOracle.sol";
-import {PendlePYOracleLib} from "@pendle/core-v2/contracts/oracles/PendlePYOracleLib.sol";
+import {PendlePYLpOracle} from "@pendle/core-v2/contracts/oracles/PtYtLpOracle/PendlePYLpOracle.sol";
+import {PendlePYOracleLib} from "@pendle/core-v2/contracts/oracles/PtYtLpOracle/PendlePYOracleLib.sol";
 import {PMath} from "@pendle/core-v2/contracts/core/libraries/math/PMath.sol";
 import {IPMarket} from "@pendle/core-v2/contracts/interfaces/IPMarket.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
