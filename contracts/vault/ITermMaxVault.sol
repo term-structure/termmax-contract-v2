@@ -152,10 +152,10 @@ interface ITermMaxVault is IERC4626 {
 
     /**
      * @notice Returns the bad debt mapping information
-     * @param order The order address to retrieve
-     * @return The bad debt amount associated with the order
+     * @param collateral The collateral address to retrieve
+     * @return The bad debt amount associated with the collateral
      */
-    function badDebtMapping(address order) external view returns (uint256);
+    function badDebtMapping(address collateral) external view returns (uint256);
 
     /**
      * @notice Creates a new order

@@ -234,8 +234,8 @@ contract TermMaxVault is
     /**
      * @inheritdoc ITermMaxVault
      */
-    function badDebtMapping(address order) external view returns (uint256) {
-        return _badDebtMapping[order];
+    function badDebtMapping(address collateral) external view returns (uint256) {
+        return _badDebtMapping[collateral];
     }
 
     /**
