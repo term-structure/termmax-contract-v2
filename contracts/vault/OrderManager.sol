@@ -371,8 +371,7 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
         if (deltaFt > 0) {
             ftChanges = uint256(deltaFt) * Constants.DECIMAL_BASE_SQ;
             _totalFt += ftChanges;
-            uint256 deltaAnnualizedInterest =
-                ftChanges * 1 days * Constants.DAYS_IN_YEAR / uint256(maturity - block.timestamp);
+            uint256 deltaAnnualizedInterest = ftChanges * 365 days / uint256(maturity - block.timestamp);
 
             _maturityToInterest[maturity] += deltaAnnualizedInterest;
 
@@ -380,8 +379,7 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
         } else {
             ftChanges = uint256(-deltaFt) * Constants.DECIMAL_BASE_SQ;
             _totalFt -= ftChanges;
-            uint256 deltaAnnualizedInterest =
-                (ftChanges * 1 days * Constants.DAYS_IN_YEAR) / uint256(maturity - block.timestamp);
+            uint256 deltaAnnualizedInterest = (ftChanges * 365 days) / uint256(maturity - block.timestamp);
             if (
                 _maturityToInterest[maturity] < deltaAnnualizedInterest || _annualizedInterest < deltaAnnualizedInterest
             ) {
