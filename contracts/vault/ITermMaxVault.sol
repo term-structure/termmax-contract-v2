@@ -37,7 +37,7 @@ interface ITermMaxVault is IERC4626 {
 
     /**
      * @notice Returns the current Annual Percentage Rate (APR)
-     * @return The current APR as a percentage with 18 decimals
+     * @return The current APR as a percentage with 8 decimals
      */
     function apr() external view returns (uint256);
 
