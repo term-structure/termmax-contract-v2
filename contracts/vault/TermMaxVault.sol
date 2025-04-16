@@ -245,8 +245,7 @@ contract TermMaxVault is
      */
     function apr() external view returns (uint256) {
         if (_accretingPrincipal == 0) return 0;
-        (uint256 previewPrincipal,) = _previewAccruedInterest();
-        return (_annualizedInterest * (Constants.DECIMAL_BASE - _performanceFeeRate)) / (previewPrincipal);
+        return (_annualizedInterest * (Constants.DECIMAL_BASE - _performanceFeeRate)) / (_accretingPrincipal);
     }
 
     /**
