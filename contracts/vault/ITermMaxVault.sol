@@ -37,7 +37,7 @@ interface ITermMaxVault is IERC4626 {
 
     /**
      * @notice Returns the current Annual Percentage Rate (APR)
-     * @return The current APR as a percentage with 18 decimals
+     * @return The current APR as a percentage with 8 decimals
      */
     function apr() external view returns (uint256);
 
@@ -152,10 +152,10 @@ interface ITermMaxVault is IERC4626 {
 
     /**
      * @notice Returns the bad debt mapping information
-     * @param order The order address to retrieve
-     * @return The bad debt amount associated with the order
+     * @param collateral The collateral address to retrieve
+     * @return The bad debt amount associated with the collateral
      */
-    function badDebtMapping(address order) external view returns (uint256);
+    function badDebtMapping(address collateral) external view returns (uint256);
 
     /**
      * @notice Creates a new order

@@ -159,7 +159,7 @@ contract TermMaxMarket is
         if (
             fee.borrowTakerFeeRatio >= Constants.MAX_FEE_RATIO || fee.borrowMakerFeeRatio >= Constants.MAX_FEE_RATIO
                 || fee.lendTakerFeeRatio >= Constants.MAX_FEE_RATIO || fee.lendMakerFeeRatio >= Constants.MAX_FEE_RATIO
-                || fee.mintGtFeeRatio >= Constants.MAX_FEE_RATIO || fee.mintGtFeeRef > Constants.DECIMAL_BASE
+                || fee.mintGtFeeRatio >= Constants.MAX_FEE_RATIO || fee.mintGtFeeRef > 5 * Constants.DECIMAL_BASE
         ) revert FeeTooHigh();
     }
 

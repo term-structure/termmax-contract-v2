@@ -371,7 +371,7 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
         if (deltaFt > 0) {
             ftChanges = uint256(deltaFt) * Constants.DECIMAL_BASE_SQ;
             _totalFt += ftChanges;
-            uint256 deltaAnnualizedInterest = (ftChanges * Constants.DAYS_IN_YEAR) / _daysToMaturity(maturity);
+            uint256 deltaAnnualizedInterest = ftChanges * 365 days / uint256(maturity - block.timestamp);
 
             _maturityToInterest[maturity] += deltaAnnualizedInterest;
 
@@ -379,7 +379,7 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
         } else {
             ftChanges = uint256(-deltaFt) * Constants.DECIMAL_BASE_SQ;
             _totalFt -= ftChanges;
-            uint256 deltaAnnualizedInterest = (ftChanges * Constants.DAYS_IN_YEAR) / _daysToMaturity(maturity);
+            uint256 deltaAnnualizedInterest = (ftChanges * 365 days) / uint256(maturity - block.timestamp);
             if (
                 _maturityToInterest[maturity] < deltaAnnualizedInterest || _annualizedInterest < deltaAnnualizedInterest
             ) {
@@ -391,10 +391,5 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
         /// @dev Ensure that the total assets after the transaction are
         ///greater than or equal to the principal and the allocated interest
         _checkLockedFt();
-    }
-
-    /// @notice Calculate how many days until expiration
-    function _daysToMaturity(uint256 maturity) internal view returns (uint256 daysToMaturity) {
-        daysToMaturity = (maturity - block.timestamp + Constants.SECONDS_IN_DAY - 1) / Constants.SECONDS_IN_DAY;
     }
 }
