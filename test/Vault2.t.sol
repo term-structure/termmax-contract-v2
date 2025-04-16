@@ -124,7 +124,7 @@ contract VaultTest2 is Test {
         }
     }
 
-    function testActions2() public {
+    function testDust() public {
         uint256 count = 0;
         while (block.timestamp < currentTime + 30 days) {
             uint256 k = vm.randomUint(2 ** 128 - 1, 2 ** 256 - 1);
@@ -202,7 +202,9 @@ contract VaultTest2 is Test {
             console.log("remainning total assets:", vault.totalAssets());
             vm.stopPrank();
         }
-        console.log("remaining balance:", resources[0].debt.balanceOf(address(vault)));
+        uint256 dustAmt = resources[0].debt.balanceOf(address(vault));
+        console.log("remaining balance:", dustAmt);
+        assertLe(dustAmt, 2);
     }
 
     function buyFt(ITermMaxOrder order, uint128 tokenAmtIn, uint128 ftAmtOut) internal {
