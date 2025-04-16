@@ -91,7 +91,7 @@ contract MarketTest is Test {
         vm.startPrank(deployer);
 
         MarketConfig memory newConfig = res.market.config();
-        newConfig.feeConfig.mintGtFeeRef = uint32(Constants.DECIMAL_BASE + 1);
+        newConfig.feeConfig.mintGtFeeRef = uint32(Constants.DECIMAL_BASE * 5 + 1);
         vm.expectRevert(abi.encodeWithSelector(MarketErrors.FeeTooHigh.selector));
         res.market.updateMarketConfig(newConfig);
 
