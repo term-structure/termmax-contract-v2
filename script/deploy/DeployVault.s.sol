@@ -34,11 +34,11 @@ contract DeloyVault is DeployBase {
     address curator = address(0x2A58A3D405c527491Daae4C62561B949e7F87EFE);
     address guardian = address(0x2A58A3D405c527491Daae4C62561B949e7F87EFE);
     address allocator = address(0x2A58A3D405c527491Daae4C62561B949e7F87EFE);
-    string name = "TermMax USDC Vault";
-    string symbol = "TermMax USDC Vault";
-    uint256 timelock = 1;
-    uint256 maxCapacity = 10000000e6;
-    uint64 performanceFeeRate = 0.1e8;
+    string name = "TermMax USDC Prime";
+    string symbol = "TMX-USDC-PRIME";
+    uint256 timelock = 1 days;
+    uint256 maxCapacity = 50000000e6;
+    uint64 performanceFeeRate = 0;
 
     // Network-specific config loaded from environment variables
     string network;
