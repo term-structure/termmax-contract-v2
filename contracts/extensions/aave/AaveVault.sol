@@ -36,7 +36,7 @@ contract AaveVault is ERC4626Upgradeable, StakingBuffer, ReentrancyGuardUpgradea
     }
 
     function totalAssets() public view override returns (uint256) {
-        return aToken.balanceOf(address(this));
+        return aToken.balanceOf(address(this)) + IERC20(asset()).balanceOf(address(this));
     }
 
     function _deposit(address caller, address receiver, uint256 assets, uint256 shares) internal override {
