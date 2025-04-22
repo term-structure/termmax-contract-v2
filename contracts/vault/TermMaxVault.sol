@@ -11,7 +11,6 @@ import {
 } from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC4626Upgradeable.sol";
 import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
-import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {PendingLib, PendingAddress, PendingUint192} from "contracts/lib/PendingLib.sol";
 import {ITermMaxMarket} from "contracts/ITermMaxMarket.sol";
 import {CurveCuts, VaultInitialParams} from "contracts/storage/TermMaxStorage.sol";
