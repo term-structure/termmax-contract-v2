@@ -181,41 +181,39 @@ contract TermMaxMarket is
         emit Mint(caller, recipient, debtTokenAmt);
     }
 
-    function burn(address recipient, uint256 debtTokenAmt) external override nonReentrant isOpen {
-        _burn(msg.sender, recipient, debtTokenAmt);
+    function burn(address owner, address recipient, uint256 debtTokenAmt) external override nonReentrant isOpen {
+        _burn(owner, msg.sender, recipient, debtTokenAmt);
     }
 
-    function _burn(address caller, address recipient, uint256 debtTokenAmt) internal {
-        ft.safeTransferFrom(caller, address(this), debtTokenAmt);
-        xt.safeTransferFrom(caller, address(this), debtTokenAmt);
-
-        ft.burn(debtTokenAmt);
-        xt.burn(debtTokenAmt);
+    function _burn(address owner, address spender, address recipient, uint256 debtTokenAmt) internal {
+        ft.burn(owner, spender, debtTokenAmt);
+        xt.burn(owner, spender, debtTokenAmt);
 
         debtToken.safeTransfer(recipient, debtTokenAmt);
 
-        emit Burn(caller, recipient, debtTokenAmt);
+        emit Burn(owner, recipient, debtTokenAmt);
     }
 
     /**
      * @inheritdoc ITermMaxMarket
      */
-    function leverageByXt(address recipient, uint128 xtAmt, bytes calldata callbackData)
+    function leverageByXt(address xtOwner, address recipient, uint128 xtAmt, bytes calldata callbackData)
         external
         override
         nonReentrant
         isOpen
         returns (uint256 gtId)
     {
-        return _leverageByXt(msg.sender, recipient, xtAmt, callbackData);
+        return _leverageByXt(xtOwner, msg.sender, recipient, xtAmt, callbackData);
     }
 
-    function _leverageByXt(address loanReceiver, address gtReceiver, uint128 xtAmt, bytes calldata callbackData)
-        internal
-        returns (uint256 gtId)
-    {
-        xt.safeTransferFrom(loanReceiver, address(this), xtAmt);
-
+    function _leverageByXt(
+        address xtOwner,
+        address loanReceiver,
+        address gtReceiver,
+        uint128 xtAmt,
+        bytes calldata callbackData
+    ) internal returns (uint256 gtId) {
         // Send debt to borrower
         debtToken.safeTransfer(loanReceiver, xtAmt);
         // Callback function
@@ -231,7 +229,7 @@ contract TermMaxMarket is
         // Mint GT
         gtId = gt.mint(loanReceiver, gtReceiver, debt, collateralData);
 
-        xt.burn(xtAmt);
+        xt.burn(xtOwner, msg.sender, xtAmt);
         emit LeverageByXt(loanReceiver, gtReceiver, gtId, debt, xtAmt, leverageFee, collateralData);
     }
 
@@ -323,17 +321,17 @@ contract TermMaxMarket is
     /**
      * @inheritdoc ITermMaxMarket
      */
-    function redeem(uint256 ftAmount, address recipient)
+    function redeem(address ftOwner, address recipient, uint256 ftAmount)
         external
         virtual
         override
         nonReentrant
         returns (uint256, bytes memory)
     {
-        return _redeem(msg.sender, recipient, ftAmount);
+        return _redeem(ftOwner, msg.sender, recipient, ftAmount);
     }
 
-    function _redeem(address caller, address recipient, uint256 ftAmount)
+    function _redeem(address ftOwner, address caller, address recipient, uint256 ftAmount)
         internal
         returns (uint256 debtTokenAmt, bytes memory deliveryData)
     {
@@ -345,14 +343,17 @@ contract TermMaxMarket is
                 revert CanNotRedeemBeforeFinalLiquidationDeadline(liquidationDeadline);
             }
         }
-
-        // Burn ft reserves
-        ft.burn(ft.balanceOf(address(this)));
-
-        ft.safeTransferFrom(caller, address(this), ftAmount);
+        // burn ft reserves(from repayment or liquidation)
+        uint256 ftReserve = ft.balanceOf(address(this));
+        if (ftReserve > 0) {
+            ft.burn(address(this), address(this), ftReserve);
+        }
 
         // The proportion that user will get how many debtToken and collateral should be deliveried
         uint256 proportion = (ftAmount * Constants.DECIMAL_BASE_SQ) / ft.totalSupply();
+
+        // Burn ft
+        ft.burn(ftOwner, caller, ftAmount);
 
         deliveryData = gt.delivery(proportion, recipient);
         // Transfer debtToken output

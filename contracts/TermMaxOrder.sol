@@ -491,9 +491,7 @@ contract TermMaxOrder is
             uint256 ftReserve = getInitialFtReserve();
             _issueFtToSelf(ftReserve, netOut + feeAmt, config);
         }
-        ft.approve(address(market), netOut);
-        xt.approve(address(market), netOut);
-        market.burn(recipient, netOut);
+        market.burn(address(this), recipient, netOut);
         return (netOut, feeAmt);
     }
 
@@ -707,9 +705,7 @@ contract TermMaxOrder is
             uint256 ftReserve = getInitialFtReserve();
             _issueFtToSelf(ftReserve, debtTokenAmtOut + feeAmt, config);
         }
-        ft.approve(address(market), debtTokenAmtOut);
-        xt.approve(address(market), debtTokenAmtOut);
-        market.burn(recipient, debtTokenAmtOut);
+        market.burn(address(this), recipient, debtTokenAmtOut);
         return (netTokenIn, feeAmt);
     }
 
@@ -762,7 +758,11 @@ contract TermMaxOrder is
     }
 
     function withdrawAssets(IERC20 token, address recipient, uint256 amount) external onlyOwner {
-        token.safeTransfer(recipient, amount);
+        if (token == debtToken) {
+            market.burn(address(this), recipient, amount);
+        } else {
+            token.safeTransfer(recipient, amount);
+        }
         emit WithdrawAssets(token, _msgSender(), recipient, amount);
     }
 
