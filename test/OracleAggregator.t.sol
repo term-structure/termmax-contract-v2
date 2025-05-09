@@ -498,4 +498,64 @@ contract OracleAggregatorTest is Test {
         assertEq(price, uint256(extremelyHighBackupPrice));
         assertEq(decimals, DECIMALS);
     }
+
+    function test_GetPrice_NoBackupAggregator() public {
+        // Create an oracle with no backup aggregator
+        IOracle.Oracle memory oracle = IOracle.Oracle({
+            aggregator: primaryFeed,
+            backupAggregator: AggregatorV3Interface(address(0)),
+            heartbeat: HEARTBEAT,
+            backupHeartbeat: 0,
+            maxPrice: MAX_PRICE
+        });
+
+        vm.startPrank(OWNER);
+        oracleAggregator.submitPendingOracle(ASSET, oracle);
+        vm.warp(block.timestamp + TIMELOCK + 1);
+        vm.stopPrank();
+
+        oracleAggregator.acceptPendingOracle(ASSET);
+
+        // Set normal price
+        int256 newPrice = 3200e8;
+        MockPriceFeed.RoundData memory roundData = MockPriceFeed.RoundData({
+            roundId: 2,
+            answer: newPrice,
+            startedAt: block.timestamp,
+            updatedAt: block.timestamp,
+            answeredInRound: 2
+        });
+        vm.prank(OWNER);
+        primaryFeed.updateRoundData(roundData);
+
+        // Get price - should return the primary price
+        (uint256 price, uint8 decimals) = oracleAggregator.getPrice(ASSET);
+        assertEq(price, uint256(newPrice));
+        assertEq(decimals, DECIMALS);
+    }
+
+    function test_RevertGetPrice_NoBackupAggregator_PrimaryStale() public {
+        // Create an oracle with no backup aggregator
+        IOracle.Oracle memory oracle = IOracle.Oracle({
+            aggregator: primaryFeed,
+            backupAggregator: AggregatorV3Interface(address(0)),
+            heartbeat: HEARTBEAT,
+            backupHeartbeat: 0,
+            maxPrice: MAX_PRICE
+        });
+
+        vm.startPrank(OWNER);
+        oracleAggregator.submitPendingOracle(ASSET, oracle);
+        vm.warp(block.timestamp + TIMELOCK + 1);
+        vm.stopPrank();
+
+        oracleAggregator.acceptPendingOracle(ASSET);
+
+        // Make primary oracle stale
+        vm.warp(block.timestamp + HEARTBEAT + 1);
+
+        // Should revert since primary is stale and no backup exists
+        vm.expectRevert(abi.encodeWithSignature("OracleIsNotWorking(address)", ASSET));
+        oracleAggregator.getPrice(ASSET);
+    }
 }
