@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {ITermMaxPriceFeed, AggregatorV3Interface} from "./ITermMaxPriceFeed.sol";
 import {MathLib} from "contracts/lib/MathLib.sol";
 
-contract PriceFeedConverter is AggregatorV3Interface {
+contract TermMaxPriceFeedConverter is ITermMaxPriceFeed {
     using MathLib for *;
 
     error GetRoundDataNotSupported();
@@ -13,8 +14,10 @@ contract PriceFeedConverter is AggregatorV3Interface {
     AggregatorV3Interface public immutable bTokenToCTokenPriceFeed;
 
     int256 immutable priceDemonitor;
+    address public immutable asset;
 
-    constructor(address _aTokenToBTokenPriceFeed, address _bTokenToCTokenPriceFeed) {
+    constructor(address _asset, address _aTokenToBTokenPriceFeed, address _bTokenToCTokenPriceFeed) {
+        asset = _asset;
         aTokenToBTokenPriceFeed = AggregatorV3Interface(_aTokenToBTokenPriceFeed);
         bTokenToCTokenPriceFeed = AggregatorV3Interface(_bTokenToCTokenPriceFeed);
         priceDemonitor =
@@ -26,9 +29,8 @@ contract PriceFeedConverter is AggregatorV3Interface {
     }
 
     function description() external view returns (string memory) {
-        return string(
-            abi.encodePacked(aTokenToBTokenPriceFeed.description(), " - ", bTokenToCTokenPriceFeed.description())
-        );
+        string memory symbol = IERC20Metadata(asset).symbol();
+        return string(abi.encodePacked("TermMax price feed: ", symbol, "/USD"));
     }
 
     function version() external view returns (uint256) {
