@@ -295,4 +295,207 @@ contract OracleAggregatorTest is Test {
         assertEq(backupHeartbeat, 0);
         assertEq(maxPrice, 0);
     }
+
+    function test_GetPrice_PrimaryExceedsMaxPrice_NoBackup() public {
+        // Create an oracle with maxPrice and no backup
+        IOracle.Oracle memory oracle = IOracle.Oracle({
+            aggregator: primaryFeed,
+            backupAggregator: AggregatorV3Interface(address(0)),
+            heartbeat: HEARTBEAT,
+            backupHeartbeat: 0,
+            maxPrice: MAX_PRICE
+        });
+
+        vm.startPrank(OWNER);
+        oracleAggregator.submitPendingOracle(ASSET, oracle);
+        vm.warp(block.timestamp + TIMELOCK + 1);
+        vm.stopPrank();
+
+        oracleAggregator.acceptPendingOracle(ASSET);
+
+        // Set primary price above maxPrice
+        int256 highPrice = MAX_PRICE + 1000e8;
+        MockPriceFeed.RoundData memory roundData = MockPriceFeed.RoundData({
+            roundId: 2,
+            answer: highPrice,
+            startedAt: block.timestamp,
+            updatedAt: block.timestamp,
+            answeredInRound: 2
+        });
+        vm.prank(OWNER);
+        primaryFeed.updateRoundData(roundData);
+
+        // Get price - should return maxPrice instead of actual price
+        (uint256 price, uint8 decimals) = oracleAggregator.getPrice(ASSET);
+        assertEq(price, uint256(MAX_PRICE));
+        assertEq(decimals, DECIMALS);
+    }
+
+    function test_GetPrice_PrimaryExceedsMaxPrice_WithBackup() public {
+        // Create an oracle with maxPrice
+        IOracle.Oracle memory oracle = IOracle.Oracle({
+            aggregator: primaryFeed,
+            backupAggregator: backupFeed,
+            heartbeat: HEARTBEAT,
+            backupHeartbeat: BACKUP_HEARTBEAT,
+            maxPrice: MAX_PRICE
+        });
+
+        vm.startPrank(OWNER);
+        oracleAggregator.submitPendingOracle(ASSET, oracle);
+        vm.warp(block.timestamp + TIMELOCK + 1);
+        vm.stopPrank();
+
+        oracleAggregator.acceptPendingOracle(ASSET);
+
+        // Set primary price above maxPrice
+        int256 highPrice = MAX_PRICE + 1000e8;
+        MockPriceFeed.RoundData memory primaryRoundData = MockPriceFeed.RoundData({
+            roundId: 2,
+            answer: highPrice,
+            startedAt: block.timestamp,
+            updatedAt: block.timestamp,
+            answeredInRound: 2
+        });
+        
+        // Set backup price below maxPrice
+        int256 validBackupPrice = MAX_PRICE - 1000e8;
+        MockPriceFeed.RoundData memory backupRoundData = MockPriceFeed.RoundData({
+            roundId: 2,
+            answer: validBackupPrice,
+            startedAt: block.timestamp,
+            updatedAt: block.timestamp,
+            answeredInRound: 2
+        });
+        
+        vm.startPrank(OWNER);
+        primaryFeed.updateRoundData(primaryRoundData);
+        backupFeed.updateRoundData(backupRoundData);
+        vm.stopPrank();
+
+        // Get price - should fallback to backup oracle
+        (uint256 price, uint8 decimals) = oracleAggregator.getPrice(ASSET);
+        assertEq(price, uint256(validBackupPrice));
+        assertEq(decimals, DECIMALS);
+    }
+
+    function test_GetPrice_BothExceedMaxPrice() public {
+        // Create an oracle with maxPrice
+        IOracle.Oracle memory oracle = IOracle.Oracle({
+            aggregator: primaryFeed,
+            backupAggregator: backupFeed,
+            heartbeat: HEARTBEAT,
+            backupHeartbeat: BACKUP_HEARTBEAT,
+            maxPrice: MAX_PRICE
+        });
+
+        vm.startPrank(OWNER);
+        oracleAggregator.submitPendingOracle(ASSET, oracle);
+        vm.warp(block.timestamp + TIMELOCK + 1);
+        vm.stopPrank();
+
+        oracleAggregator.acceptPendingOracle(ASSET);
+
+        // Set both primary and backup prices above maxPrice
+        int256 highPrimaryPrice = MAX_PRICE + 1000e8;
+        MockPriceFeed.RoundData memory primaryRoundData = MockPriceFeed.RoundData({
+            roundId: 2,
+            answer: highPrimaryPrice,
+            startedAt: block.timestamp,
+            updatedAt: block.timestamp,
+            answeredInRound: 2
+        });
+        
+        int256 highBackupPrice = MAX_PRICE + 500e8;
+        MockPriceFeed.RoundData memory backupRoundData = MockPriceFeed.RoundData({
+            roundId: 2,
+            answer: highBackupPrice,
+            startedAt: block.timestamp,
+            updatedAt: block.timestamp,
+            answeredInRound: 2
+        });
+        
+        vm.startPrank(OWNER);
+        primaryFeed.updateRoundData(primaryRoundData);
+        backupFeed.updateRoundData(backupRoundData);
+        vm.stopPrank();
+
+        // Get price - should use backup capped at maxPrice
+        (uint256 price, uint8 decimals) = oracleAggregator.getPrice(ASSET);
+        assertEq(price, uint256(MAX_PRICE));
+        assertEq(decimals, DECIMALS);
+    }
+
+    function test_GetPrice_WithMaxPriceZero_PrimaryOracle() public {
+        // Create an oracle with maxPrice set to 0 (no price cap)
+        IOracle.Oracle memory oracle = IOracle.Oracle({
+            aggregator: primaryFeed,
+            backupAggregator: backupFeed,
+            heartbeat: HEARTBEAT,
+            backupHeartbeat: BACKUP_HEARTBEAT,
+            maxPrice: 0 // No price cap
+        });
+
+        vm.startPrank(OWNER);
+        oracleAggregator.submitPendingOracle(ASSET, oracle);
+        vm.warp(block.timestamp + TIMELOCK + 1);
+        vm.stopPrank();
+
+        oracleAggregator.acceptPendingOracle(ASSET);
+
+        // Set very high price that would normally exceed any reasonable cap
+        int256 extremelyHighPrice = 1000000e8; // 1 million units
+        MockPriceFeed.RoundData memory roundData = MockPriceFeed.RoundData({
+            roundId: 2,
+            answer: extremelyHighPrice,
+            startedAt: block.timestamp,
+            updatedAt: block.timestamp,
+            answeredInRound: 2
+        });
+        vm.prank(OWNER);
+        primaryFeed.updateRoundData(roundData);
+
+        // Get price - should return the full price without capping
+        (uint256 price, uint8 decimals) = oracleAggregator.getPrice(ASSET);
+        assertEq(price, uint256(extremelyHighPrice));
+        assertEq(decimals, DECIMALS);
+    }
+
+    function test_GetPrice_WithMaxPriceZero_FallbackToBackup() public {
+        // Create an oracle with maxPrice set to 0 (no price cap)
+        IOracle.Oracle memory oracle = IOracle.Oracle({
+            aggregator: primaryFeed,
+            backupAggregator: backupFeed,
+            heartbeat: HEARTBEAT,
+            backupHeartbeat: BACKUP_HEARTBEAT,
+            maxPrice: 0 // No price cap
+        });
+
+        vm.startPrank(OWNER);
+        oracleAggregator.submitPendingOracle(ASSET, oracle);
+        vm.warp(block.timestamp + TIMELOCK + 1);
+        vm.stopPrank();
+
+        oracleAggregator.acceptPendingOracle(ASSET);
+
+        // Make primary oracle stale
+        vm.warp(block.timestamp + HEARTBEAT + 1);
+
+        // Set very high price on backup oracle
+        int256 extremelyHighBackupPrice = 2000000e8; // 2 million units
+        MockPriceFeed.RoundData memory roundData = MockPriceFeed.RoundData({
+            roundId: 2,
+            answer: extremelyHighBackupPrice,
+            startedAt: block.timestamp,
+            updatedAt: block.timestamp,
+            answeredInRound: 2
+        });
+        vm.prank(OWNER);
+        backupFeed.updateRoundData(roundData);
+
+        // Get price - should return the full backup price without capping
+        (uint256 price, uint8 decimals) = oracleAggregator.getPrice(ASSET);
+        assertEq(price, uint256(extremelyHighBackupPrice));
+        assertEq(decimals, DECIMALS);
+    }
 }
