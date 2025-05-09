@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import {TermMaxERC4626PriceFeed} from "./TermMaxERC4626PriceFeed.sol";
-import {TermMaxPriceFeedConverter} from "./TermMaxPriceFeedConverter.sol";
-import {TermMaxPTPriceFeed} from "./TermMaxPTPriceFeed.sol";
+import {TermMaxERC4626PriceFeed} from "../oracle/priceFeeds/TermMaxERC4626PriceFeed.sol";
+import {TermMaxPriceFeedConverter} from "../oracle/priceFeeds/TermMaxPriceFeedConverter.sol";
+import {TermMaxPTPriceFeed} from "../oracle/priceFeeds/TermMaxPTPriceFeed.sol";
 
 contract TermMaxPriceFeedFactory {
     event PriceFeedCreated(address indexed priceFeed);

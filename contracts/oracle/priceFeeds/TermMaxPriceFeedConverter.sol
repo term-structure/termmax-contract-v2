@@ -16,7 +16,7 @@ contract TermMaxPriceFeedConverter is ITermMaxPriceFeed {
     int256 immutable priceDemonitor;
     address public immutable asset;
 
-    constructor(address _asset, address _aTokenToBTokenPriceFeed, address _bTokenToCTokenPriceFeed) {
+    constructor(address _aTokenToBTokenPriceFeed, address _bTokenToCTokenPriceFeed, address _asset) {
         asset = _asset;
         aTokenToBTokenPriceFeed = AggregatorV3Interface(_aTokenToBTokenPriceFeed);
         bTokenToCTokenPriceFeed = AggregatorV3Interface(_bTokenToCTokenPriceFeed);

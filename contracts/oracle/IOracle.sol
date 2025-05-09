@@ -11,7 +11,9 @@ interface IOracle {
     struct Oracle {
         AggregatorV3Interface aggregator;
         AggregatorV3Interface backupAggregator;
+        int256 maxPrice;
         uint32 heartbeat;
+        uint32 backupHeartbeat;
     }
 
     /// @notice Error thrown when the oracle is not working

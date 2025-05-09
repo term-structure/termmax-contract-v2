@@ -4,7 +4,7 @@ pragma solidity ^0.8.27;
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
-import {TermMaxPriceFeedFactory} from "contracts/oracle/priceFeeds/TermMaxPriceFeedFactory.sol";
+import {TermMaxPriceFeedFactory} from "contracts/factory/TermMaxPriceFeedFactory.sol";
 
 contract DeployPriceFeeds is Script {
     function run() public {

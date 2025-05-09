@@ -462,7 +462,9 @@ contract AccessManagerTest is Test {
         IOracle.Oracle memory oracle = IOracle.Oracle({
             aggregator: AggregatorV3Interface(address(new MockPriceFeed(sender))),
             backupAggregator: AggregatorV3Interface(address(new MockPriceFeed(sender))),
-            heartbeat: 3600
+            heartbeat: 3600,
+            backupHeartbeat: 7200,
+            maxPrice: 1e8
         });
 
         // Test that non-oracle role cannot submit pending oracle

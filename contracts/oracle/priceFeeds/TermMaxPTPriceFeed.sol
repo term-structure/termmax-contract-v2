@@ -4,7 +4,7 @@ pragma solidity ^0.8.27;
 import {PendlePYLpOracle} from "@pendle/core-v2/contracts/oracles/PtYtLpOracle/PendlePYLpOracle.sol";
 import {PendlePYOracleLib} from "@pendle/core-v2/contracts/oracles/PtYtLpOracle/PendlePYOracleLib.sol";
 import {PMath} from "@pendle/core-v2/contracts/core/libraries/math/PMath.sol";
-import {IPMarket, IStandardizedYield} from "@pendle/core-v2/contracts/interfaces/IPMarket.sol";
+import {IPMarket, IPPrincipalToken} from "@pendle/core-v2/contracts/interfaces/IPMarket.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
@@ -52,8 +52,8 @@ contract TermMaxPTPriceFeed is ITermMaxPriceFeed {
         MARKET = IPMarket(market);
         DURATION = duration;
         PRICE_FEED = AggregatorV3Interface(priceFeed);
-        (IStandardizedYield _SY,,) = MARKET.readTokens();
-        (, asset,) = _SY.assetInfo();
+        (, IPPrincipalToken _PT,) = MARKET.readTokens();
+        asset = address(_PT);
         if (!_oracleIsReady()) revert OracleIsNotReady();
     }
 
