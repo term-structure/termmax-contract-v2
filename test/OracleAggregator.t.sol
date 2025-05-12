@@ -357,7 +357,7 @@ contract OracleAggregatorTest is Test {
             updatedAt: block.timestamp,
             answeredInRound: 2
         });
-        
+
         // Set backup price below maxPrice
         int256 validBackupPrice = MAX_PRICE - 1000e8;
         MockPriceFeed.RoundData memory backupRoundData = MockPriceFeed.RoundData({
@@ -367,7 +367,7 @@ contract OracleAggregatorTest is Test {
             updatedAt: block.timestamp,
             answeredInRound: 2
         });
-        
+
         vm.startPrank(OWNER);
         primaryFeed.updateRoundData(primaryRoundData);
         backupFeed.updateRoundData(backupRoundData);
@@ -405,7 +405,7 @@ contract OracleAggregatorTest is Test {
             updatedAt: block.timestamp,
             answeredInRound: 2
         });
-        
+
         int256 highBackupPrice = MAX_PRICE + 500e8;
         MockPriceFeed.RoundData memory backupRoundData = MockPriceFeed.RoundData({
             roundId: 2,
@@ -414,7 +414,7 @@ contract OracleAggregatorTest is Test {
             updatedAt: block.timestamp,
             answeredInRound: 2
         });
-        
+
         vm.startPrank(OWNER);
         primaryFeed.updateRoundData(primaryRoundData);
         backupFeed.updateRoundData(backupRoundData);
@@ -564,7 +564,7 @@ contract OracleAggregatorTest is Test {
         MockPriceFeed differentDecimalsFeed = new MockPriceFeed(OWNER);
         vm.startPrank(OWNER);
         differentDecimalsFeed.setDecimals(DECIMALS + 2); // Different decimal precision
-        
+
         // Set initial price data on the different decimals feed
         MockPriceFeed.RoundData memory roundData = MockPriceFeed.RoundData({
             roundId: 1,
@@ -602,29 +602,29 @@ contract OracleAggregatorTest is Test {
 
         vm.prank(OWNER);
         oracleAggregator.submitPendingOracle(ASSET, oracle);
-        
+
         // Verify the pending oracle was set
         (IOracle.Oracle memory pendingOracle, uint64 validAt) = oracleAggregator.pendingOracles(ASSET);
         assertEq(address(pendingOracle.aggregator), address(primaryFeed));
         assertEq(validAt, block.timestamp + TIMELOCK);
-        
+
         // Now revoke it
         vm.prank(OWNER);
         oracleAggregator.revokePendingOracle(ASSET);
-        
+
         // Verify it was revoked
         (pendingOracle, validAt) = oracleAggregator.pendingOracles(ASSET);
         assertEq(address(pendingOracle.aggregator), address(0));
         assertEq(validAt, 0);
     }
-    
+
     function test_RevertRevokePendingOracle_NoPending() public {
         // Try to revoke when there's no pending oracle
         vm.prank(OWNER);
         vm.expectRevert(abi.encodeWithSignature("NoPendingValue()"));
         oracleAggregator.revokePendingOracle(ASSET);
     }
-    
+
     function test_RevertRevokePendingOracle_NotOwner() public {
         // First submit a pending oracle
         IOracle.Oracle memory oracle = IOracle.Oracle({
@@ -637,7 +637,7 @@ contract OracleAggregatorTest is Test {
 
         vm.prank(OWNER);
         oracleAggregator.submitPendingOracle(ASSET, oracle);
-        
+
         // Try to revoke from non-owner account
         address nonOwner = address(0x123);
         vm.prank(nonOwner);

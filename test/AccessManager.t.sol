@@ -512,7 +512,7 @@ contract AccessManagerTest is Test {
         vm.startPrank(deployer);
         manager.submitPendingOracle(IOracle(address(res.oracle)), asset, oracle);
         vm.stopPrank();
-        
+
         // Test that non-oracle role cannot revoke pending oracle
         vm.startPrank(sender);
         vm.expectRevert(
@@ -522,26 +522,26 @@ contract AccessManagerTest is Test {
         );
         manager.revokePendingOracle(IOracle(address(res.oracle)), asset);
         vm.stopPrank();
-        
+
         // Test that oracle role can revoke pending oracle
         vm.startPrank(deployer);
-        
+
         // We'll capture the event to verify that revocation happened
         vm.expectEmit(true, true, true, true);
         // Define the expected event
         emit RevokePendingOracle(asset);
-        
+
         // Call the revoke function
         manager.revokePendingOracle(IOracle(address(res.oracle)), asset);
-        
+
         // Try to accept the oracle after revocation, which should fail
         // since there's no longer a pending oracle
         vm.expectRevert(); // Should revert with NoPendingValue error
         IOracle(address(res.oracle)).acceptPendingOracle(asset);
-        
+
         vm.stopPrank();
     }
-    
+
     // Define the event to match OracleAggregator's event
     event RevokePendingOracle(address indexed asset);
 

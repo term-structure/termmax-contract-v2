@@ -52,7 +52,7 @@ contract SubmitOracles is Script {
         OracleAggregator oracle = OracleAggregator(oracleAggregatorAddr);
         for (uint256 i; i < configs.length; i++) {
             JsonLoader.Config memory config = configs[i];
-            (AggregatorV3Interface aggregator,,) = oracle.oracles(address(config.underlyingConfig.tokenAddr));
+            (AggregatorV3Interface aggregator,,,,) = oracle.oracles(address(config.underlyingConfig.tokenAddr));
             if (
                 !tokenSubmitted[address(config.underlyingConfig.tokenAddr)]
                     && (
@@ -66,7 +66,9 @@ contract SubmitOracles is Script {
                     IOracle.Oracle(
                         AggregatorV3Interface(config.underlyingConfig.priceFeedAddr),
                         AggregatorV3Interface(config.underlyingConfig.priceFeedAddr),
-                        uint32(config.underlyingConfig.heartBeat)
+                        config.underlyingConfig.maxPrice,
+                        uint32(config.underlyingConfig.heartBeat),
+                        uint32(config.underlyingConfig.backupHeartBeat)
                     )
                 );
                 tokenSubmitted[address(config.underlyingConfig.tokenAddr)] = true;
@@ -76,9 +78,10 @@ contract SubmitOracles is Script {
                 );
                 console.log("Price feed: ", config.underlyingConfig.priceFeedAddr);
                 console.log("Heartbeat: ", config.underlyingConfig.heartBeat);
+                console.log("Max price: ", config.underlyingConfig.maxPrice);
                 console.log("--------------------------------");
             }
-            (aggregator,,) = oracle.oracles(address(config.collateralConfig.tokenAddr));
+            (aggregator,,,,) = oracle.oracles(address(config.collateralConfig.tokenAddr));
             if (
                 !tokenSubmitted[address(config.collateralConfig.tokenAddr)]
                     && (
@@ -92,7 +95,9 @@ contract SubmitOracles is Script {
                     IOracle.Oracle(
                         AggregatorV3Interface(config.collateralConfig.priceFeedAddr),
                         AggregatorV3Interface(config.collateralConfig.priceFeedAddr),
-                        uint32(config.collateralConfig.heartBeat)
+                        config.collateralConfig.maxPrice,
+                        uint32(config.collateralConfig.heartBeat),
+                        uint32(config.collateralConfig.backupHeartBeat)
                     )
                 );
                 tokenSubmitted[address(config.collateralConfig.tokenAddr)] = true;
@@ -102,6 +107,7 @@ contract SubmitOracles is Script {
                 );
                 console.log("Price feed: ", config.collateralConfig.priceFeedAddr);
                 console.log("Heartbeat: ", config.collateralConfig.heartBeat);
+                console.log("Max price: ", config.collateralConfig.maxPrice);
                 console.log("--------------------------------");
             }
         }
