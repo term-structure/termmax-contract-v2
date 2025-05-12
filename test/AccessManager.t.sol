@@ -498,6 +498,53 @@ contract AccessManagerTest is Test {
         vm.stopPrank();
     }
 
+    function testRevokePendingOracle() public {
+        address asset = address(res.collateral);
+        IOracle.Oracle memory oracle = IOracle.Oracle({
+            aggregator: AggregatorV3Interface(address(new MockPriceFeed(sender))),
+            backupAggregator: AggregatorV3Interface(address(new MockPriceFeed(sender))),
+            heartbeat: 3600,
+            backupHeartbeat: 7200,
+            maxPrice: 1e8
+        });
+
+        // Submit a pending oracle
+        vm.startPrank(deployer);
+        manager.submitPendingOracle(IOracle(address(res.oracle)), asset, oracle);
+        vm.stopPrank();
+        
+        // Test that non-oracle role cannot revoke pending oracle
+        vm.startPrank(sender);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector, sender, manager.ORACLE_ROLE()
+            )
+        );
+        manager.revokePendingOracle(IOracle(address(res.oracle)), asset);
+        vm.stopPrank();
+        
+        // Test that oracle role can revoke pending oracle
+        vm.startPrank(deployer);
+        
+        // We'll capture the event to verify that revocation happened
+        vm.expectEmit(true, true, true, true);
+        // Define the expected event
+        emit RevokePendingOracle(asset);
+        
+        // Call the revoke function
+        manager.revokePendingOracle(IOracle(address(res.oracle)), asset);
+        
+        // Try to accept the oracle after revocation, which should fail
+        // since there's no longer a pending oracle
+        vm.expectRevert(); // Should revert with NoPendingValue error
+        IOracle(address(res.oracle)).acceptPendingOracle(asset);
+        
+        vm.stopPrank();
+    }
+    
+    // Define the event to match OracleAggregator's event
+    event RevokePendingOracle(address indexed asset);
+
     function testUpdateGtConfig() public {
         bytes memory configData = abi.encode(1234);
 
