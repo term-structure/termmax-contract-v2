@@ -79,6 +79,11 @@ contract OracleAggregator is IOracle, Ownable2Step {
             emit UpdateOracle(asset, AggregatorV3Interface(address(0)), AggregatorV3Interface(address(0)), 0, 0, 0);
             return;
         }
+        if (address(oracle.aggregator) != address(0) && address(oracle.backupAggregator) != address(0)) {
+            if (oracle.aggregator.decimals() != oracle.backupAggregator.decimals()) {
+                revert InvalidAssetOrOracle();
+            }
+        }
         pendingOracles[asset].oracle = oracle;
         uint64 validAt = uint64(block.timestamp + _timeLock);
         pendingOracles[asset].validAt = validAt;
@@ -106,6 +111,14 @@ contract OracleAggregator is IOracle, Ownable2Step {
         emit UpdateOracle(
             asset, oracle.aggregator, oracle.backupAggregator, oracle.maxPrice, oracle.heartbeat, oracle.backupHeartbeat
         );
+    }
+
+    function revokePendingOracle(address asset) external onlyOwner {
+        if (pendingOracles[asset].validAt == 0) {
+            revert NoPendingValue();
+        }
+        delete pendingOracles[asset];
+        emit RevokePendingOracle(asset);
     }
 
     /**

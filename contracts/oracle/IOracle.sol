@@ -25,4 +25,6 @@ interface IOracle {
     function submitPendingOracle(address asset, Oracle memory oracle) external;
 
     function acceptPendingOracle(address asset) external;
+
+    function revokePendingOracle(address asset) external;
 }

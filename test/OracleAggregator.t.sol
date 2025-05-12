@@ -558,4 +558,90 @@ contract OracleAggregatorTest is Test {
         vm.expectRevert(abi.encodeWithSignature("OracleIsNotWorking(address)", ASSET));
         oracleAggregator.getPrice(ASSET);
     }
+
+    function test_RevertSubmitPendingOracle_DecimalMismatch() public {
+        // Create another mock feed with different decimals
+        MockPriceFeed differentDecimalsFeed = new MockPriceFeed(OWNER);
+        vm.startPrank(OWNER);
+        differentDecimalsFeed.setDecimals(DECIMALS + 2); // Different decimal precision
+        
+        // Set initial price data on the different decimals feed
+        MockPriceFeed.RoundData memory roundData = MockPriceFeed.RoundData({
+            roundId: 1,
+            answer: INITIAL_PRICE,
+            startedAt: block.timestamp,
+            updatedAt: block.timestamp,
+            answeredInRound: 1
+        });
+        differentDecimalsFeed.updateRoundData(roundData);
+        vm.stopPrank();
+
+        // Try to set an oracle with mismatched decimals
+        IOracle.Oracle memory oracle = IOracle.Oracle({
+            aggregator: primaryFeed,
+            backupAggregator: differentDecimalsFeed,
+            heartbeat: HEARTBEAT,
+            backupHeartbeat: BACKUP_HEARTBEAT,
+            maxPrice: MAX_PRICE
+        });
+
+        vm.prank(OWNER);
+        vm.expectRevert(abi.encodeWithSignature("InvalidAssetOrOracle()"));
+        oracleAggregator.submitPendingOracle(ASSET, oracle);
+    }
+
+    function test_RevokePendingOracle() public {
+        // First submit a pending oracle
+        IOracle.Oracle memory oracle = IOracle.Oracle({
+            aggregator: primaryFeed,
+            backupAggregator: backupFeed,
+            heartbeat: HEARTBEAT,
+            backupHeartbeat: BACKUP_HEARTBEAT,
+            maxPrice: MAX_PRICE
+        });
+
+        vm.prank(OWNER);
+        oracleAggregator.submitPendingOracle(ASSET, oracle);
+        
+        // Verify the pending oracle was set
+        (IOracle.Oracle memory pendingOracle, uint64 validAt) = oracleAggregator.pendingOracles(ASSET);
+        assertEq(address(pendingOracle.aggregator), address(primaryFeed));
+        assertEq(validAt, block.timestamp + TIMELOCK);
+        
+        // Now revoke it
+        vm.prank(OWNER);
+        oracleAggregator.revokePendingOracle(ASSET);
+        
+        // Verify it was revoked
+        (pendingOracle, validAt) = oracleAggregator.pendingOracles(ASSET);
+        assertEq(address(pendingOracle.aggregator), address(0));
+        assertEq(validAt, 0);
+    }
+    
+    function test_RevertRevokePendingOracle_NoPending() public {
+        // Try to revoke when there's no pending oracle
+        vm.prank(OWNER);
+        vm.expectRevert(abi.encodeWithSignature("NoPendingValue()"));
+        oracleAggregator.revokePendingOracle(ASSET);
+    }
+    
+    function test_RevertRevokePendingOracle_NotOwner() public {
+        // First submit a pending oracle
+        IOracle.Oracle memory oracle = IOracle.Oracle({
+            aggregator: primaryFeed,
+            backupAggregator: backupFeed,
+            heartbeat: HEARTBEAT,
+            backupHeartbeat: BACKUP_HEARTBEAT,
+            maxPrice: MAX_PRICE
+        });
+
+        vm.prank(OWNER);
+        oracleAggregator.submitPendingOracle(ASSET, oracle);
+        
+        // Try to revoke from non-owner account
+        address nonOwner = address(0x123);
+        vm.prank(nonOwner);
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", nonOwner));
+        oracleAggregator.revokePendingOracle(ASSET);
+    }
 }
