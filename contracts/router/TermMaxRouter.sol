@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
+import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC721Enumerable} from "@openzeppelin/contracts/interfaces/IERC721Enumerable.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts/interfaces/IERC721Receiver.sol";
@@ -61,6 +62,22 @@ contract TermMaxRouter is
         __UUPSUpgradeable_init();
         __Pausable_init();
         __Ownable_init(admin);
+    }
+
+    function depositAndMint(ITermMaxMarket market, address recipient, uint256 amount) external whenNotPaused {
+        (,,,, IERC20 underlying) = market.tokens();
+        IERC4626 vault = IERC4626(address(underlying));
+        IERC20(vault.asset()).safeTransferFrom(msg.sender, address(this), amount);
+        underlying.safeIncreaseAllowance(address(market), amount);
+        market.mint(recipient, amount);
+    }
+
+    function burnAndWithdraw(ITermMaxMarket market, address recipient, uint256 amount) external whenNotPaused {
+        (IERC20 ft, IERC20 xt,,, IERC20 underlying) = market.tokens();
+        ft.safeTransferFrom(msg.sender, address(this), amount);
+        xt.safeTransferFrom(msg.sender, address(this), amount);
+        market.burn(address(this), address(this), amount);
+        IERC4626(address(underlying)).redeem(amount, recipient, address(this));
     }
 
     /**

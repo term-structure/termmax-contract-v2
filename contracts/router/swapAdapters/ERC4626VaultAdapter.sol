@@ -11,6 +11,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
  */
 contract ERC4626VaultAdapter is ERC20SwapAdapter {
     using TransferUtils for IERC20;
+
     enum Action {
         Deposit,
         Redeem

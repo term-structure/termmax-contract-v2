@@ -12,7 +12,7 @@ import {TransferUtils} from "contracts/lib/TransferUtils.sol";
 import {IAaveV3Minimal} from "./IAaveV3Minimal.sol";
 import {StakingBuffer} from "contracts/extensions/StakingBuffer.sol";
 
-contract AaveVault is ERC4626Upgradeable, StakingBuffer, ReentrancyGuardUpgradeable {
+contract TermMaxAaveVault is ERC4626Upgradeable, StakingBuffer, ReentrancyGuardUpgradeable {
     using TransferUtils for address;
 
     IERC20 public aToken;

@@ -11,6 +11,7 @@ import "./ERC20SwapAdapter.sol";
  */
 contract UniswapV3Adapter is ERC20SwapAdapter {
     using TransferUtils for IERC20;
+
     ISwapRouter public immutable router;
 
     constructor(address router_) {
