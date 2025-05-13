@@ -25,6 +25,9 @@ interface IOdosRouterV2 {
  * @author Term Structure Labs
  */
 contract OdosV2Adapter is ERC20SwapAdapter {
+    using TransferUtils for IERC20;
+    error InvalidOutputToken();
+
     IOdosRouterV2 public immutable router;
 
     constructor(address router_) {
@@ -37,7 +40,7 @@ contract OdosV2Adapter is ERC20SwapAdapter {
         override
         returns (uint256 tokenOutAmt)
     {
-        IERC20(tokenIn).approve(address(router), amountIn);
+        tokenIn.safeIncreaseAllowance(address(router), amountIn);
 
         (
             IOdosRouterV2.swapTokenInfo memory tokenInfo,
@@ -46,7 +49,9 @@ contract OdosV2Adapter is ERC20SwapAdapter {
             uint32 referralCode
         ) = abi.decode(swapData, (IOdosRouterV2.swapTokenInfo, bytes, address, uint32));
 
-        require(tokenInfo.outputToken == address(tokenOut), "INVALID_OUTPUT_TOKEN");
+        if (tokenInfo.outputToken != address(tokenOut)) {
+            revert InvalidOutputToken();
+        }
         /**
          * Note: Scaling Input/Output amount
          */
