@@ -55,8 +55,7 @@ contract TermMaxAaveVault is ERC4626Upgradeable, StakingBuffer, ReentrancyGuardU
         }
 
         _burn(owner, shares);
-        _withdrawWithBuffer(asset(), assets);
-        TransferUtils.safeTransfer(IERC20(asset()), receiver, assets);
+        _withdrawWithBuffer(asset(), receiver, assets);
 
         emit Withdraw(caller, receiver, owner, assets, shares);
     }
@@ -67,7 +66,7 @@ contract TermMaxAaveVault is ERC4626Upgradeable, StakingBuffer, ReentrancyGuardU
         aavePool.supply(assertAddr, amount, address(this), referralCode);
     }
 
-    function _withdrawFromPool(address assertAddr, uint256 amount) internal virtual override {
-        aavePool.withdraw(assertAddr, amount, address(this));
+    function _withdrawFromPool(address assertAddr, address to, uint256 amount) internal virtual override {
+        aavePool.withdraw(assertAddr, amount, to);
     }
 }
