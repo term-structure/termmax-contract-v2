@@ -181,9 +181,9 @@ contract TermMaxRouter is
     ) external whenNotPaused returns (uint256 netTokenOut) {
         (IERC20 ft, IERC20 xt,,, IERC20 debtToken) = market.tokens();
         (uint256 maxBurn, IERC20 toenToSell) = ftInAmt > xtInAmt ? (xtInAmt, ft) : (ftInAmt, xt);
-        market.burn(msg.sender, recipient, maxBurn);
-        ft.safeTransferFrom(msg.sender, address(this), ftInAmt - maxBurn);
-        xt.safeTransferFrom(msg.sender, address(this), xtInAmt - maxBurn);
+        ft.transferFrom(msg.sender, address(this), ftInAmt);
+        xt.transferFrom(msg.sender, address(this), xtInAmt);
+        market.burn(address(this), recipient, maxBurn);
 
         netTokenOut = _swapExactTokenToToken(toenToSell, debtToken, recipient, orders, amtsToSellTokens, 0, deadline);
         netTokenOut += maxBurn;
