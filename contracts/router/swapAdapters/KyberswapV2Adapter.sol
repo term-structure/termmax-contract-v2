@@ -2,7 +2,7 @@
 pragma solidity ^0.8.27;
 
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
-import "./ERC20SwapAdapter.sol";
+import {ERC20SwapAdapter, TransferUtils, IERC20} from "../../router/swapAdapters/ERC20SwapAdapter.sol";
 
 interface IKyberScalingHelper {
     function getScaledInputData(bytes calldata inputData, uint256 newAmount)
@@ -17,6 +17,7 @@ interface IKyberScalingHelper {
  */
 contract KyberswapV2Adapter is ERC20SwapAdapter {
     using Address for address;
+    using TransferUtils for IERC20;
 
     address public immutable router;
     address public immutable KYBER_SCALING_HELPER;
@@ -32,7 +33,7 @@ contract KyberswapV2Adapter is ERC20SwapAdapter {
         override
         returns (uint256)
     {
-        IERC20(tokenIn).approve(address(router), amountIn);
+        IERC20(tokenIn).safeIncreaseAllowance(address(router), amountIn);
         (bool isSuccess, bytes memory newSwapData) =
             IKyberScalingHelper(KYBER_SCALING_HELPER).getScaledInputData(swapData, amountIn);
 

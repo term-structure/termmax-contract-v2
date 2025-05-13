@@ -10,6 +10,7 @@ import "./ERC20SwapAdapter.sol";
  * @author Term Structure Labs
  */
 contract UniswapV3Adapter is ERC20SwapAdapter {
+    using TransferUtils for IERC20;
     ISwapRouter public immutable router;
 
     constructor(address router_) {
@@ -22,7 +23,7 @@ contract UniswapV3Adapter is ERC20SwapAdapter {
         override
         returns (uint256 tokenOutAmt)
     {
-        IERC20(tokenIn).approve(address(router), amount);
+        IERC20(tokenIn).safeIncreaseAllowance(address(router), amount);
         (bytes memory path, uint256 deadline, uint256 inAmount, uint256 amountOutMinimum) =
             abi.decode(swapData, (bytes, uint256, uint256, uint256));
         /**
