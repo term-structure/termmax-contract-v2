@@ -158,7 +158,7 @@ abstract contract AbstractGearingToken is
         }
         id = ++total;
         loanMapping[id] = loan;
-        _mint(to, id);
+        _safeMint(to, id);
     }
 
     /**

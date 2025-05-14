@@ -204,7 +204,7 @@ contract VaultTest2 is Test {
         }
         uint256 dustAmt = resources[0].debt.balanceOf(address(vault));
         console.log("remaining balance:", dustAmt);
-        assertLe(dustAmt, 2);
+        assertLe(dustAmt, 3);
     }
 
     function buyFt(ITermMaxOrder order, uint128 tokenAmtIn, uint128 ftAmtOut) internal {

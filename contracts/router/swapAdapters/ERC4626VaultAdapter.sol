@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import {ERC20SwapAdapter} from "../../router/swapAdapters/ERC20SwapAdapter.sol";
+import {ERC20SwapAdapter, TransferUtils} from "../../router/swapAdapters/ERC20SwapAdapter.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -10,6 +10,8 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
  * @author Term Structure Labs
  */
 contract ERC4626VaultAdapter is ERC20SwapAdapter {
+    using TransferUtils for IERC20;
+
     enum Action {
         Deposit,
         Redeem
@@ -32,13 +34,13 @@ contract ERC4626VaultAdapter is ERC20SwapAdapter {
         minTokenOut = (minTokenOut * amount) / inAmount;
 
         if (action == Action.Deposit) {
-            tokenIn.approve(address(tokenOut), amount);
+            tokenIn.safeIncreaseAllowance(address(tokenOut), amount);
             tokenOutAmt = IERC4626(address(tokenOut)).deposit(amount, address(this));
             if (tokenOutAmt < minTokenOut) {
                 revert LessThanMinTokenOut(tokenOutAmt, minTokenOut);
             }
         } else if (action == Action.Redeem) {
-            tokenIn.approve(address(tokenIn), amount);
+            tokenIn.safeIncreaseAllowance(address(tokenIn), amount);
             tokenOutAmt = IERC4626(address(tokenIn)).redeem(amount, address(this), address(this));
             if (tokenOutAmt < minTokenOut) {
                 revert LessThanMinTokenOut(tokenOutAmt, minTokenOut);

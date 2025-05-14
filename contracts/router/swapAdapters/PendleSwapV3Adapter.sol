@@ -11,6 +11,8 @@ import "./ERC20SwapAdapter.sol";
  */
 
 contract PendleSwapV3Adapter is ERC20SwapAdapter, PendleHelper {
+    using TransferUtils for IERC20;
+
     IPAllActionV3 public immutable router;
 
     constructor(address router_) {
@@ -28,7 +30,7 @@ contract PendleSwapV3Adapter is ERC20SwapAdapter, PendleHelper {
         IPMarket market = IPMarket(ptMarketAddr);
 
         (, IPPrincipalToken PT,) = market.readTokens();
-        IERC20(tokenIn).approve(address(router), amount);
+        IERC20(tokenIn).safeIncreaseAllowance(address(router), amount);
 
         /**
          * Note: Scaling Input/Output amount
@@ -36,7 +38,7 @@ contract PendleSwapV3Adapter is ERC20SwapAdapter, PendleHelper {
         minTokenOut = (minTokenOut * amount) / inAmount;
 
         if (tokenOut == PT) {
-            IERC20(tokenIn).approve(address(router), amount);
+            IERC20(tokenIn).safeIncreaseAllowance(address(router), amount);
             (tokenOutAmt,,) = router.swapExactTokenForPt(
                 address(this),
                 address(market),
@@ -48,13 +50,13 @@ contract PendleSwapV3Adapter is ERC20SwapAdapter, PendleHelper {
         } else {
             if (PT.isExpired()) {
                 IPYieldToken YT = IPYieldToken(PT.YT());
-                IERC20(tokenIn).transfer(address(YT), amount);
+                IERC20(tokenIn).safeTransfer(address(YT), amount);
                 tokenOutAmt = IPYieldToken(YT).redeemPY(address(this));
                 if (tokenOutAmt < minTokenOut) {
                     revert LessThanMinTokenOut(tokenOutAmt, minTokenOut);
                 }
             } else {
-                IERC20(tokenIn).approve(address(router), amount);
+                IERC20(tokenIn).safeIncreaseAllowance(address(router), amount);
                 (tokenOutAmt,,) = router.swapExactPtForToken(
                     address(this),
                     address(market),
