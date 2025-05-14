@@ -26,6 +26,7 @@ interface IOdosRouterV2 {
  */
 contract OdosV2Adapter is ERC20SwapAdapter {
     using TransferUtils for IERC20;
+
     error InvalidOutputToken();
 
     IOdosRouterV2 public immutable router;
