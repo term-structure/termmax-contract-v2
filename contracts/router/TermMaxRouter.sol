@@ -52,8 +52,15 @@ contract TermMaxRouter is
         DEBT
     }
 
+    enum FlashRepayOptions {
+        REPAY,
+        ROLLOVER
+    }
+
     /// @notice whitelist mapping of adapter
     mapping(address => bool) public adapterWhitelist;
+
+    uint256 private constant T_ROLLOVER_GT_RESERVE_STORE = 0;
 
     function _authorizeUpgrade(address newImplementation) internal virtual override onlyOwner {}
 
@@ -374,7 +381,9 @@ contract TermMaxRouter is
     ) external whenNotPaused returns (uint256 netTokenOut) {
         (IERC20 ft,, IGearingToken gt,, IERC20 debtToken) = market.tokens();
         gt.safeTransferFrom(msg.sender, address(this), gtId, "");
-        gt.flashRepay(gtId, byDebtToken, abi.encode(orders, amtsToBuyFt, ft, units, deadline));
+        bytes memory callbackData = abi.encode(orders, amtsToBuyFt, ft, units, deadline);
+        callbackData = abi.encode(FlashRepayOptions.REPAY, callbackData);
+        gt.flashRepay(gtId, byDebtToken, callbackData);
         netTokenOut = debtToken.balanceOf(address(this));
         debtToken.safeTransfer(recipient, netTokenOut);
     }
@@ -421,7 +430,7 @@ contract TermMaxRouter is
         SwapUnit[] memory units,
         uint256 minTokenOut
     ) external whenNotPaused returns (uint256) {
-        (IERC20 ft,,, address collateralAddr, IERC20 debtToken) = market.tokens();
+        (IERC20 ft,,,, IERC20 debtToken) = market.tokens();
         ft.safeTransferFrom(msg.sender, address(this), ftAmount);
         ft.safeIncreaseAllowance(address(market), ftAmount);
         (uint256 redeemedAmt, bytes memory collateralData) = market.redeem(ftAmount, address(this));
@@ -459,6 +468,31 @@ contract TermMaxRouter is
         }
 
         emit CreateOrderAndDeposit(market, order, maker, debtTokenToDeposit, ftToDeposit, xtToDeposit, curveCuts);
+    }
+
+    function rolloverGt(
+        address recipient,
+        IGearingToken gt,
+        uint256 gtId,
+        ITermMaxOrder[] memory sellFtOrders,
+        uint128[] memory amtsToSellFt,
+        uint128 maxLtv,
+        ITermMaxMarket nextMarket,
+        SwapUnit[] memory units,
+        uint256 deadline
+    ) external whenNotPaused returns (uint256 newGtId) {
+        // clear ts stograge
+        assembly {
+            tstore(T_ROLLOVER_GT_RESERVE_STORE, 0)
+        }
+        gt.safeTransferFrom(msg.sender, address(this), gtId, "");
+        bytes memory callbackData =
+            abi.encode(recipient, sellFtOrders, amtsToSellFt, maxLtv, nextMarket, units, deadline);
+        callbackData = abi.encode(FlashRepayOptions.ROLLOVER, callbackData);
+        gt.flashRepay(gtId, true, callbackData);
+        assembly {
+            newGtId := tload(T_ROLLOVER_GT_RESERVE_STORE)
+        }
     }
 
     /// @dev Market flash leverage flashloan callback
@@ -511,6 +545,16 @@ contract TermMaxRouter is
         bytes memory collateralData,
         bytes memory callbackData
     ) external override {
+        (FlashRepayOptions option, bytes memory data) = abi.decode(callbackData, (FlashRepayOptions, bytes));
+        if (option == FlashRepayOptions.REPAY) {
+            _flashRepay(repayToken, collateralData, data);
+        } else if (option == FlashRepayOptions.ROLLOVER) {
+            _rollover(repayToken, collateralData, data);
+        }
+        repayToken.safeIncreaseAllowance(msg.sender, debtAmt);
+    }
+
+    function _flashRepay(IERC20 repayToken, bytes memory collateralData, bytes memory callbackData) internal {
         (
             ITermMaxOrder[] memory orders,
             uint128[] memory amtsToBuyFt,
@@ -525,7 +569,55 @@ contract TermMaxRouter is
             uint256 amount = abi.decode(outData, (uint256));
             _swapTokenToExactToken(debtToken, ft, address(this), orders, amtsToBuyFt, amount.toUint128(), deadline);
         }
-        repayToken.safeIncreaseAllowance(msg.sender, debtAmt);
+    }
+
+    function _rollover(IERC20 debtToken, bytes memory collateralData, bytes memory callbackData) internal {
+        (
+            address recipient,
+            ITermMaxOrder[] memory sellFtOrders,
+            uint128[] memory amtsToSellFt,
+            uint128 maxLtv,
+            ITermMaxMarket market,
+            SwapUnit[] memory units,
+            uint256 deadline
+        ) = abi.decode(
+            callbackData, (address, ITermMaxOrder[], uint128[], uint128, ITermMaxMarket, SwapUnit[], uint256)
+        );
+        {
+            // swap collateral
+            collateralData = units.length == 0 ? collateralData : _doSwap(collateralData, units);
+        }
+        uint256 totalFtAmt = sum(amtsToSellFt);
+        (IERC20 ft,, IGearingToken gt, address collateral,) = market.tokens();
+        uint256 gtId;
+        {
+            // issue new gt
+            uint256 mintGtFeeRatio = market.mintGtFeeRatio();
+            uint128 newDebtAmt =
+                ((totalFtAmt * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - mintGtFeeRatio)).toUint128();
+            IERC20(collateral).safeIncreaseAllowance(address(market), _decodeAmount(collateralData));
+            collateralData = units.length == 0 ? collateralData : _doSwap(collateralData, units);
+            (gtId,) = market.issueFt(address(this), newDebtAmt, collateralData);
+        }
+        {
+            uint256 netFtIn = _swapTokenToExactToken(
+                ft, debtToken, address(this), sellFtOrders, amtsToSellFt, totalFtAmt.toUint128(), deadline
+            );
+            if (totalFtAmt > netFtIn) {
+                uint256 repayAmt = totalFtAmt - netFtIn;
+                ft.safeIncreaseAllowance(address(gt), repayAmt);
+                gt.repay(gtId, repayAmt.toUint128(), false);
+            }
+            (, uint128 ltv,) = gt.getLiquidationInfo(gtId);
+            if (ltv > maxLtv) {
+                revert LtvBiggerThanExpected(maxLtv, ltv);
+            }
+        }
+        // transfer new gt to recipient
+        gt.safeTransferFrom(address(this), recipient, gtId);
+        assembly {
+            tstore(T_ROLLOVER_GT_RESERVE_STORE, gtId)
+        }
     }
 
     function _doSwap(bytes memory inputData, SwapUnit[] memory units) internal returns (bytes memory outData) {
