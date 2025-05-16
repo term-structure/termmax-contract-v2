@@ -15,6 +15,15 @@ import {ISwapCallback} from "../ISwapCallback.sol";
  * @dev This interface defines all external functions for swapping, leveraging, and managing positions
  */
 interface ITermMaxRouter {
+    struct TermMaxSwapData {
+        address tokenIn;
+        address tokenOut;
+        ITermMaxOrder[] orders;
+        uint128[] tradingAmts;
+        uint128 netTokenAmt;
+        uint256 deadline;
+    }
+
     /**
      * @notice Pauses all protocol operations
      * @dev Can only be called by authorized addresses

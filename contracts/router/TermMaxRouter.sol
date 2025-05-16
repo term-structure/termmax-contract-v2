@@ -474,20 +474,22 @@ contract TermMaxRouter is
         address recipient,
         IGearingToken gt,
         uint256 gtId,
-        ITermMaxOrder[] memory sellFtOrders,
-        uint128[] memory amtsToSellFt,
         uint128 maxLtv,
+        uint128 repayAmt,
         ITermMaxMarket nextMarket,
         SwapUnit[] memory units,
-        uint256 deadline
+        TermMaxSwapData memory swapData
     ) external whenNotPaused returns (uint256 newGtId) {
         // clear ts stograge
         assembly {
             tstore(T_ROLLOVER_GT_RESERVE_STORE, 0)
         }
+        // additional debt token to reduce the ltv
+        if (repayAmt != 0) {
+            IERC20(swapData.tokenOut).safeTransferFrom(msg.sender, address(this), repayAmt);
+        }
         gt.safeTransferFrom(msg.sender, address(this), gtId, "");
-        bytes memory callbackData =
-            abi.encode(recipient, sellFtOrders, amtsToSellFt, maxLtv, nextMarket, units, deadline);
+        bytes memory callbackData = abi.encode(recipient, maxLtv, repayAmt, nextMarket, units, swapData);
         callbackData = abi.encode(FlashRepayOptions.ROLLOVER, callbackData);
         gt.flashRepay(gtId, true, callbackData);
         assembly {
@@ -549,7 +551,7 @@ contract TermMaxRouter is
         if (option == FlashRepayOptions.REPAY) {
             _flashRepay(repayToken, collateralData, data);
         } else if (option == FlashRepayOptions.ROLLOVER) {
-            _rollover(repayToken, collateralData, data);
+            _rollover(repayToken, debtAmt, collateralData, data);
         }
         repayToken.safeIncreaseAllowance(msg.sender, debtAmt);
     }
@@ -571,42 +573,54 @@ contract TermMaxRouter is
         }
     }
 
-    function _rollover(IERC20 debtToken, bytes memory collateralData, bytes memory callbackData) internal {
+    function _rollover(IERC20 debtToken, uint256 debtAmt, bytes memory collateralData, bytes memory callbackData)
+        internal
+    {
         (
             address recipient,
-            ITermMaxOrder[] memory sellFtOrders,
-            uint128[] memory amtsToSellFt,
             uint128 maxLtv,
+            uint128 repayAmt,
             ITermMaxMarket market,
             SwapUnit[] memory units,
-            uint256 deadline
-        ) = abi.decode(
-            callbackData, (address, ITermMaxOrder[], uint128[], uint128, ITermMaxMarket, SwapUnit[], uint256)
-        );
+            TermMaxSwapData memory swapData
+        ) = abi.decode(callbackData, (address, uint128, uint128, ITermMaxMarket, SwapUnit[], TermMaxSwapData));
         {
             // swap collateral
             collateralData = units.length == 0 ? collateralData : _doSwap(collateralData, units);
         }
-        uint256 totalFtAmt = sum(amtsToSellFt);
         (IERC20 ft,, IGearingToken gt, address collateral,) = market.tokens();
         uint256 gtId;
         {
             // issue new gt
             uint256 mintGtFeeRatio = market.mintGtFeeRatio();
-            uint128 newDebtAmt =
-                ((totalFtAmt * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - mintGtFeeRatio)).toUint128();
-            IERC20(collateral).safeIncreaseAllowance(address(market), _decodeAmount(collateralData));
-            collateralData = units.length == 0 ? collateralData : _doSwap(collateralData, units);
+            uint128 newDebtAmt = (
+                (swapData.netTokenAmt * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - mintGtFeeRatio)
+            ).toUint128();
+            IERC20(collateral).safeIncreaseAllowance(address(gt), _decodeAmount(collateralData));
             (gtId,) = market.issueFt(address(this), newDebtAmt, collateralData);
         }
         {
             uint256 netFtIn = _swapTokenToExactToken(
-                ft, debtToken, address(this), sellFtOrders, amtsToSellFt, totalFtAmt.toUint128(), deadline
+                ft,
+                debtToken,
+                address(this),
+                swapData.orders,
+                swapData.tradingAmts,
+                swapData.netTokenAmt,
+                swapData.deadline
             );
-            if (totalFtAmt > netFtIn) {
-                uint256 repayAmt = totalFtAmt - netFtIn;
-                ft.safeIncreaseAllowance(address(gt), repayAmt);
-                gt.repay(gtId, repayAmt.toUint128(), false);
+            // check remaining ft amount
+            if (swapData.netTokenAmt > netFtIn) {
+                uint256 repaidFtAmt = swapData.netTokenAmt - netFtIn;
+                ft.safeIncreaseAllowance(address(gt), repaidFtAmt);
+                gt.repay(gtId, repaidFtAmt.toUint128(), false);
+            }
+            // check remaining debt token amount
+            uint256 totalDebtTokenAmt = sum(swapData.tradingAmts) + repayAmt;
+            if (totalDebtTokenAmt > debtAmt) {
+                uint256 repaidDebtAmt = totalDebtTokenAmt - debtAmt;
+                debtToken.safeIncreaseAllowance(address(gt), repaidDebtAmt);
+                gt.repay(gtId, repaidDebtAmt.toUint128(), true);
             }
             (, uint128 ltv,) = gt.getLiquidationInfo(gtId);
             if (ltv > maxLtv) {
