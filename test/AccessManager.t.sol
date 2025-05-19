@@ -216,6 +216,62 @@ contract AccessManagerTest is Test {
         vm.stopPrank();
     }
 
+    function testBatchSetSwitch() public {
+        // Create vault initialization parameters
+        VaultInitialParams memory params = VaultInitialParams({
+            admin: address(manager),
+            curator: address(0), // Will be set through AccessManager
+            timelock: 1 days,
+            asset: IERC20(address(res.debt)),
+            maxCapacity: 1000000e18,
+            name: "Test Vault",
+            symbol: "tVAULT",
+            performanceFeeRate: 0.2e8 // 20%
+        });
+
+        // Deploy vault
+        res.vault = DeployUtils.deployVault(params);
+
+        address pauser = vm.randomAddress();
+        bytes32 pauserRole = manager.PAUSER_ROLE();
+
+        // Create multiple pausable test entities
+        IPausable[] memory entities = new IPausable[](2);
+        entities[0] = IPausable(address(res.router));
+        entities[1] = IPausable(address(res.vault));
+
+        // Grant PAUSER_ROLE to the pauser
+        vm.prank(deployer);
+        manager.grantRole(pauserRole, pauser);
+
+        // Test batch pausing with PAUSER_ROLE
+        vm.startPrank(pauser);
+        manager.batchSetSwitch(entities, false);
+
+        // Verify all entities are paused
+        assertTrue(PausableUpgradeable(address(res.router)).paused());
+        assertTrue(PausableUpgradeable(address(res.vault)).paused());
+
+        // Test batch unpausing with PAUSER_ROLE
+        manager.batchSetSwitch(entities, true);
+
+        // Verify all entities are unpaused
+        assertFalse(PausableUpgradeable(address(res.router)).paused());
+        assertFalse(PausableUpgradeable(address(res.vault)).paused());
+        vm.stopPrank();
+
+        // Test batch pausing without PAUSER_ROLE
+        address nonPauser = vm.randomAddress();
+        vm.startPrank(nonPauser);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector, nonPauser, manager.PAUSER_ROLE()
+            )
+        );
+        manager.batchSetSwitch(entities, false);
+        vm.stopPrank();
+    }
+
     function testVaultManagement() public {
         address vaultManager = vm.randomAddress();
         address newCurator = vm.randomAddress();
