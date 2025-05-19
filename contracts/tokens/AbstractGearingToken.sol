@@ -243,8 +243,8 @@ abstract contract AbstractGearingToken is
             // Those ft tokens have been approved to market and will be burn after maturity
             config.ft.safeTransferFrom(msg.sender, marketAddr(), repayAmt);
         }
-        _repay(id, repayAmt);
-        emit Repay(id, repayAmt, byDebtToken);
+        (, bool repayAll) = _repay(id, repayAmt);
+        emit Repay(id, repayAmt, byDebtToken, repayAll);
     }
 
     function flashRepay(uint256 id, bool byDebtToken, bytes calldata callbackData) external override nonReentrant {
@@ -265,11 +265,45 @@ abstract contract AbstractGearingToken is
         );
         repayToken.safeTransferFrom(msg.sender, owner(), loan.debtAmt);
         _burnInternal(id);
-        emit Repay(id, loan.debtAmt, byDebtToken);
+        emit Repay(id, loan.debtAmt, byDebtToken, true);
     }
 
-    function _repay(uint256 id, uint128 repayAmt) internal {
-        LoanInfo memory loan = loanMapping[id];
+    function flashRepay(
+        uint256 id,
+        uint128 repayAmt,
+        bool byDebtToken,
+        bytes memory removedCollateral,
+        bytes calldata callbackData
+    ) external override nonReentrant {
+        GtConfig memory config = _config;
+        if (config.maturity <= block.timestamp) {
+            revert GtIsExpired(id);
+        }
+        if (ownerOf(id) != msg.sender) {
+            revert CallerIsNotTheOwner(id);
+        }
+        (LoanInfo memory loan, bool repayAll) = _repay(id, repayAmt);
+
+        // Check ltv after partial repayment
+        if (!repayAll) {
+            ValueAndPrice memory valueAndPrice = _getValueAndPrice(config, loan);
+            uint128 ltv = _calculateLtv(valueAndPrice);
+            require(ltv <= config.loanConfig.maxLtv, GtIsNotHealthy(id, msg.sender, ltv));
+            // Transfer collateral to the owner
+            _transferCollateral(msg.sender, removedCollateral);
+        }
+
+        IERC20 repayToken = byDebtToken ? config.debtToken : config.ft;
+
+        IFlashRepayer(msg.sender).executeOperation(
+            repayToken, repayAmt, config.collateral, removedCollateral, callbackData
+        );
+        repayToken.safeTransferFrom(msg.sender, owner(), repayAmt);
+        emit FlashRepay(id, msg.sender, repayAmt, byDebtToken, repayAll, callbackData);
+    }
+
+    function _repay(uint256 id, uint128 repayAmt) internal returns (LoanInfo memory loan, bool repayAll) {
+        loan = loanMapping[id];
         if (repayAmt > loan.debtAmt) {
             revert RepayAmtExceedsMaxRepayAmt(id, repayAmt, loan.debtAmt);
         }
@@ -278,6 +312,7 @@ abstract contract AbstractGearingToken is
             // Burn this nft
             _burnInternal(id);
             _transferCollateral(gtOwner, loan.collateralData);
+            repayAll = true;
         } else {
             uint128 debtAmt = loan.debtAmt - repayAmt;
             loanMapping[id].debtAmt = debtAmt;

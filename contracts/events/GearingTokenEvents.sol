@@ -30,7 +30,17 @@ interface GearingTokenEvents {
     /// @param id The id of Gearing Token
     /// @param repayAmt The amount of debt repaid
     /// @param byDebtToken Repay using debtToken token or bonds token
-    event Repay(uint256 indexed id, uint256 repayAmt, bool byDebtToken);
+    /// @param repayAll Repay all the debt
+    event Repay(uint256 indexed id, uint256 repayAmt, bool byDebtToken, bool repayAll);
+
+    event FlashRepay(
+        uint256 indexed id,
+        address indexed caller,
+        uint128 repayAmt,
+        bool byDebtToken,
+        bool repayAll,
+        bytes callbackData
+    );
 
     /// @notice Emitted when liquidating Gearing Token
     /// @param id The id of Gearing Token

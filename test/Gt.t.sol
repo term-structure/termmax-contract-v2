@@ -291,7 +291,7 @@ contract GtTest is Test {
         StateChecker.MarketState memory state = StateChecker.getMarketState(res);
         bool byDebtToken = true;
         vm.expectEmit();
-        emit GearingTokenEvents.Repay(gtId, debtAmt, byDebtToken);
+        emit GearingTokenEvents.Repay(gtId, debtAmt, byDebtToken, true);
         res.gt.repay(gtId, debtAmt, byDebtToken);
 
         uint256 collateralBalanceAfter = res.collateral.balanceOf(sender);
@@ -334,7 +334,7 @@ contract GtTest is Test {
 
         bool byDebtToken = false;
         vm.expectEmit();
-        emit GearingTokenEvents.Repay(gtId, debtAmt, byDebtToken);
+        emit GearingTokenEvents.Repay(gtId, debtAmt, byDebtToken, true);
         res.gt.repay(gtId, debtAmt, byDebtToken);
 
         uint256 collateralBalanceAfter = res.collateral.balanceOf(sender);
@@ -370,7 +370,7 @@ contract GtTest is Test {
 
         bool byDebtToken = true;
         vm.expectEmit();
-        emit GearingTokenEvents.Repay(gtId, repayAmt, byDebtToken);
+        emit GearingTokenEvents.Repay(gtId, repayAmt, byDebtToken, false);
         res.gt.repay(gtId, repayAmt, byDebtToken);
         state.debtReserve += repayAmt;
         StateChecker.checkMarketState(res, state);
@@ -387,7 +387,7 @@ contract GtTest is Test {
         uint256 collateralBalanceBefore = res.collateral.balanceOf(sender);
 
         vm.expectEmit();
-        emit GearingTokenEvents.Repay(gtId, debtAmt - repayAmt, byDebtToken);
+        emit GearingTokenEvents.Repay(gtId, debtAmt - repayAmt, byDebtToken, true);
         res.gt.repay(gtId, debtAmt - repayAmt, byDebtToken);
 
         state.debtReserve += (debtAmt - repayAmt);
@@ -423,7 +423,7 @@ contract GtTest is Test {
         StateChecker.MarketState memory state = StateChecker.getMarketState(res);
         bool byDebtToken = true;
         vm.expectEmit();
-        emit GearingTokenEvents.Repay(gtId, debtAmt, byDebtToken);
+        emit GearingTokenEvents.Repay(gtId, debtAmt, byDebtToken, true);
         flashRepayer.flashRepay(gtId, byDebtToken);
 
         uint256 collateralBalanceAfter = res.collateral.balanceOf(sender);

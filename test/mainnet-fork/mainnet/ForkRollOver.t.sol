@@ -7,7 +7,7 @@ import {PriceFeedFactory} from "contracts/extensions/PriceFeedFactory.sol";
 import {ITermMaxMarket} from "contracts/ITermMaxMarket.sol";
 import {ITermMaxOrder} from "contracts/ITermMaxOrder.sol";
 import {SwapUnit, ITermMaxRouter, TermMaxRouter} from "contracts/router/TermMaxRouter.sol";
-import {IGearingToken, AbstractGearingToken} from "contracts/tokens/AbstractGearingToken.sol";
+import {IGearingToken, GearingTokenEvents, AbstractGearingToken} from "contracts/tokens/AbstractGearingToken.sol";
 import {PendleSwapV3Adapter} from "contracts/router/swapAdapters/PendleSwapV3Adapter.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import "contracts/storage/TermMaxStorage.sol";
@@ -260,6 +260,8 @@ contract ForkRollOver is ForkBaseTest {
 
             console.log("usdc balance before:", IERC20(usdc).balanceOf(borrower));
             gt.approve(address(router), gt1);
+            vm.expectEmit();
+            emit GearingTokenEvents.FlashRepay(gt1, address(router), debt, true, true, abi.encode(collateralAmount));
             router.flashRepayFromColl(borrower, mmay_30, gt1, orders, amounts, true, swapUnits, may_30);
             console.log("usdc balance after:", IERC20(usdc).balanceOf(borrower));
             vm.stopPrank();
