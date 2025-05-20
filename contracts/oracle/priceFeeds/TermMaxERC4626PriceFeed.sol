@@ -21,8 +21,7 @@ contract TermMaxERC4626PriceFeed is ITermMaxPriceFeed {
         assetPriceFeed = AggregatorV3Interface(_assetPriceFeed);
         asset = _asset;
         vaultDemonitor = 10 ** IERC4626(asset).decimals();
-        uint256 assetDemonitor = 10 ** IERC20Metadata(asset).decimals();
-        priceDemonitor = int256(10 ** assetPriceFeed.decimals()) * int256(assetDemonitor);
+        priceDemonitor = int256(10 ** assetPriceFeed.decimals()) * int256(vaultDemonitor);
     }
 
     function decimals() public view returns (uint8) {

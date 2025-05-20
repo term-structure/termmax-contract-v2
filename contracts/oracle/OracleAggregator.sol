@@ -71,15 +71,15 @@ contract OracleAggregator is IOracle, Ownable2Step {
     }
 
     function submitPendingOracle(address asset, Oracle memory oracle) external onlyOwner {
-        if (asset == address(0)) {
-            revert InvalidAssetOrOracle();
-        }
         if (address(oracle.aggregator) == address(0) && address(oracle.backupAggregator) == address(0)) {
             delete oracles[asset];
             emit UpdateOracle(asset, AggregatorV3Interface(address(0)), AggregatorV3Interface(address(0)), 0, 0, 0);
             return;
         }
-        if (address(oracle.aggregator) != address(0) && address(oracle.backupAggregator) != address(0)) {
+        if (asset == address(0) || oracle.aggregator == AggregatorV3Interface(address(0))) {
+            revert InvalidAssetOrOracle();
+        }
+        if (address(oracle.backupAggregator) != address(0)) {
             if (oracle.aggregator.decimals() != oracle.backupAggregator.decimals()) {
                 revert InvalidAssetOrOracle();
             }
