@@ -448,7 +448,31 @@ contract GtTest is Test {
             abi.decode(currentCollateral, (uint256)),
             "current collateral after repayment"
         );
+
+        res.gt.approve(address(flashRepayer), gtId);
+        flashRepayer.flashRepay(gtId, currentDebt, byDebtToken, currentCollateral);
+        vm.expectRevert(abi.encodePacked(bytes4(keccak256("ERC721NonexistentToken(uint256)")), gtId));
+        res.gt.loanInfo(gtId);
         vm.stopPrank();
+    }
+
+    function testRevertByGtIsNotHealthyWhenFlashRepay() public {
+        uint128 debtAmt = 100e8;
+        uint256 collateralAmt = 1e18;
+        uint128 repayAmt = 50e8;
+
+        vm.startPrank(sender);
+
+        (uint256 gtId,) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
+        res.debt.mint(address(flashRepayer), debtAmt);
+        res.gt.approve(address(flashRepayer), gtId);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                GearingTokenErrors.GtIsNotHealthy.selector, gtId, address(flashRepayer), type(uint128).max
+            )
+        );
+        flashRepayer.flashRepay(gtId, repayAmt, true, abi.encode(collateralAmt));
     }
 
     // function testFlashRepayThroughFt() public {
