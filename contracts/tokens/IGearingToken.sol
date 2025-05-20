@@ -83,13 +83,14 @@ interface IGearingToken is IERC721Enumerable {
     /// @param repayAmt The amount of debt you want to repay
     /// @param removedCollateral The collateral data to be removed
     /// @param callbackData The data to be passed to the callback function
+    /// @return repayAll Whether the repayment is complete
     function flashRepay(
         uint256 id,
         uint128 repayAmt,
         bool byDebtToken,
         bytes memory removedCollateral,
         bytes calldata callbackData
-    ) external;
+    ) external returns (bool repayAll);
 
     /// @notice Remove collateral from the loan.
     ///         Require the loan to value bigger than maxLtv after this action.

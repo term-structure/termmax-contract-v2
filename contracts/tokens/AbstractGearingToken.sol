@@ -247,25 +247,17 @@ abstract contract AbstractGearingToken is
         emit Repay(id, repayAmt, byDebtToken, repayAll);
     }
 
+    /// @inheritdoc IGearingToken
+    /// @notice This function is deprecated, please use `flashRepay(
+    //     uint256 id,
+    //     uint128 repayAmt,
+    //     bool byDebtToken,
+    //     bytes memory removedCollateral,
+    //     bytes calldata callbackData
+    // )` instead
     function flashRepay(uint256 id, bool byDebtToken, bytes calldata callbackData) external override nonReentrant {
-        GtConfig memory config = _config;
-        if (config.maturity <= block.timestamp) {
-            revert GtIsExpired(id);
-        }
         LoanInfo memory loan = loanMapping[id];
-        if (ownerOf(id) != msg.sender) {
-            revert CallerIsNotTheOwner(id);
-        }
-        // Transfer collateral to the owner
-        _transferCollateral(msg.sender, loan.collateralData);
-        IERC20 repayToken = byDebtToken ? config.debtToken : config.ft;
-
-        IFlashRepayer(msg.sender).executeOperation(
-            repayToken, loan.debtAmt, config.collateral, loan.collateralData, callbackData
-        );
-        repayToken.safeTransferFrom(msg.sender, owner(), loan.debtAmt);
-        _burnInternal(id);
-        emit Repay(id, loan.debtAmt, byDebtToken, true);
+        _flashRepay(id, loan.debtAmt, byDebtToken, loan.collateralData, callbackData);
     }
 
     function flashRepay(
@@ -274,7 +266,17 @@ abstract contract AbstractGearingToken is
         bool byDebtToken,
         bytes memory removedCollateral,
         bytes calldata callbackData
-    ) external override nonReentrant {
+    ) external override nonReentrant returns (bool) {
+        return _flashRepay(id, repayAmt, byDebtToken, removedCollateral, callbackData);
+    }
+
+    function _flashRepay(
+        uint256 id,
+        uint128 repayAmt,
+        bool byDebtToken,
+        bytes memory removedCollateral,
+        bytes calldata callbackData
+    ) internal returns (bool) {
         GtConfig memory config = _config;
         if (config.maturity <= block.timestamp) {
             revert GtIsExpired(id);
@@ -299,7 +301,8 @@ abstract contract AbstractGearingToken is
             repayToken, repayAmt, config.collateral, removedCollateral, callbackData
         );
         repayToken.safeTransferFrom(msg.sender, owner(), repayAmt);
-        emit FlashRepay(id, msg.sender, repayAmt, byDebtToken, repayAll, callbackData);
+        emit FlashRepay(id, msg.sender, repayAmt, byDebtToken, repayAll, removedCollateral);
+        return repayAll;
     }
 
     function _repay(uint256 id, uint128 repayAmt) internal returns (LoanInfo memory loan, bool repayAll) {

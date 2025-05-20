@@ -39,7 +39,7 @@ interface GearingTokenEvents {
         uint128 repayAmt,
         bool byDebtToken,
         bool repayAll,
-        bytes callbackData
+        bytes removedCollateral
     );
 
     /// @notice Emitted when liquidating Gearing Token

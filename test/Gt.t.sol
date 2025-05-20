@@ -418,27 +418,36 @@ contract GtTest is Test {
         res.debt.mint(address(flashRepayer), debtAmt);
         res.gt.approve(address(flashRepayer), gtId);
 
+        uint256 removedCollateral = 0.5e18;
+        uint128 repayAmt = 50e8;
         uint256 collateralBalanceBefore = res.collateral.balanceOf(sender);
         uint256 debtBalanceBefore = res.debt.balanceOf(sender);
         StateChecker.MarketState memory state = StateChecker.getMarketState(res);
         bool byDebtToken = true;
         vm.expectEmit();
-        emit GearingTokenEvents.Repay(gtId, debtAmt, byDebtToken, true);
-        flashRepayer.flashRepay(gtId, byDebtToken);
+        emit GearingTokenEvents.FlashRepay(
+            gtId, address(flashRepayer), repayAmt, byDebtToken, false, abi.encode(removedCollateral)
+        );
+        flashRepayer.flashRepay(gtId, repayAmt, byDebtToken, abi.encode(removedCollateral));
 
         uint256 collateralBalanceAfter = res.collateral.balanceOf(sender);
         uint256 debtBalanceAfter = res.debt.balanceOf(sender);
-        state.debtReserve += debtAmt;
-        state.collateralReserve -= collateralAmt;
+        state.debtReserve += repayAmt;
+        state.collateralReserve -= removedCollateral;
         StateChecker.checkMarketState(res, state);
 
-        assert(res.collateral.balanceOf(address(flashRepayer)) == collateralAmt);
-        assert(res.debt.balanceOf(address(flashRepayer)) == 0);
-        assert(collateralBalanceAfter == collateralBalanceBefore);
-        assert(debtBalanceAfter == debtBalanceBefore);
-        vm.expectRevert(abi.encodePacked(bytes4(keccak256("ERC721NonexistentToken(uint256)")), gtId));
-        res.gt.loanInfo(gtId);
-
+        assertEq(res.collateral.balanceOf(address(flashRepayer)), removedCollateral, "flashRepayer collateral balance");
+        assertEq(res.debt.balanceOf(address(flashRepayer)), repayAmt, "flashRepayer debt balance");
+        assertEq(collateralBalanceAfter, collateralBalanceBefore + removedCollateral, "sender collateral balance");
+        assertEq(debtBalanceAfter, debtBalanceBefore - repayAmt, "sender debt balance");
+        (address owner, uint128 currentDebt, bytes memory currentCollateral) = res.gt.loanInfo(gtId);
+        assertEq(owner, sender, "gt owner");
+        assertEq(currentDebt, debtAmt - repayAmt, "current debt after repayment");
+        assertEq(
+            collateralAmt - removedCollateral,
+            abi.decode(currentCollateral, (uint256)),
+            "current collateral after repayment"
+        );
         vm.stopPrank();
     }
 
@@ -507,7 +516,7 @@ contract GtTest is Test {
         res.gt.approve(address(flashRepayer), gtId);
 
         vm.expectRevert(abi.encodeWithSelector(GearingTokenErrors.GtIsExpired.selector, gtId));
-        flashRepayer.flashRepay(gtId, true);
+        flashRepayer.flashRepay(gtId, debtAmt, true, abi.encode(collateralAmt));
     }
 
     function testMerge() public {
