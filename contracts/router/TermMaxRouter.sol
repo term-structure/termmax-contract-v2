@@ -367,25 +367,48 @@ contract TermMaxRouter is
     }
 
     /**
-     * @inheritdoc ITermMaxRouter
+     *  Deprecated function
+     *  @dev use `flashRepayFromCollV2` instead
      */
     function flashRepayFromColl(
         address recipient,
         ITermMaxMarket market,
         uint256 gtId,
-        ITermMaxOrder[] memory orders,
-        uint128[] memory amtsToBuyFt,
         bool byDebtToken,
         SwapUnit[] memory units,
-        uint256 deadline
+        TermMaxSwapData memory swapData
     ) external whenNotPaused returns (uint256 netTokenOut) {
         (IERC20 ft,, IGearingToken gt,, IERC20 debtToken) = market.tokens();
         gt.safeTransferFrom(msg.sender, address(this), gtId, "");
-        bytes memory callbackData = abi.encode(orders, amtsToBuyFt, ft, units, deadline);
+        bytes memory callbackData = abi.encode(units, swapData);
         callbackData = abi.encode(FlashRepayOptions.REPAY, callbackData);
         gt.flashRepay(gtId, byDebtToken, callbackData);
         netTokenOut = debtToken.balanceOf(address(this));
         debtToken.safeTransfer(recipient, netTokenOut);
+    }
+
+    function flashRepayFromCollV2(
+        address recipient,
+        ITermMaxMarket market,
+        uint256 gtId,
+        uint128 repayAmt,
+        bool byDebtToken,
+        bytes memory removedCollateral,
+        SwapUnit[] memory units,
+        TermMaxSwapData memory swapData
+    ) external whenNotPaused returns (uint256 netTokenOut) {
+        (IERC20 ft,, IGearingToken gt,, IERC20 debtToken) = market.tokens();
+        gt.safeTransferFrom(msg.sender, address(this), gtId, "");
+        bytes memory callbackData = abi.encode(units, swapData);
+        callbackData = abi.encode(FlashRepayOptions.REPAY, callbackData);
+        bool repayAll = gt.flashRepay(gtId, repayAmt, byDebtToken, removedCollateral, callbackData);
+        if (repayAll) {
+            netTokenOut = debtToken.balanceOf(address(this));
+            debtToken.safeTransfer(recipient, netTokenOut);
+        } else {
+            // transfer gt back to sender
+            gt.safeTransferFrom(address(this), msg.sender, gtId);
+        }
     }
 
     /**
@@ -557,19 +580,22 @@ contract TermMaxRouter is
     }
 
     function _flashRepay(IERC20 repayToken, bytes memory collateralData, bytes memory callbackData) internal {
-        (
-            ITermMaxOrder[] memory orders,
-            uint128[] memory amtsToBuyFt,
-            IERC20 ft,
-            SwapUnit[] memory units,
-            uint256 deadline
-        ) = abi.decode(callbackData, (ITermMaxOrder[], uint128[], IERC20, SwapUnit[], uint256));
+        (SwapUnit[] memory units, TermMaxSwapData memory swapData) =
+            abi.decode(callbackData, (SwapUnit[], TermMaxSwapData));
         bytes memory outData = _doSwap(collateralData, units);
 
-        if (address(repayToken) == address(ft)) {
-            IERC20 debtToken = IERC20(units[units.length - 1].tokenOut);
+        if (swapData.orders.length > 0) {
+            // swap token to exact token
             uint256 amount = abi.decode(outData, (uint256));
-            _swapTokenToExactToken(debtToken, ft, address(this), orders, amtsToBuyFt, amount.toUint128(), deadline);
+            _swapTokenToExactToken(
+                IERC20(swapData.tokenIn),
+                IERC20(swapData.tokenOut),
+                address(this),
+                swapData.orders,
+                swapData.tradingAmts,
+                amount.toUint128(),
+                swapData.deadline
+            );
         }
     }
 
