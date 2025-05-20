@@ -285,12 +285,13 @@ abstract contract AbstractGearingToken is
             revert CallerIsNotTheOwner(id);
         }
         (LoanInfo memory loan, bool repayAll) = _repay(id, repayAmt);
-
         // Check ltv after partial repayment
         if (!repayAll) {
+            loan.collateralData = _removeCollateral(loan, removedCollateral);
             ValueAndPrice memory valueAndPrice = _getValueAndPrice(config, loan);
             uint128 ltv = _calculateLtv(valueAndPrice);
             require(ltv <= config.loanConfig.maxLtv, GtIsNotHealthy(id, msg.sender, ltv));
+            loanMapping[id] = loan;
             // Transfer collateral to the owner
             _transferCollateral(msg.sender, removedCollateral);
         }
@@ -310,15 +311,15 @@ abstract contract AbstractGearingToken is
         if (repayAmt > loan.debtAmt) {
             revert RepayAmtExceedsMaxRepayAmt(id, repayAmt, loan.debtAmt);
         }
-        if (repayAmt == loan.debtAmt) {
+        loan.debtAmt = loan.debtAmt - repayAmt;
+        if (loan.debtAmt == 0) {
             address gtOwner = ownerOf(id);
             // Burn this nft
             _burnInternal(id);
             _transferCollateral(gtOwner, loan.collateralData);
             repayAll = true;
         } else {
-            uint128 debtAmt = loan.debtAmt - repayAmt;
-            loanMapping[id].debtAmt = debtAmt;
+            loanMapping[id].debtAmt = loan.debtAmt;
         }
     }
 
@@ -338,14 +339,15 @@ abstract contract AbstractGearingToken is
         LoanInfo memory loan = loanMapping[id];
         loan.collateralData = _removeCollateral(loan, collateralData);
 
-        _transferCollateral(msg.sender, collateralData);
-
         ValueAndPrice memory valueAndPrice = _getValueAndPrice(config, loan);
         uint128 ltv = _calculateLtv(valueAndPrice);
         if (ltv > config.loanConfig.maxLtv) {
             revert GtIsNotHealthy(id, msg.sender, ltv);
         }
         loanMapping[id] = loan;
+
+        // Transfer collateral to the owner
+        _transferCollateral(msg.sender, collateralData);
 
         emit RemoveCollateral(id, loan.collateralData);
     }

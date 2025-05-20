@@ -438,8 +438,8 @@ contract GtTest is Test {
 
         assertEq(res.collateral.balanceOf(address(flashRepayer)), removedCollateral, "flashRepayer collateral balance");
         assertEq(res.debt.balanceOf(address(flashRepayer)), repayAmt, "flashRepayer debt balance");
-        assertEq(collateralBalanceAfter, collateralBalanceBefore + removedCollateral, "sender collateral balance");
-        assertEq(debtBalanceAfter, debtBalanceBefore - repayAmt, "sender debt balance");
+        assertEq(collateralBalanceAfter, collateralBalanceBefore, "sender collateral balance");
+        assertEq(debtBalanceAfter, debtBalanceBefore, "sender debt balance");
         (address owner, uint128 currentDebt, bytes memory currentCollateral) = res.gt.loanInfo(gtId);
         assertEq(owner, sender, "gt owner");
         assertEq(currentDebt, debtAmt - repayAmt, "current debt after repayment");

@@ -69,9 +69,6 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
      */
     function _transferCollateralFrom(address from, address to, bytes memory collateralData) internal virtual override {
         uint256 amount = _decodeAmount(collateralData);
-        if (amount == 0) {
-            return;
-        }
         IERC20(_config.collateral).safeTransferFrom(from, to, amount);
     }
 
@@ -80,9 +77,6 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
      */
     function _transferCollateral(address to, bytes memory collateralData) internal virtual override {
         uint256 amount = _decodeAmount(collateralData);
-        if (amount == 0) {
-            return;
-        }
         IERC20(_config.collateral).safeTransfer(to, amount);
     }
 
