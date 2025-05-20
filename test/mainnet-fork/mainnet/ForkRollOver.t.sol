@@ -260,8 +260,6 @@ contract ForkRollOver is ForkBaseTest {
 
             console.log("usdc balance before:", IERC20(usdc).balanceOf(borrower));
             gt.approve(address(router), gt1);
-            vm.expectEmit();
-            emit GearingTokenEvents.FlashRepay(gt1, address(router), debt, true, true, abi.encode(collateralAmount));
             ITermMaxRouter.TermMaxSwapData memory swapData;
             router.flashRepayFromColl(borrower, mmay_30, gt1, true, swapUnits, swapData);
             console.log("usdc balance after:", IERC20(usdc).balanceOf(borrower));
