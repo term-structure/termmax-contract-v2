@@ -378,7 +378,7 @@ contract TermMaxRouter is
         SwapUnit[] memory units,
         TermMaxSwapData memory swapData
     ) external whenNotPaused returns (uint256 netTokenOut) {
-        (IERC20 ft,, IGearingToken gt,, IERC20 debtToken) = market.tokens();
+        (,, IGearingToken gt,, IERC20 debtToken) = market.tokens();
         gt.safeTransferFrom(msg.sender, address(this), gtId, "");
         bytes memory callbackData = abi.encode(units, swapData);
         callbackData = abi.encode(FlashRepayOptions.REPAY, callbackData);
@@ -397,18 +397,16 @@ contract TermMaxRouter is
         SwapUnit[] memory units,
         TermMaxSwapData memory swapData
     ) external whenNotPaused returns (uint256 netTokenOut) {
-        (IERC20 ft,, IGearingToken gt,, IERC20 debtToken) = market.tokens();
+        (,, IGearingToken gt,, IERC20 debtToken) = market.tokens();
         gt.safeTransferFrom(msg.sender, address(this), gtId, "");
         bytes memory callbackData = abi.encode(units, swapData);
         callbackData = abi.encode(FlashRepayOptions.REPAY, callbackData);
         bool repayAll = gt.flashRepay(gtId, repayAmt, byDebtToken, removedCollateral, callbackData);
-        if (repayAll) {
-            netTokenOut = debtToken.balanceOf(address(this));
-            debtToken.safeTransfer(recipient, netTokenOut);
-        } else {
-            // transfer gt back to sender
+        if (!repayAll) {
             gt.safeTransferFrom(address(this), msg.sender, gtId);
         }
+        netTokenOut = debtToken.balanceOf(address(this));
+        debtToken.safeTransfer(recipient, netTokenOut);
     }
 
     /**
@@ -559,8 +557,8 @@ contract TermMaxRouter is
         bytes memory callbackData =
             abi.encode(recipient, maxLtv, additionalAssets, nextMarket, additionnalNextCollateral, units, swapData);
         callbackData = abi.encode(FlashRepayOptions.ROLLOVER, callbackData);
-        if (gt.flashRepay(gtId, repayAmt, true, abi.encode(removedCollateral), callbackData)) {
-            gt.safeTransferFrom(address(this), msg.sender, gtId);
+        if (!gt.flashRepay(gtId, repayAmt, true, abi.encode(removedCollateral), callbackData)) {
+            gt.safeTransferFrom(address(this), recipient, gtId);
         }
         assembly {
             newGtId := tload(T_ROLLOVER_GT_RESERVE_STORE)
