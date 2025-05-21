@@ -304,12 +304,13 @@ abstract contract GtBaseTest is ForkBaseTest {
         res.gt.approve(address(res.router), gtId);
 
         uint256 debtTokenBalanceBeforeRepay = res.debtToken.balanceOf(taker);
-        ITermMaxOrder[] memory orders = new ITermMaxOrder[](0);
-        uint128[] memory amtsToBuyFt = new uint128[](0);
         bool byDebtToken = true;
 
-        uint256 netTokenOut = res.router.flashRepayFromColl(
-            taker, res.market, gtId, orders, amtsToBuyFt, byDebtToken, units, block.timestamp + 1 hours
+        ITermMaxRouter.TermMaxSwapData memory swapData;
+
+        (, uint128 debtAmt, bytes memory collateralData) = res.gt.loanInfo(gtId);
+        uint256 netTokenOut = res.router.flashRepayFromCollV2(
+            taker, res.market, gtId, debtAmt, byDebtToken, collateralData, units, swapData
         );
 
         uint256 debtTokenBalanceAfterRepay = res.debtToken.balanceOf(taker);
@@ -330,12 +331,19 @@ abstract contract GtBaseTest is ForkBaseTest {
         orders[0] = res.order;
         uint128[] memory amtsToBuyFt = new uint128[](1);
 
-        (, uint128 debtAmt,) = res.gt.loanInfo(gtId);
+        (, uint128 debtAmt, bytes memory collateralData) = res.gt.loanInfo(gtId);
         amtsToBuyFt[0] = debtAmt;
         bool byDebtToken = false;
 
-        uint256 netTokenOut = res.router.flashRepayFromColl(
-            taker, res.market, gtId, orders, amtsToBuyFt, byDebtToken, units, block.timestamp + 1 hours
+        ITermMaxRouter.TermMaxSwapData memory swapData;
+        swapData.tokenIn = address(res.debtToken);
+        swapData.tokenOut = address(res.ft);
+        swapData.orders = orders;
+        swapData.tradingAmts = amtsToBuyFt;
+        swapData.deadline = block.timestamp + 1 hours;
+
+        uint256 netTokenOut = res.router.flashRepayFromCollV2(
+            taker, res.market, gtId, debtAmt, byDebtToken, collateralData, units, swapData
         );
 
         uint256 debtTokenBalanceAfterRepay = res.debtToken.balanceOf(taker);

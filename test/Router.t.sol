@@ -20,7 +20,7 @@ import {MockFlashLoanReceiver} from "contracts/test/MockFlashLoanReceiver.sol";
 import {IGearingToken} from "contracts/tokens/IGearingToken.sol";
 import {MockSwapAdapter} from "contracts/test/MockSwapAdapter.sol";
 import {SwapUnit, ISwapAdapter} from "contracts/router/ISwapAdapter.sol";
-import {RouterErrors, RouterEvents, TermMaxRouter} from "contracts/router/TermMaxRouter.sol";
+import {RouterErrors, RouterEvents, TermMaxRouter, ITermMaxRouter} from "contracts/router/TermMaxRouter.sol";
 import "contracts/storage/TermMaxStorage.sol";
 
 contract RouterTest is Test {
@@ -456,9 +456,8 @@ contract RouterTest is Test {
         units[0] = SwapUnit(address(adapter), address(res.collateral), address(res.debt), abi.encode(mintTokenOut));
 
         res.gt.approve(address(res.router), gtId);
-        res.router.flashRepayFromColl(
-            sender, res.market, gtId, orders, amtsToBuyFt, byDebtToken, units, block.timestamp + 1 hours
-        );
+        ITermMaxRouter.TermMaxSwapData memory swapData;
+        res.router.flashRepayFromColl(sender, res.market, gtId, byDebtToken, units, swapData);
 
         assertEq(res.collateral.balanceOf(sender), 0);
         assertEq(res.debt.balanceOf(sender), mintTokenOut - debtAmt);
@@ -485,10 +484,16 @@ contract RouterTest is Test {
         SwapUnit[] memory units = new SwapUnit[](1);
         units[0] = SwapUnit(address(adapter), address(res.collateral), address(res.debt), abi.encode(mintTokenOut));
 
+        ITermMaxRouter.TermMaxSwapData memory swapData;
+        swapData.orders = orders;
+        swapData.tradingAmts = amtsToBuyFt;
+        swapData.tokenIn = address(res.debt);
+        swapData.tokenOut = address(res.ft);
+        swapData.netTokenAmt = 0;
+        swapData.deadline = block.timestamp + 1 hours;
+
         res.gt.approve(address(res.router), gtId);
-        res.router.flashRepayFromColl(
-            sender, res.market, gtId, orders, amtsToBuyFt, byDebtToken, units, block.timestamp
-        );
+        res.router.flashRepayFromColl(sender, res.market, gtId, byDebtToken, units, swapData);
 
         assertEq(res.collateral.balanceOf(sender), 0);
         assert(res.debt.balanceOf(sender) > mintTokenOut - debtAmt);

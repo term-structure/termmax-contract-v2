@@ -15,6 +15,15 @@ import {ISwapCallback} from "../ISwapCallback.sol";
  * @dev This interface defines all external functions for swapping, leveraging, and managing positions
  */
 interface ITermMaxRouter {
+    struct TermMaxSwapData {
+        address tokenIn;
+        address tokenOut;
+        ITermMaxOrder[] orders;
+        uint128[] tradingAmts;
+        uint128 netTokenAmt;
+        uint256 deadline;
+    }
+
     /**
      * @notice Pauses all protocol operations
      * @dev Can only be called by authorized addresses
@@ -233,22 +242,29 @@ interface ITermMaxRouter {
      * @param recipient Address to receive any remaining collateral
      * @param market The market to repay debt in
      * @param gtId ID of the GT token to repay debt from
-     * @param orders Array of orders to execute
-     * @param amtsToBuyFt Array of amounts to buy for each order
-     * @param byDebtToken Whether to repay debt using debt tokens
-     * @param units Array of swap units defining the swap path
-     * @param deadline The deadline timestamp for the transaction
+     * @param byDebtToken True if repaying with debt token, false if using FT token
+     * @param units Array of swap units defining the external swap path
+     * @param swapData Data for the termmax swap operation
      * @return netTokenOut Actual amount of tokens received
      */
     function flashRepayFromColl(
         address recipient,
         ITermMaxMarket market,
         uint256 gtId,
-        ITermMaxOrder[] memory orders,
-        uint128[] memory amtsToBuyFt,
         bool byDebtToken,
         SwapUnit[] memory units,
-        uint256 deadline
+        TermMaxSwapData memory swapData
+    ) external returns (uint256 netTokenOut);
+
+    function flashRepayFromCollV2(
+        address recipient,
+        ITermMaxMarket market,
+        uint256 gtId,
+        uint128 repayAmt,
+        bool byDebtToken,
+        bytes memory removedCollateral,
+        SwapUnit[] memory units,
+        TermMaxSwapData memory swapData
     ) external returns (uint256 netTokenOut);
 
     /**
