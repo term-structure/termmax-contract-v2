@@ -3,12 +3,7 @@ pragma solidity ^0.8.27;
 
 import {PendleHelper} from "../../extensions/PendleHelper.sol";
 import {IPAllActionV3} from "@pendle/core-v2/contracts/interfaces/IPAllActionV3.sol";
-import {
-    IPMarket,
-    IPPrincipalToken,
-    IPYieldToken,
-    IStandardizedYield
-} from "@pendle/core-v2/contracts/interfaces/IPMarket.sol";
+import {IPMarket, IPPrincipalToken} from "@pendle/core-v2/contracts/interfaces/IPMarket.sol";
 import "./ERC20SwapAdapter.sol";
 /**
  * @title TermMax PendleSwapV3Adapter
