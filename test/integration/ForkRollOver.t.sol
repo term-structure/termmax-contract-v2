@@ -2,22 +2,34 @@
 pragma solidity ^0.8.27;
 
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
-import {PriceFeedFactory} from "contracts/extensions/PriceFeedFactory.sol";
 import {ITermMaxMarket} from "contracts/ITermMaxMarket.sol";
 import {ITermMaxOrder} from "contracts/ITermMaxOrder.sol";
 import {SwapUnit, ITermMaxRouter, TermMaxRouter} from "contracts/router/TermMaxRouter.sol";
-import {IGearingToken, GearingTokenEvents, AbstractGearingToken} from "contracts/tokens/AbstractGearingToken.sol";
+import {
+    IGearingToken,
+    GearingTokenEvents,
+    AbstractGearingToken,
+    GtConfig
+} from "contracts/tokens/AbstractGearingToken.sol";
 import {PendleSwapV3Adapter} from "contracts/router/swapAdapters/PendleSwapV3Adapter.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import "contracts/storage/TermMaxStorage.sol";
-import "test/mainnet-fork/ForkBaseTest.sol";
+import {IOracle} from "contracts/oracle/IOracleV1.sol";
+import {
+    ForkBaseTest,
+    TermMaxFactory,
+    MarketConfig,
+    IERC20,
+    MarketInitialParams,
+    IERC20Metadata
+} from "test/mainnet-fork/ForkBaseTest.sol";
+import {console} from "forge-std/console.sol";
 
 interface TestOracle is IOracle {
     function acceptPendingOracle(address asset) external;
     function oracles(address asset) external returns (address aggregator, address backupAggregator, uint32 heartbeat);
 }
 
-contract ForkRollOver is ForkBaseTest {
+contract ForkRollover is ForkBaseTest {
     string MAINNET_RPC_URL = vm.envString("MAINNET_RPC_URL");
     string DATA_PATH = string.concat(vm.projectRoot(), "/test/testdata/fork/mainnet.json");
 
@@ -365,8 +377,7 @@ contract ForkRollOver is ForkBaseTest {
         vm.stopPrank();
     }
 
-    function testFlashRepayPtV2() public {
-        vm.roll(22494579); // 2025-05-15
+    function testRolloverPtV2WithCollateral() public {
         address borrower = vm.randomAddress();
         vm.label(borrower, "borrower");
         address admin = vm.randomAddress();
@@ -375,8 +386,8 @@ contract ForkRollOver is ForkBaseTest {
         vm.startPrank(admin);
         ITermMaxMarket market;
         uint256 gtId1;
-        uint128 oldDebt = 1000e6;
-        uint256 oldCollateral = 35012712455278300958037;
+        uint128 oldDebt = 100e6;
+        uint256 oldCollateral = 1000e18;
 
         deal(pt_susde_may_29, admin, oldCollateral);
 
@@ -403,91 +414,25 @@ contract ForkRollOver is ForkBaseTest {
             (,, IGearingToken gt2,,) = market.tokens();
 
             IERC20(pt_susde_may_29).approve(address(gt2), oldCollateral);
-            (gtId1,) = market.issueFt(borrower, oldDebt, abi.encode(oldCollateral));
+            (gtId1,) = market.issueFt(borrower, 100e6, abi.encode(oldCollateral));
 
             vm.label(address(market), "market_may_30");
             vm.label(address(gt2), "gt_may_30");
         }
 
         vm.stopPrank();
+
+        uint128 debt = 20e6;
+        uint256 collateralAmount = 500e18;
+
         vm.startPrank(borrower);
         vm.warp(may_30 - 0.5 days);
-        uint128 repayAmount = 300e6;
-        uint256 removedCollateral = 25012712455278300958037;
         // roll gt
         {
-            ITermMaxOrder[] memory orders = new ITermMaxOrder[](0);
-            uint128[] memory amounts = new uint128[](0);
-            SwapUnit[] memory swapUnits = new SwapUnit[](2);
             address pm1 = 0xB162B764044697cf03617C2EFbcB1f42e31E4766;
-            swapUnits[0] = SwapUnit({
-                adapter: pendleAdapter,
-                tokenIn: pt_susde_may_29,
-                tokenOut: susde,
-                swapData: abi.encode(pm1, removedCollateral, 0)
-            });
-            swapUnits[1] = SwapUnit({
-                adapter: 0x2aFEf28a8Ab57d2F5A5663Ef69351e9d3abf1779,
-                tokenIn: susde,
-                tokenOut: usdc,
-                swapData: hex"0000000000000000000000009d39a5de30e57443bff2a8307a4256c8797a349700000000000000000000000000000000000000000000048103daed12389fbcc800000000000000000000000076edf8c155a1e0d9b2ad11b04d9671cbc25fee99000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb4800000000000000000000000000000000000000000000000000000005d443b21d00000000000000000000000000000000000000000000000000000005b66b4d45000000000000000000000000c47591f5c023e44931c78d5a993834875b79fb11000000000000000000000000000000000000000000000000000000000000014000000000000000000000000076edf8c155a1e0d9b2ad11b04d9671cbc25fee9900000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000084010206000d0100010201022700000304000d0101050400ff00000000000000007eb59373d63627be64b42406b108b602174b4ccc9d39a5de30e57443bff2a8307a4256c8797a3497dac17f958d2ee523a2206206994597c13d831ec7c02aaa39b223fe8d0a0e5c4f27ead9083c756cc288e6a0c2ddd26feeb64f039a2c41296fcb3f564000000000000000000000000000000000000000000000000000000000"
-            });
-            (IERC20 ft,, IGearingToken gt, address collateral,) = market.tokens();
-            console.log("usdc balance before:", IERC20(usdc).balanceOf(borrower));
-            gt.approve(address(router), gtId1);
-            ITermMaxRouter.TermMaxSwapData memory swapData;
-            router.flashRepayFromCollV2(
-                borrower, market, gtId1, repayAmount, true, abi.encode(removedCollateral), swapUnits, swapData
-            );
-            console.log("usdc balance after:", IERC20(usdc).balanceOf(borrower));
+            address pm2 = 0x4339Ffe2B7592Dc783ed13cCE310531aB366dEac;
 
-            (address owner, uint128 currentDebt, bytes memory currentCollateral) = gt.loanInfo(gtId1);
-            assertEq(owner, borrower, "borrower should be the same");
-            assertEq(currentDebt, oldDebt - repayAmount, "debt should be the same");
-            assertEq(
-                abi.decode(currentCollateral, (uint256)),
-                oldCollateral - removedCollateral,
-                "collateral should be the same"
-            );
-            vm.stopPrank();
-        }
-
-        vm.stopPrank();
-    }
-
-    function testFlashRepayPt() public {
-        vm.roll(22494579); // 2025-05-15
-
-        address borrower;
-        address admin = vm.randomAddress();
-
-        vm.startPrank(admin);
-        TermMaxRouter router = deployRouter(admin);
-        router.setAdapterWhitelist(pendleAdapter, true);
-        router.setAdapterWhitelist(0x2aFEf28a8Ab57d2F5A5663Ef69351e9d3abf1779, true);
-        vm.stopPrank();
-
-        uint128 debt;
-        uint256 collateralAmount;
-        // deal(pt_susde_may_29, borrower, collateralAmount);
-        uint256 gt1 = 5;
-
-        {
-            (IERC20 ft,, IGearingToken gt, address collateral,) = mmay_30.tokens();
-            (address owner, uint128 debtAmt, bytes memory collateralData) = gt.loanInfo(gt1);
-            borrower = owner;
-            debt = debtAmt;
-            collateralAmount = abi.decode(collateralData, (uint256));
-            console.log("collateralAmount:", collateralAmount);
-            console.log("debt:", debt);
-
-            vm.startPrank(borrower);
-            vm.warp(may_30 - 0.5 days);
-
-            ITermMaxOrder[] memory orders = new ITermMaxOrder[](0);
-            uint128[] memory amounts = new uint128[](0);
             SwapUnit[] memory swapUnits = new SwapUnit[](2);
-            address pm1 = 0xB162B764044697cf03617C2EFbcB1f42e31E4766;
             swapUnits[0] = SwapUnit({
                 adapter: pendleAdapter,
                 tokenIn: pt_susde_may_29,
@@ -495,18 +440,57 @@ contract ForkRollOver is ForkBaseTest {
                 swapData: abi.encode(pm1, collateralAmount, 0)
             });
             swapUnits[1] = SwapUnit({
-                adapter: odosAdapter,
+                adapter: pendleAdapter,
                 tokenIn: susde,
-                tokenOut: usdc,
-                swapData: hex"0000000000000000000000009d39a5de30e57443bff2a8307a4256c8797a349700000000000000000000000000000000000000000000048103daed12389fbcc800000000000000000000000076edf8c155a1e0d9b2ad11b04d9671cbc25fee99000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb4800000000000000000000000000000000000000000000000000000005d443b21d00000000000000000000000000000000000000000000000000000005b66b4d45000000000000000000000000c47591f5c023e44931c78d5a993834875b79fb11000000000000000000000000000000000000000000000000000000000000014000000000000000000000000076edf8c155a1e0d9b2ad11b04d9671cbc25fee9900000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000084010206000d0100010201022700000304000d0101050400ff00000000000000007eb59373d63627be64b42406b108b602174b4ccc9d39a5de30e57443bff2a8307a4256c8797a3497dac17f958d2ee523a2206206994597c13d831ec7c02aaa39b223fe8d0a0e5c4f27ead9083c756cc288e6a0c2ddd26feeb64f039a2c41296fcb3f564000000000000000000000000000000000000000000000000000000000"
+                tokenOut: pt_susde_jun_31,
+                swapData: abi.encode(pm2, 1e18, 0)
             });
 
-            console.log("usdc balance before:", IERC20(usdc).balanceOf(borrower));
-            gt.approve(address(router), gt1);
-            ITermMaxRouter.TermMaxSwapData memory swapData;
-            router.flashRepayFromColl(borrower, mmay_30, gt1, true, swapUnits, swapData);
-            console.log("usdc balance after:", IERC20(usdc).balanceOf(borrower));
-            vm.stopPrank();
+            uint128 additionalAssets = 0;
+            uint256 additionalCollateral = 2 ether;
+
+            ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
+            orders[0] = ITermMaxOrder(address(o_aug_1));
+            uint128[] memory amounts = new uint128[](1);
+            amounts[0] = debt - additionalAssets;
+            (IERC20 ft,, IGearingToken gt, address collateral,) = market.tokens();
+
+            deal(pt_susde_jun_31, borrower, additionalCollateral);
+            IERC20(pt_susde_jun_31).approve(address(router), additionalCollateral);
+            gt.approve(address(router), gtId1);
+
+            (IERC20 ft_aug_1,,,,) = maug_1.tokens();
+            ITermMaxRouter.TermMaxSwapData memory swapData = ITermMaxRouter.TermMaxSwapData({
+                tokenIn: address(ft_aug_1),
+                tokenOut: usdc,
+                orders: orders,
+                tradingAmts: amounts,
+                netTokenAmt: debt + 10e6,
+                deadline: aug_1
+            });
+
+            uint128 maxLtv = 0.9e8;
+            uint256 gtId2 = router.rolloverGtV2(
+                borrower, gt, gtId1, debt, additionalAssets, collateralAmount, swapUnits, maug_1, 0, swapData, maxLtv
+            );
+
+            (address owner, uint128 currentDebt, bytes memory currentCollateral) = gt.loanInfo(gtId1);
+            assertEq(owner, borrower, "borrower should be the same");
+            assertEq(currentDebt + debt, oldDebt, "debt should be the same");
+            assertEq(
+                abi.decode(currentCollateral, (uint256)),
+                oldCollateral - collateralAmount,
+                "collateral should be the same"
+            );
+
+            (,, IGearingToken gt2,,) = maug_1.tokens();
+            console.log("new gtId:", gtId2);
+            (address owner2, uint128 currentDebt2, bytes memory currentCollateral2) = gt2.loanInfo(gtId2);
+            assertEq(owner2, borrower, "borrower should be the same");
+            console.log("new gt debt:", currentDebt2 / 1e6);
+            console.log("new gt collateral:", abi.decode(currentCollateral2, (uint256)) / 1e18);
         }
+
+        vm.stopPrank();
     }
 }
