@@ -4,13 +4,13 @@ pragma solidity ^0.8.27;
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
-import {PriceFeedFactory} from "contracts/extensions/PriceFeedFactory.sol";
+import {TermMaxPriceFeedFactory} from "contracts/factory/TermMaxPriceFeedFactory.sol";
 
 contract DeployPriceFeedsArb is Script {
     function run() public {
         uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
         vm.startBroadcast(deployerPrivateKey);
-        PriceFeedFactory priceFeedFactory = new PriceFeedFactory();
+        TermMaxPriceFeedFactory priceFeedFactory = new TermMaxPriceFeedFactory();
 
         console.log("PriceFeedFactory deployed at", address(priceFeedFactory));
         // pendle deployment: https://github.com/pendle-finance/pendle-core-v2-public/blob/main/deployments/42161-core.json
@@ -23,10 +23,12 @@ contract DeployPriceFeedsArb is Script {
             // chainlink(ETH/USD): https://data.chain.link/feeds/arbitrum/mainnet/eth-usd
             // heartBeat: 86400 (24hr)
             address ethToUsd = 0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612;
+            address wstEth = 0x5979D7b546E38E414F7E9822514be443A4800529;
             // new price feed heartBeat = max(86400, 86400) = 86400 (24hr)
             AggregatorV3Interface wstEthFeed =
-                AggregatorV3Interface(priceFeedFactory.createPriceFeedConverter(wstEthToEth, ethToUsd));
+                AggregatorV3Interface(priceFeedFactory.createPriceFeedConverter(wstEthToEth, ethToUsd, wstEth));
             (, int256 answer,,,) = wstEthFeed.latestRoundData();
+            console.log("wstEth price feed description", wstEthFeed.description());
             console.log("wstEth price feed address", address(wstEthFeed));
             console.log("wstEth last answer", answer);
         }
@@ -39,9 +41,11 @@ contract DeployPriceFeedsArb is Script {
             // heartBeat: 86400 (24hr)
             address ethToUsd = 0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612;
             // new price feed heartBeat = max(86400, 86400) = 86400 (24hr)
+            address weEth = 0x35751007a407ca6FEFfE80b3cB397736D2cf4dbe;
             AggregatorV3Interface weEthFeed =
-                AggregatorV3Interface(priceFeedFactory.createPriceFeedConverter(weEthToEth, ethToUsd));
+                AggregatorV3Interface(priceFeedFactory.createPriceFeedConverter(weEthToEth, ethToUsd, weEth));
             (, int256 answer,,,) = weEthFeed.latestRoundData();
+            console.log("weEth price feed description", weEthFeed.description());
             console.log("weEth price feed address", address(weEthFeed));
             console.log("weEth last answer", answer);
             weEthOracle = address(weEthFeed);
@@ -56,6 +60,7 @@ contract DeployPriceFeedsArb is Script {
                 priceFeedFactory.createPTWithPriceFeed(pendlePYLpOracle, PT_weETH_26JUN2025_market, 900, weEthOracle)
             );
             (, int256 answer,,,) = ptFeed.latestRoundData();
+            console.log("pt_weETH_26JUN2025 price feed description", ptFeed.description());
             console.log("pt_weETH_26JUN2025 price feed address", address(ptFeed));
             console.log("pt_weETH_26JUN2025 last answer", answer);
         }

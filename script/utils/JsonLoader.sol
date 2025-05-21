@@ -16,7 +16,9 @@ library JsonLoader {
         uint8 decimals;
         uint256 mintAmt;
         int256 initialPrice;
+        int256 maxPrice;
         uint256 heartBeat;
+        uint256 backupHeartBeat;
     }
 
     struct CollateralConfig {
@@ -28,7 +30,9 @@ library JsonLoader {
         uint256 mintAmt;
         int256 initialPrice;
         string gtKeyIdentifier;
+        int256 maxPrice;
         uint256 heartBeat;
+        uint256 backupHeartBeat;
     }
 
     struct Config {
@@ -107,6 +111,8 @@ library JsonLoader {
             uint8(vm.parseUint(jsonData.readString(string.concat(underlyingConfigPrefix, ".decimals"))));
         underlyingConfig.initialPrice =
             vm.parseInt(jsonData.readString(string.concat(underlyingConfigPrefix, ".initialPrice")));
+        underlyingConfig.maxPrice = vm.parseInt(jsonData.readString(string.concat(underlyingConfigPrefix, ".maxPrice")));
+
         underlyingConfig.heartBeat =
             uint256(vm.parseUint(jsonData.readString(string.concat(underlyingConfigPrefix, ".heartBeat"))));
 
@@ -122,8 +128,11 @@ library JsonLoader {
             vm.parseInt(jsonData.readString(string.concat(collateralConfigPrefix, ".initialPrice")));
         collateralConfig.gtKeyIdentifier =
             jsonData.readString(string.concat(collateralConfigPrefix, ".gtKeyIdentifier"));
+        collateralConfig.maxPrice = vm.parseInt(jsonData.readString(string.concat(collateralConfigPrefix, ".maxPrice")));
         collateralConfig.heartBeat =
             uint256(vm.parseUint(jsonData.readString(string.concat(collateralConfigPrefix, ".heartBeat"))));
+        collateralConfig.backupHeartBeat =
+            uint256(vm.parseUint(jsonData.readString(string.concat(collateralConfigPrefix, ".backupHeartBeat"))));
 
         config.salt = salt;
         config.collateralCapForGt = collateralCapForGt;

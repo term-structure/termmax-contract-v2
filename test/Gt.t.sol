@@ -176,7 +176,7 @@ contract GtTest is Test {
 
         vm.prank(deployer);
         res.oracle.submitPendingOracle(
-            address(res.collateral), IOracle.Oracle(res.collateralOracle, res.collateralOracle, 3600)
+            address(res.collateral), IOracle.Oracle(res.collateralOracle, res.collateralOracle, 0, 3600, 3600)
         );
         res.oracle.acceptPendingOracle(address(res.collateral));
         vm.warp(block.timestamp + 3600);
@@ -192,7 +192,7 @@ contract GtTest is Test {
 
         vm.startPrank(deployer);
         res.oracle.submitPendingOracle(
-            address(res.collateral), IOracle.Oracle(res.collateralOracle, res.collateralOracle, 365 days)
+            address(res.collateral), IOracle.Oracle(res.collateralOracle, res.collateralOracle, 0, 365 days, 0)
         );
         res.oracle.acceptPendingOracle(address(res.collateral));
         vm.stopPrank();
@@ -667,7 +667,7 @@ contract GtTest is Test {
 
         vm.prank(deployer);
         res.oracle.submitPendingOracle(
-            address(res.collateral), IOracle.Oracle(res.collateralOracle, res.collateralOracle, 3600)
+            address(res.collateral), IOracle.Oracle(res.collateralOracle, res.collateralOracle, 0, 3500, 3500)
         );
         vm.prank(deployer);
         res.oracle.acceptPendingOracle(address(res.collateral));
@@ -679,7 +679,7 @@ contract GtTest is Test {
 
         vm.prank(deployer);
         res.oracle.submitPendingOracle(
-            address(res.collateral), IOracle.Oracle(res.collateralOracle, res.collateralOracle, 365 days)
+            address(res.collateral), IOracle.Oracle(res.collateralOracle, res.collateralOracle, 0, 0, 0)
         );
         vm.prank(deployer);
         res.oracle.acceptPendingOracle(address(res.collateral));
@@ -1206,7 +1206,7 @@ contract GtTest is Test {
 
         vm.prank(deployer);
         res.oracle.submitPendingOracle(
-            address(res.collateral), IOracle.Oracle(res.collateralOracle, res.collateralOracle, 3600)
+            address(res.collateral), IOracle.Oracle(res.collateralOracle, res.collateralOracle, 0, 3600, 3600)
         );
         res.oracle.acceptPendingOracle(address(res.collateral));
 

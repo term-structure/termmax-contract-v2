@@ -73,7 +73,9 @@ contract CheckOracles is Script {
                     oracleAggregator,
                     config.underlyingConfig.tokenAddr,
                     config.underlyingConfig.priceFeedAddr,
+                    config.underlyingConfig.maxPrice,
                     uint32(config.underlyingConfig.heartBeat),
+                    uint32(config.underlyingConfig.backupHeartBeat),
                     "Underlying"
                 );
 
@@ -94,7 +96,9 @@ contract CheckOracles is Script {
                     oracleAggregator,
                     config.collateralConfig.tokenAddr,
                     config.collateralConfig.priceFeedAddr,
+                    config.collateralConfig.maxPrice,
                     uint32(config.collateralConfig.heartBeat),
+                    uint32(config.collateralConfig.backupHeartBeat),
                     "Collateral"
                 );
 
@@ -195,7 +199,9 @@ contract CheckOracles is Script {
         OracleAggregator oracleAggregator,
         address tokenAddr,
         address expectedPriceFeedAddr,
+        int256 expectedMaxPrice,
         uint32 expectedHeartbeat,
+        uint32 expectedBackupHeartbeat,
         string memory tokenType
     ) internal returns (bool success) {
         // Create a diagnostic entry in case of error
@@ -219,8 +225,13 @@ contract CheckOracles is Script {
         console.log("--- Checking %s: %s (%s) ---", tokenType, diag.symbol, tokenAddr);
 
         // Check if the oracle is configured
-        (AggregatorV3Interface aggregator, AggregatorV3Interface backupAggregator, uint32 heartbeat) =
-            oracleAggregator.oracles(tokenAddr);
+        (
+            AggregatorV3Interface aggregator,
+            AggregatorV3Interface backupAggregator,
+            int256 maxPrice,
+            uint32 heartbeat,
+            uint32 backupHeartbeat
+        ) = oracleAggregator.oracles(tokenAddr);
 
         if (address(aggregator) == address(0)) {
             console.log("ERROR: No oracle configured for token");
@@ -235,6 +246,12 @@ contract CheckOracles is Script {
         console.log("Expected: %s", expectedPriceFeedAddr);
         if (address(aggregator) != expectedPriceFeedAddr) {
             console.log("WARNING: Configured price feed doesn't match expected");
+        }
+
+        console.log("Max Price: %d", maxPrice);
+        console.log("Expected: %d", expectedMaxPrice);
+        if (maxPrice != expectedMaxPrice) {
+            console.log("WARNING: Configured max price doesn't match expected");
         }
 
         // Check heartbeat

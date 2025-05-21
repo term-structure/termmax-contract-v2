@@ -101,6 +101,10 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
         aggregator.acceptPendingOracle(asset);
     }
 
+    function revokePendingOracle(IOracle aggregator, address asset) external onlyRole(ORACLE_ROLE) {
+        aggregator.revokePendingOracle(asset);
+    }
+
     /// @notice Update the market configuration
     function updateMarketConfig(ITermMaxMarket market, MarketConfig calldata newConfig)
         external
