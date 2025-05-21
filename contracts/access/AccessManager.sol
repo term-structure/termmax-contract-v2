@@ -135,6 +135,17 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
         }
     }
 
+    /// @notice Set the switch of multiple entities
+    function batchSetSwitch(IPausable[] calldata entities, bool state) external onlyRole(PAUSER_ROLE) {
+        for (uint256 i = 0; i < entities.length; i++) {
+            if (state) {
+                entities[i].unpause();
+            } else {
+                entities[i].pause();
+            }
+        }
+    }
+
     function submitVaultGuardian(ITermMaxVault vault, address newGuardian) external onlyRole(VAULT_ROLE) {
         vault.submitGuardian(newGuardian);
     }
