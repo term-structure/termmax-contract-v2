@@ -1,27 +1,27 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {ITermMaxPriceFeed, AggregatorV3Interface} from "./ITermMaxPriceFeed.sol";
 import {MathLib} from "contracts/lib/MathLib.sol";
 
-contract PriceFeedWithERC4626 is AggregatorV3Interface {
+contract TermMaxERC4626PriceFeed is ITermMaxPriceFeed {
     using MathLib for *;
 
     error GetRoundDataNotSupported();
 
     AggregatorV3Interface public immutable assetPriceFeed;
-    IERC4626 public immutable vault;
+    address public immutable asset;
     int256 immutable priceDemonitor;
     uint256 immutable vaultDemonitor;
 
-    constructor(address _assetPriceFeed, address _vault) {
+    constructor(address _assetPriceFeed, address _asset) {
+        (, int256 answer,,,) = AggregatorV3Interface(_assetPriceFeed).latestRoundData();
         assetPriceFeed = AggregatorV3Interface(_assetPriceFeed);
-        vault = IERC4626(_vault);
-        vaultDemonitor = 10 ** vault.decimals();
-        uint256 assetDemonitor = 10 ** IERC20Metadata(vault.asset()).decimals();
-        priceDemonitor = int256(10 ** assetPriceFeed.decimals()) * int256(assetDemonitor);
+        asset = _asset;
+        vaultDemonitor = 10 ** IERC4626(asset).decimals();
+        priceDemonitor = int256(10 ** assetPriceFeed.decimals()) * int256(vaultDemonitor);
     }
 
     function decimals() public view returns (uint8) {
@@ -29,7 +29,8 @@ contract PriceFeedWithERC4626 is AggregatorV3Interface {
     }
 
     function description() external view returns (string memory) {
-        return string(abi.encodePacked("Price Feed for ", vault.name()));
+        string memory symbol = IERC20Metadata(asset).symbol();
+        return string(abi.encodePacked("TermMax price feed: ", symbol, "/USD"));
     }
 
     function version() external view returns (uint256) {
@@ -54,7 +55,8 @@ contract PriceFeedWithERC4626 is AggregatorV3Interface {
     function latestRoundData() external view returns (uint80, int256, uint256, uint256, uint80) {
         (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound) =
             assetPriceFeed.latestRoundData();
-        uint256 vaultAnswer = vault.previewRedeem(vaultDemonitor).min(vault.convertToAssets(vaultDemonitor));
+        uint256 vaultAnswer =
+            IERC4626(asset).previewRedeem(vaultDemonitor).min(IERC4626(asset).convertToAssets(vaultDemonitor));
         answer = answer * int256(vaultAnswer) * int256((10 ** decimals())) / priceDemonitor;
         return (roundId, answer, startedAt, updatedAt, answeredInRound);
     }

@@ -16,11 +16,18 @@ contract MockPriceFeed is AggregatorV3Interface, Ownable {
     event AnswerUpdated(int256 indexed current, uint256 indexed roundId, uint256 updatedAt);
 
     RoundData private _latestRoundData;
+    uint8 private _decimals;
 
-    constructor(address admin) Ownable(admin) {}
+    constructor(address admin) Ownable(admin) {
+        _decimals = 8;
+    }
 
-    function decimals() external pure override returns (uint8) {
-        return 8;
+    function decimals() external view override returns (uint8) {
+        return _decimals;
+    }
+
+    function setDecimals(uint8 decimals_) external onlyOwner {
+        _decimals = decimals_;
     }
 
     function description() external pure override returns (string memory) {

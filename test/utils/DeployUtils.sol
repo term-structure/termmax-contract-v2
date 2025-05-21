@@ -68,9 +68,11 @@ library DeployUtils {
         res.collateralOracle = new MockPriceFeed(admin);
         res.oracle = deployOracle(admin, 0);
 
-        res.oracle.submitPendingOracle(address(res.debt), IOracle.Oracle(res.debtOracle, res.debtOracle, 365 days));
         res.oracle.submitPendingOracle(
-            address(res.collateral), IOracle.Oracle(res.collateralOracle, res.collateralOracle, 365 days)
+            address(res.debt), IOracle.Oracle(res.debtOracle, res.debtOracle, 0, 365 days, 0)
+        );
+        res.oracle.submitPendingOracle(
+            address(res.collateral), IOracle.Oracle(res.collateralOracle, res.collateralOracle, 0, 365 days, 0)
         );
 
         res.oracle.acceptPendingOracle(address(res.debt));
@@ -120,9 +122,11 @@ library DeployUtils {
         res.collateralOracle = new MockPriceFeed(admin);
         res.oracle = deployOracle(admin, 0);
 
-        res.oracle.submitPendingOracle(address(res.debt), IOracle.Oracle(res.debtOracle, res.debtOracle, 365 days));
         res.oracle.submitPendingOracle(
-            address(res.collateral), IOracle.Oracle(res.collateralOracle, res.collateralOracle, 365 days)
+            address(res.debt), IOracle.Oracle(res.debtOracle, res.debtOracle, 0, 365 days, 0)
+        );
+        res.oracle.submitPendingOracle(
+            address(res.collateral), IOracle.Oracle(res.collateralOracle, res.collateralOracle, 0, 365 days, 0)
         );
         res.oracle.acceptPendingOracle(address(res.debt));
         res.oracle.acceptPendingOracle(address(res.collateral));
@@ -173,9 +177,11 @@ library DeployUtils {
         res.collateralOracle = new MockPriceFeed(admin);
         res.oracle = deployOracle(admin, 0);
 
-        res.oracle.submitPendingOracle(address(res.debt), IOracle.Oracle(res.debtOracle, res.debtOracle, 365 days));
         res.oracle.submitPendingOracle(
-            address(res.collateral), IOracle.Oracle(res.collateralOracle, res.collateralOracle, 365 days)
+            address(res.debt), IOracle.Oracle(res.debtOracle, res.debtOracle, 0, 365 days, 0)
+        );
+        res.oracle.submitPendingOracle(
+            address(res.collateral), IOracle.Oracle(res.collateralOracle, res.collateralOracle, 0, 365 days, 0)
         );
         res.oracle.acceptPendingOracle(address(res.debt));
         res.oracle.acceptPendingOracle(address(res.collateral));
@@ -220,9 +226,11 @@ library DeployUtils {
         res.collateralOracle = new MockPriceFeed(admin);
         res.oracle = deployOracle(admin, 0);
 
-        res.oracle.submitPendingOracle(address(res.debt), IOracle.Oracle(res.debtOracle, res.debtOracle, 365 days));
         res.oracle.submitPendingOracle(
-            address(res.collateral), IOracle.Oracle(res.collateralOracle, res.collateralOracle, 365 days)
+            address(res.debt), IOracle.Oracle(res.debtOracle, res.debtOracle, 0, 365 days, 0)
+        );
+        res.oracle.submitPendingOracle(
+            address(res.collateral), IOracle.Oracle(res.collateralOracle, res.collateralOracle, 0, 365 days, 0)
         );
         res.oracle.acceptPendingOracle(address(res.debt));
         res.oracle.acceptPendingOracle(address(res.collateral));

@@ -214,7 +214,7 @@ contract DeployBase is Script {
                 accessManager.submitPendingOracle(
                     oracle,
                     address(collateral),
-                    IOracle.Oracle(collateralPriceFeed, collateralPriceFeed, uint32(365 days))
+                    IOracle.Oracle(collateralPriceFeed, collateralPriceFeed, 0, uint32(365 days), uint32(365 days))
                 );
                 accessManager.acceptPendingOracle(oracle, address(collateral));
             } else {
@@ -244,7 +244,7 @@ contract DeployBase is Script {
                 accessManager.submitPendingOracle(
                     oracle,
                     address(underlying),
-                    IOracle.Oracle(underlyingPriceFeed, underlyingPriceFeed, uint32(365 days))
+                    IOracle.Oracle(underlyingPriceFeed, underlyingPriceFeed, 0, uint32(365 days), uint32(365 days))
                 );
                 accessManager.acceptPendingOracle(oracle, address(underlying));
             } else {
