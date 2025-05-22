@@ -2,6 +2,9 @@
 pragma solidity ^0.8.0;
 
 interface GearingTokenEvents {
+    /// @notice Emitted when a new Gearing Token is initialized
+    event GearingTokenInitialized(address indexed market, string name, string symbol, bytes initialData);
+
     /// @notice Emitted when updating the configuration
     event UpdateConfig(bytes configData);
 

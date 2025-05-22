@@ -73,6 +73,7 @@ abstract contract AbstractGearingToken is
     {
         __AbstractGearingToken_init(name, symbol, config_);
         __GearingToken_Implement_init(initalParams);
+        emit GearingTokenInitialized(msg.sender, name, symbol, initalParams);
     }
 
     function __AbstractGearingToken_init(string memory name, string memory symbol, GtConfig memory config_)
