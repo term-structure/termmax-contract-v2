@@ -56,12 +56,6 @@ interface OrderErrors {
     error DeadlineExpired();
 
     /**
-     * @notice Error thrown when a GT hasn't been approved for an operation
-     * @param gtId The ID of the unapproved GT
-     */
-    error GtNotApproved(uint256 gtId);
-
-    /**
      * @notice Error thrown when the XT reserve exceeds the maximum allowed
      */
     error XtReserveTooHigh();
