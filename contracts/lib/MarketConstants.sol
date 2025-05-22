@@ -5,4 +5,5 @@ library MarketConstants {
     string constant PREFIX_FT = "FT:";
     string constant PREFIX_XT = "XT:";
     string constant PREFIX_GT = "GT:";
+    string constant PREFIX_MARKET = "Termmax Market:";
 }

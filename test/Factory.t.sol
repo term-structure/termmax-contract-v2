@@ -40,6 +40,8 @@ contract FactoryTest is Test {
         );
         assert(address(res.market) == predictedMarketAddress);
 
+        assert(keccak256(abi.encode(res.market.name())) == keccak256(abi.encode("Termmax Market:DAI-ETH")));
+
         assert(keccak256(abi.encode(res.market.config())) == keccak256(abi.encode(marketConfig)));
         GtConfig memory gtConfig = res.gt.getGtConfig();
         assert(gtConfig.maturity == marketConfig.maturity);
