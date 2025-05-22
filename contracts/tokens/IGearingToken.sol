@@ -76,6 +76,22 @@ interface IGearingToken is IERC721Enumerable {
     /// @param byDebtToken Repay using debtToken token or bonds token
     function flashRepay(uint256 id, bool byDebtToken, bytes calldata callbackData) external;
 
+    /// @notice Repay the debt of Gearing Token,
+    ///         the collateral will send by flashloan first.
+    /// @param id The id of Gearing Token
+    /// @param byDebtToken Repay using debtToken token or bonds token
+    /// @param repayAmt The amount of debt you want to repay
+    /// @param removedCollateral The collateral data to be removed
+    /// @param callbackData The data to be passed to the callback function
+    /// @return repayAll Whether the repayment is complete
+    function flashRepay(
+        uint256 id,
+        uint128 repayAmt,
+        bool byDebtToken,
+        bytes memory removedCollateral,
+        bytes calldata callbackData
+    ) external returns (bool repayAll);
+
     /// @notice Remove collateral from the loan.
     ///         Require the loan to value bigger than maxLtv after this action.
     /// @param id The id of Gearing Token

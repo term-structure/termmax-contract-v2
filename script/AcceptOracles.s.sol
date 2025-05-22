@@ -83,7 +83,7 @@ contract AcceptOracles is Script {
                 PendingOracleStatus memory status = acceptedOracles[i];
 
                 // Get current oracle config before accepting
-                (AggregatorV3Interface currentAggregator,,) = oracle.oracles(status.tokenAddr);
+                (AggregatorV3Interface currentAggregator,,,,) = oracle.oracles(status.tokenAddr);
 
                 // Accept the oracle
                 accessManager.acceptPendingOracle(oracle, status.tokenAddr);
@@ -199,7 +199,7 @@ contract AcceptOracles is Script {
         (IOracle.Oracle memory pendingOracle, uint64 validAt) = oracle.pendingOracles(tokenAddr);
 
         // Get current oracle for comparison
-        (AggregatorV3Interface currentAggregator,,) = oracle.oracles(tokenAddr);
+        (AggregatorV3Interface currentAggregator,,,,) = oracle.oracles(tokenAddr);
 
         if (address(pendingOracle.aggregator) == address(0)) {
             // No pending oracle exists
@@ -231,7 +231,7 @@ contract AcceptOracles is Script {
                 address(currentAggregator) == expectedPriceFeedAddr && pendingOracle.heartbeat == expectedHeartbeat
             ) {
                 // Get current heartbeat value
-                (,, uint32 currentHeartbeat) = oracle.oracles(tokenAddr);
+                (,,, uint32 currentHeartbeat,) = oracle.oracles(tokenAddr);
 
                 // Oracle is already set correctly (both address and heartbeat)
                 if (currentHeartbeat == expectedHeartbeat) {

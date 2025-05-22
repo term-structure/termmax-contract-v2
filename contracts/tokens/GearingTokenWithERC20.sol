@@ -21,6 +21,9 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
     /// @notice The operation failed because the amount can not be uint256 max
     error AmountCanNotBeUint256Max();
 
+    /// @notice Emitted when the collateral capacity is updated
+    event CollateralCapacityUpdated(uint256 newCapacity);
+
     /// @notice The max capacity of collateral token
     uint256 public collateralCapacity;
 
@@ -31,12 +34,13 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
     }
 
     function __GearingToken_Implement_init(bytes memory initalParams) internal override onlyInitializing {
-        collateralCapacity = abi.decode(initalParams, (uint256));
+        _updateConfig(initalParams);
         collateralDecimals = IERC20Metadata(_config.collateral).decimals();
     }
 
     function _updateConfig(bytes memory configData) internal virtual override {
         collateralCapacity = abi.decode(configData, (uint256));
+        emit CollateralCapacityUpdated(collateralCapacity);
     }
 
     function _checkBeforeMint(uint128, bytes memory collateralData) internal virtual override {
@@ -69,9 +73,6 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
      */
     function _transferCollateralFrom(address from, address to, bytes memory collateralData) internal virtual override {
         uint256 amount = _decodeAmount(collateralData);
-        if (amount == 0) {
-            return;
-        }
         IERC20(_config.collateral).safeTransferFrom(from, to, amount);
     }
 
@@ -80,9 +81,6 @@ contract GearingTokenWithERC20 is AbstractGearingToken {
      */
     function _transferCollateral(address to, bytes memory collateralData) internal virtual override {
         uint256 amount = _decodeAmount(collateralData);
-        if (amount == 0) {
-            return;
-        }
         IERC20(_config.collateral).safeTransfer(to, amount);
     }
 

@@ -3,7 +3,7 @@ pragma solidity ^0.8.27;
 
 import {PendleHelper} from "contracts/extensions/pendle/PendleHelper.sol";
 import {IPAllActionV3} from "@pendle/core-v2/contracts/interfaces/IPAllActionV3.sol";
-import {IPMarket, IPPrincipalToken, IPYieldToken} from "@pendle/core-v2/contracts/interfaces/IPMarket.sol";
+import {IPMarket, IPPrincipalToken} from "@pendle/core-v2/contracts/interfaces/IPMarket.sol";
 import "./ERC20SwapAdapter.sol";
 /**
  * @title TermMax PendleSwapV3Adapter
@@ -36,9 +36,7 @@ contract PendleSwapV3Adapter is ERC20SwapAdapter, PendleHelper {
          * Note: Scaling Input/Output amount
          */
         minTokenOut = (minTokenOut * amount) / inAmount;
-
         if (tokenOut == PT) {
-            IERC20(tokenIn).safeIncreaseAllowance(address(router), amount);
             (tokenOutAmt,,) = router.swapExactTokenForPt(
                 address(this),
                 address(market),
@@ -49,14 +47,10 @@ contract PendleSwapV3Adapter is ERC20SwapAdapter, PendleHelper {
             );
         } else {
             if (PT.isExpired()) {
-                IPYieldToken YT = IPYieldToken(PT.YT());
-                IERC20(tokenIn).safeTransfer(address(YT), amount);
-                tokenOutAmt = IPYieldToken(YT).redeemPY(address(this));
-                if (tokenOutAmt < minTokenOut) {
-                    revert LessThanMinTokenOut(tokenOutAmt, minTokenOut);
-                }
+                (tokenOutAmt,) = router.redeemPyToToken(
+                    address(this), PT.YT(), amount, createTokenOutputStruct(address(tokenOut), minTokenOut)
+                );
             } else {
-                IERC20(tokenIn).safeIncreaseAllowance(address(router), amount);
                 (tokenOutAmt,,) = router.swapExactPtForToken(
                     address(this),
                     address(market),

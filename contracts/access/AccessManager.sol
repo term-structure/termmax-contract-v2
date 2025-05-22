@@ -101,6 +101,10 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
         aggregator.acceptPendingOracle(asset);
     }
 
+    function revokePendingOracle(IOracle aggregator, address asset) external onlyRole(ORACLE_ROLE) {
+        aggregator.revokePendingOracle(asset);
+    }
+
     /// @notice Update the market configuration
     function updateMarketConfig(ITermMaxMarket market, MarketConfig calldata newConfig)
         external
@@ -128,6 +132,17 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
             entity.unpause();
         } else {
             entity.pause();
+        }
+    }
+
+    /// @notice Set the switch of multiple entities
+    function batchSetSwitch(IPausable[] calldata entities, bool state) external onlyRole(PAUSER_ROLE) {
+        for (uint256 i = 0; i < entities.length; i++) {
+            if (state) {
+                entities[i].unpause();
+            } else {
+                entities[i].pause();
+            }
         }
     }
 

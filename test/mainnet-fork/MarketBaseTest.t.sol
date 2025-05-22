@@ -66,10 +66,10 @@ abstract contract MarketBaseTest is ForkBaseTest {
         res.debtPriceFeed = deployMockPriceFeed(res.marketInitialParams.admin);
         res.oracle.submitPendingOracle(
             address(res.marketInitialParams.collateral),
-            IOracle.Oracle(res.collateralPriceFeed, res.collateralPriceFeed, 365 days)
+            IOracle.Oracle(res.collateralPriceFeed, res.collateralPriceFeed, 0, 0, 0)
         );
         res.oracle.submitPendingOracle(
-            address(res.marketInitialParams.debtToken), IOracle.Oracle(res.debtPriceFeed, res.debtPriceFeed, 365 days)
+            address(res.marketInitialParams.debtToken), IOracle.Oracle(res.debtPriceFeed, res.debtPriceFeed, 0, 0, 0)
         );
         res.oracle.acceptPendingOracle(address(res.marketInitialParams.collateral));
         res.oracle.acceptPendingOracle(address(res.marketInitialParams.debtToken));

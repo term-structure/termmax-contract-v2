@@ -16,6 +16,8 @@ interface ITermMaxMarket {
     /// @notice Initialize the token and configuration of the market
     function initialize(MarketInitialParams memory params) external;
 
+    function name() external view returns (string memory);
+
     /// @notice Return the configuration
     function config() external view returns (MarketConfig memory);
 

@@ -216,6 +216,62 @@ contract AccessManagerTest is Test {
         vm.stopPrank();
     }
 
+    function testBatchSetSwitch() public {
+        // Create vault initialization parameters
+        VaultInitialParams memory params = VaultInitialParams({
+            admin: address(manager),
+            curator: address(0), // Will be set through AccessManager
+            timelock: 1 days,
+            asset: IERC20(address(res.debt)),
+            maxCapacity: 1000000e18,
+            name: "Test Vault",
+            symbol: "tVAULT",
+            performanceFeeRate: 0.2e8 // 20%
+        });
+
+        // Deploy vault
+        res.vault = DeployUtils.deployVault(params);
+
+        address pauser = vm.randomAddress();
+        bytes32 pauserRole = manager.PAUSER_ROLE();
+
+        // Create multiple pausable test entities
+        IPausable[] memory entities = new IPausable[](2);
+        entities[0] = IPausable(address(res.router));
+        entities[1] = IPausable(address(res.vault));
+
+        // Grant PAUSER_ROLE to the pauser
+        vm.prank(deployer);
+        manager.grantRole(pauserRole, pauser);
+
+        // Test batch pausing with PAUSER_ROLE
+        vm.startPrank(pauser);
+        manager.batchSetSwitch(entities, false);
+
+        // Verify all entities are paused
+        assertTrue(PausableUpgradeable(address(res.router)).paused());
+        assertTrue(PausableUpgradeable(address(res.vault)).paused());
+
+        // Test batch unpausing with PAUSER_ROLE
+        manager.batchSetSwitch(entities, true);
+
+        // Verify all entities are unpaused
+        assertFalse(PausableUpgradeable(address(res.router)).paused());
+        assertFalse(PausableUpgradeable(address(res.vault)).paused());
+        vm.stopPrank();
+
+        // Test batch pausing without PAUSER_ROLE
+        address nonPauser = vm.randomAddress();
+        vm.startPrank(nonPauser);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector, nonPauser, manager.PAUSER_ROLE()
+            )
+        );
+        manager.batchSetSwitch(entities, false);
+        vm.stopPrank();
+    }
+
     function testVaultManagement() public {
         address vaultManager = vm.randomAddress();
         address newCurator = vm.randomAddress();
@@ -462,7 +518,9 @@ contract AccessManagerTest is Test {
         IOracle.Oracle memory oracle = IOracle.Oracle({
             aggregator: AggregatorV3Interface(address(new MockPriceFeed(sender))),
             backupAggregator: AggregatorV3Interface(address(new MockPriceFeed(sender))),
-            heartbeat: 3600
+            heartbeat: 3600,
+            backupHeartbeat: 7200,
+            maxPrice: 1e8
         });
 
         // Test that non-oracle role cannot submit pending oracle
@@ -495,6 +553,53 @@ contract AccessManagerTest is Test {
         manager.acceptPendingOracle(IOracle(address(res.oracle)), asset);
         vm.stopPrank();
     }
+
+    function testRevokePendingOracle() public {
+        address asset = address(res.collateral);
+        IOracle.Oracle memory oracle = IOracle.Oracle({
+            aggregator: AggregatorV3Interface(address(new MockPriceFeed(sender))),
+            backupAggregator: AggregatorV3Interface(address(new MockPriceFeed(sender))),
+            heartbeat: 3600,
+            backupHeartbeat: 7200,
+            maxPrice: 1e8
+        });
+
+        // Submit a pending oracle
+        vm.startPrank(deployer);
+        manager.submitPendingOracle(IOracle(address(res.oracle)), asset, oracle);
+        vm.stopPrank();
+
+        // Test that non-oracle role cannot revoke pending oracle
+        vm.startPrank(sender);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector, sender, manager.ORACLE_ROLE()
+            )
+        );
+        manager.revokePendingOracle(IOracle(address(res.oracle)), asset);
+        vm.stopPrank();
+
+        // Test that oracle role can revoke pending oracle
+        vm.startPrank(deployer);
+
+        // We'll capture the event to verify that revocation happened
+        vm.expectEmit(true, true, true, true);
+        // Define the expected event
+        emit RevokePendingOracle(asset);
+
+        // Call the revoke function
+        manager.revokePendingOracle(IOracle(address(res.oracle)), asset);
+
+        // Try to accept the oracle after revocation, which should fail
+        // since there's no longer a pending oracle
+        vm.expectRevert(); // Should revert with NoPendingValue error
+        IOracle(address(res.oracle)).acceptPendingOracle(asset);
+
+        vm.stopPrank();
+    }
+
+    // Define the event to match OracleAggregator's event
+    event RevokePendingOracle(address indexed asset);
 
     function testUpdateGtConfig() public {
         bytes memory configData = abi.encode(1234);

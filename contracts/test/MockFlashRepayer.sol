@@ -11,9 +11,12 @@ contract MockFlashRepayer is IFlashRepayer, IERC721Receiver {
         gt = gt_;
     }
 
-    function flashRepay(uint256 id, bool byUnderlying) external {
+    function flashRepay(uint256 id, uint128 repayAmt, bool byUnderlying, bytes calldata removedCollateral) external {
         gt.safeTransferFrom(msg.sender, address(this), id, "");
-        gt.flashRepay(id, byUnderlying, abi.encode(msg.sender));
+        bool repayAll = gt.flashRepay(id, repayAmt, byUnderlying, removedCollateral, "");
+        if (!repayAll) {
+            gt.safeTransferFrom(address(this), msg.sender, id, "");
+        }
     }
 
     function executeOperation(IERC20 repayToken, uint128 debtAmt, address, bytes memory, bytes calldata)

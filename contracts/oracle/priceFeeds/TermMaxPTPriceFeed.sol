@@ -1,20 +1,21 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {PendlePYLpOracle} from "@pendle/core-v2/contracts/oracles/PtYtLpOracle/PendlePYLpOracle.sol";
 import {PendlePYOracleLib} from "@pendle/core-v2/contracts/oracles/PtYtLpOracle/PendlePYOracleLib.sol";
 import {PMath} from "@pendle/core-v2/contracts/core/libraries/math/PMath.sol";
-import {IPMarket} from "@pendle/core-v2/contracts/interfaces/IPMarket.sol";
+import {IPMarket, IPPrincipalToken} from "@pendle/core-v2/contracts/interfaces/IPMarket.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import {ITermMaxPriceFeed, AggregatorV3Interface} from "./ITermMaxPriceFeed.sol";
 
 /**
  * @title The customized Pendle PT price feed contract mutated from Chainlink AggregatorV3Interface
  * @author Term Structure Labs
  * @notice Use the customized price feed contract to normalized price feed interface for TermMax Protocol
  */
-contract PTWithPriceFeed is AggregatorV3Interface {
+contract TermMaxPTPriceFeed is ITermMaxPriceFeed {
     using Math for uint256;
     using SafeCast for *;
     using PendlePYOracleLib for IPMarket;
@@ -27,6 +28,7 @@ contract PTWithPriceFeed is AggregatorV3Interface {
     uint32 public immutable DURATION;
     // Price feed interface
     AggregatorV3Interface public immutable PRICE_FEED;
+    address public immutable asset;
 
     // error to call `getRoundData` function
     error GetRoundDataNotSupported();
@@ -50,7 +52,8 @@ contract PTWithPriceFeed is AggregatorV3Interface {
         MARKET = IPMarket(market);
         DURATION = duration;
         PRICE_FEED = AggregatorV3Interface(priceFeed);
-
+        (, IPPrincipalToken _PT,) = MARKET.readTokens();
+        asset = address(_PT);
         if (!_oracleIsReady()) revert OracleIsNotReady();
     }
 
@@ -113,7 +116,8 @@ contract PTWithPriceFeed is AggregatorV3Interface {
     }
 
     function description() external view returns (string memory) {
-        return PRICE_FEED.description();
+        string memory symbol = IERC20Metadata(asset).symbol();
+        return string(abi.encodePacked("TermMax price feed: ", symbol, "/USD"));
     }
 
     function version() external view returns (uint256) {

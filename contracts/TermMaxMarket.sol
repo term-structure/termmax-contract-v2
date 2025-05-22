@@ -48,6 +48,8 @@ contract TermMaxMarket is
     IMintableERC20 private xt;
     IGearingToken private gt;
 
+    string public name;
+
     /// @notice Check if the market is tradable
     modifier isOpen() {
         if (block.timestamp >= _config.maturity) {
@@ -84,7 +86,7 @@ contract TermMaxMarket is
         _config = config_;
 
         (ft, xt, gt) = _deployTokens(params);
-
+        name = _contactString(MarketConstants.PREFIX_MARKET, params.tokenName);
         emit MarketInitialized(params.collateral, params.debtToken, _config.maturity, ft, xt, gt);
     }
 

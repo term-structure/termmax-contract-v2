@@ -211,10 +211,6 @@ contract TermMaxOrder is
             xt.safeTransfer(msg.sender, (-xtChangeAmt).toUint256());
         }
         _orderConfig.maxXtReserve = newOrderConfig.maxXtReserve;
-        // check gtId
-        if (newOrderConfig.gtId != 0 && address(this) != gt.getApproved(newOrderConfig.gtId)) {
-            revert GtNotApproved(newOrderConfig.gtId);
-        }
         _orderConfig.gtId = newOrderConfig.gtId;
         _orderConfig.swapTrigger = newOrderConfig.swapTrigger;
         emit UpdateOrder(

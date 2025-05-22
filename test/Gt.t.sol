@@ -176,7 +176,7 @@ contract GtTest is Test {
 
         vm.prank(deployer);
         res.oracle.submitPendingOracle(
-            address(res.collateral), IOracle.Oracle(res.collateralOracle, res.collateralOracle, 3600)
+            address(res.collateral), IOracle.Oracle(res.collateralOracle, res.collateralOracle, 0, 3600, 3600)
         );
         res.oracle.acceptPendingOracle(address(res.collateral));
         vm.warp(block.timestamp + 3600);
@@ -192,7 +192,7 @@ contract GtTest is Test {
 
         vm.startPrank(deployer);
         res.oracle.submitPendingOracle(
-            address(res.collateral), IOracle.Oracle(res.collateralOracle, res.collateralOracle, 365 days)
+            address(res.collateral), IOracle.Oracle(res.collateralOracle, res.collateralOracle, 0, 365 days, 0)
         );
         res.oracle.acceptPendingOracle(address(res.collateral));
         vm.stopPrank();
@@ -291,7 +291,7 @@ contract GtTest is Test {
         StateChecker.MarketState memory state = StateChecker.getMarketState(res);
         bool byDebtToken = true;
         vm.expectEmit();
-        emit GearingTokenEvents.Repay(gtId, debtAmt, byDebtToken);
+        emit GearingTokenEvents.Repay(gtId, debtAmt, byDebtToken, true);
         res.gt.repay(gtId, debtAmt, byDebtToken);
 
         uint256 collateralBalanceAfter = res.collateral.balanceOf(sender);
@@ -334,7 +334,7 @@ contract GtTest is Test {
 
         bool byDebtToken = false;
         vm.expectEmit();
-        emit GearingTokenEvents.Repay(gtId, debtAmt, byDebtToken);
+        emit GearingTokenEvents.Repay(gtId, debtAmt, byDebtToken, true);
         res.gt.repay(gtId, debtAmt, byDebtToken);
 
         uint256 collateralBalanceAfter = res.collateral.balanceOf(sender);
@@ -370,7 +370,7 @@ contract GtTest is Test {
 
         bool byDebtToken = true;
         vm.expectEmit();
-        emit GearingTokenEvents.Repay(gtId, repayAmt, byDebtToken);
+        emit GearingTokenEvents.Repay(gtId, repayAmt, byDebtToken, false);
         res.gt.repay(gtId, repayAmt, byDebtToken);
         state.debtReserve += repayAmt;
         StateChecker.checkMarketState(res, state);
@@ -387,7 +387,7 @@ contract GtTest is Test {
         uint256 collateralBalanceBefore = res.collateral.balanceOf(sender);
 
         vm.expectEmit();
-        emit GearingTokenEvents.Repay(gtId, debtAmt - repayAmt, byDebtToken);
+        emit GearingTokenEvents.Repay(gtId, debtAmt - repayAmt, byDebtToken, true);
         res.gt.repay(gtId, debtAmt - repayAmt, byDebtToken);
 
         state.debtReserve += (debtAmt - repayAmt);
@@ -418,28 +418,61 @@ contract GtTest is Test {
         res.debt.mint(address(flashRepayer), debtAmt);
         res.gt.approve(address(flashRepayer), gtId);
 
+        uint256 removedCollateral = 0.5e18;
+        uint128 repayAmt = 50e8;
         uint256 collateralBalanceBefore = res.collateral.balanceOf(sender);
         uint256 debtBalanceBefore = res.debt.balanceOf(sender);
         StateChecker.MarketState memory state = StateChecker.getMarketState(res);
         bool byDebtToken = true;
         vm.expectEmit();
-        emit GearingTokenEvents.Repay(gtId, debtAmt, byDebtToken);
-        flashRepayer.flashRepay(gtId, byDebtToken);
+        emit GearingTokenEvents.FlashRepay(
+            gtId, address(flashRepayer), repayAmt, byDebtToken, false, abi.encode(removedCollateral)
+        );
+        flashRepayer.flashRepay(gtId, repayAmt, byDebtToken, abi.encode(removedCollateral));
 
         uint256 collateralBalanceAfter = res.collateral.balanceOf(sender);
         uint256 debtBalanceAfter = res.debt.balanceOf(sender);
-        state.debtReserve += debtAmt;
-        state.collateralReserve -= collateralAmt;
+        state.debtReserve += repayAmt;
+        state.collateralReserve -= removedCollateral;
         StateChecker.checkMarketState(res, state);
 
-        assert(res.collateral.balanceOf(address(flashRepayer)) == collateralAmt);
-        assert(res.debt.balanceOf(address(flashRepayer)) == 0);
-        assert(collateralBalanceAfter == collateralBalanceBefore);
-        assert(debtBalanceAfter == debtBalanceBefore);
+        assertEq(res.collateral.balanceOf(address(flashRepayer)), removedCollateral, "flashRepayer collateral balance");
+        assertEq(res.debt.balanceOf(address(flashRepayer)), repayAmt, "flashRepayer debt balance");
+        assertEq(collateralBalanceAfter, collateralBalanceBefore, "sender collateral balance");
+        assertEq(debtBalanceAfter, debtBalanceBefore, "sender debt balance");
+        (address owner, uint128 currentDebt, bytes memory currentCollateral) = res.gt.loanInfo(gtId);
+        assertEq(owner, sender, "gt owner");
+        assertEq(currentDebt, debtAmt - repayAmt, "current debt after repayment");
+        assertEq(
+            collateralAmt - removedCollateral,
+            abi.decode(currentCollateral, (uint256)),
+            "current collateral after repayment"
+        );
+
+        res.gt.approve(address(flashRepayer), gtId);
+        flashRepayer.flashRepay(gtId, currentDebt, byDebtToken, currentCollateral);
         vm.expectRevert(abi.encodePacked(bytes4(keccak256("ERC721NonexistentToken(uint256)")), gtId));
         res.gt.loanInfo(gtId);
-
         vm.stopPrank();
+    }
+
+    function testRevertByGtIsNotHealthyWhenFlashRepay() public {
+        uint128 debtAmt = 100e8;
+        uint256 collateralAmt = 1e18;
+        uint128 repayAmt = 50e8;
+
+        vm.startPrank(sender);
+
+        (uint256 gtId,) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
+        res.debt.mint(address(flashRepayer), debtAmt);
+        res.gt.approve(address(flashRepayer), gtId);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                GearingTokenErrors.GtIsNotHealthy.selector, gtId, address(flashRepayer), type(uint128).max
+            )
+        );
+        flashRepayer.flashRepay(gtId, repayAmt, true, abi.encode(collateralAmt));
     }
 
     // function testFlashRepayThroughFt() public {
@@ -507,7 +540,7 @@ contract GtTest is Test {
         res.gt.approve(address(flashRepayer), gtId);
 
         vm.expectRevert(abi.encodeWithSelector(GearingTokenErrors.GtIsExpired.selector, gtId));
-        flashRepayer.flashRepay(gtId, true);
+        flashRepayer.flashRepay(gtId, debtAmt, true, abi.encode(collateralAmt));
     }
 
     function testMerge() public {
@@ -667,7 +700,7 @@ contract GtTest is Test {
 
         vm.prank(deployer);
         res.oracle.submitPendingOracle(
-            address(res.collateral), IOracle.Oracle(res.collateralOracle, res.collateralOracle, 3600)
+            address(res.collateral), IOracle.Oracle(res.collateralOracle, res.collateralOracle, 0, 3500, 3500)
         );
         vm.prank(deployer);
         res.oracle.acceptPendingOracle(address(res.collateral));
@@ -679,7 +712,7 @@ contract GtTest is Test {
 
         vm.prank(deployer);
         res.oracle.submitPendingOracle(
-            address(res.collateral), IOracle.Oracle(res.collateralOracle, res.collateralOracle, 365 days)
+            address(res.collateral), IOracle.Oracle(res.collateralOracle, res.collateralOracle, 0, 0, 0)
         );
         vm.prank(deployer);
         res.oracle.acceptPendingOracle(address(res.collateral));
@@ -1206,7 +1239,7 @@ contract GtTest is Test {
 
         vm.prank(deployer);
         res.oracle.submitPendingOracle(
-            address(res.collateral), IOracle.Oracle(res.collateralOracle, res.collateralOracle, 3600)
+            address(res.collateral), IOracle.Oracle(res.collateralOracle, res.collateralOracle, 0, 3600, 3600)
         );
         res.oracle.acceptPendingOracle(address(res.collateral));
 

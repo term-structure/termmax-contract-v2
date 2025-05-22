@@ -19,6 +19,8 @@ contract KyberswapV2Adapter is ERC20SwapAdapter {
     using Address for address;
     using TransferUtils for IERC20;
 
+    error KyberScalingFailed();
+
     address public immutable router;
     address public immutable KYBER_SCALING_HELPER;
 
@@ -37,7 +39,7 @@ contract KyberswapV2Adapter is ERC20SwapAdapter {
         (bool isSuccess, bytes memory newSwapData) =
             IKyberScalingHelper(KYBER_SCALING_HELPER).getScaledInputData(swapData, amountIn);
 
-        require(isSuccess, "PendleSwap: Kyber scaling failed");
+        require(isSuccess, KyberScalingFailed());
 
         bytes memory returnData = router.functionCall(newSwapData);
         (uint256 tokenOutAmt,) = abi.decode(returnData, (uint256, uint256));

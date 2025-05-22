@@ -12,7 +12,7 @@ import {MockERC20, ERC20} from "contracts/test/MockERC20.sol";
 import {MockPriceFeed} from "contracts/test/MockPriceFeed.sol";
 import {IMintableERC20} from "contracts/tokens/MintableERC20.sol";
 import {IGearingToken} from "contracts/tokens/IGearingToken.sol";
-import {GearingTokenWithERC20} from "contracts/tokens/GearingTokenWithERC20.sol";
+import {GearingTokenWithERC20, GearingTokenEvents} from "contracts/tokens/GearingTokenWithERC20.sol";
 import {ITermMaxFactory, TermMaxFactory, FactoryErrors, FactoryEvents} from "contracts/factory/TermMaxFactory.sol";
 import {IOracle, OracleAggregator, AggregatorV3Interface} from "contracts/oracle/OracleAggregator.sol";
 import "contracts/storage/TermMaxStorage.sol";
@@ -39,6 +39,8 @@ contract FactoryTest is Test {
             deployer, address(res.collateral), address(res.debt), marketConfig.maturity, 0
         );
         assert(address(res.market) == predictedMarketAddress);
+
+        assert(keccak256(abi.encode(res.market.name())) == keccak256(abi.encode("Termmax Market:DAI-ETH")));
 
         assert(keccak256(abi.encode(res.market.config())) == keccak256(abi.encode(marketConfig)));
         GtConfig memory gtConfig = res.gt.getGtConfig();
@@ -116,6 +118,14 @@ contract FactoryTest is Test {
         factory.createMarket(DeployUtils.GT_ERC20, params, 0);
 
         params.marketConfig.feeConfig.mintGtFeeRef = 0;
+        address predictMarketAddress =
+            factory.predictMarketAddress(deployer, address(collateral), address(debt), maturity, 0);
+        vm.expectEmit();
+        emit GearingTokenEvents.GearingTokenInitialized(
+            predictMarketAddress, "GT:test", "GT:test", abi.encode(type(uint256).max)
+        );
+        emit GearingTokenWithERC20.CollateralCapacityUpdated(type(uint256).max);
+        emit FactoryEvents.CreateMarket(predictMarketAddress, address(collateral), debt);
         factory.createMarket(DeployUtils.GT_ERC20, params, 0);
         vm.stopPrank();
     }
