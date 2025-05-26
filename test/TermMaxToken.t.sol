@@ -37,9 +37,9 @@ contract TermMaxTokenTest is Test {
         uint256 amount = 1000e6;
         underlying.mint(address(this), amount);
         underlying.approve(address(termMaxToken), amount);
-        
+
         termMaxToken.mint(address(this), amount);
-        
+
         assertEq(termMaxToken.balanceOf(address(this)), amount);
         assertEq(underlying.balanceOf(address(this)), 0);
         // Check that aTokens were minted to the TermMaxToken contract
@@ -51,9 +51,9 @@ contract TermMaxTokenTest is Test {
         underlying.mint(address(this), amount);
         underlying.approve(address(termMaxToken), amount);
         termMaxToken.mint(address(this), amount);
-        
+
         termMaxToken.burn(address(this), amount);
-        
+
         assertEq(termMaxToken.balanceOf(address(this)), 0);
         assertEq(underlying.balanceOf(address(this)), amount);
         assertEq(aavePool.balanceOf(address(termMaxToken)), 0);
@@ -64,9 +64,9 @@ contract TermMaxTokenTest is Test {
         underlying.mint(address(this), amount);
         underlying.approve(address(termMaxToken), amount);
         termMaxToken.mint(address(this), amount);
-        
+
         termMaxToken.burnToAToken(address(this), amount);
-        
+
         assertEq(termMaxToken.balanceOf(address(this)), 0);
         assertEq(aavePool.balanceOf(address(this)), amount);
     }
@@ -77,16 +77,16 @@ contract TermMaxTokenTest is Test {
         underlying.mint(address(this), amount);
         underlying.approve(address(termMaxToken), amount);
         termMaxToken.mint(address(this), amount);
-        
+
         // Simulate yield by directly minting aTokens to the TermMaxToken contract
         uint256 yieldAmount = 100e6;
         aavePool.simulateInterestAccrual(address(termMaxToken), yieldAmount);
-        
+
         // Withdraw income as the admin
         vm.startPrank(admin);
         termMaxToken.withdrawIncomeAssets(address(underlying), admin, yieldAmount);
         vm.stopPrank();
-        
+
         // Assert balances are correct
         assertEq(underlying.balanceOf(admin), yieldAmount);
         assertEq(termMaxToken.totalIncomeAssets(), 0);
@@ -95,27 +95,24 @@ contract TermMaxTokenTest is Test {
     function testUpdateBufferConfigAndAddReserves() public {
         uint256 additionalReserves = 500e6;
         underlying.mint(admin, additionalReserves);
-        
+
         vm.startPrank(admin);
         underlying.approve(address(termMaxToken), additionalReserves);
-        
-        StakingBuffer.BufferConfig memory newConfig = StakingBuffer.BufferConfig({
-            minimumBuffer: 2000e6,
-            maximumBuffer: 20000e6,
-            buffer: 10000e6
-        });
-        
+
+        StakingBuffer.BufferConfig memory newConfig =
+            StakingBuffer.BufferConfig({minimumBuffer: 2000e6, maximumBuffer: 20000e6, buffer: 10000e6});
+
         termMaxToken.updateBufferConfigAndAddReserves(additionalReserves, newConfig);
         vm.stopPrank();
-        
+
         // Get current buffer config
         (uint256 minimumBuffer, uint256 maximumBuffer, uint256 buffer) = termMaxToken.bufferConfig();
-        
+
         // Assert the new config was set correctly
         assertEq(minimumBuffer, newConfig.minimumBuffer);
         assertEq(maximumBuffer, newConfig.maximumBuffer);
         assertEq(buffer, newConfig.buffer);
-        
+
         // Assert the additional reserves were added
         assertEq(underlying.balanceOf(address(termMaxToken)), additionalReserves);
     }
@@ -125,11 +122,11 @@ contract TermMaxTokenTest is Test {
         underlying.mint(address(this), amount);
         underlying.approve(address(termMaxToken), amount);
         termMaxToken.mint(address(this), amount);
-        
+
         // Simulate yield by directly minting aTokens to the TermMaxToken contract
         uint256 yieldAmount = 100e6;
         aavePool.simulateInterestAccrual(address(termMaxToken), yieldAmount);
-        
+
         assertEq(termMaxToken.totalIncomeAssets(), yieldAmount);
     }
 
@@ -138,7 +135,7 @@ contract TermMaxTokenTest is Test {
         // but it should revert due to transferFrom of zero amount or other validations
         underlying.mint(address(this), 0);
         underlying.approve(address(termMaxToken), 0);
-        
+
         // This should succeed as minting 0 tokens is typically allowed
         termMaxToken.mint(address(this), 0);
         assertEq(termMaxToken.balanceOf(address(this)), 0);
@@ -149,7 +146,7 @@ contract TermMaxTokenTest is Test {
         underlying.mint(address(this), amount);
         underlying.approve(address(termMaxToken), amount);
         termMaxToken.mint(address(this), amount);
-        
+
         vm.expectRevert();
         termMaxToken.burn(address(this), amount + 1);
     }
@@ -160,11 +157,11 @@ contract TermMaxTokenTest is Test {
         underlying.mint(address(this), amount);
         underlying.approve(address(termMaxToken), amount);
         termMaxToken.mint(address(this), amount);
-        
+
         // Simulate yield by directly minting aTokens to the TermMaxToken contract
         uint256 yieldAmount = 100e6;
         aavePool.simulateInterestAccrual(address(termMaxToken), yieldAmount);
-        
+
         // Try to withdraw more than available income
         vm.startPrank(admin);
         vm.expectRevert();
@@ -178,23 +175,20 @@ contract TermMaxTokenTest is Test {
         underlying.mint(address(this), amount);
         underlying.approve(address(termMaxToken), amount);
         termMaxToken.mint(address(this), amount);
-        
+
         // Simulate yield by directly minting aTokens to the TermMaxToken contract
         uint256 yieldAmount = 100e6;
         aavePool.simulateInterestAccrual(address(termMaxToken), yieldAmount);
-        
+
         // Try to withdraw as non-admin
         vm.expectRevert();
         termMaxToken.withdrawIncomeAssets(address(underlying), address(this), yieldAmount);
     }
 
     function testNonAdminCannotUpdateBufferConfig() public {
-        StakingBuffer.BufferConfig memory newConfig = StakingBuffer.BufferConfig({
-            minimumBuffer: 2000e6,
-            maximumBuffer: 20000e6,
-            buffer: 10000e6
-        });
-        
+        StakingBuffer.BufferConfig memory newConfig =
+            StakingBuffer.BufferConfig({minimumBuffer: 2000e6, maximumBuffer: 20000e6, buffer: 10000e6});
+
         vm.expectRevert();
         termMaxToken.updateBufferConfigAndAddReserves(0, newConfig);
     }
@@ -205,16 +199,16 @@ contract TermMaxTokenTest is Test {
         underlying.mint(address(this), amount);
         underlying.approve(address(termMaxToken), amount);
         termMaxToken.mint(address(this), amount);
-        
+
         // Simulate yield by directly minting aTokens to the TermMaxToken contract
         uint256 yieldAmount = 100e6;
         aavePool.simulateInterestAccrual(address(termMaxToken), yieldAmount);
-        
+
         // Withdraw income as aToken
         vm.startPrank(admin);
         termMaxToken.withdrawIncomeAssets(address(aavePool), admin, yieldAmount);
         vm.stopPrank();
-        
+
         // Assert balances are correct
         assertEq(aavePool.balanceOf(admin), yieldAmount);
     }
@@ -222,7 +216,7 @@ contract TermMaxTokenTest is Test {
     function testWithdrawIncomeAsInvalidToken() public {
         // Setup
         MockERC20 invalidToken = new MockERC20("Invalid", "INV", 18);
-        
+
         // Attempt to withdraw income with invalid token
         vm.startPrank(admin);
         vm.expectRevert();

@@ -127,12 +127,18 @@ contract TermMaxToken is
     }
 
     function _depositToPool(address assetAddr, uint256 amount) internal virtual override {
+        IERC20(assetAddr).safeIncreaseAllowance(address(aavePool), amount);
         aavePool.supply(assetAddr, amount, address(this), referralCode);
     }
 
     function _withdrawFromPool(address assetAddr, address to, uint256 amount) internal virtual override {
+        aToken.safeIncreaseAllowance(address(aavePool), amount);
         uint256 receivedAmount = aavePool.withdraw(assetAddr, amount, to);
         require(receivedAmount == amount, AaveWithdrawFailed(amount, receivedAmount));
+    }
+
+    function _aTokenBalance(address) internal view virtual override returns (uint256 amount) {
+        amount = aToken.balanceOf(address(this));
     }
 
     /// @notice Submit a new implementation for upgrade with timelock

@@ -18,26 +18,30 @@ abstract contract StakingBuffer {
         uint256 assetBalance = IERC20(assetAddr).balanceOf(address(this));
         BufferConfig memory bufferConfig = _bufferConfig(assetAddr);
         if (assetBalance + amount > bufferConfig.maximumBuffer) {
-        _depositToPool(assetAddr, assetBalance + amount - bufferConfig.buffer);
-}
+            _depositToPool(assetAddr, assetBalance + amount - bufferConfig.buffer);
+        }
     }
 
     function _withdrawWithBuffer(address assetAddr, address to, uint256 amount) internal {
         uint256 assetBalance = IERC20(assetAddr).balanceOf(address(this));
         BufferConfig memory bufferConfig = _bufferConfig(assetAddr);
-        
+
         if (assetBalance >= amount && assetBalance - amount >= bufferConfig.minimumBuffer) {
             // Sufficient buffer, transfer directly from contract balance
             IERC20(assetAddr).safeTransfer(to, amount);
+            return;
+        }
+        // Not enough buffer, withdraw from pool
+        uint256 targetBalance = bufferConfig.buffer + amount;
+        uint256 amountFromPool = targetBalance - assetBalance;
+        uint256 aTokenBalance = _aTokenBalance(assetAddr);
+        if (amountFromPool > aTokenBalance) {
+            amountFromPool = aTokenBalance;
+        }
+        if (amountFromPool == amount) {
+            _withdrawFromPool(assetAddr, to, amountFromPool);
         } else {
-            // Need to withdraw from pool to maintain buffer and fulfill request
-            uint256 targetBalance = bufferConfig.buffer + amount;
-            if (targetBalance > assetBalance) {
-                uint256 amountFromPool = targetBalance - assetBalance;
-                _withdrawFromPool(assetAddr, address(this), amountFromPool);
-            }
-            
-            // Transfer the full amount to user
+            _withdrawFromPool(assetAddr, address(this), amountFromPool);
             IERC20(assetAddr).safeTransfer(to, amount);
         }
     }
@@ -47,6 +51,8 @@ abstract contract StakingBuffer {
     function _depositToPool(address assetAddr, uint256 amount) internal virtual;
 
     function _withdrawFromPool(address assetAddr, address to, uint256 amount) internal virtual;
+
+    function _aTokenBalance(address assetAddr) internal view virtual returns (uint256 amount);
 
     function _checkBufferConfig(uint256 minimumBuffer, uint256 maximumBuffer, uint256 buffer) internal pure {
         if (minimumBuffer > maximumBuffer || buffer < minimumBuffer || buffer > maximumBuffer) {
