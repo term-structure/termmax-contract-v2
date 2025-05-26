@@ -1,7 +1,10 @@
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.27;
 
-contract PreTMX is ERC20, AccessControl {
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
+
+contract PreTMX is ERC20, Ownable2Step {
     bool public transferRestricted;
 
     mapping(address => bool) public isTransferredFromWhitelisted;
@@ -10,28 +13,31 @@ contract PreTMX is ERC20, AccessControl {
     error TransferFromNotWhitelisted(address from);
     error TransferToNotWhitelisted(address to);
 
-    constructor(address admin) ERC20("Pre TermMax Token", "pTMX") {
-        _grantRole(DEFAULT_ADMIN_ROLE, admin);
+    event TransferRestricted(bool restricted);
+    event TransferFromWhitelisted(address from, bool isWhitelisted);
+    event TransferToWhitelisted(address to, bool isWhitelisted);
+
+    constructor(address admin) ERC20("Pre TermMax Token", "pTMX") Ownable(admin) {
         _mint(admin, 1e9 ether);
-        transferRestricted = true;
-        isTransferredFromWhitelisted[admin] = true;
-        isTransferredToWhitelisted[admin] = true;
+        _setTransferRestricted(true);
+        _setTransferFromWhitelisted(admin, true);
+        _setTransferToWhitelisted(admin, true);
     }
 
-    function enableTransfer() external onlyRole(DEFAULT_ADMIN_ROLE) {
-        transferRestricted = false;
+    function enableTransfer() external onlyOwner {
+        _setTransferRestricted(false);
     }
 
-    function disableTransfer() external onlyRole(DEFAULT_ADMIN_ROLE) {
-        transferRestricted = true;
+    function disableTransfer() external onlyOwner {
+        _setTransferRestricted(true);
     }
 
-    function whitelistTransferFrom(address from, bool isWhitelisted) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        isTransferredFromWhitelisted[from] = isWhitelisted;
+    function whitelistTransferFrom(address from, bool isWhitelisted) external onlyOwner {
+        _setTransferFromWhitelisted(from, isWhitelisted);
     }
 
-    function whitelistTransferTo(address to, bool isWhitelisted) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        isTransferredToWhitelisted[to] = isWhitelisted;
+    function whitelistTransferTo(address to, bool isWhitelisted) external onlyOwner {
+        _setTransferToWhitelisted(to, isWhitelisted);
     }
 
     function transfer(address to, uint256 amount) public override returns (bool) {
@@ -44,7 +50,7 @@ contract PreTMX is ERC20, AccessControl {
         return super.transferFrom(from, to, amount);
     }
 
-    function mint(address to, uint256 amount) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function mint(address to, uint256 amount) external onlyOwner {
         _mint(to, amount);
     }
 
@@ -59,5 +65,20 @@ contract PreTMX is ERC20, AccessControl {
         if (transferRestricted && !isTransferredToWhitelisted[to]) {
             revert TransferToNotWhitelisted(to);
         }
+    }
+
+    function _setTransferRestricted(bool restricted) internal {
+        transferRestricted = restricted;
+        emit TransferRestricted(restricted);
+    }
+
+    function _setTransferFromWhitelisted(address from, bool isWhitelisted) internal {
+        isTransferredFromWhitelisted[from] = isWhitelisted;
+        emit TransferFromWhitelisted(from, isWhitelisted);
+    }
+
+    function _setTransferToWhitelisted(address to, bool isWhitelisted) internal {
+        isTransferredToWhitelisted[to] = isWhitelisted;
+        emit TransferToWhitelisted(to, isWhitelisted);
     }
 }
