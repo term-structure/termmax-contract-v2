@@ -1,6 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity ^0.8.27;
 
+/**
+ * @title TermMaxVault
+ * @notice This contract is inspired by MetaMorphoV1_1 (https://github.com/morpho-org/metamorpho-v1.1/blob/main/src/MetaMorphoV1_1.sol)
+ * @dev The role management structure is based on Morpho's role system (https://docs.morpho.org/curation/concepts/roles/)
+ * with similar separation of curator, guardian, and allocator roles for enhanced governance and risk management.
+ */
+
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
