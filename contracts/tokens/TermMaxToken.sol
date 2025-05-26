@@ -14,6 +14,7 @@ import {TransferUtils} from "contracts/lib/TransferUtils.sol";
 import {StakingBuffer} from "contracts/tokens/StakingBuffer.sol";
 import {TermMaxTokenEvents} from "contracts/events/TermMaxTokenEvents.sol";
 import {TermMaxTokenErrors} from "contracts/errors/TermMaxTokenErrors.sol";
+import {PendingLib, PendingAddress} from "contracts/lib/PendingLib.sol";
 
 contract TermMaxToken is
     StakingBuffer,
@@ -25,6 +26,7 @@ contract TermMaxToken is
     TermMaxTokenErrors
 {
     using TransferUtils for IERC20;
+    using PendingLib for PendingAddress;
 
     IAaveV3Minimal public immutable aavePool;
     uint16 public immutable referralCode;
@@ -36,23 +38,30 @@ contract TermMaxToken is
     uint8 _decimals;
     uint256 internal withdawedIncomeAssets;
 
+    /// @notice The timelock period for upgrade operations (in seconds)
+    uint256 public constant UPGRADE_TIMELOCK = 2 days;
+
+    /// @notice Pending upgrade implementation address with timelock
+    PendingAddress internal _pendingImplementation;
+
     constructor(address aavePool_, uint16 referralCode_) {
         aavePool = IAaveV3Minimal(aavePool_);
         referralCode = referralCode_;
         _disableInitializers();
     }
 
-    function initialize(address admin, address underlying, BufferConfig memory bufferConfig_) public initializer {
-        string memory name = string(abi.encodePacked("TermMax ", IERC20Metadata(underlying).name()));
-        string memory symbol = string(abi.encodePacked("tmx", IERC20Metadata(underlying).symbol()));
-        _decimals = IERC20Metadata(underlying).decimals();
+    function initialize(address admin, address underlying_, BufferConfig memory bufferConfig_) public initializer {
+        underlying = IERC20(underlying_);
+        string memory name = string(abi.encodePacked("TermMax ", IERC20Metadata(underlying_).name()));
+        string memory symbol = string(abi.encodePacked("tmx", IERC20Metadata(underlying_).symbol()));
+        _decimals = IERC20Metadata(underlying_).decimals();
         __ERC20_init(name, symbol);
         __Ownable_init(admin);
         __ReentrancyGuard_init();
         _updateBufferConfig(bufferConfig_);
-        aToken = IERC20(aavePool.getReserveData(underlying).aTokenAddress);
+        aToken = IERC20(aavePool.getReserveData(underlying_).aTokenAddress);
 
-        emit TermMaxTokenInitialized(admin, underlying);
+        emit TermMaxTokenInitialized(admin, underlying_);
     }
 
     function mint(address to, uint256 amount) external nonReentrant {
@@ -126,5 +135,51 @@ contract TermMaxToken is
         require(receivedAmount == amount, AaveWithdrawFailed(amount, receivedAmount));
     }
 
-    function _authorizeUpgrade(address newImplementation) internal virtual override onlyOwner {}
+    /// @notice Submit a new implementation for upgrade with timelock
+    /// @param newImplementation The address of the new implementation contract
+    function submitUpgrade(address newImplementation) external onlyOwner {
+        if (newImplementation == address(0)) revert InvalidImplementation();
+        if (_pendingImplementation.validAt != 0) revert AlreadyPending();
+
+        _pendingImplementation.update(newImplementation, UPGRADE_TIMELOCK);
+
+        emit SubmitUpgrade(newImplementation, _pendingImplementation.validAt);
+    }
+
+    /// @notice Accept the pending implementation upgrade after timelock period
+    function acceptUpgrade() external onlyOwner {
+        if (_pendingImplementation.validAt == 0) revert NoPendingValue();
+        if (block.timestamp < _pendingImplementation.validAt) revert TimelockNotElapsed();
+
+        address newImplementation = _pendingImplementation.value;
+        delete _pendingImplementation;
+
+        emit AcceptUpgrade(msg.sender, newImplementation);
+
+        // Perform the upgrade
+        upgradeToAndCall(newImplementation, "");
+    }
+
+    /// @notice Revoke the pending implementation upgrade
+    function revokeUpgrade() external onlyOwner {
+        if (_pendingImplementation.validAt == 0) revert NoPendingValue();
+
+        delete _pendingImplementation;
+
+        emit RevokeUpgrade(msg.sender);
+    }
+
+    /// @notice Get the pending implementation upgrade details
+    /// @return implementation The pending implementation address
+    /// @return validAt The timestamp when the upgrade becomes valid
+    function pendingImplementation() external view returns (address implementation, uint64 validAt) {
+        return (_pendingImplementation.value, _pendingImplementation.validAt);
+    }
+
+    /// @notice Override _authorizeUpgrade to prevent direct upgrades without timelock
+    /// @dev This function should never allow upgrades as they must go through the timelock process
+    function _authorizeUpgrade(address) internal virtual override onlyOwner {
+        // Always revert since upgrades must go through the timelock mechanism
+        revert("Use submitUpgrade and acceptUpgrade instead");
+    }
 }
