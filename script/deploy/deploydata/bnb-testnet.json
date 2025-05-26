@@ -1,0 +1,87 @@
+{
+  "configNum": "2",
+  "configs": {
+    "configs_0": {
+      "salt": 0,
+      "collateralCapForGt": "638791170088097000000",
+      "marketConfig": {
+        "maturity": "1748563200",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "mintGtFeeRatio": "1000000",
+        "mintGtFeeRef": "400000"
+      },
+      "loanConfig": {
+        "liquidationLtv": "94000000",
+        "maxLtv": "90000000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
+        "priceFeedAddr": "0xdDb6F90fFb4d3257dd666b69178e5B3c5Bf41136",
+        "backupPriceFeedAddr": "0x24CFEf73A30b2CEEC23d3659fA98B491D996F152",
+        "heartBeat": "86400",
+        "name": "Wrapped BNB",
+        "symbol": "WBNB",
+        "decimals": "18",
+        "initialPrice": "59000000000"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0xb0b84d294e0c75a6abe60171b70edeb2efd14a1b",
+        "priceFeedAddr": "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
+        "backupPriceFeedAddr": "0x67F6838e58859d612E4ddF04dA396d6DABB66Dc4",
+        "heartBeat": "86400",
+        "name": "Staked Lista BNB",
+        "symbol": "slisBNB",
+        "decimals": "18",
+        "initialPrice": "60000000000",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      },
+      "marketName": "WBNB/slisBNB@30MAY2025",
+      "marketSymbol": "WBNB/slisBNB@30MAY2025"
+    },
+    "configs_1": {
+      "salt": 0,
+      "collateralCapForGt": "638791170088097000000",
+      "marketConfig": {
+        "maturity": "1748563200",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "mintGtFeeRatio": "1000000",
+        "mintGtFeeRef": "400000"
+      },
+      "loanConfig": {
+        "liquidationLtv": "94000000",
+        "maxLtv": "90000000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0x5A110fC00474038f6c02E89C707D638602EA44B5",
+        "priceFeedAddr": "0xdDb6F90fFb4d3257dd666b69178e5B3c5Bf41136",
+        "backupPriceFeedAddr": "0x24CFEf73A30b2CEEC23d3659fA98B491D996F152",
+        "heartBeat": "86400",
+        "name": "Astherus USDF",
+        "symbol": "USDF",
+        "decimals": "18",
+        "initialPrice": "99900000"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0x1627abfd41cdaaff4fc595444519410160fe9df1",
+        "priceFeedAddr": "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
+        "backupPriceFeedAddr": "0x67F6838e58859d612E4ddF04dA396d6DABB66Dc4",
+        "heartBeat": "86400",
+        "name": "PT Astherus USDF 24JUL2025",
+        "symbol": "PT-USDF-24JUL2025",
+        "decimals": "18",
+        "initialPrice": "97000000",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      },
+      "marketName": "USDF/PT-USDF-24JUL2025@24JUL2025",
+      "marketSymbol": "USDF/PT-USDF-24JUL2025@24JUL2025"
+    }
+  }
+}

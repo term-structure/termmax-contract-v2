@@ -1,0 +1,17 @@
+{
+  "marketCount": 3,
+  "markets": [
+    {
+      "symbol": "WETH/gtWETH@30MAY2025",
+      "newCapacity": "750000000000000000000"
+    },
+    {
+      "symbol": "USDC/gtusdcf@30MAY2025",
+      "newCapacity": "1500000000000000000000000"
+    },
+    {
+      "symbol": "WBTC/gtWBTC@30MAY2025",
+      "newCapacity": "50000000000000000000"
+    }
+  ]
+}

@@ -1,17 +1,17 @@
 {
-  "configNum": "6",
+  "configNum": "7",
   "configs": {
     "configs_0": {
       "salt": 0,
-      "collateralCapForGt": "455279691624029000000",
+      "collateralCapForGt": "511789884423953000000",
       "marketConfig": {
-        "maturity": "1750982400",
+        "maturity": "1748563200",
         "lendTakerFeeRatio": "2000000",
         "lendMakerFeeRatio": "2000000",
         "borrowTakerFeeRatio": "3000000",
         "borrowMakerFeeRatio": "3000000",
-        "mintGtFeeRatio": "10000000",
-        "mintGtFeeRef": "4000000"
+        "mintGtFeeRatio": "1000000",
+        "mintGtFeeRef": "400000"
       },
       "loanConfig": {
         "liquidationLtv": "94000000",
@@ -26,7 +26,7 @@
         "name": "Wrapped ETH",
         "symbol": "WETH",
         "decimals": "18",
-        "initialPrice": "190861490000"
+        "initialPrice": "163272000000"
       },
       "collateralConfig": {
         "tokenAddr": "0x5979D7b546E38E414F7E9822514be443A4800529",
@@ -36,23 +36,23 @@
         "name": "Wrapped liquid staked Ether 2.0",
         "symbol": "wstETH",
         "decimals": "18",
-        "initialPrice": "228410000000",
+        "initialPrice": "195393000000",
         "gtKeyIdentifier": "GearingTokenWithERC20"
       },
-      "marketName": "WETH/wstETH@27JUN2025",
-      "marketSymbol": "WETH/wstETH@27JUN2025"
+      "marketName": "WETH/wstETH@30MAY2025",
+      "marketSymbol": "WETH/wstETH@30MAY2025"
     },
     "configs_1": {
       "salt": 0,
-      "collateralCapForGt": "455279691624029000000",
+      "collateralCapForGt": "511789884423953000000",
       "marketConfig": {
-        "maturity": "1750982400",
+        "maturity": "1748563200",
         "lendTakerFeeRatio": "2000000",
         "lendMakerFeeRatio": "2000000",
         "borrowTakerFeeRatio": "3000000",
         "borrowMakerFeeRatio": "3000000",
-        "mintGtFeeRatio": "10000000",
-        "mintGtFeeRef": "10000000"
+        "mintGtFeeRatio": "1000000",
+        "mintGtFeeRef": "2000000"
       },
       "loanConfig": {
         "liquidationLtv": "85000000",
@@ -77,27 +77,27 @@
         "name": "Wrapped liquid staked Ether 2.0",
         "symbol": "wstETH",
         "decimals": "18",
-        "initialPrice": "228410000000",
+        "initialPrice": "195393000000",
         "gtKeyIdentifier": "GearingTokenWithERC20"
       },
-      "marketName": "USDC/wstETH@27JUN2025",
-      "marketSymbol": "USDC/wstETH@27JUN2025"
+      "marketName": "USDC/wstETH@30MAY2025",
+      "marketSymbol": "USDC/wstETH@30MAY2025"
     },
     "configs_2": {
       "salt": 0,
-      "collateralCapForGt": "1033143128",
+      "collateralCapForGt": "1215801480",
       "marketConfig": {
-        "maturity": "1750982400",
+        "maturity": "1748563200",
         "lendTakerFeeRatio": "2000000",
         "lendMakerFeeRatio": "2000000",
         "borrowTakerFeeRatio": "3000000",
         "borrowMakerFeeRatio": "3000000",
-        "mintGtFeeRatio": "10000000",
-        "mintGtFeeRef": "10000000"
+        "mintGtFeeRatio": "1000000",
+        "mintGtFeeRef": "2000000"
       },
       "loanConfig": {
-        "liquidationLtv": "85000000",
-        "maxLtv": "81000000",
+        "liquidationLtv": "86000000",
+        "maxLtv": "82000000",
         "liquidatable": true
       },
       "underlyingConfig": {
@@ -118,27 +118,27 @@
         "name": "Wrapped BTC",
         "symbol": "WBTC",
         "decimals": "8",
-        "initialPrice": "9923656000000",
+        "initialPrice": "8225027000000",
         "gtKeyIdentifier": "GearingTokenWithERC20"
       },
-      "marketName": "USDC/WBTC@27JUN2025",
-      "marketSymbol": "USDC/WBTC@27JUN2025"
+      "marketName": "USDC/WBTC@30MAY2025",
+      "marketSymbol": "USDC/WBTC@30MAY2025"
     },
     "configs_3": {
       "salt": 0,
-      "collateralCapForGt": "512815358514074000000",
+      "collateralCapForGt": "576466989178777000000",
       "marketConfig": {
-        "maturity": "1750982400",
+        "maturity": "1748563200",
         "lendTakerFeeRatio": "2000000",
         "lendMakerFeeRatio": "2000000",
         "borrowTakerFeeRatio": "3000000",
         "borrowMakerFeeRatio": "3000000",
-        "mintGtFeeRatio": "10000000",
-        "mintGtFeeRef": "4000000"
+        "mintGtFeeRatio": "1000000",
+        "mintGtFeeRef": "400000"
       },
       "loanConfig": {
-        "liquidationLtv": "94000000",
-        "maxLtv": "90000000",
+        "liquidationLtv": "93000000",
+        "maxLtv": "89000000",
         "liquidatable": true
       },
       "underlyingConfig": {
@@ -149,7 +149,7 @@
         "name": "Wrapped ETH",
         "symbol": "WETH",
         "decimals": "18",
-        "initialPrice": "190861490000"
+        "initialPrice": "163272000000"
       },
       "collateralConfig": {
         "tokenAddr": "0x35751007a407ca6FEFfE80b3cB397736D2cf4dbe",
@@ -159,27 +159,27 @@
         "name": "Wrapped eETH",
         "symbol": "weETH",
         "decimals": "18",
-        "initialPrice": "202784000000",
+        "initialPrice": "173470000000",
         "gtKeyIdentifier": "GearingTokenWithERC20"
       },
-      "marketName": "WETH/weETH@27JUN2025",
-      "marketSymbol": "WETH/weETH@27JUN2025"
+      "marketName": "WETH/weETH@30MAY2025",
+      "marketSymbol": "WETH/weETH@30MAY2025"
     },
     "configs_4": {
       "salt": 0,
-      "collateralCapForGt": "544848428862385000000",
+      "collateralCapForGt": "612476065957113000000",
       "marketConfig": {
-        "maturity": "1750982400",
+        "maturity": "1748563200",
         "lendTakerFeeRatio": "2000000",
         "lendMakerFeeRatio": "2000000",
         "borrowTakerFeeRatio": "3000000",
         "borrowMakerFeeRatio": "3000000",
-        "mintGtFeeRatio": "10000000",
-        "mintGtFeeRef": "10000000"
+        "mintGtFeeRatio": "1000000",
+        "mintGtFeeRef": "2000000"
       },
       "loanConfig": {
-        "liquidationLtv": "85000000",
-        "maxLtv": "81000000",
+        "liquidationLtv": "86000000",
+        "maxLtv": "82000000",
         "liquidatable": true
       },
       "underlyingConfig": {
@@ -200,23 +200,23 @@
         "name": "Wrapped ETH",
         "symbol": "WETH",
         "decimals": "18",
-        "initialPrice": "190861000000",
+        "initialPrice": "163272000000",
         "gtKeyIdentifier": "GearingTokenWithERC20"
       },
-      "marketName": "USDC/WETH@27JUN2025",
-      "marketSymbol": "USDC/WETH@27JUN2025"
+      "marketName": "USDC/WETH@30MAY2025",
+      "marketSymbol": "USDC/WETH@30MAY2025"
     },
     "configs_5": {
       "salt": 0,
       "collateralCapForGt": "2760143527463430000000000",
       "marketConfig": {
-        "maturity": "1750982400",
+        "maturity": "1748563200",
         "lendTakerFeeRatio": "2000000",
         "lendMakerFeeRatio": "2000000",
         "borrowTakerFeeRatio": "3000000",
         "borrowMakerFeeRatio": "3000000",
-        "mintGtFeeRatio": "10000000",
-        "mintGtFeeRef": "10000000"
+        "mintGtFeeRatio": "1000000",
+        "mintGtFeeRef": "2000000"
       },
       "loanConfig": {
         "liquidationLtv": "70000000",
@@ -244,8 +244,49 @@
         "initialPrice": "36000000",
         "gtKeyIdentifier": "GearingTokenWithERC20"
       },
-      "marketName": "USDC/ARB@27JUN2025",
-      "marketSymbol": "USDC/ARB@27JUN2025"
+      "marketName": "USDC/ARB@30MAY2025",
+      "marketSymbol": "USDC/ARB@30MAY2025"
+    },
+    "configs_6": {
+      "salt": 0,
+      "collateralCapForGt": "617950533596769000000",
+      "marketConfig": {
+        "maturity": "1750982400",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "mintGtFeeRatio": "1000000",
+        "mintGtFeeRef": "400000"
+      },
+      "loanConfig": {
+        "liquidationLtv": "94000000",
+        "maxLtv": "90000000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1",
+        "priceFeedAddr": "0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612",
+        "backupPriceFeedAddr": "0xd68AeF8Ab6D86CeC502e08Faa376297d836FdfA6",
+        "heartBeat": "86400",
+        "name": "Wrapped ETH",
+        "symbol": "WETH",
+        "decimals": "18",
+        "initialPrice": "163272000000"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0xb33808ea0e883138680BA29311a220A7377cdb92",
+        "priceFeedAddr": "0x2a2a0e32c54670045256EBcA681887E32e689E97",
+        "backupPriceFeedAddr": "0x745716b8c00CAE49c422D706f630A1084B906759",
+        "heartBeat": "86400",
+        "name": "PT weETH 26JUN2025",
+        "symbol": "PT-weETH-26JUN2025",
+        "decimals": "18",
+        "initialPrice": "161825000000",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      },
+      "marketName": "WETH/PT-weETH-26JUN2025@27JUN2025",
+      "marketSymbol": "WETH/PT-weETH-26JUN2025@27JUN2025"
     }
   }
 }

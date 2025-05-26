@@ -25,6 +25,7 @@ contract AcceptOracles is Script {
         address tokenAddr;
         string tokenSymbol;
         address priceFeedAddr;
+        address backupPriceFeedAddr;
         uint32 heartbeat;
         uint64 validAt;
         bool existsInConfig;
@@ -83,7 +84,7 @@ contract AcceptOracles is Script {
                 PendingOracleStatus memory status = acceptedOracles[i];
 
                 // Get current oracle config before accepting
-                (AggregatorV3Interface currentAggregator,,,,) = oracle.oracles(status.tokenAddr);
+                (AggregatorV3Interface currentAggregator,,) = oracle.oracles(status.tokenAddr);
 
                 // Accept the oracle
                 accessManager.acceptPendingOracle(oracle, status.tokenAddr);
@@ -114,6 +115,8 @@ contract AcceptOracles is Script {
                 PendingOracleStatus memory status = notReadyOracles[i];
                 console.log("%d. %s (%s)", i + 1, status.tokenSymbol, status.tokenAddr);
                 console.log("   Price Feed:", status.priceFeedAddr);
+                console.log("   Backup Price Feed:", status.backupPriceFeedAddr);
+                console.log("   Heartbeat:", status.heartbeat);
                 console.log("   Status:", status.statusMessage);
 
                 if (status.pendingOracleExists && status.validAt > 0) {
@@ -154,6 +157,7 @@ contract AcceptOracles is Script {
                     oracle,
                     config.underlyingConfig.tokenAddr,
                     config.underlyingConfig.priceFeedAddr,
+                    config.underlyingConfig.backupPriceFeedAddr,
                     uint32(config.underlyingConfig.heartBeat),
                     "underlying"
                 );
@@ -166,6 +170,7 @@ contract AcceptOracles is Script {
                     oracle,
                     config.collateralConfig.tokenAddr,
                     config.collateralConfig.priceFeedAddr,
+                    config.collateralConfig.backupPriceFeedAddr,
                     uint32(config.collateralConfig.heartBeat),
                     "collateral"
                 );
@@ -178,6 +183,7 @@ contract AcceptOracles is Script {
         OracleAggregator oracle,
         address tokenAddr,
         address expectedPriceFeedAddr,
+        address expectedBackupPriceFeedAddr,
         uint32 expectedHeartbeat,
         string memory tokenType
     ) internal {
@@ -185,6 +191,7 @@ contract AcceptOracles is Script {
         PendingOracleStatus memory status;
         status.tokenAddr = tokenAddr;
         status.priceFeedAddr = expectedPriceFeedAddr;
+        status.backupPriceFeedAddr = expectedBackupPriceFeedAddr;
         status.heartbeat = expectedHeartbeat;
         status.existsInConfig = true;
 
@@ -199,9 +206,24 @@ contract AcceptOracles is Script {
         (IOracle.Oracle memory pendingOracle, uint64 validAt) = oracle.pendingOracles(tokenAddr);
 
         // Get current oracle for comparison
-        (AggregatorV3Interface currentAggregator,,,,) = oracle.oracles(tokenAddr);
+        (
+            AggregatorV3Interface currentAggregator,
+            AggregatorV3Interface currentBackupAggregator,
+            uint32 currentHeartbeat
+        ) = oracle.oracles(tokenAddr);
 
-        if (address(pendingOracle.aggregator) == address(0)) {
+        if (
+            address(currentAggregator) == expectedPriceFeedAddr
+                && address(currentBackupAggregator) == expectedBackupPriceFeedAddr && currentHeartbeat == expectedHeartbeat
+        ) {
+            status.readyToAccept = false;
+            status.statusMessage = "Oracle is already configured with the correct values";
+            notReadyOracles.push(status);
+            return;
+        } else if (
+            address(pendingOracle.aggregator) == address(0) && address(pendingOracle.backupAggregator) == address(0)
+                && pendingOracle.heartbeat == 0
+        ) {
             // No pending oracle exists
             status.pendingOracleExists = false;
             status.readyToAccept = false;
@@ -213,12 +235,26 @@ contract AcceptOracles is Script {
             status.validAt = validAt;
 
             // Check if it matches our expected price feed and is valid
-            if (address(pendingOracle.aggregator) != expectedPriceFeedAddr) {
+            if (
+                address(pendingOracle.aggregator) != expectedPriceFeedAddr
+                    || address(pendingOracle.backupAggregator) != expectedBackupPriceFeedAddr
+                    || pendingOracle.heartbeat != expectedHeartbeat
+            ) {
                 status.readyToAccept = false;
                 status.statusMessage = string(
                     abi.encodePacked(
                         "Pending oracle doesn't match expected price feed. Found: ",
-                        vm.toString(address(pendingOracle.aggregator))
+                        vm.toString(address(pendingOracle.aggregator)),
+                        " Expected: ",
+                        vm.toString(expectedPriceFeedAddr),
+                        " Backup: ",
+                        vm.toString(address(pendingOracle.backupAggregator)),
+                        " Expected: ",
+                        vm.toString(expectedBackupPriceFeedAddr),
+                        " Heartbeat: ",
+                        vm.toString(pendingOracle.heartbeat),
+                        " Expected: ",
+                        vm.toString(expectedHeartbeat)
                     )
                 );
                 notReadyOracles.push(status);
@@ -227,30 +263,6 @@ contract AcceptOracles is Script {
                 status.readyToAccept = false;
                 status.statusMessage = "Timelock period not yet elapsed";
                 notReadyOracles.push(status);
-            } else if (
-                address(currentAggregator) == expectedPriceFeedAddr && pendingOracle.heartbeat == expectedHeartbeat
-            ) {
-                // Get current heartbeat value
-                (,,, uint32 currentHeartbeat,) = oracle.oracles(tokenAddr);
-
-                // Oracle is already set correctly (both address and heartbeat)
-                if (currentHeartbeat == expectedHeartbeat) {
-                    status.readyToAccept = false;
-                    status.statusMessage = "Oracle is already configured with the correct values";
-                    notReadyOracles.push(status);
-                } else {
-                    // Only heartbeat needs updating
-                    status.readyToAccept = true;
-                    status.statusMessage = string(
-                        abi.encodePacked(
-                            "Heartbeat will be updated from ",
-                            vm.toString(currentHeartbeat),
-                            " to ",
-                            vm.toString(expectedHeartbeat)
-                        )
-                    );
-                    acceptedOracles.push(status);
-                }
             } else {
                 // Oracle is ready to accept - this handles the case where the price feed address is different
                 status.readyToAccept = true;

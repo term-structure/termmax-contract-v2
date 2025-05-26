@@ -10,6 +10,9 @@ const contractFiles = [
   './out/TermMaxMarket.sol/TermMaxMarket.json',
   './out/TermMaxOrder.sol/TermMaxOrder.json',
   './out/TermMaxVault.sol/TermMaxVault.json',
+  './out/VaultFactory.sol/VaultFactory.json',
+  './out/OracleAggregator.sol/OracleAggregator.json',
+  './out/TermMaxFactory.sol/TermMaxFactory.json',
 ];
 
 const transformAbi = (filePath: string) => {

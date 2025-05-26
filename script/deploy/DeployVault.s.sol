@@ -30,15 +30,15 @@ import {AccessManager} from "contracts/access/AccessManager.sol";
 
 contract DeloyVault is DeployBase {
     // Initialize vault configurations with a single USDC vault
-    address assetAddr = address(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
-    address curator = address(0x2A58A3D405c527491Daae4C62561B949e7F87EFE);
-    address guardian = address(0x2A58A3D405c527491Daae4C62561B949e7F87EFE);
-    address allocator = address(0x2A58A3D405c527491Daae4C62561B949e7F87EFE);
-    string name = "TermMax USDC Vault";
-    string symbol = "TermMax USDC Vault";
-    uint256 timelock = 1;
-    uint256 maxCapacity = 10000000e6;
-    uint64 performanceFeeRate = 0.1e8;
+    address assetAddr = address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
+    address curator = address(0x008c7DC790fA31E6CA19D8Cb6d11C53f6A88DF6c);
+    address guardian = address(0x6383EDe871F8B0167905C2466505381CDcD9cC78);
+    address allocator = address(0x518C292A86450808E593Bcf26Fc29A7a7b682198);
+    string name = "TermMax WETH Coll-Deliverable Vault";
+    string symbol = "TMX-WETH-Delivery-Vault";
+    uint256 timelock = 1 days;
+    uint256 maxCapacity = 4000e18;
+    uint64 performanceFeeRate = 0;
 
     // Network-specific config loaded from environment variables
     string network;

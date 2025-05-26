@@ -52,12 +52,14 @@ contract SubmitOracles is Script {
         OracleAggregator oracle = OracleAggregator(oracleAggregatorAddr);
         for (uint256 i; i < configs.length; i++) {
             JsonLoader.Config memory config = configs[i];
-            (AggregatorV3Interface aggregator,,,,) = oracle.oracles(address(config.underlyingConfig.tokenAddr));
+            (AggregatorV3Interface aggregator, AggregatorV3Interface backupAggregator, uint32 heartbeat) =
+                oracle.oracles(address(config.underlyingConfig.tokenAddr));
             if (
                 !tokenSubmitted[address(config.underlyingConfig.tokenAddr)]
                     && (
-                        address(aggregator) == address(0)
-                            || address(aggregator) != address(config.underlyingConfig.priceFeedAddr)
+                        address(aggregator) != address(config.underlyingConfig.priceFeedAddr)
+                            || address(backupAggregator) != address(config.underlyingConfig.backupPriceFeedAddr)
+                            || heartbeat != config.underlyingConfig.heartBeat
                     )
             ) {
                 accessManager.submitPendingOracle(
@@ -65,10 +67,8 @@ contract SubmitOracles is Script {
                     address(config.underlyingConfig.tokenAddr),
                     IOracle.Oracle(
                         AggregatorV3Interface(config.underlyingConfig.priceFeedAddr),
-                        AggregatorV3Interface(config.underlyingConfig.priceFeedAddr),
-                        config.underlyingConfig.maxPrice,
-                        uint32(config.underlyingConfig.heartBeat),
-                        uint32(config.underlyingConfig.backupHeartBeat)
+                        AggregatorV3Interface(config.underlyingConfig.backupPriceFeedAddr),
+                        uint32(config.underlyingConfig.heartBeat)
                     )
                 );
                 tokenSubmitted[address(config.underlyingConfig.tokenAddr)] = true;
@@ -77,16 +77,17 @@ contract SubmitOracles is Script {
                     IERC20Metadata(address(config.underlyingConfig.tokenAddr)).symbol()
                 );
                 console.log("Price feed: ", config.underlyingConfig.priceFeedAddr);
+                console.log("Backup price feed: ", config.underlyingConfig.backupPriceFeedAddr);
                 console.log("Heartbeat: ", config.underlyingConfig.heartBeat);
-                console.log("Max price: ", config.underlyingConfig.maxPrice);
                 console.log("--------------------------------");
             }
-            (aggregator,,,,) = oracle.oracles(address(config.collateralConfig.tokenAddr));
+            (aggregator, backupAggregator, heartbeat) = oracle.oracles(address(config.collateralConfig.tokenAddr));
             if (
                 !tokenSubmitted[address(config.collateralConfig.tokenAddr)]
                     && (
-                        address(aggregator) == address(0)
-                            || address(aggregator) != address(config.collateralConfig.priceFeedAddr)
+                        address(aggregator) != address(config.collateralConfig.priceFeedAddr)
+                            || address(backupAggregator) != address(config.collateralConfig.backupPriceFeedAddr)
+                            || heartbeat != config.collateralConfig.heartBeat
                     )
             ) {
                 accessManager.submitPendingOracle(
@@ -94,10 +95,8 @@ contract SubmitOracles is Script {
                     address(config.collateralConfig.tokenAddr),
                     IOracle.Oracle(
                         AggregatorV3Interface(config.collateralConfig.priceFeedAddr),
-                        AggregatorV3Interface(config.collateralConfig.priceFeedAddr),
-                        config.collateralConfig.maxPrice,
-                        uint32(config.collateralConfig.heartBeat),
-                        uint32(config.collateralConfig.backupHeartBeat)
+                        AggregatorV3Interface(config.collateralConfig.backupPriceFeedAddr),
+                        uint32(config.collateralConfig.heartBeat)
                     )
                 );
                 tokenSubmitted[address(config.collateralConfig.tokenAddr)] = true;
@@ -106,8 +105,8 @@ contract SubmitOracles is Script {
                     IERC20Metadata(address(config.collateralConfig.tokenAddr)).symbol()
                 );
                 console.log("Price feed: ", config.collateralConfig.priceFeedAddr);
+                console.log("Backup price feed: ", config.collateralConfig.backupPriceFeedAddr);
                 console.log("Heartbeat: ", config.collateralConfig.heartBeat);
-                console.log("Max price: ", config.collateralConfig.maxPrice);
                 console.log("--------------------------------");
             }
         }

@@ -1,0 +1,128 @@
+{
+  "configNum": "3",
+  "configs": {
+    "configs_0": {
+      "salt": 0,
+      "collateralCapForGt": "1000000000000000000000000",
+      "marketConfig": {
+        "maturity": "1748563200",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "mintGtFeeRatio": "1000000",
+        "mintGtFeeRef": "2000000"
+      },
+      "loanConfig": {
+        "liquidationLtv": "94000000",
+        "maxLtv": "90000000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "priceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "backupPriceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "heartBeat": "86400",
+        "name": "USD Coin",
+        "symbol": "USDC",
+        "decimals": "6",
+        "initialPrice": "100000000"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0xf1fd8AC6346eC7BC4116Ba7aDc81102B2BC4C52D",
+        "priceFeedAddr": "0x4cF5F12c6c0D48F0d335DdB25e11cd526EAfD322",
+        "backupPriceFeedAddr": "0x4cF5F12c6c0D48F0d335DdB25e11cd526EAfD322",
+        "heartBeat": "86400",
+        "name": "MEV Capital USDC Prime",
+        "symbol": "MC_USDCP",
+        "decimals": "18",
+        "initialPrice": "100000000",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      },
+      "marketName": "USDC/MC_USDCP@30MAY2025",
+      "marketSymbol": "USDC/MC_USDCP@30MAY2025"
+    },
+    "configs_1": {
+      "salt": 0,
+      "collateralCapForGt": "1000000000000000000000000",
+      "marketConfig": {
+        "maturity": "1748563200",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "mintGtFeeRatio": "1000000",
+        "mintGtFeeRef": "2000000"
+      },
+      "loanConfig": {
+        "liquidationLtv": "94000000",
+        "maxLtv": "90000000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "priceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "backupPriceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "heartBeat": "86400",
+        "name": "USD Coin",
+        "symbol": "USDC",
+        "decimals": "6",
+        "initialPrice": "100000000"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0xc582F04d8a82795aa2Ff9c8bb4c1c889fe7b754e",
+        "priceFeedAddr": "0x81195F8A79f6553A4078f89eF87b21a7d3C2855A",
+        "backupPriceFeedAddr": "0x81195F8A79f6553A4078f89eF87b21a7d3C2855A",
+        "heartBeat": "86400",
+        "name": "Gauntlet USDC Frontier",
+        "symbol": "gtusdcf",
+        "decimals": "18",
+        "initialPrice": "100000000",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      },
+      "marketName": "USDC/gtusdcf@30MAY2025",
+      "marketSymbol": "USDC/gtusdcf@30MAY2025"
+    },
+    "configs_2": {
+      "salt": 0,
+      "collateralCapForGt": "624356074116256000000",
+      "marketConfig": {
+        "maturity": "1748563200",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "mintGtFeeRatio": "1000000",
+        "mintGtFeeRef": "400000"
+      },
+      "loanConfig": {
+        "liquidationLtv": "94000000",
+        "maxLtv": "90000000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+        "priceFeedAddr": "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
+        "backupPriceFeedAddr": "0x67F6838e58859d612E4ddF04dA396d6DABB66Dc4",
+        "heartBeat": "86400",
+        "name": "Wrapped ETH",
+        "symbol": "WETH",
+        "decimals": "18",
+        "initialPrice": "158359710000"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0x701907283a57FF77E255C3f1aAD790466B8CE4ef",
+        "priceFeedAddr": "0x0221cd3fA8B1Bea16293fb0cD6B60977d531c931",
+        "backupPriceFeedAddr": "0x00B96F0eBf39158cb4E3F801073966bD6Db7959C",
+        "heartBeat": "86400",
+        "name": "IndexCoop hyETH",
+        "symbol": "mhyETH",
+        "decimals": "18",
+        "initialPrice": "160165020000",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      },
+      "marketName": "WETH/mhyETH@30MAY2025",
+      "marketSymbol": "WETH/mhyETH@30MAY2025"
+    }
+  }
+}

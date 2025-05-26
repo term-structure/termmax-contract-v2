@@ -17,6 +17,7 @@ export interface LoanConfig {
 export interface TokenConfig {
     tokenAddr: string;
     priceFeedAddr: string;
+    backupPriceFeedAddr: string;
     heartBeat: string;
     name: string;
     symbol: string;

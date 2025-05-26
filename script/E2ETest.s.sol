@@ -74,7 +74,7 @@ contract E2ETest is Script {
         address tokenAddr = address(0xE407D6b58f1BaB00DB15a6b164F6e882aB3bb939);
         IOracle oracle = IOracle(address(0xFBc0A46463645de435012363354f24791789b4D7));
         OracleAggregator oracleAggregator = OracleAggregator(address(0xFBc0A46463645de435012363354f24791789b4D7));
-        (AggregatorV3Interface aggregator, AggregatorV3Interface backupAggregator,, uint32 heartbeat,) =
+        (AggregatorV3Interface aggregator, AggregatorV3Interface backupAggregator, uint32 heartbeat) =
             oracleAggregator.oracles(tokenAddr);
         console.log(IERC20Metadata(tokenAddr).symbol());
         console.log(address(aggregator));

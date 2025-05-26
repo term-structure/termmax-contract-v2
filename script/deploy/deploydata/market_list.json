@@ -1,0 +1,1084 @@
+{
+  "data": [
+    {
+      "contracts": {
+        "routerAddr": "0xc47591f5c023e44931c78d5a993834875b79fb11",
+        "marketAddr": "0x03f2af12ae4eb5533c3f7773be826e8da56f6e1a",
+        "underlyingAddr": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "collateralAddr": "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf",
+        "ftAddr": "0x970d02242b8339fc3148643a00e0a1e52c1eb5eb",
+        "xtAddr": "0xf1f31f2668ada8400d91bfc00f9a3c316c538cb3",
+        "gtAddr": "0x49d06206055e0cbdcbe94257782284b69b4b15fd"
+      },
+      "symbol": "USDC/cbBTC@30MAY2025",
+      "isFixed": false,
+      "openTime": "2025-04-09T16:53:59.000Z",
+      "maturity": "2025-05-30T00:00:00.000Z",
+      "treasurer": "0x719e77027952929ed3060dbffc5d43ec50c1cf79",
+      "defaultFeeConfig": {
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "issueFtFeeRatio": "10000000",
+        "issueFtFeeRef": "6000000",
+        "redeemFeeRatio": "0"
+      },
+      "liquidationWindowSeconds": 7200,
+      "maxLtv": "81000000",
+      "liquidationLtv": "85000000",
+      "liquidatable": true,
+      "isEnabled": true
+    },
+    {
+      "contracts": {
+        "routerAddr": "0xc47591f5c023e44931c78d5a993834875b79fb11",
+        "marketAddr": "0x08d6e7d4f49f6e34878a6f35db96f3130c43245f",
+        "underlyingAddr": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "collateralAddr": "0x1132065009850c72e27b7950c0f9285d1d103589",
+        "ftAddr": "0x8445c7a468bc74d9a6af8006f36fe5703ccae230",
+        "xtAddr": "0x38636a20a312094ac71d73481a2fc51e691c5680",
+        "gtAddr": "0x94257d83ba7b89a53f6bb4dfa282d1c992118986"
+      },
+      "symbol": "USDC/PT-mMEV-31JUL2025@20250801",
+      "isFixed": false,
+      "openTime": "2025-05-14T16:12:11.000Z",
+      "maturity": "2025-08-01T00:00:00.000Z",
+      "treasurer": "0x719e77027952929ed3060dbffc5d43ec50c1cf79",
+      "defaultFeeConfig": {
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "issueFtFeeRatio": "10000000",
+        "issueFtFeeRef": "6000000",
+        "redeemFeeRatio": "0"
+      },
+      "liquidationWindowSeconds": 7200,
+      "maxLtv": "87500000",
+      "liquidationLtv": "91500000",
+      "liquidatable": true,
+      "isEnabled": true
+    },
+    {
+      "contracts": {
+        "routerAddr": "0xc47591f5c023e44931c78d5a993834875b79fb11",
+        "marketAddr": "0x0b7efe5de3c3b5d75de33e25965b193d6ba79f52",
+        "underlyingAddr": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+        "collateralAddr": "0xcd5fe23c85820f7b72d0926fc9b05b43e359b7ee",
+        "ftAddr": "0x409e45a47629f45b91607bb87bcd8d043f32bc9a",
+        "xtAddr": "0x21ad8e3b575b65f2c937b201749a738ec53786e8",
+        "gtAddr": "0x02da4fda501396e036dcb591827e938e25fe3dd4"
+      },
+      "symbol": "WETH/weETH@30MAY2025",
+      "isFixed": false,
+      "openTime": "2025-04-09T16:51:23.000Z",
+      "maturity": "2025-05-30T00:00:00.000Z",
+      "treasurer": "0x719e77027952929ed3060dbffc5d43ec50c1cf79",
+      "defaultFeeConfig": {
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "issueFtFeeRatio": "10000000",
+        "issueFtFeeRef": "3000000",
+        "redeemFeeRatio": "0"
+      },
+      "liquidationWindowSeconds": 7200,
+      "maxLtv": "90000000",
+      "liquidationLtv": "94000000",
+      "liquidatable": true,
+      "isEnabled": true
+    },
+    {
+      "contracts": {
+        "routerAddr": "0xc47591f5c023e44931c78d5a993834875b79fb11",
+        "marketAddr": "0x1a69127188b72a155165255270017b4c78f31b88",
+        "underlyingAddr": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "collateralAddr": "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf",
+        "ftAddr": "0x0f8a293c6f7e578d46b1da2a44a5a65ce874da2d",
+        "xtAddr": "0x5ba653575ea036d734d703eaf9de2fe8936a6979",
+        "gtAddr": "0xe81e8f37ac256253c78f5d880ad3d1cfcd00a5b2"
+      },
+      "symbol": "USDC/cbBTC@27JUN2025",
+      "isFixed": false,
+      "openTime": "2025-05-07T08:19:11.000Z",
+      "maturity": "2025-06-27T00:00:00.000Z",
+      "treasurer": "0x719e77027952929ed3060dbffc5d43ec50c1cf79",
+      "defaultFeeConfig": {
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "issueFtFeeRatio": "10000000",
+        "issueFtFeeRef": "6000000",
+        "redeemFeeRatio": "0"
+      },
+      "liquidationWindowSeconds": 7200,
+      "maxLtv": "81000000",
+      "liquidationLtv": "85000000",
+      "liquidatable": true,
+      "isEnabled": true
+    },
+    {
+      "contracts": {
+        "routerAddr": "0xc47591f5c023e44931c78d5a993834875b79fb11",
+        "marketAddr": "0x22cd4c59ed4bb2ad852892518073056441c55bfe",
+        "underlyingAddr": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "collateralAddr": "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+        "ftAddr": "0x285a4618d3349e2fff63f750fcac94fb002f932e",
+        "xtAddr": "0x874adbd54f7ba2cf46f97bb569ab7ba4cb8f89c9",
+        "gtAddr": "0xec4aa75e5c4b09eb65761f8328252d3509f232c0"
+      },
+      "symbol": "USDC/wstETH@27JUN2025",
+      "isFixed": false,
+      "openTime": "2025-05-07T08:18:23.000Z",
+      "maturity": "2025-06-27T00:00:00.000Z",
+      "treasurer": "0x719e77027952929ed3060dbffc5d43ec50c1cf79",
+      "defaultFeeConfig": {
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "issueFtFeeRatio": "10000000",
+        "issueFtFeeRef": "6000000",
+        "redeemFeeRatio": "0"
+      },
+      "liquidationWindowSeconds": 7200,
+      "maxLtv": "81000000",
+      "liquidationLtv": "85000000",
+      "liquidatable": true,
+      "isEnabled": true
+    },
+    {
+      "contracts": {
+        "routerAddr": "0xc47591f5c023e44931c78d5a993834875b79fb11",
+        "marketAddr": "0x2524d9a55c2d18a3f257a7f67afd552b285de34e",
+        "underlyingAddr": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "collateralAddr": "0x9bca74f805ab0a22ddd0886db0942199a0feba71",
+        "ftAddr": "0x3448d6883c7762ed95f59b4a9780b07981b6afee",
+        "xtAddr": "0xffd2743ca5fcdd97b690c33434ef456be9885d20",
+        "gtAddr": "0x581577e0b27fc695b21089a08be962ae3f60aa2f"
+      },
+      "symbol": "USDC/PT-lvlUSD-29MAY2025@30MAY2025",
+      "isFixed": false,
+      "openTime": "2025-04-14T08:49:59.000Z",
+      "maturity": "2025-05-30T00:00:00.000Z",
+      "treasurer": "0x719e77027952929ed3060dbffc5d43ec50c1cf79",
+      "defaultFeeConfig": {
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "issueFtFeeRatio": "10000000",
+        "issueFtFeeRef": "6000000",
+        "redeemFeeRatio": "0"
+      },
+      "liquidationWindowSeconds": 7200,
+      "maxLtv": "86000000",
+      "liquidationLtv": "90000000",
+      "liquidatable": true,
+      "isEnabled": true
+    },
+    {
+      "contracts": {
+        "routerAddr": "0xc47591f5c023e44931c78d5a993834875b79fb11",
+        "marketAddr": "0x2eaaffbcde68337341c0ec65a862e648a413dc14",
+        "underlyingAddr": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "collateralAddr": "0xc582f04d8a82795aa2ff9c8bb4c1c889fe7b754e",
+        "ftAddr": "0x09ec4be9869bfabf9ff6652fe7703276d6f5e5d8",
+        "xtAddr": "0x9c7fbdd0055604bbf7736b153407e9513c818c22",
+        "gtAddr": "0x8ee590224c6cdde0d27fb60b37b05784dd794e59"
+      },
+      "symbol": "USDC/gtusdcf@30MAY2025",
+      "isFixed": false,
+      "openTime": "2025-04-17T04:34:59.000Z",
+      "maturity": "2025-05-30T00:00:00.000Z",
+      "treasurer": "0x719e77027952929ed3060dbffc5d43ec50c1cf79",
+      "defaultFeeConfig": {
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "issueFtFeeRatio": "10000000",
+        "issueFtFeeRef": "10000000",
+        "redeemFeeRatio": "0"
+      },
+      "liquidationWindowSeconds": 7200,
+      "maxLtv": "90000000",
+      "liquidationLtv": "94000000",
+      "liquidatable": true,
+      "isEnabled": true
+    },
+    {
+      "contracts": {
+        "routerAddr": "0xc47591f5c023e44931c78d5a993834875b79fb11",
+        "marketAddr": "0x37877773b1289c27bb6159b86613efd0d15cadae",
+        "underlyingAddr": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+        "collateralAddr": "0xb7de5dfcb74d25c2f21841fbd6230355c50d9308",
+        "ftAddr": "0x6fbe672e148db5374a17dcfe78c22a31751b0f5f",
+        "xtAddr": "0x9b23666f665aa6b280d1f5c3a580eead7414dcac",
+        "gtAddr": "0x4f1b12bfe07534c68ecd6a971d3f6295b423cd09"
+      },
+      "symbol": "sUSDe/PT-sUSDE-29MAY2025@30MAY2025",
+      "isFixed": false,
+      "openTime": "2025-04-14T08:49:23.000Z",
+      "maturity": "2025-05-30T00:00:00.000Z",
+      "treasurer": "0x719e77027952929ed3060dbffc5d43ec50c1cf79",
+      "defaultFeeConfig": {
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "issueFtFeeRatio": "10000000",
+        "issueFtFeeRef": "6000000",
+        "redeemFeeRatio": "0"
+      },
+      "liquidationWindowSeconds": 7200,
+      "maxLtv": "94000000",
+      "liquidationLtv": "96000000",
+      "liquidatable": true,
+      "isEnabled": true
+    },
+    {
+      "contracts": {
+        "routerAddr": "0xc47591f5c023e44931c78d5a993834875b79fb11",
+        "marketAddr": "0x403863917316bf8aa1966f9d90b393cec98f991b",
+        "underlyingAddr": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "collateralAddr": "0x90d2af7d622ca3141efa4d8f1f24d86e5974cc8f",
+        "ftAddr": "0x7e5da817e4cd2f2a897c997fb6eb3506d9861432",
+        "xtAddr": "0x9c4ef4476130f92cef4b661f99130157d35129cd",
+        "gtAddr": "0xe09ad59438a1ea4041217cd1ee018589db508268"
+      },
+      "symbol": "USDC/eUSDe@29MAY2025",
+      "isFixed": false,
+      "openTime": "2025-04-09T16:52:59.000Z",
+      "maturity": "2025-05-29T00:00:00.000Z",
+      "treasurer": "0x719e77027952929ed3060dbffc5d43ec50c1cf79",
+      "defaultFeeConfig": {
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "issueFtFeeRatio": "10000000",
+        "issueFtFeeRef": "6000000",
+        "redeemFeeRatio": "0"
+      },
+      "liquidationWindowSeconds": 7200,
+      "maxLtv": "92000000",
+      "liquidationLtv": "94000000",
+      "liquidatable": true,
+      "isEnabled": true
+    },
+    {
+      "contracts": {
+        "routerAddr": "0xc47591f5c023e44931c78d5a993834875b79fb11",
+        "marketAddr": "0x484cdece3fc951a7d009b9dbac66ec287ec1f58e",
+        "underlyingAddr": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+        "collateralAddr": "0xd9a442856c234a39a81a089c06451ebaa4306a72",
+        "ftAddr": "0xc74af187d844dc35998271b5696053cf57816413",
+        "xtAddr": "0x1f2f2af9fbba146cb03b4eafd8c8ae9ed5b91f60",
+        "gtAddr": "0x89bce5e162cdb10ea0d0b84b5e7aff8f51036e89"
+      },
+      "symbol": "WETH/pufETH@30MAY2025",
+      "isFixed": false,
+      "openTime": "2025-04-09T16:53:11.000Z",
+      "maturity": "2025-05-30T00:00:00.000Z",
+      "treasurer": "0x719e77027952929ed3060dbffc5d43ec50c1cf79",
+      "defaultFeeConfig": {
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "issueFtFeeRatio": "10000000",
+        "issueFtFeeRef": "3000000",
+        "redeemFeeRatio": "0"
+      },
+      "liquidationWindowSeconds": 7200,
+      "maxLtv": "90000000",
+      "liquidationLtv": "94000000",
+      "liquidatable": true,
+      "isEnabled": true
+    },
+    {
+      "contracts": {
+        "routerAddr": "0xc47591f5c023e44931c78d5a993834875b79fb11",
+        "marketAddr": "0x6c7b36f0a2136cb0da7b38293925d9af06895c20",
+        "underlyingAddr": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "collateralAddr": "0x030b69280892c888670edcdcd8b69fd8026a0bf3",
+        "ftAddr": "0xfc97e7b4728d81b275dad8701f2a53b72e5a0898",
+        "xtAddr": "0x56c7334191d0cc03043f5e6203c56245de3d9bca",
+        "gtAddr": "0x4bdf64b59a1cadab0ff34e18cdee225435d0479e"
+      },
+      "symbol": "USDC/mMEV@20250801",
+      "isFixed": false,
+      "openTime": "2025-05-14T16:12:23.000Z",
+      "maturity": "2025-08-01T00:00:00.000Z",
+      "treasurer": "0x719e77027952929ed3060dbffc5d43ec50c1cf79",
+      "defaultFeeConfig": {
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "issueFtFeeRatio": "10000000",
+        "issueFtFeeRef": "6000000",
+        "redeemFeeRatio": "0"
+      },
+      "liquidationWindowSeconds": 7200,
+      "maxLtv": "81000000",
+      "liquidationLtv": "85000000",
+      "liquidatable": true,
+      "isEnabled": true
+    },
+    {
+      "contracts": {
+        "routerAddr": "0xc47591f5c023e44931c78d5a993834875b79fb11",
+        "marketAddr": "0x6f5c8838e618448e43385e4c401006822aa15142",
+        "underlyingAddr": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "collateralAddr": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+        "ftAddr": "0x1be1a3b4a052f669f521f5966a37b49171aef57c",
+        "xtAddr": "0x7705d2b0990192c3b3d1ea6c3a7908250605120a",
+        "gtAddr": "0x1bb662b38ec6ff531def9caa37a3489c7f5e2f98"
+      },
+      "symbol": "USDC/sUSDe@30MAY2025",
+      "isFixed": false,
+      "openTime": "2025-04-09T16:51:47.000Z",
+      "maturity": "2025-05-30T00:00:00.000Z",
+      "treasurer": "0x719e77027952929ed3060dbffc5d43ec50c1cf79",
+      "defaultFeeConfig": {
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "issueFtFeeRatio": "10000000",
+        "issueFtFeeRef": "6000000",
+        "redeemFeeRatio": "0"
+      },
+      "liquidationWindowSeconds": 7200,
+      "maxLtv": "86000000",
+      "liquidationLtv": "90000000",
+      "liquidatable": true,
+      "isEnabled": true
+    },
+    {
+      "contracts": {
+        "routerAddr": "0xc47591f5c023e44931c78d5a993834875b79fb11",
+        "marketAddr": "0x7526d036cddbd3bdfdd8370d75304b822740b291",
+        "underlyingAddr": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "collateralAddr": "0x207f7205fd6c4b602fa792c8b2b60e6006d4a0b8",
+        "ftAddr": "0x51ae9ef7395a46e2861fe6b93f97728f9595e6e5",
+        "xtAddr": "0xa95cdaac1bf0af025ced0f259ac74cdec7503450",
+        "gtAddr": "0x6fa797c9675880654f098b554ae5b9cfdd6b2310"
+      },
+      "symbol": "USDC/PT-lvlUSD-25SEP2025@26SEP2025",
+      "isFixed": false,
+      "openTime": "2025-05-10T06:05:47.000Z",
+      "maturity": "2025-09-26T00:00:00.000Z",
+      "treasurer": "0x719e77027952929ed3060dbffc5d43ec50c1cf79",
+      "defaultFeeConfig": {
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "issueFtFeeRatio": "10000000",
+        "issueFtFeeRef": "6000000",
+        "redeemFeeRatio": "0"
+      },
+      "liquidationWindowSeconds": 7200,
+      "maxLtv": "87500000",
+      "liquidationLtv": "91500000",
+      "liquidatable": true,
+      "isEnabled": true
+    },
+    {
+      "contracts": {
+        "routerAddr": "0xc47591f5c023e44931c78d5a993834875b79fb11",
+        "marketAddr": "0x7d042a2800c2bf66a2af99014c96513bc4cefeda",
+        "underlyingAddr": "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
+        "collateralAddr": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+        "ftAddr": "0x775157a35b1efb4d86c5bc732f047758085d2127",
+        "xtAddr": "0x91bc1c8dde63ec666397a7e1500acbd9b028fea3",
+        "gtAddr": "0xe173c8d8192d20d820061d04323c3e89aa836a4c"
+      },
+      "symbol": "WBTC/sUSDe@20250627",
+      "isFixed": false,
+      "openTime": "2025-05-14T16:12:47.000Z",
+      "maturity": "2025-06-27T00:00:00.000Z",
+      "treasurer": "0x719e77027952929ed3060dbffc5d43ec50c1cf79",
+      "defaultFeeConfig": {
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "issueFtFeeRatio": "10000000",
+        "issueFtFeeRef": "3000000",
+        "redeemFeeRatio": "0"
+      },
+      "liquidationWindowSeconds": 7200,
+      "maxLtv": "71000000",
+      "liquidationLtv": "75000000",
+      "liquidatable": true,
+      "isEnabled": true
+    },
+    {
+      "contracts": {
+        "routerAddr": "0xc47591f5c023e44931c78d5a993834875b79fb11",
+        "marketAddr": "0x8d501c7640595ec9d2a39fbd30ded7672e9631bd",
+        "underlyingAddr": "0x7c1156e515aa1a2e851674120074968c905aaf37",
+        "collateralAddr": "0x4737d9b4592b40d51e110b94c9c043c6654067ae",
+        "ftAddr": "0x53b52637923839676f6441c7e824d91478f882d3",
+        "xtAddr": "0xc5421aad009f200b60a8cc67b60cf6f774a1e693",
+        "gtAddr": "0xc03746e7441a523686d93c5282557e3970065d6a"
+      },
+      "symbol": "lvlUSD/slvlUSD@27JUN2025",
+      "isFixed": false,
+      "openTime": "2025-05-07T08:19:23.000Z",
+      "maturity": "2025-06-27T00:00:00.000Z",
+      "treasurer": "0x719e77027952929ed3060dbffc5d43ec50c1cf79",
+      "defaultFeeConfig": {
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "issueFtFeeRatio": "10000000",
+        "issueFtFeeRef": "6000000",
+        "redeemFeeRatio": "0"
+      },
+      "liquidationWindowSeconds": 7200,
+      "maxLtv": "86000000",
+      "liquidationLtv": "90000000",
+      "liquidatable": true,
+      "isEnabled": true
+    },
+    {
+      "contracts": {
+        "routerAddr": "0xc47591f5c023e44931c78d5a993834875b79fb11",
+        "marketAddr": "0x918d8ecba4c683ef3004b1c313cfef5e3b9e1146",
+        "underlyingAddr": "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+        "collateralAddr": "0x8e0789d39db454dbe9f4a77acef6dc7c69f6d552",
+        "ftAddr": "0xc4ce5aa3cabab5525d838f3095105e68764a4863",
+        "xtAddr": "0xd54417d73fedbbfa242e296a9199d401c377a23f",
+        "gtAddr": "0x79614885f2b286a20a18315a9963e9e7a5ef0824"
+      },
+      "symbol": "wstETH/inwstETHs@30MAY2025",
+      "isFixed": false,
+      "openTime": "2025-04-22T15:56:23.000Z",
+      "maturity": "2025-05-30T00:00:00.000Z",
+      "treasurer": "0x719e77027952929ed3060dbffc5d43ec50c1cf79",
+      "defaultFeeConfig": {
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "issueFtFeeRatio": "10000000",
+        "issueFtFeeRef": "3000000",
+        "redeemFeeRatio": "0"
+      },
+      "liquidationWindowSeconds": 7200,
+      "maxLtv": "90000000",
+      "liquidationLtv": "94000000",
+      "liquidatable": true,
+      "isEnabled": true
+    },
+    {
+      "contracts": {
+        "routerAddr": "0xc47591f5c023e44931c78d5a993834875b79fb11",
+        "marketAddr": "0x975cba8bad13ef86bc4d2bbb3eb7497327c640d1",
+        "underlyingAddr": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "collateralAddr": "0x2103e845c5e135493bb6c2a4f0b8651956ea8682",
+        "ftAddr": "0xf8c1cda465071665d3ecaf906732899186fd4856",
+        "xtAddr": "0xf7e8f91286e3d4685a4d8e4f2a7413fe273db503",
+        "gtAddr": "0x6216d113cbbc1c4a1017699e691e949d1dee8812"
+      },
+      "symbol": "USDC/XAUM@20250627",
+      "isFixed": false,
+      "openTime": "2025-05-14T16:12:35.000Z",
+      "maturity": "2025-06-27T00:00:00.000Z",
+      "treasurer": "0x719e77027952929ed3060dbffc5d43ec50c1cf79",
+      "defaultFeeConfig": {
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "issueFtFeeRatio": "10000000",
+        "issueFtFeeRef": "6000000",
+        "redeemFeeRatio": "0"
+      },
+      "liquidationWindowSeconds": 7200,
+      "maxLtv": "70000000",
+      "liquidationLtv": "77000000",
+      "liquidatable": true,
+      "isEnabled": true
+    },
+    {
+      "contracts": {
+        "routerAddr": "0xc47591f5c023e44931c78d5a993834875b79fb11",
+        "marketAddr": "0x988a287c4340b18665cc5e128dc76906a5c839e6",
+        "underlyingAddr": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "collateralAddr": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+        "ftAddr": "0xce7decb042927ec42db8ecc75a8e526824376a3e",
+        "xtAddr": "0x13b29958f0f6eb39a587704034e531e4090e9d59",
+        "gtAddr": "0xdba3379f0406f5c90eb74d27e511e4fb4d10b6b3"
+      },
+      "symbol": "USDC/sUSDe@27JUN2025",
+      "isFixed": false,
+      "openTime": "2025-05-07T08:18:35.000Z",
+      "maturity": "2025-06-27T00:00:00.000Z",
+      "treasurer": "0x719e77027952929ed3060dbffc5d43ec50c1cf79",
+      "defaultFeeConfig": {
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "issueFtFeeRatio": "10000000",
+        "issueFtFeeRef": "6000000",
+        "redeemFeeRatio": "0"
+      },
+      "liquidationWindowSeconds": 7200,
+      "maxLtv": "86000000",
+      "liquidationLtv": "90000000",
+      "liquidatable": true,
+      "isEnabled": true
+    },
+    {
+      "contracts": {
+        "routerAddr": "0xc47591f5c023e44931c78d5a993834875b79fb11",
+        "marketAddr": "0x9904f3b879385033faa31b50d1d63cb80b3495a3",
+        "underlyingAddr": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "collateralAddr": "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
+        "ftAddr": "0x75b8ea5178baa489c9ab208ec80af10780927890",
+        "xtAddr": "0x6182feffc89a170154a991fe09c31765ba5441c8",
+        "gtAddr": "0x42c57cde40b26c5e68c28e687eaca7b83dc48377"
+      },
+      "symbol": "USDC/WBTC@27JUN2025",
+      "isFixed": false,
+      "openTime": "2025-05-07T08:18:59.000Z",
+      "maturity": "2025-06-27T00:00:00.000Z",
+      "treasurer": "0x719e77027952929ed3060dbffc5d43ec50c1cf79",
+      "defaultFeeConfig": {
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "issueFtFeeRatio": "10000000",
+        "issueFtFeeRef": "6000000",
+        "redeemFeeRatio": "0"
+      },
+      "liquidationWindowSeconds": 7200,
+      "maxLtv": "81000000",
+      "liquidationLtv": "85000000",
+      "liquidatable": true,
+      "isEnabled": true
+    },
+    {
+      "contracts": {
+        "routerAddr": "0xc47591f5c023e44931c78d5a993834875b79fb11",
+        "marketAddr": "0x9d7386f68d9001a809860b4d88ec8e2cc3dd81b0",
+        "underlyingAddr": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "collateralAddr": "0x2ca5f2c4300450d53214b00546795c1c07b89acb",
+        "ftAddr": "0x831a11a25a98715e632a51d46a6296da47883743",
+        "xtAddr": "0x733f08c07fe2d37c86516abe830fc2756e56ac1c",
+        "gtAddr": "0x68dce038af76f907617a0e648e23011143774e8a"
+      },
+      "symbol": "USDC/PT-slvlUSD-25SEP2025@20250926",
+      "isFixed": false,
+      "openTime": "2025-05-14T16:11:59.000Z",
+      "maturity": "2025-09-26T00:00:00.000Z",
+      "treasurer": "0x719e77027952929ed3060dbffc5d43ec50c1cf79",
+      "defaultFeeConfig": {
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "issueFtFeeRatio": "10000000",
+        "issueFtFeeRef": "6000000",
+        "redeemFeeRatio": "0"
+      },
+      "liquidationWindowSeconds": 7200,
+      "maxLtv": "87500000",
+      "liquidationLtv": "91500000",
+      "liquidatable": true,
+      "isEnabled": true
+    },
+    {
+      "contracts": {
+        "routerAddr": "0xc47591f5c023e44931c78d5a993834875b79fb11",
+        "marketAddr": "0xa1ed39c786eea298925dd6fcc33199c3ff06765e",
+        "underlyingAddr": "0x7c1156e515aa1a2e851674120074968c905aaf37",
+        "collateralAddr": "0x4737d9b4592b40d51e110b94c9c043c6654067ae",
+        "ftAddr": "0x5623695881db8cfc84ee1f40a1f4a0999d1552f6",
+        "xtAddr": "0x453dfd4db1a92bf8d84b4e4fa6381019370d0c5d",
+        "gtAddr": "0xe1e045a8a238994703ec0dd7e4e2ad6f97c5f186"
+      },
+      "symbol": "lvlUSD/slvlUSD@30MAY2025",
+      "isFixed": false,
+      "openTime": "2025-04-14T08:49:47.000Z",
+      "maturity": "2025-05-30T00:00:00.000Z",
+      "treasurer": "0x719e77027952929ed3060dbffc5d43ec50c1cf79",
+      "defaultFeeConfig": {
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "issueFtFeeRatio": "10000000",
+        "issueFtFeeRef": "6000000",
+        "redeemFeeRatio": "0"
+      },
+      "liquidationWindowSeconds": 7200,
+      "maxLtv": "86000000",
+      "liquidationLtv": "90000000",
+      "liquidatable": true,
+      "isEnabled": true
+    },
+    {
+      "contracts": {
+        "routerAddr": "0xc47591f5c023e44931c78d5a993834875b79fb11",
+        "marketAddr": "0xabe8ab2223c846466eb30f5137a7f05106c9d0c4",
+        "underlyingAddr": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+        "collateralAddr": "0xd9a442856c234a39a81a089c06451ebaa4306a72",
+        "ftAddr": "0x23ed558080ceb4755a24d841e24558e85b1ddb18",
+        "xtAddr": "0xa97ba034797386d9987c88beff430b40c4fdc6c5",
+        "gtAddr": "0xb4a859d44470f0168464a5db99f058cf9a7b4df1"
+      },
+      "symbol": "WETH/pufETH@27JUN2025",
+      "isFixed": false,
+      "openTime": "2025-05-07T08:18:47.000Z",
+      "maturity": "2025-06-27T00:00:00.000Z",
+      "treasurer": "0x719e77027952929ed3060dbffc5d43ec50c1cf79",
+      "defaultFeeConfig": {
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "issueFtFeeRatio": "10000000",
+        "issueFtFeeRef": "3000000",
+        "redeemFeeRatio": "0"
+      },
+      "liquidationWindowSeconds": 7200,
+      "maxLtv": "90000000",
+      "liquidationLtv": "94000000",
+      "liquidatable": true,
+      "isEnabled": true
+    },
+    {
+      "contracts": {
+        "routerAddr": "0xc47591f5c023e44931c78d5a993834875b79fb11",
+        "marketAddr": "0xb9919ee2169a7da664ad024c6ddcf0ccd4121c26",
+        "underlyingAddr": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+        "collateralAddr": "0x701907283a57ff77e255c3f1aad790466b8ce4ef",
+        "ftAddr": "0xbc9c191613c6e77c03a3f792579520d455e852a6",
+        "xtAddr": "0x1aa1ff0d8c47066c72902040716f91df18090adc",
+        "gtAddr": "0x489f04a08d6ee13789cd59c5ce241494b063b3db"
+      },
+      "symbol": "WETH/mhyETH@30MAY2025",
+      "isFixed": false,
+      "openTime": "2025-04-17T04:35:11.000Z",
+      "maturity": "2025-05-30T00:00:00.000Z",
+      "treasurer": "0x719e77027952929ed3060dbffc5d43ec50c1cf79",
+      "defaultFeeConfig": {
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "issueFtFeeRatio": "10000000",
+        "issueFtFeeRef": "3000000",
+        "redeemFeeRatio": "0"
+      },
+      "liquidationWindowSeconds": 7200,
+      "maxLtv": "90000000",
+      "liquidationLtv": "94000000",
+      "liquidatable": true,
+      "isEnabled": true
+    },
+    {
+      "contracts": {
+        "routerAddr": "0xc47591f5c023e44931c78d5a993834875b79fb11",
+        "marketAddr": "0xbebb5cee893110cf477901af7fa94e4840606421",
+        "underlyingAddr": "0xd9a442856c234a39a81a089c06451ebaa4306a72",
+        "collateralAddr": "0x9cfc9917c171a384c7168d3529fc7e851a2e0d6d",
+        "ftAddr": "0x5db7a477dede7d12fea665312282e052e0207fc1",
+        "xtAddr": "0xe8a7a6dd9218202996d9cf825426ab283b3396ed",
+        "gtAddr": "0x69cf2acd3499df9b322d3b3fb579e1af420f601d"
+      },
+      "symbol": "pufETH/PT-pufETH-26JUN2025@30MAY2025",
+      "isFixed": false,
+      "openTime": "2025-04-09T16:52:47.000Z",
+      "maturity": "2025-05-30T00:00:00.000Z",
+      "treasurer": "0x719e77027952929ed3060dbffc5d43ec50c1cf79",
+      "defaultFeeConfig": {
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "issueFtFeeRatio": "10000000",
+        "issueFtFeeRef": "3000000",
+        "redeemFeeRatio": "0"
+      },
+      "liquidationWindowSeconds": 7200,
+      "maxLtv": "92000000",
+      "liquidationLtv": "94000000",
+      "liquidatable": true,
+      "isEnabled": true
+    },
+    {
+      "contracts": {
+        "routerAddr": "0xc47591f5c023e44931c78d5a993834875b79fb11",
+        "marketAddr": "0xc68a2fbd7cb560c71ccafbdee971824ed9bf4556",
+        "underlyingAddr": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+        "collateralAddr": "0x2371e134e3455e0593363cbf89d3b6cf53740618",
+        "ftAddr": "0xd31d16770d10feee37fec90777697546f5388f85",
+        "xtAddr": "0xa7dbc90d2959e40eb093abe75c7405ff26ac3fe3",
+        "gtAddr": "0x9bdd5071f150d02af43a65e56a0622d03e846ddb"
+      },
+      "symbol": "WETH/gtWETH@30MAY2025",
+      "isFixed": false,
+      "openTime": "2025-04-09T16:54:11.000Z",
+      "maturity": "2025-05-30T00:00:00.000Z",
+      "treasurer": "0x719e77027952929ed3060dbffc5d43ec50c1cf79",
+      "defaultFeeConfig": {
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "issueFtFeeRatio": "10000000",
+        "issueFtFeeRef": "3000000",
+        "redeemFeeRatio": "0"
+      },
+      "liquidationWindowSeconds": 7200,
+      "maxLtv": "90000000",
+      "liquidationLtv": "94000000",
+      "liquidatable": true,
+      "isEnabled": true
+    },
+    {
+      "contracts": {
+        "routerAddr": "0xc47591f5c023e44931c78d5a993834875b79fb11",
+        "marketAddr": "0xc7559e952666fac90206758e664f86d09e7f1f72",
+        "underlyingAddr": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+        "collateralAddr": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+        "ftAddr": "0x7337261cf19cc2d2146f6a30dd4fb186e31728cc",
+        "xtAddr": "0x0fe1a8e392f4c03eedb805260c12716b4b4ed68f",
+        "gtAddr": "0xdf7e3c6ba0239e1933e431ad68be7861ea51387e"
+      },
+      "symbol": "WETH/sUSDe@20250627",
+      "isFixed": false,
+      "openTime": "2025-05-14T16:12:59.000Z",
+      "maturity": "2025-06-27T00:00:00.000Z",
+      "treasurer": "0x719e77027952929ed3060dbffc5d43ec50c1cf79",
+      "defaultFeeConfig": {
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "issueFtFeeRatio": "10000000",
+        "issueFtFeeRef": "3000000",
+        "redeemFeeRatio": "0"
+      },
+      "liquidationWindowSeconds": 7200,
+      "maxLtv": "71000000",
+      "liquidationLtv": "75000000",
+      "liquidatable": true,
+      "isEnabled": true
+    },
+    {
+      "contracts": {
+        "routerAddr": "0xc47591f5c023e44931c78d5a993834875b79fb11",
+        "marketAddr": "0xc898fa3a26ceacae25ccfff6003b087948dede2a",
+        "underlyingAddr": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+        "collateralAddr": "0x9cfc9917c171a384c7168d3529fc7e851a2e0d6d",
+        "ftAddr": "0x0ad67bb21be025f9c47ceb0db3ac490e473afd9a",
+        "xtAddr": "0x0e960cfde8730da71e72b52bb1bc8ef4f4f5a9bb",
+        "gtAddr": "0xab490460b78c481fdf4d10ed85378cfa1dd342f1"
+      },
+      "symbol": "WETH/PT-pufETH-26JUN2025@27JUN2025",
+      "isFixed": false,
+      "openTime": "2025-05-08T15:19:23.000Z",
+      "maturity": "2025-06-27T00:00:00.000Z",
+      "treasurer": "0x719e77027952929ed3060dbffc5d43ec50c1cf79",
+      "defaultFeeConfig": {
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "issueFtFeeRatio": "10000000",
+        "issueFtFeeRef": "3000000",
+        "redeemFeeRatio": "0"
+      },
+      "liquidationWindowSeconds": 7200,
+      "maxLtv": "87500000",
+      "liquidationLtv": "91500000",
+      "liquidatable": true,
+      "isEnabled": true
+    },
+    {
+      "contracts": {
+        "routerAddr": "0xc47591f5c023e44931c78d5a993834875b79fb11",
+        "marketAddr": "0xce511791715d1a84cd2f7bfa279f92c187bb9d93",
+        "underlyingAddr": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "collateralAddr": "0x933b9ffee0ad3ef8e4dbb52688ea905826d73755",
+        "ftAddr": "0x89d6cd335090d67e6a18a63f97b55d7d177d2a1b",
+        "xtAddr": "0xc1a89e8c63f5162e78f339f138f3585f4372ece0",
+        "gtAddr": "0xd08c49be9063512c49dc113f1f7c00cd2519c654"
+      },
+      "symbol": "USDC/PT-cUSDO-19JUN2025@20JUN2025",
+      "isFixed": false,
+      "openTime": "2025-05-10T06:05:23.000Z",
+      "maturity": "2025-06-20T00:00:00.000Z",
+      "treasurer": "0x719e77027952929ed3060dbffc5d43ec50c1cf79",
+      "defaultFeeConfig": {
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "issueFtFeeRatio": "10000000",
+        "issueFtFeeRef": "6000000",
+        "redeemFeeRatio": "0"
+      },
+      "liquidationWindowSeconds": 7200,
+      "maxLtv": "87500000",
+      "liquidationLtv": "91500000",
+      "liquidatable": true,
+      "isEnabled": true
+    },
+    {
+      "contracts": {
+        "routerAddr": "0xc47591f5c023e44931c78d5a993834875b79fb11",
+        "marketAddr": "0xd017e469d22ab7ffb097b9aa329391874954523b",
+        "underlyingAddr": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "collateralAddr": "0x207f7205fd6c4b602fa792c8b2b60e6006d4a0b8",
+        "ftAddr": "0xc53c94aaeecc2f58ac64f97ef26f6947b8a1fa49",
+        "xtAddr": "0x13dd004a37cd8e35ecea7379ab45bd03c1f4e249",
+        "gtAddr": "0x022e7d8585f9214bbe29077501ce938e552f8d5e"
+      },
+      "symbol": "USDC/PT-lvlUSD-25SEP2025@25JUL2025",
+      "isFixed": false,
+      "openTime": "2025-05-10T06:05:35.000Z",
+      "maturity": "2025-07-25T00:00:00.000Z",
+      "treasurer": "0x719e77027952929ed3060dbffc5d43ec50c1cf79",
+      "defaultFeeConfig": {
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "issueFtFeeRatio": "10000000",
+        "issueFtFeeRef": "6000000",
+        "redeemFeeRatio": "0"
+      },
+      "liquidationWindowSeconds": 7200,
+      "maxLtv": "87500000",
+      "liquidationLtv": "91500000",
+      "liquidatable": true,
+      "isEnabled": true
+    },
+    {
+      "contracts": {
+        "routerAddr": "0xc47591f5c023e44931c78d5a993834875b79fb11",
+        "marketAddr": "0xd316d4494c840f8a758fb6184e9b60281e35cc02",
+        "underlyingAddr": "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+        "collateralAddr": "0x8e0789d39db454dbe9f4a77acef6dc7c69f6d552",
+        "ftAddr": "0x6b3aaab883d2b5a42276206b18c62dbd2f075b73",
+        "xtAddr": "0x1ad25fc3fad6b5fb2744ec684c74bc301a3a26dc",
+        "gtAddr": "0xce6df2c8a6b5d7f70f73a71f78c64f54bda4dbed"
+      },
+      "symbol": "wstETH/inwstETHs@27JUN2025",
+      "isFixed": false,
+      "openTime": "2025-05-07T08:19:35.000Z",
+      "maturity": "2025-06-27T00:00:00.000Z",
+      "treasurer": "0x719e77027952929ed3060dbffc5d43ec50c1cf79",
+      "defaultFeeConfig": {
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "issueFtFeeRatio": "10000000",
+        "issueFtFeeRef": "3000000",
+        "redeemFeeRatio": "0"
+      },
+      "liquidationWindowSeconds": 7200,
+      "maxLtv": "90000000",
+      "liquidationLtv": "94000000",
+      "liquidatable": true,
+      "isEnabled": true
+    },
+    {
+      "contracts": {
+        "routerAddr": "0xc47591f5c023e44931c78d5a993834875b79fb11",
+        "marketAddr": "0xd699efc4162d76bfd3cb553d65f850c882c29f5f",
+        "underlyingAddr": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "collateralAddr": "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
+        "ftAddr": "0x0297807b6f251431bc60d96e74daddaaacd8533e",
+        "xtAddr": "0x68f2e8b2b09122475c5208456a39caf87a097fe4",
+        "gtAddr": "0xbe53610fd2870ba0f221c40ed734f173685e3666"
+      },
+      "symbol": "USDC/WBTC@30MAY2025",
+      "isFixed": false,
+      "openTime": "2025-04-09T16:53:23.000Z",
+      "maturity": "2025-05-30T00:00:00.000Z",
+      "treasurer": "0x719e77027952929ed3060dbffc5d43ec50c1cf79",
+      "defaultFeeConfig": {
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "issueFtFeeRatio": "10000000",
+        "issueFtFeeRef": "6000000",
+        "redeemFeeRatio": "0"
+      },
+      "liquidationWindowSeconds": 7200,
+      "maxLtv": "81000000",
+      "liquidationLtv": "85000000",
+      "liquidatable": true,
+      "isEnabled": true
+    },
+    {
+      "contracts": {
+        "routerAddr": "0xc47591f5c023e44931c78d5a993834875b79fb11",
+        "marketAddr": "0xdbb2d44c238c459ccb820de886abf721ef6e6941",
+        "underlyingAddr": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "collateralAddr": "0x3b3fb9c57858ef816833dc91565efcd85d96f634",
+        "ftAddr": "0x39815280f3804a860a09b0ffbccaf8a0679ff5ba",
+        "xtAddr": "0x6cfa4b8506736dd838dcbec5187d777801160684",
+        "gtAddr": "0xa7793d67dcbcc16ef92ed455bc17594311d58d55"
+      },
+      "symbol": "USDC/PT-sUSDE-31JUL2025@01AUG2025",
+      "isFixed": false,
+      "openTime": "2025-05-08T15:18:59.000Z",
+      "maturity": "2025-08-01T00:00:00.000Z",
+      "treasurer": "0x719e77027952929ed3060dbffc5d43ec50c1cf79",
+      "defaultFeeConfig": {
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "issueFtFeeRatio": "10000000",
+        "issueFtFeeRef": "6000000",
+        "redeemFeeRatio": "0"
+      },
+      "liquidationWindowSeconds": 7200,
+      "maxLtv": "87500000",
+      "liquidationLtv": "91500000",
+      "liquidatable": true,
+      "isEnabled": true
+    },
+    {
+      "contracts": {
+        "routerAddr": "0xc47591f5c023e44931c78d5a993834875b79fb11",
+        "marketAddr": "0xe867255dc0c3a27c90f756ecc566a5292ce19492",
+        "underlyingAddr": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "collateralAddr": "0xb7de5dfcb74d25c2f21841fbd6230355c50d9308",
+        "ftAddr": "0x07ef01ba0947eb64df31a826c8a084ca005e545d",
+        "xtAddr": "0xb58036be9723ba7766161ddb8d4050b3c44dc273",
+        "gtAddr": "0x3a888cb50b4b1bfcb61507d4a453ef67ba1e4055"
+      },
+      "symbol": "USDC/PT-sUSDE-29MAY2025@30MAY2025",
+      "isFixed": false,
+      "openTime": "2025-04-09T16:51:59.000Z",
+      "maturity": "2025-05-30T00:00:00.000Z",
+      "treasurer": "0x719e77027952929ed3060dbffc5d43ec50c1cf79",
+      "defaultFeeConfig": {
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "issueFtFeeRatio": "10000000",
+        "issueFtFeeRef": "6000000",
+        "redeemFeeRatio": "0"
+      },
+      "liquidationWindowSeconds": 7200,
+      "maxLtv": "86000000",
+      "liquidationLtv": "90000000",
+      "liquidatable": true,
+      "isEnabled": true
+    },
+    {
+      "contracts": {
+        "routerAddr": "0xc47591f5c023e44931c78d5a993834875b79fb11",
+        "marketAddr": "0xed7cd45e5e6ef68261929b58539805ba3c061f14",
+        "underlyingAddr": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "collateralAddr": "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+        "ftAddr": "0x94b0b2679bdee922039d8b0bb952f5048ff8b87f",
+        "xtAddr": "0xbd99501360ffe943c60546c422f4885ea022fcbc",
+        "gtAddr": "0xef15c2c9d5213fe471d9d28a8908cd3b007c4539"
+      },
+      "symbol": "USDC/wstETH@30MAY2025",
+      "isFixed": false,
+      "openTime": "2025-04-09T16:51:35.000Z",
+      "maturity": "2025-05-30T00:00:00.000Z",
+      "treasurer": "0x719e77027952929ed3060dbffc5d43ec50c1cf79",
+      "defaultFeeConfig": {
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "issueFtFeeRatio": "10000000",
+        "issueFtFeeRef": "6000000",
+        "redeemFeeRatio": "0"
+      },
+      "liquidationWindowSeconds": 7200,
+      "maxLtv": "81000000",
+      "liquidationLtv": "85000000",
+      "liquidatable": true,
+      "isEnabled": true
+    },
+    {
+      "contracts": {
+        "routerAddr": "0xc47591f5c023e44931c78d5a993834875b79fb11",
+        "marketAddr": "0xf0de37189366f0f3aae2795160763f3f34797b11",
+        "underlyingAddr": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+        "collateralAddr": "0xcd5fe23c85820f7b72d0926fc9b05b43e359b7ee",
+        "ftAddr": "0xe8503ffecc5d4065ba0eb11dcbdcd47a4f752572",
+        "xtAddr": "0xf98042dd2ca30440d27373eca2727e9540897ebf",
+        "gtAddr": "0x272f222de90adf7b1cca859d685bec738993ba6c"
+      },
+      "symbol": "WETH/weETH@27JUN2025",
+      "isFixed": false,
+      "openTime": "2025-05-07T08:18:11.000Z",
+      "maturity": "2025-06-27T00:00:00.000Z",
+      "treasurer": "0x719e77027952929ed3060dbffc5d43ec50c1cf79",
+      "defaultFeeConfig": {
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "issueFtFeeRatio": "10000000",
+        "issueFtFeeRef": "3000000",
+        "redeemFeeRatio": "0"
+      },
+      "liquidationWindowSeconds": 7200,
+      "maxLtv": "90000000",
+      "liquidationLtv": "94000000",
+      "liquidatable": true,
+      "isEnabled": true
+    },
+    {
+      "contracts": {
+        "routerAddr": "0xc47591f5c023e44931c78d5a993834875b79fb11",
+        "marketAddr": "0xf4924d6189552ae5a7818088da6f23bd33281c1b",
+        "underlyingAddr": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "collateralAddr": "0xf1fd8ac6346ec7bc4116ba7adc81102b2bc4c52d",
+        "ftAddr": "0xe7b3c858ff8031dc6c84d899aeec343c89a246e0",
+        "xtAddr": "0x2568d2b892b5c761e1155f4f1c05e5b61961f126",
+        "gtAddr": "0x5c4db8db0ca1d040e7fd6fb2afaa81032df0a4f7"
+      },
+      "symbol": "USDC/MC_USDCP@30MAY2025",
+      "isFixed": false,
+      "openTime": "2025-04-17T04:34:47.000Z",
+      "maturity": "2025-05-30T00:00:00.000Z",
+      "treasurer": "0x719e77027952929ed3060dbffc5d43ec50c1cf79",
+      "defaultFeeConfig": {
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "issueFtFeeRatio": "10000000",
+        "issueFtFeeRef": "6000000",
+        "redeemFeeRatio": "0"
+      },
+      "liquidationWindowSeconds": 7200,
+      "maxLtv": "90000000",
+      "liquidationLtv": "94000000",
+      "liquidatable": true,
+      "isEnabled": true
+    }
+  ]
+}
