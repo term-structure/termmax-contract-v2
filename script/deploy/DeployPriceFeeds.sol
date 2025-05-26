@@ -4,19 +4,20 @@ pragma solidity ^0.8.27;
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
-import {PriceFeedFactory} from "contracts/extensions/PriceFeedFactory.sol";
+import {TermMaxPriceFeedFactory} from "contracts/factory/TermMaxPriceFeedFactory.sol";
 
 contract DeployPriceFeeds is Script {
     function run() public {
         uint256 deployerPrivateKey = vm.envUint("ETH_MAINNET_DEPLOYER_PRIVATE_KEY");
         vm.startBroadcast(deployerPrivateKey);
-        PriceFeedFactory priceFeedFactory = new PriceFeedFactory();
+        TermMaxPriceFeedFactory priceFeedFactory = new TermMaxPriceFeedFactory();
 
-        console.log("PriceFeedFactory deployed at", address(priceFeedFactory));
+        console.log("TermMaxPriceFeedFactory deployed at", address(priceFeedFactory));
         // pendle deployments: https://github.com/pendle-finance/pendle-core-v2-public/blob/main/deployments/1-core.json
         address pendlePYLpOracle = 0x9a9Fa8338dd5E5B2188006f1Cd2Ef26d921650C2;
         address pufferEthOracle;
         {
+            address pufETH = 0xD9A442856C234a39a81a089C06451EBAa4306a72;
             // chainlink(pufETH/ETH): https://data.chain.link/feeds/ethereum/mainnet/pufeth-eth
             // heartBeat: 86400 (24hr)
             address pufferEthToEth = 0xDe3f7Dd92C4701BCf59F47235bCb61e727c45f80;
@@ -25,7 +26,7 @@ contract DeployPriceFeeds is Script {
             address ethToUsd = 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419;
             // new price feed heartBeat = max(3600, 86400) = 86400 (24hr)
             AggregatorV3Interface pufferEthFeed =
-                AggregatorV3Interface(priceFeedFactory.createPriceFeedConverter(pufferEthToEth, ethToUsd));
+                AggregatorV3Interface(priceFeedFactory.createPriceFeedConverter(pufferEthToEth, ethToUsd, pufETH));
             (, int256 answer,,,) = pufferEthFeed.latestRoundData();
             console.log("pufferEth price feed address", address(pufferEthFeed));
             console.log("pufferEth last answer", answer);

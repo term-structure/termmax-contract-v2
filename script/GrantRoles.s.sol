@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
 import {AccessManager} from "contracts/access/AccessManager.sol";
 import {StringHelper} from "./utils/StringHelper.sol";
+import {ScriptBase} from "./utils/ScriptBase.sol";
 
 /**
  * @title GrantRoles
@@ -12,7 +12,7 @@ import {StringHelper} from "./utils/StringHelper.sol";
  * @dev Uses admin private key to grant MARKET_ROLE, ORACLE_ROLE, and VAULT_ROLE
  *      to the deployer address for deploying and managing contracts
  */
-contract GrantRoles is Script {
+contract GrantRoles is ScriptBase {
     // Network-specific config loaded from environment variables
     string network;
     uint256 adminPrivateKey;
@@ -90,5 +90,53 @@ contract GrantRoles is Script {
         console.log("");
         console.log("=== Role Assignment Complete ===");
         console.log("The deployer address now has all necessary roles to deploy and manage contracts");
+
+        // Generate execution results JSON
+        uint256 currentBlock = block.number;
+        uint256 currentTimestamp = block.timestamp;
+
+        string memory baseJson = createBaseExecutionJson(network, "GrantRoles", currentBlock, currentTimestamp);
+
+        // Check final role status
+        bool hasMarketRole = accessManager.hasRole(accessManager.MARKET_ROLE(), deployerAddr);
+        bool hasOracleRole = accessManager.hasRole(accessManager.ORACLE_ROLE(), deployerAddr);
+        bool hasVaultRole = accessManager.hasRole(accessManager.VAULT_ROLE(), deployerAddr);
+        bool hasConfiguratorRole = accessManager.hasRole(accessManager.CONFIGURATOR_ROLE(), deployerAddr);
+
+        // Add script-specific data
+        string memory executionJson = string(
+            abi.encodePacked(
+                baseJson,
+                ",\n",
+                '  "results": {\n',
+                '    "adminAddress": "',
+                vm.toString(adminAddr),
+                '",\n',
+                '    "deployerAddress": "',
+                vm.toString(deployerAddr),
+                '",\n',
+                '    "accessManagerAddress": "',
+                vm.toString(accessManagerAddr),
+                '",\n',
+                '    "rolesGranted": {\n',
+                '      "MARKET_ROLE": ',
+                hasMarketRole ? "true" : "false",
+                ",\n",
+                '      "ORACLE_ROLE": ',
+                hasOracleRole ? "true" : "false",
+                ",\n",
+                '      "VAULT_ROLE": ',
+                hasVaultRole ? "true" : "false",
+                ",\n",
+                '      "CONFIGURATOR_ROLE": ',
+                hasConfiguratorRole ? "true" : "false",
+                "\n",
+                "    }\n",
+                "  }\n",
+                "}"
+            )
+        );
+
+        writeScriptExecutionResults(network, "GrantRoles", executionJson);
     }
 }

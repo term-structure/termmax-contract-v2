@@ -39,6 +39,7 @@ import {UniswapV3Adapter} from "contracts/router/swapAdapters/UniswapV3Adapter.s
 import {ERC4626VaultAdapter} from "contracts/router/swapAdapters/ERC4626VaultAdapter.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {AccessManager} from "contracts/access/AccessManager.sol";
+import {StringHelper} from "../utils/StringHelper.sol";
 
 contract DeployBase is Script {
     bytes32 constant GT_ERC20 = keccak256("GearingTokenWithERC20");
@@ -214,7 +215,7 @@ contract DeployBase is Script {
                 accessManager.submitPendingOracle(
                     oracle,
                     address(collateral),
-                    IOracle.Oracle(collateralPriceFeed, collateralPriceFeed, uint32(365 days))
+                    IOracle.Oracle(collateralPriceFeed, collateralPriceFeed, 0, uint32(365 days), uint32(365 days))
                 );
                 accessManager.acceptPendingOracle(oracle, address(collateral));
             } else {
@@ -244,7 +245,7 @@ contract DeployBase is Script {
                 accessManager.submitPendingOracle(
                     oracle,
                     address(underlying),
-                    IOracle.Oracle(underlyingPriceFeed, underlyingPriceFeed, uint32(365 days))
+                    IOracle.Oracle(underlyingPriceFeed, underlyingPriceFeed, 0, uint32(365 days), uint32(365 days))
                 );
                 accessManager.acceptPendingOracle(oracle, address(underlying));
             } else {
@@ -411,5 +412,21 @@ contract DeployBase is Script {
             }
         }
         return string(bUpper);
+    }
+
+    // Helper function to generate date suffix for JSON files
+    function getDateSuffix() internal view returns (string memory) {
+        return StringHelper.convertTimestampToDateString(block.timestamp);
+    }
+
+    // Helper function to create deployment file path with date suffix
+    function getDeploymentFilePath(string memory network, string memory contractType)
+        internal
+        view
+        returns (string memory)
+    {
+        string memory dateSuffix = getDateSuffix();
+        string memory deploymentsDir = string.concat(vm.projectRoot(), "/deployments/", network);
+        return string.concat(deploymentsDir, "/", network, "-", contractType, "-", dateSuffix, ".json");
     }
 }

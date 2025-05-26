@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
 import {IOracle} from "contracts/oracle/IOracle.sol";
 import {OracleAggregator} from "contracts/oracle/OracleAggregator.sol";
@@ -10,8 +9,9 @@ import {JsonLoader} from "./utils/JsonLoader.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {StringHelper} from "./utils/StringHelper.sol";
 import {AccessManager} from "contracts/access/AccessManager.sol";
+import {ScriptBase} from "./utils/ScriptBase.sol";
 
-contract SubmitOracles is Script {
+contract SubmitOracles is ScriptBase {
     // Network-specific config loaded from environment variables
     string network;
     uint256 deployerPrivateKey;
@@ -52,8 +52,13 @@ contract SubmitOracles is Script {
         OracleAggregator oracle = OracleAggregator(oracleAggregatorAddr);
         for (uint256 i; i < configs.length; i++) {
             JsonLoader.Config memory config = configs[i];
-            (AggregatorV3Interface aggregator, AggregatorV3Interface backupAggregator, uint32 heartbeat) =
-                oracle.oracles(address(config.underlyingConfig.tokenAddr));
+            (
+                AggregatorV3Interface aggregator,
+                AggregatorV3Interface backupAggregator,
+                int256 maxPrice,
+                uint32 heartbeat,
+                uint32 backupHeartbeat
+            ) = oracle.oracles(address(config.underlyingConfig.tokenAddr));
             if (
                 !tokenSubmitted[address(config.underlyingConfig.tokenAddr)]
                     && (
@@ -68,6 +73,8 @@ contract SubmitOracles is Script {
                     IOracle.Oracle(
                         AggregatorV3Interface(config.underlyingConfig.priceFeedAddr),
                         AggregatorV3Interface(config.underlyingConfig.backupPriceFeedAddr),
+                        0,
+                        uint32(config.underlyingConfig.heartBeat),
                         uint32(config.underlyingConfig.heartBeat)
                     )
                 );
@@ -81,7 +88,8 @@ contract SubmitOracles is Script {
                 console.log("Heartbeat: ", config.underlyingConfig.heartBeat);
                 console.log("--------------------------------");
             }
-            (aggregator, backupAggregator, heartbeat) = oracle.oracles(address(config.collateralConfig.tokenAddr));
+            (aggregator, backupAggregator, maxPrice, heartbeat, backupHeartbeat) =
+                oracle.oracles(address(config.collateralConfig.tokenAddr));
             if (
                 !tokenSubmitted[address(config.collateralConfig.tokenAddr)]
                     && (
@@ -96,6 +104,8 @@ contract SubmitOracles is Script {
                     IOracle.Oracle(
                         AggregatorV3Interface(config.collateralConfig.priceFeedAddr),
                         AggregatorV3Interface(config.collateralConfig.backupPriceFeedAddr),
+                        0,
+                        uint32(config.collateralConfig.heartBeat),
                         uint32(config.collateralConfig.heartBeat)
                     )
                 );
@@ -112,5 +122,33 @@ contract SubmitOracles is Script {
         }
 
         vm.stopBroadcast();
+
+        // Generate execution results JSON
+        uint256 currentBlock = block.number;
+        uint256 currentTimestamp = block.timestamp;
+
+        string memory baseJson = createBaseExecutionJson(network, "SubmitOracles", currentBlock, currentTimestamp);
+
+        // Add script-specific data
+        string memory executionJson = string(
+            abi.encodePacked(
+                baseJson,
+                ",\n",
+                '  "results": {\n',
+                '    "totalConfigs": "',
+                vm.toString(configs.length),
+                '",\n',
+                '    "oracleAggregatorAddress": "',
+                vm.toString(oracleAggregatorAddr),
+                '",\n',
+                '    "accessManagerAddress": "',
+                vm.toString(accessManagerAddr),
+                '"\n',
+                "  }\n",
+                "}"
+            )
+        );
+
+        writeScriptExecutionResults(network, "SubmitOracles", executionJson);
     }
 }

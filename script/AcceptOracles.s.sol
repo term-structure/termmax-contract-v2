@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
 import {IOracle} from "contracts/oracle/IOracle.sol";
 import {OracleAggregator} from "contracts/oracle/OracleAggregator.sol";
@@ -10,8 +9,9 @@ import {JsonLoader} from "./utils/JsonLoader.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {StringHelper} from "./utils/StringHelper.sol";
 import {AccessManager} from "contracts/access/AccessManager.sol";
+import {ScriptBase} from "./utils/ScriptBase.sol";
 
-contract AcceptOracles is Script {
+contract AcceptOracles is ScriptBase {
     // Network-specific config loaded from environment variables
     string network;
     uint256 deployerPrivateKey;
@@ -84,7 +84,7 @@ contract AcceptOracles is Script {
                 PendingOracleStatus memory status = acceptedOracles[i];
 
                 // Get current oracle config before accepting
-                (AggregatorV3Interface currentAggregator,,) = oracle.oracles(status.tokenAddr);
+                (AggregatorV3Interface currentAggregator,,,,) = oracle.oracles(status.tokenAddr);
 
                 // Accept the oracle
                 accessManager.acceptPendingOracle(oracle, status.tokenAddr);
@@ -128,6 +128,40 @@ contract AcceptOracles is Script {
                 console.log("   ---");
             }
         }
+
+        // Generate execution results JSON
+        uint256 currentBlock = block.number;
+        uint256 currentTimestamp = block.timestamp;
+
+        string memory baseJson = createBaseExecutionJson(network, "AcceptOracles", currentBlock, currentTimestamp);
+
+        // Add script-specific data
+        string memory executionJson = string(
+            abi.encodePacked(
+                baseJson,
+                ",\n",
+                '  "results": {\n',
+                '    "totalTokensChecked": "',
+                vm.toString(acceptedOracles.length + notReadyOracles.length),
+                '",\n',
+                '    "oraclesAccepted": "',
+                vm.toString(acceptedOracles.length),
+                '",\n',
+                '    "oraclesNotReady": "',
+                vm.toString(notReadyOracles.length),
+                '",\n',
+                '    "oracleAggregatorAddress": "',
+                vm.toString(oracleAggregatorAddr),
+                '",\n',
+                '    "accessManagerAddress": "',
+                vm.toString(accessManagerAddr),
+                '"\n',
+                "  }\n",
+                "}"
+            )
+        );
+
+        writeScriptExecutionResults(network, "AcceptOracles", executionJson);
     }
 
     function formatTimestamp(uint256 timestamp) internal pure returns (string memory) {
@@ -209,7 +243,9 @@ contract AcceptOracles is Script {
         (
             AggregatorV3Interface currentAggregator,
             AggregatorV3Interface currentBackupAggregator,
-            uint32 currentHeartbeat
+            int256 currentMaxPrice,
+            uint32 currentHeartbeat,
+            uint32 currentBackupHeartbeat
         ) = oracle.oracles(tokenAddr);
 
         if (

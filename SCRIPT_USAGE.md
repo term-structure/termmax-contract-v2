@@ -216,3 +216,224 @@ The oracle update process consists of two steps:
    ```bash
    ./script.sh <network> script:AcceptOracles --broadcast
    ```
+
+## Date Suffix System for Script JSON Output
+
+The script system automatically appends date suffixes to JSON output files to create unique, timestamped records for each execution.
+
+### Overview
+
+The system automatically appends date suffixes to JSON output files to:
+- Create unique records for each script execution
+- Prevent overwriting previous execution results
+- Enable historical tracking of deployments and contract interactions
+- Facilitate auditing and debugging
+
+### Date Format
+
+The date suffix uses the format: `DDMMMYYYY` (e.g., `15JAN2024`)
+- `DD`: Two-digit day (01-31)
+- `MMM`: Three-letter month abbreviation (JAN, FEB, MAR, etc.)
+- `YYYY`: Four-digit year
+
+### File Structure
+
+#### Deployment Scripts
+Deployment scripts save JSON files to: `/deployments/{network}/{network}-{contractType}-{dateSuffix}.json`
+
+Examples:
+- `/deployments/eth-sepolia/eth-sepolia-pretmx-15JAN2024.json`
+- `/deployments/arb-mainnet/arb-mainnet-core-15JAN2024.json`
+- `/deployments/eth-mainnet/eth-mainnet-access-manager-15JAN2024.json`
+
+#### Contract Call Scripts
+Contract call scripts save JSON files to: `/executions/{network}/{network}-{scriptName}-{dateSuffix}.json`
+
+Examples:
+- `/executions/eth-sepolia/eth-sepolia-SubmitOracles-15JAN2024.json`
+- `/executions/arb-mainnet/arb-mainnet-AcceptOracles-15JAN2024.json`
+- `/executions/eth-mainnet/eth-mainnet-GrantRoles-15JAN2024.json`
+
+### Implementation
+
+#### For Deployment Scripts
+
+Deployment scripts inherit from `DeployBase` which provides:
+
+```solidity
+// Helper function to generate date suffix
+function getDateSuffix() internal view returns (string memory) {
+    return StringHelper.convertTimestampToDateString(block.timestamp);
+}
+
+// Helper function to create deployment file path with date suffix
+function getDeploymentFilePath(string memory network, string memory contractType) 
+    internal view returns (string memory) {
+    string memory dateSuffix = getDateSuffix();
+    string memory deploymentsDir = string.concat(vm.projectRoot(), "/deployments/", network);
+    return string.concat(deploymentsDir, "/", network, "-", contractType, "-", dateSuffix, ".json");
+}
+```
+
+Usage in deployment scripts:
+```solidity
+// Write the JSON file with date suffix
+string memory filePath = getDeploymentFilePath(network, "pretmx");
+vm.writeFile(filePath, deploymentJson);
+```
+
+#### For Contract Call Scripts
+
+Contract call scripts inherit from `ScriptBase` which provides:
+
+```solidity
+// Helper function to create script execution file path with date suffix
+function getScriptExecutionFilePath(string memory network, string memory scriptName) 
+    internal view returns (string memory) {
+    string memory dateSuffix = getDateSuffix();
+    string memory executionsDir = string.concat(vm.projectRoot(), "/executions/", network);
+    return string.concat(executionsDir, "/", network, "-", scriptName, "-", dateSuffix, ".json");
+}
+
+// Helper function to write script execution results to JSON
+function writeScriptExecutionResults(
+    string memory network,
+    string memory scriptName,
+    string memory executionData
+) internal {
+    // Create executions directory if it doesn't exist
+    string memory executionsDir = string.concat(vm.projectRoot(), "/executions/", network);
+    if (!vm.exists(executionsDir)) {
+        vm.createDir(executionsDir, true);
+    }
+
+    // Write the JSON file with date suffix
+    string memory filePath = getScriptExecutionFilePath(network, scriptName);
+    vm.writeFile(filePath, executionData);
+    console.log("Script execution information written to:", filePath);
+}
+```
+
+Usage in contract call scripts:
+```solidity
+// Generate execution results JSON
+uint256 currentBlock = block.number;
+uint256 currentTimestamp = block.timestamp;
+
+string memory baseJson = createBaseExecutionJson(network, "SubmitOracles", currentBlock, currentTimestamp);
+
+// Add script-specific data
+string memory executionJson = string(
+    abi.encodePacked(
+        baseJson,
+        ',\n',
+        '  "results": {\n',
+        '    "totalConfigs": "',
+        vm.toString(configs.length),
+        '"\n',
+        "  }\n",
+        "}"
+    )
+);
+
+writeScriptExecutionResults(network, "SubmitOracles", executionJson);
+```
+
+### JSON Structure
+
+#### Deployment Scripts JSON
+```json
+{
+  "network": "eth-sepolia",
+  "deployedAt": "1705334400",
+  "gitBranch": "main",
+  "gitCommitHash": "0xabc123...",
+  "blockInfo": {
+    "number": "12345678",
+    "timestamp": "1705334400"
+  },
+  "deployer": "0x123...",
+  "admin": "0x456...",
+  "contracts": {
+    "preTMX": {
+      "address": "0x789...",
+      "name": "PreTMX Token",
+      "symbol": "PreTMX",
+      "totalSupply": "1000000000000000000000000000",
+      "owner": "0x456...",
+      "transferRestricted": true
+    }
+  }
+}
+```
+
+#### Contract Call Scripts JSON
+```json
+{
+  "network": "eth-sepolia",
+  "scriptName": "SubmitOracles",
+  "executedAt": "1705334400",
+  "gitBranch": "main",
+  "gitCommitHash": "0xabc123...",
+  "blockInfo": {
+    "number": "12345678",
+    "timestamp": "1705334400"
+  },
+  "results": {
+    "totalConfigs": "5",
+    "oracleAggregatorAddress": "0x123...",
+    "accessManagerAddress": "0x456..."
+  }
+}
+```
+
+### Updated Scripts
+
+#### Deployment Scripts
+- ✅ `DeployBase.s.sol` - Base contract with date suffix utilities
+- ✅ `DeployPretmx.s.sol` - Updated to use date suffixes
+
+#### Contract Call Scripts
+- ✅ `ScriptBase.sol` - Base contract with JSON output and date suffix utilities
+- ✅ `SubmitOracles.s.sol` - Updated with JSON output and date suffixes
+- ✅ `AcceptOracles.s.sol` - Updated with JSON output and date suffixes
+- ✅ `GrantRoles.s.sol` - Updated with JSON output and date suffixes
+
+#### Scripts to Update
+Other contract call scripts can be updated by:
+1. Changing inheritance from `Script` to `ScriptBase`
+2. Adding JSON output generation at the end of the `run()` function
+3. Using `writeScriptExecutionResults()` to save the JSON file
+
+### Benefits
+
+1. **Historical Tracking**: Each execution creates a unique record
+2. **Audit Trail**: Complete history of deployments and contract interactions
+3. **Debugging**: Easy to compare different execution results
+4. **No Overwrites**: Previous execution data is preserved
+5. **Organized Storage**: Clear separation between deployments and executions
+6. **Timestamped Records**: Easy to identify when operations occurred
+
+### Directory Structure
+
+```
+project-root/
+├── deployments/
+│   ├── eth-sepolia/
+│   │   ├── eth-sepolia-pretmx-15JAN2024.json
+│   │   ├── eth-sepolia-core-15JAN2024.json
+│   │   └── eth-sepolia-access-manager-14JAN2024.json
+│   └── arb-mainnet/
+│       ├── arb-mainnet-pretmx-15JAN2024.json
+│       └── arb-mainnet-core-15JAN2024.json
+└── executions/
+    ├── eth-sepolia/
+    │   ├── eth-sepolia-SubmitOracles-15JAN2024.json
+    │   ├── eth-sepolia-AcceptOracles-15JAN2024.json
+    │   └── eth-sepolia-GrantRoles-14JAN2024.json
+    └── arb-mainnet/
+        ├── arb-mainnet-SubmitOracles-15JAN2024.json
+        └── arb-mainnet-AcceptOracles-15JAN2024.json
+```
+
+This system ensures comprehensive tracking of all script executions while maintaining organized, timestamped records for audit and debugging purposes.

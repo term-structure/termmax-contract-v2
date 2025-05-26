@@ -122,8 +122,8 @@ contract DeployPreTMX is DeployBase {
             vm.createDir(deploymentsDir, true);
         }
 
-        // Write the JSON file
-        string memory filePath = string.concat(deploymentsDir, "/", network, "-PreTMX.json");
+        // Write the JSON file with date suffix
+        string memory filePath = getDeploymentFilePath(network, "pretmx");
         vm.writeFile(filePath, deploymentJson);
         console.log("Deployment information written to:", filePath);
     }
