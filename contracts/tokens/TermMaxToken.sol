@@ -39,7 +39,7 @@ contract TermMaxToken is
     uint256 internal withdawedIncomeAssets;
 
     /// @notice The timelock period for upgrade operations (in seconds)
-    uint256 public constant UPGRADE_TIMELOCK = 2 days;
+    uint256 public constant UPGRADE_TIMELOCK = 1 days;
 
     /// @notice Pending upgrade implementation address with timelock
     PendingAddress internal _pendingImplementation;
@@ -137,27 +137,13 @@ contract TermMaxToken is
 
     /// @notice Submit a new implementation for upgrade with timelock
     /// @param newImplementation The address of the new implementation contract
-    function submitUpgrade(address newImplementation) external onlyOwner {
+    function submitPendingUpgrade(address newImplementation) external onlyOwner {
         if (newImplementation == address(0)) revert InvalidImplementation();
         if (_pendingImplementation.validAt != 0) revert AlreadyPending();
 
         _pendingImplementation.update(newImplementation, UPGRADE_TIMELOCK);
 
         emit SubmitUpgrade(newImplementation, _pendingImplementation.validAt);
-    }
-
-    /// @notice Accept the pending implementation upgrade after timelock period
-    function acceptUpgrade() external onlyOwner {
-        if (_pendingImplementation.validAt == 0) revert NoPendingValue();
-        if (block.timestamp < _pendingImplementation.validAt) revert TimelockNotElapsed();
-
-        address newImplementation = _pendingImplementation.value;
-        delete _pendingImplementation;
-
-        emit AcceptUpgrade(msg.sender, newImplementation);
-
-        // Perform the upgrade
-        upgradeToAndCall(newImplementation, "");
     }
 
     /// @notice Revoke the pending implementation upgrade
@@ -178,8 +164,11 @@ contract TermMaxToken is
 
     /// @notice Override _authorizeUpgrade to prevent direct upgrades without timelock
     /// @dev This function should never allow upgrades as they must go through the timelock process
-    function _authorizeUpgrade(address) internal virtual override onlyOwner {
-        // Always revert since upgrades must go through the timelock mechanism
-        revert("Use submitUpgrade and acceptUpgrade instead");
+    function _authorizeUpgrade(address newImplementation) internal virtual override onlyOwner {
+        if (_pendingImplementation.validAt == 0) revert NoPendingValue();
+        if (newImplementation != _pendingImplementation.value) revert InvalidImplementation();
+        if (block.timestamp < _pendingImplementation.validAt) revert TimelockNotElapsed();
+        delete _pendingImplementation;
+        emit AcceptUpgrade(msg.sender, newImplementation);
     }
 }
