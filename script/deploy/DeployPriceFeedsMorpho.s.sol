@@ -15,9 +15,9 @@ contract DeployPriceFeeds is Script {
         {
             // morpho(gtusdcf): https://app.morpho.org/ethereum/vault/0xc582F04d8a82795aa2Ff9c8bb4c1c889fe7b754e/gauntlet-usdc-frontier
             address gtusdcfVault = 0xc582F04d8a82795aa2Ff9c8bb4c1c889fe7b754e;
-            // chainlink(USDC/USD): https://data.chain.link/feeds/ethereum/mainnet/usdc-usd
+            // chainlink(USDC/USD): https://data.chain.link/feeds/ethereum/mainnet/usdc-usd-svr
             // heartBeat: 86400  (24hr)
-            address usdcToUsd = 0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6;
+            address usdcToUsd = 0xfB6471ACD42c91FF265344Ff73E88353521d099F;
             // new price feed heartBeat = max(86400) = 86400 (24hr)
             AggregatorV3Interface gtusdcfFeed =
                 AggregatorV3Interface(priceFeedFactory.createPriceFeedWithERC4626(usdcToUsd, gtusdcfVault));
@@ -57,9 +57,9 @@ contract DeployPriceFeeds is Script {
         {
             // morpho(MC_USDCP): https://app.morpho.org/ethereum/vault/0xf1fd8AC6346eC7BC4116Ba7aDc81102B2BC4C52D/mev-capital-usdc-prime
             address mevUsdcPrimeVault = 0xf1fd8AC6346eC7BC4116Ba7aDc81102B2BC4C52D;
-            // chainlink(USDC/USD): https://data.chain.link/feeds/ethereum/mainnet/usdc-usd
+            // chainlink(USDC/USD): https://data.chain.link/feeds/ethereum/mainnet/usdc-usd-svr
             // heartBeat: 86400  (24hr)
-            address usdcToUsd = 0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6;
+            address usdcToUsd = 0xfB6471ACD42c91FF265344Ff73E88353521d099F;
             // new price feed heartBeat = max(86400) = 86400 (24hr)
             AggregatorV3Interface mevUsdcPrimeFeed =
                 AggregatorV3Interface(priceFeedFactory.createPriceFeedWithERC4626(usdcToUsd, mevUsdcPrimeVault));
