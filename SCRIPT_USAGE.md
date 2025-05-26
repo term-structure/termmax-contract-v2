@@ -24,6 +24,7 @@ The `script.sh` utility is a flexible command runner that can handle both deploy
     - `deploy:market` - Deploy Market contracts
     - `deploy:order` - Deploy Order contracts
     - `deploy:vault` - Deploy Vault contracts
+    - `deploy:pretmx` - Deploy PreTMX token contract
   - Script commands:
     - `script:<script-name>` - Run a custom script (e.g., `script:GrantRoles`, `script:SubmitOracles`)
   
@@ -63,6 +64,15 @@ The `script.sh` utility is a flexible command runner that can handle both deploy
 
 # Run E2ETest script on Arbitrum Sepolia 
 ./script.sh arb-sepolia script:E2ETest
+
+# Deploy PreTMX token contract on Ethereum Sepolia (dry run)
+./script.sh eth-sepolia deploy:pretmx
+
+# Deploy PreTMX token contract on Arbitrum Mainnet and broadcast transactions
+./script.sh arb-mainnet deploy:pretmx --broadcast
+
+# Deploy PreTMX token contract with verification on Ethereum Mainnet
+./script.sh eth-mainnet deploy:pretmx --broadcast --verify
 ```
 
 ## System Setup Flow
@@ -113,6 +123,46 @@ The proper sequence for setting up the TermMax system is as follows:
    ```
 
 Following this sequence ensures that contracts are deployed with the correct dependency chain and permissions setup.
+
+## PreTMX Token Deployment
+
+The PreTMX token can be deployed independently of the main system flow as it's a standalone tokenomics contract:
+
+```bash
+# Deploy PreTMX token contract
+./script.sh <network> deploy:pretmx --broadcast
+```
+
+This creates a `<network>-pretmx.json` file containing the PreTMX token contract details.
+
+### PreTMX Token Features
+
+- **Token Name**: "Pre TermMax Token"
+- **Symbol**: "pTMX"
+- **Initial Supply**: 1,000,000,000 tokens (1e9 ether)
+- **Access Control**: Uses `Ownable2Step` for secure ownership transfer
+- **Transfer Restrictions**: Transfers are initially restricted and require whitelisting
+- **Initial State**: Admin is whitelisted for both sending and receiving transfers
+
+### Post-Deployment Management
+
+After deployment, the admin can manage the token through the following functions:
+
+1. **Transfer Restrictions**:
+   - `enableTransfer()` - Remove all transfer restrictions
+   - `disableTransfer()` - Re-enable transfer restrictions
+
+2. **Whitelist Management**:
+   - `whitelistTransferFrom(address, bool)` - Allow/disallow an address to send tokens
+   - `whitelistTransferTo(address, bool)` - Allow/disallow an address to receive tokens
+
+3. **Token Operations**:
+   - `mint(address, uint256)` - Mint additional tokens (admin only)
+   - `burn(uint256)` - Burn tokens (any token holder)
+
+4. **Ownership Transfer** (Two-step process for security):
+   - `transferOwnership(address)` - Initiate ownership transfer
+   - New owner calls `acceptOwnership()` - Complete the transfer
 
 ## Special Environment Variables
 
