@@ -129,9 +129,7 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
             // withdraw assets from order and burn to assets
             order.updateOrder(newOrderConfig, changes, changes);
             uint256 withdrawChanges = (-changes).toUint256();
-            orderInfo.ft.safeIncreaseAllowance(address(orderInfo.market), withdrawChanges);
-            orderInfo.xt.safeIncreaseAllowance(address(orderInfo.market), withdrawChanges);
-            orderInfo.market.burn(address(this), withdrawChanges);
+            orderInfo.market.burn(address(this), address(this), withdrawChanges);
         } else {
             // deposit assets to order
             uint256 depositChanges = uint256(changes);
@@ -210,12 +208,10 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
 
                     if (maxWithdraw < amountLeft) {
                         amountLeft -= maxWithdraw;
-                        _burnFromOrder(ITermMaxOrder(order), orderInfo, maxWithdraw);
+                        ITermMaxOrder(order).withdrawAssets(asset, recipient, maxWithdraw);
                         ++i;
                     } else {
-                        _burnFromOrder(ITermMaxOrder(order), orderInfo, amountLeft);
-                        // transfer all assets to recipient
-                        asset.safeTransfer(recipient, amount);
+                        ITermMaxOrder(order).withdrawAssets(asset, recipient, amountLeft);
                         amountLeft = 0;
                         break;
                     }
@@ -268,21 +264,11 @@ contract OrderManager is VaultStorage, VaultErrors, VaultEvents, IOrderManager {
         _totalFt -= amplifiedAmt;
     }
 
-    function _burnFromOrder(ITermMaxOrder order, OrderInfo memory orderInfo, uint256 amount) internal {
-        order.withdrawAssets(orderInfo.ft, address(this), amount);
-        order.withdrawAssets(orderInfo.xt, address(this), amount);
-        orderInfo.ft.safeIncreaseAllowance(address(orderInfo.market), amount);
-        orderInfo.xt.safeIncreaseAllowance(address(orderInfo.market), amount);
-
-        orderInfo.market.burn(address(this), amount);
-    }
-
     function _redeemFromMarket(address order, OrderInfo memory orderInfo) internal returns (uint256 totalRedeem) {
         uint256 ftReserve = orderInfo.ft.balanceOf(order);
         if (ftReserve != 0) {
             ITermMaxOrder(order).withdrawAssets(orderInfo.ft, address(this), ftReserve);
-            orderInfo.ft.safeIncreaseAllowance(address(orderInfo.market), ftReserve);
-            (totalRedeem,) = orderInfo.market.redeem(ftReserve, address(this));
+            (totalRedeem,) = orderInfo.market.redeem(address(this), address(this), ftReserve);
             if (totalRedeem < ftReserve) {
                 // storage bad debt
                 (,,, address collateral,) = orderInfo.market.tokens();

@@ -137,9 +137,7 @@ abstract contract MarketBaseTest is ForkBaseTest {
         res.debtToken.approve(address(res.market), amount);
         res.market.mint(taker, amount);
 
-        res.ft.approve(address(res.market), amount);
-        res.xt.approve(address(res.market), amount);
-        res.market.burn(taker, amount);
+        res.market.burn(taker, taker, amount);
         vm.assertEq(res.debtToken.balanceOf(taker), amount);
         vm.stopPrank();
     }
@@ -187,7 +185,7 @@ abstract contract MarketBaseTest is ForkBaseTest {
 
         vm.expectEmit();
         emit MarketEvents.Redeem(bob, bob, uint128(propotion), uint128(redeemAmt), abi.encode(redeemedCollateral));
-        res.market.redeem(depositAmt, bob);
+        res.market.redeem(bob, bob, depositAmt);
 
         assertEq(res.debtToken.balanceOf(bob), redeemAmt);
         assertEq(res.collateral.balanceOf(bob), redeemedCollateral);

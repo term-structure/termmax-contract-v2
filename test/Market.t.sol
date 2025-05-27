@@ -139,10 +139,8 @@ contract MarketTest is Test {
         res.debt.approve(address(res.market), amount);
         res.market.mint(sender, amount);
 
-        res.ft.approve(address(res.market), amount);
-        res.xt.approve(address(res.market), amount);
         emit MarketEvents.Burn(sender, sender, amount);
-        res.market.burn(sender, amount);
+        res.market.burn(sender, sender, amount);
         assertEq(res.debt.balanceOf(sender), amount);
         assertEq(res.ft.balanceOf(sender), 0);
         assertEq(res.xt.balanceOf(sender), 0);
@@ -157,7 +155,7 @@ contract MarketTest is Test {
         res.debt.approve(address(res.market), amount);
         vm.warp(marketConfig.maturity);
         vm.expectRevert(abi.encodeWithSelector(MarketErrors.TermIsNotOpen.selector));
-        res.market.burn(sender, amount);
+        res.market.burn(sender, sender, amount);
         vm.stopPrank();
     }
 
@@ -357,7 +355,7 @@ contract MarketTest is Test {
         vm.expectEmit();
         uint128 proportion = uint128(Constants.DECIMAL_BASE_SQ) * depositAmt / (depositAmt + leverageFee);
         emit MarketEvents.Redeem(bob, bob, proportion, uint128(expectDebt), collateralData);
-        res.market.redeem(depositAmt, bob);
+        res.market.redeem(bob, bob, depositAmt);
         uint256 expectCollateral = abi.decode(collateralData, (uint256));
 
         assertEq(res.debt.balanceOf(bob), expectDebt);
@@ -382,13 +380,13 @@ contract MarketTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(MarketErrors.CanNotRedeemBeforeFinalLiquidationDeadline.selector, deadline)
         );
-        res.market.redeem(depositAmt, sender);
+        res.market.redeem(sender, sender, depositAmt);
 
         vm.warp(marketConfig.maturity - 1);
         vm.expectRevert(
             abi.encodeWithSelector(MarketErrors.CanNotRedeemBeforeFinalLiquidationDeadline.selector, deadline)
         );
-        res.market.redeem(depositAmt, sender);
+        res.market.redeem(sender, sender, depositAmt);
 
         vm.stopPrank();
     }

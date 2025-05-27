@@ -42,8 +42,10 @@ interface ITermMaxMarket {
 
     /// @notice Burn FT and XT to get underlying token.
     ///         No price slippage or handling fees.
+    /// @param owner The owner of the tokens to be burned
+    /// @param recipient The address to receive the underlying token
     /// @param debtTokenAmt Amount of underlying token want to get
-    function burn(address recipient, uint256 debtTokenAmt) external;
+    function burn(address owner, address recipient, uint256 debtTokenAmt) external;
 
     /// @notice Using collateral to issue FT tokens.
     ///         Caller will get FT(bond) tokens equal to the debt amount subtract issue fee
@@ -68,12 +70,13 @@ interface ITermMaxMarket {
     function issueFtByExistedGt(address recipient, uint128 debt, uint256 gtId) external returns (uint128 ftOutAmt);
 
     /// @notice Flash loan underlying token for leverage
+    /// @param xtOwner The owner of XT token
     /// @param recipient Who will receive Gearing Token
     /// @param xtAmt The amount of XT token.
     ///              The caller will receive an equal amount of underlying token by flash loan.
     /// @param callbackData The data of flash loan callback
     /// @return gtId The id of Gearing Token
-    function leverageByXt(address recipient, uint128 xtAmt, bytes calldata callbackData)
+    function leverageByXt(address xtOwner, address recipient, uint128 xtAmt, bytes calldata callbackData)
         external
         returns (uint256 gtId);
 
@@ -84,11 +87,12 @@ interface ITermMaxMarket {
     function previewRedeem(uint256 ftAmount) external view returns (uint256 debtTokenAmt, bytes memory deliveryData);
 
     /// @notice Redeem underlying tokens after maturity
-    /// @param ftAmount The amount of FT want to redeem
+    /// @param ftOwner The owner of FT token
     /// @param recipient Who will receive the underlying tokens
+    /// @param ftAmount The amount of FT want to redeem
     /// @return debtTokenAmt The amount of debt token
     /// @return deliveryData The delivery data
-    function redeem(uint256 ftAmount, address recipient)
+    function redeem(address ftOwner, address recipient, uint256 ftAmount)
         external
         returns (uint256 debtTokenAmt, bytes memory deliveryData);
 

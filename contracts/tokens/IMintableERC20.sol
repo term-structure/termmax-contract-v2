@@ -27,9 +27,11 @@ interface IMintableERC20 is IERC20 {
     function marketAddr() external view returns (address);
 
     /// @notice Burn tokens from sender
+    /// @param owner The address of the token holder
+    /// @param spender The address of the token spender
     /// @param amount The number of tokens to be burned
     /// @dev Only the market can burn TermMax tokens
-    function burn(uint256 amount) external;
+    function burn(address owner, address spender, uint256 amount) external;
 
     /**
      * @dev Returns the decimals places of the token.

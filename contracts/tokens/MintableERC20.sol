@@ -43,8 +43,11 @@ contract MintableERC20 is ERC20Upgradeable, OwnableUpgradeable, IMintableERC20 {
     /**
      * @inheritdoc IMintableERC20
      */
-    function burn(uint256 amount) external override onlyOwner {
-        _burn(msg.sender, amount);
+    function burn(address owner, address spender, uint256 amount) external override onlyOwner {
+        if (owner != spender) {
+            _spendAllowance(owner, spender, amount);
+        }
+        _burn(owner, amount);
     }
 
     /**

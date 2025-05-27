@@ -236,9 +236,7 @@ contract MockOrder is
             market.mint(address(this), tokenAmtIn);
         }
         if (tokenOut == debtToken) {
-            ft.safeIncreaseAllowance(address(market), minTokenOut);
-            xt.safeIncreaseAllowance(address(market), minTokenOut);
-            market.burn(recipient, minTokenOut);
+            market.burn(address(this), recipient, minTokenOut);
         } else {
             tokenOut.safeTransfer(recipient, minTokenOut);
         }
@@ -276,9 +274,7 @@ contract MockOrder is
             market.mint(address(this), maxTokenIn);
         }
         if (tokenOut == debtToken) {
-            ft.safeIncreaseAllowance(address(market), tokenAmtOut);
-            xt.safeIncreaseAllowance(address(market), tokenAmtOut);
-            market.burn(recipient, tokenAmtOut);
+            market.burn(address(this), recipient, tokenAmtOut);
         } else {
             tokenOut.safeTransfer(recipient, tokenAmtOut);
         }
@@ -297,7 +293,11 @@ contract MockOrder is
     }
 
     function withdrawAssets(IERC20 token, address recipient, uint256 amount) external onlyOwner {
-        token.safeTransfer(recipient, amount);
+        if (token == debtToken) {
+            market.burn(address(this), recipient, amount);
+        } else {
+            token.safeTransfer(recipient, amount);
+        }
         emit WithdrawAssets(token, _msgSender(), recipient, amount);
     }
 

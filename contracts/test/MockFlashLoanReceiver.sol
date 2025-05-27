@@ -32,8 +32,6 @@ contract MockFlashLoanReceiver is IFlashLoanReceiver {
     }
 
     function leverageByXt(uint128 xtAmt, bytes calldata callbackData) external returns (uint256 gtId) {
-        xt.transferFrom(msg.sender, address(this), xtAmt);
-        xt.approve(address(market), xtAmt);
-        gtId = market.leverageByXt(msg.sender, xtAmt, callbackData);
+        gtId = market.leverageByXt(msg.sender, msg.sender, xtAmt, callbackData);
     }
 }
