@@ -43,7 +43,8 @@ contract TermMaxTokenTest is Test {
         assertEq(termMaxToken.balanceOf(address(this)), amount);
         assertEq(underlying.balanceOf(address(this)), 0);
         // Check that aTokens were minted to the TermMaxToken contract
-        assertEq(aavePool.balanceOf(address(termMaxToken)), amount);
+        assertEq(aavePool.balanceOf(address(termMaxToken)), 0);
+        assertEq(underlying.balanceOf(address(termMaxToken)), amount);
     }
 
     function testBurn() public {
@@ -65,9 +66,16 @@ contract TermMaxTokenTest is Test {
         underlying.approve(address(termMaxToken), amount);
         termMaxToken.mint(address(this), amount);
 
+        vm.expectRevert();
         termMaxToken.burnToAToken(address(this), amount);
 
-        assertEq(termMaxToken.balanceOf(address(this)), 0);
+        underlying.mint(address(this), amount * 10);
+        underlying.approve(address(termMaxToken), amount * 10);
+        termMaxToken.mint(address(this), amount * 10);
+
+        termMaxToken.burnToAToken(address(this), amount);
+
+        assertEq(termMaxToken.balanceOf(address(this)), amount * 10);
         assertEq(aavePool.balanceOf(address(this)), amount);
     }
 
@@ -89,7 +97,7 @@ contract TermMaxTokenTest is Test {
 
         // Assert balances are correct
         assertEq(underlying.balanceOf(admin), yieldAmount);
-        assertEq(termMaxToken.totalIncomeAssets(), 0);
+        assertEq(termMaxToken.totalIncomeAssets(), yieldAmount);
     }
 
     function testUpdateBufferConfigAndAddReserves() public {

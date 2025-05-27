@@ -14,11 +14,11 @@ abstract contract StakingBuffer {
         uint256 buffer;
     }
 
-    function _depositWithBuffer(address assetAddr, uint256 amount) internal {
+    function _depositWithBuffer(address assetAddr) internal {
         uint256 assetBalance = IERC20(assetAddr).balanceOf(address(this));
         BufferConfig memory bufferConfig = _bufferConfig(assetAddr);
-        if (assetBalance + amount > bufferConfig.maximumBuffer) {
-            _depositToPool(assetAddr, assetBalance + amount - bufferConfig.buffer);
+        if (assetBalance > bufferConfig.maximumBuffer) {
+            _depositToPool(assetAddr, assetBalance - bufferConfig.buffer);
         }
     }
 

@@ -67,7 +67,7 @@ contract TermMaxToken is
     function mint(address to, uint256 amount) external nonReentrant {
         _mint(to, amount);
         underlying.safeTransferFrom(msg.sender, address(this), amount);
-        _depositWithBuffer(address(underlying), amount);
+        _depositWithBuffer(address(underlying));
     }
 
     function burn(address to, uint256 amount) external nonReentrant {
