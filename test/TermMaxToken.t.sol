@@ -6,6 +6,7 @@ import {Test} from "forge-std/Test.sol";
 import {MockAave} from "contracts/test/MockAave.sol";
 import {MockERC20} from "contracts/test/MockERC20.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {IERC20Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
 
 contract TermMaxTokenTest is Test {
     TermMaxToken public termMaxToken;
@@ -16,6 +17,10 @@ contract TermMaxTokenTest is Test {
     function setUp() public {
         underlying = new MockERC20("USDC", "USDC", 6);
         aavePool = new MockAave(address(underlying));
+
+        vm.label(address(underlying), "USDC");
+        vm.label(address(aavePool), "AavePool");
+        vm.label(admin, "Admin");
 
         address implementation = address(new TermMaxToken(address(aavePool), 0));
         termMaxToken = TermMaxToken(
@@ -31,6 +36,8 @@ contract TermMaxTokenTest is Test {
                 )
             )
         );
+
+        vm.label(address(termMaxToken), "tmxUSDC");
     }
 
     function testMint() public {
@@ -229,6 +236,152 @@ contract TermMaxTokenTest is Test {
         vm.startPrank(admin);
         vm.expectRevert();
         termMaxToken.withdrawIncomeAssets(address(invalidToken), admin, 100e6);
+        vm.stopPrank();
+    }
+
+    function testInvalidBufferConfiguration() public {
+        vm.startPrank(admin);
+
+        // Test minimum buffer greater than maximum buffer
+        vm.expectRevert(abi.encodeWithSelector(StakingBuffer.InvalidBuffer.selector, 10000e6, 5000e6, 7500e6));
+        termMaxToken.updateBufferConfigAndAddReserves(
+            0, StakingBuffer.BufferConfig({minimumBuffer: 10000e6, maximumBuffer: 5000e6, buffer: 7500e6})
+        );
+
+        // Test buffer outside min/max range (below minimum)
+        vm.expectRevert(abi.encodeWithSelector(StakingBuffer.InvalidBuffer.selector, 5000e6, 10000e6, 4000e6));
+        termMaxToken.updateBufferConfigAndAddReserves(
+            0, StakingBuffer.BufferConfig({minimumBuffer: 5000e6, maximumBuffer: 10000e6, buffer: 4000e6})
+        );
+
+        // Test buffer outside min/max range (above maximum)
+        vm.expectRevert(abi.encodeWithSelector(StakingBuffer.InvalidBuffer.selector, 5000e6, 10000e6, 11000e6));
+        termMaxToken.updateBufferConfigAndAddReserves(
+            0, StakingBuffer.BufferConfig({minimumBuffer: 5000e6, maximumBuffer: 10000e6, buffer: 11000e6})
+        );
+
+        vm.stopPrank();
+    }
+
+    function testUnauthorizedAccess() public {
+        address unauthorizedUser = vm.randomAddress();
+
+        // Test unauthorized buffer config update
+        vm.startPrank(unauthorizedUser);
+        vm.expectRevert();
+        termMaxToken.updateBufferConfigAndAddReserves(
+            0, StakingBuffer.BufferConfig({minimumBuffer: 2000e6, maximumBuffer: 20000e6, buffer: 10000e6})
+        );
+        vm.stopPrank();
+
+        // Test unauthorized income withdrawal
+        vm.startPrank(unauthorizedUser);
+        vm.expectRevert();
+        termMaxToken.withdrawIncomeAssets(address(termMaxToken), unauthorizedUser, 100e6);
+        vm.stopPrank();
+    }
+
+    function testBurnToATokenInsufficientStaking() public {
+        uint256 amount = 1000e6;
+        underlying.mint(address(this), amount);
+        underlying.approve(address(termMaxToken), amount);
+        termMaxToken.mint(address(this), amount);
+
+        // Should revert when trying to burn to aToken without sufficient staking buffer
+        vm.expectRevert(
+            abi.encodeWithSelector(IERC20Errors.ERC20InsufficientBalance.selector, address(termMaxToken), 0, amount)
+        );
+        termMaxToken.burnToAToken(address(this), amount);
+    }
+
+    function testBurnToATokenExceedsBalance() public {
+        uint256 amount = 1000e6;
+        underlying.mint(address(this), amount * 20);
+        underlying.approve(address(termMaxToken), amount * 20);
+        termMaxToken.mint(address(this), amount * 20);
+
+        // Should revert when trying to burn more than balance
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IERC20Errors.ERC20InsufficientBalance.selector, address(this), amount * 20, amount * 21
+            )
+        );
+        termMaxToken.burnToAToken(address(this), amount * 21);
+    }
+
+    function testMintWithInsufficientApproval() public {
+        uint256 amount = 1000e6;
+        underlying.mint(address(this), amount);
+        underlying.approve(address(termMaxToken), amount - 1); // Insufficient approval
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IERC20Errors.ERC20InsufficientAllowance.selector, address(termMaxToken), amount - 1, amount
+            )
+        );
+        termMaxToken.mint(address(this), amount);
+    }
+
+    function testBurnWithInsufficientBalance() public {
+        uint256 amount = 1000e6;
+        underlying.mint(address(this), amount);
+        underlying.approve(address(termMaxToken), amount);
+        termMaxToken.mint(address(this), amount);
+
+        // Try to burn more than balance
+        vm.expectRevert(
+            abi.encodeWithSelector(IERC20Errors.ERC20InsufficientBalance.selector, address(this), amount, amount + 1)
+        );
+        termMaxToken.burn(address(this), amount + 1);
+    }
+
+    function testWithdrawIncomeToZeroAddress() public {
+        uint256 amount = 1000e6;
+        underlying.mint(address(this), amount);
+        underlying.approve(address(termMaxToken), amount);
+        termMaxToken.mint(address(this), amount);
+
+        uint256 yieldAmount = 100e6;
+        aavePool.simulateInterestAccrual(address(termMaxToken), yieldAmount);
+
+        vm.startPrank(admin);
+        vm.expectRevert(abi.encodeWithSelector(IERC20Errors.ERC20InvalidReceiver.selector, address(0)));
+        termMaxToken.withdrawIncomeAssets(address(underlying), address(0), yieldAmount);
+        vm.stopPrank();
+    }
+
+    function testMintToZeroAddress() public {
+        uint256 amount = 1000e6;
+        underlying.mint(address(this), amount);
+        underlying.approve(address(termMaxToken), amount);
+
+        vm.expectRevert(abi.encodeWithSelector(IERC20Errors.ERC20InvalidReceiver.selector, address(0)));
+        termMaxToken.mint(address(0), amount);
+    }
+
+    function testBurnToZeroAddress() public {
+        uint256 amount = 1000e6;
+        underlying.mint(address(this), amount);
+        underlying.approve(address(termMaxToken), amount);
+        termMaxToken.mint(address(this), amount);
+        vm.expectRevert(abi.encodeWithSelector(IERC20Errors.ERC20InvalidReceiver.selector, address(0)));
+        termMaxToken.burn(address(0), amount);
+    }
+
+    function testUpdateBufferWithInsufficientBalance() public {
+        uint256 additionalReserves = 500e6;
+        // Don't mint tokens to admin
+
+        vm.startPrank(admin);
+        underlying.approve(address(termMaxToken), additionalReserves);
+
+        StakingBuffer.BufferConfig memory newConfig =
+            StakingBuffer.BufferConfig({minimumBuffer: 2000e6, maximumBuffer: 20000e6, buffer: 10000e6});
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IERC20Errors.ERC20InsufficientBalance.selector, admin, 0, additionalReserves)
+        );
+        termMaxToken.updateBufferConfigAndAddReserves(additionalReserves, newConfig);
         vm.stopPrank();
     }
 
