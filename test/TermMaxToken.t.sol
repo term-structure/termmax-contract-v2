@@ -231,4 +231,57 @@ contract TermMaxTokenTest is Test {
         termMaxToken.withdrawIncomeAssets(address(invalidToken), admin, 100e6);
         vm.stopPrank();
     }
+
+    function testTermMaxTokenFuzzActions() public {
+        vm.prank(admin);
+        termMaxToken.updateBufferConfigAndAddReserves(
+            0, StakingBuffer.BufferConfig({minimumBuffer: 500e6, maximumBuffer: 1000e6, buffer: 700e6})
+        );
+
+        address[] memory accounts = new address[](10);
+        for (uint256 i = 0; i < accounts.length; i++) {
+            accounts[i] = vm.addr(i + 1); // Create unique addresses for each account
+        }
+        uint256 totalInterest = 0;
+        for (uint256 i = 0; i < 1000; i++) {
+            uint256 amount = vm.randomUint(1e6, 1000000e6);
+            address account = accounts[vm.randomUint(0, accounts.length - 1)];
+            vm.startPrank(account);
+            uint256 action = vm.randomUint(0, 2); // 0 for mint, 1 for burn
+
+            uint256 underlyingBalanceBefore = underlying.balanceOf(account);
+            uint256 tmxTokenBalanceBefore = termMaxToken.balanceOf(account);
+            if (action == 0 || tmxTokenBalanceBefore < amount) {
+                if (underlyingBalanceBefore < amount) {
+                    underlying.mint(account, amount - underlyingBalanceBefore);
+                }
+                // Mint action
+                underlying.mint(account, amount);
+                underlying.approve(address(termMaxToken), amount);
+                termMaxToken.mint(account, amount);
+                assertEq(termMaxToken.balanceOf(account), amount + tmxTokenBalanceBefore);
+            } else {
+                // Burn action
+                if (termMaxToken.balanceOf(account) >= amount) {
+                    termMaxToken.burn(account, amount);
+                    assertEq(termMaxToken.balanceOf(account), tmxTokenBalanceBefore - amount);
+                    assertEq(underlying.balanceOf(account), underlyingBalanceBefore + amount);
+                }
+            }
+
+            // Simulate interest accrual
+            uint256 rate = vm.randomUint(0.01e8, 0.1e8);
+            uint256 aTokenBalanceBefore = aavePool.balanceOf(address(termMaxToken));
+            uint256 interest = (aTokenBalanceBefore * rate) / 1e8; // Interest accrued
+            aavePool.simulateInterestAccrual(address(termMaxToken), interest);
+            totalInterest += interest;
+            vm.stopPrank();
+        }
+
+        assertEq(termMaxToken.totalIncomeAssets(), totalInterest);
+        assertEq(
+            underlying.balanceOf(address(termMaxToken)) + aavePool.balanceOf(address(termMaxToken)),
+            totalInterest + termMaxToken.totalSupply()
+        );
+    }
 }
