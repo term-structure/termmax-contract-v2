@@ -7,7 +7,6 @@ pragma solidity ^0.8.27;
  * @dev The role management structure is based on Morpho's role system (https://docs.morpho.org/curation/concepts/roles/)
  * with similar separation of curator, guardian, and allocator roles for enhanced governance and risk management.
  */
-
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";

@@ -4,7 +4,7 @@ pragma solidity ^0.8.27;
 import {PendlePYLpOracle} from "@pendle/core-v2/contracts/oracles/PtYtLpOracle/PendlePYLpOracle.sol";
 import {PendlePYOracleLib} from "@pendle/core-v2/contracts/oracles/PtYtLpOracle/PendlePYOracleLib.sol";
 import {PMath} from "@pendle/core-v2/contracts/core/libraries/math/PMath.sol";
-import {IPMarket, IPPrincipalToken} from "@pendle/core-v2/contracts/interfaces/IPMarket.sol";
+import {IPMarket, IPPrincipalToken, IStandardizedYield} from "@pendle/core-v2/contracts/interfaces/IPMarket.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
@@ -30,6 +30,8 @@ contract TermMaxPTPriceFeed is ITermMaxPriceFeed {
     AggregatorV3Interface public immutable PRICE_FEED;
     address public immutable asset;
 
+    uint256 private immutable PT_TO_SY_RATE_BASE;
+
     // error to call `getRoundData` function
     error GetRoundDataNotSupported();
     // error when Pendle PY LP oracle is not ready
@@ -52,7 +54,14 @@ contract TermMaxPTPriceFeed is ITermMaxPriceFeed {
         MARKET = IPMarket(market);
         DURATION = duration;
         PRICE_FEED = AggregatorV3Interface(priceFeed);
-        (, IPPrincipalToken _PT,) = MARKET.readTokens();
+        (IStandardizedYield _SY, IPPrincipalToken _PT,) = MARKET.readTokens();
+        uint8 syDecimals = _SY.decimals();
+        uint8 ptDecimals = _PT.decimals();
+        if (syDecimals < ptDecimals) {
+            PT_TO_SY_RATE_BASE = PMath.ONE / (10 ** (ptDecimals - syDecimals));
+        } else {
+            PT_TO_SY_RATE_BASE = PMath.ONE * (10 ** (syDecimals - ptDecimals));
+        }
         asset = address(_PT);
         if (!_oracleIsReady()) revert OracleIsNotReady();
     }
@@ -92,7 +101,7 @@ contract TermMaxPTPriceFeed is ITermMaxPriceFeed {
         uint256 ptRateInSy = MARKET.getPtToSyRate(DURATION); // PT -> SY
 
         (roundId, answer, startedAt, updatedAt, answeredInRound) = PRICE_FEED.latestRoundData();
-        answer = ptRateInSy.mulDiv(answer.toUint256(), PMath.ONE).toInt256();
+        answer = ptRateInSy.mulDiv(answer.toUint256(), PT_TO_SY_RATE_BASE).toInt256();
 
         return (roundId, answer, startedAt, updatedAt, answeredInRound);
     }

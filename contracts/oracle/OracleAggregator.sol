@@ -4,11 +4,10 @@ pragma solidity ^0.8.27;
 /**
  * @title OracleAggregator
  * @notice This contract references design concepts from AAVE's oracle system
- * @dev Implements price feed aggregation with primary and backup oracles, 
+ * @dev Implements price feed aggregation with primary and backup oracles,
  *      staleness checks via heartbeats, and governance-controlled updates with timelocks
  *      similar to AAVE's oracle architecture
  */
-
 import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {AggregatorV3Interface, IOracle} from "./IOracle.sol";
 
