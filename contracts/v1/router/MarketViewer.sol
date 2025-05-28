@@ -21,6 +21,7 @@ interface IPausable {
 
 contract MarketViewer {
     using Math for uint256;
+
     struct LoanPosition {
         uint256 loanId;
         uint256 collateralAmt;
@@ -45,7 +46,7 @@ contract MarketViewer {
         uint256 xtBalance;
         LoanPosition[] gtInfo;
     }
-    
+
     struct VaultPosition {
         uint256 balance;
         uint256 toAssetBalance;
@@ -141,7 +142,7 @@ contract MarketViewer {
         (,, IGearingToken gt,,) = market.tokens();
         uint256 balance = gt.balanceOf(owner);
         LoanPosition[] memory loanPositionsTmp = new LoanPosition[](balance);
-        
+
         uint256 validPositions = 0;
         for (uint256 i = 0; i < balance; ++i) {
             uint256 loanId = gt.tokenOfOwnerByIndex(owner, i);
@@ -167,7 +168,7 @@ contract MarketViewer {
         GtConfig memory config = gtNft.getGtConfig();
         uint256 supply = gtNft.totalSupply();
         LoanPositionV2[] memory loanPositionsTmp = new LoanPositionV2[](supply);
-        
+
         uint256 validPositions = 0;
         for (uint256 i = 0; i < supply; ++i) {
             uint256 loanId = gtNft.tokenByIndex(i);
@@ -189,9 +190,8 @@ contract MarketViewer {
                 // Skip this loan ID if loanInfo call fails
                 continue;
             }
-
         }
-        
+
         LoanPositionV2[] memory loanPositions = new LoanPositionV2[](validPositions);
         for (uint256 i = 0; i < validPositions; i++) {
             loanPositions[i] = loanPositionsTmp[i];
@@ -199,7 +199,11 @@ contract MarketViewer {
         return loanPositions;
     }
 
-    function getVaultBalance(address user, ITermMaxVault[] memory vaults, OracleAggregator oracleAggregator) external view returns (VaultPosition[] memory) {
+    function getVaultBalance(address user, ITermMaxVault[] memory vaults, OracleAggregator oracleAggregator)
+        external
+        view
+        returns (VaultPosition[] memory)
+    {
         VaultPosition[] memory vaultPositions = new VaultPosition[](vaults.length);
         for (uint256 i = 0; i < vaults.length; i++) {
             address asset = vaults[i].asset();
