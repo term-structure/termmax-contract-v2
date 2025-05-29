@@ -12,7 +12,7 @@ contract MintableERC20V2 is MintableERC20, IMintableERC20V2 {
     /**
      * @inheritdoc IMintableERC20V2
      */
-    function burn(address owner, address spender, uint256 amount) external override onlyOwner {
+    function burn(address owner, address spender, uint256 amount) external virtual override onlyOwner {
         if (owner != spender) {
             _spendAllowance(owner, spender, amount);
         }

@@ -76,7 +76,7 @@ contract TermMaxMarketV2 is
     /**
      * @inheritdoc ITermMaxMarket
      */
-    function initialize(MarketInitialParams memory params) external override initializer {
+    function initialize(MarketInitialParams memory params) external virtual override initializer {
         __Ownable_init(params.admin);
         __ReentrancyGuard_init();
         if (params.collateral == address(params.debtToken)) revert CollateralCanNotEqualUnderlyinng();
@@ -140,14 +140,20 @@ contract TermMaxMarketV2 is
     /**
      * @inheritdoc ITermMaxMarket
      */
-    function tokens() external view override returns (IMintableERC20, IMintableERC20, IGearingToken, address, IERC20) {
+    function tokens()
+        external
+        view
+        virtual
+        override
+        returns (IMintableERC20, IMintableERC20, IGearingToken, address, IERC20)
+    {
         return (ft, xt, IGearingToken(gt), collateral, debtToken);
     }
 
     /**
      * @inheritdoc ITermMaxMarket
      */
-    function updateMarketConfig(MarketConfig calldata newConfig) external override onlyOwner {
+    function updateMarketConfig(MarketConfig calldata newConfig) external virtual override onlyOwner {
         MarketConfig memory mConfig = _config;
         if (newConfig.treasurer != mConfig.treasurer) {
             mConfig.treasurer = newConfig.treasurer;
@@ -173,7 +179,7 @@ contract TermMaxMarketV2 is
         daysToMaturity = (maturity - block.timestamp + Constants.SECONDS_IN_DAY - 1) / Constants.SECONDS_IN_DAY;
     }
 
-    function mint(address recipient, uint256 debtTokenAmt) external override nonReentrant isOpen {
+    function mint(address recipient, uint256 debtTokenAmt) external virtual override nonReentrant isOpen {
         _mint(msg.sender, recipient, debtTokenAmt);
     }
 
@@ -189,14 +195,20 @@ contract TermMaxMarketV2 is
     /**
      * @inheritdoc ITermMaxMarket
      */
-    function burn(address recipient, uint256 debtTokenAmt) external override nonReentrant isOpen {
+    function burn(address recipient, uint256 debtTokenAmt) external virtual override nonReentrant isOpen {
         _burn(msg.sender, msg.sender, recipient, debtTokenAmt);
     }
 
     /**
      * @inheritdoc ITermMaxMarketV2
      */
-    function burn(address owner, address recipient, uint256 debtTokenAmt) external override nonReentrant isOpen {
+    function burn(address owner, address recipient, uint256 debtTokenAmt)
+        external
+        virtual
+        override
+        nonReentrant
+        isOpen
+    {
         _burn(owner, msg.sender, recipient, debtTokenAmt);
     }
 
@@ -214,6 +226,7 @@ contract TermMaxMarketV2 is
      */
     function leverageByXt(address recipient, uint128 xtAmt, bytes calldata callbackData)
         external
+        virtual
         override
         nonReentrant
         isOpen
@@ -227,6 +240,7 @@ contract TermMaxMarketV2 is
      */
     function leverageByXt(address xtOwner, address recipient, uint128 xtAmt, bytes calldata callbackData)
         external
+        virtual
         override
         nonReentrant
         isOpen
@@ -266,6 +280,7 @@ contract TermMaxMarketV2 is
      */
     function issueFt(address recipient, uint128 debt, bytes calldata collateralData)
         external
+        virtual
         override
         nonReentrant
         isOpen
@@ -296,6 +311,7 @@ contract TermMaxMarketV2 is
      */
     function issueFtByExistedGt(address recipient, uint128 debt, uint256 gtId)
         external
+        virtual
         override
         nonReentrant
         isOpen
@@ -326,6 +342,7 @@ contract TermMaxMarketV2 is
     function previewRedeem(uint256 ftAmount)
         external
         view
+        virtual
         override
         returns (uint256 debtTokenAmt, bytes memory deliveryData)
     {
@@ -406,7 +423,7 @@ contract TermMaxMarketV2 is
     /**
      * @inheritdoc ITermMaxMarket
      */
-    function updateGtConfig(bytes memory configData) external override onlyOwner {
+    function updateGtConfig(bytes memory configData) external virtual override onlyOwner {
         gt.updateConfig(configData);
     }
 
@@ -415,6 +432,7 @@ contract TermMaxMarketV2 is
      */
     function createOrder(address maker, uint256 maxXtReserve, ISwapCallback swapTrigger, CurveCuts memory curveCuts)
         external
+        virtual
         nonReentrant
         isOpen
         returns (ITermMaxOrder order)
@@ -424,7 +442,7 @@ contract TermMaxMarketV2 is
         emit CreateOrder(maker, order);
     }
 
-    function updateOrderFeeRate(ITermMaxOrder order, FeeConfig memory newFeeConfig) external onlyOwner {
+    function updateOrderFeeRate(ITermMaxOrder order, FeeConfig memory newFeeConfig) external virtual onlyOwner {
         _checkFee(newFeeConfig);
         order.updateFeeConfig(newFeeConfig);
     }
