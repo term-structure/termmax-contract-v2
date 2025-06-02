@@ -16,7 +16,7 @@ import {FactoryEventsV2} from "../events/FactoryEventsV2.sol";
  * @author Term Structure Labs
  */
 contract TermMaxFactoryV2 is Ownable2Step, FactoryErrors, FactoryEvents, ITermMaxFactory, FactoryEventsV2 {
-    bytes32 constant GT_ERC20 = keccak256("GearingTokenWithERC20V2");
+    bytes32 constant GT_ERC20 = keccak256("GearingTokenWithERC20");
 
     /// @notice The implementation of TermMax Market contract
     address public immutable TERMMAX_MARKET_IMPLEMENTATION;

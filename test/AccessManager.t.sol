@@ -25,7 +25,7 @@ import {ITermMaxVault, TermMaxVault} from "contracts/vault/TermMaxVault.sol";
 import {Constants} from "contracts/lib/Constants.sol";
 import "contracts/storage/TermMaxStorage.sol";
 
-contract AccessManagerTest is Test {
+contract AccessManagerTestV2 is Test {
     using JSONLoader for *;
 
     DeployUtils.Res res;
@@ -471,10 +471,11 @@ contract AccessManagerTest is Test {
         uint256 salt = 123;
 
         // Test that non-market role cannot create market
-        vm.startPrank(sender);
+        address caller = 0x1234567890123456789012345678901234567890;
+        vm.startPrank(caller);
         vm.expectRevert(
             abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector, sender, manager.MARKET_ROLE()
+                IAccessControl.AccessControlUnauthorizedAccount.selector, caller, manager.MARKET_ROLE()
             )
         );
         manager.createMarket(ITermMaxFactory(address(res.factory)), gtKey, params, salt);
