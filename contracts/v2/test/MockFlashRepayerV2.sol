@@ -4,7 +4,7 @@ pragma solidity ^0.8.27;
 import {IGearingToken, IGearingTokenV2, IERC20, IFlashRepayer} from "../tokens/AbstractGearingTokenV2.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts/interfaces/IERC721Receiver.sol";
 
-contract MockFlashRepayer is IFlashRepayer, IERC721Receiver {
+contract MockFlashRepayerV2 is IFlashRepayer, IERC721Receiver {
     IGearingToken gt;
 
     constructor(IGearingToken gt_) {

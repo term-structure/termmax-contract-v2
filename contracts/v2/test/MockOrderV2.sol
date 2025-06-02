@@ -22,7 +22,7 @@ import {ITermMaxMarketV2} from "../ITermMaxMarketV2.sol";
  * @title TermMax Order
  * @author Term Structure Labs
  */
-contract MockOrder is
+contract MockOrderV2 is
     ITermMaxOrder,
     ReentrancyGuardUpgradeable,
     OwnableUpgradeable,

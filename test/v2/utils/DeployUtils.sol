@@ -16,7 +16,7 @@ import {ITermMaxFactory, TermMaxFactoryV2} from "contracts/v2/factory/TermMaxFac
 import {TermMaxRouterV2} from "contracts/v2/router/TermMaxRouterV2.sol";
 import {IOracleV2, OracleAggregatorV2, AggregatorV3Interface} from "contracts/v2/oracle/OracleAggregatorV2.sol";
 import {IOracle} from "contracts/v1/oracle/IOracle.sol";
-import {MockOrder} from "contracts/v2/test/MockOrder.sol";
+import {MockOrderV2} from "contracts/v2/test/MockOrderV2.sol";
 import {VaultFactory, IVaultFactory} from "contracts/v1/factory/VaultFactory.sol";
 import {OrderManager} from "contracts/v1/vault/OrderManager.sol";
 import {TermMaxVaultV2, ITermMaxVault} from "contracts/v2/vault/TermMaxVaultV2.sol";
@@ -27,6 +27,7 @@ import {
     MarketInitialParams,
     LoanConfig,
     OrderConfig,
+    CurveCut,
     CurveCuts
 } from "contracts/v1/storage/TermMaxStorage.sol";
 
@@ -310,7 +311,7 @@ library DeployUtils {
 
     function deployFactoryWithMockOrder(address admin) public returns (TermMaxFactoryV2 factory) {
         address tokenImplementation = address(new MintableERC20V2());
-        address orderImplementation = address(new MockOrder());
+        address orderImplementation = address(new MockOrderV2());
         TermMaxMarketV2 m = new TermMaxMarketV2(tokenImplementation, orderImplementation);
         factory = new TermMaxFactoryV2(admin, address(m));
     }
