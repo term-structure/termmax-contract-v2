@@ -2,10 +2,10 @@
 pragma solidity ^0.8.27;
 
 import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
-import {ITermMaxVault} from "contracts/vault/ITermMaxVault.sol";
-import {VaultInitialParams} from "contracts/storage/TermMaxStorage.sol";
-import {FactoryEvents} from "contracts/events/FactoryEvents.sol";
-import {FactoryErrors} from "contracts/errors/FactoryErrors.sol";
+import {ITermMaxVault} from "../vault/ITermMaxVault.sol";
+import {VaultInitialParams} from "../storage/TermMaxStorage.sol";
+import {FactoryEvents} from "../events/FactoryEvents.sol";
+import {FactoryErrors} from "../errors/FactoryErrors.sol";
 import {IVaultFactory} from "./IVaultFactory.sol";
 
 /**

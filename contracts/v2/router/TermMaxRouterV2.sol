@@ -30,10 +30,10 @@ import {Constants} from "../../v1/lib/Constants.sol";
 import {MathLib} from "../../v1/lib/MathLib.sol";
 
 /**
- * @title TermMax Router
+ * @title TermMax Router V2
  * @author Term Structure Labs
  */
-contract TermMaxRouter is
+contract TermMaxRouterV2 is
     UUPSUpgradeable,
     Ownable2StepUpgradeable,
     PausableUpgradeable,

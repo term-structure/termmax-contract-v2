@@ -5,21 +5,30 @@ import {console} from "forge-std/Script.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import {ITermMaxMarket, TermMaxMarket} from "contracts/TermMaxMarket.sol";
-import {ITermMaxOrder, ISwapCallback, TermMaxOrder} from "contracts/TermMaxOrder.sol";
-import {MockERC20, ERC20} from "contracts/test/MockERC20.sol";
-import {MockPriceFeed} from "contracts/test/MockPriceFeed.sol";
-import {IMintableERC20, MintableERC20} from "contracts/tokens/MintableERC20.sol";
-import {IGearingToken} from "contracts/tokens/IGearingToken.sol";
-import {ITermMaxFactory, TermMaxFactory} from "contracts/factory/TermMaxFactory.sol";
-import {TermMaxRouter} from "contracts/router/TermMaxRouter.sol";
-import {IOracle, OracleAggregator, AggregatorV3Interface} from "contracts/oracle/OracleAggregator.sol";
-import {MockOrder} from "contracts/test/MockOrder.sol";
-import {VaultFactory, IVaultFactory} from "contracts/factory/VaultFactory.sol";
-import {OrderManager} from "contracts/vault/OrderManager.sol";
-import {TermMaxVault, ITermMaxVault} from "contracts/vault/TermMaxVault.sol";
-import {AccessManager} from "contracts/access/AccessManager.sol";
-import "contracts/storage/TermMaxStorage.sol";
+import {ITermMaxMarket, ITermMaxMarketV2, TermMaxMarketV2} from "contracts/v2/TermMaxMarketV2.sol";
+import {ITermMaxOrder, ISwapCallback, TermMaxOrderV2} from "contracts/v2/TermMaxOrderV2.sol";
+import {MockERC20, ERC20} from "contracts/v1/test/MockERC20.sol";
+import {MockPriceFeed} from "contracts/v1/test/MockPriceFeed.sol";
+import {IMintableERC20} from "contracts/v1/tokens/IMintableERC20.sol";
+import {IMintableERC20V2, MintableERC20V2} from "contracts/v2/tokens/MintableERC20V2.sol";
+import {IGearingToken} from "contracts/v1/tokens/IGearingToken.sol";
+import {ITermMaxFactory, TermMaxFactoryV2} from "contracts/v2/factory/TermMaxFactoryV2.sol";
+import {TermMaxRouterV2} from "contracts/v2/router/TermMaxRouterV2.sol";
+import {IOracleV2, OracleAggregatorV2, AggregatorV3Interface} from "contracts/v2/oracle/OracleAggregatorV2.sol";
+import {IOracle} from "contracts/v1/oracle/IOracle.sol";
+import {MockOrder} from "contracts/v2/test/MockOrder.sol";
+import {VaultFactory, IVaultFactory} from "contracts/v1/factory/VaultFactory.sol";
+import {OrderManager} from "contracts/v1/vault/OrderManager.sol";
+import {TermMaxVaultV2, ITermMaxVault} from "contracts/v2/vault/TermMaxVaultV2.sol";
+import {AccessManager} from "contracts/v2/access/AccessManagerV2.sol";
+import {
+    VaultInitialParams,
+    MarketConfig,
+    MarketInitialParams,
+    LoanConfig,
+    OrderConfig,
+    CurveCuts
+} from "contracts/v1/storage/TermMaxStorage.sol";
 
 library DeployUtils {
     bytes32 constant GT_ERC20 = keccak256("GearingTokenWithERC20");
@@ -38,9 +47,9 @@ library DeployUtils {
     struct Res {
         ITermMaxVault vault;
         IVaultFactory vaultFactory;
-        TermMaxFactory factory;
+        TermMaxFactoryV2 factory;
         ITermMaxOrder order;
-        TermMaxRouter router;
+        TermMaxRouterV2 router;
         MarketConfig marketConfig;
         OrderConfig orderConfig;
         ITermMaxMarket market;
@@ -49,7 +58,7 @@ library DeployUtils {
         IGearingToken gt;
         MockPriceFeed debtOracle;
         MockPriceFeed collateralOracle;
-        OracleAggregator oracle;
+        OracleAggregatorV2 oracle;
         MockERC20 collateral;
         MockERC20 debt;
         SwapRange swapRange;
@@ -69,10 +78,10 @@ library DeployUtils {
         res.oracle = deployOracle(admin, 0);
 
         res.oracle.submitPendingOracle(
-            address(res.debt), IOracle.Oracle(res.debtOracle, res.debtOracle, 0, 365 days, 0)
+            address(res.debt), IOracleV2.Oracle(res.debtOracle, res.debtOracle, 0, 365 days, 0)
         );
         res.oracle.submitPendingOracle(
-            address(res.collateral), IOracle.Oracle(res.collateralOracle, res.collateralOracle, 0, 365 days, 0)
+            address(res.collateral), IOracleV2.Oracle(res.collateralOracle, res.collateralOracle, 0, 365 days, 0)
         );
 
         res.oracle.acceptPendingOracle(address(res.debt));
@@ -93,7 +102,12 @@ library DeployUtils {
             admin: admin,
             gtImplementation: address(0),
             marketConfig: marketConfig,
-            loanConfig: LoanConfig({oracle: res.oracle, liquidationLtv: liquidationLtv, maxLtv: maxLtv, liquidatable: true}),
+            loanConfig: LoanConfig({
+                oracle: IOracle(address(res.oracle)),
+                liquidationLtv: liquidationLtv,
+                maxLtv: maxLtv,
+                liquidatable: true
+            }),
             gtInitalParams: abi.encode(type(uint256).max),
             tokenName: "DAI-ETH",
             tokenSymbol: "DAI-ETH"
@@ -123,10 +137,10 @@ library DeployUtils {
         res.oracle = deployOracle(admin, 0);
 
         res.oracle.submitPendingOracle(
-            address(res.debt), IOracle.Oracle(res.debtOracle, res.debtOracle, 0, 365 days, 0)
+            address(res.debt), IOracleV2.Oracle(res.debtOracle, res.debtOracle, 0, 365 days, 0)
         );
         res.oracle.submitPendingOracle(
-            address(res.collateral), IOracle.Oracle(res.collateralOracle, res.collateralOracle, 0, 365 days, 0)
+            address(res.collateral), IOracleV2.Oracle(res.collateralOracle, res.collateralOracle, 0, 365 days, 0)
         );
         res.oracle.acceptPendingOracle(address(res.debt));
         res.oracle.acceptPendingOracle(address(res.collateral));
@@ -146,7 +160,12 @@ library DeployUtils {
             admin: admin,
             gtImplementation: address(0),
             marketConfig: marketConfig,
-            loanConfig: LoanConfig({oracle: res.oracle, liquidationLtv: liquidationLtv, maxLtv: maxLtv, liquidatable: true}),
+            loanConfig: LoanConfig({
+                oracle: IOracle(address(res.oracle)),
+                liquidationLtv: liquidationLtv,
+                maxLtv: maxLtv,
+                liquidatable: true
+            }),
             gtInitalParams: abi.encode(type(uint256).max),
             tokenName: "DAI-ETH",
             tokenSymbol: "DAI-ETH"
@@ -178,10 +197,10 @@ library DeployUtils {
         res.oracle = deployOracle(admin, 0);
 
         res.oracle.submitPendingOracle(
-            address(res.debt), IOracle.Oracle(res.debtOracle, res.debtOracle, 0, 365 days, 0)
+            address(res.debt), IOracleV2.Oracle(res.debtOracle, res.debtOracle, 0, 365 days, 0)
         );
         res.oracle.submitPendingOracle(
-            address(res.collateral), IOracle.Oracle(res.collateralOracle, res.collateralOracle, 0, 365 days, 0)
+            address(res.collateral), IOracleV2.Oracle(res.collateralOracle, res.collateralOracle, 0, 365 days, 0)
         );
         res.oracle.acceptPendingOracle(address(res.debt));
         res.oracle.acceptPendingOracle(address(res.collateral));
@@ -201,7 +220,12 @@ library DeployUtils {
             admin: admin,
             gtImplementation: address(0),
             marketConfig: marketConfig,
-            loanConfig: LoanConfig({oracle: res.oracle, liquidationLtv: liquidationLtv, maxLtv: maxLtv, liquidatable: true}),
+            loanConfig: LoanConfig({
+                oracle: IOracle(address(res.oracle)),
+                liquidationLtv: liquidationLtv,
+                maxLtv: maxLtv,
+                liquidatable: true
+            }),
             gtInitalParams: abi.encode(type(uint256).max),
             tokenName: "DAI-ETH",
             tokenSymbol: "DAI-ETH"
@@ -227,10 +251,10 @@ library DeployUtils {
         res.oracle = deployOracle(admin, 0);
 
         res.oracle.submitPendingOracle(
-            address(res.debt), IOracle.Oracle(res.debtOracle, res.debtOracle, 0, 365 days, 0)
+            address(res.debt), IOracleV2.Oracle(res.debtOracle, res.debtOracle, 0, 365 days, 0)
         );
         res.oracle.submitPendingOracle(
-            address(res.collateral), IOracle.Oracle(res.collateralOracle, res.collateralOracle, 0, 365 days, 0)
+            address(res.collateral), IOracleV2.Oracle(res.collateralOracle, res.collateralOracle, 0, 365 days, 0)
         );
         res.oracle.acceptPendingOracle(address(res.debt));
         res.oracle.acceptPendingOracle(address(res.collateral));
@@ -250,7 +274,12 @@ library DeployUtils {
             admin: admin,
             gtImplementation: address(0),
             marketConfig: marketConfig,
-            loanConfig: LoanConfig({oracle: res.oracle, liquidationLtv: liquidationLtv, maxLtv: maxLtv, liquidatable: true}),
+            loanConfig: LoanConfig({
+                oracle: IOracle(address(res.oracle)),
+                liquidationLtv: liquidationLtv,
+                maxLtv: maxLtv,
+                liquidatable: true
+            }),
             gtInitalParams: abi.encode(type(uint256).max),
             tokenName: "DAI-ETH",
             tokenSymbol: "DAI-ETH"
@@ -272,34 +301,34 @@ library DeployUtils {
         order = market.createOrder(maker, maxXtReserve, swapTrigger, curveCuts);
     }
 
-    function deployFactory(address admin) public returns (TermMaxFactory factory) {
-        address tokenImplementation = address(new MintableERC20());
-        address orderImplementation = address(new TermMaxOrder());
-        TermMaxMarket m = new TermMaxMarket(tokenImplementation, orderImplementation);
-        factory = new TermMaxFactory(admin, address(m));
+    function deployFactory(address admin) public returns (TermMaxFactoryV2 factory) {
+        address tokenImplementation = address(new MintableERC20V2());
+        address orderImplementation = address(new TermMaxOrderV2());
+        TermMaxMarketV2 m = new TermMaxMarketV2(tokenImplementation, orderImplementation);
+        factory = new TermMaxFactoryV2(admin, address(m));
     }
 
-    function deployFactoryWithMockOrder(address admin) public returns (TermMaxFactory factory) {
-        address tokenImplementation = address(new MintableERC20());
+    function deployFactoryWithMockOrder(address admin) public returns (TermMaxFactoryV2 factory) {
+        address tokenImplementation = address(new MintableERC20V2());
         address orderImplementation = address(new MockOrder());
-        TermMaxMarket m = new TermMaxMarket(tokenImplementation, orderImplementation);
-        factory = new TermMaxFactory(admin, address(m));
+        TermMaxMarketV2 m = new TermMaxMarketV2(tokenImplementation, orderImplementation);
+        factory = new TermMaxFactoryV2(admin, address(m));
     }
 
-    function deployOracle(address admin, uint256 timeLock) public returns (OracleAggregator oracle) {
-        oracle = new OracleAggregator(admin, timeLock);
+    function deployOracle(address admin, uint256 timeLock) public returns (OracleAggregatorV2 oracle) {
+        oracle = new OracleAggregatorV2(admin, timeLock);
     }
 
-    function deployRouter(address admin) public returns (TermMaxRouter router) {
-        TermMaxRouter implementation = new TermMaxRouter();
-        bytes memory data = abi.encodeCall(TermMaxRouter.initialize, admin);
+    function deployRouter(address admin) public returns (TermMaxRouterV2 router) {
+        TermMaxRouterV2 implementation = new TermMaxRouterV2();
+        bytes memory data = abi.encodeCall(TermMaxRouterV2.initialize, admin);
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), data);
-        router = TermMaxRouter(address(proxy));
+        router = TermMaxRouterV2(address(proxy));
     }
 
     function deployVault(VaultInitialParams memory initialParams) public returns (ITermMaxVault vault) {
         OrderManager orderManager = new OrderManager();
-        TermMaxVault implementation = new TermMaxVault(address(orderManager));
+        TermMaxVaultV2 implementation = new TermMaxVaultV2(address(orderManager));
         VaultFactory vaultFactory = new VaultFactory(address(implementation));
 
         vault = ITermMaxVault(vaultFactory.createVault(initialParams, 0));

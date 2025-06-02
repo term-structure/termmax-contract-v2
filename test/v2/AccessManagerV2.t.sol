@@ -13,15 +13,16 @@ import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/Pau
 import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {GearingTokenWithERC20} from "contracts/v1/tokens/GearingTokenWithERC20.sol";
-import {ITermMaxMarket} from "contracts/interfaces/ITermMaxMarket.sol";
+import {ITermMaxMarket} from "contracts/v1/ITermMaxMarket.sol";
 import {MockERC20} from "contracts/v1/test/MockERC20.sol";
 import {MockPriceFeed} from "contracts/v1/test/MockPriceFeed.sol";
 import {ITermMaxFactory} from "contracts/v1/factory/ITermMaxFactory.sol";
 import {MarketConfig, FeeConfig, MarketInitialParams} from "contracts/v1/storage/TermMaxStorage.sol";
 import {IOwnable, IPausable, AccessManagerV2, AccessManager} from "contracts/v2/access/AccessManagerV2.sol";
-import {ITermMaxRouter, TermMaxRouter} from "contracts/router/TermMaxRouter.sol";
+import {TermMaxRouterV2} from "contracts/v2/router/TermMaxRouterV2.sol";
+import {ITermMaxRouter} from "contracts/v1/router/ITermMaxRouter.sol";
 import {ITermMaxVault, TermMaxVaultV2} from "contracts/v2/vault/TermMaxVaultV2.sol";
-import {Constants} from "contracts/lib/Constants.sol";
+import {Constants} from "contracts/v1/lib/Constants.sol";
 import "contracts/v1/storage/TermMaxStorage.sol";
 import {IOracleV2} from "contracts/v2/oracle/IOracleV2.sol";
 
@@ -415,7 +416,7 @@ contract AccessManagerTestV2 is Test {
         vm.startPrank(deployer);
 
         // Deploy a new router implementation
-        TermMaxRouter routerV2 = new TermMaxRouter();
+        TermMaxRouterV2 routerV2 = new TermMaxRouterV2();
 
         // Test upgrade with DEFAULT_ADMIN_ROLE
         manager.upgradeSubContract(UUPSUpgradeable(address(res.router)), address(routerV2), "");
@@ -515,7 +516,7 @@ contract AccessManagerTestV2 is Test {
 
     function testSubmitAndAcceptPendingOracle() public {
         address asset = address(res.collateral);
-        IOracle.Oracle memory oracle = IOracle.Oracle({
+        IOracleV2.Oracle memory oracle = IOracleV2.Oracle({
             aggregator: AggregatorV3Interface(address(new MockPriceFeed(sender))),
             backupAggregator: AggregatorV3Interface(address(new MockPriceFeed(sender))),
             heartbeat: 3600,
@@ -530,12 +531,12 @@ contract AccessManagerTestV2 is Test {
                 IAccessControl.AccessControlUnauthorizedAccount.selector, sender, manager.ORACLE_ROLE()
             )
         );
-        manager.submitPendingOracle(IOracle(address(res.oracle)), asset, oracle);
+        manager.submitPendingOracle(IOracleV2(address(res.oracle)), asset, oracle);
         vm.stopPrank();
 
         // Test that oracle role can submit pending oracle
         vm.startPrank(deployer);
-        manager.submitPendingOracle(IOracle(address(res.oracle)), asset, oracle);
+        manager.submitPendingOracle(IOracleV2(address(res.oracle)), asset, oracle);
 
         // Test that non-oracle role cannot accept pending oracle
         vm.stopPrank();
@@ -556,7 +557,7 @@ contract AccessManagerTestV2 is Test {
 
     function testRevokePendingOracle() public {
         address asset = address(res.collateral);
-        IOracle.Oracle memory oracle = IOracle.Oracle({
+        IOracleV2.Oracle memory oracle = IOracleV2.Oracle({
             aggregator: AggregatorV3Interface(address(new MockPriceFeed(sender))),
             backupAggregator: AggregatorV3Interface(address(new MockPriceFeed(sender))),
             heartbeat: 3600,
@@ -566,7 +567,7 @@ contract AccessManagerTestV2 is Test {
 
         // Submit a pending oracle
         vm.startPrank(deployer);
-        manager.submitPendingOracle(IOracle(address(res.oracle)), asset, oracle);
+        manager.submitPendingOracle(IOracleV2(address(res.oracle)), asset, oracle);
         vm.stopPrank();
 
         // Test that non-oracle role cannot revoke pending oracle

@@ -3,13 +3,13 @@ pragma solidity ^0.8.27;
 
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {ITermMaxMarket} from "contracts/ITermMaxMarket.sol";
-import {ITermMaxFactory} from "contracts/factory/ITermMaxFactory.sol";
-import {ITermMaxRouter} from "contracts/router/ITermMaxRouter.sol";
-import {ITermMaxOrder} from "contracts/ITermMaxOrder.sol";
-import {IOracle} from "contracts/oracle/IOracle.sol";
-import {ITermMaxVault} from "contracts/vault/ITermMaxVault.sol";
-import {MarketConfig, FeeConfig, MarketInitialParams} from "contracts/storage/TermMaxStorage.sol";
+import {ITermMaxMarket} from "../ITermMaxMarket.sol";
+import {ITermMaxFactory} from "../factory/ITermMaxFactory.sol";
+import {ITermMaxRouter} from "../router/ITermMaxRouter.sol";
+import {ITermMaxOrder} from "../ITermMaxOrder.sol";
+import {IOracle} from "../oracle/IOracle.sol";
+import {ITermMaxVault} from "../vault/ITermMaxVault.sol";
+import {MarketConfig, FeeConfig, MarketInitialParams} from "../storage/TermMaxStorage.sol";
 
 interface IOwnable {
     function transferOwnership(address newOwner) external;

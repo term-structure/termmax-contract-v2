@@ -22,10 +22,10 @@ import {TransferUtils} from "../v1/lib/TransferUtils.sol";
 import {ITermMaxMarketV2} from "./ITermMaxMarketV2.sol";
 
 /**
- * @title TermMax Order
+ * @title TermMax Order V2
  * @author Term Structure Labs
  */
-contract TermMaxOrder is
+contract TermMaxOrderV2 is
     ITermMaxOrder,
     ReentrancyGuardUpgradeable,
     Ownable2StepUpgradeable,

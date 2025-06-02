@@ -3,7 +3,7 @@ pragma solidity ^0.8.27;
 
 import {console} from "forge-std/console.sol";
 import {DeployUtils} from "./DeployUtils.sol";
-import "contracts/storage/TermMaxStorage.sol";
+import "contracts/v1/storage/TermMaxStorage.sol";
 
 library StateChecker {
     struct MarketState {

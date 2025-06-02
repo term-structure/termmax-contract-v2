@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {VaultInitialParams} from "contracts/storage/TermMaxStorage.sol";
+import {VaultInitialParams} from "../storage/TermMaxStorage.sol";
 
 /**
  * @title TermMax Vault Factory Interface
