@@ -27,7 +27,7 @@ import {
 import {JSONLoader} from "../utils/JSONLoader.sol";
 import "forge-std/Test.sol";
 
-abstract contract ForkBaseTest is Test {
+abstract contract ForkBaseTestV2 is Test {
     using SafeCast for *;
 
     string jsonData;

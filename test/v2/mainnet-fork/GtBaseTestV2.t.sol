@@ -6,28 +6,48 @@ import {DeployUtils} from "../utils/DeployUtils.sol";
 import {JSONLoader} from "../utils/JSONLoader.sol";
 import {StateChecker} from "../utils/StateChecker.sol";
 import {SwapUtils} from "../utils/SwapUtils.sol";
+import {ForkBaseTestV2} from "./ForkBaseTestV2.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {TermMaxFactory} from "contracts/factory/TermMaxFactory.sol";
-import {Constants} from "contracts/lib/Constants.sol";
-import {ITermMaxMarket, TermMaxMarket, MarketEvents} from "contracts/TermMaxMarket.sol";
-import {ITermMaxOrder} from "contracts/ITermMaxOrder.sol";
-import {IMintableERC20} from "contracts/tokens/IMintableERC20.sol";
-import {MockPriceFeed} from "contracts/test/MockPriceFeed.sol";
-import {IGearingToken, AbstractGearingToken, GearingTokenConstants} from "contracts/tokens/AbstractGearingToken.sol";
-import {IOracle, OracleAggregator, AggregatorV3Interface} from "contracts/oracle/OracleAggregator.sol";
-import {TermMaxRouter, ISwapAdapter, ITermMaxRouter, SwapUnit, RouterErrors} from "contracts/router/TermMaxRouter.sol";
-import {UniswapV3Adapter, ERC20SwapAdapter} from "contracts/router/swapAdapters/UniswapV3Adapter.sol";
-import {PendleSwapV3Adapter} from "contracts/router/swapAdapters/PendleSwapV3Adapter.sol";
-import {OdosV2Adapter, IOdosRouterV2} from "contracts/router/swapAdapters/OdosV2Adapter.sol";
-import {ERC4626VaultAdapter} from "contracts/router/swapAdapters/ERC4626VaultAdapter.sol";
-import {TermMaxOrder, ITermMaxOrder} from "contracts/TermMaxOrder.sol";
-import {ForkBaseTest} from "./ForkBaseTest.sol";
-import {RouterEvents} from "contracts/events/RouterEvents.sol";
-import {MockFlashLoanReceiver} from "contracts/test/MockFlashLoanReceiver.sol";
-import "contracts/storage/TermMaxStorage.sol";
+import {TermMaxFactoryV2, ITermMaxFactory} from "contracts/v2/factory/TermMaxFactoryV2.sol";
+import {ITermMaxRouterV2, TermMaxRouterV2} from "contracts/v2/router/TermMaxRouterV2.sol";
+import {TermMaxMarketV2, Constants, SafeCast} from "contracts/v2/TermMaxMarketV2.sol";
+import {TermMaxOrderV2, OrderConfig} from "contracts/v2/TermMaxOrderV2.sol";
+import {MockERC20} from "contracts/v1/test/MockERC20.sol";
+import {MockPriceFeed} from "contracts/v1/test/MockPriceFeed.sol";
+import {MockOrderV2} from "contracts/v2/test/MockOrderV2.sol";
+import {MintableERC20V2} from "contracts/v2/tokens/MintableERC20V2.sol";
+import {IMintableERC20} from "contracts/v1/tokens/IMintableERC20.sol";
+import {SwapAdapter} from "contracts/v1/test/testnet/SwapAdapter.sol";
+import {IOracleV2, OracleAggregatorV2} from "contracts/v2/oracle/OracleAggregatorV2.sol";
+import {IOracle} from "contracts/v1/oracle/IOracle.sol";
+import {IOrderManager, OrderManager} from "contracts/v1/vault/OrderManager.sol";
+import {ITermMaxVault, ITermMaxVaultV2, TermMaxVaultV2} from "contracts/v2/vault/TermMaxVaultV2.sol";
+import {VaultFactory, IVaultFactory} from "contracts/v1/factory/VaultFactory.sol";
+import {
+    MarketConfig,
+    FeeConfig,
+    MarketInitialParams,
+    LoanConfig,
+    VaultInitialParams
+} from "contracts/v1/storage/TermMaxStorage.sol";
+import {ITermMaxRouter, RouterEvents, RouterErrors} from "contracts/v1/router/TermMaxRouter.sol";
+import {MockFlashLoanReceiver} from "contracts/v1/test/MockFlashLoanReceiver.sol";
+import {SwapUnit, ISwapAdapter} from "contracts/v1/router/ISwapAdapter.sol";
+import {
+    IGearingToken, IGearingTokenV2, GearingTokenWithERC20V2
+} from "contracts/v2/tokens/GearingTokenWithERC20V2.sol";
+import {MintableERC20V2} from "contracts/v2/tokens/MintableERC20V2.sol";
+import {ITermMaxOrder} from "contracts/v1/ITermMaxOrder.sol";
+import {ISwapCallback} from "contracts/v1/ISwapCallback.sol";
+import {UniswapV3AdapterV2} from "contracts/v2/router/swapAdapters/UniswapV3AdapterV2.sol";
+import {PendleSwapV3AdapterV2} from "contracts/v2/router/swapAdapters/PendleSwapV3AdapterV2.sol";
+import {OdosV2AdapterV2} from "contracts/v2/router/swapAdapters/OdosV2AdapterV2.sol";
+import {ERC4626VaultAdapterV2} from "contracts/v2/router/swapAdapters/ERC4626VaultAdapterV2.sol";
+import {KyberswapV2AdapterV2} from "contracts/v2/router/swapAdapters/KyberswapV2AdapterV2.sol";
 
-abstract contract GtBaseTest is ForkBaseTest {
+abstract contract GtBaseTestV2 is ForkBaseTestV2 {
     enum TokenType {
         General,
         Pendle,
@@ -54,17 +74,17 @@ abstract contract GtBaseTest is ForkBaseTest {
         uint256 orderInitialAmount;
         MarketInitialParams marketInitialParams;
         OrderConfig orderConfig;
-        TermMaxMarket market;
+        TermMaxMarketV2 market;
         IMintableERC20 ft;
         IMintableERC20 xt;
         IGearingToken gt;
         IERC20Metadata collateral;
         IERC20Metadata debtToken;
-        IOracle oracle;
+        IOracleV2 oracle;
         MockPriceFeed collateralPriceFeed;
         MockPriceFeed debtPriceFeed;
         ITermMaxOrder order;
-        ITermMaxRouter router;
+        ITermMaxRouterV2 router;
         uint256 maxXtReserve;
         address maker;
         SwapData swapData;
@@ -88,19 +108,19 @@ abstract contract GtBaseTest is ForkBaseTest {
         res.debtPriceFeed = deployMockPriceFeed(res.marketInitialParams.admin);
         res.oracle.submitPendingOracle(
             address(res.marketInitialParams.collateral),
-            IOracle.Oracle(res.collateralPriceFeed, res.collateralPriceFeed, 0, 0, 0)
+            IOracleV2.Oracle(res.collateralPriceFeed, res.collateralPriceFeed, 0, 0, 0)
         );
         res.oracle.submitPendingOracle(
-            address(res.marketInitialParams.debtToken), IOracle.Oracle(res.debtPriceFeed, res.debtPriceFeed, 0, 0, 0)
+            address(res.marketInitialParams.debtToken), IOracleV2.Oracle(res.debtPriceFeed, res.debtPriceFeed, 0, 0, 0)
         );
 
         res.oracle.acceptPendingOracle(address(res.marketInitialParams.collateral));
         res.oracle.acceptPendingOracle(address(res.marketInitialParams.debtToken));
 
         res.marketInitialParams.marketConfig.maturity += uint64(block.timestamp);
-        res.marketInitialParams.loanConfig.oracle = res.oracle;
+        res.marketInitialParams.loanConfig.oracle = IOracle(address(res.oracle));
 
-        res.market = TermMaxMarket(
+        res.market = TermMaxMarketV2(
             deployFactory(res.marketInitialParams.admin).createMarket(
                 keccak256("GearingTokenWithERC20"), res.marketInitialParams, 0
             )
@@ -126,11 +146,12 @@ abstract contract GtBaseTest is ForkBaseTest {
             res.market.createOrder(res.maker, res.maxXtReserve, ISwapCallback(address(0)), res.orderConfig.curveCuts);
 
         res.swapAdapters.uniswapAdapter =
-            address(new UniswapV3Adapter(vm.parseJsonAddress(jsonData, ".routers.uniswapRouter")));
+            address(new UniswapV3AdapterV2(vm.parseJsonAddress(jsonData, ".routers.uniswapRouter")));
         res.swapAdapters.pendleAdapter =
-            address(new PendleSwapV3Adapter(vm.parseJsonAddress(jsonData, ".routers.pendleRouter")));
-        res.swapAdapters.odosAdapter = address(new OdosV2Adapter(vm.parseJsonAddress(jsonData, ".routers.odosRouter")));
-        res.swapAdapters.vaultAdapter = address(new ERC4626VaultAdapter());
+            address(new PendleSwapV3AdapterV2(vm.parseJsonAddress(jsonData, ".routers.pendleRouter")));
+        res.swapAdapters.odosAdapter =
+            address(new OdosV2AdapterV2(vm.parseJsonAddress(jsonData, ".routers.odosRouter")));
+        res.swapAdapters.vaultAdapter = address(new ERC4626VaultAdapterV2());
         res.router = deployRouter(res.marketInitialParams.admin);
         res.router.setAdapterWhitelist(res.swapAdapters.uniswapAdapter, true);
         res.router.setAdapterWhitelist(res.swapAdapters.pendleAdapter, true);
@@ -306,7 +327,7 @@ abstract contract GtBaseTest is ForkBaseTest {
         uint256 debtTokenBalanceBeforeRepay = res.debtToken.balanceOf(taker);
         bool byDebtToken = true;
 
-        ITermMaxRouter.TermMaxSwapData memory swapData;
+        ITermMaxRouterV2.TermMaxSwapData memory swapData;
 
         (, uint128 debtAmt, bytes memory collateralData) = res.gt.loanInfo(gtId);
         uint256 netTokenOut = res.router.flashRepayFromCollV2(
@@ -335,7 +356,7 @@ abstract contract GtBaseTest is ForkBaseTest {
         amtsToBuyFt[0] = debtAmt;
         bool byDebtToken = false;
 
-        ITermMaxRouter.TermMaxSwapData memory swapData;
+        ITermMaxRouterV2.TermMaxSwapData memory swapData;
         swapData.tokenIn = address(res.debtToken);
         swapData.tokenOut = address(res.ft);
         swapData.orders = orders;

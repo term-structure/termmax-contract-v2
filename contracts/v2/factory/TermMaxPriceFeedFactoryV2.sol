@@ -5,7 +5,7 @@ import {TermMaxERC4626PriceFeed} from "../oracle/priceFeeds/TermMaxERC4626PriceF
 import {TermMaxPriceFeedConverter} from "../oracle/priceFeeds/TermMaxPriceFeedConverter.sol";
 import {TermMaxPTPriceFeed} from "../oracle/priceFeeds/TermMaxPTPriceFeed.sol";
 
-contract TermMaxPriceFeedFactory {
+contract TermMaxPriceFeedFactoryV2 {
     event PriceFeedCreated(address indexed priceFeed);
 
     function createPriceFeedWithERC4626(address _assetPriceFeed, address _vault) external returns (address) {
