@@ -4,7 +4,7 @@ pragma solidity ^0.8.27;
 import {console} from "forge-std/Script.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {Constants} from "contracts/lib/Constants.sol";
+import {Constants} from "contracts/v1/lib/Constants.sol";
 import {DeployUtils} from "./DeployUtils.sol";
 
 library LoanUtils {

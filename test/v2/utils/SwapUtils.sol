@@ -3,7 +3,7 @@ pragma solidity ^0.8.27;
 
 import {console} from "forge-std/Script.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import {Constants} from "contracts/lib/Constants.sol";
+import {Constants} from "contracts/v1/lib/Constants.sol";
 import {DeployUtils} from "./DeployUtils.sol";
 
 library SwapUtils {

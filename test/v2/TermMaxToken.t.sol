@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import {TermMaxToken, StakingBuffer} from "contracts/tokens/TermMaxToken.sol";
+import {TermMaxToken, StakingBuffer} from "contracts/v2/tokens/TermMaxToken.sol";
 import {Test} from "forge-std/Test.sol";
 import {MockAave} from "contracts/v2/test/MockAave.sol";
 import {MockERC20} from "contracts/v1/test/MockERC20.sol";
