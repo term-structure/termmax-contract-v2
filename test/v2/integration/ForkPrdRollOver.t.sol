@@ -13,7 +13,7 @@ import {
     GtConfig
 } from "contracts/v1/tokens/AbstractGearingToken.sol";
 import {PendleSwapV3AdapterV2} from "contracts/v2/router/swapAdapters/PendleSwapV3AdapterV2.sol";
-import {IOracle} from "contracts/oracle/IOracleV1.sol";
+import {IOracle} from "contracts/v1/oracle/IOracle.sol";
 import {
     ForkBaseTestV2,
     TermMaxFactoryV2,
