@@ -4,7 +4,7 @@ pragma solidity ^0.8.27;
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {ITermMaxPriceFeed, AggregatorV3Interface} from "./ITermMaxPriceFeed.sol";
-import {MathLib} from "contracts/lib/MathLib.sol";
+import {MathLib} from "contracts/v1/lib/MathLib.sol";
 
 contract TermMaxERC4626PriceFeed is ITermMaxPriceFeed {
     using MathLib for *;

@@ -4,7 +4,7 @@ pragma solidity ^0.8.27;
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {MathLib} from "contracts/lib/MathLib.sol";
+import {MathLib} from "contracts/v1/lib/MathLib.sol";
 
 contract PriceFeedWithERC4626 is AggregatorV3Interface {
     using MathLib for *;
