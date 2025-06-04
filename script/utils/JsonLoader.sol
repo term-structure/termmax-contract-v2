@@ -3,7 +3,7 @@ pragma solidity ^0.8.27;
 
 import "forge-std/Test.sol";
 import {stdJson} from "forge-std/StdJson.sol";
-import {MarketConfig, FeeConfig, LoanConfig} from "../../contracts/storage/TermMaxStorage.sol";
+import {MarketConfig, FeeConfig, LoanConfig} from "contracts/v1/storage/TermMaxStorage.sol";
 
 library JsonLoader {
     using stdJson for string;
