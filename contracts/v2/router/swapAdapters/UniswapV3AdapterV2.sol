@@ -1,18 +1,23 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import "../../../v1/router/swapAdapters/UniswapV3Adapter.sol";
+import {ISwapRouter} from "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
+import "./ERC20SwapAdapterV2.sol";
 
 /**
  * @title TermMax UniswapV3AdapterV2
  * @author Term Structure Labs
  */
-contract UniswapV3AdapterV2 is UniswapV3Adapter {
-    using TransferUtils for IERC20;
+contract UniswapV3AdapterV2 is ERC20SwapAdapterV2 {
+    using TransferUtilsV2 for IERC20;
 
-    constructor(address router_) UniswapV3Adapter(router_) {}
+    ISwapRouter public immutable router;
 
-    function _swap(IERC20 tokenIn, IERC20, uint256 amount, bytes memory swapData)
+    constructor(address router_) {
+        router = ISwapRouter(router_);
+    }
+
+    function _swap(address receipient, IERC20 tokenIn, IERC20 tokenOut, uint256 amount, bytes memory swapData)
         internal
         virtual
         override
@@ -29,7 +34,7 @@ contract UniswapV3AdapterV2 is UniswapV3Adapter {
         tokenOutAmt = router.exactInput(
             ISwapRouter.ExactInputParams({
                 path: path,
-                recipient: address(this),
+                recipient: receipient,
                 deadline: deadline,
                 amountIn: amount,
                 amountOutMinimum: amountOutMinimum

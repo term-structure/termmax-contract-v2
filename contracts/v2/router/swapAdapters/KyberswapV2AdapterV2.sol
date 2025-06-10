@@ -1,21 +1,35 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import "../../../v1/router/swapAdapters/KyberswapV2Adapter.sol";
+import {Address} from "@openzeppelin/contracts/utils/Address.sol";
+import "./ERC20SwapAdapterV2.sol";
+
+interface IKyberScalingHelper {
+    function getScaledInputData(bytes calldata inputData, uint256 newAmount)
+        external
+        view
+        returns (bool isSuccess, bytes memory data);
+}
 
 /**
  * @title TermMax KyberswapV2AdapterV2
  * @author Term Structure Labs
  */
-contract KyberswapV2AdapterV2 is KyberswapV2Adapter {
+contract KyberswapV2AdapterV2 is ERC20SwapAdapterV2 {
     using Address for address;
-    using TransferUtils for IERC20;
+    using TransferUtilsV2 for IERC20;
 
     error KyberScalingFailed();
 
-    constructor(address router_, address scalingHelper_) KyberswapV2Adapter(router_, scalingHelper_) {}
+    address public immutable router;
+    address public immutable KYBER_SCALING_HELPER;
 
-    function _swap(IERC20 tokenIn, IERC20, uint256 amountIn, bytes memory swapData)
+    constructor(address router_, address scalingHelper_) {
+        router = router_;
+        KYBER_SCALING_HELPER = scalingHelper_; // 0x2f577A41BeC1BE1152AeEA12e73b7391d15f655D
+    }
+
+    function _swap(address receipient, IERC20 tokenIn, IERC20, uint256 amountIn, bytes memory swapData)
         internal
         virtual
         override

@@ -11,7 +11,6 @@ import {IOracleV2} from "../oracle/IOracleV2.sol";
  * @dev Inherits from AccessManager V1 and adds V2-specific functionality for managing oracles and batch operations
  */
 contract AccessManagerV2 is AccessManager {
-    
     /**
      * @notice Batch pause/unpause multiple entities in a single transaction
      * @dev Allows efficient management of multiple pausable contracts simultaneously

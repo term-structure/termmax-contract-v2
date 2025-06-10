@@ -1,21 +1,29 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import "../../../v1/router/swapAdapters/PendleSwapV3Adapter.sol";
+import {IPAllActionV3} from "@pendle/core-v2/contracts/interfaces/IPAllActionV3.sol";
+import {IPMarket, IPPrincipalToken, IPYieldToken} from "@pendle/core-v2/contracts/interfaces/IPMarket.sol";
+import {PendleHelper} from "../../extensions/pendle/PendleHelper.sol";
+import "./ERC20SwapAdapterV2.sol";
 
 /**
- * @title TermMax PendleSwapV3Adapter
+ * @title TermMax PendleSwapV3AdapterV2
  * @author Term Structure Labs
  */
-contract PendleSwapV3AdapterV2 is PendleSwapV3Adapter {
-    using TransferUtils for IERC20;
+contract PendleSwapV3AdapterV2 is ERC20SwapAdapterV2, PendleHelper {
+    using TransferUtilsV2 for IERC20;
 
-    constructor(address router_) PendleSwapV3Adapter(router_) {}
+    IPAllActionV3 public immutable router;
 
-    function _swap(IERC20 tokenIn, IERC20 tokenOut, uint256 amount, bytes memory swapData)
+    constructor(address router_) {
+        router = IPAllActionV3(router_);
+    }
+
+    function _swap(address receipient, IERC20 tokenIn, IERC20 tokenOut, uint256 amount, bytes memory swapData)
         internal
         virtual
         override
+        onlyProxy
         returns (uint256 tokenOutAmt)
     {
         (address ptMarketAddr, uint256 inAmount, uint256 minTokenOut) =
@@ -31,7 +39,7 @@ contract PendleSwapV3AdapterV2 is PendleSwapV3Adapter {
         minTokenOut = (minTokenOut * amount) / inAmount;
         if (tokenOut == PT) {
             (tokenOutAmt,,) = router.swapExactTokenForPt(
-                address(this),
+                receipient,
                 address(market),
                 minTokenOut,
                 defaultApprox,
@@ -41,11 +49,11 @@ contract PendleSwapV3AdapterV2 is PendleSwapV3Adapter {
         } else {
             if (PT.isExpired()) {
                 (tokenOutAmt,) = router.redeemPyToToken(
-                    address(this), PT.YT(), amount, createTokenOutputStruct(address(tokenOut), minTokenOut)
+                    receipient, PT.YT(), amount, createTokenOutputStruct(address(tokenOut), minTokenOut)
                 );
             } else {
                 (tokenOutAmt,,) = router.swapExactPtForToken(
-                    address(this),
+                    receipient,
                     address(market),
                     amount,
                     createTokenOutputStruct(address(tokenOut), minTokenOut),

@@ -16,7 +16,9 @@ import {IMintableERC20} from "contracts/v1/tokens/IMintableERC20.sol";
 import {MockPriceFeed} from "contracts/v1/test/MockPriceFeed.sol";
 import {IGearingToken, AbstractGearingToken} from "contracts/v1/tokens/AbstractGearingToken.sol";
 import {IOracle, OracleAggregator, AggregatorV3Interface} from "contracts/v1/oracle/OracleAggregator.sol";
-import {TermMaxRouter, ISwapAdapter, ITermMaxRouter, SwapUnit, RouterErrors} from "contracts/v1/router/TermMaxRouter.sol";
+import {
+    TermMaxRouter, ISwapAdapter, ITermMaxRouter, SwapUnit, RouterErrors
+} from "contracts/v1/router/TermMaxRouter.sol";
 import {UniswapV3Adapter, ERC20SwapAdapter} from "contracts/v1/router/swapAdapters/UniswapV3Adapter.sol";
 import {PendleSwapV3Adapter} from "contracts/v1/router/swapAdapters/PendleSwapV3Adapter.sol";
 import {OdosV2Adapter, IOdosRouterV2} from "contracts/v1/router/swapAdapters/OdosV2Adapter.sol";

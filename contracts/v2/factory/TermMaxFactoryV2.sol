@@ -27,7 +27,7 @@ contract TermMaxFactoryV2 is Ownable2Step, FactoryErrors, FactoryEvents, ITermMa
     address public immutable TERMMAX_MARKET_IMPLEMENTATION;
 
     /// @notice Mapping of gearing token implementation names to their contract addresses
-    /// @dev Based on the abstract GearingToken contract, different GearingTokens can be adapted 
+    /// @dev Based on the abstract GearingToken contract, different GearingTokens can be adapted
     /// to various collaterals, such as ERC20 tokens and ERC721 tokens
     /// @dev Keys are keccak256 hashes of implementation names for gas efficiency
     mapping(bytes32 => address) public gtImplements;
@@ -107,13 +107,13 @@ contract TermMaxFactoryV2 is Ownable2Step, FactoryErrors, FactoryEvents, ITermMa
         if (params.gtImplementation == address(0)) {
             revert CantNotFindGtImplementation();
         }
-        
+
         // Deploy market using CREATE2 for deterministic addressing
         market = Clones.cloneDeterministic(
             TERMMAX_MARKET_IMPLEMENTATION,
             keccak256(abi.encode(msg.sender, params.collateral, params.debtToken, params.marketConfig.maturity, salt))
         );
-        
+
         // Initialize the newly deployed market with provided parameters
         ITermMaxMarket(market).initialize(params);
 

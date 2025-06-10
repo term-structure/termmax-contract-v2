@@ -1,20 +1,41 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import "../../../v1/router/swapAdapters/OdosV2Adapter.sol";
+import "./ERC20SwapAdapterV2.sol";
+
+interface IOdosRouterV2 {
+    struct swapTokenInfo {
+        address inputToken;
+        uint256 inputAmount;
+        address inputReceiver;
+        address outputToken;
+        uint256 outputQuote;
+        uint256 outputMin;
+        address outputReceiver;
+    }
+
+    function swap(swapTokenInfo memory tokenInfo, bytes calldata pathDefinition, address executor, uint32 referralCode)
+        external
+        payable
+        returns (uint256 amountOut);
+}
 
 /**
  * @title TermMax OdosAdapterV2AdapterV2
  * @author Term Structure Labs
  */
-contract OdosV2AdapterV2 is OdosV2Adapter {
-    using TransferUtils for IERC20;
+contract OdosV2AdapterV2 is ERC20SwapAdapterV2 {
+    using TransferUtilsV2 for IERC20;
 
     error InvalidOutputToken();
 
-    constructor(address router_) OdosV2Adapter(router_) {}
+    IOdosRouterV2 public immutable router;
 
-    function _swap(IERC20 tokenIn, IERC20 tokenOut, uint256 amountIn, bytes memory swapData)
+    constructor(address router_) {
+        router = IOdosRouterV2(router_);
+    }
+
+    function _swap(address receipient, IERC20 tokenIn, IERC20 tokenOut, uint256 amountIn, bytes memory swapData)
         internal
         virtual
         override
@@ -38,7 +59,7 @@ contract OdosV2AdapterV2 is OdosV2Adapter {
         tokenInfo.outputQuote = (tokenInfo.outputQuote * amountIn) / tokenInfo.inputAmount;
         tokenInfo.outputMin = (tokenInfo.outputMin * amountIn) / tokenInfo.inputAmount;
         tokenInfo.inputAmount = amountIn;
-        tokenInfo.outputReceiver = address(this);
+        tokenInfo.outputReceiver = receipient;
 
         tokenOutAmt = router.swap(tokenInfo, pathDefinition, executor, referralCode);
     }

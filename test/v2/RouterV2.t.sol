@@ -55,7 +55,7 @@ import {
     RouterEvents
 } from "contracts/v2/router/TermMaxRouterV2.sol";
 import {ITermMaxRouter} from "contracts/v1/router/ITermMaxRouter.sol";
-import {MockSwapAdapter} from "contracts/v1/test/MockSwapAdapter.sol";
+import {MockSwapAdapterV2} from "contracts/v2/test/MockSwapAdapterV2.sol";
 import {ITermMaxOrder} from "contracts/v1/ITermMaxOrder.sol";
 
 contract RouterTestV2 is Test {
@@ -75,7 +75,7 @@ contract RouterTestV2 is Test {
 
     address pool = vm.randomAddress();
 
-    MockSwapAdapter adapter;
+    MockSwapAdapterV2 adapter;
 
     function setUp() public {
         vm.startPrank(deployer);
@@ -106,7 +106,7 @@ contract RouterTestV2 is Test {
         res.xt.transfer(address(res.order), amount);
 
         res.router = DeployUtils.deployRouter(deployer);
-        adapter = new MockSwapAdapter(pool);
+        adapter = new MockSwapAdapterV2(pool);
         res.router.setAdapterWhitelist(address(adapter), true);
 
         vm.stopPrank();

@@ -15,7 +15,7 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {ITermMaxMarket} from "../../v1/ITermMaxMarket.sol";
 import {ITermMaxMarketV2} from "../../v2/ITermMaxMarketV2.sol";
 import {ITermMaxOrder} from "../../v1/ITermMaxOrder.sol";
-import {SwapUnit, ISwapAdapter} from "../../v1/router/ISwapAdapter.sol";
+import {SwapUnit} from "../../v1/router/ISwapAdapter.sol";
 import {RouterErrors} from "../../v1/errors/RouterErrors.sol";
 import {RouterEvents} from "../../v1/events/RouterEvents.sol";
 import {TransferUtils} from "../../v1/lib/TransferUtils.sol";
@@ -28,6 +28,7 @@ import {CurveCuts} from "../../v1/storage/TermMaxStorage.sol";
 import {ISwapCallback} from "../../v1/ISwapCallback.sol";
 import {Constants} from "../../v1/lib/Constants.sol";
 import {MathLib} from "../../v1/lib/MathLib.sol";
+import {IERC20SwapAdapter} from "./IERC20SwapAdapter.sol";
 
 /**
  * @title TermMax Router V2
@@ -69,22 +70,6 @@ contract TermMaxRouterV2 is
         __UUPSUpgradeable_init();
         __Pausable_init();
         __Ownable_init(admin);
-    }
-
-    function depositAndMint(ITermMaxMarket market, address recipient, uint256 amount) external whenNotPaused {
-        (,,,, IERC20 underlying) = market.tokens();
-        IERC4626 vault = IERC4626(address(underlying));
-        IERC20(vault.asset()).safeTransferFrom(msg.sender, address(this), amount);
-        underlying.safeIncreaseAllowance(address(market), amount);
-        market.mint(recipient, amount);
-    }
-
-    function burnAndWithdraw(ITermMaxMarket market, address recipient, uint256 amount) external whenNotPaused {
-        (IERC20 ft, IERC20 xt,,, IERC20 underlying) = market.tokens();
-        ft.safeTransferFrom(msg.sender, address(this), amount);
-        xt.safeTransferFrom(msg.sender, address(this), amount);
-        ITermMaxMarketV2(address(market)).burn(address(this), address(this), amount);
-        IERC4626(address(underlying)).redeem(amount, recipient, address(this));
     }
 
     /**
@@ -459,7 +444,7 @@ contract TermMaxRouterV2 is
         (,,,, IERC20 debtToken) = market.tokens();
         (uint256 redeemedAmt, bytes memory collateralData) =
             ITermMaxMarketV2(address(market)).redeem(msg.sender, address(this), ftAmount);
-        redeemedAmt += _decodeAmount(_doSwap(collateralData, units));
+        redeemedAmt += _doSwap(_decodeAmount(collateralData), units);
         if (redeemedAmt < minTokenOut) {
             revert InsufficientTokenOut(address(debtToken), redeemedAmt, minTokenOut);
         }
@@ -578,26 +563,17 @@ contract TermMaxRouterV2 is
         (address gt, uint256 tokenInAmt, SwapUnit[] memory units, FlashLoanType flashLoanType) =
             abi.decode(data, (address, uint256, SwapUnit[], FlashLoanType));
         uint256 totalAmount = amount + tokenInAmt;
-        collateralData = _doSwap(abi.encode(totalAmount), units);
+        uint256 collateralBalance = _doSwap(totalAmount, units);
         SwapUnit memory lastUnit = units[units.length - 1];
         if (!adapterWhitelist[lastUnit.adapter]) {
             revert AdapterNotWhitelisted(lastUnit.adapter);
         }
-
+        IERC20 collateral = IERC20(lastUnit.tokenOut);
         if (flashLoanType == FlashLoanType.COLLATERAL) {
-            IERC20 collateral = IERC20(lastUnit.tokenOut);
-            uint256 collateralBalance = collateral.balanceOf(address(this));
-            collateralData = _encodeAmount(collateralBalance);
-            // approve all collateral if fashloan type is collateral
-            collateral.safeIncreaseAllowance(gt, collateralBalance);
-        } else if (flashLoanType == FlashLoanType.DEBT) {
-            bytes memory approvalData =
-                abi.encodeCall(ISwapAdapter.approveOutputToken, (lastUnit.tokenOut, gt, collateralData));
-            (bool success, bytes memory returnData) = lastUnit.adapter.delegatecall(approvalData);
-            if (!success) {
-                revert ApproveTokenFailWhenSwap(lastUnit.tokenOut, returnData);
-            }
+            collateralBalance = collateral.balanceOf(address(this));
         }
+        collateral.safeIncreaseAllowance(gt, collateralBalance);
+        collateralData = _encodeAmount(collateralBalance);
     }
 
     function _balanceOf(IERC20 token, address account) internal view returns (uint256) {
@@ -632,11 +608,10 @@ contract TermMaxRouterV2 is
     function _flashRepay(IERC20 repayToken, bytes memory collateralData, bytes memory callbackData) internal {
         (SwapUnit[] memory units, TermMaxSwapData memory swapData) =
             abi.decode(callbackData, (SwapUnit[], TermMaxSwapData));
-        bytes memory outData = _doSwap(collateralData, units);
+        uint256 amount = _doSwap(_decodeAmount(collateralData), units);
 
         if (swapData.orders.length > 0) {
             // swap token to exact token
-            uint256 amount = abi.decode(outData, (uint256));
             _swapTokenToExactToken(
                 IERC20(swapData.tokenIn),
                 IERC20(swapData.tokenOut),
@@ -663,7 +638,8 @@ contract TermMaxRouterV2 is
         ) = abi.decode(callbackData, (address, uint128, uint128, ITermMaxMarket, uint256, SwapUnit[], TermMaxSwapData));
         {
             // swap collateral
-            collateralData = units.length == 0 ? collateralData : _doSwap(collateralData, units);
+            collateralData =
+                units.length == 0 ? collateralData : _encodeAmount(_doSwap(_decodeAmount(collateralData), units));
         }
         (IERC20 ft,, IGearingToken gt, address collateral,) = market.tokens();
         uint256 gtId;
@@ -712,7 +688,7 @@ contract TermMaxRouterV2 is
         }
     }
 
-    function _doSwap(bytes memory inputData, SwapUnit[] memory units) internal returns (bytes memory outData) {
+    function _doSwap(uint256 inputAmt, SwapUnit[] memory units) internal returns (uint256 outputAmt) {
         if (units.length == 0) {
             revert SwapUnitsIsEmpty();
         }
@@ -720,16 +696,18 @@ contract TermMaxRouterV2 is
             if (!adapterWhitelist[units[i].adapter]) {
                 revert AdapterNotWhitelisted(units[i].adapter);
             }
-            bytes memory dataToSwap =
-                abi.encodeCall(ISwapAdapter.swap, (units[i].tokenIn, units[i].tokenOut, inputData, units[i].swapData));
+            bytes memory dataToSwap = abi.encodeCall(
+                IERC20SwapAdapter.swap,
+                (address(this), units[i].tokenIn, units[i].tokenOut, inputAmt, units[i].swapData)
+            );
 
             (bool success, bytes memory returnData) = units[i].adapter.delegatecall(dataToSwap);
             if (!success) {
                 revert SwapFailed(units[i].adapter, returnData);
             }
-            inputData = abi.decode(returnData, (bytes));
+            inputAmt = abi.decode(returnData, (uint256));
         }
-        outData = inputData;
+        outputAmt = inputAmt;
     }
 
     function onERC721Received(address, address, uint256, bytes memory) external pure override returns (bytes4) {

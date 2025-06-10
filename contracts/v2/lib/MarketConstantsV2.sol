@@ -12,15 +12,15 @@ library MarketConstantsV2 {
     /// @notice Prefix for Fixed Term token names and symbols (e.g., "FT:USDC-24-Dec")
     /// @dev Fixed Term tokens represent the fixed-rate lending position in a market
     string constant PREFIX_FT = "FT:";
-    
+
     /// @notice Prefix for Variable Term token names and symbols (e.g., "XT:USDC-24-Dec")
     /// @dev Variable Term tokens represent the variable-rate lending position in a market
     string constant PREFIX_XT = "XT:";
-    
+
     /// @notice Prefix for Gearing Token names and symbols (e.g., "GT:USDC-24-Dec")
     /// @dev Gearing Tokens are NFTs representing leveraged positions with collateral backing
     string constant PREFIX_GT = "GT:";
-    
+
     /// @notice Prefix for TermMax Market contract names (e.g., "Termmax Market:USDC-24-Dec")
     /// @dev Used to create human-readable market identifiers for easier recognition and debugging
     /// @dev V2-specific addition for enhanced market identification

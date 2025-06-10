@@ -9,7 +9,7 @@ pragma solidity ^0.8.27;
  * Implements price feed aggregation with primary and backup oracles,
  * staleness checks via heartbeats, and governance-controlled updates with timelocks
  * similar to AAVE's oracle architecture
- * 
+ *
  * Key V2 improvements over V1:
  * - Independent heartbeat configuration for backup oracles
  * - Price capping mechanism with maxPrice parameter
@@ -123,24 +123,24 @@ contract OracleAggregatorV2 is IOracleV2, Ownable2Step {
             emit UpdateOracle(asset, AggregatorV3Interface(address(0)), AggregatorV3Interface(address(0)), 0, 0, 0);
             return;
         }
-        
+
         // Validate inputs for oracle addition/update
         if (asset == address(0) || oracle.aggregator == AggregatorV3Interface(address(0))) {
             revert InvalidAssetOrOracle();
         }
-        
+
         // Ensure backup aggregator has same decimals as primary if both are present
         if (address(oracle.backupAggregator) != address(0)) {
             if (oracle.aggregator.decimals() != oracle.backupAggregator.decimals()) {
                 revert InvalidAssetOrOracle();
             }
         }
-        
+
         // Store pending oracle with timelock
         pendingOracles[asset].oracle = oracle;
         uint64 validAt = uint64(block.timestamp + _timeLock);
         pendingOracles[asset].validAt = validAt;
-        
+
         emit SubmitPendingOracle(
             asset,
             oracle.aggregator,
@@ -162,12 +162,12 @@ contract OracleAggregatorV2 is IOracleV2, Ownable2Step {
         if (block.timestamp < pendingOracles[asset].validAt) {
             revert TimelockNotElapsed();
         }
-        
+
         // Activate the pending oracle
         Oracle memory oracle = pendingOracles[asset].oracle;
         oracles[asset] = oracle;
         delete pendingOracles[asset];
-        
+
         emit UpdateOracle(
             asset, oracle.aggregator, oracle.backupAggregator, oracle.maxPrice, oracle.heartbeat, oracle.backupHeartbeat
         );
@@ -189,7 +189,7 @@ contract OracleAggregatorV2 is IOracleV2, Ownable2Step {
      */
     function getPrice(address asset) external view override returns (uint256, uint8) {
         Oracle memory oracle = oracles[asset];
-        
+
         // Try primary oracle first
         {
             (, int256 answer,, uint256 updatedAt,) = oracle.aggregator.latestRoundData();
@@ -205,7 +205,7 @@ contract OracleAggregatorV2 is IOracleV2, Ownable2Step {
                 // Primary exceeds cap but backup exists, continue to backup check
             }
         }
-        
+
         // Try backup oracle if available
         if (address(oracle.backupAggregator) != address(0)) {
             (, int256 answer,, uint256 updatedAt,) = oracle.backupAggregator.latestRoundData();
@@ -220,7 +220,7 @@ contract OracleAggregatorV2 is IOracleV2, Ownable2Step {
                 }
             }
         }
-        
+
         // Both oracles failed or are stale
         revert OracleIsNotWorking(asset);
     }
