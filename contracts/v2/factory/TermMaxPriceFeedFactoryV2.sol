@@ -4,6 +4,7 @@ pragma solidity ^0.8.27;
 import {TermMaxERC4626PriceFeed} from "../oracle/priceFeeds/TermMaxERC4626PriceFeed.sol";
 import {TermMaxPriceFeedConverter} from "../oracle/priceFeeds/TermMaxPriceFeedConverter.sol";
 import {TermMaxPTPriceFeed} from "../oracle/priceFeeds/TermMaxPTPriceFeed.sol";
+import {FactoryEventsV2} from "../events/FactoryEventsV2.sol";
 
 /**
  * @title TermMax Price Feed Factory V2
@@ -14,12 +15,6 @@ import {TermMaxPTPriceFeed} from "../oracle/priceFeeds/TermMaxPTPriceFeed.sol";
  */
 contract TermMaxPriceFeedFactoryV2 {
     /**
-     * @notice Emitted when a new price feed is created
-     * @param priceFeed The address of the newly created price feed contract
-     */
-    event PriceFeedCreated(address indexed priceFeed);
-
-    /**
      * @notice Creates a price feed for ERC4626 vaults
      * @dev Deploys a TermMaxERC4626PriceFeed that calculates vault token prices based on the underlying asset price and vault exchange rate
      * @param _assetPriceFeed The address of the underlying asset's price feed (e.g., USDC/USD feed)
@@ -29,7 +24,7 @@ contract TermMaxPriceFeedFactoryV2 {
      */
     function createPriceFeedWithERC4626(address _assetPriceFeed, address _vault) external returns (address) {
         address priceFeed = address(new TermMaxERC4626PriceFeed(_assetPriceFeed, _vault));
-        emit PriceFeedCreated(priceFeed);
+        emit FactoryEventsV2.PriceFeedCreated(priceFeed);
         return priceFeed;
     }
 
@@ -50,7 +45,7 @@ contract TermMaxPriceFeedFactoryV2 {
     ) external returns (address) {
         address priceFeed =
             address(new TermMaxPriceFeedConverter(_aTokenToBTokenPriceFeed, _bTokenToCTokenPriceFeed, _asset));
-        emit PriceFeedCreated(priceFeed);
+        emit FactoryEventsV2.PriceFeedCreated(priceFeed);
         return priceFeed;
     }
 
@@ -71,7 +66,7 @@ contract TermMaxPriceFeedFactoryV2 {
         returns (address)
     {
         address priceFeed = address(new TermMaxPTPriceFeed(_pendlePYLpOracle, _market, _duration, _priceFeed));
-        emit PriceFeedCreated(priceFeed);
+        emit FactoryEventsV2.PriceFeedCreated(priceFeed);
         return priceFeed;
     }
 }

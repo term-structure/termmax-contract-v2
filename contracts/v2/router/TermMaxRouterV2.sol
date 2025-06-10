@@ -238,7 +238,7 @@ contract TermMaxRouterV2 is
         uint128 maxLtv,
         SwapUnit[] memory units
     ) external whenNotPaused returns (uint256 gtId) {
-        (, IERC20 xt, IGearingToken gt,, IERC20 debtToken) = market.tokens();
+        (,, IGearingToken gt,, IERC20 debtToken) = market.tokens();
         debtToken.safeTransferFrom(msg.sender, address(this), tokenInAmt);
 
         bytes memory callbackData = abi.encode(address(gt), tokenInAmt, units, FlashLoanType.DEBT);
@@ -263,7 +263,7 @@ contract TermMaxRouterV2 is
         uint128 maxLtv,
         SwapUnit[] memory units
     ) external whenNotPaused returns (uint256 gtId) {
-        (, IERC20 xt, IGearingToken gt, address collAddr,) = market.tokens();
+        (,, IGearingToken gt, address collAddr,) = market.tokens();
         IERC20 collateral = IERC20(collAddr);
 
         collateral.safeTransferFrom(msg.sender, address(this), collateralInAmt);
@@ -314,7 +314,7 @@ contract TermMaxRouterV2 is
         whenNotPaused
         returns (uint256)
     {
-        (IERC20 ft, IERC20 xt, IGearingToken gt, address collateralAddr,) = market.tokens();
+        (, IERC20 xt, IGearingToken gt, address collateralAddr,) = market.tokens();
 
         IERC20(collateralAddr).safeTransferFrom(msg.sender, address(this), collInAmt);
         IERC20(collateralAddr).safeIncreaseAllowance(address(gt), collInAmt);
@@ -337,7 +337,7 @@ contract TermMaxRouterV2 is
         external
         whenNotPaused
     {
-        (IERC20 ft, IERC20 xt, IGearingToken gt,,) = market.tokens();
+        (, IERC20 xt, IGearingToken gt,,) = market.tokens();
 
         if (gt.ownerOf(gtId) != msg.sender) {
             revert GtNotOwnedBySender();
@@ -605,7 +605,7 @@ contract TermMaxRouterV2 is
         repayToken.safeIncreaseAllowance(msg.sender, debtAmt);
     }
 
-    function _flashRepay(IERC20 repayToken, bytes memory collateralData, bytes memory callbackData) internal {
+    function _flashRepay(IERC20, bytes memory collateralData, bytes memory callbackData) internal {
         (SwapUnit[] memory units, TermMaxSwapData memory swapData) =
             abi.decode(callbackData, (SwapUnit[], TermMaxSwapData));
         uint256 amount = _doSwap(_decodeAmount(collateralData), units);

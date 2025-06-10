@@ -18,7 +18,7 @@ import {FactoryEventsV2} from "../events/FactoryEventsV2.sol";
  * @dev Manages market deployment, gearing token implementations, and market configuration validation
  * Inherits from V1 factory interface while adding V2-specific features for improved market creation
  */
-contract TermMaxFactoryV2 is Ownable2Step, FactoryErrors, FactoryEvents, ITermMaxFactory, FactoryEventsV2 {
+contract TermMaxFactoryV2 is Ownable2Step, ITermMaxFactory, FactoryEventsV2 {
     /// @notice Constant key for the default ERC20 gearing token implementation
     bytes32 constant GT_ERC20 = keccak256("GearingTokenWithERC20");
 
@@ -41,7 +41,7 @@ contract TermMaxFactoryV2 is Ownable2Step, FactoryErrors, FactoryEvents, ITermMa
      */
     constructor(address admin, address TERMMAX_MARKET_IMPLEMENTATION_) Ownable(admin) {
         if (TERMMAX_MARKET_IMPLEMENTATION_ == address(0)) {
-            revert InvalidImplementation();
+            revert FactoryErrors.InvalidImplementation();
         }
         TERMMAX_MARKET_IMPLEMENTATION = TERMMAX_MARKET_IMPLEMENTATION_;
 
@@ -60,7 +60,7 @@ contract TermMaxFactoryV2 is Ownable2Step, FactoryErrors, FactoryEvents, ITermMa
     function setGtImplement(string memory gtImplementName, address gtImplement) external onlyOwner {
         bytes32 key = keccak256(abi.encodePacked(gtImplementName));
         gtImplements[key] = gtImplement;
-        emit SetGtImplement(key, gtImplement);
+        emit FactoryEvents.SetGtImplement(key, gtImplement);
     }
 
     /**
@@ -105,7 +105,7 @@ contract TermMaxFactoryV2 is Ownable2Step, FactoryErrors, FactoryEvents, ITermMa
         // Retrieve the gearing token implementation for the requested key
         params.gtImplementation = gtImplements[gtKey];
         if (params.gtImplementation == address(0)) {
-            revert CantNotFindGtImplementation();
+            revert FactoryErrors.CantNotFindGtImplementation();
         }
 
         // Deploy market using CREATE2 for deterministic addressing
@@ -118,6 +118,6 @@ contract TermMaxFactoryV2 is Ownable2Step, FactoryErrors, FactoryEvents, ITermMa
         ITermMaxMarket(market).initialize(params);
 
         // Emit event for market creation tracking
-        emit CreateMarket(market, params.collateral, params.debtToken, params);
+        emit FactoryEventsV2.CreateMarket(market, params.collateral, params.debtToken, params);
     }
 }

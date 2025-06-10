@@ -138,7 +138,7 @@ contract OrderManagerV2 is VaultStorageV2, VaultErrors, VaultEvents, IOrderManag
     /**
      * @inheritdoc IOrderManager
      */
-    function depositAssets(IERC20 asset, uint256 amount) external override onlyProxy {
+    function depositAssets(IERC20, uint256 amount) external override onlyProxy {
         _accruedInterest();
         // deposit to lpers
         uint256 amplifiedAmt = amount * Constants.DECIMAL_BASE_SQ;
