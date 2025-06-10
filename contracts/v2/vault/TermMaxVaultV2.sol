@@ -26,6 +26,7 @@ import {TransferUtils} from "../../v1/lib/TransferUtils.sol";
 import {ISwapCallback} from "../../v1/ISwapCallback.sol";
 import {VaultErrors} from "../../v1/errors/VaultErrors.sol";
 import {VaultEvents} from "../../v1/events/VaultEvents.sol";
+import {VaultEventsV2} from "../events/VaultEventsV2.sol";
 import {IOrderManager} from "../../v1/vault/IOrderManager.sol";
 import {VaultStorageV2, OrderInfo} from "../../v2/vault/VaultStorageV2.sol";
 import {Constants} from "../../v1/lib/Constants.sol";
@@ -263,17 +264,89 @@ contract TermMaxVaultV2 is
     }
 
     /**
-     * @inheritdoc ITermMaxVault
+     * @inheritdoc ITermMaxVaultV2
      */
-    function supplyQueueLength() external view virtual returns (uint256) {
-        revert VaultErrorsV2.SupplyQueueNoLongerSupported();
+    function minApy() external view virtual override returns (uint64) {
+        return _minApy;
     }
 
     /**
-     * @inheritdoc ITermMaxVault
+     * @inheritdoc ITermMaxVaultV2
      */
-    function withdrawQueueLength() external view virtual returns (uint256) {
-        revert VaultErrorsV2.WithdrawalQueueNoLongerSupported();
+    function minIdleFundRate() external view virtual override returns (uint64) {
+        return _minIdleFundRate;
+    }
+
+    /**
+     * @inheritdoc ITermMaxVaultV2
+     */
+    function pendingMinApy() external view virtual override returns (PendingUint192 memory) {
+        return _pendingMinApy;
+    }
+
+    /**
+     * @inheritdoc ITermMaxVaultV2
+     */
+    function pendingMinIdleFundRate() external view virtual override returns (PendingUint192 memory) {
+        return _pendingMinIdleFundRate;
+    }
+
+    /**
+     * @inheritdoc ITermMaxVaultV2
+     */
+    function submitPendingMinApy(uint64 newMinApy) external virtual override onlyCuratorRole {
+        if (newMinApy == _minApy) revert AlreadySet();
+        if (_pendingMinApy.validAt != 0) revert AlreadyPending();
+
+        if (newMinApy > _minApy) {
+            _setMinApy(newMinApy);
+        } else {
+            _pendingMinApy.update(uint184(newMinApy), _timelock);
+            emit VaultEventsV2.SubmitMinApy(newMinApy, _pendingMinApy.validAt);
+        }
+    }
+
+    /**
+     * @inheritdoc ITermMaxVaultV2
+     */
+    function submitPendingMinIdleFundRate(uint64 newMinIdleFundRate) external virtual override onlyCuratorRole {
+        if (newMinIdleFundRate == _minIdleFundRate) revert AlreadySet();
+        if (_pendingMinIdleFundRate.validAt != 0) revert AlreadyPending();
+
+        if (newMinIdleFundRate > _minIdleFundRate) {
+            _setMinIdleFundRate(newMinIdleFundRate);
+        } else {
+            _pendingMinIdleFundRate.update(uint184(newMinIdleFundRate), _timelock);
+            emit VaultEventsV2.SubmitMinIdleFundRate(newMinIdleFundRate, _pendingMinIdleFundRate.validAt);
+        }
+    }
+
+    /**
+     * @inheritdoc ITermMaxVaultV2
+     */
+    function acceptPendingMinApy() external virtual override afterTimelock(_pendingMinApy.validAt) {
+        _setMinApy(uint64(_pendingMinApy.value));
+        delete _pendingMinApy;
+    }
+
+    /**
+     * @inheritdoc ITermMaxVaultV2
+     */
+    function acceptPendingMinIdleFundRate() external virtual override afterTimelock(_pendingMinIdleFundRate.validAt) {
+        _setMinIdleFundRate(uint64(_pendingMinIdleFundRate.value));
+        delete _pendingMinIdleFundRate;
+    }
+
+    /// @dev Sets `_minApy` to `newMinApy`.
+    function _setMinApy(uint64 newMinApy) internal {
+        _minApy = newMinApy;
+        emit VaultEventsV2.SetMinApy(_msgSender(), newMinApy);
+    }
+
+    /// @dev Sets `_minIdleFundRate` to `newMinIdleFundRate`.
+    function _setMinIdleFundRate(uint64 newMinIdleFundRate) internal {
+        _minIdleFundRate = newMinIdleFundRate;
+        emit VaultEventsV2.SetMinIdleFundRate(_msgSender(), newMinIdleFundRate);
     }
 
     // Ordermanager functions
@@ -613,6 +686,24 @@ contract TermMaxVaultV2 is
     }
 
     /**
+     * @notice Revoke pending minimum APY change
+     */
+    function revokePendingMinApy() external virtual onlyGuardianRole {
+        delete _pendingMinApy;
+
+        emit VaultEventsV2.RevokePendingMinApy(_msgSender());
+    }
+
+    /**
+     * @notice Revoke pending minimum idle fund rate change
+     */
+    function revokePendingMinIdleFundRate() external virtual onlyGuardianRole {
+        delete _pendingMinIdleFundRate;
+
+        emit VaultEventsV2.RevokePendingMinIdleFundRate(_msgSender());
+    }
+
+    /**
      * @inheritdoc ITermMaxVault
      */
     function acceptTimelock() external virtual afterTimelock(_pendingTimelock.validAt) {
@@ -712,5 +803,19 @@ contract TermMaxVaultV2 is
         whenNotPaused
     {
         _delegateCall(abi.encodeCall(IOrderManager.afterSwap, (ftReserve, xtReserve, deltaFt)));
+    }
+
+    /**
+     * @inheritdoc ITermMaxVault
+     */
+    function supplyQueueLength() external view virtual returns (uint256) {
+        revert VaultErrorsV2.SupplyQueueNoLongerSupported();
+    }
+
+    /**
+     * @inheritdoc ITermMaxVault
+     */
+    function withdrawQueueLength() external view virtual returns (uint256) {
+        revert VaultErrorsV2.WithdrawalQueueNoLongerSupported();
     }
 }

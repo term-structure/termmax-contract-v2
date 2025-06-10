@@ -42,8 +42,8 @@ contract VaultStorageV2 {
     /// @dev A mapping from maturity to its annualized interest
     mapping(uint64 => uint256) internal _maturityToInterest;
 
-    PendingUint192 internal _pendingApy;
-    PendingUint192 internal _pendingIdleFundRate;
+    PendingUint192 internal _pendingMinApy;
+    PendingUint192 internal _pendingMinIdleFundRate;
 
     uint64 internal _performanceFeeRate;
 

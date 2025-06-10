@@ -46,6 +46,7 @@ import {
 import {PendingUint192, PendingLib} from "contracts/v1/lib/PendingLib.sol";
 import {VaultErrorsV2} from "contracts/v2/errors/VaultErrorsV2.sol";
 import {IPausable} from "contracts/v1/access/AccessManager.sol";
+import {VaultEventsV2} from "contracts/v2/events/VaultEventsV2.sol";
 
 contract VaultTestV2 is Test {
     using JSONLoader for *;
@@ -956,5 +957,338 @@ contract VaultTestV2 is Test {
         maxSupplies[0] = maxCapacity;
         vault.updateOrders(orders, amounts, maxSupplies, curveCuts);
         vm.stopPrank();
+    }
+
+    // ========== Tests for ITermMaxVaultV2 new functions ==========
+
+    function testMinApyManagement() public {
+        ITermMaxVaultV2 vaultV2 = ITermMaxVaultV2(address(vault));
+
+        // Test initial state
+        assertEq(vaultV2.minApy(), 0);
+        assertEq(vaultV2.pendingMinApy().value, 0);
+        assertEq(vaultV2.pendingMinApy().validAt, 0);
+
+        // Test submitPendingMinApy - increase (immediate)
+        uint64 newMinApy = 0.05e8; // 5%
+        vm.prank(curator);
+        vaultV2.submitPendingMinApy(newMinApy);
+
+        // Should be set immediately for increases
+        assertEq(vaultV2.minApy(), newMinApy);
+        assertEq(vaultV2.pendingMinApy().value, 0);
+
+        // Test submitPendingMinApy - decrease (timelock required)
+        uint64 lowerMinApy = 0.03e8; // 3%
+        vm.prank(curator);
+        vaultV2.submitPendingMinApy(lowerMinApy);
+
+        // Should not be set immediately for decreases
+        assertEq(vaultV2.minApy(), newMinApy);
+        assertEq(vaultV2.pendingMinApy().value, lowerMinApy);
+        assertEq(vaultV2.pendingMinApy().validAt, block.timestamp + timelock);
+
+        // Test acceptPendingMinApy before timelock
+        vm.expectRevert(VaultErrors.TimelockNotElapsed.selector);
+        vaultV2.acceptPendingMinApy();
+
+        // Test acceptPendingMinApy after timelock
+        vm.warp(block.timestamp + timelock + 1);
+        vaultV2.acceptPendingMinApy();
+
+        assertEq(vaultV2.minApy(), lowerMinApy);
+        assertEq(vaultV2.pendingMinApy().value, 0);
+        assertEq(vaultV2.pendingMinApy().validAt, 0);
+    }
+
+    function testMinApyRevoke() public {
+        ITermMaxVaultV2 vaultV2 = ITermMaxVaultV2(address(vault));
+
+        // Set initial minApy
+        uint64 initialMinApy = 0.05e8;
+        vm.prank(curator);
+        vaultV2.submitPendingMinApy(initialMinApy);
+
+        // Submit decrease
+        uint64 lowerMinApy = 0.03e8;
+        vm.prank(curator);
+        vaultV2.submitPendingMinApy(lowerMinApy);
+
+        // Guardian revokes pending change
+        vm.prank(guardian);
+        vaultV2.revokePendingMinApy();
+
+        assertEq(vaultV2.minApy(), initialMinApy);
+        assertEq(vaultV2.pendingMinApy().value, 0);
+        assertEq(vaultV2.pendingMinApy().validAt, 0);
+    }
+
+    function testMinIdleFundRateManagement() public {
+        ITermMaxVaultV2 vaultV2 = ITermMaxVaultV2(address(vault));
+
+        // Test initial state
+        assertEq(vaultV2.minIdleFundRate(), 0);
+        assertEq(vaultV2.pendingMinIdleFundRate().value, 0);
+        assertEq(vaultV2.pendingMinIdleFundRate().validAt, 0);
+
+        // Test submitPendingMinIdleFundRate - increase (immediate)
+        uint64 newMinIdleFundRate = 0.1e8; // 10%
+        vm.prank(curator);
+        vaultV2.submitPendingMinIdleFundRate(newMinIdleFundRate);
+
+        // Should be set immediately for increases
+        assertEq(vaultV2.minIdleFundRate(), newMinIdleFundRate);
+        assertEq(vaultV2.pendingMinIdleFundRate().value, 0);
+
+        // Test submitPendingMinIdleFundRate - decrease (timelock required)
+        uint64 lowerMinIdleFundRate = 0.05e8; // 5%
+        vm.prank(curator);
+        vaultV2.submitPendingMinIdleFundRate(lowerMinIdleFundRate);
+
+        // Should not be set immediately for decreases
+        assertEq(vaultV2.minIdleFundRate(), newMinIdleFundRate);
+        assertEq(vaultV2.pendingMinIdleFundRate().value, lowerMinIdleFundRate);
+        assertEq(vaultV2.pendingMinIdleFundRate().validAt, block.timestamp + timelock);
+
+        // Test acceptPendingMinIdleFundRate before timelock
+        vm.expectRevert(VaultErrors.TimelockNotElapsed.selector);
+        vaultV2.acceptPendingMinIdleFundRate();
+
+        // Test acceptPendingMinIdleFundRate after timelock
+        vm.warp(block.timestamp + timelock + 1);
+        vaultV2.acceptPendingMinIdleFundRate();
+
+        assertEq(vaultV2.minIdleFundRate(), lowerMinIdleFundRate);
+        assertEq(vaultV2.pendingMinIdleFundRate().value, 0);
+        assertEq(vaultV2.pendingMinIdleFundRate().validAt, 0);
+    }
+
+    function testMinIdleFundRateRevoke() public {
+        ITermMaxVaultV2 vaultV2 = ITermMaxVaultV2(address(vault));
+
+        // Set initial minIdleFundRate
+        uint64 initialMinIdleFundRate = 0.1e8;
+        vm.prank(curator);
+        vaultV2.submitPendingMinIdleFundRate(initialMinIdleFundRate);
+
+        // Submit decrease
+        uint64 lowerMinIdleFundRate = 0.05e8;
+        vm.prank(curator);
+        vaultV2.submitPendingMinIdleFundRate(lowerMinIdleFundRate);
+
+        // Guardian revokes pending change
+        vm.prank(guardian);
+        vaultV2.revokePendingMinIdleFundRate();
+
+        assertEq(vaultV2.minIdleFundRate(), initialMinIdleFundRate);
+        assertEq(vaultV2.pendingMinIdleFundRate().value, 0);
+        assertEq(vaultV2.pendingMinIdleFundRate().validAt, 0);
+    }
+
+    function testApyFunction() public {
+        ITermMaxVaultV2 vaultV2 = ITermMaxVaultV2(address(vault));
+
+        // Initially should return 0 when no accreting principal
+        assertEq(vaultV2.apy(), 0);
+
+        // After some trading activity, APY should be calculated correctly
+        vm.warp(currentTime + 2 days);
+        buyXt(48.219178e8, 1000e8);
+
+        uint256 apy = vaultV2.apy();
+        uint256 annualizedInterest = vault.annualizedInterest();
+        uint256 accretingPrincipal = vault.accretingPrincipal();
+        uint256 performanceFeeRate = vault.performanceFeeRate();
+
+        // APY should be calculated as: (annualizedInterest * (1 - performanceFeeRate)) / accretingPrincipal
+        uint256 expectedApy = (annualizedInterest * (Constants.DECIMAL_BASE - performanceFeeRate)) / accretingPrincipal;
+        assertEq(apy, expectedApy);
+
+        // APY should be greater than 0 after trading
+        assertGt(apy, 0);
+    }
+
+    function test_RevertMinApyAccessControl() public {
+        ITermMaxVaultV2 vaultV2 = ITermMaxVaultV2(address(vault));
+
+        // Test unauthorized access
+        vm.prank(vm.randomAddress());
+        vm.expectRevert(VaultErrors.NotCuratorRole.selector);
+        vaultV2.submitPendingMinApy(0.05e8);
+
+        vm.prank(vm.randomAddress());
+        vm.expectRevert(VaultErrors.NotGuardianRole.selector);
+        vaultV2.revokePendingMinApy();
+    }
+
+    function test_RevertMinIdleFundRateAccessControl() public {
+        ITermMaxVaultV2 vaultV2 = ITermMaxVaultV2(address(vault));
+
+        // Test unauthorized access
+        vm.prank(vm.randomAddress());
+        vm.expectRevert(VaultErrors.NotCuratorRole.selector);
+        vaultV2.submitPendingMinIdleFundRate(0.1e8);
+
+        vm.prank(vm.randomAddress());
+        vm.expectRevert(VaultErrors.NotGuardianRole.selector);
+        vaultV2.revokePendingMinIdleFundRate();
+    }
+
+    function test_RevertMinApyAlreadySet() public {
+        ITermMaxVaultV2 vaultV2 = ITermMaxVaultV2(address(vault));
+
+        uint64 minApy = 0.05e8;
+        vm.startPrank(curator);
+        vaultV2.submitPendingMinApy(minApy);
+
+        // Should revert when trying to set the same value
+        vm.expectRevert(VaultErrors.AlreadySet.selector);
+        vaultV2.submitPendingMinApy(minApy);
+
+        vm.stopPrank();
+    }
+
+    function test_RevertMinIdleFundRateAlreadySet() public {
+        ITermMaxVaultV2 vaultV2 = ITermMaxVaultV2(address(vault));
+
+        uint64 minIdleFundRate = 0.1e8;
+        vm.startPrank(curator);
+        vaultV2.submitPendingMinIdleFundRate(minIdleFundRate);
+
+        // Should revert when trying to set the same value
+        vm.expectRevert(VaultErrors.AlreadySet.selector);
+        vaultV2.submitPendingMinIdleFundRate(minIdleFundRate);
+
+        vm.stopPrank();
+    }
+
+    function test_RevertMinApyAlreadyPending() public {
+        ITermMaxVaultV2 vaultV2 = ITermMaxVaultV2(address(vault));
+
+        vm.startPrank(curator);
+        // Set initial value
+        vaultV2.submitPendingMinApy(0.05e8);
+
+        // Submit decrease (creates pending)
+        vaultV2.submitPendingMinApy(0.03e8);
+
+        // Should revert when trying to submit another pending change
+        vm.expectRevert(VaultErrors.AlreadyPending.selector);
+        vaultV2.submitPendingMinApy(0.02e8);
+
+        vm.stopPrank();
+    }
+
+    function test_RevertMinIdleFundRateAlreadyPending() public {
+        ITermMaxVaultV2 vaultV2 = ITermMaxVaultV2(address(vault));
+
+        vm.startPrank(curator);
+        // Set initial value
+        vaultV2.submitPendingMinIdleFundRate(0.1e8);
+
+        // Submit decrease (creates pending)
+        vaultV2.submitPendingMinIdleFundRate(0.05e8);
+
+        // Should revert when trying to submit another pending change
+        vm.expectRevert(VaultErrors.AlreadyPending.selector);
+        vaultV2.submitPendingMinIdleFundRate(0.03e8);
+
+        vm.stopPrank();
+    }
+
+    function test_RevertAcceptMinApyNoPendingValue() public {
+        ITermMaxVaultV2 vaultV2 = ITermMaxVaultV2(address(vault));
+
+        // Should revert when no pending value exists
+        vm.expectRevert(VaultErrors.NoPendingValue.selector);
+        vaultV2.acceptPendingMinApy();
+    }
+
+    function test_RevertAcceptMinIdleFundRateNoPendingValue() public {
+        ITermMaxVaultV2 vaultV2 = ITermMaxVaultV2(address(vault));
+
+        // Should revert when no pending value exists
+        vm.expectRevert(VaultErrors.NoPendingValue.selector);
+        vaultV2.acceptPendingMinIdleFundRate();
+    }
+
+    function testMinApyEventEmission() public {
+        ITermMaxVaultV2 vaultV2 = ITermMaxVaultV2(address(vault));
+
+        // Test SetMinApy event for immediate increase
+        uint64 newMinApy = 0.05e8;
+        vm.expectEmit(true, false, false, true);
+        emit VaultEventsV2.SetMinApy(curator, newMinApy);
+
+        vm.prank(curator);
+        vaultV2.submitPendingMinApy(newMinApy);
+
+        // Test SubmitMinApy event for timelock decrease
+        uint64 lowerMinApy = 0.03e8;
+        vm.expectEmit(false, false, false, true);
+        emit VaultEventsV2.SubmitMinApy(lowerMinApy, uint64(block.timestamp + timelock));
+
+        vm.prank(curator);
+        vaultV2.submitPendingMinApy(lowerMinApy);
+
+        // Test SetMinApy event when accepting pending value
+        vm.warp(block.timestamp + timelock + 1);
+        vm.expectEmit(true, false, false, true);
+        emit VaultEventsV2.SetMinApy(address(this), lowerMinApy);
+
+        vaultV2.acceptPendingMinApy();
+    }
+
+    function testMinIdleFundRateEventEmission() public {
+        ITermMaxVaultV2 vaultV2 = ITermMaxVaultV2(address(vault));
+
+        // Test SetMinIdleFundRate event for immediate increase
+        uint64 newMinIdleFundRate = 0.1e8;
+        vm.expectEmit(true, false, false, true);
+        emit VaultEventsV2.SetMinIdleFundRate(curator, newMinIdleFundRate);
+
+        vm.prank(curator);
+        vaultV2.submitPendingMinIdleFundRate(newMinIdleFundRate);
+
+        // Test SubmitMinIdleFundRate event for timelock decrease
+        uint64 lowerMinIdleFundRate = 0.05e8;
+        vm.expectEmit(false, false, false, true);
+        emit VaultEventsV2.SubmitMinIdleFundRate(lowerMinIdleFundRate, uint64(block.timestamp + timelock));
+
+        vm.prank(curator);
+        vaultV2.submitPendingMinIdleFundRate(lowerMinIdleFundRate);
+
+        // Test SetMinIdleFundRate event when accepting pending value
+        vm.warp(block.timestamp + timelock + 1);
+        vm.expectEmit(true, false, false, true);
+        emit VaultEventsV2.SetMinIdleFundRate(address(this), lowerMinIdleFundRate);
+
+        vaultV2.acceptPendingMinIdleFundRate();
+    }
+
+    function testRevokeEventEmission() public {
+        ITermMaxVaultV2 vaultV2 = ITermMaxVaultV2(address(vault));
+
+        // Set up pending changes
+        vm.startPrank(curator);
+        vaultV2.submitPendingMinApy(0.05e8);
+        vaultV2.submitPendingMinApy(0.03e8); // Creates pending
+        vaultV2.submitPendingMinIdleFundRate(0.1e8);
+        vaultV2.submitPendingMinIdleFundRate(0.05e8); // Creates pending
+        vm.stopPrank();
+
+        // Test RevokePendingMinApy event
+        vm.expectEmit(true, false, false, false);
+        emit VaultEventsV2.RevokePendingMinApy(guardian);
+
+        vm.prank(guardian);
+        vaultV2.revokePendingMinApy();
+
+        // Test RevokePendingMinIdleFundRate event
+        vm.expectEmit(true, false, false, false);
+        emit VaultEventsV2.RevokePendingMinIdleFundRate(guardian);
+
+        vm.prank(guardian);
+        vaultV2.revokePendingMinIdleFundRate();
     }
 }
