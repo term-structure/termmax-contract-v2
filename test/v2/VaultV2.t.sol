@@ -44,6 +44,7 @@ import {
     OrderInfo
 } from "contracts/v2/vault/TermMaxVaultV2.sol";
 import {PendingUint192, PendingLib} from "contracts/v1/lib/PendingLib.sol";
+import {VaultErrorsV2} from "contracts/v2/errors/VaultErrorsV2.sol";
 
 contract VaultTestV2 is Test {
     using JSONLoader for *;
@@ -418,57 +419,32 @@ contract VaultTestV2 is Test {
         vm.stopPrank();
     }
 
-    function testSupplyQueue(uint256 orderCount, uint256 seed) public {
-        vm.assume(orderCount < VaultConstants.MAX_QUEUE_LENGTH && orderCount > 0);
-        address[] memory supplyQueue = new address[](orderCount);
-        supplyQueue[0] = vault.supplyQueue(0);
+    function testSupplyQueue() public {
+        vm.expectRevert(VaultErrorsV2.SupplyQueueNoLongerSupported.selector);
+        vault.supplyQueueLength();
+
+        vm.expectRevert(VaultErrorsV2.SupplyQueueNoLongerSupported.selector);
+        vault.supplyQueue(0);
+
         vm.startPrank(curator);
-        for (uint256 i = 1; i < orderCount; i++) {
-            address order = address(vault.createOrder(res.market, maxCapacity, 0, orderConfig.curveCuts));
-            OrderInfo memory orderInfo = vault.orderMapping(order);
-            assertEq(address(orderInfo.market), address(res.market));
-            assertEq(orderInfo.maturity, res.market.config().maturity);
-            assertEq(address(orderInfo.ft), address(res.ft));
-            assertEq(address(orderInfo.xt), address(res.xt));
-            supplyQueue[i] = order;
-            assertEq(vault.supplyQueue(i), order);
-        }
-
-        uint256[] memory indexes = new uint256[](orderCount);
-        for (uint256 i = 0; i < orderCount; i++) {
-            indexes[i] = i;
-        }
-        indexes = shuffle(indexes, seed);
+        uint256[] memory indexes = new uint256[](2);
+        vm.expectRevert(VaultErrorsV2.SupplyQueueNoLongerSupported.selector);
         vault.updateSupplyQueue(indexes);
-
-        for (uint256 i = 0; i < orderCount; i++) {
-            assertEq(vault.supplyQueue(i), supplyQueue[indexes[i]]);
-        }
 
         vm.stopPrank();
     }
 
-    function testWithdrawQueue(uint256 orderCount, uint256 seed) public {
-        vm.assume(orderCount < VaultConstants.MAX_QUEUE_LENGTH && orderCount > 0);
-        address[] memory withdrawQueue = new address[](orderCount);
-        withdrawQueue[0] = vault.withdrawQueue(0);
+    function testWithdrawQueue() public {
+        vm.expectRevert(VaultErrorsV2.WithdrawalQueueNoLongerSupported.selector);
+        vault.withdrawQueueLength();
+
+        vm.expectRevert(VaultErrorsV2.WithdrawalQueueNoLongerSupported.selector);
+        vault.withdrawQueue(0);
+
         vm.startPrank(curator);
-        for (uint256 i = 1; i < orderCount; i++) {
-            address order = address(vault.createOrder(res.market, maxCapacity, 0, orderConfig.curveCuts));
-            withdrawQueue[i] = order;
-            assertEq(vault.withdrawQueue(i), order);
-        }
-
-        uint256[] memory indexes = new uint256[](orderCount);
-        for (uint256 i = 0; i < orderCount; i++) {
-            indexes[i] = i;
-        }
-        indexes = shuffle(indexes, seed);
+        uint256[] memory indexes = new uint256[](2);
+        vm.expectRevert(VaultErrorsV2.WithdrawalQueueNoLongerSupported.selector);
         vault.updateWithdrawQueue(indexes);
-
-        for (uint256 i = 0; i < orderCount; i++) {
-            assertEq(vault.withdrawQueue(i), withdrawQueue[indexes[i]]);
-        }
 
         vm.stopPrank();
     }
@@ -485,44 +461,6 @@ contract VaultTestV2 is Test {
         }
 
         return arr;
-    }
-
-    function test_RevertSupplyQueue() public {
-        vm.prank(lper);
-        vm.expectRevert(VaultErrors.NotAllocatorRole.selector);
-        vault.updateSupplyQueue(new uint256[](0));
-
-        vm.startPrank(curator);
-        vm.expectRevert(VaultErrors.SupplyQueueLengthMismatch.selector);
-        vault.updateSupplyQueue(new uint256[](0));
-
-        address order2 = address(vault.createOrder(res.market, maxCapacity, 0, orderConfig.curveCuts));
-        uint256[] memory indexes = new uint256[](2);
-        indexes[0] = 1;
-        indexes[1] = 1;
-        vm.expectRevert(abi.encodeWithSelector(VaultErrors.DuplicateOrder.selector, order2));
-        vault.updateSupplyQueue(indexes);
-
-        vm.stopPrank();
-    }
-
-    function test_RevertWithdrawQueue() public {
-        vm.prank(lper);
-        vm.expectRevert(VaultErrors.NotAllocatorRole.selector);
-        vault.updateWithdrawQueue(new uint256[](0));
-
-        vm.startPrank(curator);
-        vm.expectRevert(VaultErrors.WithdrawQueueLengthMismatch.selector);
-        vault.updateWithdrawQueue(new uint256[](0));
-
-        address order2 = address(vault.createOrder(res.market, maxCapacity, 0, orderConfig.curveCuts));
-        uint256[] memory indexes = new uint256[](2);
-        indexes[0] = 1;
-        indexes[1] = 1;
-        vm.expectRevert(abi.encodeWithSelector(VaultErrors.DuplicateOrder.selector, order2));
-        vault.updateWithdrawQueue(indexes);
-
-        vm.stopPrank();
     }
 
     function testUpdateOrder() public {
@@ -943,6 +881,10 @@ contract VaultTestV2 is Test {
         vm.startPrank(lper2);
         res.debt.approve(address(vault), amount2);
         vault.deposit(amount2, lper2);
+        vm.stopPrank();
+
+        vm.startPrank(curator);
+        
         vm.stopPrank();
 
         address borrower = vm.randomAddress();
