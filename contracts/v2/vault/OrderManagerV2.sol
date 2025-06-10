@@ -16,6 +16,7 @@ import {LinkedList} from "../../v1/lib/LinkedList.sol";
 import {IOrderManager} from "../../v1/vault/IOrderManager.sol";
 import {ISwapCallback} from "../../v1/ISwapCallback.sol";
 import {OrderInfo, VaultStorageV2} from "./VaultStorageV2.sol";
+import {VaultErrorsV2} from "../errors/VaultErrorsV2.sol";
 /**
  * @title Order Manager V2
  * @author Term Structure Labs
@@ -150,7 +151,6 @@ contract OrderManagerV2 is VaultStorageV2, VaultErrors, VaultEvents, IOrderManag
      */
     function withdrawAssets(IERC20 asset, address recipient, uint256 amount) external override onlyProxy {
         _accruedInterest();
-        uint256 amountLeft = amount;
         uint256 assetBalance = asset.balanceOf(address(this));
         if (assetBalance >= amount) {
             asset.safeTransfer(recipient, amount);
@@ -277,6 +277,15 @@ contract OrderManagerV2 is VaultStorageV2, VaultErrors, VaultEvents, IOrderManag
         }
     }
 
+    function _checkApy() internal view {
+        uint256 currentApy = _accretingPrincipal == 0
+            ? 0
+            : (_annualizedInterest * (Constants.DECIMAL_BASE - _performanceFeeRate)) / (_accretingPrincipal);
+        if (currentApy < _minApy) {
+            revert VaultErrorsV2.ApyTooLow(currentApy, _minApy);
+        }
+    }
+
     /// @notice Callback function for the swap
     /// @param deltaFt The change in the ft balance of the order
     function afterSwap(uint256 ftReserve, uint256 xtReserve, int256 deltaFt) external onlyProxy {
@@ -313,9 +322,10 @@ contract OrderManagerV2 is VaultStorageV2, VaultErrors, VaultEvents, IOrderManag
             }
             _maturityToInterest[maturity] -= deltaAnnualizedInterest;
             _annualizedInterest -= deltaAnnualizedInterest;
+            _checkApy();
         }
         /// @dev Ensure that the total assets after the transaction are
-        ///greater than or equal to the principal and the allocated interest
+        /// greater than or equal to the principal and the allocated interest
         _checkLockedFt();
     }
 }

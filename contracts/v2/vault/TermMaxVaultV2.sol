@@ -222,14 +222,14 @@ contract TermMaxVaultV2 is
     /**
      * @inheritdoc ITermMaxVault
      */
-    function supplyQueue(uint256 index) external view virtual returns (address) {
+    function supplyQueue(uint256) external view virtual returns (address) {
         revert VaultErrorsV2.SupplyQueueNoLongerSupported();
     }
 
     /**
      * @inheritdoc ITermMaxVault
      */
-    function withdrawQueue(uint256 index) external view virtual returns (address) {
+    function withdrawQueue(uint256) external view virtual returns (address) {
         revert VaultErrorsV2.WithdrawalQueueNoLongerSupported();
     }
 
@@ -561,14 +561,14 @@ contract TermMaxVaultV2 is
     /**
      * @inheritdoc ITermMaxVault
      */
-    function updateSupplyQueue(uint256[] memory indexes) external virtual onlyAllocatorRole {
+    function updateSupplyQueue(uint256[] memory) external virtual onlyAllocatorRole {
         revert VaultErrorsV2.SupplyQueueNoLongerSupported();
     }
 
     /**
      * @inheritdoc ITermMaxVault
      */
-    function updateWithdrawQueue(uint256[] memory indexes) external virtual onlyAllocatorRole {
+    function updateWithdrawQueue(uint256[] memory) external virtual onlyAllocatorRole {
         revert VaultErrorsV2.WithdrawalQueueNoLongerSupported();
     }
 

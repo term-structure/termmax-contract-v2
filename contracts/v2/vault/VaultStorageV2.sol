@@ -31,18 +31,28 @@ contract VaultStorageV2 {
     /// @notice Annualize the interest income
     uint256 internal _annualizedInterest;
 
-    uint64 internal _performanceFeeRate;
-
     /// @dev A mapping from collateral address to bad debt
     mapping(address => uint256) internal _badDebtMapping;
     mapping(address => OrderInfo) internal _orderMapping;
 
-    /// @dev The last time the interest was accurately calculated
-    uint64 internal _lastUpdateTime;
     /// @dev A one-way linked list presented using a mapping structure, recorded in order according to matiruty
     /// @dev The key is the maturity, and the value is the next maturity
     /// Etc. day 0 => day 1 => day 2 => day 3 => ...
     mapping(uint64 => uint64) internal _maturityMapping;
     /// @dev A mapping from maturity to its annualized interest
     mapping(uint64 => uint256) internal _maturityToInterest;
+
+    PendingUint192 internal _pendingApy;
+    PendingUint192 internal _pendingIdleFundRate;
+
+    uint64 internal _performanceFeeRate;
+
+    /// @dev The last time the interest was accurately calculated
+    uint64 internal _lastUpdateTime;
+
+    /// @dev The minimum APY for the vault to be active
+    uint64 internal _minApy;
+
+    /// @dev The idle fund rate is the percentage of the assets that is not actively used in markets
+    uint64 internal _idleFundRate;
 }

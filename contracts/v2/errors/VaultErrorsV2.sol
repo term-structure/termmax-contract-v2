@@ -12,4 +12,6 @@ interface VaultErrorsV2 {
     error WithdrawalQueueNoLongerSupported();
     /// @notice Error thrown when an invalid or unsupported functions is called
     error UseApyInsteadOfApr();
+    /// @notice Error thrown when the APY is too low
+    error ApyTooLow(uint256 apy, uint256 minApy);
 }
