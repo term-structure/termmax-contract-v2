@@ -14,4 +14,6 @@ interface VaultErrorsV2 {
     error UseApyInsteadOfApr();
     /// @notice Error thrown when the APY is too low
     error ApyTooLow(uint256 apy, uint256 minApy);
+    /// @notice Error thrown when the idle fund rate is too low
+    error IdleFundRateTooLow(uint256 idleFundRate, uint256 minIdleFundRate);
 }

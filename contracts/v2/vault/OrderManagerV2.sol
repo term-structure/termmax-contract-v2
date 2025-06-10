@@ -59,6 +59,7 @@ contract OrderManagerV2 is VaultStorageV2, VaultErrors, VaultEvents, IOrderManag
         for (uint256 i = 0; i < orders.length; ++i) {
             _updateOrder(asset, ITermMaxOrder(orders[i]), changes[i], maxSupplies[i], curveCuts[i]);
         }
+        _checkIdleFundRate(asset);
     }
 
     /**
@@ -86,6 +87,7 @@ contract OrderManagerV2 is VaultStorageV2, VaultErrors, VaultEvents, IOrderManag
         uint256 initialReserve,
         CurveCuts memory curveCuts
     ) external onlyProxy returns (ITermMaxOrder order) {
+        _accruedInterest();
         (IERC20 ft, IERC20 xt,,, IERC20 debtToken) = market.tokens();
         if (asset != debtToken) revert InconsistentAsset();
 
@@ -93,6 +95,7 @@ contract OrderManagerV2 is VaultStorageV2, VaultErrors, VaultEvents, IOrderManag
         if (initialReserve > 0) {
             asset.safeIncreaseAllowance(address(market), initialReserve);
             market.mint(address(order), initialReserve);
+            _checkIdleFundRate(asset);
         }
 
         uint64 orderMaturity = market.config().maturity;
@@ -133,6 +136,17 @@ contract OrderManagerV2 is VaultStorageV2, VaultErrors, VaultEvents, IOrderManag
         }
         _orderMapping[address(order)] = orderInfo;
         emit UpdateOrder(msg.sender, address(order), changes, maxSupply, curveCuts);
+    }
+
+    function _checkIdleFundRate(IERC20 asset) internal view {
+        uint256 __minIdleFundRate = _minIdleFundRate;
+        if (__minIdleFundRate > 0) {
+            uint256 idleFundBalance = asset.balanceOf(address(this));
+            uint256 currentIdleFundRate = idleFundBalance * Constants.DECIMAL_BASE / _accretingPrincipal;
+            if (currentIdleFundRate < __minIdleFundRate) {
+                revert VaultErrorsV2.IdleFundRateTooLow(currentIdleFundRate, __minIdleFundRate);
+            }
+        }
     }
 
     /**
@@ -278,11 +292,14 @@ contract OrderManagerV2 is VaultStorageV2, VaultErrors, VaultEvents, IOrderManag
     }
 
     function _checkApy() internal view {
-        uint256 currentApy = _accretingPrincipal == 0
-            ? 0
-            : (_annualizedInterest * (Constants.DECIMAL_BASE - _performanceFeeRate)) / (_accretingPrincipal);
-        if (currentApy < _minApy) {
-            revert VaultErrorsV2.ApyTooLow(currentApy, _minApy);
+        uint256 __minAPy = _minApy;
+        if (__minAPy > 0) {
+            uint256 currentApy = _accretingPrincipal == 0
+                ? 0
+                : (_annualizedInterest * (Constants.DECIMAL_BASE - _performanceFeeRate)) / (_accretingPrincipal);
+            if (currentApy < __minAPy) {
+                revert VaultErrorsV2.ApyTooLow(currentApy, __minAPy);
+            }
         }
     }
 

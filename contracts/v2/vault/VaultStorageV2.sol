@@ -53,6 +53,6 @@ contract VaultStorageV2 {
     /// @dev The minimum APY for the vault to be active
     uint64 internal _minApy;
 
-    /// @dev The idle fund rate is the percentage of the assets that is not actively used in markets
-    uint64 internal _idleFundRate;
+    /// @dev The minimum idle fund rate for the vault to be active
+    uint64 internal _minIdleFundRate;
 }
