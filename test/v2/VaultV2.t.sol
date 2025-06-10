@@ -1314,4 +1314,23 @@ contract VaultTestV2 is Test {
 
         vm.stopPrank();
     }
+
+    function testRevertWhenApyTooLow() public {
+        ITermMaxVaultV2 vaultV2 = ITermMaxVaultV2(address(vault));
+        vm.prank(curator);
+        vaultV2.submitPendingMinApy(0.05e8); // minApy = 5%
+
+        sellFt(1000e8, 800e8); // Sell 100e8 FT
+
+        uint128 tokenAmtIn = 800e8;
+        uint128 ftAmtOut = 1000e8;
+        address taker = vm.randomAddress();
+        res.debt.mint(taker, tokenAmtIn);
+        vm.startPrank(taker);
+        res.debt.approve(address(res.order), tokenAmtIn);
+
+        vm.expectRevert(abi.encodeWithSelector(VaultErrorsV2.ApyTooLow.selector, 0, 0.05e8));
+        res.order.swapExactTokenToToken(res.debt, res.ft, taker, tokenAmtIn, ftAmtOut, block.timestamp + 1 hours);
+        vm.stopPrank();
+    }
 }
