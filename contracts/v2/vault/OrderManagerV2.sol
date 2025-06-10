@@ -3,14 +3,11 @@ pragma solidity ^0.8.27;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import {PendingLib, PendingAddress, PendingUint192} from "../../v1/lib/PendingLib.sol";
 import {ITermMaxMarket} from "../../v1/ITermMaxMarket.sol";
 import {CurveCuts, OrderConfig} from "../../v1/storage/TermMaxStorage.sol";
 import {VaultErrors} from "../../v1/errors/VaultErrors.sol";
 import {VaultEvents} from "../../v1/events/VaultEvents.sol";
-import {ITermMaxRouter} from "../../v1/router/ITermMaxRouter.sol";
 import {ITermMaxOrder} from "../../v1/ITermMaxOrder.sol";
-import {VaultConstants} from "../../v1/lib/VaultConstants.sol";
 import {TransferUtils} from "../../v1/lib/TransferUtils.sol";
 import {Constants} from "../../v1/lib/Constants.sol";
 import {ArrayUtils} from "../../v1/lib/ArrayUtils.sol";
@@ -20,12 +17,12 @@ import {IOrderManager} from "../../v1/vault/IOrderManager.sol";
 import {ISwapCallback} from "../../v1/ISwapCallback.sol";
 import {OrderInfo, VaultStorageV2} from "./VaultStorageV2.sol";
 /**
- * @title Order Manager
+ * @title Order Manager V2
  * @author Term Structure Labs
  * @notice The extension of the TermMaxVault that manages orders and calculates interest
  */
 
-contract OrderManager is VaultStorageV2, VaultErrors, VaultEvents, IOrderManager {
+contract OrderManagerV2 is VaultStorageV2, VaultErrors, VaultEvents, IOrderManager {
     using SafeCast for uint256;
     using SafeCast for int256;
     using TransferUtils for IERC20;

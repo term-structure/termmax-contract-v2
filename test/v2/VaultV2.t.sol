@@ -45,6 +45,7 @@ import {
 } from "contracts/v2/vault/TermMaxVaultV2.sol";
 import {PendingUint192, PendingLib} from "contracts/v1/lib/PendingLib.sol";
 import {VaultErrorsV2} from "contracts/v2/errors/VaultErrorsV2.sol";
+import {IPausable} from "contracts/v1/access/AccessManager.sol";
 
 contract VaultTestV2 is Test {
     using JSONLoader for *;
@@ -87,6 +88,7 @@ contract VaultTestV2 is Test {
         orderConfig = JSONLoader.getOrderConfigFromJson(testdata, ".orderConfig");
         marketConfig.maturity = uint64(currentTime + 90 days);
         res = DeployUtils.deployMockMarket(deployer, marketConfig, maxLtv, liquidationLtv);
+        vm.label(address(res.market), "market");
         MarketConfig memory marketConfig2 = JSONLoader.getMarketConfigFromJson(treasurer, testdata, ".marketConfig");
         marketConfig2.maturity = uint64(currentTime + 180 days);
 
@@ -112,6 +114,7 @@ contract VaultTestV2 is Test {
                 0
             )
         );
+        vm.label(address(market2), "market2");
 
         // update oracle
         res.collateralOracle.updateRoundData(JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_2000_DAI_1.eth"));
@@ -125,8 +128,17 @@ contract VaultTestV2 is Test {
 
         vault = DeployUtils.deployVault(initialParams);
 
+        vm.label(address(vault), "vault");
+
         vault.submitGuardian(guardian);
+        vm.label(guardian, "guardian");
         vault.setIsAllocator(allocator, true);
+        vm.label(allocator, "allocator");
+        vm.label(curator, "curator");
+        vm.label(deployer, "deployer");
+        vm.label(lper, "lper");
+        vm.label(address(res.debt), "debt token");
+        vm.label(address(res.collateral), "collateral token");
 
         vault.submitMarket(address(res.market), true);
         vault.submitMarket(address(market2), true);
@@ -138,9 +150,10 @@ contract VaultTestV2 is Test {
         res.debt.mint(deployer, amount);
         res.debt.approve(address(vault), amount);
         vault.deposit(amount, deployer);
+        assertEq(res.debt.balanceOf(address(vault)), amount);
 
         res.order = vault.createOrder(res.market, maxCapacity, amount, orderConfig.curveCuts);
-
+        vm.label(address(res.order), "order");
         res.debt.mint(deployer, 10000e18);
         res.debt.approve(address(res.market), 10000e18);
         res.market.mint(deployer, 10000e18);
@@ -567,6 +580,8 @@ contract VaultTestV2 is Test {
         vault.deposit(amount2, lper2);
         vm.stopPrank();
 
+        _depositToOrder(vault, res.order, -1e10);
+
         vm.startPrank(deployer);
         uint256 totalFt = vault.totalFt();
         uint256 lockedFr = vault.totalAssets();
@@ -642,6 +657,7 @@ contract VaultTestV2 is Test {
         res.debt.approve(address(vault), amount2);
         vault.deposit(amount2, lper2);
         vm.stopPrank();
+        _depositToOrder(vault, res.order, amount2.toInt256());
         console.log("principal after deposit:", vault.totalAssets());
         console.log("total supply:", vault.totalSupply());
         console.log("anulizedInterest:", vault.annualizedInterest());
@@ -661,6 +677,7 @@ contract VaultTestV2 is Test {
         console.log("----day 6----");
         vm.warp(currentTime + 6 days);
         console.log("new principal:", vault.totalAssets());
+        _depositToOrder(vault, res.order, -(vault.previewRedeem(1000e8)).toInt256());
         vm.startPrank(lper2);
         console.log("previewRedeem: ", vault.previewRedeem(1000e8));
         assertEq(vault.previewRedeem(1000e8), vault.redeem(1000e8, lper2, lper2));
@@ -680,6 +697,7 @@ contract VaultTestV2 is Test {
         console.log("new principal:", vault.totalAssets());
         vm.startPrank(lper2);
         console.log("previewRedeem: ", vault.previewRedeem(1000e8));
+        vault.redeemOrder(res.order);
         assertEq(vault.previewRedeem(1000e8), vault.redeem(1000e8, lper2, lper2));
         console.log("principal after redeem:", vault.totalAssets());
         console.log("total supply:", vault.totalSupply());
@@ -731,161 +749,22 @@ contract VaultTestV2 is Test {
         vm.stopPrank();
     }
 
-    function testRedeemFromMarket() public {
-        vm.warp(currentTime + 2 days);
-        buyXt(48.219178e8, 1000e8);
-
-        vm.warp(currentTime + 3 days);
-        address lper2 = vm.randomAddress();
-        uint256 amount2 = 10000e8;
-        res.debt.mint(lper2, amount2);
-        vm.startPrank(lper2);
-        res.debt.approve(address(vault), amount2);
-        vault.deposit(amount2, lper2);
-        vm.stopPrank();
-
-        vm.startPrank(curator);
-        address order2 = address(vault.createOrder(market2, maxCapacity, 0, orderConfig.curveCuts));
-        uint256[] memory indexes = new uint256[](2);
-        indexes[0] = 1;
-        indexes[1] = 0;
-        vault.updateSupplyQueue(indexes);
-
-        res.debt.mint(curator, 10000e8);
-        res.debt.approve(address(vault), 10000e8);
-        vault.deposit(10000e8, curator);
-
-        vm.stopPrank();
-
-        vm.warp(currentTime + 92 days);
-
-        vm.startPrank(lper2);
-
-        vault.redeem(1000e8, lper2, lper2);
-        vm.stopPrank();
-
-        uint256 performanceFee = vault.performanceFee();
-        vm.prank(curator);
-        vault.withdrawPerformanceFee(curator, performanceFee);
-
-        assertEq(vault.performanceFee(), 0);
-        assertEq(vault.annualizedInterest(), 0);
-        assertEq(vault.supplyQueueLength(), 1);
-        assertEq(vault.supplyQueue(0), order2);
-        assertEq(vault.withdrawQueueLength(), 1);
-        assertEq(vault.withdrawQueue(0), order2);
-
-        vm.warp(currentTime + 182 days);
-        vm.prank(lper2);
-        vault.redeem(1000e8, lper2, lper2);
-
-        vm.prank(curator);
-        vault.redeemOrder(ITermMaxOrder(order2));
-
-        assertEq(vault.performanceFee(), 0);
-        assertEq(vault.annualizedInterest(), 0);
-        assertEq(vault.supplyQueueLength(), 0);
-        assertEq(vault.withdrawQueueLength(), 0);
-    }
-
-    function testRedeemFromMarket2() public {
-        vm.warp(currentTime + 2 days);
-        buyXt(48.219178e8, 1000e8);
-
-        vm.warp(currentTime + 3 days);
-        address lper2 = vm.randomAddress();
-        uint256 amount2 = 10000e8;
-        res.debt.mint(lper2, amount2);
-        vm.startPrank(lper2);
-        res.debt.approve(address(vault), amount2);
-        vault.deposit(amount2, lper2);
-        vm.stopPrank();
-
-        vm.startPrank(curator);
-        address order2 = address(vault.createOrder(market2, maxCapacity, 0, orderConfig.curveCuts));
-        uint256[] memory indexes = new uint256[](2);
-        indexes[0] = 1;
-        indexes[1] = 0;
-        vault.updateSupplyQueue(indexes);
-
-        res.debt.mint(curator, 10000e8);
-        res.debt.approve(address(vault), 10000e8);
-        vault.deposit(10000e8, curator);
-
-        vm.stopPrank();
-
-        (, IERC20 xt,,,) = market2.tokens();
-
-        vm.warp(currentTime + 4 days);
-        {
-            address taker = vm.randomAddress();
-            uint128 tokenAmtIn = 50e8;
-            res.debt.mint(taker, tokenAmtIn);
-            vm.startPrank(taker);
-            res.debt.approve(address(order2), tokenAmtIn);
-            ITermMaxOrder(order2).swapExactTokenToToken(
-                res.debt, xt, taker, tokenAmtIn, 1000e8, block.timestamp + 1 hours
-            );
-            vm.stopPrank();
-        }
-
-        vm.warp(currentTime + 92 days);
-
-        {
-            address taker = vm.randomAddress();
-            uint128 tokenAmtIn = 50e8;
-            res.debt.mint(taker, tokenAmtIn);
-            vm.startPrank(taker);
-            res.debt.approve(address(order2), tokenAmtIn);
-            ITermMaxOrder(order2).swapExactTokenToToken(
-                res.debt, xt, taker, tokenAmtIn, 1000e8, block.timestamp + 1 hours
-            );
-            vm.stopPrank();
-        }
-
-        vm.prank(lper2);
-        vault.redeem(100e8, lper2, lper2);
-
-        uint256 performanceFee = vault.performanceFee();
-        vm.prank(curator);
-        vault.withdrawPerformanceFee(curator, performanceFee);
-
-        assertEq(vault.performanceFee(), 0);
-        assertGt(vault.annualizedInterest(), 0);
-        assertEq(vault.supplyQueueLength(), 1);
-        assertEq(vault.supplyQueue(0), order2);
-        assertEq(vault.withdrawQueueLength(), 1);
-        assertEq(vault.withdrawQueue(0), order2);
-
-        vm.warp(currentTime + 182 days);
-        vm.prank(lper2);
-        vault.redeem(100e8, lper2, lper2);
-
-        vm.prank(curator);
-        vault.redeemOrder(ITermMaxOrder(order2));
-
-        assertGt(vault.performanceFee(), 0);
-        assertEq(vault.annualizedInterest(), 0);
-        assertEq(vault.supplyQueueLength(), 0);
-        assertEq(vault.withdrawQueueLength(), 0);
-    }
-
     function testBadDebt() public {
         vm.warp(currentTime + 2 days);
         buyXt(48.219178e8, 1000e8);
 
         vm.warp(currentTime + 3 days);
         address lper2 = vm.randomAddress();
+        vm.label(lper2, "lper2");
         uint256 amount2 = 10000e8;
         res.debt.mint(lper2, amount2);
         vm.startPrank(lper2);
         res.debt.approve(address(vault), amount2);
         vault.deposit(amount2, lper2);
+        assertEq(res.debt.balanceOf(address(vault)), amount2);
         vm.stopPrank();
 
-        vm.startPrank(curator);
-        
-        vm.stopPrank();
+        _depositToOrder(vault, res.order, amount2.toInt256());
 
         address borrower = vm.randomAddress();
         vm.startPrank(borrower);
@@ -902,6 +781,7 @@ contract VaultTestV2 is Test {
         uint256 delivered = (propotion * 1e18) / Constants.DECIMAL_BASE_SQ;
 
         vm.startPrank(lper2);
+        vault.redeemOrder(res.order);
         vault.redeem(1000e8, lper2, lper2);
         vm.stopPrank();
 
@@ -945,6 +825,8 @@ contract VaultTestV2 is Test {
         vault.deposit(amount2, lper2);
         vm.stopPrank();
 
+        _depositToOrder(vault, res.order, amount2.toInt256());
+
         address borrower = vm.randomAddress();
         vm.startPrank(borrower);
         LoanUtils.fastMintGt(res, borrower, 1000e8, 1e18);
@@ -952,6 +834,7 @@ contract VaultTestV2 is Test {
 
         vm.warp(currentTime + 92 days);
         vm.startPrank(lper2);
+        vault.redeemOrder(res.order);
         vault.redeem(1000e8, lper2, lper2);
 
         uint256 badDebt = vault.badDebtMapping(address(res.collateral));
@@ -963,6 +846,20 @@ contract VaultTestV2 is Test {
         vm.expectRevert(abi.encodeWithSelector(VaultErrors.NoBadDebt.selector, address(res.collateral)));
         vault.dealBadDebt(address(res.collateral), 10e8, lper2, lper2);
 
+        vm.stopPrank();
+    }
+
+    function testSwapWhenVaultIsPaused() public {
+        vm.prank(deployer);
+        IPausable(address(vault)).pause();
+        address taker = vm.randomAddress();
+        uint128 tokenAmtIn = 1e8;
+        uint128 ftAmtOut = 1.2e8;
+        res.debt.mint(taker, tokenAmtIn);
+        vm.startPrank(taker);
+        res.debt.approve(address(res.order), tokenAmtIn);
+        vm.expectRevert(abi.encodeWithSignature("EnforcedPause()"));
+        res.order.swapExactTokenToToken(res.debt, res.ft, taker, tokenAmtIn, ftAmtOut, block.timestamp + 1 hours);
         vm.stopPrank();
     }
 
@@ -1045,5 +942,19 @@ contract VaultTestV2 is Test {
 
     function _daysToMaturity(uint256 _now) internal view returns (uint256 daysToMaturity) {
         daysToMaturity = (res.market.config().maturity - _now + Constants.SECONDS_IN_DAY - 1) / Constants.SECONDS_IN_DAY;
+    }
+
+    function _depositToOrder(ITermMaxVault vault, ITermMaxOrder order, int256 amount) internal {
+        vm.startPrank(vault.curator());
+        CurveCuts[] memory curveCuts = new CurveCuts[](1);
+        curveCuts[0] = order.orderConfig().curveCuts;
+        int256[] memory amounts = new int256[](1);
+        amounts[0] = amount;
+        ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
+        orders[0] = res.order;
+        uint256[] memory maxSupplies = new uint256[](1);
+        maxSupplies[0] = maxCapacity;
+        vault.updateOrders(orders, amounts, maxSupplies, curveCuts);
+        vm.stopPrank();
     }
 }

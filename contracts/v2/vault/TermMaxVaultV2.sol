@@ -315,7 +315,7 @@ contract TermMaxVaultV2 is
     /**
      * @inheritdoc ITermMaxVault
      */
-    function redeemOrder(ITermMaxOrder order) external virtual onlyCuratorRole {
+    function redeemOrder(ITermMaxOrder order) external virtual {
         _delegateCall(abi.encodeCall(IOrderManager.redeemOrder, (order)));
     }
 

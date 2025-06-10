@@ -18,7 +18,7 @@ import {IOracleV2, OracleAggregatorV2, AggregatorV3Interface} from "contracts/v2
 import {IOracle} from "contracts/v1/oracle/IOracle.sol";
 import {MockOrderV2} from "contracts/v2/test/MockOrderV2.sol";
 import {VaultFactory, IVaultFactory} from "contracts/v1/factory/VaultFactory.sol";
-import {OrderManager} from "contracts/v1/vault/OrderManager.sol";
+import {OrderManagerV2} from "contracts/v2/vault/OrderManagerV2.sol";
 import {TermMaxVaultV2, ITermMaxVault} from "contracts/v2/vault/TermMaxVaultV2.sol";
 import {AccessManager} from "contracts/v2/access/AccessManagerV2.sol";
 import {
@@ -328,7 +328,7 @@ library DeployUtils {
     }
 
     function deployVault(VaultInitialParams memory initialParams) public returns (ITermMaxVault vault) {
-        OrderManager orderManager = new OrderManager();
+        OrderManagerV2 orderManager = new OrderManagerV2();
         TermMaxVaultV2 implementation = new TermMaxVaultV2(address(orderManager));
         VaultFactory vaultFactory = new VaultFactory(address(implementation));
 
