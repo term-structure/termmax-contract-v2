@@ -952,7 +952,7 @@ contract VaultTestV2 is Test {
         int256[] memory amounts = new int256[](1);
         amounts[0] = amount;
         ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
-        orders[0] = res.order;
+        orders[0] = order;
         uint256[] memory maxSupplies = new uint256[](1);
         maxSupplies[0] = maxCapacity;
         vault.updateOrders(orders, amounts, maxSupplies, curveCuts);
@@ -1290,5 +1290,28 @@ contract VaultTestV2 is Test {
 
         vm.prank(guardian);
         vaultV2.revokePendingMinIdleFundRate();
+    }
+
+    function testRevertWhenIdleFundTooLow() public {
+        ITermMaxVaultV2 vaultV2 = ITermMaxVaultV2(address(vault));
+        vm.startPrank(curator);
+        vaultV2.submitPendingMinIdleFundRate(0.1e8); // minIdleFundRate = 10%
+
+        CurveCuts[] memory curveCuts = new CurveCuts[](1);
+        curveCuts[0] = res.order.orderConfig().curveCuts;
+        int256[] memory amounts = new int256[](1);
+        amounts[0] = -3000e8; // Withdraw 3000e8 from the order
+        ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
+        orders[0] = res.order;
+        uint256[] memory maxSupplies = new uint256[](1);
+        maxSupplies[0] = maxCapacity;
+
+        vault.updateOrders(orders, amounts, maxSupplies, curveCuts);
+
+        amounts[0] = 3000e8; // deposit 3000e8 from the order
+        vm.expectRevert(abi.encodeWithSelector(VaultErrorsV2.IdleFundRateTooLow.selector, 0, 0.1e8));
+        vault.updateOrders(orders, amounts, maxSupplies, curveCuts);
+
+        vm.stopPrank();
     }
 }

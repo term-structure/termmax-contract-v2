@@ -56,10 +56,15 @@ contract OrderManagerV2 is VaultStorageV2, VaultErrors, VaultEvents, IOrderManag
         CurveCuts[] memory curveCuts
     ) external override onlyProxy {
         _accruedInterest();
+        int256 totalChanges = 0;
         for (uint256 i = 0; i < orders.length; ++i) {
+            totalChanges += changes[i];
             _updateOrder(asset, ITermMaxOrder(orders[i]), changes[i], maxSupplies[i], curveCuts[i]);
         }
-        _checkIdleFundRate(asset);
+        /// @dev Check idle fund rate after all orders are updated if deposit funds to orders
+        if (totalChanges > 0) {
+            _checkIdleFundRate(asset);
+        }
     }
 
     /**
@@ -142,7 +147,10 @@ contract OrderManagerV2 is VaultStorageV2, VaultErrors, VaultEvents, IOrderManag
         uint256 __minIdleFundRate = _minIdleFundRate;
         if (__minIdleFundRate > 0) {
             uint256 idleFundBalance = asset.balanceOf(address(this));
-            uint256 currentIdleFundRate = idleFundBalance * Constants.DECIMAL_BASE / _accretingPrincipal;
+            uint256 currentIdleFundRate = _accretingPrincipal == 0
+                ? Constants.DECIMAL_BASE
+                : idleFundBalance * Constants.DECIMAL_BASE_SQ * Constants.DECIMAL_BASE / _accretingPrincipal;
+
             if (currentIdleFundRate < __minIdleFundRate) {
                 revert VaultErrorsV2.IdleFundRateTooLow(currentIdleFundRate, __minIdleFundRate);
             }
@@ -208,15 +216,6 @@ contract OrderManagerV2 is VaultStorageV2, VaultErrors, VaultEvents, IOrderManag
         uint256 amplifiedAmt = amount * Constants.DECIMAL_BASE_SQ;
         _accretingPrincipal -= amplifiedAmt;
         _totalFt -= amplifiedAmt;
-    }
-
-    function _burnFromOrder(ITermMaxOrder order, OrderInfo memory orderInfo, uint256 amount) internal {
-        order.withdrawAssets(orderInfo.ft, address(this), amount);
-        order.withdrawAssets(orderInfo.xt, address(this), amount);
-        orderInfo.ft.safeIncreaseAllowance(address(orderInfo.market), amount);
-        orderInfo.xt.safeIncreaseAllowance(address(orderInfo.market), amount);
-
-        orderInfo.market.burn(address(this), amount);
     }
 
     function _redeemFromMarket(address order, OrderInfo memory orderInfo) internal returns (uint256 totalRedeem) {
