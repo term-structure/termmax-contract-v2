@@ -27,13 +27,14 @@ import {ISwapCallback} from "../../v1/ISwapCallback.sol";
 import {VaultErrors} from "../../v1/errors/VaultErrors.sol";
 import {VaultEvents} from "../../v1/events/VaultEvents.sol";
 import {IOrderManager} from "../../v1/vault/IOrderManager.sol";
-import {VaultStorage, OrderInfo} from "../../v1/vault/VaultStorage.sol";
+import {VaultStorageV2, OrderInfo} from "../../v2/vault/VaultStorageV2.sol";
 import {Constants} from "../../v1/lib/Constants.sol";
 import {ITermMaxVault} from "../../v1/vault/ITermMaxVault.sol";
 import {ITermMaxVaultV2} from "./ITermMaxVaultV2.sol";
+import {VaultErrorsV2} from "../errors/VaultErrorsV2.sol";
 
 contract TermMaxVaultV2 is
-    VaultStorage,
+    VaultStorageV2,
     ITermMaxVault,
     Ownable2StepUpgradeable,
     ReentrancyGuardUpgradeable,
@@ -222,14 +223,14 @@ contract TermMaxVaultV2 is
      * @inheritdoc ITermMaxVault
      */
     function supplyQueue(uint256 index) external view virtual returns (address) {
-        return _supplyQueue[index];
+        revert VaultErrorsV2.SupplyQueueNoLongerSupported();
     }
 
     /**
      * @inheritdoc ITermMaxVault
      */
     function withdrawQueue(uint256 index) external view virtual returns (address) {
-        return _withdrawQueue[index];
+        revert VaultErrorsV2.WithdrawalQueueNoLongerSupported();
     }
 
     /**
@@ -250,7 +251,7 @@ contract TermMaxVaultV2 is
      * @inheritdoc ITermMaxVault
      */
     function apr() external view virtual returns (uint256) {
-        revert("Method not implemented, use apy() instead");
+        revert VaultErrorsV2.UseApyInsteadOfApr();
     }
 
     /**
@@ -265,14 +266,14 @@ contract TermMaxVaultV2 is
      * @inheritdoc ITermMaxVault
      */
     function supplyQueueLength() external view virtual returns (uint256) {
-        return _supplyQueue.length;
+        revert VaultErrorsV2.SupplyQueueNoLongerSupported();
     }
 
     /**
      * @inheritdoc ITermMaxVault
      */
     function withdrawQueueLength() external view virtual returns (uint256) {
-        return _withdrawQueue.length;
+        revert VaultErrorsV2.WithdrawalQueueNoLongerSupported();
     }
 
     // Ordermanager functions
@@ -561,60 +562,14 @@ contract TermMaxVaultV2 is
      * @inheritdoc ITermMaxVault
      */
     function updateSupplyQueue(uint256[] memory indexes) external virtual onlyAllocatorRole {
-        _updateSupplyQueue(indexes);
+        revert VaultErrorsV2.SupplyQueueNoLongerSupported();
     }
 
     /**
      * @inheritdoc ITermMaxVault
      */
     function updateWithdrawQueue(uint256[] memory indexes) external virtual onlyAllocatorRole {
-        _updateWithdrawQueue(indexes);
-    }
-
-    function _updateWithdrawQueue(uint256[] memory indexes) internal {
-        uint256 length = _withdrawQueue.length;
-        if (indexes.length != length) {
-            revert WithdrawQueueLengthMismatch();
-        }
-        bool[] memory seen = new bool[](length);
-        address[] memory newWithdrawQueue = new address[](length);
-
-        for (uint256 i; i < length; ++i) {
-            uint256 prevIndex = indexes[i];
-
-            // If prevIndex >= currLength, it will revert with native "Index out of bounds".
-            address order = _withdrawQueue[prevIndex];
-            if (seen[prevIndex]) revert DuplicateOrder(order);
-            seen[prevIndex] = true;
-
-            newWithdrawQueue[i] = order;
-        }
-        _withdrawQueue = newWithdrawQueue;
-
-        emit UpdateWithdrawQueue(msg.sender, newWithdrawQueue);
-    }
-
-    function _updateSupplyQueue(uint256[] memory indexes) internal {
-        uint256 length = _supplyQueue.length;
-        if (indexes.length != length) {
-            revert SupplyQueueLengthMismatch();
-        }
-        bool[] memory seen = new bool[](length);
-        address[] memory newSupplyQueue = new address[](length);
-
-        for (uint256 i; i < length; ++i) {
-            uint256 prevIndex = indexes[i];
-
-            // If prevIndex >= currLength, it will revert with native "Index out of bounds".
-            address order = _supplyQueue[prevIndex];
-            if (seen[prevIndex]) revert DuplicateOrder(order);
-            seen[prevIndex] = true;
-
-            newSupplyQueue[i] = order;
-        }
-        _supplyQueue = newSupplyQueue;
-
-        emit UpdateSupplyQueue(msg.sender, newSupplyQueue);
+        revert VaultErrorsV2.WithdrawalQueueNoLongerSupported();
     }
 
     /**
@@ -692,10 +647,6 @@ contract TermMaxVaultV2 is
      */
     function pause() external virtual onlyOwner {
         _pause();
-        // pause orders
-        for (uint256 i = 0; i < _supplyQueue.length; ++i) {
-            ITermMaxOrder(_supplyQueue[i]).pause();
-        }
     }
 
     /**
@@ -703,10 +654,6 @@ contract TermMaxVaultV2 is
      */
     function unpause() external virtual onlyOwner {
         _unpause();
-        // unpause orders
-        for (uint256 i = 0; i < _supplyQueue.length; ++i) {
-            ITermMaxOrder(_supplyQueue[i]).unpause();
-        }
     }
 
     function _previewAccruedInterest()
@@ -758,7 +705,12 @@ contract TermMaxVaultV2 is
 
     /// @notice Callback function for the swap
     /// @param deltaFt The change in the ft balance of the order
-    function afterSwap(uint256 ftReserve, uint256 xtReserve, int256 deltaFt, int256) external virtual override {
+    function afterSwap(uint256 ftReserve, uint256 xtReserve, int256 deltaFt, int256)
+        external
+        virtual
+        override
+        whenNotPaused
+    {
         _delegateCall(abi.encodeCall(IOrderManager.afterSwap, (ftReserve, xtReserve, deltaFt)));
     }
 }
