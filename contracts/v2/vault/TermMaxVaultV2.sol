@@ -55,6 +55,9 @@ contract TermMaxVaultV2 is
 
     address public immutable ORDER_MANAGER_SINGLETON;
 
+    uint256 private constant ACTION_DEPOSIT = 1;
+    uint256 private constant ACTION_WITHDRAW = 2;
+
     modifier onlyCuratorRole() {
         address sender = _msgSender();
         if (sender != _curator && sender != owner()) revert NotCuratorRole();
@@ -448,7 +451,8 @@ contract TermMaxVaultV2 is
     function _deposit(address caller, address recipient, uint256 assets, uint256 shares)
         internal
         override
-        nonTxReentrant
+        nonReentrant
+        nonTxReentrantBetweenActions(ACTION_DEPOSIT)
         whenNotPaused
     {
         IERC20(asset()).safeTransferFrom(caller, address(this), assets);
@@ -465,7 +469,8 @@ contract TermMaxVaultV2 is
     function _withdraw(address caller, address receiver, address owner, uint256 assets, uint256 shares)
         internal
         override
-        nonTxReentrant
+        nonReentrant
+        nonTxReentrantBetweenActions(ACTION_WITHDRAW)
     {
         if (caller != owner) {
             _spendAllowance(owner, caller, shares);

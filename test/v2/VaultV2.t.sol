@@ -49,6 +49,7 @@ import {IPausable} from "contracts/v1/access/AccessManager.sol";
 import {VaultEventsV2} from "contracts/v2/events/VaultEventsV2.sol";
 import {VaultInitialParamsV2} from "contracts/v2/storage/TermMaxStorageV2.sol";
 
+/// @dev use --isolate to run this tests
 contract VaultTestV2 is Test {
     using JSONLoader for *;
     using SafeCast for *;
@@ -1340,6 +1341,47 @@ contract VaultTestV2 is Test {
 
         vm.expectRevert(abi.encodeWithSelector(VaultErrorsV2.ApyTooLow.selector, 0, 0.05e8));
         res.order.swapExactTokenToToken(res.debt, res.ft, taker, tokenAmtIn, ftAmtOut, block.timestamp + 1 hours);
+        vm.stopPrank();
+    }
+
+    // ========== Tests for ITermMaxVaultV2 nonTxReentrantBetweenActions ==========
+    /// @dev remove --isolate to run this test
+    function testMultipleDeposits() public {
+        ITermMaxVaultV2 vaultV2 = ITermMaxVaultV2(address(vault));
+
+        // Initial deposit
+        vm.startPrank(deployer);
+        res.debt.mint(deployer, 1000e8);
+        res.debt.approve(address(vault), 1000e8);
+        vault.deposit(1000e8, deployer);
+        vm.stopPrank();
+
+        // Second deposit
+        vm.startPrank(deployer);
+        res.debt.mint(deployer, 500e8);
+        res.debt.approve(address(vault), 500e8);
+        vault.deposit(500e8, deployer);
+        vm.stopPrank();
+    }
+
+    /// @dev remove --isolate to run this test
+    function testMultipleWithdrawals() public {
+        ITermMaxVaultV2 vaultV2 = ITermMaxVaultV2(address(vault));
+
+        _depositToOrder(vault, res.order, -10e8.toInt256());
+
+        // First withdrawal
+        vm.startPrank(deployer);
+        uint256 sharesToWithdraw = 1e2;
+        uint256 amountWithdrawn = vault.withdraw(sharesToWithdraw, deployer, deployer);
+        assertEq(amountWithdrawn, vault.previewWithdraw(sharesToWithdraw));
+        vm.stopPrank();
+
+        // Second withdrawal
+        vm.startPrank(deployer);
+        sharesToWithdraw = 1e3;
+        amountWithdrawn = vault.withdraw(sharesToWithdraw, deployer, deployer);
+        assertEq(amountWithdrawn, vault.previewWithdraw(sharesToWithdraw));
         vm.stopPrank();
     }
 }
