@@ -35,6 +35,12 @@ Test without fork.
 $ forge test --skip Fork
 ```
 
+Using '--isolate' when testing TermMaxVault.
+
+```shell
+$ forge test --skip Fork --isolate
+```
+
 Using test scripts can configure multiple environments more flexibly, it will automatically configure the environment variables you need.
 Do unit test if you have an env file named sepolia.env.
 

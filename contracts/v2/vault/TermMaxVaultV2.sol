@@ -33,6 +33,7 @@ import {Constants} from "../../v1/lib/Constants.sol";
 import {ITermMaxVault} from "../../v1/vault/ITermMaxVault.sol";
 import {ITermMaxVaultV2} from "./ITermMaxVaultV2.sol";
 import {VaultErrorsV2} from "../errors/VaultErrorsV2.sol";
+import {TransactionReentrancyGuard} from "../lib/TransactionReentrancyGuard.sol";
 
 contract TermMaxVaultV2 is
     VaultStorageV2,
@@ -44,7 +45,8 @@ contract TermMaxVaultV2 is
     VaultErrors,
     VaultEvents,
     ISwapCallback,
-    ITermMaxVaultV2
+    ITermMaxVaultV2,
+    TransactionReentrancyGuard
 {
     using SafeCast for uint256;
     using TransferUtils for IERC20;
@@ -438,7 +440,7 @@ contract TermMaxVaultV2 is
     function _deposit(address caller, address recipient, uint256 assets, uint256 shares)
         internal
         override
-        nonReentrant
+        nonTxReentrant
         whenNotPaused
     {
         IERC20(asset()).safeTransferFrom(caller, address(this), assets);
@@ -455,7 +457,7 @@ contract TermMaxVaultV2 is
     function _withdraw(address caller, address receiver, address owner, uint256 assets, uint256 shares)
         internal
         override
-        nonReentrant
+        nonTxReentrant
     {
         if (caller != owner) {
             _spendAllowance(owner, caller, shares);

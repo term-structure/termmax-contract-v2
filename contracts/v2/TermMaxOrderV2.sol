@@ -11,7 +11,6 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {ITermMaxOrder, IERC20} from "../v1/ITermMaxOrder.sol";
 import {ITermMaxMarket} from "../v1/ITermMaxMarket.sol";
 import {IGearingToken} from "../v1/tokens/IGearingToken.sol";
-import {IFlashLoanReceiver} from "../v1/IFlashLoanReceiver.sol";
 import {Constants} from "../v1/lib/Constants.sol";
 import {TermMaxCurve, MathLib} from "../v1/lib/TermMaxCurve.sol";
 import {OrderErrors} from "../v1/errors/OrderErrors.sol";
