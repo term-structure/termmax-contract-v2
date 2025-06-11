@@ -19,7 +19,8 @@ import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/acces
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {PendingLib, PendingAddress, PendingUint192} from "../../v1/lib/PendingLib.sol";
 import {ITermMaxMarket} from "../../v1/ITermMaxMarket.sol";
-import {CurveCuts, VaultInitialParams} from "../../v1/storage/TermMaxStorage.sol";
+import {VaultInitialParams, CurveCuts} from "../../v1/storage/TermMaxStorage.sol";
+import {VaultInitialParamsV2} from "../storage/TermMaxStorageV2.sol";
 import {ITermMaxOrder} from "../../v1/ITermMaxOrder.sol";
 import {VaultConstants} from "../../v1/lib/VaultConstants.sol";
 import {TransferUtils} from "../../v1/lib/TransferUtils.sol";
@@ -101,7 +102,7 @@ contract TermMaxVaultV2 is
         _disableInitializers();
     }
 
-    function initialize(VaultInitialParams memory params) external virtual initializer {
+    function initialize(VaultInitialParamsV2 memory params) external virtual initializer {
         __ERC20_init(params.name, params.symbol);
         __Ownable_init(params.admin);
         __ERC4626_init(params.asset);
@@ -110,9 +111,16 @@ contract TermMaxVaultV2 is
 
         _setPerformanceFeeRate(params.performanceFeeRate);
         _checkTimelockBounds(params.timelock);
-        _timelock = params.timelock;
-        _maxCapacity = params.maxCapacity;
-        _curator = params.curator;
+        _setTimelock(params.timelock);
+        _setMinApy(params.minApy);
+        _setMinIdleFundRate(params.minIdleFundRate);
+        _setGuardian(params.guardian);
+        _setCapacity(params.maxCapacity);
+        _setCurator(params.curator);
+    }
+
+    function initialize(VaultInitialParams memory params) external virtual initializer {
+        revert VaultErrorsV2.UseVaultInitialParamsV2();
     }
 
     function _setPerformanceFeeRate(uint64 newPerformanceFeeRate) internal {
@@ -542,6 +550,10 @@ contract TermMaxVaultV2 is
      */
     function setCapacity(uint256 newCapacity) external virtual onlyCuratorRole {
         if (newCapacity == _maxCapacity) revert AlreadySet();
+        _setCapacity(newCapacity);
+    }
+
+    function _setCapacity(uint256 newCapacity) internal {
         _maxCapacity = newCapacity;
         emit SetCapacity(_msgSender(), newCapacity);
     }
@@ -627,9 +639,11 @@ contract TermMaxVaultV2 is
      */
     function setCurator(address newCurator) external virtual onlyOwner {
         if (newCurator == _curator) revert AlreadySet();
+        _setCurator(newCurator);
+    }
 
+    function _setCurator(address newCurator) internal {
         _curator = newCurator;
-
         emit SetCurator(newCurator);
     }
 

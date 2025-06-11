@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {ITermMaxMarket} from "../../v1/ITermMaxMarket.sol";
 import {PendingAddress, PendingUint192} from "../../v1/lib/PendingLib.sol";
 import {OrderInfo} from "../../v1/vault/VaultStorage.sol";
 

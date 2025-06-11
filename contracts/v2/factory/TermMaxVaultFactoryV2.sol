@@ -2,19 +2,19 @@
 pragma solidity ^0.8.27;
 
 import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
-import {VaultInitialParams} from "../../v1/storage/TermMaxStorage.sol";
 import {FactoryErrors} from "../../v1/errors/FactoryErrors.sol";
-import {IVaultFactory} from "../../v1/factory/IVaultFactory.sol";
-import {ITermMaxVault} from "../../v1/vault/ITermMaxVault.sol";
+import {ITermMaxVaultV2} from "../vault/ITermMaxVaultV2.sol";
 import {FactoryEventsV2} from "../events/FactoryEventsV2.sol";
+import {ITermMaxVaultFactoryV2} from "./ITermMaxVaultFactoryV2.sol";
+import {VaultInitialParamsV2} from "../storage/TermMaxStorageV2.sol";
 
 /**
  * @title The TermMax vault factory v2
  * @author Term Structure Labs
  */
-contract TermMaxVaultFactoryV2 is IVaultFactory {
+contract TermMaxVaultFactoryV2 is ITermMaxVaultFactoryV2 {
     /**
-     * @notice The implementation of TermMax Vault contract
+     * @notice The implementation of TermMax Vault contract v2
      */
     address public immutable TERMMAX_VAULT_IMPLEMENTATION;
 
@@ -26,7 +26,7 @@ contract TermMaxVaultFactoryV2 is IVaultFactory {
     }
 
     /**
-     * @inheritdoc IVaultFactory
+     * @inheritdoc ITermMaxVaultFactoryV2
      */
     function predictVaultAddress(
         address deployer,
@@ -41,14 +41,14 @@ contract TermMaxVaultFactoryV2 is IVaultFactory {
     }
 
     /**
-     * @inheritdoc IVaultFactory
+     * @inheritdoc ITermMaxVaultFactoryV2
      */
-    function createVault(VaultInitialParams memory initialParams, uint256 salt) public returns (address vault) {
+    function createVault(VaultInitialParamsV2 memory initialParams, uint256 salt) public returns (address vault) {
         vault = Clones.cloneDeterministic(
             TERMMAX_VAULT_IMPLEMENTATION,
             keccak256(abi.encode(msg.sender, initialParams.asset, initialParams.name, initialParams.symbol, salt))
         );
-        ITermMaxVault(vault).initialize(initialParams);
+        ITermMaxVaultV2(vault).initialize(initialParams);
         emit FactoryEventsV2.CreateVault(vault, msg.sender, initialParams);
     }
 }

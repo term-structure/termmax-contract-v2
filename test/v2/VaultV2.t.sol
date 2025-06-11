@@ -47,6 +47,7 @@ import {PendingUint192, PendingLib} from "contracts/v1/lib/PendingLib.sol";
 import {VaultErrorsV2} from "contracts/v2/errors/VaultErrorsV2.sol";
 import {IPausable} from "contracts/v1/access/AccessManager.sol";
 import {VaultEventsV2} from "contracts/v2/events/VaultEventsV2.sol";
+import {VaultInitialParamsV2} from "contracts/v2/storage/TermMaxStorageV2.sol";
 
 contract VaultTestV2 is Test {
     using JSONLoader for *;
@@ -76,7 +77,7 @@ contract VaultTestV2 is Test {
     uint256 currentTime;
     uint32 maxLtv = 0.89e8;
     uint32 liquidationLtv = 0.9e8;
-    VaultInitialParams initialParams;
+    VaultInitialParamsV2 initialParams;
 
     function setUp() public {
         vm.startPrank(deployer);
@@ -123,15 +124,23 @@ contract VaultTestV2 is Test {
 
         uint256 amount = 10000e8;
 
-        initialParams = VaultInitialParams(
-            deployer, curator, timelock, res.debt, maxCapacity, "Vault-DAI", "Vault-DAI", performanceFeeRate
+        initialParams = VaultInitialParamsV2(
+            deployer,
+            curator,
+            guardian,
+            timelock,
+            res.debt,
+            maxCapacity,
+            "Vault-DAI",
+            "Vault-DAI",
+            performanceFeeRate,
+            0,
+            0
         );
 
         vault = DeployUtils.deployVault(initialParams);
 
         vm.label(address(vault), "vault");
-
-        vault.submitGuardian(guardian);
         vm.label(guardian, "guardian");
         vault.setIsAllocator(allocator, true);
         vm.label(allocator, "allocator");

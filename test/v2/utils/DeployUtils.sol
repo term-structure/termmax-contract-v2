@@ -30,6 +30,8 @@ import {
     CurveCut,
     CurveCuts
 } from "contracts/v1/storage/TermMaxStorage.sol";
+import {VaultInitialParamsV2} from "contracts/v2/storage/TermMaxStorageV2.sol";
+import {TermMaxVaultFactoryV2} from "contracts/v2/factory/TermMaxVaultFactoryV2.sol";
 
 library DeployUtils {
     bytes32 constant GT_ERC20 = keccak256("GearingTokenWithERC20");
@@ -327,10 +329,10 @@ library DeployUtils {
         router = TermMaxRouterV2(address(proxy));
     }
 
-    function deployVault(VaultInitialParams memory initialParams) public returns (ITermMaxVault vault) {
+    function deployVault(VaultInitialParamsV2 memory initialParams) public returns (ITermMaxVault vault) {
         OrderManagerV2 orderManager = new OrderManagerV2();
         TermMaxVaultV2 implementation = new TermMaxVaultV2(address(orderManager));
-        VaultFactory vaultFactory = new VaultFactory(address(implementation));
+        TermMaxVaultFactoryV2 vaultFactory = new TermMaxVaultFactoryV2(address(implementation));
 
         vault = ITermMaxVault(vaultFactory.createVault(initialParams, 0));
     }

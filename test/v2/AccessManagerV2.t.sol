@@ -25,6 +25,7 @@ import {ITermMaxVault, TermMaxVaultV2} from "contracts/v2/vault/TermMaxVaultV2.s
 import {Constants} from "contracts/v1/lib/Constants.sol";
 import "contracts/v1/storage/TermMaxStorage.sol";
 import {IOracleV2} from "contracts/v2/oracle/IOracleV2.sol";
+import {VaultInitialParamsV2} from "contracts/v2/storage/TermMaxStorageV2.sol";
 
 contract AccessManagerTestV2 is Test {
     using JSONLoader for *;
@@ -219,15 +220,18 @@ contract AccessManagerTestV2 is Test {
 
     function testBatchSetSwitch() public {
         // Create vault initialization parameters
-        VaultInitialParams memory params = VaultInitialParams({
+        VaultInitialParamsV2 memory params = VaultInitialParamsV2({
             admin: address(manager),
             curator: address(0), // Will be set through AccessManager
+            guardian: address(0), // Will be set through AccessManager
             timelock: 1 days,
             asset: IERC20(address(res.debt)),
             maxCapacity: 1000000e18,
             name: "Test Vault",
             symbol: "tVAULT",
-            performanceFeeRate: 0.2e8 // 20%
+            performanceFeeRate: 0.2e8,
+            minApy: 0,
+            minIdleFundRate: 0
         });
 
         // Deploy vault
@@ -278,15 +282,18 @@ contract AccessManagerTestV2 is Test {
         address newCurator = vm.randomAddress();
 
         // Create vault initialization parameters
-        VaultInitialParams memory params = VaultInitialParams({
+        VaultInitialParamsV2 memory params = VaultInitialParamsV2({
             admin: address(manager),
             curator: address(0), // Will be set through AccessManager
+            guardian: address(0), // Will be set through AccessManager
             timelock: 1 days,
             asset: IERC20(address(res.debt)),
             maxCapacity: 1000000e18,
             name: "Test Vault",
             symbol: "tVAULT",
-            performanceFeeRate: 0.2e8 // 20%
+            performanceFeeRate: 0.2e8, // 20%
+            minApy: 0, // 5% minimum APY
+            minIdleFundRate: 0 // 1% minimum idle fund rate
         });
 
         // Deploy vault
@@ -340,15 +347,19 @@ contract AccessManagerTestV2 is Test {
         address curator = vm.randomAddress();
 
         // Create vault initialization parameters
-        VaultInitialParams memory params = VaultInitialParams({
+
+        VaultInitialParamsV2 memory params = VaultInitialParamsV2({
             admin: address(manager),
             curator: curator,
+            guardian: address(0),
             timelock: 1 days,
             asset: IERC20(address(res.debt)),
             maxCapacity: 1000000e18,
             name: "Test Vault",
             symbol: "tVAULT",
-            performanceFeeRate: 0.2e8
+            performanceFeeRate: 0.2e8, // 20%
+            minApy: 0,
+            minIdleFundRate: 0
         });
 
         // Deploy vault

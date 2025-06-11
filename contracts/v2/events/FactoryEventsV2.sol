@@ -2,7 +2,8 @@
 pragma solidity ^0.8.0;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {MarketInitialParams, VaultInitialParams} from "../../v1/storage/TermMaxStorage.sol";
+import {MarketInitialParams} from "../../v1/storage/TermMaxStorage.sol";
+import {VaultInitialParamsV2} from "../storage/TermMaxStorageV2.sol";
 
 /**
  * @title Factory Events Interface V2
@@ -26,7 +27,7 @@ interface FactoryEventsV2 {
      * @param creator The address of the vault creator
      * @param initialParams The initial parameters used to configure the vault
      */
-    event CreateVault(address indexed vault, address indexed creator, VaultInitialParams initialParams);
+    event CreateVault(address indexed vault, address indexed creator, VaultInitialParamsV2 initialParams);
 
     /**
      * @notice Emitted when a new price feed is created
