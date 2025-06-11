@@ -45,4 +45,11 @@ interface VaultEventsV2 {
      * @param caller The address that initiated the revocation
      */
     event RevokePendingMinIdleFundRate(address indexed caller);
+
+    /**
+     * @notice Emitted when accrued interest is calculated
+     * @param newAccretingPrincipal The updated accreting principal
+     * @param newPerformanceFee The updated performance fee
+     */
+    event AccruedInterest(uint256 newAccretingPrincipal, uint256 newPerformanceFee);
 }

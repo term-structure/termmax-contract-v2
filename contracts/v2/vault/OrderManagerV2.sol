@@ -17,6 +17,7 @@ import {IOrderManager} from "../../v1/vault/IOrderManager.sol";
 import {ISwapCallback} from "../../v1/ISwapCallback.sol";
 import {OrderInfo, VaultStorageV2} from "./VaultStorageV2.sol";
 import {VaultErrorsV2} from "../errors/VaultErrorsV2.sol";
+import {VaultEventsV2} from "../events/VaultEventsV2.sol";
 /**
  * @title Order Manager V2
  * @author Term Structure Labs
@@ -192,7 +193,6 @@ contract OrderManagerV2 is VaultStorageV2, VaultErrors, VaultEvents, IOrderManag
         asset.safeTransfer(recipient, amount);
         _performanceFee -= amplifiedAmt;
         _totalFt -= amplifiedAmt;
-
         emit WithdrawPerformanceFee(msg.sender, recipient, amount);
     }
 
@@ -277,6 +277,7 @@ contract OrderManagerV2 is VaultStorageV2, VaultErrors, VaultEvents, IOrderManag
             // all orders are expired
             _annualizedInterest = 0;
         }
+        emit VaultEventsV2.AccruedInterest(_accretingPrincipal, _performanceFee);
         _lastUpdateTime = currentTime;
     }
 
