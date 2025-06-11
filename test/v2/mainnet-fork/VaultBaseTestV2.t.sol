@@ -30,7 +30,8 @@ import {
     FeeConfig,
     MarketInitialParams,
     LoanConfig,
-    VaultInitialParams
+    VaultInitialParams,
+    CurveCuts
 } from "contracts/v1/storage/TermMaxStorage.sol";
 import {ITermMaxRouter, RouterEvents, RouterErrors} from "contracts/v1/router/TermMaxRouter.sol";
 import {MockFlashLoanReceiver} from "contracts/v1/test/MockFlashLoanReceiver.sol";
@@ -51,8 +52,12 @@ import {VaultConstants} from "contracts/v1/lib/VaultConstants.sol";
 import {PendingAddress, PendingUint192} from "contracts/v1/lib/PendingLib.sol";
 import {ITermMaxVault} from "contracts/v1/vault/ITermMaxVault.sol";
 import {ITermMaxVaultV2, VaultErrors, VaultEvents, TermMaxVaultV2} from "contracts/v2/vault/TermMaxVaultV2.sol";
+import {VaultInitialParamsV2} from "contracts/v2/storage/TermMaxStorageV2.sol";
+import {TermMaxVaultFactoryV2} from "contracts/v2/factory/TermMaxVaultFactoryV2.sol";
 
 abstract contract VaultBaseTestV2 is ForkBaseTestV2 {
+    using SafeCast for *;
+
     struct VaultTestRes {
         uint256 blockNumber;
         uint256 orderInitialAmount;
@@ -69,7 +74,7 @@ abstract contract VaultBaseTestV2 is ForkBaseTestV2 {
         MockPriceFeed debtPriceFeed;
         ITermMaxOrder order;
         ITermMaxVault vault;
-        VaultInitialParams vaultInitialParams;
+        VaultInitialParamsV2 vaultInitialParams;
         uint256 currentTime;
         uint256 maxCapacity;
         address maker;
@@ -215,6 +220,8 @@ abstract contract VaultBaseTestV2 is ForkBaseTestV2 {
         res.vault.deposit(amount2, lper2);
         vm.stopPrank();
 
+        _depositToOrder(res.vault, res.order, amount2.toInt256());
+
         address borrower = vm.randomAddress();
         vm.startPrank(borrower);
         deal(borrower, 1e18);
@@ -234,6 +241,7 @@ abstract contract VaultBaseTestV2 is ForkBaseTestV2 {
         uint256 delivered = (propotion * collateralAmt) / Constants.DECIMAL_BASE_SQ;
 
         vm.startPrank(lper2);
+        res.vault.redeemOrder(res.order);
         res.vault.redeem(10e8, lper2, lper2);
         vm.stopPrank();
 
@@ -263,6 +271,20 @@ abstract contract VaultBaseTestV2 is ForkBaseTestV2 {
         vm.startPrank(taker);
         res.debtToken.approve(address(res.order), tokenAmtIn);
         res.order.swapExactTokenToToken(res.debtToken, res.xt, taker, tokenAmtIn, xtAmtOut, block.timestamp + 1 hours);
+        vm.stopPrank();
+    }
+
+    function _depositToOrder(ITermMaxVault vault, ITermMaxOrder order, int256 amount) internal {
+        vm.startPrank(vault.curator());
+        CurveCuts[] memory curveCuts = new CurveCuts[](1);
+        curveCuts[0] = order.orderConfig().curveCuts;
+        int256[] memory amounts = new int256[](1);
+        amounts[0] = amount;
+        ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
+        orders[0] = order;
+        uint256[] memory maxSupplies = new uint256[](1);
+        maxSupplies[0] = type(uint128).max;
+        vault.updateOrders(orders, amounts, maxSupplies, curveCuts);
         vm.stopPrank();
     }
 }

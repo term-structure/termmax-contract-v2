@@ -16,7 +16,8 @@ import {SwapAdapter} from "contracts/v1/test/testnet/SwapAdapter.sol";
 import {IOracleV2, OracleAggregatorV2} from "contracts/v2/oracle/OracleAggregatorV2.sol";
 import {IOrderManager, OrderManager} from "contracts/v1/vault/OrderManager.sol";
 import {ITermMaxVault, ITermMaxVaultV2, TermMaxVaultV2} from "contracts/v2/vault/TermMaxVaultV2.sol";
-import {VaultFactory, IVaultFactory} from "contracts/v1/factory/VaultFactory.sol";
+import {OrderManagerV2} from "contracts/v2/vault/OrderManagerV2.sol";
+import {TermMaxVaultFactoryV2} from "contracts/v2/factory/TermMaxVaultFactoryV2.sol";
 import {
     MarketConfig,
     FeeConfig,
@@ -149,10 +150,10 @@ abstract contract ForkBaseTestV2 is Test {
         factory = new TermMaxFactoryV2(admin, address(m));
     }
 
-    function deployVaultFactory() public returns (VaultFactory vaultFactory) {
-        OrderManager orderManager = new OrderManager();
+    function deployVaultFactory() public returns (TermMaxVaultFactoryV2 vaultFactory) {
+        OrderManagerV2 orderManager = new OrderManagerV2();
         TermMaxVaultV2 implementation = new TermMaxVaultV2(address(orderManager));
-        vaultFactory = new VaultFactory(address(implementation));
+        vaultFactory = new TermMaxVaultFactoryV2(address(implementation));
     }
 
     function deployOracleAggregator(address admin) public returns (OracleAggregatorV2 oracle) {
