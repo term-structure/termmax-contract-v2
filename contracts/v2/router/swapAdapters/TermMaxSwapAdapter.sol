@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {ERC20SwapAdapterV2, IERC20} from "./ERC20SwapAdapterV2.sol";
 import {ITermMaxOrder} from "contracts/interfaces/ITermMaxOrder.sol";
 import {TransferUtilsV2} from "../../lib/TransferUtilsV2.sol";
@@ -17,6 +18,7 @@ struct TermMaxSwapData {
 
 contract TermMaxSwapAdapter is ERC20SwapAdapterV2 {
     using TransferUtilsV2 for IERC20;
+    using SafeCast for uint256;
 
     error OrdersAndAmtsLengthNotMatch();
 
@@ -28,8 +30,8 @@ contract TermMaxSwapAdapter is ERC20SwapAdapterV2 {
     {
         TermMaxSwapData memory data = abi.decode(swapData, (TermMaxSwapData));
         if (data.orders.length != data.tradingAmts.length) revert OrdersAndAmtsLengthNotMatch();
-
         if (data.swapExactTokenForToken) {
+            data.tradingAmts = _scaleTradingAmts(tokenInAmt, data.tradingAmts);
             for (uint256 i = 0; i < data.orders.length; ++i) {
                 address order = data.orders[i];
                 tokenIn.forceApprove(order, data.netTokenAmt);
@@ -39,6 +41,7 @@ contract TermMaxSwapAdapter is ERC20SwapAdapterV2 {
             }
             if (netTokenOutOrIn < data.netTokenAmt) revert LessThanMinTokenOut(netTokenOutOrIn, data.netTokenAmt);
         } else {
+            /// @dev Token inputs may not be costed totally in this case.
             for (uint256 i = 0; i < data.orders.length; ++i) {
                 address order = data.orders[i];
                 tokenIn.forceApprove(order, data.netTokenAmt);
@@ -48,5 +51,32 @@ contract TermMaxSwapAdapter is ERC20SwapAdapterV2 {
             }
             if (netTokenOutOrIn > data.netTokenAmt) revert LessThanMinTokenOut(netTokenOutOrIn, data.netTokenAmt);
         }
+    }
+
+    function _scaleTradingAmts(uint256 tokenInAmt, uint128[] memory tradingAmts)
+        internal
+        pure
+        virtual
+        returns (uint128[] memory scaledTradingAmts)
+    {
+        uint256 totalTradingAmt;
+        for (uint256 i = 0; i < tradingAmts.length; ++i) {
+            totalTradingAmt += tradingAmts[i];
+        }
+        if (totalTradingAmt == tokenInAmt) {
+            // No scaling needed, return the original trading amounts
+            return tradingAmts;
+        }
+        uint256 exceedAmt = tokenInAmt - totalTradingAmt;
+        scaledTradingAmts = new uint128[](tradingAmts.length);
+        tokenInAmt = 0;
+        for (uint256 i = 0; i < tradingAmts.length; ++i) {
+            scaledTradingAmts[i] = tradingAmts[i] + ((tradingAmts[i] * exceedAmt) / totalTradingAmt).toUint128();
+            tokenInAmt += scaledTradingAmts[i];
+        }
+        if (tokenInAmt < totalTradingAmt + exceedAmt) {
+            scaledTradingAmts[0] += uint128(totalTradingAmt + exceedAmt - tokenInAmt);
+        }
+        return scaledTradingAmts;
     }
 }
