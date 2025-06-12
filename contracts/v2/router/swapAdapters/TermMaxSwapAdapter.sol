@@ -8,8 +8,6 @@ import {TransferUtilsV2} from "../../lib/TransferUtilsV2.sol";
 
 struct TermMaxSwapData {
     bool swapExactTokenForToken;
-    address tokenIn;
-    address tokenOut;
     address[] orders;
     uint128[] tradingAmts;
     uint128 netTokenAmt;
@@ -57,7 +55,7 @@ contract TermMaxSwapAdapter is ERC20SwapAdapterV2 {
         internal
         pure
         virtual
-        returns (uint128[] memory scaledTradingAmts)
+        returns (uint128[] memory)
     {
         uint256 totalTradingAmt;
         for (uint256 i = 0; i < tradingAmts.length; ++i) {
@@ -68,15 +66,7 @@ contract TermMaxSwapAdapter is ERC20SwapAdapterV2 {
             return tradingAmts;
         }
         uint256 exceedAmt = tokenInAmt - totalTradingAmt;
-        scaledTradingAmts = new uint128[](tradingAmts.length);
-        tokenInAmt = 0;
-        for (uint256 i = 0; i < tradingAmts.length; ++i) {
-            scaledTradingAmts[i] = tradingAmts[i] + ((tradingAmts[i] * exceedAmt) / totalTradingAmt).toUint128();
-            tokenInAmt += scaledTradingAmts[i];
-        }
-        if (tokenInAmt < totalTradingAmt + exceedAmt) {
-            scaledTradingAmts[0] += uint128(totalTradingAmt + exceedAmt - tokenInAmt);
-        }
-        return scaledTradingAmts;
+        tradingAmts[0] += exceedAmt.toUint128();
+        return tradingAmts;
     }
 }
