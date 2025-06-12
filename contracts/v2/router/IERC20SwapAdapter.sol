@@ -7,13 +7,13 @@ pragma solidity ^0.8.27;
  */
 interface IERC20SwapAdapter {
     /// @notice Swap tokenIn to tokenOut
-    /// @param receipient Address to receive the output tokens
+    /// @param recipient Address to receive the output tokens
     /// @param tokenIn Input token address
     /// @param tokenOut Output token address
     /// @param tokenInAmt token input amount
     /// @param swapData Encoded swap data
     /// @return tokenOutAmt token output amount
-    function swap(address receipient, address tokenIn, address tokenOut, uint256 tokenInAmt, bytes memory swapData)
+    function swap(address recipient, address tokenIn, address tokenOut, uint256 tokenInAmt, bytes memory swapData)
         external
         returns (uint256 tokenOutAmt);
 }

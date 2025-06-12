@@ -20,7 +20,7 @@ contract TermMaxSwapAdapter is ERC20SwapAdapterV2 {
 
     error OrdersAndAmtsLengthNotMatch();
 
-    function _swap(address receipient, IERC20 tokenIn, IERC20 tokenOut, uint256 tokenInAmt, bytes memory swapData)
+    function _swap(address recipient, IERC20 tokenIn, IERC20 tokenOut, uint256 tokenInAmt, bytes memory swapData)
         internal
         virtual
         override
@@ -34,7 +34,7 @@ contract TermMaxSwapAdapter is ERC20SwapAdapterV2 {
                 address order = data.orders[i];
                 tokenIn.forceApprove(order, data.netTokenAmt);
                 netTokenOutOrIn += ITermMaxOrder(order).swapExactTokenToToken(
-                    tokenIn, tokenOut, receipient, data.tradingAmts[i], 0, data.deadline
+                    tokenIn, tokenOut, recipient, data.tradingAmts[i], 0, data.deadline
                 );
             }
             if (netTokenOutOrIn < data.netTokenAmt) revert LessThanMinTokenOut(netTokenOutOrIn, data.netTokenAmt);
@@ -44,7 +44,7 @@ contract TermMaxSwapAdapter is ERC20SwapAdapterV2 {
                 address order = data.orders[i];
                 tokenIn.forceApprove(order, data.netTokenAmt);
                 netTokenOutOrIn += ITermMaxOrder(order).swapTokenToExactToken(
-                    tokenIn, tokenOut, receipient, data.tradingAmts[i], data.netTokenAmt, data.deadline
+                    tokenIn, tokenOut, recipient, data.tradingAmts[i], data.netTokenAmt, data.deadline
                 );
             }
             if (netTokenOutOrIn > data.netTokenAmt) revert LessThanMinTokenOut(netTokenOutOrIn, data.netTokenAmt);

@@ -20,7 +20,7 @@ contract ERC4626VaultAdapterV2 is ERC20SwapAdapterV2 {
 
     constructor() {}
 
-    function _swap(address receipient, IERC20 tokenIn, IERC20 tokenOut, uint256 amount, bytes memory swapData)
+    function _swap(address recipient, IERC20 tokenIn, IERC20 tokenOut, uint256 amount, bytes memory swapData)
         internal
         virtual
         override
@@ -34,13 +34,13 @@ contract ERC4626VaultAdapterV2 is ERC20SwapAdapterV2 {
 
         if (action == Action.Deposit) {
             tokenIn.safeIncreaseAllowance(address(tokenOut), amount);
-            tokenOutAmt = IERC4626(address(tokenOut)).deposit(amount, receipient);
+            tokenOutAmt = IERC4626(address(tokenOut)).deposit(amount, recipient);
             if (tokenOutAmt < minTokenOut) {
                 revert LessThanMinTokenOut(tokenOutAmt, minTokenOut);
             }
         } else if (action == Action.Redeem) {
             tokenIn.safeIncreaseAllowance(address(tokenIn), amount);
-            tokenOutAmt = IERC4626(address(tokenIn)).redeem(amount, receipient, address(this));
+            tokenOutAmt = IERC4626(address(tokenIn)).redeem(amount, recipient, address(this));
             if (tokenOutAmt < minTokenOut) {
                 revert LessThanMinTokenOut(tokenOutAmt, minTokenOut);
             }

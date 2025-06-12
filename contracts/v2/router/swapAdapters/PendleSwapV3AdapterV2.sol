@@ -19,7 +19,7 @@ contract PendleSwapV3AdapterV2 is ERC20SwapAdapterV2, PendleHelper {
         router = IPAllActionV3(router_);
     }
 
-    function _swap(address receipient, IERC20 tokenIn, IERC20 tokenOut, uint256 amount, bytes memory swapData)
+    function _swap(address recipient, IERC20 tokenIn, IERC20 tokenOut, uint256 amount, bytes memory swapData)
         internal
         virtual
         override
@@ -39,7 +39,7 @@ contract PendleSwapV3AdapterV2 is ERC20SwapAdapterV2, PendleHelper {
         minTokenOut = (minTokenOut * amount) / inAmount;
         if (tokenOut == PT) {
             (tokenOutAmt,,) = router.swapExactTokenForPt(
-                receipient,
+                recipient,
                 address(market),
                 minTokenOut,
                 defaultApprox,
@@ -49,11 +49,11 @@ contract PendleSwapV3AdapterV2 is ERC20SwapAdapterV2, PendleHelper {
         } else {
             if (PT.isExpired()) {
                 (tokenOutAmt,) = router.redeemPyToToken(
-                    receipient, PT.YT(), amount, createTokenOutputStruct(address(tokenOut), minTokenOut)
+                    recipient, PT.YT(), amount, createTokenOutputStruct(address(tokenOut), minTokenOut)
                 );
             } else {
                 (tokenOutAmt,,) = router.swapExactPtForToken(
-                    receipient,
+                    recipient,
                     address(market),
                     amount,
                     createTokenOutputStruct(address(tokenOut), minTokenOut),

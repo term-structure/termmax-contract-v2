@@ -35,7 +35,7 @@ contract OdosV2AdapterV2 is ERC20SwapAdapterV2 {
         router = IOdosRouterV2(router_);
     }
 
-    function _swap(address receipient, IERC20 tokenIn, IERC20 tokenOut, uint256 amountIn, bytes memory swapData)
+    function _swap(address recipient, IERC20 tokenIn, IERC20 tokenOut, uint256 amountIn, bytes memory swapData)
         internal
         virtual
         override
@@ -59,7 +59,7 @@ contract OdosV2AdapterV2 is ERC20SwapAdapterV2 {
         tokenInfo.outputQuote = (tokenInfo.outputQuote * amountIn) / tokenInfo.inputAmount;
         tokenInfo.outputMin = (tokenInfo.outputMin * amountIn) / tokenInfo.inputAmount;
         tokenInfo.inputAmount = amountIn;
-        tokenInfo.outputReceiver = receipient;
+        tokenInfo.outputReceiver = recipient;
 
         tokenOutAmt = router.swap(tokenInfo, pathDefinition, executor, referralCode);
     }
