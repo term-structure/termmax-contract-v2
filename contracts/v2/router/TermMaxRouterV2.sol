@@ -13,7 +13,7 @@ import {
 } from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {ITermMaxMarket} from "../../v1/ITermMaxMarket.sol";
-import {ITermMaxMarketV2} from "../../v2/ITermMaxMarketV2.sol";
+import {ITermMaxMarketV2} from "../ITermMaxMarketV2.sol";
 import {ITermMaxOrder} from "../../v1/ITermMaxOrder.sol";
 import {SwapUnit} from "../../v1/router/ISwapAdapter.sol";
 import {RouterErrors} from "../../v1/errors/RouterErrors.sol";
@@ -21,9 +21,9 @@ import {RouterEvents} from "../../v1/events/RouterEvents.sol";
 import {TransferUtils} from "../../v1/lib/TransferUtils.sol";
 import {IFlashLoanReceiver} from "../../v1/IFlashLoanReceiver.sol";
 import {IFlashRepayer} from "../../v1/tokens/IFlashRepayer.sol";
-import {ITermMaxRouterV2} from "./ITermMaxRouterV2.sol";
+import {ITermMaxRouterV2, SwapPath} from "./ITermMaxRouterV2.sol";
 import {IGearingToken} from "../../v1/tokens/IGearingToken.sol";
-import {IGearingTokenV2} from "../../v2/tokens/IGearingTokenV2.sol";
+import {IGearingTokenV2} from "../tokens/IGearingTokenV2.sol";
 import {CurveCuts} from "../../v1/storage/TermMaxStorage.sol";
 import {ISwapCallback} from "../../v1/ISwapCallback.sol";
 import {Constants} from "../../v1/lib/Constants.sol";
@@ -64,6 +64,13 @@ contract TermMaxRouterV2 is
 
     uint256 private constant T_ROLLOVER_GT_RESERVE_STORE = 0;
 
+    error SwapPathsIsEmpty();
+
+    modifier checkSwapPaths(SwapPath[] calldata paths) {
+        if (paths.length == 0 || paths[0].units.length == 0) revert SwapPathsIsEmpty();
+        _;
+    }
+
     function _authorizeUpgrade(address newImplementation) internal virtual override onlyOwner {}
 
     function initialize(address admin) public initializer {
@@ -103,6 +110,70 @@ contract TermMaxRouterV2 is
         for (uint256 i = 0; i < balance; ++i) {
             gtIds[i] = IERC721Enumerable(gtAddr).tokenOfOwnerByIndex(owner, i);
         }
+    }
+
+    function swapTokens(SwapPath[] calldata paths)
+        external
+        whenNotPaused
+        checkSwapPaths(paths)
+        returns (uint256[] memory)
+    {
+        IERC20 tokenIn = IERC20(paths[0].units[0].tokenIn);
+        tokenIn.safeTransferFrom(msg.sender, address(this), paths[0].inputAmount);
+        return _executeSwapPaths(paths);
+    }
+
+    function _executeSwapPaths(SwapPath[] calldata paths) internal returns (uint256[] memory netTokenOuts) {
+        uint256 inputAmount = paths[0].inputAmount;
+        netTokenOuts = new uint256[](paths.length);
+        for (uint256 i = 0; i < paths.length; ++i) {
+            SwapPath memory path = paths[i];
+            if (path.units.length == 0) revert SwapUnitsIsEmpty();
+            if (path.useBalanceOnchain) {
+                inputAmount = IERC20(path.units[0].tokenIn).balanceOf(address(this));
+            }
+            netTokenOuts[i] = _executeSwapUnits(path.recipient, inputAmount, path.units);
+        }
+        return netTokenOuts;
+    }
+
+    function _executeSwapUnits(address recipient, uint256 inputAmt, SwapUnit[] memory units)
+        internal
+        returns (uint256 outputAmt)
+    {
+        if (units.length == 0) {
+            revert SwapUnitsIsEmpty();
+        }
+        for (uint256 i = 0; i < units.length; ++i) {
+            if (units[i].adapter == address(0)) {
+                // transfer token directly if no adapter is specified
+                IERC20(units[i].tokenIn).safeTransfer(recipient, inputAmt);
+                continue;
+            }
+            if (!adapterWhitelist[units[i].adapter]) {
+                revert AdapterNotWhitelisted(units[i].adapter);
+            }
+            bytes memory dataToSwap;
+            if (i == units.length - 1) {
+                // if it's the last unit and recipient is not this contract, we need to transfer the output token to recipient
+                dataToSwap = abi.encodeCall(
+                    IERC20SwapAdapter.swap,
+                    (recipient, units[i].tokenIn, units[i].tokenOut, inputAmt, units[i].swapData)
+                );
+            } else {
+                dataToSwap = abi.encodeCall(
+                    IERC20SwapAdapter.swap,
+                    (address(this), units[i].tokenIn, units[i].tokenOut, inputAmt, units[i].swapData)
+                );
+            }
+
+            (bool success, bytes memory returnData) = units[i].adapter.delegatecall(dataToSwap);
+            if (!success) {
+                revert SwapFailed(units[i].adapter, returnData);
+            }
+            inputAmt = abi.decode(returnData, (uint256));
+        }
+        outputAmt = inputAmt;
     }
 
     function swapExactTokenToToken(

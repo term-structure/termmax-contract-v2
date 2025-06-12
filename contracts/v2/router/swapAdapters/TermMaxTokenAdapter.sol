@@ -19,6 +19,7 @@ import {ITermMaxToken} from "../../tokens/ITermMaxToken.sol";
  *      making it suitable for wrapped token scenarios where no price discovery is needed.
  */
 contract TermMaxTokenAdapter is ERC20SwapAdapterV2 {
+    using TransferUtilsV2 for IERC20;
     /**
      * @notice Performs token conversion through mint/burn operations
      * @dev Overrides the base swap function to implement TermMax token-specific logic
@@ -38,6 +39,7 @@ contract TermMaxTokenAdapter is ERC20SwapAdapterV2 {
      *      - For unwrap operations: tokenIn must implement ITermMaxToken.burn()
      *      - No slippage protection needed due to 1:1 conversion ratio
      */
+
     function _swap(address recipient, IERC20 tokenIn, IERC20 tokenOut, uint256 tokenInAmt, bytes memory swapData)
         internal
         virtual
@@ -50,6 +52,7 @@ contract TermMaxTokenAdapter is ERC20SwapAdapterV2 {
         if (isWrap) {
             // Wrap operation: Mint new TermMax tokens
             // tokenOut must be a TermMax token that supports minting
+            tokenIn.safeIncreaseAllowance(address(tokenOut), tokenInAmt);
             ITermMaxToken(address(tokenOut)).mint(recipient, tokenInAmt);
         } else {
             // Unwrap operation: Burn existing TermMax tokens

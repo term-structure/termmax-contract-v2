@@ -8,6 +8,15 @@ import {SwapUnit} from "../../v1/router/ISwapAdapter.sol";
 import {ISwapCallback} from "../../v1/ISwapCallback.sol";
 import {CurveCuts} from "../../v1/storage/TermMaxStorage.sol";
 
+/// @title TermMaxSwapPath
+/// @notice Represents a path for swapping tokens in the TermMax protocol and third-party adapters
+struct SwapPath {
+    uint256 inputAmount;
+    address recipient;
+    bool useBalanceOnchain;
+    SwapUnit[] units;
+}
+
 /**
  * @title TermMax RouterV2 interface
  * @author Term Structure Labs
