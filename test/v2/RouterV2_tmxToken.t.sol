@@ -231,6 +231,8 @@ contract RouterTestV2_tmxToken is Test {
 
     function testSwapTokenToExactTokenWithTmxToken() public {
         vm.startPrank(sender);
+        // units 1: sender => usdc -> tmxToken -> ft => recipient
+        // units 2: tmxToken -> usdc => recipient
 
         uint128 amountOut = 90e8;
         uint128[] memory tradingAmts = new uint128[](2);
