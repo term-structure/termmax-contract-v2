@@ -681,29 +681,32 @@ contract RouterTestV2 is Test {
         vm.stopPrank();
     }
 
-    function testCreateOrderAndDeposit() public {
+    function testPlaceOrderForV1() public {
         vm.startPrank(sender);
 
-        uint256 maxXtReserve = 1000e8;
-
-        ISwapCallback swapTrigger = ISwapCallback(address(0));
         uint256 debtTokenToDeposit = 1e8;
         uint128 ftToDeposit = 2e8;
-        uint128 xtToDeposit = 10e8;
-        CurveCuts memory curveCuts = orderConfig.curveCuts;
-        deal(address(res.ft), sender, ftToDeposit);
-        deal(address(res.xt), sender, xtToDeposit);
+        uint128 xtToDeposit = 0;
+
         res.debt.mint(sender, debtTokenToDeposit);
+        deal(address(res.ft), sender, ftToDeposit);
         res.debt.approve(address(res.router), debtTokenToDeposit);
         res.ft.approve(address(res.router), ftToDeposit);
         res.xt.approve(address(res.router), xtToDeposit);
-        ITermMaxOrder order = res.router.createOrderAndDeposit(
-            res.market, maker, maxXtReserve, swapTrigger, debtTokenToDeposit, ftToDeposit, xtToDeposit, curveCuts
+        uint256 collateralToMintGt = 1e18;
+        res.collateral.mint(sender, collateralToMintGt);
+        res.collateral.approve(address(res.router), collateralToMintGt);
+
+        (ITermMaxOrder order, uint256 gtId) = res.router.placeOrderForV1(
+            res.market, sender, collateralToMintGt, debtTokenToDeposit, ftToDeposit, xtToDeposit, orderConfig
         );
 
-        assertEq(order.maker(), maker);
+        assertEq(gtId, 1);
+        assertEq(order.maker(), sender);
         assertEq(res.ft.balanceOf(address(order)), ftToDeposit + debtTokenToDeposit);
         assertEq(res.xt.balanceOf(address(order)), xtToDeposit + debtTokenToDeposit);
+
+        vm.stopPrank();
     }
 
     function testOrdersAndAmtsLengthNotMatch() public {

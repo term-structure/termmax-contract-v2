@@ -24,11 +24,12 @@ import {IFlashRepayer} from "../../v1/tokens/IFlashRepayer.sol";
 import {ITermMaxRouterV2} from "./ITermMaxRouterV2.sol";
 import {IGearingToken} from "../../v1/tokens/IGearingToken.sol";
 import {IGearingTokenV2} from "../../v2/tokens/IGearingTokenV2.sol";
-import {CurveCuts} from "../../v1/storage/TermMaxStorage.sol";
+import {CurveCuts, OrderConfig} from "../../v1/storage/TermMaxStorage.sol";
 import {ISwapCallback} from "../../v1/ISwapCallback.sol";
 import {Constants} from "../../v1/lib/Constants.sol";
 import {MathLib} from "../../v1/lib/MathLib.sol";
 import {IERC20SwapAdapter} from "./IERC20SwapAdapter.sol";
+import {RouterEventsV2} from "../events/RouterEventsV2.sol";
 
 /**
  * @title TermMax Router V2
@@ -453,31 +454,31 @@ contract TermMaxRouterV2 is
         return redeemedAmt;
     }
 
-    function createOrderAndDeposit(
+    function placeOrderForV1(
         ITermMaxMarket market,
         address maker,
-        uint256 maxXtReserve,
-        ISwapCallback swapTrigger,
+        uint256 collateralToMintGt,
         uint256 debtTokenToDeposit,
         uint128 ftToDeposit,
         uint128 xtToDeposit,
-        CurveCuts memory curveCuts
-    ) external whenNotPaused returns (ITermMaxOrder order) {
-        (IERC20 ft, IERC20 xt,,, IERC20 debtToken) = market.tokens();
-        order = market.createOrder(maker, maxXtReserve, swapTrigger, curveCuts);
+        OrderConfig memory orderConfig
+    ) external whenNotPaused returns (ITermMaxOrder order, uint256 gtId) {
+        (IERC20 ft, IERC20 xt, IGearingToken gt, address collateral, IERC20 debtToken) = market.tokens();
+        if (collateralToMintGt > 0) {
+            IERC20(collateral).safeTransferFrom(msg.sender, address(this), collateralToMintGt);
+            IERC20(collateral).safeIncreaseAllowance(address(gt), collateralToMintGt);
+            (gtId,) = market.issueFt(maker, 0, _encodeAmount(collateralToMintGt));
+        }
+        order = market.createOrder(maker, orderConfig.maxXtReserve, orderConfig.swapTrigger, orderConfig.curveCuts);
+
         if (debtTokenToDeposit > 0) {
             debtToken.safeTransferFrom(msg.sender, address(this), debtTokenToDeposit);
             debtToken.safeIncreaseAllowance(address(market), debtTokenToDeposit);
             market.mint(address(order), debtTokenToDeposit);
         }
-        if (ftToDeposit > 0) {
-            ft.safeTransferFrom(msg.sender, address(order), ftToDeposit);
-        }
-        if (xtToDeposit > 0) {
-            xt.safeTransferFrom(msg.sender, address(order), xtToDeposit);
-        }
-
-        emit CreateOrderAndDeposit(market, order, maker, debtTokenToDeposit, ftToDeposit, xtToDeposit, curveCuts);
+        ft.safeTransferFrom(msg.sender, address(order), ftToDeposit);
+        xt.safeTransferFrom(msg.sender, address(order), xtToDeposit);
+        emit RouterEventsV2.PlaceOrderForV1(maker, address(order), address(market), gtId, orderConfig);
     }
 
     function rolloverGt(
