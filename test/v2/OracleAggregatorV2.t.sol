@@ -16,6 +16,7 @@ contract OracleAggregatorTestV2 is Test {
     uint32 public constant HEARTBEAT = 1 hours;
     uint32 public constant BACKUP_HEARTBEAT = 2 hours;
     int256 public constant MAX_PRICE = 10000e8;
+    int256 public constant MIN_PRICE = 8000e8;
 
     // Price feed configuration
     uint8 public constant DECIMALS = 8;
@@ -51,7 +52,8 @@ contract OracleAggregatorTestV2 is Test {
             backupAggregator: backupFeed,
             heartbeat: HEARTBEAT,
             backupHeartbeat: BACKUP_HEARTBEAT,
-            maxPrice: MAX_PRICE
+            maxPrice: MAX_PRICE,
+            minPrice: MIN_PRICE
         });
 
         vm.prank(OWNER);
@@ -62,6 +64,7 @@ contract OracleAggregatorTestV2 is Test {
             AggregatorV3Interface aggregator,
             AggregatorV3Interface backupAggregator,
             int256 maxPrice,
+            int256 minPrice,
             uint32 heartbeat,
             uint32 backupHeartbeat
         ) = oracleAggregator.oracles(ASSET);
@@ -70,6 +73,7 @@ contract OracleAggregatorTestV2 is Test {
         assertEq(heartbeat, 0, "Heartbeat should not be set yet");
         assertEq(backupHeartbeat, 0, "Backup heartbeat should not be set yet");
         assertEq(maxPrice, 0, "Max price should not be set yet");
+        assertEq(minPrice, 0, "Min price should not be set yet");
 
         (IOracleV2.Oracle memory pendingOracle, uint64 validAt) = oracleAggregator.pendingOracles(ASSET);
         assertEq(address(pendingOracle.aggregator), address(primaryFeed));
@@ -87,7 +91,8 @@ contract OracleAggregatorTestV2 is Test {
             backupAggregator: backupFeed,
             heartbeat: HEARTBEAT,
             backupHeartbeat: BACKUP_HEARTBEAT,
-            maxPrice: MAX_PRICE
+            maxPrice: MAX_PRICE,
+            minPrice: MIN_PRICE
         });
 
         vm.prank(OWNER);
@@ -103,6 +108,7 @@ contract OracleAggregatorTestV2 is Test {
             AggregatorV3Interface aggregator,
             AggregatorV3Interface backupAggregator,
             int256 maxPrice,
+            int256 minPrice,
             uint32 heartbeat,
             uint32 backupHeartbeat
         ) = oracleAggregator.oracles(ASSET);
@@ -111,6 +117,7 @@ contract OracleAggregatorTestV2 is Test {
         assertEq(heartbeat, HEARTBEAT);
         assertEq(backupHeartbeat, BACKUP_HEARTBEAT);
         assertEq(maxPrice, MAX_PRICE);
+        assertEq(minPrice, MIN_PRICE);
 
         // Verify pending oracle is cleared
         (IOracleV2.Oracle memory pendingOracle, uint64 validAt) = oracleAggregator.pendingOracles(ASSET);
@@ -129,7 +136,8 @@ contract OracleAggregatorTestV2 is Test {
             backupAggregator: backupFeed,
             heartbeat: HEARTBEAT,
             backupHeartbeat: BACKUP_HEARTBEAT,
-            maxPrice: MAX_PRICE
+            maxPrice: MAX_PRICE,
+            minPrice: MIN_PRICE
         });
 
         vm.startPrank(OWNER);
@@ -163,7 +171,8 @@ contract OracleAggregatorTestV2 is Test {
             backupAggregator: backupFeed,
             heartbeat: HEARTBEAT,
             backupHeartbeat: BACKUP_HEARTBEAT,
-            maxPrice: MAX_PRICE
+            maxPrice: MAX_PRICE,
+            minPrice: MIN_PRICE
         });
 
         vm.startPrank(OWNER);
@@ -201,7 +210,8 @@ contract OracleAggregatorTestV2 is Test {
             backupAggregator: backupFeed,
             heartbeat: HEARTBEAT,
             backupHeartbeat: BACKUP_HEARTBEAT,
-            maxPrice: MAX_PRICE
+            maxPrice: MAX_PRICE,
+            minPrice: MIN_PRICE
         });
 
         vm.startPrank(OWNER);
@@ -225,7 +235,8 @@ contract OracleAggregatorTestV2 is Test {
             backupAggregator: backupFeed,
             heartbeat: HEARTBEAT,
             backupHeartbeat: BACKUP_HEARTBEAT,
-            maxPrice: MAX_PRICE
+            maxPrice: MAX_PRICE,
+            minPrice: MIN_PRICE
         });
 
         vm.prank(address(0x3));
@@ -240,7 +251,8 @@ contract OracleAggregatorTestV2 is Test {
             backupAggregator: backupFeed,
             heartbeat: HEARTBEAT,
             backupHeartbeat: BACKUP_HEARTBEAT,
-            maxPrice: MAX_PRICE
+            maxPrice: MAX_PRICE,
+            minPrice: MIN_PRICE
         });
 
         vm.prank(OWNER);
@@ -257,7 +269,8 @@ contract OracleAggregatorTestV2 is Test {
             backupAggregator: backupFeed,
             heartbeat: HEARTBEAT,
             backupHeartbeat: BACKUP_HEARTBEAT,
-            maxPrice: MAX_PRICE
+            maxPrice: MAX_PRICE,
+            minPrice: MIN_PRICE
         });
 
         vm.startPrank(OWNER);
@@ -276,7 +289,8 @@ contract OracleAggregatorTestV2 is Test {
                 backupAggregator: AggregatorV3Interface(address(0)),
                 heartbeat: 0,
                 backupHeartbeat: 0,
-                maxPrice: 0
+                maxPrice: 0,
+                minPrice: 0
             })
         );
 
@@ -285,6 +299,7 @@ contract OracleAggregatorTestV2 is Test {
             AggregatorV3Interface aggregator,
             AggregatorV3Interface backupAggregator,
             int256 maxPrice,
+            int256 minPrice,
             uint32 heartbeat,
             uint32 backupHeartbeat
         ) = oracleAggregator.oracles(ASSET);
@@ -293,6 +308,7 @@ contract OracleAggregatorTestV2 is Test {
         assertEq(heartbeat, 0);
         assertEq(backupHeartbeat, 0);
         assertEq(maxPrice, 0);
+        assertEq(minPrice, 0);
     }
 
     function test_GetPrice_PrimaryExceedsMaxPrice_NoBackup() public {
@@ -302,7 +318,8 @@ contract OracleAggregatorTestV2 is Test {
             backupAggregator: AggregatorV3Interface(address(0)),
             heartbeat: HEARTBEAT,
             backupHeartbeat: 0,
-            maxPrice: MAX_PRICE
+            maxPrice: MAX_PRICE,
+            minPrice: MIN_PRICE
         });
 
         vm.startPrank(OWNER);
@@ -337,7 +354,8 @@ contract OracleAggregatorTestV2 is Test {
             backupAggregator: backupFeed,
             heartbeat: HEARTBEAT,
             backupHeartbeat: BACKUP_HEARTBEAT,
-            maxPrice: MAX_PRICE
+            maxPrice: MAX_PRICE,
+            minPrice: MIN_PRICE
         });
 
         vm.startPrank(OWNER);
@@ -385,7 +403,8 @@ contract OracleAggregatorTestV2 is Test {
             backupAggregator: backupFeed,
             heartbeat: HEARTBEAT,
             backupHeartbeat: BACKUP_HEARTBEAT,
-            maxPrice: MAX_PRICE
+            maxPrice: MAX_PRICE,
+            minPrice: MIN_PRICE
         });
 
         vm.startPrank(OWNER);
@@ -432,7 +451,8 @@ contract OracleAggregatorTestV2 is Test {
             backupAggregator: backupFeed,
             heartbeat: HEARTBEAT,
             backupHeartbeat: BACKUP_HEARTBEAT,
-            maxPrice: 0 // No price cap
+            maxPrice: 0, // No price cap
+            minPrice: MIN_PRICE
         });
 
         vm.startPrank(OWNER);
@@ -467,7 +487,8 @@ contract OracleAggregatorTestV2 is Test {
             backupAggregator: backupFeed,
             heartbeat: HEARTBEAT,
             backupHeartbeat: BACKUP_HEARTBEAT,
-            maxPrice: 0 // No price cap
+            maxPrice: 0, // No price cap
+            minPrice: MIN_PRICE
         });
 
         vm.startPrank(OWNER);
@@ -505,7 +526,8 @@ contract OracleAggregatorTestV2 is Test {
             backupAggregator: AggregatorV3Interface(address(0)),
             heartbeat: HEARTBEAT,
             backupHeartbeat: 0,
-            maxPrice: MAX_PRICE
+            maxPrice: MAX_PRICE,
+            minPrice: MIN_PRICE
         });
 
         vm.startPrank(OWNER);
@@ -540,7 +562,8 @@ contract OracleAggregatorTestV2 is Test {
             backupAggregator: AggregatorV3Interface(address(0)),
             heartbeat: HEARTBEAT,
             backupHeartbeat: 0,
-            maxPrice: MAX_PRICE
+            maxPrice: MAX_PRICE,
+            minPrice: MIN_PRICE
         });
 
         vm.startPrank(OWNER);
@@ -581,7 +604,8 @@ contract OracleAggregatorTestV2 is Test {
             backupAggregator: differentDecimalsFeed,
             heartbeat: HEARTBEAT,
             backupHeartbeat: BACKUP_HEARTBEAT,
-            maxPrice: MAX_PRICE
+            maxPrice: MAX_PRICE,
+            minPrice: MIN_PRICE
         });
 
         vm.prank(OWNER);
@@ -596,7 +620,8 @@ contract OracleAggregatorTestV2 is Test {
             backupAggregator: backupFeed,
             heartbeat: HEARTBEAT,
             backupHeartbeat: BACKUP_HEARTBEAT,
-            maxPrice: MAX_PRICE
+            maxPrice: MAX_PRICE,
+            minPrice: MIN_PRICE
         });
 
         vm.prank(OWNER);
@@ -631,7 +656,8 @@ contract OracleAggregatorTestV2 is Test {
             backupAggregator: backupFeed,
             heartbeat: HEARTBEAT,
             backupHeartbeat: BACKUP_HEARTBEAT,
-            maxPrice: MAX_PRICE
+            maxPrice: MAX_PRICE,
+            minPrice: MIN_PRICE
         });
 
         vm.prank(OWNER);

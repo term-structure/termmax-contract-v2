@@ -108,10 +108,11 @@ abstract contract GtBaseTestV2 is ForkBaseTestV2 {
         res.debtPriceFeed = deployMockPriceFeed(res.marketInitialParams.admin);
         res.oracle.submitPendingOracle(
             address(res.marketInitialParams.collateral),
-            IOracleV2.Oracle(res.collateralPriceFeed, res.collateralPriceFeed, 0, 0, 0)
+            IOracleV2.Oracle(res.collateralPriceFeed, res.collateralPriceFeed, 0, 0, 0, 0)
         );
         res.oracle.submitPendingOracle(
-            address(res.marketInitialParams.debtToken), IOracleV2.Oracle(res.debtPriceFeed, res.debtPriceFeed, 0, 0, 0)
+            address(res.marketInitialParams.debtToken),
+            IOracleV2.Oracle(res.debtPriceFeed, res.debtPriceFeed, 0, 0, 0, 0)
         );
 
         res.oracle.acceptPendingOracle(address(res.marketInitialParams.collateral));

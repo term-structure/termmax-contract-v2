@@ -63,6 +63,7 @@ contract OracleAggregatorV2 is IOracleV2, Ownable2Step {
      * @param aggregator The address of the primary aggregator
      * @param backupAggregator The address of the backup aggregator
      * @param maxPrice The maximum price cap for this asset (0 = no cap)
+     * @param minPrice The minimum price floor for this asset (0 = no floor)
      * @param heartbeat The staleness threshold for the primary aggregator
      * @param backupHeartbeat The staleness threshold for the backup aggregator
      */
@@ -71,6 +72,7 @@ contract OracleAggregatorV2 is IOracleV2, Ownable2Step {
         AggregatorV3Interface indexed aggregator,
         AggregatorV3Interface indexed backupAggregator,
         int256 maxPrice,
+        int256 minPrice,
         uint32 heartbeat,
         uint32 backupHeartbeat
     );
@@ -81,6 +83,7 @@ contract OracleAggregatorV2 is IOracleV2, Ownable2Step {
      * @param aggregator The address of the primary aggregator
      * @param backupAggregator The address of the backup aggregator
      * @param maxPrice The maximum price cap for this asset
+     * @param minPrice The minimum price floor for this asset (0 = no floor)
      * @param heartbeat The staleness threshold for the primary aggregator
      * @param backupHeartbeat The staleness threshold for the backup aggregator
      * @param validAt The timestamp when this pending oracle can be accepted
@@ -90,6 +93,7 @@ contract OracleAggregatorV2 is IOracleV2, Ownable2Step {
         AggregatorV3Interface indexed aggregator,
         AggregatorV3Interface indexed backupAggregator,
         int256 maxPrice,
+        int256 minPrice,
         uint32 heartbeat,
         uint32 backupHeartbeat,
         uint64 validAt
@@ -120,7 +124,7 @@ contract OracleAggregatorV2 is IOracleV2, Ownable2Step {
         // Handle oracle removal case
         if (address(oracle.aggregator) == address(0) && address(oracle.backupAggregator) == address(0)) {
             delete oracles[asset];
-            emit UpdateOracle(asset, AggregatorV3Interface(address(0)), AggregatorV3Interface(address(0)), 0, 0, 0);
+            emit UpdateOracle(asset, AggregatorV3Interface(address(0)), AggregatorV3Interface(address(0)), 0, 0, 0, 0);
             return;
         }
 
@@ -146,6 +150,7 @@ contract OracleAggregatorV2 is IOracleV2, Ownable2Step {
             oracle.aggregator,
             oracle.backupAggregator,
             oracle.maxPrice,
+            oracle.minPrice,
             oracle.heartbeat,
             oracle.backupHeartbeat,
             validAt
@@ -169,7 +174,13 @@ contract OracleAggregatorV2 is IOracleV2, Ownable2Step {
         delete pendingOracles[asset];
 
         emit UpdateOracle(
-            asset, oracle.aggregator, oracle.backupAggregator, oracle.maxPrice, oracle.heartbeat, oracle.backupHeartbeat
+            asset,
+            oracle.aggregator,
+            oracle.backupAggregator,
+            oracle.maxPrice,
+            oracle.minPrice,
+            oracle.heartbeat,
+            oracle.backupHeartbeat
         );
     }
 
@@ -195,14 +206,7 @@ contract OracleAggregatorV2 is IOracleV2, Ownable2Step {
             (, int256 answer,, uint256 updatedAt,) = oracle.aggregator.latestRoundData();
             // Check if primary oracle is fresh and has positive price
             if ((oracle.heartbeat == 0 || oracle.heartbeat + updatedAt >= block.timestamp) && answer > 0) {
-                // Apply price cap if configured
-                if (oracle.maxPrice == 0 || answer <= oracle.maxPrice) {
-                    return (uint256(answer), oracle.aggregator.decimals());
-                } else if (address(oracle.backupAggregator) == address(0)) {
-                    // No backup available, return capped price
-                    return (uint256(oracle.maxPrice), oracle.aggregator.decimals());
-                }
-                // Primary exceeds cap but backup exists, continue to backup check
+                return (uint256(_processPriceRange(answer, oracle)), oracle.aggregator.decimals());
             }
         }
 
@@ -211,17 +215,21 @@ contract OracleAggregatorV2 is IOracleV2, Ownable2Step {
             (, int256 answer,, uint256 updatedAt,) = oracle.backupAggregator.latestRoundData();
             // Check if backup oracle is fresh and has positive price
             if ((oracle.backupHeartbeat == 0 || oracle.backupHeartbeat + updatedAt >= block.timestamp) && answer > 0) {
-                // Apply price cap if configured
-                if (oracle.maxPrice == 0 || answer <= oracle.maxPrice) {
-                    return (uint256(answer), oracle.backupAggregator.decimals());
-                } else {
-                    // Return capped price using backup decimals
-                    return (uint256(oracle.maxPrice), oracle.backupAggregator.decimals());
-                }
+                return (uint256(_processPriceRange(answer, oracle)), oracle.backupAggregator.decimals());
             }
         }
 
         // Both oracles failed or are stale
         revert OracleIsNotWorking(asset);
+    }
+
+    function _processPriceRange(int256 price, Oracle memory oracle) internal view returns (int256) {
+        if (oracle.maxPrice != 0 && price > oracle.maxPrice) {
+            return oracle.maxPrice;
+        }
+        if (oracle.minPrice != 0 && price < oracle.minPrice) {
+            return oracle.minPrice;
+        }
+        return price;
     }
 }
