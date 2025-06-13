@@ -6,6 +6,8 @@ abstract contract TransactionReentrancyGuard {
     error ReentrantCall();
     /// @notice Error thrown when a reentrant call is detected between actions.
     error ReentrantCallBetweenActions(uint256 actionId, uint256 oldActionId);
+    /// @notice Error thrown when an invalid action ID is provided. (0 and 1 are reserved for the guard itself)
+    error InvalidActionId();
 
     // keccak256(abi.encode(uint256(keccak256("termmax.tsstorage.TransactionReentrancyGuard")) - 1)) & ~bytes32(uint256(0xff))
     uint256 private constant T_FLAG_STORE = 0x55d65f3b5821c66716708cd5119fc8b654f479bd23b96d0911cee85241904700;
@@ -18,6 +20,7 @@ abstract contract TransactionReentrancyGuard {
     }
 
     modifier nonTxReentrantBetweenActions(uint256 actionId) {
+        if (actionId <= 1) revert InvalidActionId();
         uint256 oldActionId = _getTxReentrancyGuardStorage();
         if (oldActionId != 0 && oldActionId != actionId) revert ReentrantCallBetweenActions(actionId, oldActionId);
         _setTxReentrancyGuardStorage(actionId);
