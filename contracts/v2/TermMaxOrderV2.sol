@@ -19,6 +19,9 @@ import {OrderConfig, MarketConfig, CurveCuts, CurveCut, FeeConfig} from "../v1/s
 import {ISwapCallback} from "../v1/ISwapCallback.sol";
 import {TransferUtils} from "../v1/lib/TransferUtils.sol";
 import {ITermMaxMarketV2} from "./ITermMaxMarketV2.sol";
+import {ITermMaxOrderV2} from "./ITermMaxOrderV2.sol";
+import {OrderEventsV2} from "./events/OrderEventsV2.sol";
+import {OrderErrorsV2} from "./errors/OrderErrorsV2.sol";
 
 /**
  * @title TermMax Order V2
@@ -26,6 +29,7 @@ import {ITermMaxMarketV2} from "./ITermMaxMarketV2.sol";
  */
 contract TermMaxOrderV2 is
     ITermMaxOrder,
+    ITermMaxOrderV2,
     ReentrancyGuardUpgradeable,
     Ownable2StepUpgradeable,
     PausableUpgradeable,
@@ -48,8 +52,10 @@ contract TermMaxOrderV2 is
 
     uint64 private maturity;
 
-    uint256 private constant T_FT_RESERVE_STORE = 0;
-    uint256 private constant T_XT_RESERVE_STORE = 1;
+    // keccak256(abi.encode(uint256(keccak256("termmax.tsstorage.order.ftReserve")) - 1)) & ~bytes32(uint256(0xff))
+    uint256 private constant T_FT_RESERVE_STORE = 0x2a12e4f8e6ef46c978fd57eac04c67eb8dcdc9f0eec6327794e0ab372ed36000;
+    // keccak256(abi.encode(uint256(keccak256("termmax.tsstorage.order.xtReserve")) - 1)) & ~bytes32(uint256(0xff))
+    uint256 private constant T_XT_RESERVE_STORE = 0x2688c417e2e5b2d9eeee9f203d038d530482d06e29ca0badc05b91bdc9593000;
 
     function setInitialFtReserve(uint256 ftReserve) private {
         assembly {
@@ -117,31 +123,42 @@ contract TermMaxOrderV2 is
      * @inheritdoc ITermMaxOrder
      */
     function initialize(
+        address,
+        IERC20[3] memory,
+        IGearingToken,
+        uint256,
+        ISwapCallback,
+        CurveCuts memory,
+        MarketConfig memory
+    ) external virtual override initializer {
+        revert OrderErrorsV2.UseOrderInitializationFunctionV2();
+    }
+
+    /**
+     * @inheritdoc ITermMaxOrderV2
+     */
+    function initialize(
         address maker_,
         IERC20[3] memory tokens,
         IGearingToken gt_,
-        uint256 maxXtReserve_,
-        ISwapCallback swapTrigger,
-        CurveCuts memory curveCuts_,
+        OrderConfig memory orderConfig_,
         MarketConfig memory marketConfig
     ) external virtual override initializer {
         __Ownable_init(maker_);
         __ReentrancyGuard_init();
         __Pausable_init();
         market = ITermMaxMarket(_msgSender());
-
-        // _orderConfig.curveCuts = curveCuts_;
-        _updateCurve(curveCuts_);
+        _updateCurve(orderConfig_.curveCuts);
         _orderConfig.feeConfig = marketConfig.feeConfig;
-        _orderConfig.maxXtReserve = maxXtReserve_;
-        _orderConfig.swapTrigger = swapTrigger;
+        _orderConfig.maxXtReserve = orderConfig_.maxXtReserve;
+        _orderConfig.swapTrigger = orderConfig_.swapTrigger;
         maturity = marketConfig.maturity;
-
         ft = tokens[0];
         xt = tokens[1];
         debtToken = tokens[2];
         gt = gt_;
-        emit OrderInitialized(market, maker_, maxXtReserve_, swapTrigger, curveCuts_);
+
+        emit OrderEventsV2.OrderInitialized(address(this), maker_, address(market), orderConfig_);
     }
 
     /**

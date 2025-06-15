@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import {OrderConfig} from "../v1/storage/TermMaxStorage.sol";
+import {ITermMaxOrder} from "../v1/ITermMaxOrder.sol";
+
 /**
  * @title TermMax Market V2 interface
  * @author Term Structure Labs
@@ -47,4 +50,6 @@ interface ITermMaxMarketV2 {
      * @return deliveryData Encoded data containing collateral delivery information
      */
     function redeem(address ftOwner, address recipient, uint256 ftAmount) external returns (uint256, bytes memory);
+
+    function createOrder(address maker, OrderConfig memory orderconfig) external returns (ITermMaxOrder order);
 }
