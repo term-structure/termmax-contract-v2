@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC721Enumerable} from "@openzeppelin/contracts/interfaces/IERC721Enumerable.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts/interfaces/IERC721Receiver.sol";
@@ -25,7 +24,6 @@ import {ITermMaxRouterV2, SwapPath} from "./ITermMaxRouterV2.sol";
 import {IGearingToken} from "../../v1/tokens/IGearingToken.sol";
 import {IGearingTokenV2} from "../tokens/IGearingTokenV2.sol";
 import {CurveCuts, OrderConfig} from "../../v1/storage/TermMaxStorage.sol";
-import {ISwapCallback} from "../../v1/ISwapCallback.sol";
 import {Constants} from "../../v1/lib/Constants.sol";
 import {MathLib} from "../../v1/lib/MathLib.sol";
 import {IERC20SwapAdapter} from "./IERC20SwapAdapter.sol";
@@ -506,6 +504,9 @@ contract TermMaxRouterV2 is
         emit RepayByTokenThroughFt(market, gtId, msg.sender, recipient, repayAmt, returnAmt);
     }
 
+    /**
+     * @inheritdoc ITermMaxRouterV2
+     */
     function redeemAndSwap(
         address recipient,
         ITermMaxMarket market,
@@ -525,6 +526,9 @@ contract TermMaxRouterV2 is
         return redeemedAmt;
     }
 
+    /**
+     * @inheritdoc ITermMaxRouterV2
+     */
     function placeOrderForV1(
         ITermMaxMarket market,
         address maker,
@@ -552,6 +556,9 @@ contract TermMaxRouterV2 is
         emit RouterEventsV2.PlaceOrder(maker, address(order), address(market), gtId, orderConfig);
     }
 
+    /**
+     * @inheritdoc ITermMaxRouterV2
+     */
     function placeOrderForV2(
         ITermMaxMarket market,
         address maker,
@@ -579,6 +586,9 @@ contract TermMaxRouterV2 is
         emit RouterEventsV2.PlaceOrder(maker, address(order), address(market), gtId, orderConfig);
     }
 
+    /**
+     * @inheritdoc ITermMaxRouterV2
+     */
     function rolloverGt(
         address recipient,
         IGearingToken gt,
@@ -614,6 +624,9 @@ contract TermMaxRouterV2 is
         }
     }
 
+    /**
+     * @inheritdoc ITermMaxRouterV2
+     */
     function rolloverGtV2(
         address recipient,
         IGearingToken gt,
