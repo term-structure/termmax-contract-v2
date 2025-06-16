@@ -17,11 +17,19 @@ import {MarketConstantsV2} from "./lib/MarketConstantsV2.sol";
 import {MarketErrors} from "../v1/errors/MarketErrors.sol";
 import {MarketEvents} from "../v1/events/MarketEvents.sol";
 import {StringUtil} from "../v1/lib/StringUtil.sol";
-import {MarketConfig, MarketInitialParams, GtConfig, CurveCuts, FeeConfig} from "../v1/storage/TermMaxStorage.sol";
+import {
+    MarketConfig,
+    MarketInitialParams,
+    GtConfig,
+    CurveCuts,
+    FeeConfig,
+    OrderConfig
+} from "../v1/storage/TermMaxStorage.sol";
 import {ISwapCallback} from "../v1/ISwapCallback.sol";
 import {TransferUtils} from "../v1/lib/TransferUtils.sol";
 import {ITermMaxMarket, IMintableERC20, IERC20} from "../v1/ITermMaxMarket.sol";
 import {IMintableERC20V2} from "./tokens/IMintableERC20V2.sol";
+import {ITermMaxOrderV2} from "./ITermMaxOrderV2.sol";
 
 /**
  * @title TermMax Market V2
@@ -435,11 +443,27 @@ contract TermMaxMarketV2 is
         virtual
         nonReentrant
         isOpen
-        returns (ITermMaxOrder order)
+        returns (ITermMaxOrder)
     {
-        order = ITermMaxOrder(Clones.clone(TERMMAX_ORDER_IMPLEMENT));
-        order.initialize(maker, [ft, xt, debtToken], gt, maxXtReserve, swapTrigger, curveCuts, _config);
-        emit CreateOrder(maker, order);
+        OrderConfig memory orderconfig;
+        orderconfig.maxXtReserve = maxXtReserve;
+        orderconfig.swapTrigger = swapTrigger;
+        orderconfig.curveCuts = curveCuts;
+        return _createOrder(maker, orderconfig);
+    }
+
+    /**
+     * @inheritdoc ITermMaxMarketV2
+     */
+    function createOrder(address maker, OrderConfig memory orderconfig) external returns (ITermMaxOrder) {
+        return _createOrder(maker, orderconfig);
+    }
+
+    function _createOrder(address maker, OrderConfig memory orderconfig) internal returns (ITermMaxOrder) {
+        address order = Clones.clone(TERMMAX_ORDER_IMPLEMENT);
+        ITermMaxOrderV2(order).initialize(maker, [ft, xt, debtToken], gt, orderconfig, _config);
+        emit CreateOrder(maker, ITermMaxOrder(order));
+        return ITermMaxOrder(order);
     }
 
     function updateOrderFeeRate(ITermMaxOrder order, FeeConfig memory newFeeConfig) external virtual onlyOwner {

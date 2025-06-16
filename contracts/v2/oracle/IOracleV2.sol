@@ -24,6 +24,7 @@ interface IOracleV2 {
         AggregatorV3Interface aggregator;
         AggregatorV3Interface backupAggregator;
         int256 maxPrice;
+        int256 minPrice;
         uint32 heartbeat;
         uint32 backupHeartbeat;
     }

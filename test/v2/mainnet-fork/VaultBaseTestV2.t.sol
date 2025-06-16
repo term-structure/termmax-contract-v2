@@ -100,11 +100,11 @@ abstract contract VaultBaseTestV2 is ForkBaseTestV2 {
         res.debtPriceFeed = deployMockPriceFeed(res.marketInitialParams.admin);
         res.oracle.submitPendingOracle(
             address(res.marketInitialParams.collateral),
-            IOracleV2.Oracle(res.collateralPriceFeed, res.collateralPriceFeed, 365 days, 365 days, 0)
+            IOracleV2.Oracle(res.collateralPriceFeed, res.collateralPriceFeed, 365 days, 365 days, 0, 0)
         );
         res.oracle.submitPendingOracle(
             address(res.marketInitialParams.debtToken),
-            IOracleV2.Oracle(res.debtPriceFeed, res.debtPriceFeed, 365 days, 365 days, 0)
+            IOracleV2.Oracle(res.debtPriceFeed, res.debtPriceFeed, 365 days, 365 days, 0, 0)
         );
         res.oracle.acceptPendingOracle(address(res.marketInitialParams.collateral));
         res.oracle.acceptPendingOracle(address(res.marketInitialParams.debtToken));

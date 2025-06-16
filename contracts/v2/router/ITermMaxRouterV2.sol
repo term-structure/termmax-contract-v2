@@ -6,7 +6,7 @@ import {ITermMaxMarket} from "../../v1/ITermMaxMarket.sol";
 import {ITermMaxOrder} from "../../v1/ITermMaxOrder.sol";
 import {SwapUnit} from "../../v1/router/ISwapAdapter.sol";
 import {ISwapCallback} from "../../v1/ISwapCallback.sol";
-import {CurveCuts} from "../../v1/storage/TermMaxStorage.sol";
+import {OrderConfig} from "../../v1/storage/TermMaxStorage.sol";
 
 /// @title TermMaxSwapPath
 /// @notice Represents a path for swapping tokens in the TermMax protocol and third-party adapters
@@ -316,27 +316,13 @@ interface ITermMaxRouterV2 {
         uint256 minTokenOut
     ) external returns (uint256 redeemedAmt);
 
-    /**
-     * @notice Creates an order and deposits tokens
-     * @dev Creates a new order and deposits tokens to the market
-     * @param market The market to create order in
-     * @param maker Address of the order maker
-     * @param maxXtReserve Maximum amount of XT to reserve
-     * @param swapTrigger Swap trigger callback
-     * @param debtTokenToDeposit Amount of debt tokens to deposit
-     * @param ftToDeposit Amount of FT tokens to deposit
-     * @param xtToDeposit Amount of XT tokens to deposit
-     * @param curveCuts Curve cuts for the order
-     * @return order The created order
-     */
-    function createOrderAndDeposit(
+    function placeOrderForV1(
         ITermMaxMarket market,
         address maker,
-        uint256 maxXtReserve,
-        ISwapCallback swapTrigger,
+        uint256 collateralToMintGt,
         uint256 debtTokenToDeposit,
         uint128 ftToDeposit,
         uint128 xtToDeposit,
-        CurveCuts memory curveCuts
-    ) external returns (ITermMaxOrder order);
+        OrderConfig memory orderConfig
+    ) external returns (ITermMaxOrder order, uint256 gtId);
 }

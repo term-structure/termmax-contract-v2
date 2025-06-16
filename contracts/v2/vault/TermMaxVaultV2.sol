@@ -55,8 +55,8 @@ contract TermMaxVaultV2 is
 
     address public immutable ORDER_MANAGER_SINGLETON;
 
-    uint256 private constant ACTION_DEPOSIT = 1;
-    uint256 private constant ACTION_WITHDRAW = 2;
+    uint256 private constant ACTION_DEPOSIT = uint256(keccak256("ACTION_DEPOSIT"));
+    uint256 private constant ACTION_WITHDRAW = uint256(keccak256("ACTION_WITHDRAW"));
 
     modifier onlyCuratorRole() {
         address sender = _msgSender();
@@ -122,7 +122,7 @@ contract TermMaxVaultV2 is
         _setCurator(params.curator);
     }
 
-    function initialize(VaultInitialParams memory params) external virtual initializer {
+    function initialize(VaultInitialParams memory) external virtual initializer {
         revert VaultErrorsV2.UseVaultInitialParamsV2();
     }
 
@@ -503,6 +503,7 @@ contract TermMaxVaultV2 is
         nonReentrant
         returns (uint256 shares, uint256 collateralOut)
     {
+        if (collateral == asset()) revert VaultErrorsV2.CollateralIsAsset();
         address caller = msg.sender;
         shares = previewWithdraw(badDebtAmt);
         uint256 maxShares = maxRedeem(owner);

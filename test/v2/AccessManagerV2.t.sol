@@ -532,7 +532,8 @@ contract AccessManagerTestV2 is Test {
             backupAggregator: AggregatorV3Interface(address(new MockPriceFeed(sender))),
             heartbeat: 3600,
             backupHeartbeat: 7200,
-            maxPrice: 1e8
+            maxPrice: 1e8,
+            minPrice: 0
         });
 
         // Test that non-oracle role cannot submit pending oracle
@@ -573,7 +574,8 @@ contract AccessManagerTestV2 is Test {
             backupAggregator: AggregatorV3Interface(address(new MockPriceFeed(sender))),
             heartbeat: 3600,
             backupHeartbeat: 7200,
-            maxPrice: 1e8
+            maxPrice: 1e8,
+            minPrice: 0
         });
 
         // Submit a pending oracle
