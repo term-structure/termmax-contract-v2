@@ -147,10 +147,10 @@ library DeployUtils {
         res.oracle = deployOracle(admin, 0);
 
         res.oracle.submitPendingOracle(
-            address(res.tmxToken), IOracleV2.Oracle(res.debtOracle, res.debtOracle, 0, 365 days, 0)
+            address(res.tmxToken), IOracleV2.Oracle(res.debtOracle, res.debtOracle, 0, 0, 365 days, 0)
         );
         res.oracle.submitPendingOracle(
-            address(res.collateral), IOracleV2.Oracle(res.collateralOracle, res.collateralOracle, 0, 365 days, 0)
+            address(res.collateral), IOracleV2.Oracle(res.collateralOracle, res.collateralOracle, 0, 0, 365 days, 0)
         );
 
         res.oracle.acceptPendingOracle(address(res.tmxToken));
