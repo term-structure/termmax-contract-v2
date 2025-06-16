@@ -857,6 +857,9 @@ contract VaultTestV2 is Test {
         vm.expectRevert(abi.encodeWithSelector(VaultErrors.NoBadDebt.selector, address(res.collateral)));
         vault.dealBadDebt(address(res.collateral), 10e8, lper2, lper2);
 
+        vm.expectRevert(abi.encodeWithSelector(VaultErrorsV2.CollateralIsAsset.selector));
+        vault.dealBadDebt(address(res.debt), 10e8, lper2, lper2); // Update to use asset() for the test
+
         vm.stopPrank();
     }
 

@@ -503,6 +503,7 @@ contract TermMaxVaultV2 is
         nonReentrant
         returns (uint256 shares, uint256 collateralOut)
     {
+        if (collateral == asset()) revert VaultErrorsV2.CollateralIsAsset();
         address caller = msg.sender;
         shares = previewWithdraw(badDebtAmt);
         uint256 maxShares = maxRedeem(owner);
