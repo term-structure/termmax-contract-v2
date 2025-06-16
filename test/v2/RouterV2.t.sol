@@ -709,6 +709,34 @@ contract RouterTestV2 is Test {
         vm.stopPrank();
     }
 
+    function testPlaceOrderForV2() public {
+        vm.startPrank(sender);
+
+        uint256 debtTokenToDeposit = 1e8;
+        uint128 ftToDeposit = 2e8;
+        uint128 xtToDeposit = 0;
+
+        res.debt.mint(sender, debtTokenToDeposit);
+        deal(address(res.ft), sender, ftToDeposit);
+        res.debt.approve(address(res.router), debtTokenToDeposit);
+        res.ft.approve(address(res.router), ftToDeposit);
+        res.xt.approve(address(res.router), xtToDeposit);
+        uint256 collateralToMintGt = 1e18;
+        res.collateral.mint(sender, collateralToMintGt);
+        res.collateral.approve(address(res.router), collateralToMintGt);
+
+        (ITermMaxOrder order, uint256 gtId) = res.router.placeOrderForV2(
+            res.market, sender, collateralToMintGt, debtTokenToDeposit, ftToDeposit, xtToDeposit, orderConfig
+        );
+
+        assertEq(gtId, order.orderConfig().gtId);
+        assertEq(order.maker(), sender);
+        assertEq(res.ft.balanceOf(address(order)), ftToDeposit + debtTokenToDeposit);
+        assertEq(res.xt.balanceOf(address(order)), xtToDeposit + debtTokenToDeposit);
+
+        vm.stopPrank();
+    }
+
     function testOrdersAndAmtsLengthNotMatch() public {
         vm.startPrank(sender);
 

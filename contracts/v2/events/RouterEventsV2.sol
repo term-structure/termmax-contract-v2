@@ -19,7 +19,5 @@ interface RouterEventsV2 {
      * @param gtId The id of the gearing token
      * @param config The configuration details of the order, encapsulated in an OrderConfig struct
      */
-    event PlaceOrderForV1(
-        address indexed maker, address indexed order, address market, uint256 gtId, OrderConfig config
-    );
+    event PlaceOrder(address indexed maker, address indexed order, address market, uint256 gtId, OrderConfig config);
 }
