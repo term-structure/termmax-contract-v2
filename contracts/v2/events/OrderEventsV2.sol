@@ -9,11 +9,8 @@ import {OrderConfig} from "../../v1/storage/TermMaxStorage.sol";
  */
 interface OrderEventsV2 {
     /// @notice Emitted when an order is initialized
-    /// @param order The address of the order contract
     /// @param maker The address of the maker who created the order
     /// @param market The address of the market associated with the order
     /// @param orderConfig The configuration of the order
-    event OrderInitialized(
-        address indexed order, address indexed maker, address indexed market, OrderConfig orderConfig
-    );
+    event OrderInitialized(address indexed maker, address indexed market, OrderConfig orderConfig);
 }

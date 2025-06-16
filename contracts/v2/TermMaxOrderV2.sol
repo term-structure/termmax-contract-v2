@@ -149,6 +149,7 @@ contract TermMaxOrderV2 is
         __Pausable_init();
         market = ITermMaxMarket(_msgSender());
         _updateCurve(orderConfig_.curveCuts);
+
         _orderConfig.feeConfig = marketConfig.feeConfig;
         _orderConfig.maxXtReserve = orderConfig_.maxXtReserve;
         _orderConfig.swapTrigger = orderConfig_.swapTrigger;
@@ -158,7 +159,8 @@ contract TermMaxOrderV2 is
         debtToken = tokens[2];
         gt = gt_;
 
-        emit OrderEventsV2.OrderInitialized(address(this), maker_, address(market), orderConfig_);
+        orderConfig_.feeConfig = marketConfig.feeConfig;
+        emit OrderEventsV2.OrderInitialized(maker_, address(market), orderConfig_);
     }
 
     /**

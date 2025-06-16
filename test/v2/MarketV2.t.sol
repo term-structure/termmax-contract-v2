@@ -26,6 +26,7 @@ import {
     OrderConfig,
     CurveCuts
 } from "contracts/v1/storage/TermMaxStorage.sol";
+import {OrderEventsV2} from "contracts/v2/events/OrderEventsV2.sol";
 
 contract MarketV2Test is Test {
     using JSONLoader for *;
@@ -305,11 +306,9 @@ contract MarketV2Test is Test {
 
     function testCreateOrder() public {
         vm.startPrank(sender);
-
+        orderConfig.feeConfig = res.market.config().feeConfig;
         vm.expectEmit();
-        emit OrderEvents.OrderInitialized(
-            res.market, sender, orderConfig.maxXtReserve, ISwapCallback(address(0)), orderConfig.curveCuts
-        );
+        emit OrderEventsV2.OrderInitialized(sender, address(res.market), orderConfig);
         ITermMaxOrder order =
             res.market.createOrder(sender, orderConfig.maxXtReserve, ISwapCallback(address(0)), orderConfig.curveCuts);
         assertEq(address(order.market()), address(res.market));
