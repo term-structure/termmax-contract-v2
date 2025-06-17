@@ -255,11 +255,6 @@ contract TermMaxRouterV2 is
 
     /**
      * @inheritdoc ITermMaxRouterV2
-     * @dev input/output: =>, swap: ->
-     *      path0 (=> xt or => token -> xt) => router
-     *      case1 by debt token: path1 (=> debt token or => token -> debt token) => router
-     *      case2 by collateral token: path1 (=> collateral token or => token -> collateral token) => router
-     *      swapCollateralPath debt token -> collateral token => router
      */
     function leverageForV1(
         address recipient,
@@ -294,11 +289,6 @@ contract TermMaxRouterV2 is
 
     /**
      * @inheritdoc ITermMaxRouterV2
-     * @dev input/output: =>, swap: ->
-     *      path0 (=> xt or => token -> xt) => router
-     *      case1 by debt token: path1 (=> debt token or => token -> debt token) => router
-     *      case2 by collateral token: path1 (=> collateral token or => token -> collateral token) => router
-     *      swapCollateralPath debt token -> collateral token => router
      */
     function leverageForV2(
         address recipient,

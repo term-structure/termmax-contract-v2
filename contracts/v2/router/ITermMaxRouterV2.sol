@@ -125,6 +125,22 @@ interface ITermMaxRouterV2 {
         SwapPath calldata path
     ) external returns (uint256 netTokenOut);
 
+    /**
+     * @notice Leverages a position
+     * @dev Creates a leveraged position in the specified market
+     *      input/output: =>, swap: ->
+     *      path0 (=> xt or => token -> xt) => router
+     *      case1 by debt token: path1 (=> debt token or => token -> debt token) => router
+     *      case2 by collateral token: path1 (=> collateral token or => token -> collateral token) => router
+     *      swapCollateralPath debt token -> collateral token => router
+     * @param recipient Address to receive the leveraged position
+     * @param market The market to leverage in
+     * @param maxLtv Maximum loan-to-value ratio for the leverage
+     * @param inputPaths Array of SwapPath structs defining the input token paths
+     * @param swapCollateralPath SwapPath for collateral token
+     * @return gtId ID of the generated GT token
+     * @return netXtOut Actual amount of XT tokens input after swapping
+     */
     function leverageForV1(
         address recipient,
         ITermMaxMarket market,
@@ -133,6 +149,22 @@ interface ITermMaxRouterV2 {
         SwapPath calldata swapCollateralPath
     ) external returns (uint256 gtId, uint256 netXtOut);
 
+    /**
+     * @notice Leverages a position
+     * @dev Creates a leveraged position in the specified market
+     *      input/output: =>, swap: ->
+     *      path0 (=> xt or => token -> xt) => router
+     *      case1 by debt token: path1 (=> debt token or => token -> debt token) => router
+     *      case2 by collateral token: path1 (=> collateral token or => token -> collateral token) => router
+     *      swapCollateralPath debt token -> collateral token => router
+     * @param recipient Address to receive the leveraged position
+     * @param market The market to leverage in
+     * @param maxLtv Maximum loan-to-value ratio for the leverage
+     * @param inputPaths Array of SwapPath structs defining the input token paths
+     * @param swapCollateralPath SwapPath for collateral token
+     * @return gtId ID of the generated GT token
+     * @return netXtOut Actual amount of XT tokens input after swapping
+     */
     function leverageForV2(
         address recipient,
         ITermMaxMarket market,
