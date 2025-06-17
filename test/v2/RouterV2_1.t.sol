@@ -143,7 +143,7 @@ contract RouterTestV2_1 is Test {
             scalingFactor: 0,
             orders: orders,
             tradingAmts: tradingAmts,
-            netTokenAmt: 80e8,
+            netTokenAmt: mintTokenOut,
             deadline: block.timestamp + 1 hours
         });
 
@@ -187,7 +187,7 @@ contract RouterTestV2_1 is Test {
             scalingFactor: 0,
             orders: orders,
             tradingAmts: tradingAmts,
-            netTokenAmt: 80e8,
+            netTokenAmt: mintTokenOut,
             deadline: block.timestamp + 1 hours
         });
 
