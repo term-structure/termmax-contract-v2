@@ -85,27 +85,39 @@ interface ITermMaxRouterV2 {
     function swapTokens(SwapPath[] calldata paths) external returns (uint256[] memory netAmounts);
 
     /**
-     * @notice Sells FT and XT tokens for underlying tokens
-     * @dev Executes multiple orders to sell tokens
+     * @notice Swaps ft and xt tokens for a specific marketV1
+     * @dev This function allows users to swap FT and XT tokens for a specific market
      * @param recipient Address to receive the output tokens
-     * @param market The market to sell tokens in
-     * @param ftInAmt Amount of FT tokens to sell
-     * @param xtInAmt Amount of XT tokens to sell
-     * @param orders Array of orders to execute
-     * @param amtsToSellTokens Array of amounts to sell for each order
-     * @param minTokenOut Minimum amount of output tokens to receive
-     * @param deadline The deadline timestamp for the transaction
-     * @return netTokenOut Actual amount of output tokens received
+     * @param market The market to burn FT and XT tokens
+     * @param ftInAmt Amount of FT tokens to swap
+     * @param xtInAmt Amount of XT tokens to swap
+     * @param paths Array of SwapPath to swap xt or ft token
+     * @return netTokenOut Actual amount of tokens received after the swap
      */
-    function sellTokens(
+    function sellFtAndXtForV1(
         address recipient,
         ITermMaxMarket market,
         uint128 ftInAmt,
         uint128 xtInAmt,
-        ITermMaxOrder[] memory orders,
-        uint128[] memory amtsToSellTokens,
-        uint128 minTokenOut,
-        uint256 deadline
+        SwapPath[] calldata paths
+    ) external returns (uint256 netTokenOut);
+
+    /**
+     * @notice Swaps ft and xt tokens for a specific marketV2
+     * @dev This function allows users to swap FT and XT tokens for a specific market
+     * @param recipient Address to receive the output tokens
+     * @param market The market to burn FT and XT tokens
+     * @param ftInAmt Amount of FT tokens to swap
+     * @param xtInAmt Amount of XT tokens to swap
+     * @param paths Array of SwapPath to swap xt or ft token
+     * @return netTokenOut Actual amount of tokens received after the swap
+     */
+    function sellFtAndXtForV2(
+        address recipient,
+        ITermMaxMarket market,
+        uint128 ftInAmt,
+        uint128 xtInAmt,
+        SwapPath[] calldata paths
     ) external returns (uint256 netTokenOut);
 
     /**

@@ -34,7 +34,7 @@ contract TermMaxSwapAdapter is ERC20SwapAdapterV2 {
             _scaleTradingAmts(tokenInAmt, data);
             for (uint256 i = 0; i < data.orders.length; ++i) {
                 address order = data.orders[i];
-                tokenIn.forceApprove(order, data.netTokenAmt);
+                tokenIn.forceApprove(order, data.tradingAmts[i]);
                 netTokenOutOrIn += ITermMaxOrder(order).swapExactTokenToToken(
                     tokenIn, tokenOut, recipient, data.tradingAmts[i], 0, data.deadline
                 );

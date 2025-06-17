@@ -218,26 +218,41 @@ contract TermMaxRouterV2 is
         }
     }
 
-    function sellTokens(
+    /**
+     * @inheritdoc ITermMaxRouterV2
+     */
+    function sellFtAndXtForV1(
         address recipient,
         ITermMaxMarket market,
         uint128 ftInAmt,
         uint128 xtInAmt,
-        ITermMaxOrder[] memory orders,
-        uint128[] memory amtsToSellTokens,
-        uint128 minTokenOut,
-        uint256 deadline
+        SwapPath[] calldata paths
     ) external whenNotPaused returns (uint256 netTokenOut) {
-        (IERC20 ft, IERC20 xt,,, IERC20 debtToken) = market.tokens();
-        (uint256 maxBurn, IERC20 toenToSell) = ftInAmt > xtInAmt ? (xtInAmt, ft) : (ftInAmt, xt);
+        (IERC20 ft, IERC20 xt,,,) = market.tokens();
+        uint256 maxBurn = ftInAmt > xtInAmt ? xtInAmt : ftInAmt;
         ft.transferFrom(msg.sender, address(this), ftInAmt);
         xt.transferFrom(msg.sender, address(this), xtInAmt);
-        ITermMaxMarketV2(address(market)).burn(address(this), recipient, maxBurn);
+        ft.safeIncreaseAllowance(address(market), maxBurn);
+        xt.safeIncreaseAllowance(address(market), maxBurn);
+        market.burn(recipient, maxBurn);
+        netTokenOut = maxBurn + _executeSwapPaths(paths)[0];
+    }
 
-        netTokenOut = _swapExactTokenToToken(toenToSell, debtToken, recipient, orders, amtsToSellTokens, 0, deadline);
-        netTokenOut += maxBurn;
-        if (netTokenOut < minTokenOut) revert InsufficientTokenOut(address(debtToken), netTokenOut, minTokenOut);
-        emit SellTokens(market, msg.sender, recipient, ftInAmt, xtInAmt, orders, amtsToSellTokens, netTokenOut);
+    /**
+     * @inheritdoc ITermMaxRouterV2
+     */
+    function sellFtAndXtForV2(
+        address recipient,
+        ITermMaxMarket market,
+        uint128 ftInAmt,
+        uint128 xtInAmt,
+        SwapPath[] calldata paths
+    ) external whenNotPaused returns (uint256 netTokenOut) {
+        uint256 maxBurn = ftInAmt > xtInAmt ? xtInAmt : ftInAmt;
+        ITermMaxMarketV2(address(market)).burn(msg.sender, recipient, maxBurn);
+        IERC20 tokenIn = IERC20(paths[0].units[0].tokenIn);
+        tokenIn.safeTransferFrom(msg.sender, address(this), paths[0].inputAmount);
+        netTokenOut = maxBurn + _executeSwapPaths(paths)[0];
     }
 
     function leverageFromToken(

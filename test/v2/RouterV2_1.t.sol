@@ -265,4 +265,104 @@ contract RouterTestV2_1 is Test {
 
         vm.stopPrank();
     }
+
+    function testSellXtAndFtForV1(uint128 ftAmount, uint128 xtAmount) public {
+        vm.assume(ftAmount <= 150e8 && xtAmount <= 150e8);
+        vm.startPrank(sender);
+        deal(address(res.ft), sender, ftAmount);
+        deal(address(res.xt), sender, xtAmount);
+
+        address[] memory orders = new address[](2);
+        orders[0] = address(res.order);
+        orders[1] = address(res.order);
+
+        (uint128 maxBurn, uint128 sellAmt) =
+            ftAmount > xtAmount ? (xtAmount, ftAmount - xtAmount) : (ftAmount, xtAmount - ftAmount);
+        IERC20 tokenToSell = ftAmount > xtAmount ? res.ft : res.xt;
+        uint128[] memory tradingAmts = new uint128[](2);
+        tradingAmts[0] = sellAmt / 2;
+        tradingAmts[1] = sellAmt / 2;
+        uint128 mintTokenOut = 0;
+
+        res.ft.approve(address(res.router), ftAmount);
+        res.xt.approve(address(res.router), xtAmount);
+
+        TermMaxSwapData memory swapData = TermMaxSwapData({
+            swapExactTokenForToken: true,
+            scalingFactor: 0,
+            orders: orders,
+            tradingAmts: tradingAmts,
+            netTokenAmt: mintTokenOut,
+            deadline: block.timestamp + 1 hours
+        });
+
+        SwapUnit[] memory swapUnits = new SwapUnit[](1);
+        swapUnits[0] = SwapUnit({
+            adapter: address(termMaxSwapAdapter),
+            tokenIn: address(tokenToSell),
+            tokenOut: address(res.debt),
+            swapData: abi.encode(swapData)
+        });
+
+        SwapPath[] memory swapPaths = new SwapPath[](1);
+        swapPaths[0] = SwapPath({units: swapUnits, recipient: sender, inputAmount: sellAmt, useBalanceOnchain: false});
+
+        uint256 netOut = res.router.sellFtAndXtForV1(sender, res.market, ftAmount, xtAmount, swapPaths);
+        assertEq(netOut, res.debt.balanceOf(sender));
+        assertEq(res.ft.balanceOf(sender), 0);
+        assertEq(res.xt.balanceOf(sender), 0);
+        assert(maxBurn <= netOut);
+
+        vm.stopPrank();
+    }
+
+    function testSellXtAndFtForV2(uint128 ftAmount, uint128 xtAmount) public {
+        vm.assume(ftAmount <= 150e8 && xtAmount <= 150e8);
+        vm.startPrank(sender);
+        deal(address(res.ft), sender, ftAmount);
+        deal(address(res.xt), sender, xtAmount);
+
+        address[] memory orders = new address[](2);
+        orders[0] = address(res.order);
+        orders[1] = address(res.order);
+
+        (uint128 maxBurn, uint128 sellAmt) =
+            ftAmount > xtAmount ? (xtAmount, ftAmount - xtAmount) : (ftAmount, xtAmount - ftAmount);
+        IERC20 tokenToSell = ftAmount > xtAmount ? res.ft : res.xt;
+        uint128[] memory tradingAmts = new uint128[](2);
+        tradingAmts[0] = sellAmt / 2;
+        tradingAmts[1] = sellAmt / 2;
+        uint128 mintTokenOut = 0;
+
+        res.ft.approve(address(res.router), ftAmount);
+        res.xt.approve(address(res.router), xtAmount);
+
+        TermMaxSwapData memory swapData = TermMaxSwapData({
+            swapExactTokenForToken: true,
+            scalingFactor: 0,
+            orders: orders,
+            tradingAmts: tradingAmts,
+            netTokenAmt: mintTokenOut,
+            deadline: block.timestamp + 1 hours
+        });
+
+        SwapUnit[] memory swapUnits = new SwapUnit[](1);
+        swapUnits[0] = SwapUnit({
+            adapter: address(termMaxSwapAdapter),
+            tokenIn: address(tokenToSell),
+            tokenOut: address(res.debt),
+            swapData: abi.encode(swapData)
+        });
+
+        SwapPath[] memory swapPaths = new SwapPath[](1);
+        swapPaths[0] = SwapPath({units: swapUnits, recipient: sender, inputAmount: sellAmt, useBalanceOnchain: false});
+
+        uint256 netOut = res.router.sellFtAndXtForV2(sender, res.market, ftAmount, xtAmount, swapPaths);
+        assertEq(netOut, res.debt.balanceOf(sender));
+        assertEq(res.ft.balanceOf(sender), 0);
+        assertEq(res.xt.balanceOf(sender), 0);
+        assert(maxBurn <= netOut);
+
+        vm.stopPrank();
+    }
 }
