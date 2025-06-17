@@ -223,7 +223,7 @@ contract OracleAggregatorV2 is IOracleV2, Ownable2Step {
         revert OracleIsNotWorking(asset);
     }
 
-    function _processPriceRange(int256 price, Oracle memory oracle) internal view returns (int256) {
+    function _processPriceRange(int256 price, Oracle memory oracle) internal pure returns (int256) {
         if (oracle.maxPrice != 0 && price > oracle.maxPrice) {
             return oracle.maxPrice;
         }
