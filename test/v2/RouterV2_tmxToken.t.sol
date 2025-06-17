@@ -142,6 +142,7 @@ contract RouterTestV2_tmxToken is Test {
 
         TermMaxSwapData memory swapData = TermMaxSwapData({
             swapExactTokenForToken: true,
+            scalingFactor: 0,
             orders: orders,
             tradingAmts: tradingAmts,
             netTokenAmt: 80e8,
@@ -191,6 +192,7 @@ contract RouterTestV2_tmxToken is Test {
 
         TermMaxSwapData memory swapData = TermMaxSwapData({
             swapExactTokenForToken: true,
+            scalingFactor: 0,
             orders: orders,
             tradingAmts: tradingAmts,
             netTokenAmt: 60e8,
@@ -246,6 +248,7 @@ contract RouterTestV2_tmxToken is Test {
 
         TermMaxSwapData memory swapData = TermMaxSwapData({
             swapExactTokenForToken: false,
+            scalingFactor: 0,
             orders: orders,
             tradingAmts: tradingAmts,
             netTokenAmt: maxAmountIn,

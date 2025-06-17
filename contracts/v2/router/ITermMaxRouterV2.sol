@@ -77,48 +77,12 @@ interface ITermMaxRouterV2 {
         returns (IERC20[4] memory tokens, uint256[4] memory balances, address gt, uint256[] memory gtIds);
 
     /**
-     * @notice Swaps an exact amount of input token for output token
-     * @dev Uses specified orders for the swap path
-     * @param tokenIn Input token to swap from
-     * @param tokenOut Output token to swap to
-     * @param recipient Address to receive the output tokens
-     * @param orders Array of orders to use for the swap path
-     * @param tradingAmts Array of amounts to trade for each order
-     * @param minTokenOut Minimum amount of output tokens to receive
-     * @param deadline The deadline timestamp for the transaction
-     * @return netTokenOut Actual amount of output tokens received
+     * @notice Swaps tokens using a predefined path
+     * @dev Uses the SwapPath struct to define the swap path
+     * @param paths Array of SwapPath structs defining the swap operations
+     * @return netAmounts Array of amounts received for each swap operation
      */
-    function swapExactTokenToToken(
-        IERC20 tokenIn,
-        IERC20 tokenOut,
-        address recipient,
-        ITermMaxOrder[] memory orders,
-        uint128[] memory tradingAmts,
-        uint128 minTokenOut,
-        uint256 deadline
-    ) external returns (uint256 netTokenOut);
-
-    /**
-     * @notice Swaps tokens to receive an exact amount of output token
-     * @dev Uses specified orders for the swap path
-     * @param tokenIn Input token to swap from
-     * @param tokenOut Output token to swap to
-     * @param recipient Address to receive the output tokens
-     * @param orders Array of orders to use for the swap path
-     * @param tradingAmts Array of amounts to trade for each order
-     * @param maxTokenIn Maximum amount of input tokens to spend
-     * @param deadline The deadline timestamp for the transaction
-     * @return netTokenIn Actual amount of input tokens spent
-     */
-    function swapTokenToExactToken(
-        IERC20 tokenIn,
-        IERC20 tokenOut,
-        address recipient,
-        ITermMaxOrder[] memory orders,
-        uint128[] memory tradingAmts,
-        uint128 maxTokenIn,
-        uint256 deadline
-    ) external returns (uint256 netTokenIn);
+    function swapTokens(SwapPath[] calldata paths) external returns (uint256[] memory netAmounts);
 
     /**
      * @notice Sells FT and XT tokens for underlying tokens

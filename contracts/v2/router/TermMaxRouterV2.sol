@@ -175,21 +175,6 @@ contract TermMaxRouterV2 is
         outputAmt = inputAmt;
     }
 
-    function swapExactTokenToToken(
-        IERC20 tokenIn,
-        IERC20 tokenOut,
-        address recipient,
-        ITermMaxOrder[] memory orders,
-        uint128[] memory tradingAmts,
-        uint128 minTokenOut,
-        uint256 deadline
-    ) external whenNotPaused returns (uint256 netTokenOut) {
-        uint256 totalAmtIn = sum(tradingAmts);
-        tokenIn.safeTransferFrom(msg.sender, address(this), totalAmtIn);
-        netTokenOut = _swapExactTokenToToken(tokenIn, tokenOut, recipient, orders, tradingAmts, minTokenOut, deadline);
-        emit SwapExactTokenToToken(tokenIn, tokenOut, msg.sender, recipient, orders, tradingAmts, netTokenOut);
-    }
-
     function _swapExactTokenToToken(
         IERC20 tokenIn,
         IERC20 tokenOut,
@@ -206,21 +191,6 @@ contract TermMaxRouterV2 is
             netTokenOut += order.swapExactTokenToToken(tokenIn, tokenOut, recipient, tradingAmts[i], 0, deadline);
         }
         if (netTokenOut < minTokenOut) revert InsufficientTokenOut(address(tokenOut), netTokenOut, minTokenOut);
-    }
-
-    function swapTokenToExactToken(
-        IERC20 tokenIn,
-        IERC20 tokenOut,
-        address recipient,
-        ITermMaxOrder[] memory orders,
-        uint128[] memory tradingAmts,
-        uint128 maxTokenIn,
-        uint256 deadline
-    ) external whenNotPaused returns (uint256 netTokenIn) {
-        tokenIn.safeTransferFrom(msg.sender, address(this), maxTokenIn);
-        netTokenIn = _swapTokenToExactToken(tokenIn, tokenOut, recipient, orders, tradingAmts, maxTokenIn, deadline);
-        tokenIn.safeTransfer(msg.sender, maxTokenIn - netTokenIn);
-        emit SwapTokenToExactToken(tokenIn, tokenOut, msg.sender, recipient, orders, tradingAmts, netTokenIn);
     }
 
     function _swapTokenToExactToken(

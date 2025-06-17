@@ -156,59 +156,6 @@ contract RouterTestV2 is Test {
         vm.stopPrank();
     }
 
-    function testSwapExactTokenToToken() public {
-        vm.startPrank(sender);
-
-        uint128 amountIn = 100e8;
-        uint128[] memory tradingAmts = new uint128[](2);
-        tradingAmts[0] = 50e8;
-        tradingAmts[1] = 50e8;
-        uint128 mintTokenOut = 80e8;
-
-        ITermMaxOrder[] memory orders = new ITermMaxOrder[](2);
-        orders[0] = res.order;
-        orders[1] = res.order;
-
-        res.debt.mint(sender, amountIn);
-        res.debt.approve(address(res.router), amountIn);
-        uint256 netOut = res.router.swapExactTokenToToken(
-            res.debt, res.ft, sender, orders, tradingAmts, mintTokenOut, block.timestamp + 1 hours
-        );
-        assertEq(netOut, res.ft.balanceOf(sender));
-
-        assertEq(res.debt.balanceOf(sender), 0);
-
-        vm.stopPrank();
-    }
-
-    function testSwapTokenToExactToken() public {
-        vm.startPrank(sender);
-
-        uint128 amountOut = 90e8;
-        uint128[] memory tradingAmts = new uint128[](2);
-        tradingAmts[0] = 45e8;
-        tradingAmts[1] = 45e8;
-        uint128 maxAmountIn = 100e8;
-
-        ITermMaxOrder[] memory orders = new ITermMaxOrder[](2);
-        orders[0] = res.order;
-        orders[1] = res.order;
-
-        res.debt.mint(sender, maxAmountIn);
-        res.debt.approve(address(res.router), maxAmountIn);
-
-        uint256 balanceBefore = res.ft.balanceOf(sender);
-        uint256 amountIn = res.router.swapTokenToExactToken(
-            res.debt, res.ft, sender, orders, tradingAmts, maxAmountIn, block.timestamp + 1 hours
-        );
-        uint256 balanceAfter = res.ft.balanceOf(sender);
-
-        assertEq(maxAmountIn - amountIn, res.debt.balanceOf(sender));
-        assertEq(balanceAfter - balanceBefore, amountOut);
-
-        vm.stopPrank();
-    }
-
     function testSellTokens(uint128 ftAmount, uint128 xtAmount) public {
         //TODO check output
         vm.assume(ftAmount <= 150e8 && xtAmount <= 150e8);
@@ -734,32 +681,6 @@ contract RouterTestV2 is Test {
         assertEq(res.ft.balanceOf(address(order)), ftToDeposit + debtTokenToDeposit);
         assertEq(res.xt.balanceOf(address(order)), xtToDeposit + debtTokenToDeposit);
 
-        vm.stopPrank();
-    }
-
-    function testOrdersAndAmtsLengthNotMatch() public {
-        vm.startPrank(sender);
-
-        uint128[] memory tradingAmts = new uint128[](2);
-        tradingAmts[0] = 45e8;
-        tradingAmts[1] = 45e8;
-        uint128 maxAmountIn = 100e8;
-
-        ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
-        orders[0] = res.order;
-
-        res.debt.mint(sender, maxAmountIn);
-        res.debt.approve(address(res.router), maxAmountIn);
-
-        vm.expectRevert(RouterErrors.OrdersAndAmtsLengthNotMatch.selector);
-        res.router.swapTokenToExactToken(
-            res.debt, res.ft, sender, orders, tradingAmts, maxAmountIn, block.timestamp + 1 hours
-        );
-
-        vm.expectRevert(RouterErrors.OrdersAndAmtsLengthNotMatch.selector);
-        res.router.swapExactTokenToToken(
-            res.debt, res.ft, sender, orders, tradingAmts, maxAmountIn, block.timestamp + 1 hours
-        );
         vm.stopPrank();
     }
 }
