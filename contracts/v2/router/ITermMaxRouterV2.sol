@@ -91,7 +91,7 @@ interface ITermMaxRouterV2 {
      * @param market The market to burn FT and XT tokens
      * @param ftInAmt Amount of FT tokens to swap
      * @param xtInAmt Amount of XT tokens to swap
-     * @param paths Array of SwapPath to swap xt or ft token
+     * @param path SwapPath to swap xt or ft token
      * @return netTokenOut Actual amount of tokens received after the swap
      */
     function sellFtAndXtForV1(
@@ -99,7 +99,7 @@ interface ITermMaxRouterV2 {
         ITermMaxMarket market,
         uint128 ftInAmt,
         uint128 xtInAmt,
-        SwapPath[] calldata paths
+        SwapPath calldata path
     ) external returns (uint256 netTokenOut);
 
     /**
@@ -109,7 +109,7 @@ interface ITermMaxRouterV2 {
      * @param market The market to burn FT and XT tokens
      * @param ftInAmt Amount of FT tokens to swap
      * @param xtInAmt Amount of XT tokens to swap
-     * @param paths Array of SwapPath to swap xt or ft token
+     * @param path SwapPath to swap xt or ft token
      * @return netTokenOut Actual amount of tokens received after the swap
      */
     function sellFtAndXtForV2(
@@ -117,7 +117,7 @@ interface ITermMaxRouterV2 {
         ITermMaxMarket market,
         uint128 ftInAmt,
         uint128 xtInAmt,
-        SwapPath[] calldata paths
+        SwapPath calldata path
     ) external returns (uint256 netTokenOut);
 
     /**

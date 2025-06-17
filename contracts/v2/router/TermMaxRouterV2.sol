@@ -127,7 +127,6 @@ contract TermMaxRouterV2 is
         netTokenOuts = new uint256[](paths.length);
         for (uint256 i = 0; i < paths.length; ++i) {
             SwapPath memory path = paths[i];
-            if (path.units.length == 0) revert SwapUnitsIsEmpty();
             if (path.useBalanceOnchain) {
                 inputAmount = IERC20(path.units[0].tokenIn).balanceOf(address(this));
             }
@@ -226,7 +225,7 @@ contract TermMaxRouterV2 is
         ITermMaxMarket market,
         uint128 ftInAmt,
         uint128 xtInAmt,
-        SwapPath[] calldata paths
+        SwapPath calldata path
     ) external whenNotPaused returns (uint256 netTokenOut) {
         (IERC20 ft, IERC20 xt,,,) = market.tokens();
         uint256 maxBurn = ftInAmt > xtInAmt ? xtInAmt : ftInAmt;
@@ -235,7 +234,7 @@ contract TermMaxRouterV2 is
         ft.safeIncreaseAllowance(address(market), maxBurn);
         xt.safeIncreaseAllowance(address(market), maxBurn);
         market.burn(recipient, maxBurn);
-        netTokenOut = maxBurn + _executeSwapPaths(paths)[0];
+        netTokenOut = maxBurn + _executeSwapUnits(path.recipient, path.inputAmount, path.units);
     }
 
     /**
@@ -246,13 +245,13 @@ contract TermMaxRouterV2 is
         ITermMaxMarket market,
         uint128 ftInAmt,
         uint128 xtInAmt,
-        SwapPath[] calldata paths
+        SwapPath calldata path
     ) external whenNotPaused returns (uint256 netTokenOut) {
         uint256 maxBurn = ftInAmt > xtInAmt ? xtInAmt : ftInAmt;
         ITermMaxMarketV2(address(market)).burn(msg.sender, recipient, maxBurn);
-        IERC20 tokenIn = IERC20(paths[0].units[0].tokenIn);
-        tokenIn.safeTransferFrom(msg.sender, address(this), paths[0].inputAmount);
-        netTokenOut = maxBurn + _executeSwapPaths(paths)[0];
+        IERC20 tokenIn = IERC20(path.units[0].tokenIn);
+        tokenIn.safeTransferFrom(msg.sender, address(this), path.inputAmount);
+        netTokenOut = maxBurn + _executeSwapUnits(path.recipient, path.inputAmount, path.units);
     }
 
     function leverageFromToken(

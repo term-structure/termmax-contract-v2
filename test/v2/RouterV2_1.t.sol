@@ -304,10 +304,10 @@ contract RouterTestV2_1 is Test {
             swapData: abi.encode(swapData)
         });
 
-        SwapPath[] memory swapPaths = new SwapPath[](1);
-        swapPaths[0] = SwapPath({units: swapUnits, recipient: sender, inputAmount: sellAmt, useBalanceOnchain: false});
+        SwapPath memory swapPath =
+            SwapPath({units: swapUnits, recipient: sender, inputAmount: sellAmt, useBalanceOnchain: false});
 
-        uint256 netOut = res.router.sellFtAndXtForV1(sender, res.market, ftAmount, xtAmount, swapPaths);
+        uint256 netOut = res.router.sellFtAndXtForV1(sender, res.market, ftAmount, xtAmount, swapPath);
         assertEq(netOut, res.debt.balanceOf(sender));
         assertEq(res.ft.balanceOf(sender), 0);
         assertEq(res.xt.balanceOf(sender), 0);
@@ -354,10 +354,10 @@ contract RouterTestV2_1 is Test {
             swapData: abi.encode(swapData)
         });
 
-        SwapPath[] memory swapPaths = new SwapPath[](1);
-        swapPaths[0] = SwapPath({units: swapUnits, recipient: sender, inputAmount: sellAmt, useBalanceOnchain: false});
+        SwapPath memory swapPath =
+            SwapPath({units: swapUnits, recipient: sender, inputAmount: sellAmt, useBalanceOnchain: false});
 
-        uint256 netOut = res.router.sellFtAndXtForV2(sender, res.market, ftAmount, xtAmount, swapPaths);
+        uint256 netOut = res.router.sellFtAndXtForV2(sender, res.market, ftAmount, xtAmount, swapPath);
         assertEq(netOut, res.debt.balanceOf(sender));
         assertEq(res.ft.balanceOf(sender), 0);
         assertEq(res.xt.balanceOf(sender), 0);
