@@ -48,11 +48,6 @@ contract TermMaxRouterV2 is
     using TransferUtils for IERC20;
     using MathLib for uint256;
 
-    enum FlashLoanType {
-        COLLATERAL,
-        DEBT
-    }
-
     enum FlashRepayOptions {
         REPAY,
         ROLLOVER
@@ -117,20 +112,19 @@ contract TermMaxRouterV2 is
         checkSwapPaths(paths)
         returns (uint256[] memory)
     {
-        IERC20 tokenIn = IERC20(paths[0].units[0].tokenIn);
-        tokenIn.safeTransferFrom(msg.sender, address(this), paths[0].inputAmount);
         return _executeSwapPaths(paths);
     }
 
     function _executeSwapPaths(SwapPath[] calldata paths) internal returns (uint256[] memory netTokenOuts) {
-        uint256 inputAmount = paths[0].inputAmount;
         netTokenOuts = new uint256[](paths.length);
         for (uint256 i = 0; i < paths.length; ++i) {
             SwapPath memory path = paths[i];
             if (path.useBalanceOnchain) {
-                inputAmount = IERC20(path.units[0].tokenIn).balanceOf(address(this));
+                path.inputAmount = IERC20(path.units[0].tokenIn).balanceOf(address(this));
+            } else {
+                IERC20(path.units[0].tokenIn).safeTransferFrom(msg.sender, address(this), path.inputAmount);
             }
-            netTokenOuts[i] = _executeSwapUnits(path.recipient, inputAmount, path.units);
+            netTokenOuts[i] = _executeSwapUnits(path.recipient, path.inputAmount, path.units);
         }
         return netTokenOuts;
     }
@@ -143,6 +137,9 @@ contract TermMaxRouterV2 is
             revert SwapUnitsIsEmpty();
         }
         for (uint256 i = 0; i < units.length; ++i) {
+            if (units[i].tokenIn == units[i].tokenOut) {
+                continue;
+            }
             if (units[i].adapter == address(0)) {
                 // transfer token directly if no adapter is specified
                 IERC20(units[i].tokenIn).safeTransfer(recipient, inputAmt);
@@ -219,6 +216,8 @@ contract TermMaxRouterV2 is
 
     /**
      * @inheritdoc ITermMaxRouterV2
+     * @dev input/output: =>, swap: ->
+     *      path => xt/ft -> debt token => receipient
      */
     function sellFtAndXtForV1(
         address recipient,
@@ -254,23 +253,26 @@ contract TermMaxRouterV2 is
         netTokenOut = maxBurn + _executeSwapUnits(path.recipient, path.inputAmount, path.units);
     }
 
-    function leverageFromToken(
+    /**
+     * @inheritdoc ITermMaxRouterV2
+     * @dev input/output: =>, swap: ->
+     *      path0 (=> xt or => token -> xt) => router
+     *      case1 by debt token: path1 (=> debt token or => token -> debt token) => router
+     *      case2 by collateral token: path1 (=> collateral token or => token -> collateral token) => router
+     *      swapCollateralPath debt token -> collateral token => router
+     */
+    function leverageForV1(
         address recipient,
         ITermMaxMarket market,
-        ITermMaxOrder[] memory orders,
-        uint128[] memory amtsToBuyXt,
-        uint128 minXtOut,
-        uint128 tokenToSwap,
         uint128 maxLtv,
-        SwapUnit[] memory units,
-        uint256 deadline
+        SwapPath[] calldata inputPaths,
+        SwapPath calldata swapCollateralPath
     ) external whenNotPaused returns (uint256 gtId, uint256 netXtOut) {
-        (, IERC20 xt, IGearingToken gt,, IERC20 debtToken) = market.tokens();
-        uint256 totalAmtToBuyXt = sum(amtsToBuyXt);
-        debtToken.safeTransferFrom(msg.sender, address(this), tokenToSwap + totalAmtToBuyXt);
-        netXtOut = _swapExactTokenToToken(debtToken, xt, address(this), orders, amtsToBuyXt, minXtOut, deadline);
+        (, IERC20 xt, IGearingToken gt,,) = market.tokens();
+        netXtOut = _executeSwapPaths(inputPaths)[0];
+        xt.safeIncreaseAllowance(address(market), netXtOut);
 
-        bytes memory callbackData = abi.encode(address(gt), tokenToSwap, units, FlashLoanType.DEBT);
+        bytes memory callbackData = abi.encode(address(gt), swapCollateralPath.units);
         gtId =
             ITermMaxMarketV2(address(market)).leverageByXt(address(this), recipient, netXtOut.toUint128(), callbackData);
         (,, bytes memory collateralData) = gt.loanInfo(gtId);
@@ -278,64 +280,56 @@ contract TermMaxRouterV2 is
         if (ltv > maxLtv) {
             revert LtvBiggerThanExpected(maxLtv, ltv);
         }
-        emit IssueGt(market, gtId, msg.sender, recipient, tokenToSwap, netXtOut.toUint128(), ltv, collateralData);
+        emit IssueGt(
+            market,
+            gtId,
+            msg.sender,
+            recipient,
+            (inputPaths[1].inputAmount).toUint128(),
+            netXtOut.toUint128(),
+            ltv,
+            collateralData
+        );
     }
 
     /**
      * @inheritdoc ITermMaxRouterV2
+     * @dev input/output: =>, swap: ->
+     *      path0 (=> xt or => token -> xt) => router
+     *      case1 by debt token: path1 (=> debt token or => token -> debt token) => router
+     *      case2 by collateral token: path1 (=> collateral token or => token -> collateral token) => router
+     *      swapCollateralPath debt token -> collateral token => router
      */
-    function leverageFromXt(
+    function leverageForV2(
         address recipient,
         ITermMaxMarket market,
-        uint128 xtInAmt,
-        uint128 tokenInAmt,
         uint128 maxLtv,
-        SwapUnit[] memory units
-    ) external whenNotPaused returns (uint256 gtId) {
-        (,, IGearingToken gt,, IERC20 debtToken) = market.tokens();
-        debtToken.safeTransferFrom(msg.sender, address(this), tokenInAmt);
+        SwapPath[] calldata inputPaths,
+        SwapPath calldata swapCollateralPath
+    ) external whenNotPaused returns (uint256 gtId, uint256 netXtOut) {
+        (,, IGearingToken gt,,) = market.tokens();
+        netXtOut = _executeSwapPaths(inputPaths)[0];
 
-        bytes memory callbackData = abi.encode(address(gt), tokenInAmt, units, FlashLoanType.DEBT);
-        gtId = ITermMaxMarketV2(address(market)).leverageByXt(msg.sender, recipient, xtInAmt.toUint128(), callbackData);
-
+        bytes memory callbackData = abi.encode(address(gt), swapCollateralPath.units);
+        gtId =
+            ITermMaxMarketV2(address(market)).leverageByXt(address(this), recipient, netXtOut.toUint128(), callbackData);
         (,, bytes memory collateralData) = gt.loanInfo(gtId);
         (, uint128 ltv,) = gt.getLiquidationInfo(gtId);
         if (ltv > maxLtv) {
             revert LtvBiggerThanExpected(maxLtv, ltv);
         }
-        emit IssueGt(market, gtId, msg.sender, recipient, tokenInAmt, xtInAmt, ltv, collateralData);
+        emit IssueGt(
+            market,
+            gtId,
+            msg.sender,
+            recipient,
+            (inputPaths[1].inputAmount).toUint128(),
+            netXtOut.toUint128(),
+            ltv,
+            collateralData
+        );
     }
 
-    /**
-     * @inheritdoc ITermMaxRouterV2
-     */
-    function leverageFromXtAndCollateral(
-        address recipient,
-        ITermMaxMarket market,
-        uint128 xtInAmt,
-        uint128 collateralInAmt,
-        uint128 maxLtv,
-        SwapUnit[] memory units
-    ) external whenNotPaused returns (uint256 gtId) {
-        (,, IGearingToken gt, address collAddr,) = market.tokens();
-        IERC20 collateral = IERC20(collAddr);
-
-        collateral.safeTransferFrom(msg.sender, address(this), collateralInAmt);
-
-        bytes memory callbackData = abi.encode(address(gt), 0, units, FlashLoanType.COLLATERAL);
-        gtId = ITermMaxMarketV2(address(market)).leverageByXt(msg.sender, recipient, xtInAmt.toUint128(), callbackData);
-
-        (,, bytes memory collateralData) = gt.loanInfo(gtId);
-        (, uint128 ltv,) = gt.getLiquidationInfo(gtId);
-        if (ltv > maxLtv) {
-            revert LtvBiggerThanExpected(maxLtv, ltv);
-        }
-        emit IssueGt(market, gtId, msg.sender, recipient, 0, xtInAmt, ltv, collateralData);
-    }
-
-    /**
-     * @inheritdoc ITermMaxRouterV2
-     */
     function borrowTokenFromCollateral(
         address recipient,
         ITermMaxMarket market,
@@ -652,22 +646,19 @@ contract TermMaxRouterV2 is
     }
 
     /// @dev Market flash leverage flashloan callback
-    function executeOperation(address, IERC20, uint256 amount, bytes memory data)
+    function executeOperation(address, IERC20, uint256, bytes memory data)
         external
         returns (bytes memory collateralData)
     {
-        (address gt, uint256 tokenInAmt, SwapUnit[] memory units, FlashLoanType flashLoanType) =
-            abi.decode(data, (address, uint256, SwapUnit[], FlashLoanType));
-        uint256 totalAmount = amount + tokenInAmt;
+        (address gt, SwapUnit[] memory units) = abi.decode(data, (address, SwapUnit[]));
+        uint256 totalAmount = IERC20(units[0].tokenIn).balanceOf(address(this));
         uint256 collateralBalance = _doSwap(totalAmount, units);
         SwapUnit memory lastUnit = units[units.length - 1];
         if (!adapterWhitelist[lastUnit.adapter]) {
             revert AdapterNotWhitelisted(lastUnit.adapter);
         }
         IERC20 collateral = IERC20(lastUnit.tokenOut);
-        if (flashLoanType == FlashLoanType.COLLATERAL) {
-            collateralBalance = collateral.balanceOf(address(this));
-        }
+        collateralBalance = collateral.balanceOf(address(this));
         collateral.safeIncreaseAllowance(gt, collateralBalance);
         collateralData = _encodeAmount(collateralBalance);
     }

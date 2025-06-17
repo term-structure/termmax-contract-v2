@@ -266,7 +266,7 @@ contract RouterTestV2_1 is Test {
         vm.stopPrank();
     }
 
-    function testSellXtAndFtForV1(uint128 ftAmount, uint128 xtAmount) public {
+    function testSellXtAndFt(bool isV1, uint128 ftAmount, uint128 xtAmount) public {
         vm.assume(ftAmount <= 150e8 && xtAmount <= 150e8);
         vm.startPrank(sender);
         deal(address(res.ft), sender, ftAmount);
@@ -306,8 +306,12 @@ contract RouterTestV2_1 is Test {
 
         SwapPath memory swapPath =
             SwapPath({units: swapUnits, recipient: sender, inputAmount: sellAmt, useBalanceOnchain: false});
-
-        uint256 netOut = res.router.sellFtAndXtForV1(sender, res.market, ftAmount, xtAmount, swapPath);
+        uint256 netOut;
+        if (isV1) {
+            netOut = res.router.sellFtAndXtForV1(sender, res.market, ftAmount, xtAmount, swapPath);
+        } else {
+            netOut = res.router.sellFtAndXtForV2(sender, res.market, ftAmount, xtAmount, swapPath);
+        }
         assertEq(netOut, res.debt.balanceOf(sender));
         assertEq(res.ft.balanceOf(sender), 0);
         assertEq(res.xt.balanceOf(sender), 0);
@@ -316,52 +320,255 @@ contract RouterTestV2_1 is Test {
         vm.stopPrank();
     }
 
-    function testSellXtAndFtForV2(uint128 ftAmount, uint128 xtAmount) public {
-        vm.assume(ftAmount <= 150e8 && xtAmount <= 150e8);
+    function testLeverageFromToken(bool isV1) public {
         vm.startPrank(sender);
-        deal(address(res.ft), sender, ftAmount);
-        deal(address(res.xt), sender, xtAmount);
+
+        uint128 minXtOut = 0;
+        uint128 tokenToSwap = 100e8;
+        uint128 maxLtv = 0.8e8;
+        uint256 minCollAmt = 1e18;
+        res.debt.mint(sender, tokenToSwap + 2e8 * 2);
 
         address[] memory orders = new address[](2);
         orders[0] = address(res.order);
         orders[1] = address(res.order);
 
-        (uint128 maxBurn, uint128 sellAmt) =
-            ftAmount > xtAmount ? (xtAmount, ftAmount - xtAmount) : (ftAmount, xtAmount - ftAmount);
-        IERC20 tokenToSell = ftAmount > xtAmount ? res.ft : res.xt;
-        uint128[] memory tradingAmts = new uint128[](2);
-        tradingAmts[0] = sellAmt / 2;
-        tradingAmts[1] = sellAmt / 2;
-        uint128 mintTokenOut = 0;
-
-        res.ft.approve(address(res.router), ftAmount);
-        res.xt.approve(address(res.router), xtAmount);
+        uint128[] memory amtsToBuyXt = new uint128[](2);
+        amtsToBuyXt[0] = 2e8;
+        amtsToBuyXt[1] = 2e8;
 
         TermMaxSwapData memory swapData = TermMaxSwapData({
             swapExactTokenForToken: true,
             scalingFactor: 0,
             orders: orders,
-            tradingAmts: tradingAmts,
-            netTokenAmt: mintTokenOut,
+            tradingAmts: amtsToBuyXt,
+            netTokenAmt: minXtOut,
             deadline: block.timestamp + 1 hours
         });
 
         SwapUnit[] memory swapUnits = new SwapUnit[](1);
         swapUnits[0] = SwapUnit({
             adapter: address(termMaxSwapAdapter),
-            tokenIn: address(tokenToSell),
-            tokenOut: address(res.debt),
+            tokenIn: address(res.debt),
+            tokenOut: address(res.xt),
             swapData: abi.encode(swapData)
         });
 
-        SwapPath memory swapPath =
-            SwapPath({units: swapUnits, recipient: sender, inputAmount: sellAmt, useBalanceOnchain: false});
+        SwapPath[] memory inputPaths = new SwapPath[](2);
+        inputPaths[0] = SwapPath({
+            units: swapUnits,
+            recipient: address(res.router),
+            inputAmount: amtsToBuyXt[0] + amtsToBuyXt[1],
+            useBalanceOnchain: false
+        });
+        SwapUnit[] memory transferTokenUnits = new SwapUnit[](1);
+        transferTokenUnits[0] = SwapUnit({
+            adapter: address(0),
+            tokenIn: address(res.debt),
+            tokenOut: address(res.debt),
+            swapData: bytes("")
+        });
+        inputPaths[1] = SwapPath({
+            units: transferTokenUnits,
+            recipient: address(res.router),
+            inputAmount: tokenToSwap,
+            useBalanceOnchain: false
+        });
 
-        uint256 netOut = res.router.sellFtAndXtForV2(sender, res.market, ftAmount, xtAmount, swapPath);
-        assertEq(netOut, res.debt.balanceOf(sender));
-        assertEq(res.ft.balanceOf(sender), 0);
-        assertEq(res.xt.balanceOf(sender), 0);
-        assert(maxBurn <= netOut);
+        SwapUnit[] memory swapCollateralUnits = new SwapUnit[](1);
+        swapCollateralUnits[0] =
+            SwapUnit(address(adapter), address(res.debt), address(res.collateral), abi.encode(minCollAmt));
+        SwapPath memory collateralPath = SwapPath({
+            units: swapCollateralUnits,
+            recipient: address(res.router),
+            inputAmount: 0,
+            useBalanceOnchain: true
+        });
+
+        res.debt.approve(address(res.router), tokenToSwap + 2e8 * 2);
+        uint256 gtId;
+        uint256 netXtOut;
+        if (isV1) {
+            (gtId, netXtOut) = res.router.leverageForV1(sender, res.market, maxLtv, inputPaths, collateralPath);
+        } else {
+            (gtId, netXtOut) = res.router.leverageForV2(sender, res.market, maxLtv, inputPaths, collateralPath);
+        }
+        (address owner, uint128 debtAmt, bytes memory collateralData) = res.gt.loanInfo(gtId);
+        assertEq(owner, sender);
+        assertEq(minCollAmt, abi.decode(collateralData, (uint256)));
+        assertEq(netXtOut * Constants.DECIMAL_BASE / (Constants.DECIMAL_BASE - res.market.mintGtFeeRatio()), debtAmt);
+        vm.stopPrank();
+    }
+
+    function testLeverageFromTokenAndXt(bool isV1) public {
+        vm.startPrank(sender);
+
+        uint128 xtAmt = 10e8;
+        uint128 tokenToSwap = 100e8;
+        uint128 maxLtv = 0.8e8;
+        uint256 minCollAmt = 1e18;
+
+        deal(address(res.xt), sender, xtAmt);
+        res.xt.approve(address(res.router), xtAmt);
+        res.debt.mint(sender, tokenToSwap);
+        res.debt.approve(address(res.router), tokenToSwap);
+
+        SwapUnit[] memory swapUnits = new SwapUnit[](1);
+        swapUnits[0] =
+            SwapUnit({adapter: address(0), tokenIn: address(res.xt), tokenOut: address(res.xt), swapData: bytes("")});
+
+        SwapPath[] memory inputPaths = new SwapPath[](2);
+        inputPaths[0] =
+            SwapPath({units: swapUnits, recipient: address(res.router), inputAmount: xtAmt, useBalanceOnchain: false});
+        SwapUnit[] memory transferTokenUnits = new SwapUnit[](1);
+        transferTokenUnits[0] = SwapUnit({
+            adapter: address(0),
+            tokenIn: address(res.debt),
+            tokenOut: address(res.debt),
+            swapData: bytes("")
+        });
+        inputPaths[1] = SwapPath({
+            units: transferTokenUnits,
+            recipient: address(res.router),
+            inputAmount: tokenToSwap,
+            useBalanceOnchain: false
+        });
+
+        SwapUnit[] memory swapCollateralUnits = new SwapUnit[](1);
+        swapCollateralUnits[0] =
+            SwapUnit(address(adapter), address(res.debt), address(res.collateral), abi.encode(minCollAmt));
+        SwapPath memory collateralPath = SwapPath({
+            units: swapCollateralUnits,
+            recipient: address(res.router),
+            inputAmount: 0,
+            useBalanceOnchain: true
+        });
+
+        res.debt.approve(address(res.router), tokenToSwap + 2e8 * 2);
+        (uint256 gtId, uint256 netXtOut) = isV1
+            ? res.router.leverageForV1(sender, res.market, maxLtv, inputPaths, collateralPath)
+            : res.router.leverageForV2(sender, res.market, maxLtv, inputPaths, collateralPath);
+        (address owner, uint128 debtAmt, bytes memory collateralData) = res.gt.loanInfo(gtId);
+        assertEq(owner, sender);
+        assertEq(minCollAmt, abi.decode(collateralData, (uint256)));
+        assertEq(netXtOut * Constants.DECIMAL_BASE / (Constants.DECIMAL_BASE - res.market.mintGtFeeRatio()), debtAmt);
+        vm.stopPrank();
+    }
+
+    function testLeverageFromCollateralAndXt(bool isV1) public {
+        vm.startPrank(sender);
+
+        uint128 xtAmt = 10e8;
+        uint128 collateralAmt = 0.5e18;
+        uint128 maxLtv = 0.8e8;
+        uint256 minCollAmt = 0.5e18;
+
+        deal(address(res.xt), sender, xtAmt);
+
+        SwapUnit[] memory swapUnits = new SwapUnit[](1);
+        swapUnits[0] =
+            SwapUnit({adapter: address(0), tokenIn: address(res.xt), tokenOut: address(res.xt), swapData: bytes("")});
+
+        SwapPath[] memory inputPaths = new SwapPath[](2);
+        inputPaths[0] =
+            SwapPath({units: swapUnits, recipient: address(res.router), inputAmount: xtAmt, useBalanceOnchain: false});
+        SwapUnit[] memory transferTokenUnits = new SwapUnit[](1);
+        transferTokenUnits[0] = SwapUnit({
+            adapter: address(0),
+            tokenIn: address(res.collateral),
+            tokenOut: address(res.collateral),
+            swapData: bytes("")
+        });
+        inputPaths[1] = SwapPath({
+            units: transferTokenUnits,
+            recipient: address(res.router),
+            inputAmount: collateralAmt,
+            useBalanceOnchain: false
+        });
+
+        SwapUnit[] memory swapCollateralUnits = new SwapUnit[](1);
+        swapCollateralUnits[0] =
+            SwapUnit(address(adapter), address(res.debt), address(res.collateral), abi.encode(minCollAmt));
+        SwapPath memory collateralPath = SwapPath({
+            units: swapCollateralUnits,
+            recipient: address(res.router),
+            inputAmount: 0,
+            useBalanceOnchain: true
+        });
+
+        res.xt.approve(address(res.router), xtAmt);
+        res.collateral.mint(sender, collateralAmt);
+        res.collateral.approve(address(res.router), collateralAmt);
+
+        (uint256 gtId,) = isV1
+            ? res.router.leverageForV1(sender, res.market, maxLtv, inputPaths, collateralPath)
+            : res.router.leverageForV2(sender, res.market, maxLtv, inputPaths, collateralPath);
+        (address owner, uint128 debtAmt, bytes memory collateralData) = res.gt.loanInfo(gtId);
+        assertEq(owner, sender);
+        assertEq(minCollAmt + collateralAmt, abi.decode(collateralData, (uint256)));
+        assertEq(
+            uint128(xtAmt * Constants.DECIMAL_BASE / (Constants.DECIMAL_BASE - res.market.mintGtFeeRatio())), debtAmt
+        );
+        vm.stopPrank();
+    }
+
+    function testLeverage_LtvTooBig(bool isV1) public {
+        vm.startPrank(sender);
+
+        uint128 xtAmt = 100e8;
+        uint128 tokenToSwap = 100e8;
+        uint128 maxLtv = 0.1e2;
+        uint256 minCollAmt = 1e18;
+
+        uint256 ltv = (xtAmt * Constants.DECIMAL_BASE / (Constants.DECIMAL_BASE - res.market.mintGtFeeRatio())) / 2000;
+
+        deal(address(res.xt), sender, xtAmt);
+
+        //paths to transfer xt and debt token
+        SwapUnit[] memory swapUnits = new SwapUnit[](1);
+        swapUnits[0] =
+            SwapUnit({adapter: address(0), tokenIn: address(res.xt), tokenOut: address(res.xt), swapData: bytes("")});
+
+        SwapPath[] memory inputPaths = new SwapPath[](2);
+        inputPaths[0] =
+            SwapPath({units: swapUnits, recipient: address(res.router), inputAmount: xtAmt, useBalanceOnchain: false});
+        SwapUnit[] memory transferTokenUnits = new SwapUnit[](1);
+        transferTokenUnits[0] = SwapUnit({
+            adapter: address(0),
+            tokenIn: address(res.debt),
+            tokenOut: address(res.debt),
+            swapData: bytes("")
+        });
+        inputPaths[1] = SwapPath({
+            units: transferTokenUnits,
+            recipient: address(res.router),
+            inputAmount: tokenToSwap,
+            useBalanceOnchain: false
+        });
+
+        //path to swap collateral
+        SwapUnit[] memory swapCollateralUnits = new SwapUnit[](1);
+        swapCollateralUnits[0] =
+            SwapUnit(address(adapter), address(res.debt), address(res.collateral), abi.encode(minCollAmt));
+        SwapPath memory collateralPath = SwapPath({
+            units: swapCollateralUnits,
+            recipient: address(res.router),
+            inputAmount: 0,
+            useBalanceOnchain: true
+        });
+
+        res.xt.approve(address(res.router), xtAmt);
+        res.debt.mint(sender, tokenToSwap);
+        res.debt.approve(address(res.router), tokenToSwap);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(RouterErrors.LtvBiggerThanExpected.selector, uint128(maxLtv), uint128(ltv))
+        );
+        if (isV1) {
+            res.router.leverageForV1(sender, res.market, maxLtv, inputPaths, collateralPath);
+        } else {
+            res.router.leverageForV2(sender, res.market, maxLtv, inputPaths, collateralPath);
+        }
 
         vm.stopPrank();
     }

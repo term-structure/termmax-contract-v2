@@ -11,7 +11,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {TermMaxFactoryV2, ITermMaxFactory} from "contracts/v2/factory/TermMaxFactoryV2.sol";
-import {ITermMaxRouterV2, TermMaxRouterV2} from "contracts/v2/router/TermMaxRouterV2.sol";
+import {ITermMaxRouterV2, TermMaxRouterV2, SwapPath} from "contracts/v2/router/TermMaxRouterV2.sol";
 import {TermMaxMarketV2, Constants, SafeCast} from "contracts/v2/TermMaxMarketV2.sol";
 import {TermMaxOrderV2, OrderConfig} from "contracts/v2/TermMaxOrderV2.sol";
 import {MockERC20} from "contracts/v1/test/MockERC20.sol";
@@ -46,6 +46,7 @@ import {PendleSwapV3AdapterV2} from "contracts/v2/router/swapAdapters/PendleSwap
 import {OdosV2AdapterV2} from "contracts/v2/router/swapAdapters/OdosV2AdapterV2.sol";
 import {ERC4626VaultAdapterV2} from "contracts/v2/router/swapAdapters/ERC4626VaultAdapterV2.sol";
 import {KyberswapV2AdapterV2} from "contracts/v2/router/swapAdapters/KyberswapV2AdapterV2.sol";
+import {TermMaxSwapData, TermMaxSwapAdapter} from "contracts/v2/router/swapAdapters/TermMaxSwapAdapter.sol";
 
 abstract contract GtBaseTestV2 is ForkBaseTestV2 {
     enum TokenType {
@@ -89,6 +90,7 @@ abstract contract GtBaseTestV2 is ForkBaseTestV2 {
         address maker;
         SwapData swapData;
         SwapAdapters swapAdapters;
+        TermMaxSwapAdapter termMaxSwapAdapter;
     }
 
     function _initializeGtTestRes(string memory key) internal returns (GtTestRes memory) {
@@ -153,11 +155,13 @@ abstract contract GtBaseTestV2 is ForkBaseTestV2 {
         res.swapAdapters.odosAdapter =
             address(new OdosV2AdapterV2(vm.parseJsonAddress(jsonData, ".routers.odosRouter")));
         res.swapAdapters.vaultAdapter = address(new ERC4626VaultAdapterV2());
+        res.termMaxSwapAdapter = new TermMaxSwapAdapter();
         res.router = deployRouter(res.marketInitialParams.admin);
         res.router.setAdapterWhitelist(res.swapAdapters.uniswapAdapter, true);
         res.router.setAdapterWhitelist(res.swapAdapters.pendleAdapter, true);
         res.router.setAdapterWhitelist(res.swapAdapters.odosAdapter, true);
         res.router.setAdapterWhitelist(res.swapAdapters.vaultAdapter, true);
+        res.router.setAdapterWhitelist(address(res.termMaxSwapAdapter), true);
         res.swapData = _readSwapData(key);
 
         res.orderInitialAmount = vm.parseJsonUint(jsonData, string.concat(key, ".orderInitialAmount"));
@@ -252,7 +256,32 @@ abstract contract GtBaseTestV2 is ForkBaseTestV2 {
         uint256 xtAmtBeforeSwap = res.xt.balanceOf(taker);
 
         res.xt.approve(address(res.router), xtAmtIn);
-        gtId = res.router.leverageFromXt(taker, res.market, xtAmtIn, tokenAmtIn, uint128(maxLtv), units);
+
+        SwapUnit[] memory swapUnits = new SwapUnit[](1);
+        swapUnits[0] =
+            SwapUnit({adapter: address(0), tokenIn: address(res.xt), tokenOut: address(res.xt), swapData: bytes("")});
+
+        SwapPath[] memory inputPaths = new SwapPath[](2);
+        inputPaths[0] =
+            SwapPath({units: swapUnits, recipient: address(res.router), inputAmount: xtAmtIn, useBalanceOnchain: false});
+        SwapUnit[] memory transferTokenUnits = new SwapUnit[](1);
+        transferTokenUnits[0] = SwapUnit({
+            adapter: address(0),
+            tokenIn: address(res.debtToken),
+            tokenOut: address(res.debtToken),
+            swapData: bytes("")
+        });
+        inputPaths[1] = SwapPath({
+            units: transferTokenUnits,
+            recipient: address(res.router),
+            inputAmount: tokenAmtIn,
+            useBalanceOnchain: false
+        });
+
+        SwapPath memory collateralPath =
+            SwapPath({units: units, recipient: address(res.router), inputAmount: 0, useBalanceOnchain: true});
+
+        (gtId,) = res.router.leverageForV2(taker, res.market, uint128(maxLtv), inputPaths, collateralPath);
 
         uint256 debtTokenBalanceAfterSwap = res.debtToken.balanceOf(taker);
         uint256 xtAmtAfterSwap = res.xt.balanceOf(taker);
@@ -281,28 +310,59 @@ abstract contract GtBaseTestV2 is ForkBaseTestV2 {
         deal(taker, 1e8);
 
         uint256 maxLtv = res.marketInitialParams.loanConfig.maxLtv;
-        uint128 minXTOut = 0e8;
+        uint128 minXtOut = 0e8;
         deal(address(res.debtToken), taker, tokenAmtToBuyXt + tokenAmtIn);
         res.debtToken.approve(address(res.router), tokenAmtToBuyXt + tokenAmtIn);
 
         uint256 debtTokenBalanceBeforeSwap = res.debtToken.balanceOf(taker);
 
-        ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
-        orders[0] = res.order;
+        address[] memory orders = new address[](1);
+        orders[0] = address(res.order);
         uint128[] memory amtsToBuyXt = new uint128[](1);
         amtsToBuyXt[0] = tokenAmtToBuyXt;
 
-        (gtId,) = res.router.leverageFromToken(
-            taker,
-            res.market,
-            orders,
-            amtsToBuyXt,
-            minXTOut,
-            tokenAmtIn,
-            uint128(maxLtv),
-            units,
-            block.timestamp + 1 hours
-        );
+        TermMaxSwapData memory swapData = TermMaxSwapData({
+            swapExactTokenForToken: true,
+            scalingFactor: 0,
+            orders: orders,
+            tradingAmts: amtsToBuyXt,
+            netTokenAmt: minXtOut,
+            deadline: block.timestamp + 1 hours
+        });
+
+        SwapUnit[] memory swapUnits = new SwapUnit[](1);
+        swapUnits[0] = SwapUnit({
+            adapter: address(res.termMaxSwapAdapter),
+            tokenIn: address(res.debtToken),
+            tokenOut: address(res.xt),
+            swapData: abi.encode(swapData)
+        });
+
+        SwapPath[] memory inputPaths = new SwapPath[](2);
+        inputPaths[0] = SwapPath({
+            units: swapUnits,
+            recipient: address(res.router),
+            inputAmount: amtsToBuyXt[0] + amtsToBuyXt[1],
+            useBalanceOnchain: false
+        });
+        SwapUnit[] memory transferTokenUnits = new SwapUnit[](1);
+        transferTokenUnits[0] = SwapUnit({
+            adapter: address(0),
+            tokenIn: address(res.debtToken),
+            tokenOut: address(res.debtToken),
+            swapData: bytes("")
+        });
+        inputPaths[1] = SwapPath({
+            units: transferTokenUnits,
+            recipient: address(res.router),
+            inputAmount: tokenAmtIn,
+            useBalanceOnchain: false
+        });
+
+        SwapPath memory collateralPath =
+            SwapPath({units: units, recipient: address(res.router), inputAmount: 0, useBalanceOnchain: true});
+
+        (gtId,) = res.router.leverageForV2(taker, res.market, uint128(maxLtv), inputPaths, collateralPath);
 
         uint256 debtTokenBalanceAfterSwap = res.debtToken.balanceOf(taker);
 

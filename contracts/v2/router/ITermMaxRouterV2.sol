@@ -11,9 +11,14 @@ import {OrderConfig} from "../../v1/storage/TermMaxStorage.sol";
 /// @title TermMaxSwapPath
 /// @notice Represents a path for swapping tokens in the TermMax protocol and third-party adapters
 struct SwapPath {
+    /// @notice The token input amount of the first unit in the path
     uint256 inputAmount;
+    /// @notice The last unit will send the output token to this address
     address recipient;
+    /// @notice If true, input amount will using balance onchain, otherwise using the input amount from sender
     bool useBalanceOnchain;
+    /// @notice If uint's adapter is address(0), it means transfer the input token to recipient directly
+    /// @notice If uint's adapter token in equals to token out, the unit will be skipped
     SwapUnit[] units;
 }
 
@@ -120,61 +125,21 @@ interface ITermMaxRouterV2 {
         SwapPath calldata path
     ) external returns (uint256 netTokenOut);
 
-    /**
-     * @notice Creates a leveraged position from input tokens
-     * @dev Swaps tokens for XT and creates a leveraged position
-     * @param recipient Address to receive the position
-     * @param market The market to create position in
-     * @param orders Array of orders to execute
-     * @param amtsToBuyXt Array of amounts of XT to buy for each order
-     * @param minXtOut Minimum amount of XT to establish the position
-     * @param tokenToSwap Amount of tokens to swap
-     * @param maxLtv Maximum loan-to-value ratio
-     * @param units Array of swap units defining the swap path
-     * @param deadline The deadline timestamp for the transaction
-     * @return gtId ID of the generated GT token
-     * @return netXtOut Amount of XT tokens received
-     */
-    function leverageFromToken(
+    function leverageForV1(
         address recipient,
         ITermMaxMarket market,
-        ITermMaxOrder[] memory orders,
-        uint128[] memory amtsToBuyXt,
-        uint128 minXtOut,
-        uint128 tokenToSwap,
         uint128 maxLtv,
-        SwapUnit[] memory units,
-        uint256 deadline
+        SwapPath[] calldata inputPaths,
+        SwapPath calldata swapCollateralPath
     ) external returns (uint256 gtId, uint256 netXtOut);
 
-    /**
-     * @notice Creates a leveraged position from XT tokens
-     * @dev Uses existing XT tokens to create a leveraged position
-     * @param recipient Address to receive the position
-     * @param market The market to create position in
-     * @param xtInAmt Amount of XT tokens to use
-     * @param tokenInAmt Amount of additional tokens to use
-     * @param maxLtv Maximum loan-to-value ratio
-     * @param units Array of swap units defining the swap path
-     * @return gtId ID of the generated GT token
-     */
-    function leverageFromXt(
+    function leverageForV2(
         address recipient,
         ITermMaxMarket market,
-        uint128 xtInAmt,
-        uint128 tokenInAmt,
         uint128 maxLtv,
-        SwapUnit[] memory units
-    ) external returns (uint256 gtId);
-
-    function leverageFromXtAndCollateral(
-        address recipient,
-        ITermMaxMarket market,
-        uint128 xtInAmt,
-        uint128 collateralInAmt,
-        uint128 maxLtv,
-        SwapUnit[] memory units
-    ) external returns (uint256 gtId);
+        SwapPath[] calldata inputPaths,
+        SwapPath calldata swapCollateralPath
+    ) external returns (uint256 gtId, uint256 netXtOut);
 
     /**
      * @notice Borrows tokens using collateral
