@@ -617,4 +617,102 @@ contract RouterTestV2_1 is Test {
         assertEq(res.debt.balanceOf(sender), borrowAmt);
         vm.stopPrank();
     }
+
+    function testBorrowTokenFromCollateralAndXt(bool isV1) public {
+        vm.startPrank(sender);
+
+        uint256 collInAmt = 1e18;
+        uint128 borrowAmt = 80e8;
+
+        res.collateral.mint(sender, collInAmt);
+        res.collateral.approve(address(res.router), collInAmt);
+
+        res.debt.mint(sender, borrowAmt);
+        res.debt.approve(address(res.market), borrowAmt);
+        res.market.mint(sender, borrowAmt);
+
+        res.xt.approve(address(res.router), borrowAmt);
+
+        uint256 mintGtFeeRatio = res.market.mintGtFeeRatio();
+        uint128 previewDebtAmt =
+            ((borrowAmt * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - mintGtFeeRatio)).toUint128();
+
+        vm.expectEmit();
+        emit RouterEvents.Borrow(res.market, 1, sender, sender, collInAmt, previewDebtAmt, borrowAmt);
+
+        uint256 gtId = isV1
+            ? res.router.borrowTokenFromCollateralAndXtForV1(sender, res.market, collInAmt, borrowAmt)
+            : res.router.borrowTokenFromCollateralAndXtForV2(sender, res.market, collInAmt, borrowAmt);
+        (address owner, uint128 debtAmt, bytes memory collateralData) = res.gt.loanInfo(gtId);
+        assertEq(owner, sender);
+        assertEq(collInAmt, abi.decode(collateralData, (uint256)));
+        assert(previewDebtAmt == debtAmt);
+        assertEq(res.debt.balanceOf(sender), borrowAmt);
+
+        vm.stopPrank();
+    }
+
+    function testBorrowTokenFromGtAndXt(bool isV1) public {
+        vm.startPrank(sender);
+        uint256 collInAmt = 1e18;
+
+        (uint256 gtId,) = LoanUtils.fastMintGt(res, sender, 100e8, collInAmt);
+
+        uint128 borrowAmt = 80e8;
+
+        res.debt.mint(sender, borrowAmt);
+        res.debt.approve(address(res.market), borrowAmt);
+        res.market.mint(sender, borrowAmt);
+
+        res.xt.approve(address(res.router), borrowAmt);
+        res.gt.approve(address(res.router), gtId);
+
+        uint256 mintGtFeeRatio = res.market.mintGtFeeRatio();
+        uint128 previewDebtAmt =
+            ((borrowAmt * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - mintGtFeeRatio)).toUint128();
+
+        vm.expectEmit();
+        emit RouterEvents.Borrow(res.market, 1, sender, sender, 0, previewDebtAmt, borrowAmt);
+        if (isV1) {
+            res.router.borrowTokenFromGtAndXtForV1(sender, res.market, gtId, borrowAmt);
+        } else {
+            res.router.borrowTokenFromGtAndXtForV2(sender, res.market, gtId, borrowAmt);
+        }
+
+        (, uint128 dAmt,) = res.gt.loanInfo(gtId);
+        assert(dAmt == 100e8 + previewDebtAmt);
+        assertEq(res.debt.balanceOf(sender), borrowAmt);
+
+        vm.stopPrank();
+    }
+
+    function testBorrowTokenFromGtInvalidSender(bool isV1) public {
+        vm.startPrank(sender);
+        uint256 collInAmt = 1e18;
+
+        (uint256 gtId,) = LoanUtils.fastMintGt(res, sender, 100e8, collInAmt);
+
+        uint128 borrowAmt = 80e8;
+
+        res.debt.mint(sender, borrowAmt);
+        res.debt.approve(address(res.market), borrowAmt);
+        res.market.mint(sender, borrowAmt);
+
+        res.xt.approve(address(res.router), borrowAmt);
+        res.gt.approve(address(res.router), gtId);
+
+        uint256 mintGtFeeRatio = res.market.mintGtFeeRatio();
+        ((borrowAmt * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - mintGtFeeRatio)).toUint128();
+        vm.stopPrank();
+
+        vm.expectRevert(abi.encodeWithSelector(RouterErrors.GtNotOwnedBySender.selector));
+        vm.prank(deployer);
+        if (isV1) {
+            res.router.borrowTokenFromGtAndXtForV1(sender, res.market, gtId, borrowAmt);
+        } else {
+            res.router.borrowTokenFromGtAndXtForV2(sender, res.market, gtId, borrowAmt);
+        }
+
+        vm.stopPrank();
+    }
 }

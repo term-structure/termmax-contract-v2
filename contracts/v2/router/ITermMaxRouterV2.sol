@@ -200,19 +200,50 @@ interface ITermMaxRouterV2 {
      * @param borrowAmt Amount of tokens to borrow
      * @return gtId ID of the generated GT token
      */
-    function borrowTokenFromCollateral(address recipient, ITermMaxMarket market, uint256 collInAmt, uint256 borrowAmt)
-        external
-        returns (uint256 gtId);
+    function borrowTokenFromCollateralAndXtForV1(
+        address recipient,
+        ITermMaxMarket market,
+        uint256 collInAmt,
+        uint256 borrowAmt
+    ) external returns (uint256 gtId);
 
     /**
-     * @notice Borrows tokens from an existing GT position
+     * @notice Borrows tokens using collateral and XT
+     * @dev Creates a collateralized debt position
+     * @param recipient Address to receive the borrowed tokens
+     * @param market The market to borrow from
+     * @param collInAmt Amount of collateral to deposit
+     * @param borrowAmt Amount of tokens to borrow
+     * @return gtId ID of the generated GT token
+     */
+    function borrowTokenFromCollateralAndXtForV2(
+        address recipient,
+        ITermMaxMarket market,
+        uint256 collInAmt,
+        uint256 borrowAmt
+    ) external returns (uint256 gtId);
+
+    /**
+     * @notice Borrows tokens from an existing GT position and XT
      * @dev Increases the debt of an existing position
      * @param recipient Address to receive the borrowed tokens
      * @param market The market to borrow from
      * @param gtId ID of the GT token to borrow from
      * @param borrowAmt Amount of tokens to borrow
      */
-    function borrowTokenFromGt(address recipient, ITermMaxMarket market, uint256 gtId, uint256 borrowAmt) external;
+    function borrowTokenFromGtAndXtForV1(address recipient, ITermMaxMarket market, uint256 gtId, uint256 borrowAmt)
+        external;
+
+    /**
+     * @notice Borrows tokens from an existing GT position and XT
+     * @dev Increases the debt of an existing position
+     * @param recipient Address to receive the borrowed tokens
+     * @param market The market to borrow from
+     * @param gtId ID of the GT token to borrow from
+     * @param borrowAmt Amount of tokens to borrow
+     */
+    function borrowTokenFromGtAndXtForV2(address recipient, ITermMaxMarket market, uint256 gtId, uint256 borrowAmt)
+        external;
 
     /**
      * @notice Repays debt from collateral

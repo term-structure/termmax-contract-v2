@@ -344,11 +344,38 @@ contract TermMaxRouterV2 is
         return gtId;
     }
 
-    function borrowTokenFromCollateral(address recipient, ITermMaxMarket market, uint256 collInAmt, uint256 borrowAmt)
-        external
-        whenNotPaused
-        returns (uint256)
-    {
+    function borrowTokenFromCollateralAndXtForV1(
+        address recipient,
+        ITermMaxMarket market,
+        uint256 collInAmt,
+        uint256 borrowAmt
+    ) external whenNotPaused returns (uint256) {
+        (IERC20 ft, IERC20 xt, IGearingToken gt, address collateralAddr,) = market.tokens();
+
+        IERC20(collateralAddr).safeTransferFrom(msg.sender, address(this), collInAmt);
+        IERC20(collateralAddr).safeIncreaseAllowance(address(gt), collInAmt);
+
+        uint256 mintGtFeeRatio = market.mintGtFeeRatio();
+        uint128 debtAmt = ((borrowAmt * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - mintGtFeeRatio)).toUint128();
+
+        (uint256 gtId, uint128 ftOutAmt) = market.issueFt(address(this), debtAmt, _encodeAmount(collInAmt));
+        borrowAmt = borrowAmt.min(ftOutAmt);
+        xt.safeTransferFrom(msg.sender, address(this), borrowAmt);
+        xt.safeIncreaseAllowance(address(market), borrowAmt);
+        ft.safeIncreaseAllowance(address(market), borrowAmt);
+        market.burn(recipient, borrowAmt);
+
+        gt.safeTransferFrom(address(this), recipient, gtId);
+        emit Borrow(market, gtId, msg.sender, recipient, collInAmt, debtAmt, borrowAmt.toUint128());
+        return gtId;
+    }
+
+    function borrowTokenFromCollateralAndXtForV2(
+        address recipient,
+        ITermMaxMarket market,
+        uint256 collInAmt,
+        uint256 borrowAmt
+    ) external whenNotPaused returns (uint256) {
         (, IERC20 xt, IGearingToken gt, address collateralAddr,) = market.tokens();
 
         IERC20(collateralAddr).safeTransferFrom(msg.sender, address(this), collInAmt);
@@ -360,7 +387,6 @@ contract TermMaxRouterV2 is
         (uint256 gtId, uint128 ftOutAmt) = market.issueFt(address(this), debtAmt, _encodeAmount(collInAmt));
         borrowAmt = borrowAmt.min(ftOutAmt);
         xt.safeTransferFrom(msg.sender, address(this), borrowAmt);
-
         ITermMaxMarketV2(address(market)).burn(address(this), recipient, borrowAmt);
 
         gt.safeTransferFrom(address(this), recipient, gtId);
@@ -368,7 +394,30 @@ contract TermMaxRouterV2 is
         return gtId;
     }
 
-    function borrowTokenFromGt(address recipient, ITermMaxMarket market, uint256 gtId, uint256 borrowAmt)
+    function borrowTokenFromGtAndXtForV1(address recipient, ITermMaxMarket market, uint256 gtId, uint256 borrowAmt)
+        external
+        whenNotPaused
+    {
+        (IERC20 ft, IERC20 xt, IGearingToken gt,,) = market.tokens();
+
+        if (gt.ownerOf(gtId) != msg.sender) {
+            revert GtNotOwnedBySender();
+        }
+
+        uint256 mintGtFeeRatio = market.mintGtFeeRatio();
+        uint128 debtAmt = ((borrowAmt * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - mintGtFeeRatio)).toUint128();
+
+        uint256 ftOutAmt = market.issueFtByExistedGt(address(this), debtAmt, gtId);
+        borrowAmt = borrowAmt.min(ftOutAmt);
+        xt.safeTransferFrom(msg.sender, address(this), borrowAmt);
+        xt.safeIncreaseAllowance(address(market), borrowAmt);
+        ft.safeIncreaseAllowance(address(market), borrowAmt);
+        market.burn(recipient, borrowAmt);
+
+        emit Borrow(market, gtId, msg.sender, recipient, 0, debtAmt, borrowAmt.toUint128());
+    }
+
+    function borrowTokenFromGtAndXtForV2(address recipient, ITermMaxMarket market, uint256 gtId, uint256 borrowAmt)
         external
         whenNotPaused
     {
