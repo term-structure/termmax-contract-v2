@@ -405,12 +405,12 @@ abstract contract GtBaseTestV2 is ForkBaseTestV2 {
         uint256 debtTokenBalanceBeforeRepay = res.debtToken.balanceOf(taker);
         bool byDebtToken = true;
 
-        ITermMaxRouterV2.TermMaxSwapData memory swapData;
+        SwapPath[] memory swapPaths = new SwapPath[](1);
+        swapPaths[0] = SwapPath({units: units, recipient: address(res.router), inputAmount: 0, useBalanceOnchain: true});
 
         (, uint128 debtAmt, bytes memory collateralData) = res.gt.loanInfo(gtId);
-        uint256 netTokenOut = res.router.flashRepayFromCollV2(
-            taker, res.market, gtId, debtAmt, byDebtToken, collateralData, units, swapData
-        );
+        uint256 netTokenOut =
+            res.router.flashRepayFromCollForV2(taker, res.market, gtId, debtAmt, byDebtToken, collateralData, swapPaths);
 
         uint256 debtTokenBalanceAfterRepay = res.debtToken.balanceOf(taker);
 
@@ -426,24 +426,38 @@ abstract contract GtBaseTestV2 is ForkBaseTestV2 {
         res.gt.approve(address(res.router), gtId);
 
         uint256 debtTokenBalanceBeforeRepay = res.debtToken.balanceOf(taker);
-        ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
-        orders[0] = res.order;
+        address[] memory orders = new address[](1);
+        orders[0] = address(res.order);
         uint128[] memory amtsToBuyFt = new uint128[](1);
 
         (, uint128 debtAmt, bytes memory collateralData) = res.gt.loanInfo(gtId);
         amtsToBuyFt[0] = debtAmt;
         bool byDebtToken = false;
 
-        ITermMaxRouterV2.TermMaxSwapData memory swapData;
-        swapData.tokenIn = address(res.debtToken);
-        swapData.tokenOut = address(res.ft);
-        swapData.orders = orders;
-        swapData.tradingAmts = amtsToBuyFt;
-        swapData.deadline = block.timestamp + 1 hours;
+        TermMaxSwapData memory swapData = TermMaxSwapData({
+            swapExactTokenForToken: false,
+            scalingFactor: 0,
+            orders: orders,
+            tradingAmts: amtsToBuyFt,
+            netTokenAmt: type(uint128).max,
+            deadline: block.timestamp + 1 hours
+        });
 
-        uint256 netTokenOut = res.router.flashRepayFromCollV2(
-            taker, res.market, gtId, debtAmt, byDebtToken, collateralData, units, swapData
-        );
+        SwapUnit[] memory units2 = new SwapUnit[](2);
+        units2[0] = units[0];
+        units2[1] = SwapUnit({
+            adapter: address(res.termMaxSwapAdapter),
+            tokenIn: address(res.debtToken),
+            tokenOut: address(res.ft),
+            swapData: abi.encode(swapData)
+        });
+
+        SwapPath[] memory swapPaths = new SwapPath[](1);
+        swapPaths[0] =
+            SwapPath({units: units2, recipient: address(res.router), inputAmount: 0, useBalanceOnchain: true});
+
+        uint256 netTokenOut =
+            res.router.flashRepayFromCollForV2(taker, res.market, gtId, debtAmt, byDebtToken, collateralData, swapPaths);
 
         uint256 debtTokenBalanceAfterRepay = res.debtToken.balanceOf(taker);
 

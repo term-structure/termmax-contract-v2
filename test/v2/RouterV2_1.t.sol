@@ -715,4 +715,88 @@ contract RouterTestV2_1 is Test {
 
         vm.stopPrank();
     }
+
+    function testFlashRepayFromCollateralForV1(bool isV1) public {
+        vm.startPrank(sender);
+        uint128 debtAmt = 100e8;
+        (uint256 gtId,) = LoanUtils.fastMintGt(res, sender, debtAmt, 1e18);
+        (,, bytes memory collateralData) = res.gt.loanInfo(gtId);
+        bool byDebtToken = true;
+
+        uint256 mintTokenOut = 2000e8;
+        SwapUnit[] memory units = new SwapUnit[](1);
+        units[0] = SwapUnit(address(adapter), address(res.collateral), address(res.debt), abi.encode(mintTokenOut));
+
+        SwapPath[] memory swapPaths = new SwapPath[](1);
+        swapPaths[0] = SwapPath({units: units, recipient: address(res.router), inputAmount: 0, useBalanceOnchain: true});
+
+        res.gt.approve(address(res.router), gtId);
+        if (isV1) {
+            res.router.flashRepayFromCollForV1(sender, res.market, gtId, byDebtToken, swapPaths);
+        } else {
+            res.router.flashRepayFromCollForV2(
+                sender, res.market, gtId, debtAmt, byDebtToken, collateralData, swapPaths
+            );
+        }
+
+        assertEq(res.collateral.balanceOf(sender), 0);
+        assertEq(res.debt.balanceOf(sender), mintTokenOut - debtAmt);
+
+        vm.expectRevert(abi.encodePacked(bytes4(keccak256("ERC721NonexistentToken(uint256)")), gtId));
+        res.gt.loanInfo(gtId);
+
+        vm.stopPrank();
+    }
+
+    function testFlashRepayFromCollateralForV1_ByFt(bool isV1) public {
+        vm.startPrank(sender);
+        uint128 debtAmt = 100e8;
+        (uint256 gtId,) = LoanUtils.fastMintGt(res, sender, debtAmt, 1e18);
+        (,, bytes memory collateralData) = res.gt.loanInfo(gtId);
+        address[] memory orders = new address[](1);
+        orders[0] = address(res.order);
+        uint128[] memory amtsToBuyFt = new uint128[](1);
+        amtsToBuyFt[0] = debtAmt;
+
+        bool byDebtToken = false;
+
+        uint256 mintTokenOut = 2000e8;
+        SwapUnit[] memory units = new SwapUnit[](2);
+        units[0] = SwapUnit(address(adapter), address(res.collateral), address(res.debt), abi.encode(mintTokenOut));
+
+        TermMaxSwapData memory swapData = TermMaxSwapData({
+            swapExactTokenForToken: false,
+            scalingFactor: 0,
+            orders: orders,
+            tradingAmts: amtsToBuyFt,
+            netTokenAmt: mintTokenOut.toUint128(),
+            deadline: block.timestamp + 1 hours
+        });
+        units[1] = SwapUnit({
+            adapter: address(termMaxSwapAdapter),
+            tokenIn: address(res.debt),
+            tokenOut: address(res.ft),
+            swapData: abi.encode(swapData)
+        });
+
+        SwapPath[] memory swapPaths = new SwapPath[](1);
+        swapPaths[0] = SwapPath({units: units, recipient: address(res.router), inputAmount: 0, useBalanceOnchain: true});
+
+        res.gt.approve(address(res.router), gtId);
+        if (isV1) {
+            res.router.flashRepayFromCollForV1(sender, res.market, gtId, byDebtToken, swapPaths);
+        } else {
+            res.router.flashRepayFromCollForV2(
+                sender, res.market, gtId, debtAmt, byDebtToken, collateralData, swapPaths
+            );
+        }
+
+        assertEq(res.collateral.balanceOf(sender), 0);
+        assert(res.debt.balanceOf(sender) > mintTokenOut - debtAmt);
+
+        vm.expectRevert(abi.encodePacked(bytes4(keccak256("ERC721NonexistentToken(uint256)")), gtId));
+        res.gt.loanInfo(gtId);
+
+        vm.stopPrank();
+    }
 }

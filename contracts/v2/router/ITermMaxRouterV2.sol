@@ -87,7 +87,7 @@ interface ITermMaxRouterV2 {
      * @param paths Array of SwapPath structs defining the swap operations
      * @return netAmounts Array of amounts received for each swap operation
      */
-    function swapTokens(SwapPath[] calldata paths) external returns (uint256[] memory netAmounts);
+    function swapTokens(SwapPath[] memory paths) external returns (uint256[] memory netAmounts);
 
     /**
      * @notice Swaps ft and xt tokens for a specific marketV1
@@ -104,7 +104,7 @@ interface ITermMaxRouterV2 {
         ITermMaxMarket market,
         uint128 ftInAmt,
         uint128 xtInAmt,
-        SwapPath calldata path
+        SwapPath memory path
     ) external returns (uint256 netTokenOut);
 
     /**
@@ -122,7 +122,7 @@ interface ITermMaxRouterV2 {
         ITermMaxMarket market,
         uint128 ftInAmt,
         uint128 xtInAmt,
-        SwapPath calldata path
+        SwapPath memory path
     ) external returns (uint256 netTokenOut);
 
     /**
@@ -145,8 +145,8 @@ interface ITermMaxRouterV2 {
         address recipient,
         ITermMaxMarket market,
         uint128 maxLtv,
-        SwapPath[] calldata inputPaths,
-        SwapPath calldata swapCollateralPath
+        SwapPath[] memory inputPaths,
+        SwapPath memory swapCollateralPath
     ) external returns (uint256 gtId, uint256 netXtOut);
 
     /**
@@ -169,13 +169,15 @@ interface ITermMaxRouterV2 {
         address recipient,
         ITermMaxMarket market,
         uint128 maxLtv,
-        SwapPath[] calldata inputPaths,
-        SwapPath calldata swapCollateralPath
+        SwapPath[] memory inputPaths,
+        SwapPath memory swapCollateralPath
     ) external returns (uint256 gtId, uint256 netXtOut);
 
     /**
      * @notice Borrows tokens using collateral
      * @dev Creates a collateralized debt position
+     *      input/output: =>, swap: ->
+     *      swapFtPath ft -> debt token => recipient
      * @param recipient Address to receive the borrowed tokens
      * @param market The market to borrow from
      * @param collInAmt Amount of collateral
@@ -188,7 +190,7 @@ interface ITermMaxRouterV2 {
         ITermMaxMarket market,
         uint256 collInAmt,
         uint128 maxDebtAmt,
-        SwapPath calldata swapFtPath
+        SwapPath memory swapFtPath
     ) external returns (uint256 gtId);
 
     /**
@@ -248,37 +250,39 @@ interface ITermMaxRouterV2 {
     /**
      * @notice Repays debt from collateral
      * @dev Repays debt and closes a position
+     *      input/output: =>, swap: ->
+     *      path0: collateral -> debt token (-> exact ft token. optional) => router
      * @param recipient Address to receive any remaining collateral
      * @param market The market to repay debt in
      * @param gtId ID of the GT token to repay debt from
      * @param byDebtToken True if repaying with debt token, false if using FT token
-     * @param units Array of swap units defining the external swap path
-     * @param swapData Data for the termmax swap operation
+     * @param swapPaths Array of SwapPath structs defining the swap paths
      * @return netTokenOut Actual amount of tokens received
      */
-    function flashRepayFromColl(
+    function flashRepayFromCollForV1(
         address recipient,
         ITermMaxMarket market,
         uint256 gtId,
         bool byDebtToken,
-        SwapUnit[] memory units,
-        TermMaxSwapData memory swapData
+        SwapPath[] memory swapPaths
     ) external returns (uint256 netTokenOut);
 
-    function flashRepayFromCollV2(
+    function flashRepayFromCollForV2(
         address recipient,
         ITermMaxMarket market,
         uint256 gtId,
         uint128 repayAmt,
         bool byDebtToken,
         bytes memory removedCollateral,
-        SwapUnit[] memory units,
-        TermMaxSwapData memory swapData
+        SwapPath[] memory swapPaths
     ) external returns (uint256 netTokenOut);
 
     /**
      * @notice Repays debt using FT tokens
      * @dev Repays debt and closes a position
+     * @dev If collateral value is larger than debt, please swap collateral partially and add a swap path to defend MEV attack
+     *      input/output: =>, swap: ->
+     *      path0: collateral -> debt token (-> exact ft token. optional) => router
      * @param recipient Address to receive any remaining tokens
      * @param market The market to repay debt in
      * @param gtId ID of the GT token to repay debt from

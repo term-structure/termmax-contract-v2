@@ -156,68 +156,6 @@ contract RouterTestV2 is Test {
         vm.stopPrank();
     }
 
-    function testFlashRepayFromCollateral() public {
-        vm.startPrank(sender);
-        uint128 debtAmt = 100e8;
-        (uint256 gtId,) = LoanUtils.fastMintGt(res, sender, debtAmt, 1e18);
-
-        ITermMaxOrder[] memory orders = new ITermMaxOrder[](0);
-        uint128[] memory amtsToBuyFt = new uint128[](0);
-        bool byDebtToken = true;
-
-        uint256 mintTokenOut = 2000e8;
-        SwapUnit[] memory units = new SwapUnit[](1);
-        units[0] = SwapUnit(address(adapter), address(res.collateral), address(res.debt), abi.encode(mintTokenOut));
-
-        res.gt.approve(address(res.router), gtId);
-        ITermMaxRouterV2.TermMaxSwapData memory swapData;
-        res.router.flashRepayFromColl(sender, res.market, gtId, byDebtToken, units, swapData);
-
-        assertEq(res.collateral.balanceOf(sender), 0);
-        assertEq(res.debt.balanceOf(sender), mintTokenOut - debtAmt);
-
-        vm.expectRevert(abi.encodePacked(bytes4(keccak256("ERC721NonexistentToken(uint256)")), gtId));
-        res.gt.loanInfo(gtId);
-
-        vm.stopPrank();
-    }
-
-    function testFlashRepayFromCollateral_ByFt() public {
-        vm.startPrank(sender);
-        uint128 debtAmt = 100e8;
-        (uint256 gtId,) = LoanUtils.fastMintGt(res, sender, debtAmt, 1e18);
-
-        ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
-        orders[0] = res.order;
-        uint128[] memory amtsToBuyFt = new uint128[](1);
-        amtsToBuyFt[0] = debtAmt;
-
-        bool byDebtToken = false;
-
-        uint256 mintTokenOut = 2000e8;
-        SwapUnit[] memory units = new SwapUnit[](1);
-        units[0] = SwapUnit(address(adapter), address(res.collateral), address(res.debt), abi.encode(mintTokenOut));
-
-        ITermMaxRouterV2.TermMaxSwapData memory swapData;
-        swapData.orders = orders;
-        swapData.tradingAmts = amtsToBuyFt;
-        swapData.tokenIn = address(res.debt);
-        swapData.tokenOut = address(res.ft);
-        swapData.netTokenAmt = 0;
-        swapData.deadline = block.timestamp + 1 hours;
-
-        res.gt.approve(address(res.router), gtId);
-        res.router.flashRepayFromColl(sender, res.market, gtId, byDebtToken, units, swapData);
-
-        assertEq(res.collateral.balanceOf(sender), 0);
-        assert(res.debt.balanceOf(sender) > mintTokenOut - debtAmt);
-
-        vm.expectRevert(abi.encodePacked(bytes4(keccak256("ERC721NonexistentToken(uint256)")), gtId));
-        res.gt.loanInfo(gtId);
-
-        vm.stopPrank();
-    }
-
     function testRepayByTokenThroughFt() public {
         vm.startPrank(sender);
         uint128 debtAmt = 100e8;
