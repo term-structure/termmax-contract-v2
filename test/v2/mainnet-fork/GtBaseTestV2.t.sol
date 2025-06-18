@@ -214,17 +214,34 @@ abstract contract GtBaseTestV2 is ForkBaseTestV2 {
 
         vm.startPrank(taker);
 
-        ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
-        orders[0] = res.order;
+        address[] memory orders = new address[](1);
+        orders[0] = address(res.order);
         uint128[] memory tokenAmtsWantBuy = new uint128[](1);
         tokenAmtsWantBuy[0] = borrowAmt;
+
+        TermMaxSwapData memory swapData = TermMaxSwapData({
+            swapExactTokenForToken: false,
+            scalingFactor: 0,
+            orders: orders,
+            tradingAmts: tokenAmtsWantBuy,
+            netTokenAmt: maxDebtAmt,
+            deadline: block.timestamp + 1 hours
+        });
+
+        SwapUnit[] memory swapUnits = new SwapUnit[](1);
+        swapUnits[0] = SwapUnit({
+            adapter: address(res.termMaxSwapAdapter),
+            tokenIn: address(res.ft),
+            tokenOut: address(res.debtToken),
+            swapData: abi.encode(swapData)
+        });
+
+        SwapPath memory ftPath = SwapPath({units: swapUnits, recipient: taker, inputAmount: 0, useBalanceOnchain: true});
 
         deal(address(res.collateral), taker, collInAmt);
         res.collateral.approve(address(res.router), collInAmt);
 
-        uint256 gtId = res.router.borrowTokenFromCollateral(
-            taker, res.market, collInAmt, orders, tokenAmtsWantBuy, maxDebtAmt, block.timestamp + 1 hours
-        );
+        uint256 gtId = res.router.borrowTokenFromCollateral(taker, res.market, collInAmt, maxDebtAmt, ftPath);
         (address owner, uint128 debtAmt, bytes memory collateralData) = res.gt.loanInfo(gtId);
         assertEq(owner, taker);
         assertEq(collInAmt, abi.decode(collateralData, (uint256)));

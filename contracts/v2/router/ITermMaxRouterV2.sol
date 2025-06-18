@@ -178,21 +178,17 @@ interface ITermMaxRouterV2 {
      * @dev Creates a collateralized debt position
      * @param recipient Address to receive the borrowed tokens
      * @param market The market to borrow from
-     * @param collInAmt Amount of collateral to deposit
-     * @param orders Array of orders to execute
-     * @param tokenAmtsWantBuy Array of token amounts to buy
-     * @param maxDebtAmt Maximum amount of debt to take on
-     * @param deadline The deadline timestamp for the transaction
+     * @param collInAmt Amount of collateral
+     * @param maxDebtAmt Maximum amount of debt to incur
+     * @param swapFtPath SwapPath for swapping FT token to debt token
      * @return gtId ID of the generated GT token
      */
     function borrowTokenFromCollateral(
         address recipient,
         ITermMaxMarket market,
         uint256 collInAmt,
-        ITermMaxOrder[] memory orders,
-        uint128[] memory tokenAmtsWantBuy,
         uint128 maxDebtAmt,
-        uint256 deadline
+        SwapPath calldata swapFtPath
     ) external returns (uint256 gtId);
 
     /**

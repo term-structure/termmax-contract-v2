@@ -572,4 +572,49 @@ contract RouterTestV2_1 is Test {
 
         vm.stopPrank();
     }
+
+    function testBorrowTokenFromCollateral() public {
+        vm.startPrank(sender);
+
+        uint256 collInAmt = 1e18;
+        uint128 borrowAmt = 80e8;
+        uint128 maxDebtAmt = 100e8;
+
+        address[] memory orders = new address[](1);
+        orders[0] = address(res.order);
+        uint128[] memory tokenAmtsWantBuy = new uint128[](1);
+        tokenAmtsWantBuy[0] = borrowAmt;
+
+        TermMaxSwapData memory swapData = TermMaxSwapData({
+            swapExactTokenForToken: false,
+            scalingFactor: 0,
+            orders: orders,
+            tradingAmts: tokenAmtsWantBuy,
+            netTokenAmt: maxDebtAmt,
+            deadline: block.timestamp + 1 hours
+        });
+
+        SwapUnit[] memory swapUnits = new SwapUnit[](1);
+        swapUnits[0] = SwapUnit({
+            adapter: address(termMaxSwapAdapter),
+            tokenIn: address(res.ft),
+            tokenOut: address(res.debt),
+            swapData: abi.encode(swapData)
+        });
+
+        SwapPath memory ftPath =
+            SwapPath({units: swapUnits, recipient: sender, inputAmount: 0, useBalanceOnchain: true});
+
+        res.collateral.mint(sender, collInAmt);
+        res.collateral.approve(address(res.router), collInAmt);
+
+        uint256 gtId = res.router.borrowTokenFromCollateral(sender, res.market, collInAmt, maxDebtAmt, ftPath);
+
+        (address owner, uint128 debtAmt, bytes memory collateralData) = res.gt.loanInfo(gtId);
+        assertEq(owner, sender);
+        assertEq(collInAmt, abi.decode(collateralData, (uint256)));
+        assert(debtAmt <= maxDebtAmt);
+        assertEq(res.debt.balanceOf(sender), borrowAmt);
+        vm.stopPrank();
+    }
 }

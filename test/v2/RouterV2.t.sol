@@ -156,39 +156,6 @@ contract RouterTestV2 is Test {
         vm.stopPrank();
     }
 
-    function testBorrowTokenFromCollateral() public {
-        vm.startPrank(sender);
-
-        uint256 collInAmt = 1e18;
-        uint128 borrowAmt = 80e8;
-        uint128 maxDebtAmt = 100e8;
-
-        // uint fee = (res.market.mintGtFeeRatio() * maxDebtAmt) / Constants.DECIMAL_BASE;
-        // uint ftAmt = maxDebtAmt - fee;
-
-        ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
-        orders[0] = res.order;
-        uint128[] memory tokenAmtsWantBuy = new uint128[](1);
-        tokenAmtsWantBuy[0] = borrowAmt;
-
-        res.collateral.mint(sender, collInAmt);
-        res.collateral.approve(address(res.router), collInAmt);
-
-        // vm.expectEmit();
-        // emit RouterEvents.Borrow(res.market, gtId, sender, sender, collInAmt, maxDebtAmt.toUint128(), borrowAmt);
-        uint256 gtId = res.router.borrowTokenFromCollateral(
-            sender, res.market, collInAmt, orders, tokenAmtsWantBuy, maxDebtAmt, block.timestamp + 1 hours
-        );
-
-        (address owner, uint128 debtAmt, bytes memory collateralData) = res.gt.loanInfo(gtId);
-        assertEq(owner, sender);
-        assertEq(collInAmt, abi.decode(collateralData, (uint256)));
-        assert(debtAmt <= maxDebtAmt);
-        assertEq(res.debt.balanceOf(sender), borrowAmt);
-
-        vm.stopPrank();
-    }
-
     function testBorrowTokenFromCollateralCase2() public {
         vm.startPrank(sender);
 

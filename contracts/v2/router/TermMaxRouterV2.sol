@@ -324,18 +324,15 @@ contract TermMaxRouterV2 is
         address recipient,
         ITermMaxMarket market,
         uint256 collInAmt,
-        ITermMaxOrder[] memory orders,
-        uint128[] memory tokenAmtsWantBuy,
         uint128 maxDebtAmt,
-        uint256 deadline
+        SwapPath calldata swapFtPath
     ) external whenNotPaused returns (uint256) {
-        (IERC20 ft,, IGearingToken gt, address collateralAddr, IERC20 debtToken) = market.tokens();
+        (IERC20 ft,, IGearingToken gt, address collateralAddr,) = market.tokens();
         IERC20(collateralAddr).safeTransferFrom(msg.sender, address(this), collInAmt);
         IERC20(collateralAddr).safeIncreaseAllowance(address(gt), collInAmt);
 
         (uint256 gtId, uint128 ftOutAmt) = market.issueFt(address(this), maxDebtAmt, _encodeAmount(collInAmt));
-        uint256 netTokenIn =
-            _swapTokenToExactToken(ft, debtToken, recipient, orders, tokenAmtsWantBuy, ftOutAmt, deadline);
+        uint256 netTokenIn = _executeSwapUnits(swapFtPath.recipient, ftOutAmt, swapFtPath.units);
         uint256 repayAmt = ftOutAmt - netTokenIn;
         if (repayAmt > 0) {
             ft.safeIncreaseAllowance(address(gt), repayAmt);
@@ -651,10 +648,6 @@ contract TermMaxRouterV2 is
         collateralBalance = collateral.balanceOf(address(this));
         collateral.safeIncreaseAllowance(gt, collateralBalance);
         collateralData = _encodeAmount(collateralBalance);
-    }
-
-    function _balanceOf(IERC20 token, address account) internal view returns (uint256) {
-        return token.balanceOf(account);
     }
 
     function _encodeAmount(uint256 amount) internal pure returns (bytes memory) {
