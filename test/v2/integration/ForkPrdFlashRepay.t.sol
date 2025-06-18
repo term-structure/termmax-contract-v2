@@ -13,6 +13,7 @@ import {
     GtConfig
 } from "contracts/v1/tokens/AbstractGearingToken.sol";
 import {PendleSwapV3AdapterV2} from "contracts/v2/router/swapAdapters/PendleSwapV3AdapterV2.sol";
+import {OdosV2AdapterV2} from "contracts/v2/router/swapAdapters/OdosV2AdapterV2.sol";
 import {IOracle} from "contracts/v1/oracle/IOracle.sol";
 import {
     ForkBaseTestV2,
@@ -23,7 +24,7 @@ import {
     IERC20Metadata
 } from "../mainnet-fork/ForkBaseTestV2.sol";
 import {ITermMaxMarketV2} from "contracts/v2/ITermMaxMarketV2.sol";
-import {ITermMaxRouterV2, TermMaxRouterV2} from "contracts/v2/router/TermMaxRouterV2.sol";
+import {ITermMaxRouterV2, TermMaxRouterV2, SwapPath} from "contracts/v2/router/TermMaxRouterV2.sol";
 import {console} from "forge-std/console.sol";
 
 interface TestOracle is IOracle {
@@ -49,7 +50,7 @@ contract ForkPrdFlashRepay is ForkBaseTestV2 {
     ITermMaxOrder o_may_30 = ITermMaxOrder(0xe99ee5b18cB57276EbEADf0E773E4f8Ab49Db9B7);
     ITermMaxOrder o_aug_1 = ITermMaxOrder(0x71Df74d65c3895C8FA5a1c8E8d93A7eE30A1aFc7);
     address pendleAdapter;
-    address odosAdapter = 0x2aFEf28a8Ab57d2F5A5663Ef69351e9d3abf1779;
+    address odosAdapter;
     TermMaxRouterV2 router;
 
     function _getForkRpcUrl() internal view override returns (string memory) {
@@ -91,6 +92,9 @@ contract ForkPrdFlashRepay is ForkBaseTestV2 {
 
         PendleSwapV3AdapterV2 adapter = new PendleSwapV3AdapterV2(0x888888888889758F76e7103c6CbF23ABbF58F946);
         pendleAdapter = address(adapter);
+
+        OdosV2AdapterV2 od = new OdosV2AdapterV2(0xCf5540fFFCdC3d510B18bFcA6d2b9987b0772559);
+        odosAdapter = address(od);
 
         vm.label(pt_susde_may_29, "pt_susde_may_29");
         vm.label(pt_susde_jun_31, "pt_susde_jun_31");
@@ -172,7 +176,7 @@ contract ForkPrdFlashRepay is ForkBaseTestV2 {
                 swapData: abi.encode(pm1, removedCollateral, 0)
             });
             swapUnits[1] = SwapUnit({
-                adapter: 0x2aFEf28a8Ab57d2F5A5663Ef69351e9d3abf1779,
+                adapter: odosAdapter,
                 tokenIn: susde,
                 tokenOut: usdc,
                 swapData: hex"0000000000000000000000009d39a5de30e57443bff2a8307a4256c8797a349700000000000000000000000000000000000000000000048103daed12389fbcc800000000000000000000000076edf8c155a1e0d9b2ad11b04d9671cbc25fee99000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb4800000000000000000000000000000000000000000000000000000005d443b21d00000000000000000000000000000000000000000000000000000005b66b4d45000000000000000000000000c47591f5c023e44931c78d5a993834875b79fb11000000000000000000000000000000000000000000000000000000000000014000000000000000000000000076edf8c155a1e0d9b2ad11b04d9671cbc25fee9900000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000084010206000d0100010201022700000304000d0101050400ff00000000000000007eb59373d63627be64b42406b108b602174b4ccc9d39a5de30e57443bff2a8307a4256c8797a3497dac17f958d2ee523a2206206994597c13d831ec7c02aaa39b223fe8d0a0e5c4f27ead9083c756cc288e6a0c2ddd26feeb64f039a2c41296fcb3f564000000000000000000000000000000000000000000000000000000000"
@@ -180,9 +184,12 @@ contract ForkPrdFlashRepay is ForkBaseTestV2 {
             (IERC20 ft,, IGearingToken gt, address collateral,) = market.tokens();
             console.log("usdc balance before:", IERC20(usdc).balanceOf(borrower));
             gt.approve(address(router), gtId1);
-            ITermMaxRouterV2.TermMaxSwapData memory swapData;
-            router.flashRepayFromCollV2(
-                borrower, market, gtId1, repayAmount, true, abi.encode(removedCollateral), swapUnits, swapData
+
+            SwapPath[] memory swapPaths = new SwapPath[](1);
+            swapPaths[0] =
+                SwapPath({units: swapUnits, recipient: address(router), inputAmount: 0, useBalanceOnchain: true});
+            router.flashRepayFromCollForV2(
+                borrower, market, gtId1, repayAmount, true, abi.encode(removedCollateral), swapPaths
             );
             console.log("usdc balance after:", IERC20(usdc).balanceOf(borrower));
 
@@ -207,7 +214,7 @@ contract ForkPrdFlashRepay is ForkBaseTestV2 {
         vm.startPrank(admin);
         TermMaxRouterV2 router2 = deployRouter(admin);
         router2.setAdapterWhitelist(pendleAdapter, true);
-        router2.setAdapterWhitelist(0x2aFEf28a8Ab57d2F5A5663Ef69351e9d3abf1779, true);
+        router2.setAdapterWhitelist(odosAdapter, true);
         vm.stopPrank();
 
         uint128 debt;
@@ -246,8 +253,11 @@ contract ForkPrdFlashRepay is ForkBaseTestV2 {
 
             console.log("usdc balance before:", IERC20(usdc).balanceOf(borrower));
             gt.approve(address(router2), gt1);
-            ITermMaxRouterV2.TermMaxSwapData memory swapData;
-            router2.flashRepayFromColl(borrower, mmay_30, gt1, true, swapUnits, swapData);
+
+            SwapPath[] memory swapPaths = new SwapPath[](1);
+            swapPaths[0] =
+                SwapPath({units: swapUnits, recipient: address(router2), inputAmount: 0, useBalanceOnchain: true});
+            router2.flashRepayFromCollForV1(borrower, mmay_30, gt1, true, swapPaths);
             console.log("usdc balance after:", IERC20(usdc).balanceOf(borrower));
             vm.stopPrank();
         }
