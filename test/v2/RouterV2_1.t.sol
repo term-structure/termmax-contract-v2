@@ -716,7 +716,7 @@ contract RouterTestV2_1 is Test {
         vm.stopPrank();
     }
 
-    function testFlashRepayFromCollateralForV1(bool isV1) public {
+    function testFlashRepayFromCollateral(bool isV1) public {
         vm.startPrank(sender);
         uint128 debtAmt = 100e8;
         (uint256 gtId,) = LoanUtils.fastMintGt(res, sender, debtAmt, 1e18);
@@ -748,7 +748,7 @@ contract RouterTestV2_1 is Test {
         vm.stopPrank();
     }
 
-    function testFlashRepayFromCollateralForV1_ByFt(bool isV1) public {
+    function testFlashRepayFromCollateral_ByFt(bool isV1) public {
         vm.startPrank(sender);
         uint128 debtAmt = 100e8;
         (uint256 gtId,) = LoanUtils.fastMintGt(res, sender, debtAmt, 1e18);
@@ -796,6 +796,36 @@ contract RouterTestV2_1 is Test {
 
         vm.expectRevert(abi.encodePacked(bytes4(keccak256("ERC721NonexistentToken(uint256)")), gtId));
         res.gt.loanInfo(gtId);
+
+        vm.stopPrank();
+    }
+
+    function testFlashRepayFromCollateralPatrially() public {
+        vm.startPrank(sender);
+        uint128 debtAmt = 100e8;
+        uint256 collateralAmt = 1e18;
+        (uint256 gtId,) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
+        bytes memory collateralData = abi.encode(collateralAmt / 2);
+        bool byDebtToken = true;
+
+        uint256 mintTokenOut = debtAmt / 2;
+        SwapUnit[] memory units = new SwapUnit[](1);
+        units[0] = SwapUnit(address(adapter), address(res.collateral), address(res.debt), abi.encode(mintTokenOut));
+
+        SwapPath[] memory swapPaths = new SwapPath[](1);
+        swapPaths[0] = SwapPath({units: units, recipient: address(res.router), inputAmount: 0, useBalanceOnchain: true});
+
+        res.gt.approve(address(res.router), gtId);
+        res.router.flashRepayFromCollForV2(
+            sender, res.market, gtId, debtAmt / 2, byDebtToken, collateralData, swapPaths
+        );
+
+        assertEq(res.collateral.balanceOf(sender), 0);
+        assertEq(res.debt.balanceOf(sender), 0);
+        (address owner, uint128 remainingDebtAmt, bytes memory remainingCollateralData) = res.gt.loanInfo(gtId);
+        assertEq(owner, sender);
+        assertEq(remainingDebtAmt, debtAmt - debtAmt / 2);
+        assertEq(abi.decode(remainingCollateralData, (uint256)), collateralAmt - collateralAmt / 2);
 
         vm.stopPrank();
     }
