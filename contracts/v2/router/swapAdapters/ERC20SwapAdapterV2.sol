@@ -9,7 +9,7 @@ import {OnlyProxyCall} from "../../lib/OnlyProxyCall.sol";
 /**
  * @title TermMax ERC20SwapAdapter V2
  * @author Term Structure Labs
- * @notice This contract facilitates ERC20 token swaps with additional features.
+ * @notice This contract is an abstract base for ERC20 swap adapters in the TermMax protocol.
  */
 abstract contract ERC20SwapAdapterV2 is IERC20SwapAdapter, OnlyProxyCall {
     using TransferUtilsV2 for IERC20;
