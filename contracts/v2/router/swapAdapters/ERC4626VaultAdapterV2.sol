@@ -28,9 +28,9 @@ contract ERC4626VaultAdapterV2 is ERC20SwapAdapterV2 {
     {
         (Action action, uint256 inAmount, uint256 minTokenOut) = abi.decode(swapData, (Action, uint256, uint256));
         /**
-         * Note: Scaling Input/Output amount
+         * Note: Scaling Input/Output amount (round up)
          */
-        minTokenOut = (minTokenOut * amount) / inAmount;
+        minTokenOut = (minTokenOut * amount + inAmount - 1) / inAmount;
 
         if (action == Action.Deposit) {
             tokenIn.safeIncreaseAllowance(address(tokenOut), amount);
