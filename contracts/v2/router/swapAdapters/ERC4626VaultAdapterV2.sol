@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.27;
+pragma solidity ^0.8.0;
 
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import "./ERC20SwapAdapterV2.sol";
@@ -10,6 +10,7 @@ import "./ERC20SwapAdapterV2.sol";
  */
 contract ERC4626VaultAdapterV2 is ERC20SwapAdapterV2 {
     using TransferUtilsV2 for IERC20;
+    using Math for uint256;
 
     enum Action {
         Deposit,
@@ -17,8 +18,6 @@ contract ERC4626VaultAdapterV2 is ERC20SwapAdapterV2 {
     }
 
     error InvalidAction();
-
-    constructor() {}
 
     function _swap(address recipient, IERC20 tokenIn, IERC20 tokenOut, uint256 amount, bytes memory swapData)
         internal
@@ -28,9 +27,9 @@ contract ERC4626VaultAdapterV2 is ERC20SwapAdapterV2 {
     {
         (Action action, uint256 inAmount, uint256 minTokenOut) = abi.decode(swapData, (Action, uint256, uint256));
         /**
-         * Note: Scaling Input/Output amount
+         * Note: Scaling Input/Output amount (round up)
          */
-        minTokenOut = (minTokenOut * amount) / inAmount;
+        minTokenOut = minTokenOut.mulDiv(amount, inAmount, Math.Rounding.Ceil);
 
         if (action == Action.Deposit) {
             tokenIn.safeIncreaseAllowance(address(tokenOut), amount);
@@ -39,7 +38,6 @@ contract ERC4626VaultAdapterV2 is ERC20SwapAdapterV2 {
                 revert LessThanMinTokenOut(tokenOutAmt, minTokenOut);
             }
         } else if (action == Action.Redeem) {
-            tokenIn.safeIncreaseAllowance(address(tokenIn), amount);
             tokenOutAmt = IERC4626(address(tokenIn)).redeem(amount, recipient, address(this));
             if (tokenOutAmt < minTokenOut) {
                 revert LessThanMinTokenOut(tokenOutAmt, minTokenOut);

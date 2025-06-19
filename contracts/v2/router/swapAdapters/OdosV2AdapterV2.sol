@@ -1,10 +1,14 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.27;
+pragma solidity ^0.8.0;
 
 import "./ERC20SwapAdapterV2.sol";
 
+/**
+ * @title OdosRouterV2 interface
+ */
 interface IOdosRouterV2 {
-    struct swapTokenInfo {
+    /// @notice Struct to hold swap token information
+    struct SwapTokenInfo {
         address inputToken;
         uint256 inputAmount;
         address inputReceiver;
@@ -14,7 +18,7 @@ interface IOdosRouterV2 {
         address outputReceiver;
     }
 
-    function swap(swapTokenInfo memory tokenInfo, bytes calldata pathDefinition, address executor, uint32 referralCode)
+    function swap(SwapTokenInfo memory tokenInfo, bytes calldata pathDefinition, address executor, uint32 referralCode)
         external
         payable
         returns (uint256 amountOut);
@@ -26,8 +30,7 @@ interface IOdosRouterV2 {
  */
 contract OdosV2AdapterV2 is ERC20SwapAdapterV2 {
     using TransferUtilsV2 for IERC20;
-
-    error InvalidOutputToken();
+    using Math for uint256;
 
     IOdosRouterV2 public immutable router;
 
@@ -35,7 +38,7 @@ contract OdosV2AdapterV2 is ERC20SwapAdapterV2 {
         router = IOdosRouterV2(router_);
     }
 
-    function _swap(address recipient, IERC20 tokenIn, IERC20 tokenOut, uint256 amountIn, bytes memory swapData)
+    function _swap(address recipient, IERC20 tokenIn, IERC20, uint256 amountIn, bytes memory swapData)
         internal
         virtual
         override
@@ -44,20 +47,17 @@ contract OdosV2AdapterV2 is ERC20SwapAdapterV2 {
         tokenIn.safeIncreaseAllowance(address(router), amountIn);
 
         (
-            IOdosRouterV2.swapTokenInfo memory tokenInfo,
+            IOdosRouterV2.SwapTokenInfo memory tokenInfo,
             bytes memory pathDefinition,
             address executor,
             uint32 referralCode
-        ) = abi.decode(swapData, (IOdosRouterV2.swapTokenInfo, bytes, address, uint32));
+        ) = abi.decode(swapData, (IOdosRouterV2.SwapTokenInfo, bytes, address, uint32));
 
-        if (tokenInfo.outputToken != address(tokenOut)) {
-            revert InvalidOutputToken();
-        }
         /**
          * Note: Scaling Input/Output amount
          */
-        tokenInfo.outputQuote = (tokenInfo.outputQuote * amountIn) / tokenInfo.inputAmount;
-        tokenInfo.outputMin = (tokenInfo.outputMin * amountIn) / tokenInfo.inputAmount;
+        tokenInfo.outputQuote = tokenInfo.outputQuote.mulDiv(amountIn, tokenInfo.inputAmount, Math.Rounding.Ceil);
+        tokenInfo.outputMin = tokenInfo.outputMin.mulDiv(amountIn, tokenInfo.inputAmount, Math.Rounding.Ceil);
         tokenInfo.inputAmount = amountIn;
         tokenInfo.outputReceiver = recipient;
 

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.27;
+pragma solidity ^0.8.0;
 
 import {IPAllActionV3} from "@pendle/core-v2/contracts/interfaces/IPAllActionV3.sol";
 import {IPMarket, IPPrincipalToken, IPYieldToken} from "@pendle/core-v2/contracts/interfaces/IPMarket.sol";
@@ -12,6 +12,7 @@ import "./ERC20SwapAdapterV2.sol";
  */
 contract PendleSwapV3AdapterV2 is ERC20SwapAdapterV2, PendleHelper {
     using TransferUtilsV2 for IERC20;
+    using Math for uint256;
 
     IPAllActionV3 public immutable router;
 
@@ -36,7 +37,7 @@ contract PendleSwapV3AdapterV2 is ERC20SwapAdapterV2, PendleHelper {
         /**
          * Note: Scaling Input/Output amount
          */
-        minTokenOut = (minTokenOut * amount) / inAmount;
+        minTokenOut = minTokenOut.mulDiv(amount, inAmount, Math.Rounding.Ceil);
         if (tokenOut == PT) {
             (tokenOutAmt,,) = router.swapExactTokenForPt(
                 recipient,

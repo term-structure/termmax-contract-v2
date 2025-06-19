@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.27;
+pragma solidity ^0.8.0;
 
 import {ISwapRouter} from "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 import "./ERC20SwapAdapterV2.sol";
@@ -10,6 +10,7 @@ import "./ERC20SwapAdapterV2.sol";
  */
 contract UniswapV3AdapterV2 is ERC20SwapAdapterV2 {
     using TransferUtilsV2 for IERC20;
+    using Math for uint256;
 
     ISwapRouter public immutable router;
 
@@ -17,7 +18,7 @@ contract UniswapV3AdapterV2 is ERC20SwapAdapterV2 {
         router = ISwapRouter(router_);
     }
 
-    function _swap(address recipient, IERC20 tokenIn, IERC20 tokenOut, uint256 amount, bytes memory swapData)
+    function _swap(address recipient, IERC20 tokenIn, IERC20, uint256 amount, bytes memory swapData)
         internal
         virtual
         override
@@ -29,7 +30,7 @@ contract UniswapV3AdapterV2 is ERC20SwapAdapterV2 {
         /**
          * Note: Scaling Input/Output amount
          */
-        amountOutMinimum = (amountOutMinimum * amount) / inAmount;
+        amountOutMinimum = amountOutMinimum.mulDiv(amount, inAmount, Math.Rounding.Ceil);
 
         tokenOutAmt = router.exactInput(
             ISwapRouter.ExactInputParams({
