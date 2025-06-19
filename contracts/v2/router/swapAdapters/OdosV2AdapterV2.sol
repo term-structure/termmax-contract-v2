@@ -57,7 +57,7 @@ contract OdosV2AdapterV2 is ERC20SwapAdapterV2 {
          * Note: Scaling Input/Output amount
          */
         tokenInfo.outputQuote = (tokenInfo.outputQuote * amountIn) / tokenInfo.inputAmount;
-        tokenInfo.outputMin = (tokenInfo.outputMin * amountIn) / tokenInfo.inputAmount;
+        tokenInfo.outputMin = (tokenInfo.outputMin * amountIn + tokenInfo.inputAmount - 1) / tokenInfo.inputAmount;
         tokenInfo.inputAmount = amountIn;
         tokenInfo.outputReceiver = receipient;
 

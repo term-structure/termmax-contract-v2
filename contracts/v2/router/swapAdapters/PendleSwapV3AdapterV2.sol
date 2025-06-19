@@ -36,7 +36,7 @@ contract PendleSwapV3AdapterV2 is ERC20SwapAdapterV2, PendleHelper {
         /**
          * Note: Scaling Input/Output amount
          */
-        minTokenOut = (minTokenOut * amount) / inAmount;
+        minTokenOut = (minTokenOut * amount + inAmount - 1) / inAmount;
         if (tokenOut == PT) {
             (tokenOutAmt,,) = router.swapExactTokenForPt(
                 receipient,

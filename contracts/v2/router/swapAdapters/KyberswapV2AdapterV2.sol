@@ -29,7 +29,7 @@ contract KyberswapV2AdapterV2 is ERC20SwapAdapterV2 {
         KYBER_SCALING_HELPER = scalingHelper_; // 0x2f577A41BeC1BE1152AeEA12e73b7391d15f655D
     }
 
-    function _swap(address receipient, IERC20 tokenIn, IERC20, uint256 amountIn, bytes memory swapData)
+    function _swap(address, IERC20 tokenIn, IERC20, uint256 amountIn, bytes memory swapData)
         internal
         virtual
         override
