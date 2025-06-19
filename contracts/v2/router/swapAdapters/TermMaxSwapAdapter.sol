@@ -1,25 +1,35 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.27;
+pragma solidity ^0.8.0;
 
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import {ERC20SwapAdapterV2, IERC20} from "./ERC20SwapAdapterV2.sol";
+import "./ERC20SwapAdapterV2.sol";
 import {ITermMaxOrder} from "contracts/interfaces/ITermMaxOrder.sol";
 import {TransferUtilsV2} from "../../lib/TransferUtilsV2.sol";
 import {Constants} from "../../../v1/lib/Constants.sol";
+/// @notice The data structure for the TermMax swap adapter.
 
 struct TermMaxSwapData {
+    /// @notice Whether the swap is exact token in for net token out.
     bool swapExactTokenForToken;
-    uint32 scalingFactor; //default is 1e8
+    /// @notice The scaling factor for the trading amounts.
+    /// @dev Decimals is 8.
+    uint32 scalingFactor;
+    /// @notice The orders to be traded.
     address[] orders;
+    /// @notice The trading amounts for each order.
     uint128[] tradingAmts;
+    /// @notice The net token amount to check actual output.
     uint128 netTokenAmt;
+    /// @notice The deadline for the swap.
     uint256 deadline;
 }
 
 contract TermMaxSwapAdapter is ERC20SwapAdapterV2 {
     using TransferUtilsV2 for IERC20;
     using SafeCast for uint256;
+    using Math for uint256;
 
+    /// @notice Emitted when the orders and trading amounts length do not match.
     error OrdersAndAmtsLengthNotMatch();
 
     function _swap(address recipient, IERC20 tokenIn, IERC20 tokenOut, uint256 tokenInAmt, bytes memory swapData)
@@ -66,8 +76,9 @@ contract TermMaxSwapAdapter is ERC20SwapAdapterV2 {
         data.tradingAmts[0] += exceedAmt.toUint128();
         // Scale the trading amounts proportionally
         if (data.scalingFactor != 0) {
-            uint256 scalingOutAmount = (uint256(data.netTokenAmt) * tokenInAmt / totalTradingAmt) - data.netTokenAmt;
-            data.netTokenAmt += (scalingOutAmount * data.scalingFactor / Constants.DECIMAL_BASE).toUint128();
+            uint256 scalingOutAmount =
+                (uint256(data.netTokenAmt).mulDiv(tokenInAmt, totalTradingAmt, Math.Rounding.Ceil) - data.netTokenAmt);
+            data.netTokenAmt += (scalingOutAmount.mulDiv(data.scalingFactor, Constants.DECIMAL_BASE)).toUint128();
         }
     }
 }

@@ -217,7 +217,7 @@ contract TermMaxRouterV2 is
     /**
      * @inheritdoc ITermMaxRouterV2
      * @dev input/output: =>, swap: ->
-     *      path => xt/ft -> debt token => receipient
+     *      path => xt/ft -> debt token => recipient
      */
     function sellFtAndXtForV1(
         address recipient,

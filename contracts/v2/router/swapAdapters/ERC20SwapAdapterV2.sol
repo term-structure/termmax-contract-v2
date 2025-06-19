@@ -2,10 +2,10 @@
 pragma solidity ^0.8.0;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {TransferUtilsV2} from "../../lib/TransferUtilsV2.sol";
 import {IERC20SwapAdapter} from "../IERC20SwapAdapter.sol";
 import {OnlyProxyCall} from "../../lib/OnlyProxyCall.sol";
-import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /**
  * @title TermMax ERC20SwapAdapter V2
