@@ -282,25 +282,17 @@ interface ITermMaxRouterV2 {
      * @dev Repays debt and closes a position
      * @dev If collateral value is larger than debt, please swap collateral partially and add a swap path to defend MEV attack
      *      input/output: =>, swap: ->
-     *      path0: collateral -> debt token (-> exact ft token. optional) => router
+     *      path0: => debt token -> exact ft token => router
+     *      path1: remaining debt token => recipient
      * @param recipient Address to receive any remaining tokens
      * @param market The market to repay debt in
      * @param gtId ID of the GT token to repay debt from
-     * @param orders Array of orders to execute
-     * @param ftAmtsWantBuy Array of FT amounts to buy for each order
-     * @param maxTokenIn Maximum amount of tokens to spend
-     * @param deadline The deadline timestamp for the transaction
-     * @return returnAmt Actual amount of tokens returned
+     * @param paths Array of SwapPath structs defining the swap paths
+     * @return netCost Actual amount of tokens spent to buy FT tokens
      */
-    function repayByTokenThroughFt(
-        address recipient,
-        ITermMaxMarket market,
-        uint256 gtId,
-        ITermMaxOrder[] memory orders,
-        uint128[] memory ftAmtsWantBuy,
-        uint128 maxTokenIn,
-        uint256 deadline
-    ) external returns (uint256 returnAmt);
+    function repayByTokenThroughFt(address recipient, ITermMaxMarket market, uint256 gtId, SwapPath[] memory paths)
+        external
+        returns (uint256 netCost);
 
     /**
      * @notice Redeems FT tokens and swaps for underlying tokens

@@ -829,4 +829,110 @@ contract RouterTestV2_1 is Test {
 
         vm.stopPrank();
     }
+
+    function testRepayByTokenThroughFt() public {
+        vm.startPrank(sender);
+        uint128 debtAmt = 100e8;
+        uint256 collateralAmt = 1e18;
+        (uint256 gtId,) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
+
+        address[] memory orders = new address[](1);
+        orders[0] = address(res.order);
+        uint128[] memory amtsToBuyFt = new uint128[](1);
+        amtsToBuyFt[0] = debtAmt;
+        uint128 maxTokenIn = debtAmt;
+
+        TermMaxSwapData memory swapData = TermMaxSwapData({
+            swapExactTokenForToken: false,
+            scalingFactor: 0,
+            orders: orders,
+            tradingAmts: amtsToBuyFt,
+            netTokenAmt: maxTokenIn,
+            deadline: block.timestamp + 1 hours
+        });
+
+        SwapUnit[] memory swapUnits = new SwapUnit[](1);
+        swapUnits[0] = SwapUnit({
+            adapter: address(termMaxSwapAdapter),
+            tokenIn: address(res.debt),
+            tokenOut: address(res.ft),
+            swapData: abi.encode(swapData)
+        });
+
+        SwapPath[] memory inputPaths = new SwapPath[](2);
+        inputPaths[0] =
+            SwapPath({units: swapUnits, recipient: address(res.router), inputAmount: debtAmt, useBalanceOnchain: false});
+
+        SwapUnit[] memory transferTokenUnits = new SwapUnit[](1);
+        transferTokenUnits[0] =
+            SwapUnit({adapter: address(0), tokenIn: address(res.debt), tokenOut: address(0), swapData: bytes("")});
+        inputPaths[1] =
+            SwapPath({units: transferTokenUnits, recipient: sender, inputAmount: 0, useBalanceOnchain: true});
+
+        res.debt.mint(sender, maxTokenIn);
+        res.debt.approve(address(res.router), maxTokenIn);
+
+        uint256 netCost = res.router.repayByTokenThroughFt(sender, res.market, gtId, inputPaths);
+        assertEq(res.debt.balanceOf(sender), maxTokenIn - netCost);
+        assertEq(res.collateral.balanceOf(sender), collateralAmt);
+
+        vm.expectRevert(abi.encodePacked(bytes4(keccak256("ERC721NonexistentToken(uint256)")), gtId));
+        res.gt.loanInfo(gtId);
+
+        vm.stopPrank();
+    }
+
+    function testPartialRepayByTokenThroughFt() public {
+        vm.startPrank(sender);
+        uint128 debtAmt = 100e8;
+        uint256 collateralAmt = 1e18;
+        (uint256 gtId,) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
+
+        address[] memory orders = new address[](1);
+        orders[0] = address(res.order);
+        uint128[] memory amtsToBuyFt = new uint128[](1);
+        amtsToBuyFt[0] = debtAmt / 2;
+        uint128 maxTokenIn = debtAmt;
+
+        TermMaxSwapData memory swapData = TermMaxSwapData({
+            swapExactTokenForToken: false,
+            scalingFactor: 0,
+            orders: orders,
+            tradingAmts: amtsToBuyFt,
+            netTokenAmt: maxTokenIn,
+            deadline: block.timestamp + 1 hours
+        });
+
+        SwapUnit[] memory swapUnits = new SwapUnit[](1);
+        swapUnits[0] = SwapUnit({
+            adapter: address(termMaxSwapAdapter),
+            tokenIn: address(res.debt),
+            tokenOut: address(res.ft),
+            swapData: abi.encode(swapData)
+        });
+
+        SwapPath[] memory inputPaths = new SwapPath[](2);
+        inputPaths[0] =
+            SwapPath({units: swapUnits, recipient: address(res.router), inputAmount: debtAmt, useBalanceOnchain: false});
+
+        SwapUnit[] memory transferTokenUnits = new SwapUnit[](1);
+        transferTokenUnits[0] =
+            SwapUnit({adapter: address(0), tokenIn: address(res.debt), tokenOut: address(0), swapData: bytes("")});
+        inputPaths[1] =
+            SwapPath({units: transferTokenUnits, recipient: sender, inputAmount: 0, useBalanceOnchain: true});
+
+        res.debt.mint(sender, maxTokenIn);
+        res.debt.approve(address(res.router), maxTokenIn);
+
+        uint256 netCost = res.router.repayByTokenThroughFt(sender, res.market, gtId, inputPaths);
+        assertEq(res.debt.balanceOf(sender), maxTokenIn - netCost);
+        assertEq(res.collateral.balanceOf(sender), 0);
+
+        (address owner, uint128 dAmt, bytes memory collateralData) = res.gt.loanInfo(gtId);
+        assertEq(owner, sender);
+        assertEq(collateralAmt, abi.decode(collateralData, (uint256)));
+        assertEq(dAmt, debtAmt / 2);
+
+        vm.stopPrank();
+    }
 }

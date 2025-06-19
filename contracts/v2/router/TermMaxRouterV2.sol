@@ -477,39 +477,24 @@ contract TermMaxRouterV2 is
         debtToken.safeTransfer(recipient, netTokenOut);
     }
 
-    /**
-     * @inheritdoc ITermMaxRouterV2
-     */
-    function repayByTokenThroughFt(
-        address recipient,
-        ITermMaxMarket market,
-        uint256 gtId,
-        ITermMaxOrder[] memory orders,
-        uint128[] memory ftAmtsWantBuy,
-        uint128 maxTokenIn,
-        uint256 deadline
-    ) external whenNotPaused returns (uint256 returnAmt) {
-        (IERC20 ft,, IGearingToken gt,, IERC20 debtToken) = market.tokens();
+    // /**
+    //  * @inheritdoc ITermMaxRouterV2
+    //  * path0: debt token-> ft
+    //  * path1: remaining debt -> recipient
+    //  */
+    function repayByTokenThroughFt(address recipient, ITermMaxMarket market, uint256 gtId, SwapPath[] memory paths)
+        external
+        whenNotPaused
+        returns (uint256 netCost)
+    {
+        netCost = _executeSwapPaths(paths)[0];
+        (IERC20 ft,, IGearingToken gt,,) = market.tokens();
+        uint256 repayAmt = ft.balanceOf(address(this));
 
-        debtToken.safeTransferFrom(msg.sender, address(this), maxTokenIn);
-        uint256 netCost =
-            _swapTokenToExactToken(debtToken, ft, address(this), orders, ftAmtsWantBuy, maxTokenIn, deadline);
-        uint256 totalFtAmt = sum(ftAmtsWantBuy);
-        (, uint128 repayAmt,) = gt.loanInfo(gtId);
-
-        if (totalFtAmt < repayAmt) {
-            repayAmt = totalFtAmt.toUint128();
-        }
         ft.safeIncreaseAllowance(address(gt), repayAmt);
-        gt.repay(gtId, repayAmt, false);
+        gt.repay(gtId, repayAmt.toUint128(), false);
 
-        returnAmt = maxTokenIn - netCost;
-        debtToken.safeTransfer(recipient, returnAmt);
-        if (totalFtAmt > repayAmt) {
-            ft.safeTransfer(recipient, totalFtAmt - repayAmt);
-        }
-
-        emit RepayByTokenThroughFt(market, gtId, msg.sender, recipient, repayAmt, returnAmt);
+        emit RouterEventsV2.RepayByTokenThroughFt(address(market), gtId, msg.sender, recipient, repayAmt, netCost);
     }
 
     /**
@@ -711,14 +696,14 @@ contract TermMaxRouterV2 is
     ) external override {
         (FlashRepayOptions option, bytes memory data) = abi.decode(callbackData, (FlashRepayOptions, bytes));
         if (option == FlashRepayOptions.REPAY) {
-            _flashRepay(repayToken, removedCollateralData, data);
+            _flashRepay(data);
         } else if (option == FlashRepayOptions.ROLLOVER) {
             _rollover(repayToken, repayAmt, removedCollateralData, data);
         }
         repayToken.safeIncreaseAllowance(msg.sender, repayAmt);
     }
 
-    function _flashRepay(IERC20 repayToken, bytes memory removedCollateralData, bytes memory callbackData) internal {
+    function _flashRepay(bytes memory callbackData) internal {
         (SwapPath[] memory swapPaths) = abi.decode(callbackData, (SwapPath[]));
         _executeSwapPaths(swapPaths);
     }

@@ -20,4 +20,22 @@ interface RouterEventsV2 {
      * @param config The configuration details of the order, encapsulated in an OrderConfig struct
      */
     event PlaceOrder(address indexed maker, address indexed order, address market, uint256 gtId, OrderConfig config);
+
+    /**
+     * @notice Emitted when a repay operation is performed through ft
+     * @param market The address of the market
+     * @param gtId The id of the gt
+     * @param caller The address initiating the repay
+     * @param recipient The address receiving the repaid tokens
+     * @param repayAmt The amount of tokens repaid
+     * @param netCost The amount of tokens spent to by ft tokens
+     */
+    event RepayByTokenThroughFt(
+        address indexed market,
+        uint256 indexed gtId,
+        address caller,
+        address recipient,
+        uint256 repayAmt,
+        uint256 netCost
+    );
 }
