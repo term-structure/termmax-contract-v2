@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.27;
+pragma solidity ^0.8.0;
 
 import "@pendle/core-v2/contracts/interfaces/IPAllActionV3.sol";
-import "@pendle/core-v2/contracts/interfaces/IPMarket.sol";
 
 abstract contract PendleHelper {
     // EmptySwap means no swap aggregator is involved
@@ -18,7 +17,7 @@ abstract contract PendleHelper {
     /// IPAllActionTypeV3.sol
     function createTokenInputStruct(address tokenIn, uint256 netTokenIn)
         internal
-        view
+        pure
         returns (TokenInput memory input)
     {
         input.tokenIn = tokenIn;
@@ -30,7 +29,7 @@ abstract contract PendleHelper {
     /// IPAllActionTypeV3.sol
     function createTokenOutputStruct(address tokenOut, uint256 minTokenOut)
         internal
-        view
+        pure
         returns (TokenOutput memory output)
     {
         output.tokenOut = tokenOut;

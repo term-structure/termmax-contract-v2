@@ -1,10 +1,18 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.27;
+pragma solidity ^0.8.0;
 
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import "./ERC20SwapAdapterV2.sol";
 
+/**
+ * @title KyberswapV2AdapterV2 Scaling helper interface
+ */
 interface IKyberScalingHelper {
+    /// @notice Get scaled input data for KyberswapV2
+    /// @param inputData The original swap data
+    /// @param newAmount The new amount to scale the input data
+    /// @return isSuccess Boolean indicating if the scaling was successful
+    /// @return data The scaled input data
     function getScaledInputData(bytes calldata inputData, uint256 newAmount)
         external
         view
@@ -19,14 +27,14 @@ contract KyberswapV2AdapterV2 is ERC20SwapAdapterV2 {
     using Address for address;
     using TransferUtilsV2 for IERC20;
 
-    error KyberScalingFailed();
+    error KyberScalingFailed(bytes errorData);
 
     address public immutable router;
     address public immutable KYBER_SCALING_HELPER;
 
     constructor(address router_, address scalingHelper_) {
         router = router_;
-        KYBER_SCALING_HELPER = scalingHelper_; // 0x2f577A41BeC1BE1152AeEA12e73b7391d15f655D
+        KYBER_SCALING_HELPER = scalingHelper_;
     }
 
     function _swap(address, IERC20 tokenIn, IERC20, uint256 amountIn, bytes memory swapData)
@@ -39,7 +47,7 @@ contract KyberswapV2AdapterV2 is ERC20SwapAdapterV2 {
         (bool isSuccess, bytes memory newSwapData) =
             IKyberScalingHelper(KYBER_SCALING_HELPER).getScaledInputData(swapData, amountIn);
 
-        require(isSuccess, KyberScalingFailed());
+        require(isSuccess, KyberScalingFailed(newSwapData));
 
         bytes memory returnData = router.functionCall(newSwapData);
         (uint256 tokenOutAmt,) = abi.decode(returnData, (uint256, uint256));
