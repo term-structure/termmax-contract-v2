@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import "./ERC20SwapAdapterV2.sol";
 
 interface IOdosRouterV2 {
@@ -26,6 +27,7 @@ interface IOdosRouterV2 {
  */
 contract OdosV2AdapterV2 is ERC20SwapAdapterV2 {
     using TransferUtilsV2 for IERC20;
+    using Math for uint256;
 
     error InvalidOutputToken();
 
@@ -56,8 +58,8 @@ contract OdosV2AdapterV2 is ERC20SwapAdapterV2 {
         /**
          * Note: Scaling Input/Output amount
          */
-        tokenInfo.outputQuote = (tokenInfo.outputQuote * amountIn) / tokenInfo.inputAmount;
-        tokenInfo.outputMin = (tokenInfo.outputMin * amountIn + tokenInfo.inputAmount - 1) / tokenInfo.inputAmount;
+        tokenInfo.outputQuote = tokenInfo.outputQuote.mulDiv(amountIn, tokenInfo.inputAmount, Math.Rounding.Ceil);
+        tokenInfo.outputMin = tokenInfo.outputMin.mulDiv(amountIn, tokenInfo.inputAmount, Math.Rounding.Ceil);
         tokenInfo.inputAmount = amountIn;
         tokenInfo.outputReceiver = receipient;
 
