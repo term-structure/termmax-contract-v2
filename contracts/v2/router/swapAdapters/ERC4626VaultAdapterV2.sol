@@ -19,7 +19,7 @@ contract ERC4626VaultAdapterV2 is ERC20SwapAdapterV2 {
 
     error InvalidAction();
 
-    function _swap(address recipient, IERC20 tokenIn, IERC20 tokenOut, uint256 amount, bytes memory swapData)
+    function _swap(address receipient, IERC20 tokenIn, IERC20 tokenOut, uint256 amount, bytes memory swapData)
         internal
         virtual
         override
