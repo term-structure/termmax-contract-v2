@@ -295,77 +295,65 @@ interface ITermMaxRouterV2 {
         returns (uint256 netCost);
 
     /**
-     * @notice Redeems FT tokens and swaps for underlying tokens
-     * @dev Executes a swap to redeem FT tokens
-     * @param recipient Address to receive the output tokens
-     * @param market The market to redeem FT tokens in
-     * @param ftAmount Amount of FT tokens to redeem
-     * @param units Array of swap units defining the swap path
-     * @param minTokenOut Minimum amount of output tokens to receive
-     * @return redeemedAmt Actual amount of output tokens received
+     * @notice Rollover GT position to a new market with additional assets(dont support partial rollover)
+     * @dev This function allows users to rollover their GT position to a new market
+     *      input/output: =>, swap: ->
+     *      collateralPaths: old collateral -> new collateral => router
+     *      debtTokenPaths: ft -> debt token => router
+     * @param recipient The address that will receive the new GT token
+     * @param gt The GearingToken contract instance
+     * @param gtId The ID of the GT token being rolled over
+     * @param nextMarket The next market to rollover into
+     * @param maxLtv Maximum loan-to-value ratio for the next position
+     * @param additionalCollateral Amount of collateral to add to the new position
+     * @param additionalDebt Amount of debt to add to the new position
+     * @param collateralPath SwapPath to swap old collateral to new collateral
+     * @param debtTokenPath SwapPath to swap ft to exact debt token
+     * @return newGtId The ID of the newly created GT token in the next market
      */
-    function redeemAndSwap(
+    function rolloverGtForV1(
         address recipient,
-        ITermMaxMarket market,
-        uint256 ftAmount,
-        SwapUnit[] memory units,
-        uint256 minTokenOut
-    ) external returns (uint256 redeemedAmt);
+        IGearingToken gt,
+        uint256 gtId,
+        ITermMaxMarket nextMarket,
+        uint128 maxLtv,
+        uint256 additionalCollateral,
+        uint256 additionalDebt,
+        SwapPath memory collateralPath,
+        SwapPath memory debtTokenPath
+    ) external returns (uint256 newGtId);
 
     /**
      * @notice Rollover GT position to a new market with additional assets(dont support partial rollover)
      * @dev This function allows users to rollover their GT position to a new market
+     *      input/output: =>, swap: ->
+     *      collateralPaths: old collateral -> new collateral => router
+     *      debtTokenPaths: ft -> debt token => router
      * @param recipient The address that will receive the new GT token
      * @param gt The GearingToken contract instance
      * @param gtId The ID of the GT token being rolled over
-     * @param additionalAssets Amount of additional assets to add to the position
-     * @param units Array of swap units defining the external swap path
      * @param nextMarket The next market to rollover into
-     * @param additionnalNextCollateral Additional collateral for the next market
-     * @param swapData Data for the termmax swap operation
-     * @param maxLtv Maximum loan-to-value ratio for the rollover
+     * @param maxLtv Maximum loan-to-value ratio for the next position
+     * @param repayAmt Amount of debt to repay the old GT position
+     * @param removedCollateral Amount of collateral to remove from the old position
+     * @param additionalCollateral Amount of collateral to add to the new position
+     * @param additionalDebt Amount of debt to add to the new position
+     * @param collateralPath SwapPath to swap old collateral to new collateral
+     * @param debtTokenPath SwapPath to swap ft to exact debt token
      * @return newGtId The ID of the newly created GT token in the next market
      */
-    function rolloverGt(
+    function rolloverGtForV2(
         address recipient,
         IGearingToken gt,
         uint256 gtId,
-        uint128 additionalAssets,
-        SwapUnit[] memory units,
         ITermMaxMarket nextMarket,
-        uint256 additionnalNextCollateral,
-        TermMaxSwapData memory swapData,
-        uint128 maxLtv
-    ) external returns (uint256 newGtId);
-
-    /**
-     * @notice Rollover GT position to a new market with additional assets(allow partial rollover)
-     * @dev This function allows users to rollover their GT position to a new market
-     * @param recipient The address that will receive the new GT token
-     * @param gt The GearingToken contract instance
-     * @param gtId The ID of the GT token being rolled over
-     * @param repayAmt Amount of debt to repay
-     * @param additionalAssets Amount of additional assets to add to the position
-     * @param removedCollateral Amount of collateral to remove from the position
-     * @param units Array of swap units defining the external swap path
-     * @param nextMarket The next market to rollover into
-     * @param additionnalNextCollateral Additional collateral for the next market
-     * @param swapData Data for the termmax swap operation
-     * @param maxLtv Maximum loan-to-value ratio for the rollover
-     * @return newGtId The ID of the newly created GT token in the next market
-     */
-    function rolloverGtV2(
-        address recipient,
-        IGearingToken gt,
-        uint256 gtId,
+        uint128 maxLtv,
         uint128 repayAmt,
-        uint128 additionalAssets,
         uint256 removedCollateral,
-        SwapUnit[] memory units,
-        ITermMaxMarket nextMarket,
-        uint256 additionnalNextCollateral,
-        TermMaxSwapData memory swapData,
-        uint128 maxLtv
+        uint256 additionalCollateral,
+        uint256 additionalDebt,
+        SwapPath memory collateralPath,
+        SwapPath memory debtTokenPath
     ) external returns (uint256 newGtId);
 
     /**

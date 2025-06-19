@@ -156,93 +156,54 @@ contract RouterTestV2 is Test {
         vm.stopPrank();
     }
 
-    function testRedeemAndSwap() public {
-        address bob = vm.randomAddress();
-        address alice = vm.randomAddress();
+    // function testRedeemAndSwap() public {
+    //     address bob = vm.randomAddress();
+    //     address alice = vm.randomAddress();
 
-        uint128 depositAmt = 1000e8;
-        uint128 debtAmt = 100e8;
-        uint256 collateralAmt = 1e18;
+    //     uint128 depositAmt = 1000e8;
+    //     uint128 debtAmt = 100e8;
+    //     uint256 collateralAmt = 1e18;
 
-        vm.startPrank(bob);
-        res.debt.mint(bob, depositAmt);
-        res.debt.approve(address(res.market), depositAmt);
-        res.market.mint(bob, depositAmt);
+    //     vm.startPrank(bob);
+    //     res.debt.mint(bob, depositAmt);
+    //     res.debt.approve(address(res.market), depositAmt);
+    //     res.market.mint(bob, depositAmt);
 
-        res.xt.transfer(alice, debtAmt);
-        vm.stopPrank();
+    //     res.xt.transfer(alice, debtAmt);
+    //     vm.stopPrank();
 
-        vm.startPrank(alice);
+    //     vm.startPrank(alice);
 
-        MockFlashLoanReceiver receiver = new MockFlashLoanReceiver(res.market);
-        res.collateral.mint(address(receiver), collateralAmt);
+    //     MockFlashLoanReceiver receiver = new MockFlashLoanReceiver(res.market);
+    //     res.collateral.mint(address(receiver), collateralAmt);
 
-        res.xt.approve(address(receiver), debtAmt);
-        receiver.leverageByXt(debtAmt, abi.encode(alice, collateralAmt));
-        vm.stopPrank();
+    //     res.xt.approve(address(receiver), debtAmt);
+    //     receiver.leverageByXt(debtAmt, abi.encode(alice, collateralAmt));
+    //     vm.stopPrank();
 
-        vm.warp(marketConfig.maturity + Constants.LIQUIDATION_WINDOW);
+    //     vm.warp(marketConfig.maturity + Constants.LIQUIDATION_WINDOW);
 
-        vm.startPrank(bob);
+    //     vm.startPrank(bob);
 
-        uint256 minDebtOutAmt = 1000e8;
-        SwapUnit[] memory units = new SwapUnit[](1);
-        units[0] = SwapUnit(address(adapter), address(res.collateral), address(res.debt), abi.encode(minDebtOutAmt));
+    //     uint256 minDebtOutAmt = 1000e8;
+    //     SwapUnit[] memory units = new SwapUnit[](1);
+    //     units[0] = SwapUnit(address(adapter), address(res.collateral), address(res.debt), abi.encode(minDebtOutAmt));
 
-        res.ft.approve(address(res.router), depositAmt);
-        uint256 ftTotalSupply = res.ft.totalSupply();
-        uint256 redeemedDebtToken = (res.debt.balanceOf(address(res.market)) * depositAmt) / ftTotalSupply;
+    //     res.ft.approve(address(res.router), depositAmt);
+    //     uint256 ftTotalSupply = res.ft.totalSupply();
+    //     uint256 redeemedDebtToken = (res.debt.balanceOf(address(res.market)) * depositAmt) / ftTotalSupply;
 
-        uint256 expectedOutput = redeemedDebtToken + minDebtOutAmt;
+    //     uint256 expectedOutput = redeemedDebtToken + minDebtOutAmt;
 
-        vm.expectEmit();
-        emit RouterEvents.RedeemAndSwap(res.market, depositAmt, bob, bob, expectedOutput);
-        uint256 netOutput = res.router.redeemAndSwap(bob, res.market, depositAmt, units, expectedOutput);
+    //     vm.expectEmit();
+    //     emit RouterEvents.RedeemAndSwap(res.market, depositAmt, bob, bob, expectedOutput);
+    //     uint256 netOutput = res.router.redeemAndSwap(bob, res.market, depositAmt, units, expectedOutput);
 
-        assertEq(netOutput, expectedOutput);
-        assertEq(res.debt.balanceOf(bob), netOutput);
+    //     assertEq(netOutput, expectedOutput);
+    //     assertEq(res.debt.balanceOf(bob), netOutput);
 
-        vm.stopPrank();
-    }
-
-    function testSwapUnitsIsEmpty() public {
-        address bob = vm.randomAddress();
-        address alice = vm.randomAddress();
-
-        uint128 depositAmt = 1000e8;
-        uint128 debtAmt = 100e8;
-        uint256 collateralAmt = 1e18;
-
-        vm.startPrank(bob);
-        res.debt.mint(bob, depositAmt);
-        res.debt.approve(address(res.market), depositAmt);
-        res.market.mint(bob, depositAmt);
-
-        res.xt.transfer(alice, debtAmt);
-        vm.stopPrank();
-
-        vm.startPrank(alice);
-
-        MockFlashLoanReceiver receiver = new MockFlashLoanReceiver(res.market);
-        res.collateral.mint(address(receiver), collateralAmt);
-
-        res.xt.approve(address(receiver), debtAmt);
-        receiver.leverageByXt(debtAmt, abi.encode(alice, collateralAmt));
-        vm.stopPrank();
-
-        vm.warp(marketConfig.maturity + Constants.LIQUIDATION_WINDOW);
-
-        vm.startPrank(bob);
-
-        uint256 minDebtOutAmt = 1000e8;
-        SwapUnit[] memory units = new SwapUnit[](0);
-        res.ft.approve(address(res.router), depositAmt);
-
-        vm.expectRevert(abi.encodeWithSelector(RouterErrors.SwapUnitsIsEmpty.selector));
-        res.router.redeemAndSwap(bob, res.market, depositAmt, units, minDebtOutAmt);
-
-        vm.stopPrank();
-    }
+    //     vm.stopPrank();
+    // }
 
     function testPlaceOrderForV1() public {
         vm.startPrank(sender);
