@@ -451,7 +451,7 @@ interface ITermMaxRouterV2 {
      * @param market The market to redeem from
      * @param ftAmt Amount of FT tokens to redeem
      * @param paths Array of SwapPath structs defining the swap paths
-     * @return netOut The net amount of tokens received from market
+     * @return debtTokenOutAmt The net amount of tokens received from market
      * @return deliveryData data of the delivery of collateral tokens
      */
     function redeemFromMarketAndSwapForV2(
@@ -459,7 +459,7 @@ interface ITermMaxRouterV2 {
         ITermMaxMarketV2 market,
         uint256 ftAmt,
         SwapPath[] memory paths
-    ) external returns (uint256 netOut, bytes memory deliveryData);
+    ) external returns (uint256 debtTokenOutAmt, bytes memory deliveryData);
 
     /**
      * @notice Swaps tokens and repays debt in a GearingToken position
@@ -486,11 +486,11 @@ interface ITermMaxRouterV2 {
      * @param recipient Address to receive the share tokens
      * @param vault The IERC4626 vault to deposit into
      * @param paths The SwapPath struct defining the swap operations
-     * @return netOut The net amount of share tokens received after swapping and depositing
+     * @return shareAmt The ERC4626 share amount received after the swap and deposit
      */
     function swapAndDeposit(address recipient, IERC4626 vault, SwapPath[] memory paths)
         external
-        returns (uint256 netOut);
+        returns (uint256 shareAmt);
     /**
      * @notice Redeems shares from a vault and swaps the output tokens
      * @dev This function allows users to redeem shares from an IERC4626 vault and swap the output tokens

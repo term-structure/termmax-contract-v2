@@ -797,6 +797,9 @@ contract TermMaxRouterV2 is
         _unpause();
     }
 
+    /**
+     * @inheritdoc ITermMaxRouterV2
+     */
     function swapAndMint(address recipient, ITermMaxMarket market, SwapPath[] memory paths)
         external
         override
@@ -810,6 +813,9 @@ contract TermMaxRouterV2 is
         market.mint(recipient, netOut);
     }
 
+    /**
+     * @inheritdoc ITermMaxRouterV2
+     */
     function redeemFromMarketAndSwapForV1(
         address recipient,
         ITermMaxMarket market,
@@ -828,6 +834,9 @@ contract TermMaxRouterV2 is
         }
     }
 
+    /**
+     * @inheritdoc ITermMaxRouterV2
+     */
     function redeemFromMarketAndSwapForV2(
         address recipient,
         ITermMaxMarketV2 market,
@@ -843,6 +852,9 @@ contract TermMaxRouterV2 is
         }
     }
 
+    /**
+     * @inheritdoc ITermMaxRouterV2
+     */
     function swapAndRepay(IGearingToken gt, uint256 gtId, uint128 repayAmt, bool byDebtToken, SwapPath[] memory paths)
         external
         override
@@ -856,15 +868,36 @@ contract TermMaxRouterV2 is
         gt.repay(gtId, repayAmt, byDebtToken);
     }
 
+    /**
+     * @inheritdoc ITermMaxRouterV2
+     */
     function swapAndDeposit(address recipient, IERC4626 vault, SwapPath[] memory paths)
         external
         override
-        returns (uint256 netOut)
-    {}
+        whenNotPaused
+        checkSwapPaths(paths)
+        returns (uint256 shareAmt)
+    {
+        uint256 amounts = sum(_executeSwapPaths(paths));
+        IERC20 asset = IERC20(paths[0].units[paths[0].units.length - 1].tokenOut);
+        asset.safeIncreaseAllowance(address(vault), asset.balanceOf(address(this)));
+        shareAmt = vault.deposit(amounts, recipient);
+    }
 
+    /**
+     * @inheritdoc ITermMaxRouterV2
+     */
     function redeemFromVaultAndSwap(address recipient, IERC4626 vault, uint256 shareAmt, SwapPath memory swapPath)
         external
         override
+        whenNotPaused
         returns (uint256 netOut)
-    {}
+    {
+        if (swapPath.units.length == 0) {
+            netOut = vault.redeem(shareAmt, recipient, msg.sender);
+        } else {
+            netOut = vault.redeem(shareAmt, address(this), msg.sender);
+            netOut = _executeSwapUnits(swapPath.recipient, netOut, swapPath.units);
+        }
+    }
 }
