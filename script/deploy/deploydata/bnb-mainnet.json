@@ -1,0 +1,333 @@
+{
+  "configNum": "8",
+  "configs": {
+    "configs_0": {
+        "salt": 0,
+        "collateralCapForGt": "15000000000000000000000",
+        "marketName": "WBNB/ynBNBx@25JUL2025",
+        "marketSymbol": "WBNB/ynBNBx@25JUL2025",
+        "marketConfig": {
+            "maturity": "1753401600",
+            "lendTakerFeeRatio": "2000000",
+            "lendMakerFeeRatio": "2000000",
+            "borrowTakerFeeRatio": "3000000",
+            "borrowMakerFeeRatio": "3000000",
+            "mintGtFeeRatio": "10000000",
+            "mintGtFeeRef": "3000000"
+        },
+        "loanConfig": {
+            "liquidationLtv": "86500000",
+            "maxLtv": "84500000",
+            "liquidatable": true
+        },
+        "underlyingConfig": {
+            "tokenAddr": "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
+            "priceFeedAddr": "0x0567F2323251f0Aab15c8dFb1967E4e8A7D42aeE",
+            "backupPriceFeedAddr": "0x8dd2D85C7c28F43F965AE4d9545189C7D022ED0e",
+            "heartBeat": "86400",
+            "name": "Wrapped BNB",
+            "symbol": "WBNB",
+            "decimals": "18",
+            "initialPrice": "66380000000"
+        },
+        "collateralConfig": {
+            "tokenAddr": "0x32C830f5c34122C6afB8aE87ABA541B7900a2C5F",
+            "priceFeedAddr": "0x5F5376913E011AeDe8d93027B335832180411322",
+            "backupPriceFeedAddr": "0x0000000000000000000000000000000000000000",
+            "heartBeat": "86400",
+            "name": "ynBNB MAX",
+            "symbol": "ynBNBx",
+            "decimals": "18",
+            "initialPrice": "67700740261",
+            "gtKeyIdentifier": "GearingTokenWithERC20"
+        }
+    },
+    "configs_1": {
+        "salt": 0,
+        "collateralCapForGt": "15000000000000000000000",
+        "marketName": "USDT/WBNB@25JUL2025",
+        "marketSymbol": "USDT/WBNB@25JUL2025",
+        "marketConfig": {
+            "maturity": "1753401600",
+            "lendTakerFeeRatio": "2000000",
+            "lendMakerFeeRatio": "2000000",
+            "borrowTakerFeeRatio": "3000000",
+            "borrowMakerFeeRatio": "3000000",
+            "mintGtFeeRatio": "10000000",
+            "mintGtFeeRef": "6000000"
+        },
+        "loanConfig": {
+            "liquidationLtv": "80000000",
+            "maxLtv": "75000000",
+            "liquidatable": true
+        },
+        "underlyingConfig": {
+            "tokenAddr": "0x55d398326f99059fF775485246999027B3197955",
+            "priceFeedAddr": "0xB97Ad0E74fa7d920791E90258A6E2085088b4320",
+            "backupPriceFeedAddr": "0xf57bA29437C130e155Ca4b65128630777638F05D",
+            "heartBeat": "86400",
+            "name": "Tether USD",
+            "symbol": "USDT",
+            "decimals": "18",
+            "initialPrice": "99909118"
+        },
+        "collateralConfig": {
+            "tokenAddr": "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
+            "priceFeedAddr": "0x0567F2323251f0Aab15c8dFb1967E4e8A7D42aeE",
+            "backupPriceFeedAddr": "0x8dd2D85C7c28F43F965AE4d9545189C7D022ED0e",
+            "heartBeat": "86400",
+            "name": "Wrapped BNB",
+            "symbol": "WBNB",
+            "decimals": "18",
+            "initialPrice": "66388000000",
+            "gtKeyIdentifier": "GearingTokenWithERC20"
+        }
+    },
+    "configs_2": {
+        "salt": 0,
+        "collateralCapForGt": "8550000000000000000000000",
+        "marketName": "USDT/sUSDe@25JUL2025",
+        "marketSymbol": "USDT/sUSDe@25JUL2025",
+        "marketConfig": {
+            "maturity": "1753401600",
+            "lendTakerFeeRatio": "2000000",
+            "lendMakerFeeRatio": "2000000",
+            "borrowTakerFeeRatio": "3000000",
+            "borrowMakerFeeRatio": "3000000",
+            "mintGtFeeRatio": "10000000",
+            "mintGtFeeRef": "6000000"
+        },
+        "loanConfig": {
+            "liquidationLtv": "91500000",
+            "maxLtv": "89500000",
+            "liquidatable": true
+        },
+        "underlyingConfig": {
+            "tokenAddr": "0x55d398326f99059fF775485246999027B3197955",
+            "priceFeedAddr": "0xB97Ad0E74fa7d920791E90258A6E2085088b4320",
+            "backupPriceFeedAddr": "0xf57bA29437C130e155Ca4b65128630777638F05D",
+            "heartBeat": "86400",
+            "name": "Tether USD",
+            "symbol": "USDT",
+            "decimals": "18",
+            "initialPrice": "99909118"
+        },
+        "collateralConfig": {
+            "tokenAddr": "0x211Cc4DD073734dA055fbF44a2b4667d5E5fE5d2",
+            "priceFeedAddr": "0x7CD1174235476Ec8844A88de0d3E56A21E72ADa2",
+            "backupPriceFeedAddr": "0x59538B3BdF046f15F7bDD231aACfA314071b1DF1",
+            "heartBeat": "86400",
+            "name": "Staked USDe",
+            "symbol": "sUSDe",
+            "decimals": "18",
+            "initialPrice": "117868657",
+            "gtKeyIdentifier": "GearingTokenWithERC20"
+        }
+    },
+    "configs_3": {
+        "salt": 0,
+        "collateralCapForGt": "10000000000000000000000000",
+        "marketName": "BTCB/USD1@25JUL2025",
+        "marketSymbol": "BTCB/USD1@25JUL2025",
+        "marketConfig": {
+            "maturity": "1753401600",
+            "lendTakerFeeRatio": "2000000",
+            "lendMakerFeeRatio": "2000000",
+            "borrowTakerFeeRatio": "3000000",
+            "borrowMakerFeeRatio": "3000000",
+            "mintGtFeeRatio": "10000000",
+            "mintGtFeeRef": "3000000"
+        },
+        "loanConfig": {
+            "liquidationLtv": "80000000",
+            "maxLtv": "75000000",
+            "liquidatable": true
+        },
+        "underlyingConfig": {
+            "tokenAddr": "0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c",
+            "priceFeedAddr": "0x264990fbd0A4796A3E3d8E37C4d5F87a3aCa5Ebf",
+            "backupPriceFeedAddr": "0x0000000000000000000000000000000000000000",
+            "heartBeat": "86400",
+            "name": "BTCB Token",
+            "symbol": "BTCB",
+            "decimals": "18",
+            "initialPrice": "10722977910429"
+        },
+        "collateralConfig": {
+            "tokenAddr": "0x8d0D000Ee44948FC98c9B98A4FA4921476f08B0d",
+            "priceFeedAddr": "0xaD8b4e59A7f25B68945fAf0f3a3EAF027832FFB0",
+            "backupPriceFeedAddr": "0x6A1c87d11dDe3D1d52c24f8EC59B91019f14170D",
+            "heartBeat": "86400",
+            "name": "World Liberty Financial USD",
+            "symbol": "USD1",
+            "decimals": "18",
+            "initialPrice": "99974118",
+            "gtKeyIdentifier": "GearingTokenWithERC20"
+        }
+    },
+    "configs_4": {
+        "salt": 0,
+        "collateralCapForGt": "93000000000000000000",
+        "marketName": "USDT/BTCB@25JUL2025",
+        "marketSymbol": "USDT/BTCB@25JUL2025",
+        "marketConfig": {
+            "maturity": "1753401600",
+            "lendTakerFeeRatio": "2000000",
+            "lendMakerFeeRatio": "2000000",
+            "borrowTakerFeeRatio": "3000000",
+            "borrowMakerFeeRatio": "3000000",
+            "mintGtFeeRatio": "10000000",
+            "mintGtFeeRef": "6000000"
+        },
+        "loanConfig": {
+            "liquidationLtv": "80000000",
+            "maxLtv": "75000000",
+            "liquidatable": true
+        },
+        "underlyingConfig": {
+            "tokenAddr": "0x55d398326f99059fF775485246999027B3197955",
+            "priceFeedAddr": "0xB97Ad0E74fa7d920791E90258A6E2085088b4320",
+            "backupPriceFeedAddr": "0xf57bA29437C130e155Ca4b65128630777638F05D",
+            "heartBeat": "86400",
+            "name": "Tether USD",
+            "symbol": "USDT",
+            "decimals": "18",
+            "initialPrice": "99947066"
+        },
+        "collateralConfig": {
+            "tokenAddr": "0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c",
+            "priceFeedAddr": "0x264990fbd0A4796A3E3d8E37C4d5F87a3aCa5Ebf",
+            "backupPriceFeedAddr": "0x0000000000000000000000000000000000000000",
+            "heartBeat": "86400",
+            "name": "BTCB Token",
+            "symbol": "BTCB",
+            "decimals": "18",
+            "initialPrice": "10724217325584",
+            "gtKeyIdentifier": "GearingTokenWithERC20"
+        }
+    },
+    "configs_5": {
+        "salt": 0,
+        "collateralCapForGt": "10000000000000000000000000",
+        "marketName": "USDT/USD1@25JUL2025",
+        "marketSymbol": "USDT/USD1@25JUL2025",
+        "marketConfig": {
+            "maturity": "1753401600",
+            "lendTakerFeeRatio": "2000000",
+            "lendMakerFeeRatio": "2000000",
+            "borrowTakerFeeRatio": "3000000",
+            "borrowMakerFeeRatio": "3000000",
+            "mintGtFeeRatio": "10000000",
+            "mintGtFeeRef": "6000000"
+        },
+        "loanConfig": {
+            "liquidationLtv": "92500000",
+            "maxLtv": "90000000",
+            "liquidatable": true
+        },
+        "underlyingConfig": {
+            "tokenAddr": "0x55d398326f99059fF775485246999027B3197955",
+            "priceFeedAddr": "0xB97Ad0E74fa7d920791E90258A6E2085088b4320",
+            "backupPriceFeedAddr": "0xf57bA29437C130e155Ca4b65128630777638F05D",
+            "heartBeat": "86400",
+            "name": "Tether USD",
+            "symbol": "USDT",
+            "decimals": "18",
+            "initialPrice": "100021431"
+        },
+        "collateralConfig": {
+            "tokenAddr": "0x8d0D000Ee44948FC98c9B98A4FA4921476f08B0d",
+            "priceFeedAddr": "0xaD8b4e59A7f25B68945fAf0f3a3EAF027832FFB0",
+            "backupPriceFeedAddr": "0x6A1c87d11dDe3D1d52c24f8EC59B91019f14170D",
+            "heartBeat": "86400",
+            "name": "World Liberty Financial USD",
+            "symbol": "USD1",
+            "decimals": "18",
+            "initialPrice": "99942432",
+            "gtKeyIdentifier": "GearingTokenWithERC20"
+        }
+    },
+    "configs_6": {
+        "salt": 0,
+        "collateralCapForGt": "10000000000000000000000000",
+        "marketName": "WBNB/USD1@25JUL2025",
+        "marketSymbol": "WBNB/USD1@25JUL2025",
+        "marketConfig": {
+            "maturity": "1753401600",
+            "lendTakerFeeRatio": "2000000",
+            "lendMakerFeeRatio": "2000000",
+            "borrowTakerFeeRatio": "3000000",
+            "borrowMakerFeeRatio": "3000000",
+            "mintGtFeeRatio": "10000000",
+            "mintGtFeeRef": "3000000"
+        },
+        "loanConfig": {
+            "liquidationLtv": "80000000",
+            "maxLtv": "75000000",
+            "liquidatable": true
+        },
+        "underlyingConfig": {
+            "tokenAddr": "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
+            "priceFeedAddr": "0x0567F2323251f0Aab15c8dFb1967E4e8A7D42aeE",
+            "backupPriceFeedAddr": "0x8dd2D85C7c28F43F965AE4d9545189C7D022ED0e",
+            "heartBeat": "86400",
+            "name": "Wrapped BNB",
+            "symbol": "WBNB",
+            "decimals": "18",
+            "initialPrice": "66423000000"
+        },
+        "collateralConfig": {
+            "tokenAddr": "0x8d0D000Ee44948FC98c9B98A4FA4921476f08B0d",
+            "priceFeedAddr": "0xaD8b4e59A7f25B68945fAf0f3a3EAF027832FFB0",
+            "backupPriceFeedAddr": "0x6A1c87d11dDe3D1d52c24f8EC59B91019f14170D",
+            "heartBeat": "86400",
+            "name": "World Liberty Financial USD",
+            "symbol": "USD1",
+            "decimals": "18",
+            "initialPrice": "99942432",
+            "gtKeyIdentifier": "GearingTokenWithERC20"
+        }
+    },
+    "configs_7": {
+        "salt": 0,
+        "collateralCapForGt": "93000000000000000000",
+        "marketName": "WBNB/BTCB@25JUL2025",
+        "marketSymbol": "WBNB/BTCB@25JUL2025",
+        "marketConfig": {
+            "maturity": "1753401600",
+            "lendTakerFeeRatio": "2000000",
+            "lendMakerFeeRatio": "2000000",
+            "borrowTakerFeeRatio": "3000000",
+            "borrowMakerFeeRatio": "3000000",
+            "mintGtFeeRatio": "10000000",
+            "mintGtFeeRef": "3000000"
+        },
+        "loanConfig": {
+            "liquidationLtv": "80000000",
+            "maxLtv": "75000000",
+            "liquidatable": true
+        },
+        "underlyingConfig": {
+            "tokenAddr": "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
+            "priceFeedAddr": "0x0567F2323251f0Aab15c8dFb1967E4e8A7D42aeE",
+            "backupPriceFeedAddr": "0x8dd2D85C7c28F43F965AE4d9545189C7D022ED0e",
+            "heartBeat": "86400",
+            "name": "Wrapped BNB",
+            "symbol": "WBNB",
+            "decimals": "18",
+            "initialPrice": "66424000000"
+        },
+        "collateralConfig": {
+            "tokenAddr": "0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c",
+            "priceFeedAddr": "0x264990fbd0A4796A3E3d8E37C4d5F87a3aCa5Ebf",
+            "backupPriceFeedAddr": "0x0000000000000000000000000000000000000000",
+            "heartBeat": "86400",
+            "name": "BTCB Token",
+            "symbol": "BTCB",
+            "decimals": "18",
+            "initialPrice": "10725187649683",
+            "gtKeyIdentifier": "GearingTokenWithERC20"
+        }
+    }
+  }
+}

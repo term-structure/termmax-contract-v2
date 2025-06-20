@@ -1,0 +1,10 @@
+{
+  "oracles": [
+    {
+      "tokenAddr": "0xE2Fc85BfB48C4cF147921fBE110cf92Ef9f26F94",
+      "priceFeedAddr": "0x91F37A3058A7fD3f4f66ED87d715CF05bB4fbfBd",
+      "backupPriceFeedAddr": "0x0000000000000000000000000000000000000000",
+      "heartBeat": 86400
+    }
+  ]
+}

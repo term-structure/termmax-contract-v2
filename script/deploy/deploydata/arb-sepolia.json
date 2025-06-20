@@ -5,7 +5,7 @@
       "salt": 0,
       "collateralCapForGt": "511789884423953000000",
       "marketConfig": {
-        "maturity": "1748563200",
+        "maturity": "1758844800",
         "lendTakerFeeRatio": "2000000",
         "lendMakerFeeRatio": "2000000",
         "borrowTakerFeeRatio": "3000000",
@@ -46,7 +46,7 @@
       "salt": 0,
       "collateralCapForGt": "511789884423953000000",
       "marketConfig": {
-        "maturity": "1748563200",
+        "maturity": "1758844800",
         "lendTakerFeeRatio": "2000000",
         "lendMakerFeeRatio": "2000000",
         "borrowTakerFeeRatio": "3000000",
@@ -87,7 +87,7 @@
       "salt": 0,
       "collateralCapForGt": "1215801480",
       "marketConfig": {
-        "maturity": "1748563200",
+        "maturity": "1758844800",
         "lendTakerFeeRatio": "2000000",
         "lendMakerFeeRatio": "2000000",
         "borrowTakerFeeRatio": "3000000",
@@ -128,7 +128,7 @@
       "salt": 0,
       "collateralCapForGt": "576466989178777000000",
       "marketConfig": {
-        "maturity": "1748563200",
+        "maturity": "1758844800",
         "lendTakerFeeRatio": "2000000",
         "lendMakerFeeRatio": "2000000",
         "borrowTakerFeeRatio": "3000000",
@@ -169,7 +169,7 @@
       "salt": 0,
       "collateralCapForGt": "612476065957113000000",
       "marketConfig": {
-        "maturity": "1748563200",
+        "maturity": "1766707200",
         "lendTakerFeeRatio": "2000000",
         "lendMakerFeeRatio": "2000000",
         "borrowTakerFeeRatio": "3000000",
@@ -210,7 +210,7 @@
       "salt": 0,
       "collateralCapForGt": "2760143527463430000000000",
       "marketConfig": {
-        "maturity": "1748563200",
+        "maturity": "1766707200",
         "lendTakerFeeRatio": "2000000",
         "lendMakerFeeRatio": "2000000",
         "borrowTakerFeeRatio": "3000000",
@@ -251,7 +251,7 @@
       "salt": 0,
       "collateralCapForGt": "617950533596769000000",
       "marketConfig": {
-        "maturity": "1750982400",
+        "maturity": "1766707200",
         "lendTakerFeeRatio": "2000000",
         "lendMakerFeeRatio": "2000000",
         "borrowTakerFeeRatio": "3000000",

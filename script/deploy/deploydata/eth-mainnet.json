@@ -1,13 +1,13 @@
 {
-  "configNum": "1",
+  "configNum": "2",
   "configs": {
     "configs_0": {
       "salt": 0,
-      "collateralCapForGt": "9832841690000000000000000",
-      "marketName": "USDC/cUSDO@25JUL2025",
-      "marketSymbol": "USDC/cUSDO@25JUL2025",
+      "collateralCapForGt": "5000000000000",
+      "marketName": "USDC/xUSD@29AUG2025",
+      "marketSymbol": "USDC/xUSD@29AUG2025",
       "marketConfig": {
-        "maturity": "1753401600",
+        "maturity": "1756425600",
         "lendTakerFeeRatio": "2000000",
         "lendMakerFeeRatio": "2000000",
         "borrowTakerFeeRatio": "3000000",
@@ -17,7 +17,7 @@
       },
       "loanConfig": {
         "liquidationLtv": "94000000",
-        "maxLtv": "92000000",
+        "maxLtv": "90000000",
         "liquidatable": true
       },
       "underlyingConfig": {
@@ -28,17 +28,58 @@
         "name": "USD Coin",
         "symbol": "USDC",
         "decimals": "6",
-        "initialPrice": "99845377"
+        "initialPrice": "100131606"
       },
       "collateralConfig": {
-        "tokenAddr": "0xaD55aebc9b8c03FC43cd9f62260391c13c23e7c0",
-        "priceFeedAddr": "0xf158000de86899b5EB5E6fA3BB78F32A072bD14b",
-        "backupPriceFeedAddr": "0xf158000de86899b5EB5E6fA3BB78F32A072bD14b",
+        "tokenAddr": "0xE2Fc85BfB48C4cF147921fBE110cf92Ef9f26F94",
+        "priceFeedAddr": "0x91F37A3058A7fD3f4f66ED87d715CF05bB4fbfBd",
+        "backupPriceFeedAddr": "0x0000000000000000000000000000000000000000",
         "heartBeat": "86400",
-        "name": "Compounding Open Dollar",
-        "symbol": "cUSDO",
-        "decimals": "18",
-        "initialPrice": "101885665",
+        "name": "Staked Stream USD",
+        "symbol": "xUSD",
+        "decimals": "6",
+        "initialPrice": "100000000",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    },
+    "configs_1": {
+      "salt": 0,
+      "collateralCapForGt": "5000000000000",
+      "marketName": "USDC/xUSD@26SEP2025",
+      "marketSymbol": "USDC/xUSD@26SEP2025",
+      "marketConfig": {
+        "maturity": "1758844800",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "mintGtFeeRatio": "10000000",
+        "mintGtFeeRef": "6000000"
+      },
+      "loanConfig": {
+        "liquidationLtv": "94000000",
+        "maxLtv": "90000000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "priceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "backupPriceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "heartBeat": "86400",
+        "name": "USD Coin",
+        "symbol": "USDC",
+        "decimals": "6",
+        "initialPrice": "99982129"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0xE2Fc85BfB48C4cF147921fBE110cf92Ef9f26F94",
+        "priceFeedAddr": "0x91F37A3058A7fD3f4f66ED87d715CF05bB4fbfBd",
+        "backupPriceFeedAddr": "0x0000000000000000000000000000000000000000",
+        "heartBeat": "86400",
+        "name": "Staked Stream USD",
+        "symbol": "xUSD",
+        "decimals": "6",
+        "initialPrice": "100000000",
         "gtKeyIdentifier": "GearingTokenWithERC20"
       }
     }
