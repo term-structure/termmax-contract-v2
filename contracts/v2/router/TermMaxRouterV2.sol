@@ -20,7 +20,7 @@ import {RouterEvents} from "../../v1/events/RouterEvents.sol";
 import {TransferUtils} from "../../v1/lib/TransferUtils.sol";
 import {IFlashLoanReceiver} from "../../v1/IFlashLoanReceiver.sol";
 import {IFlashRepayer} from "../../v1/tokens/IFlashRepayer.sol";
-import {ITermMaxRouterV2, SwapPath} from "./ITermMaxRouterV2.sol";
+import {ITermMaxRouterV2, SwapPath, IERC4626} from "./ITermMaxRouterV2.sol";
 import {IGearingToken} from "../../v1/tokens/IGearingToken.sol";
 import {IGearingTokenV2} from "../tokens/IGearingTokenV2.sol";
 import {CurveCuts, OrderConfig} from "../../v1/storage/TermMaxStorage.sol";
@@ -706,7 +706,7 @@ contract TermMaxRouterV2 is
     }
 
     function _flashRepay(bytes memory callbackData) internal {
-        (SwapPath[] memory swapPaths) = abi.decode(callbackData, (SwapPath[]));
+        SwapPath[] memory swapPaths = abi.decode(callbackData, (SwapPath[]));
         _executeSwapPaths(swapPaths);
     }
 
@@ -798,4 +798,40 @@ contract TermMaxRouterV2 is
     function unpause() external onlyOwner {
         _unpause();
     }
+
+    function SwapAndMint(address recipient, ITermMaxMarket market, SwapPath[] memory paths)
+        external
+        override
+        checkSwapPaths(paths)
+        returns (uint256 netOut)
+    {
+        netOut = sum(_executeSwapPaths(paths));
+        IERC20 debtToken = IERC20(paths[0].units[paths[0].units.length - 1].tokenOut);
+        debtToken.safeIncreaseAllowance(address(market), netOut);
+        market.mint(recipient, netOut);
+    }
+
+    function RedeemFromMarketAndSwap(address recipient, ITermMaxMarket market, uint256 ftAmt, SwapPath[] memory paths)
+        external
+        override
+        returns (uint256 netOut)
+    {}
+
+    function SwapAndRepay(IGearingToken gt, uint256 gtId, SwapPath[] memory paths)
+        external
+        override
+        returns (uint256 netOut)
+    {}
+
+    function SwapAndDeposit(address recipient, IERC4626 vault, SwapPath[] memory paths)
+        external
+        override
+        returns (uint256 netOut)
+    {}
+
+    function RedeemFromVaultAndSwap(address recipient, IERC4626 vault, uint256 shareAmt, SwapPath memory swapPath)
+        external
+        override
+        returns (uint256 netOut)
+    {}
 }

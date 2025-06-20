@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
+import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ITermMaxMarket, IGearingToken} from "../../v1/ITermMaxMarket.sol";
 import {ITermMaxOrder} from "../../v1/ITermMaxOrder.sol";
@@ -422,4 +423,72 @@ interface ITermMaxRouterV2 {
         uint128 xtToDeposit,
         OrderConfig memory orderConfig
     ) external returns (ITermMaxOrder order, uint256 gtId);
+
+    /**
+     * @notice Swaps tokens and mints ft and xt tokens in the TermMax protocol
+     * @dev This function allows users to swap tokens and mint ft and xt tokens in the TermMax protocol
+     * @dev input/output: =>, swap: ->
+     *      path 0: => any token -> debt token => router
+     * @param market The market to mint the tokens in
+     * @param paths The SwapPath struct defining the swap operations
+     * @return netOut The net amount of ft and xt tokens received after the swap
+     */
+    function SwapAndMint(address recipient, ITermMaxMarket market, SwapPath[] memory paths)
+        external
+        returns (uint256 netOut);
+
+    /**
+     * @notice Redeems FT tokens from a market and swaps output tokens
+     * @dev This function allows users to redeem FT tokens from a market and swap output tokens
+     * @dev input/output: =>, swap: ->
+     *      path0: => debt token -> output token => recipient
+     *      path1(optional): collateral token -> output token => recipient
+     * @param recipient Address to receive the output tokens
+     * @param market The market to redeem from
+     * @param ftAmt Amount of FT tokens to redeem
+     * @param paths Array of SwapPath structs defining the swap paths
+     * @return netOut The net amount of tokens received after the swap
+     */
+    function RedeemFromMarketAndSwap(address recipient, ITermMaxMarket market, uint256 ftAmt, SwapPath[] memory paths)
+        external
+        returns (uint256 netOut);
+    /**
+     * @notice Swaps tokens and repays debt in a GearingToken position
+     * @dev This function allows users to swap tokens and repay debt in a GearingToken position
+     * @dev input/output: =>, swap: ->
+     *      path 0: => any token -> debt token/ft token => router
+     * @param gt The GearingToken contract instance
+     * @param gtId The ID of the GearingToken position to repay
+     * @param paths The SwapPath struct defining the swap operations
+     * @return netOut The net amount of tokens received after the swap
+     */
+    function SwapAndRepay(IGearingToken gt, uint256 gtId, SwapPath[] memory paths) external returns (uint256 netOut);
+
+    /**
+     * @notice Swaps tokens and deposits into a vault
+     * @dev This function allows users to swap tokens and deposit into an IERC4626 vault
+     * @dev input/output: =>, swap: ->
+     *      path0: => any token -> vault underlying => router
+     * @param recipient Address to receive the share tokens
+     * @param vault The IERC4626 vault to deposit into
+     * @param paths The SwapPath struct defining the swap operations
+     * @return netOut The net amount of share tokens received after swapping and depositing
+     */
+    function SwapAndDeposit(address recipient, IERC4626 vault, SwapPath[] memory paths)
+        external
+        returns (uint256 netOut);
+    /**
+     * @notice Redeems shares from a vault and swaps the output tokens
+     * @dev This function allows users to redeem shares from an IERC4626 vault and swap the output tokens
+     * @dev input/output: =>, swap: ->
+     *      swapPath: vault underlying -> output token => recipient
+     * @param recipient Address to receive the output tokens
+     * @param vault The IERC4626 vault to redeem shares from
+     * @param shareAmt Amount of shares to redeem from the vault
+     * @param swapPath The SwapPath struct defining the swap operations
+     * @return netOut The net amount of tokens received after redeeming and swapping
+     */
+    function RedeemFromVaultAndSwap(address recipient, IERC4626 vault, uint256 shareAmt, SwapPath memory swapPath)
+        external
+        returns (uint256 netOut);
 }
