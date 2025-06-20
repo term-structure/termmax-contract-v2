@@ -316,7 +316,7 @@ interface ITermMaxRouterV2 {
      * @param additionalAssets Amount of additional assets to add to the position
      * @param units Array of swap units defining the external swap path
      * @param nextMarket The next market to rollover into
-     * @param additionnalNextCollateral Additional collateral for the next market
+     * @param additionalNextCollateral Additional collateral for the next market
      * @param swapData Data for the termmax swap operation
      * @param maxLtv Maximum loan-to-value ratio for the rollover
      * @return newGtId The ID of the newly created GT token in the next market
@@ -328,7 +328,7 @@ interface ITermMaxRouterV2 {
         uint128 additionalAssets,
         SwapUnit[] memory units,
         ITermMaxMarket nextMarket,
-        uint256 additionnalNextCollateral,
+        uint256 additionalNextCollateral,
         TermMaxSwapData memory swapData,
         uint128 maxLtv
     ) external returns (uint256 newGtId);
@@ -344,7 +344,7 @@ interface ITermMaxRouterV2 {
      * @param removedCollateral Amount of collateral to remove from the position
      * @param units Array of swap units defining the external swap path
      * @param nextMarket The next market to rollover into
-     * @param additionnalNextCollateral Additional collateral for the next market
+     * @param additionalNextCollateral Additional collateral for the next market
      * @param swapData Data for the termmax swap operation
      * @param maxLtv Maximum loan-to-value ratio for the rollover
      * @return newGtId The ID of the newly created GT token in the next market
@@ -358,7 +358,7 @@ interface ITermMaxRouterV2 {
         uint256 removedCollateral,
         SwapUnit[] memory units,
         ITermMaxMarket nextMarket,
-        uint256 additionnalNextCollateral,
+        uint256 additionalNextCollateral,
         TermMaxSwapData memory swapData,
         uint128 maxLtv
     ) external returns (uint256 newGtId);

@@ -25,16 +25,16 @@ abstract contract ERC20SwapAdapterV2 is IERC20SwapAdapter, OnlyProxyCall {
     /**
      * @inheritdoc IERC20SwapAdapter
      */
-    function swap(address receipient, address tokenIn, address tokenOut, uint256 tokenInAmt, bytes memory swapData)
+    function swap(address recipient, address tokenIn, address tokenOut, uint256 tokenInAmt, bytes memory swapData)
         external
         override
         onlyProxy
         returns (uint256)
     {
-        return _swap(receipient, IERC20(tokenIn), IERC20(tokenOut), tokenInAmt, swapData);
+        return _swap(recipient, IERC20(tokenIn), IERC20(tokenOut), tokenInAmt, swapData);
     }
 
-    function _swap(address receipient, IERC20 tokenIn, IERC20 tokenOut, uint256 tokenInAmt, bytes memory swapData)
+    function _swap(address recipient, IERC20 tokenIn, IERC20 tokenOut, uint256 tokenInAmt, bytes memory swapData)
         internal
         virtual
         returns (uint256 tokenOutAmt)

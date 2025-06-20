@@ -18,7 +18,7 @@ contract UniswapV3AdapterV2 is ERC20SwapAdapterV2 {
         router = ISwapRouter(router_);
     }
 
-    function _swap(address receipient, IERC20 tokenIn, IERC20, uint256 amount, bytes memory swapData)
+    function _swap(address recipient, IERC20 tokenIn, IERC20, uint256 amount, bytes memory swapData)
         internal
         virtual
         override
@@ -35,7 +35,7 @@ contract UniswapV3AdapterV2 is ERC20SwapAdapterV2 {
         tokenOutAmt = router.exactInput(
             ISwapRouter.ExactInputParams({
                 path: path,
-                recipient: receipient,
+                recipient: recipient,
                 deadline: deadline,
                 amountIn: amount,
                 amountOutMinimum: amountOutMinimum

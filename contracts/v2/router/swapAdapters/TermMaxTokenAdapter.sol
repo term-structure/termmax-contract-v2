@@ -38,7 +38,7 @@ contract TermMaxTokenAdapter is ERC20SwapAdapterV2 {
      *      - For unwrap operations: tokenIn must implement ITermMaxToken.burn()
      *      - No slippage protection needed due to 1:1 conversion ratio
      */
-    function _swap(address receipient, IERC20 tokenIn, IERC20 tokenOut, uint256 tokenInAmt, bytes memory swapData)
+    function _swap(address recipient, IERC20 tokenIn, IERC20 tokenOut, uint256 tokenInAmt, bytes memory swapData)
         internal
         virtual
         override
@@ -50,11 +50,11 @@ contract TermMaxTokenAdapter is ERC20SwapAdapterV2 {
         if (isWrap) {
             // Wrap operation: Mint new TermMax tokens
             // tokenOut must be a TermMax token that supports minting
-            ITermMaxToken(address(tokenOut)).mint(receipient, tokenInAmt);
+            ITermMaxToken(address(tokenOut)).mint(recipient, tokenInAmt);
         } else {
             // Unwrap operation: Burn existing TermMax tokens
             // tokenIn must be a TermMax token that supports burning
-            ITermMaxToken(address(tokenIn)).burn(receipient, tokenInAmt);
+            ITermMaxToken(address(tokenIn)).burn(recipient, tokenInAmt);
         }
 
         // Return the same amount due to 1:1 conversion ratio

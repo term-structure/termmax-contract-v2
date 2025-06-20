@@ -525,7 +525,7 @@ contract TermMaxRouterV2 is
         uint128 additionalAssets,
         SwapUnit[] memory units,
         ITermMaxMarket nextMarket,
-        uint256 additionnalNextCollateral,
+        uint256 additionalNextCollateral,
         TermMaxSwapData memory swapData,
         uint128 maxLtv
     ) external whenNotPaused returns (uint256 newGtId) {
@@ -538,14 +538,14 @@ contract TermMaxRouterV2 is
             IERC20(swapData.tokenOut).safeTransferFrom(msg.sender, address(this), additionalAssets);
         }
         // additional collateral to reduce the ltv
-        if (additionnalNextCollateral != 0) {
+        if (additionalNextCollateral != 0) {
             IERC20(units[units.length - 1].tokenOut).safeTransferFrom(
-                msg.sender, address(this), additionnalNextCollateral
+                msg.sender, address(this), additionalNextCollateral
             );
         }
         gt.safeTransferFrom(msg.sender, address(this), gtId, "");
         bytes memory callbackData =
-            abi.encode(recipient, maxLtv, additionalAssets, nextMarket, additionnalNextCollateral, units, swapData);
+            abi.encode(recipient, maxLtv, additionalAssets, nextMarket, additionalNextCollateral, units, swapData);
         callbackData = abi.encode(FlashRepayOptions.ROLLOVER, callbackData);
         gt.flashRepay(gtId, true, callbackData);
         assembly {
@@ -565,7 +565,7 @@ contract TermMaxRouterV2 is
         uint256 removedCollateral,
         SwapUnit[] memory units,
         ITermMaxMarket nextMarket,
-        uint256 additionnalNextCollateral,
+        uint256 additionalNextCollateral,
         TermMaxSwapData memory swapData,
         uint128 maxLtv
     ) external whenNotPaused returns (uint256 newGtId) {
@@ -578,14 +578,14 @@ contract TermMaxRouterV2 is
             IERC20(swapData.tokenOut).safeTransferFrom(msg.sender, address(this), additionalAssets);
         }
         // additional collateral to reduce the ltv
-        if (additionnalNextCollateral != 0) {
+        if (additionalNextCollateral != 0) {
             IERC20(units[units.length - 1].tokenOut).safeTransferFrom(
-                msg.sender, address(this), additionnalNextCollateral
+                msg.sender, address(this), additionalNextCollateral
             );
         }
         gt.safeTransferFrom(msg.sender, address(this), gtId, "");
         bytes memory callbackData =
-            abi.encode(recipient, maxLtv, additionalAssets, nextMarket, additionnalNextCollateral, units, swapData);
+            abi.encode(recipient, maxLtv, additionalAssets, nextMarket, additionalNextCollateral, units, swapData);
         callbackData = abi.encode(FlashRepayOptions.ROLLOVER, callbackData);
         if (!IGearingTokenV2(address(gt)).flashRepay(gtId, repayAmt, true, abi.encode(removedCollateral), callbackData))
         {
@@ -673,7 +673,7 @@ contract TermMaxRouterV2 is
             uint128 maxLtv,
             uint128 additionalAssets,
             ITermMaxMarket market,
-            uint256 additionnalNextCollateral,
+            uint256 additionalNextCollateral,
             SwapUnit[] memory units,
             TermMaxSwapData memory swapData
         ) = abi.decode(callbackData, (address, uint128, uint128, ITermMaxMarket, uint256, SwapUnit[], TermMaxSwapData));
@@ -690,7 +690,7 @@ contract TermMaxRouterV2 is
             uint128 newDebtAmt = (
                 (swapData.netTokenAmt * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - mintGtFeeRatio)
             ).toUint128();
-            uint256 newCollateralAmt = _decodeAmount(collateralData) + additionnalNextCollateral;
+            uint256 newCollateralAmt = _decodeAmount(collateralData) + additionalNextCollateral;
             IERC20(collateral).safeIncreaseAllowance(address(gt), newCollateralAmt);
             (gtId,) = market.issueFt(address(this), newDebtAmt, abi.encode(newCollateralAmt));
         }
