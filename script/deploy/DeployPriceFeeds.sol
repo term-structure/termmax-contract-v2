@@ -4,13 +4,13 @@ pragma solidity ^0.8.27;
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
-import {TermMaxPriceFeedFactory} from "contracts/factory/TermMaxPriceFeedFactory.sol";
+import {TermMaxPriceFeedFactoryV2} from "contracts/v2/factory/TermMaxPriceFeedFactoryV2.sol";
 
 contract DeployPriceFeeds is Script {
     function run() public {
         uint256 deployerPrivateKey = vm.envUint("ETH_MAINNET_DEPLOYER_PRIVATE_KEY");
         vm.startBroadcast(deployerPrivateKey);
-        TermMaxPriceFeedFactory priceFeedFactory = new TermMaxPriceFeedFactory();
+        TermMaxPriceFeedFactoryV2 priceFeedFactory = new TermMaxPriceFeedFactoryV2();
 
         console.log("TermMaxPriceFeedFactory deployed at", address(priceFeedFactory));
         // pendle deployments: https://github.com/pendle-finance/pendle-core-v2-public/blob/main/deployments/1-core.json

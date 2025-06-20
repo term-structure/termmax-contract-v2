@@ -3,7 +3,7 @@ pragma solidity ^0.8.27;
 
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
-import {AccessManager} from "contracts/access/AccessManager.sol";
+import {AccessManager} from "contracts/v1/access/AccessManager.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {DeployBase} from "./DeployBase.s.sol";
 
