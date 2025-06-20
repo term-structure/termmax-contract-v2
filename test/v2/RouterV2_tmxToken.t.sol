@@ -60,6 +60,7 @@ import {MockSwapAdapterV2} from "contracts/v2/test/MockSwapAdapterV2.sol";
 import {ITermMaxOrder} from "contracts/v1/ITermMaxOrder.sol";
 import {TermMaxSwapData, TermMaxSwapAdapter} from "contracts/v2/router/swapAdapters/TermMaxSwapAdapter.sol";
 import {TermMaxTokenAdapter} from "contracts/v2/router/swapAdapters/TermMaxTokenAdapter.sol";
+import {TermMaxVaultV2, VaultInitialParamsV2} from "contracts/v2/vault/TermMaxVaultV2.sol";
 
 contract RouterTestV2_tmxToken is Test {
     using JSONLoader for *;
@@ -123,6 +124,21 @@ contract RouterTestV2_tmxToken is Test {
 
         termMaxTokenAdapter = new TermMaxTokenAdapter();
         res.router.setAdapterWhitelist(address(termMaxTokenAdapter), true);
+
+        VaultInitialParamsV2 memory vaultParams = VaultInitialParamsV2({
+            admin: deployer,
+            curator: deployer,
+            guardian: deployer,
+            timelock: 1 days,
+            asset: res.tmxToken,
+            maxCapacity: 1000000e8,
+            name: "TermMax Vault",
+            symbol: "TMX-Vault",
+            performanceFeeRate: 0,
+            minApy: 0,
+            minIdleFundRate: 0
+        });
+        res.vault = DeployUtils.deployVault(vaultParams);
 
         vm.stopPrank();
     }
@@ -294,6 +310,157 @@ contract RouterTestV2_tmxToken is Test {
         assertEq(maxAmountIn - amountIn, res.debt.balanceOf(sender));
         assertEq(balanceAfter - balanceBefore, amountOut);
 
+        vm.stopPrank();
+    }
+
+    function testSwapAndMint() public {
+        vm.startPrank(sender);
+        uint256 amount = 100e8;
+        res.debt.mint(sender, amount);
+        res.debt.approve(address(res.router), amount);
+
+        SwapUnit[] memory swapUnits = new SwapUnit[](1);
+        swapUnits[0] = SwapUnit({
+            adapter: address(termMaxTokenAdapter),
+            tokenIn: address(res.debt),
+            tokenOut: address(res.tmxToken),
+            swapData: abi.encode(true) // true indicates wrap operation
+        });
+        SwapPath[] memory swapPaths = new SwapPath[](1);
+        swapPaths[0] =
+            SwapPath({units: swapUnits, recipient: address(res.router), inputAmount: amount, useBalanceOnchain: false});
+
+        uint256 netOut = res.router.swapAndMint(sender, res.market, swapPaths);
+        assertEq(netOut, res.ft.balanceOf(sender));
+        assertEq(netOut, res.xt.balanceOf(sender));
+    }
+
+    function testSwapAndMintDirectly() public {
+        vm.startPrank(sender);
+        uint256 amount = 100e8;
+        res.debt.mint(sender, amount);
+        res.debt.approve(address(res.tmxToken), amount);
+        res.tmxToken.mint(sender, amount);
+        res.tmxToken.approve(address(res.router), amount);
+
+        SwapUnit[] memory swapUnits = new SwapUnit[](1);
+        swapUnits[0] = SwapUnit({
+            adapter: address(0),
+            tokenIn: address(res.tmxToken),
+            tokenOut: address(res.tmxToken),
+            swapData: bytes("")
+        });
+        SwapPath[] memory swapPaths = new SwapPath[](1);
+        swapPaths[0] =
+            SwapPath({units: swapUnits, recipient: address(res.router), inputAmount: amount, useBalanceOnchain: false});
+
+        uint256 netOut = res.router.swapAndMint(sender, res.market, swapPaths);
+        assertEq(netOut, res.ft.balanceOf(sender));
+        assertEq(netOut, res.xt.balanceOf(sender));
+    }
+
+    function testRedeemFromMarketAndSwap() public {
+        address bob = vm.randomAddress();
+        address alice = vm.randomAddress();
+
+        uint128 depositAmt = 1000e8;
+        uint128 debtAmt = 100e8;
+        uint256 collateralAmt = 1e18;
+
+        vm.startPrank(bob);
+        res.debt.mint(bob, depositAmt);
+        res.debt.approve(address(res.tmxToken), depositAmt);
+        res.tmxToken.mint(bob, depositAmt);
+        res.tmxToken.approve(address(res.market), depositAmt);
+        res.market.mint(bob, depositAmt);
+
+        res.xt.transfer(alice, debtAmt);
+        vm.stopPrank();
+
+        vm.startPrank(alice);
+
+        MockFlashLoanReceiver receiver = new MockFlashLoanReceiver(res.market);
+        res.collateral.mint(address(receiver), collateralAmt);
+
+        res.xt.approve(address(receiver), debtAmt);
+        receiver.leverageByXt(debtAmt, abi.encode(alice, collateralAmt));
+        vm.stopPrank();
+
+        vm.warp(marketConfig.maturity + Constants.LIQUIDATION_WINDOW);
+
+        vm.startPrank(bob);
+
+        SwapPath[] memory swapPaths = new SwapPath[](2);
+        uint256 minDebtOutAmt = 1000e8;
+        SwapUnit[] memory units = new SwapUnit[](1);
+        units[0] = SwapUnit(address(adapter), address(res.collateral), address(res.debt), abi.encode(minDebtOutAmt));
+        swapPaths[0] = SwapPath({units: units, recipient: bob, inputAmount: 0, useBalanceOnchain: true});
+
+        SwapUnit[] memory units2 = new SwapUnit[](1);
+        units2[0] = SwapUnit(address(termMaxTokenAdapter), address(res.tmxToken), address(res.debt), abi.encode(false));
+        swapPaths[1] = SwapPath({units: units2, recipient: bob, inputAmount: 0, useBalanceOnchain: true});
+
+        res.ft.approve(address(res.router), depositAmt);
+        uint256 ftTotalSupply = res.ft.totalSupply();
+        uint256 redeemedDebtToken = (res.tmxToken.balanceOf(address(res.market)) * depositAmt) / ftTotalSupply;
+
+        uint256 expectedOutput = redeemedDebtToken + minDebtOutAmt;
+
+        // vm.expectEmit();
+        // emit RouterEvents.RedeemAndSwap(res.market, depositAmt, bob, bob, expectedOutput);
+        (uint256 netOut, bytes memory deliveryData) =
+            res.router.redeemFromMarketAndSwapForV2(bob, ITermMaxMarketV2(address(res.market)), depositAmt, swapPaths);
+
+        assertEq(res.debt.balanceOf(bob), expectedOutput);
+        assertEq(res.collateral.balanceOf(bob), 0);
+        assertEq(res.tmxToken.balanceOf(bob), 0);
+
+        vm.stopPrank();
+    }
+
+    function testSwapAndDeposit() public {
+        vm.startPrank(sender);
+        uint256 amount = 100e8;
+        res.debt.mint(sender, amount);
+        res.debt.approve(address(res.router), amount);
+
+        SwapUnit[] memory swapUnits = new SwapUnit[](1);
+        swapUnits[0] = SwapUnit({
+            adapter: address(termMaxTokenAdapter),
+            tokenIn: address(res.debt),
+            tokenOut: address(res.tmxToken),
+            swapData: abi.encode(true) // true indicates wrap operation
+        });
+        SwapPath[] memory swapPaths = new SwapPath[](1);
+        swapPaths[0] =
+            SwapPath({units: swapUnits, recipient: address(res.router), inputAmount: amount, useBalanceOnchain: false});
+
+        uint256 netOut = res.router.swapAndDeposit(sender, res.vault, swapPaths);
+        assertEq(netOut, res.vault.balanceOf(sender));
+    }
+
+    /// @notice use --isolate to run this test
+    function testRedeemFromVaultAndSwap() public {
+        vm.startPrank(sender);
+        uint256 amount = 100e8;
+        res.debt.mint(sender, amount);
+        res.debt.approve(address(res.tmxToken), amount);
+        res.tmxToken.mint(sender, amount);
+        res.tmxToken.approve(address(res.vault), amount);
+        uint256 shareBalance = res.vault.deposit(amount, sender);
+        res.vault.approve(address(res.router), shareBalance);
+
+        SwapUnit[] memory swapUnits = new SwapUnit[](1);
+        swapUnits[0] = SwapUnit({
+            adapter: address(termMaxTokenAdapter),
+            tokenIn: address(res.tmxToken),
+            tokenOut: address(res.debt),
+            swapData: abi.encode(false) // false indicates unwrap operation
+        });
+        SwapPath memory swapPath =
+            SwapPath({units: swapUnits, recipient: sender, inputAmount: shareBalance, useBalanceOnchain: false});
+        uint256 netOut = res.router.redeemFromVaultAndSwap(sender, res.vault, shareBalance, swapPath);
+        assertEq(netOut, res.debt.balanceOf(sender));
         vm.stopPrank();
     }
 }
