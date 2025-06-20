@@ -21,10 +21,10 @@ import {IOracle, OracleAggregator, AggregatorV3Interface} from "contracts/v1/ora
 import {
     TermMaxRouter, ISwapAdapter, ITermMaxRouter, SwapUnit, RouterErrors
 } from "contracts/v1/router/TermMaxRouter.sol";
-import {UniswapV3Adapter, ERC20SwapAdapter} from "contracts/v1/router/swapAdapters/UniswapV3Adapter.sol";
-import {PendleSwapV3Adapter} from "contracts/v1/router/swapAdapters/PendleSwapV3Adapter.sol";
-import {OdosV2Adapter, IOdosRouterV2} from "contracts/v1/router/swapAdapters/OdosV2Adapter.sol";
-import {ERC4626VaultAdapter} from "contracts/v1/router/swapAdapters/ERC4626VaultAdapter.sol";
+import {UniswapV3AdapterV2, ERC20SwapAdapterV2} from "contracts/v1/router/specAdapters/UniswapV3AdapterV2.sol";
+import {PendleSwapV3AdapterV2} from "contracts/v1/router/specAdapters/PendleSwapV3AdapterV2.sol";
+import {OdosV2AdapterV2, IOdosRouterV2} from "contracts/v1/router/specAdapters/OdosV2AdapterV2.sol";
+import {ERC4626VaultAdapterV2} from "contracts/v1/router/specAdapters/ERC4626VaultAdapterV2.sol";
 import {TermMaxOrder, ITermMaxOrder} from "contracts/v1/TermMaxOrder.sol";
 import {ForkBaseTest} from "./ForkBaseTest.sol";
 import {RouterEvents} from "contracts/v1/events/RouterEvents.sol";
@@ -130,11 +130,12 @@ abstract contract GtBaseTest is ForkBaseTest {
             res.market.createOrder(res.maker, res.maxXtReserve, ISwapCallback(address(0)), res.orderConfig.curveCuts);
 
         res.swapAdapters.uniswapAdapter =
-            address(new UniswapV3Adapter(vm.parseJsonAddress(jsonData, ".routers.uniswapRouter")));
+            address(new UniswapV3AdapterV2(vm.parseJsonAddress(jsonData, ".routers.uniswapRouter")));
         res.swapAdapters.pendleAdapter =
-            address(new PendleSwapV3Adapter(vm.parseJsonAddress(jsonData, ".routers.pendleRouter")));
-        res.swapAdapters.odosAdapter = address(new OdosV2Adapter(vm.parseJsonAddress(jsonData, ".routers.odosRouter")));
-        res.swapAdapters.vaultAdapter = address(new ERC4626VaultAdapter());
+            address(new PendleSwapV3AdapterV2(vm.parseJsonAddress(jsonData, ".routers.pendleRouter")));
+        res.swapAdapters.odosAdapter =
+            address(new OdosV2AdapterV2(vm.parseJsonAddress(jsonData, ".routers.odosRouter")));
+        res.swapAdapters.vaultAdapter = address(new ERC4626VaultAdapterV2());
         res.router = deployRouter(res.marketInitialParams.admin);
         res.router.setAdapterWhitelist(res.swapAdapters.uniswapAdapter, true);
         res.router.setAdapterWhitelist(res.swapAdapters.pendleAdapter, true);

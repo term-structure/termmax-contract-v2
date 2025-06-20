@@ -3,7 +3,7 @@ pragma solidity ^0.8.27;
 
 import "../GtBaseTest.t.sol";
 
-contract ForkGt is GtBaseTest {
+contract ForkGtV1 is GtBaseTest {
     string MAINNET_RPC_URL = vm.envString("MAINNET_RPC_URL");
     string DATA_PATH = string.concat(vm.projectRoot(), "/test/testdata/fork/mainnet.json");
 
