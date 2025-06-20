@@ -878,7 +878,7 @@ contract RouterTestV2_1 is Test {
         res.debt.mint(sender, maxTokenIn);
         res.debt.approve(address(res.router), maxTokenIn);
 
-        uint256 netCost = res.router.repayByTokenThroughFt(sender, res.market, gtId, inputPaths);
+        uint256 netCost = res.router.swapAndRepay(res.gt, gtId, debtAmt, false, inputPaths)[0];
         assertEq(res.debt.balanceOf(sender), maxTokenIn - netCost);
         assertEq(res.collateral.balanceOf(sender), collateralAmt);
 
@@ -930,7 +930,7 @@ contract RouterTestV2_1 is Test {
         res.debt.mint(sender, maxTokenIn);
         res.debt.approve(address(res.router), maxTokenIn);
 
-        uint256 netCost = res.router.repayByTokenThroughFt(sender, res.market, gtId, inputPaths);
+        uint256 netCost = res.router.swapAndRepay(res.gt, gtId, debtAmt / 2, false, inputPaths)[0];
         assertEq(res.debt.balanceOf(sender), maxTokenIn - netCost);
         assertEq(res.collateral.balanceOf(sender), 0);
 

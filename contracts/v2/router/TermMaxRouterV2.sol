@@ -17,7 +17,7 @@ import {ITermMaxOrder} from "../../v1/ITermMaxOrder.sol";
 import {SwapUnit} from "../../v1/router/ISwapAdapter.sol";
 import {RouterErrors} from "../../v1/errors/RouterErrors.sol";
 import {RouterEvents} from "../../v1/events/RouterEvents.sol";
-import {TransferUtils} from "../../v1/lib/TransferUtils.sol";
+import {TransferUtilsV2} from "../lib/TransferUtilsV2.sol";
 import {IFlashLoanReceiver} from "../../v1/IFlashLoanReceiver.sol";
 import {IFlashRepayer} from "../../v1/tokens/IFlashRepayer.sol";
 import {ITermMaxRouterV2, SwapPath, IERC4626} from "./ITermMaxRouterV2.sol";
@@ -45,7 +45,7 @@ contract TermMaxRouterV2 is
     RouterEvents
 {
     using SafeCast for *;
-    using TransferUtils for IERC20;
+    using TransferUtilsV2 for IERC20;
     using MathLib for uint256;
 
     enum FlashRepayOptions {
@@ -500,23 +500,21 @@ contract TermMaxRouterV2 is
 
     // /**
     //  * @inheritdoc ITermMaxRouterV2
-    //  * path0: debt token-> ft
-    //  * path1: remaining debt -> recipient
     //  */
-    function repayByTokenThroughFt(address recipient, ITermMaxMarket market, uint256 gtId, SwapPath[] memory paths)
-        external
-        whenNotPaused
-        returns (uint256 netCost)
-    {
-        netCost = _executeSwapPaths(paths)[0];
-        (IERC20 ft,, IGearingToken gt,,) = market.tokens();
-        uint256 repayAmt = ft.balanceOf(address(this));
+    // function repayByTokenThroughFt(ITermMaxMarket market, uint256 gtId, SwapPath[] memory paths)
+    //     external
+    //     whenNotPaused
+    //     returns (uint256 netCost)
+    // {
+    //     netCost = _executeSwapPaths(paths)[0];
+    //     (IERC20 ft,, IGearingToken gt,,) = market.tokens();
+    //     uint256 repayAmt = ft.balanceOf(address(this));
 
-        ft.safeIncreaseAllowance(address(gt), repayAmt);
-        gt.repay(gtId, repayAmt.toUint128(), false);
+    //     ft.safeIncreaseAllowance(address(gt), repayAmt);
+    //     gt.repay(gtId, repayAmt.toUint128(), false);
 
-        emit RouterEventsV2.RepayByTokenThroughFt(address(market), gtId, msg.sender, recipient, repayAmt, netCost);
-    }
+    //     emit RouterEventsV2.RepayByTokenThroughFt(address(market), gtId, msg.sender, repayAmt, netCost);
+    // }
 
     /**
      * @inheritdoc ITermMaxRouterV2
@@ -799,9 +797,10 @@ contract TermMaxRouterV2 is
         _unpause();
     }
 
-    function SwapAndMint(address recipient, ITermMaxMarket market, SwapPath[] memory paths)
+    function swapAndMint(address recipient, ITermMaxMarket market, SwapPath[] memory paths)
         external
         override
+        whenNotPaused
         checkSwapPaths(paths)
         returns (uint256 netOut)
     {
@@ -811,25 +810,59 @@ contract TermMaxRouterV2 is
         market.mint(recipient, netOut);
     }
 
-    function RedeemFromMarketAndSwap(address recipient, ITermMaxMarket market, uint256 ftAmt, SwapPath[] memory paths)
+    function redeemFromMarketAndSwapForV1(
+        address recipient,
+        ITermMaxMarket market,
+        uint256 ftAmt,
+        SwapPath[] memory paths
+    ) external override whenNotPaused returns (uint256 netOut, bytes memory deliveryData) {
+        (IERC20 ft,,,,) = market.tokens();
+        ft.safeTransferFrom(msg.sender, address(this), ftAmt);
+        ft.safeIncreaseAllowance(address(market), ftAmt);
+        if (paths.length == 0) {
+            (netOut, deliveryData) = market.redeem(ftAmt, recipient);
+        } else {
+            (netOut, deliveryData) = market.redeem(ftAmt, address(this));
+            // execute swap paths
+            _executeSwapPaths(paths);
+        }
+    }
+
+    function redeemFromMarketAndSwapForV2(
+        address recipient,
+        ITermMaxMarketV2 market,
+        uint256 ftAmt,
+        SwapPath[] memory paths
+    ) external override whenNotPaused returns (uint256 netOut, bytes memory deliveryData) {
+        if (paths.length == 0) {
+            (netOut, deliveryData) = market.redeem(msg.sender, recipient, ftAmt);
+        } else {
+            (netOut, deliveryData) = market.redeem(msg.sender, address(this), ftAmt);
+            // execute swap paths
+            _executeSwapPaths(paths);
+        }
+    }
+
+    function swapAndRepay(IGearingToken gt, uint256 gtId, uint128 repayAmt, bool byDebtToken, SwapPath[] memory paths)
+        external
+        override
+        whenNotPaused
+        checkSwapPaths(paths)
+        returns (uint256[] memory netOutOrIns)
+    {
+        netOutOrIns = _executeSwapPaths(paths);
+        IERC20 repayToken = IERC20(paths[0].units[paths[0].units.length - 1].tokenOut);
+        repayToken.safeIncreaseAllowance(address(gt), repayAmt);
+        gt.repay(gtId, repayAmt, byDebtToken);
+    }
+
+    function swapAndDeposit(address recipient, IERC4626 vault, SwapPath[] memory paths)
         external
         override
         returns (uint256 netOut)
     {}
 
-    function SwapAndRepay(IGearingToken gt, uint256 gtId, SwapPath[] memory paths)
-        external
-        override
-        returns (uint256 netOut)
-    {}
-
-    function SwapAndDeposit(address recipient, IERC4626 vault, SwapPath[] memory paths)
-        external
-        override
-        returns (uint256 netOut)
-    {}
-
-    function RedeemFromVaultAndSwap(address recipient, IERC4626 vault, uint256 shareAmt, SwapPath memory swapPath)
+    function redeemFromVaultAndSwap(address recipient, IERC4626 vault, uint256 shareAmt, SwapPath memory swapPath)
         external
         override
         returns (uint256 netOut)
