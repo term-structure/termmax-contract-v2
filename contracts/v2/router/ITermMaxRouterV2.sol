@@ -92,11 +92,14 @@ interface ITermMaxRouterV2 {
     /**
      * @notice Swaps ft and xt tokens for a specific marketV1
      * @dev This function allows users to swap FT and XT tokens for a specific market
+     * @dev input/output: =>, swap: ->
+     *      path0: => xt/ft -> debt token => router/recipient
+     *      path1(optional): debt token -> unwrap => recipient
      * @param recipient Address to receive the output tokens
      * @param market The market to burn FT and XT tokens
      * @param ftInAmt Amount of FT tokens to swap
      * @param xtInAmt Amount of XT tokens to swap
-     * @param path SwapPath to swap xt or ft token
+     * @param swapPaths Array of SwapPath structs defining the swap paths
      * @return netTokenOut Actual amount of tokens received after the swap
      */
     function sellFtAndXtForV1(
@@ -104,17 +107,20 @@ interface ITermMaxRouterV2 {
         ITermMaxMarket market,
         uint128 ftInAmt,
         uint128 xtInAmt,
-        SwapPath memory path
+        SwapPath[] memory swapPaths
     ) external returns (uint256 netTokenOut);
 
     /**
      * @notice Swaps ft and xt tokens for a specific marketV2
      * @dev This function allows users to swap FT and XT tokens for a specific market
+     * @dev input/output: =>, swap: ->
+     *      path0: => xt/ft -> debt token => router/recipient
+     *      path1(optional): debt token -> unwrap => recipient
      * @param recipient Address to receive the output tokens
      * @param market The market to burn FT and XT tokens
      * @param ftInAmt Amount of FT tokens to swap
      * @param xtInAmt Amount of XT tokens to swap
-     * @param path SwapPath to swap xt or ft token
+     * @param swapPaths Array of SwapPath structs defining the swap paths
      * @return netTokenOut Actual amount of tokens received after the swap
      */
     function sellFtAndXtForV2(
@@ -122,7 +128,7 @@ interface ITermMaxRouterV2 {
         ITermMaxMarket market,
         uint128 ftInAmt,
         uint128 xtInAmt,
-        SwapPath memory path
+        SwapPath[] memory swapPaths
     ) external returns (uint256 netTokenOut);
 
     /**
@@ -200,13 +206,15 @@ interface ITermMaxRouterV2 {
      * @param market The market to borrow from
      * @param collInAmt Amount of collateral to deposit
      * @param borrowAmt Amount of tokens to borrow
+     * @param pathsAfterBorrow Array of SwapPath structs defining the swap paths after borrowing
      * @return gtId ID of the generated GT token
      */
     function borrowTokenFromCollateralAndXtForV1(
         address recipient,
         ITermMaxMarket market,
         uint256 collInAmt,
-        uint256 borrowAmt
+        uint256 borrowAmt,
+        SwapPath[] memory pathsAfterBorrow
     ) external returns (uint256 gtId);
 
     /**
@@ -216,13 +224,15 @@ interface ITermMaxRouterV2 {
      * @param market The market to borrow from
      * @param collInAmt Amount of collateral to deposit
      * @param borrowAmt Amount of tokens to borrow
+     * @param pathsAfterBorrow Array of SwapPath structs defining the swap paths after borrowing
      * @return gtId ID of the generated GT token
      */
     function borrowTokenFromCollateralAndXtForV2(
         address recipient,
         ITermMaxMarket market,
         uint256 collInAmt,
-        uint256 borrowAmt
+        uint256 borrowAmt,
+        SwapPath[] memory pathsAfterBorrow
     ) external returns (uint256 gtId);
 
     /**
@@ -232,9 +242,15 @@ interface ITermMaxRouterV2 {
      * @param market The market to borrow from
      * @param gtId ID of the GT token to borrow from
      * @param borrowAmt Amount of tokens to borrow
+     * @param pathsAfterBorrow Array of SwapPath structs defining the swap paths after borrowing
      */
-    function borrowTokenFromGtAndXtForV1(address recipient, ITermMaxMarket market, uint256 gtId, uint256 borrowAmt)
-        external;
+    function borrowTokenFromGtAndXtForV1(
+        address recipient,
+        ITermMaxMarket market,
+        uint256 gtId,
+        uint256 borrowAmt,
+        SwapPath[] memory pathsAfterBorrow
+    ) external;
 
     /**
      * @notice Borrows tokens from an existing GT position and XT
@@ -244,8 +260,13 @@ interface ITermMaxRouterV2 {
      * @param gtId ID of the GT token to borrow from
      * @param borrowAmt Amount of tokens to borrow
      */
-    function borrowTokenFromGtAndXtForV2(address recipient, ITermMaxMarket market, uint256 gtId, uint256 borrowAmt)
-        external;
+    function borrowTokenFromGtAndXtForV2(
+        address recipient,
+        ITermMaxMarket market,
+        uint256 gtId,
+        uint256 borrowAmt,
+        SwapPath[] memory pathsAfterBorrow
+    ) external;
 
     /**
      * @notice Repays debt from collateral

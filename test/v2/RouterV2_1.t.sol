@@ -304,13 +304,16 @@ contract RouterTestV2_1 is Test {
             swapData: abi.encode(swapData)
         });
 
-        SwapPath memory swapPath =
-            SwapPath({units: swapUnits, recipient: sender, inputAmount: sellAmt, useBalanceOnchain: false});
+        SwapPath[] memory swapPaths = new SwapPath[](1);
         uint256 netOut;
         if (isV1) {
-            netOut = res.router.sellFtAndXtForV1(sender, res.market, ftAmount, xtAmount, swapPath);
+            swapPaths[0] =
+                SwapPath({units: swapUnits, recipient: sender, inputAmount: sellAmt, useBalanceOnchain: true});
+            netOut = res.router.sellFtAndXtForV1(sender, res.market, ftAmount, xtAmount, swapPaths);
         } else {
-            netOut = res.router.sellFtAndXtForV2(sender, res.market, ftAmount, xtAmount, swapPath);
+            swapPaths[0] =
+                SwapPath({units: swapUnits, recipient: sender, inputAmount: sellAmt, useBalanceOnchain: false});
+            netOut = res.router.sellFtAndXtForV2(sender, res.market, ftAmount, xtAmount, swapPaths);
         }
         assertEq(netOut, res.debt.balanceOf(sender));
         assertEq(res.ft.balanceOf(sender), 0);
@@ -640,9 +643,10 @@ contract RouterTestV2_1 is Test {
         vm.expectEmit();
         emit RouterEvents.Borrow(res.market, 1, sender, sender, collInAmt, previewDebtAmt, borrowAmt);
 
+        SwapPath[] memory swapPaths = new SwapPath[](0);
         uint256 gtId = isV1
-            ? res.router.borrowTokenFromCollateralAndXtForV1(sender, res.market, collInAmt, borrowAmt)
-            : res.router.borrowTokenFromCollateralAndXtForV2(sender, res.market, collInAmt, borrowAmt);
+            ? res.router.borrowTokenFromCollateralAndXtForV1(sender, res.market, collInAmt, borrowAmt, swapPaths)
+            : res.router.borrowTokenFromCollateralAndXtForV2(sender, res.market, collInAmt, borrowAmt, swapPaths);
         (address owner, uint128 debtAmt, bytes memory collateralData) = res.gt.loanInfo(gtId);
         assertEq(owner, sender);
         assertEq(collInAmt, abi.decode(collateralData, (uint256)));
@@ -673,10 +677,11 @@ contract RouterTestV2_1 is Test {
 
         vm.expectEmit();
         emit RouterEvents.Borrow(res.market, 1, sender, sender, 0, previewDebtAmt, borrowAmt);
+        SwapPath[] memory swapPaths = new SwapPath[](0);
         if (isV1) {
-            res.router.borrowTokenFromGtAndXtForV1(sender, res.market, gtId, borrowAmt);
+            res.router.borrowTokenFromGtAndXtForV1(sender, res.market, gtId, borrowAmt, swapPaths);
         } else {
-            res.router.borrowTokenFromGtAndXtForV2(sender, res.market, gtId, borrowAmt);
+            res.router.borrowTokenFromGtAndXtForV2(sender, res.market, gtId, borrowAmt, swapPaths);
         }
 
         (, uint128 dAmt,) = res.gt.loanInfo(gtId);
@@ -707,10 +712,11 @@ contract RouterTestV2_1 is Test {
 
         vm.expectRevert(abi.encodeWithSelector(RouterErrors.GtNotOwnedBySender.selector));
         vm.prank(deployer);
+        SwapPath[] memory swapPaths = new SwapPath[](0);
         if (isV1) {
-            res.router.borrowTokenFromGtAndXtForV1(sender, res.market, gtId, borrowAmt);
+            res.router.borrowTokenFromGtAndXtForV1(sender, res.market, gtId, borrowAmt, swapPaths);
         } else {
-            res.router.borrowTokenFromGtAndXtForV2(sender, res.market, gtId, borrowAmt);
+            res.router.borrowTokenFromGtAndXtForV2(sender, res.market, gtId, borrowAmt, swapPaths);
         }
 
         vm.stopPrank();

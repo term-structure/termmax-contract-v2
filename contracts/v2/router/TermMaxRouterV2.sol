@@ -216,15 +216,13 @@ contract TermMaxRouterV2 is
 
     /**
      * @inheritdoc ITermMaxRouterV2
-     * @dev input/output: =>, swap: ->
-     *      path => xt/ft -> debt token => recipient
      */
     function sellFtAndXtForV1(
         address recipient,
         ITermMaxMarket market,
         uint128 ftInAmt,
         uint128 xtInAmt,
-        SwapPath memory path
+        SwapPath[] memory swapPaths
     ) external whenNotPaused returns (uint256 netTokenOut) {
         (IERC20 ft, IERC20 xt,,,) = market.tokens();
         uint256 maxBurn = ftInAmt > xtInAmt ? xtInAmt : ftInAmt;
@@ -233,7 +231,7 @@ contract TermMaxRouterV2 is
         ft.safeIncreaseAllowance(address(market), maxBurn);
         xt.safeIncreaseAllowance(address(market), maxBurn);
         market.burn(recipient, maxBurn);
-        netTokenOut = maxBurn + _executeSwapUnits(path.recipient, path.inputAmount, path.units);
+        netTokenOut = maxBurn + _executeSwapPaths(swapPaths)[0];
     }
 
     /**
@@ -244,13 +242,11 @@ contract TermMaxRouterV2 is
         ITermMaxMarket market,
         uint128 ftInAmt,
         uint128 xtInAmt,
-        SwapPath memory path
+        SwapPath[] memory swapPaths
     ) external whenNotPaused returns (uint256 netTokenOut) {
         uint256 maxBurn = ftInAmt > xtInAmt ? xtInAmt : ftInAmt;
         ITermMaxMarketV2(address(market)).burn(msg.sender, recipient, maxBurn);
-        IERC20 tokenIn = IERC20(path.units[0].tokenIn);
-        tokenIn.safeTransferFrom(msg.sender, address(this), path.inputAmount);
-        netTokenOut = maxBurn + _executeSwapUnits(path.recipient, path.inputAmount, path.units);
+        netTokenOut = maxBurn + _executeSwapPaths(swapPaths)[0];
     }
 
     /**
@@ -348,7 +344,8 @@ contract TermMaxRouterV2 is
         address recipient,
         ITermMaxMarket market,
         uint256 collInAmt,
-        uint256 borrowAmt
+        uint256 borrowAmt,
+        SwapPath[] memory pathsAfterBorrow
     ) external whenNotPaused returns (uint256) {
         (IERC20 ft, IERC20 xt, IGearingToken gt, address collateralAddr,) = market.tokens();
 
@@ -366,6 +363,10 @@ contract TermMaxRouterV2 is
         market.burn(recipient, borrowAmt);
 
         gt.safeTransferFrom(address(this), recipient, gtId);
+
+        if (pathsAfterBorrow.length > 0) {
+            _executeSwapPaths(pathsAfterBorrow);
+        }
         emit Borrow(market, gtId, msg.sender, recipient, collInAmt, debtAmt, borrowAmt.toUint128());
         return gtId;
     }
@@ -374,7 +375,8 @@ contract TermMaxRouterV2 is
         address recipient,
         ITermMaxMarket market,
         uint256 collInAmt,
-        uint256 borrowAmt
+        uint256 borrowAmt,
+        SwapPath[] memory pathsAfterBorrow
     ) external whenNotPaused returns (uint256) {
         (, IERC20 xt, IGearingToken gt, address collateralAddr,) = market.tokens();
 
@@ -390,14 +392,22 @@ contract TermMaxRouterV2 is
         ITermMaxMarketV2(address(market)).burn(address(this), recipient, borrowAmt);
 
         gt.safeTransferFrom(address(this), recipient, gtId);
+
+        if (pathsAfterBorrow.length > 0) {
+            _executeSwapPaths(pathsAfterBorrow);
+        }
+
         emit Borrow(market, gtId, msg.sender, recipient, collInAmt, debtAmt, borrowAmt.toUint128());
         return gtId;
     }
 
-    function borrowTokenFromGtAndXtForV1(address recipient, ITermMaxMarket market, uint256 gtId, uint256 borrowAmt)
-        external
-        whenNotPaused
-    {
+    function borrowTokenFromGtAndXtForV1(
+        address recipient,
+        ITermMaxMarket market,
+        uint256 gtId,
+        uint256 borrowAmt,
+        SwapPath[] memory pathsAfterBorrow
+    ) external whenNotPaused {
         (IERC20 ft, IERC20 xt, IGearingToken gt,,) = market.tokens();
 
         if (gt.ownerOf(gtId) != msg.sender) {
@@ -414,13 +424,20 @@ contract TermMaxRouterV2 is
         ft.safeIncreaseAllowance(address(market), borrowAmt);
         market.burn(recipient, borrowAmt);
 
+        if (pathsAfterBorrow.length > 0) {
+            _executeSwapPaths(pathsAfterBorrow);
+        }
+
         emit Borrow(market, gtId, msg.sender, recipient, 0, debtAmt, borrowAmt.toUint128());
     }
 
-    function borrowTokenFromGtAndXtForV2(address recipient, ITermMaxMarket market, uint256 gtId, uint256 borrowAmt)
-        external
-        whenNotPaused
-    {
+    function borrowTokenFromGtAndXtForV2(
+        address recipient,
+        ITermMaxMarket market,
+        uint256 gtId,
+        uint256 borrowAmt,
+        SwapPath[] memory pathsAfterBorrow
+    ) external whenNotPaused {
         (, IERC20 xt, IGearingToken gt,,) = market.tokens();
 
         if (gt.ownerOf(gtId) != msg.sender) {
@@ -435,6 +452,10 @@ contract TermMaxRouterV2 is
         xt.safeTransferFrom(msg.sender, address(this), borrowAmt);
 
         ITermMaxMarketV2(address(market)).burn(address(this), recipient, borrowAmt);
+
+        if (pathsAfterBorrow.length > 0) {
+            _executeSwapPaths(pathsAfterBorrow);
+        }
 
         emit Borrow(market, gtId, msg.sender, recipient, 0, debtAmt, borrowAmt.toUint128());
     }
