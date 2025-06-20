@@ -1,0 +1,243 @@
+Running on arb-mainnet...
+Deployment type: market
+=== Configuration ===
+Operation: Deployment
+Type: market
+Network: arb-mainnet
+Script: DeployMarket.s.sol
+Path: script/deploy/DeployMarket.s.sol
+RPC URL: http*****://arbi*****.gate*****.tend*****.co/agLs*****
+Admin Address: 0x8409a9C1A911CED491892c5694E43994c9d47E8f
+Mode: Live Broadcast--broadcast
+Resume: Disabled
+Verification: Enabled--verify
+Using API Key: ARBSCAN_API_KEY
+Tenderly Verification: Disabled
+Debug Mode: Disabled
+===============================
+Starting deployment...
+Executing: forge script script/deploy/DeployMarket.s.sol --private-key [MASKED] --rpc-url [MASKED] --broadcast --slow --verify --etherscan-api-key [MASKED]
+No files changed, compilation skipped
+Script ran successfully.
+
+== Logs ==
+  ===== Git Info =====
+  Git branch: deploy/v1.0.8
+  Git commit hash:
+  0xb2b014ea037e2ab91e91090a3d3afca9457b840b
+  
+  ===== Block Info =====
+  Block number: 324770690
+  Block timestamp: 1744254877
+  
+  ===== Address Info =====
+  Deplyer: 0x56E3665038C5F0b56Cc7D81aC66C86521274B251
+  Deployed at block number: 324770690
+  
+  ===== Market Info - 0 =====
+  Market deployed at: 0xcc60D097222f45538159D43681FBa4B1fD37DE97
+  Market name: WETH/wstETH@30MAY2025
+  Market symbol: WETH/wstETH@30MAY2025
+  Collateral (wstETH) address: 0x5979D7b546E38E414F7E9822514be443A4800529
+  Underlying (WETH) address: 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1
+  Collateral price feed address: 0xB3ae8A16CF827d193Ae51a92fd2630e6839F5761
+  Collateral heartbeat: 86400
+  Underlying price feed address: 0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612
+  Underlying heartbeat: 86400
+  FT deployed at: 0xDd7049672aB42AF472D43849CBD25da619622f10
+  XT deployed at: 0x39FDbccDD78dED330EdcF11dE4FFd805a7F69D5E
+  GT deployed at: 0xc9244551127b07f0964a4320C86129a7C5F0826b
+  
+  Treasurer: 0x719e77027952929ed3060dbFFC5D43EC50c1cf79
+  Maturity: 30MAY2025
+  Salt: 0
+  Lend Taker Fee Ratio: 2000000
+  Lend Maker Fee Ratio: 2000000
+  Borrow Taker Fee Ratio: 3000000
+  Borrow Maker Fee Ratio: 3000000
+  Mint GT Fee Ratio: 1000000
+  Issue FT Fee Ref: 400000
+  Market config written to: /Users/vincent/Documents/ts-codes/termmax-contract/deployments/arb-mainnet/arb-mainnet-market-WETH-wstETH@30MAY2025.json
+  
+  ===== Market Info - 1 =====
+  Market deployed at: 0xC62B23864c1e909868471bf72Cc457397BC52E13
+  Market name: USDC/wstETH@30MAY2025
+  Market symbol: USDC/wstETH@30MAY2025
+  Collateral (wstETH) address: 0x5979D7b546E38E414F7E9822514be443A4800529
+  Underlying (USDC) address: 0xaf88d065e77c8cC2239327C5EDb3A432268e5831
+  Collateral price feed address: 0xB3ae8A16CF827d193Ae51a92fd2630e6839F5761
+  Collateral heartbeat: 86400
+  Underlying price feed address: 0x50834F3163758fcC1Df9973b6e91f0F0F0434aD3
+  Underlying heartbeat: 86400
+  FT deployed at: 0xdD6a46c4520eC02b0D3243bD43Eefc5aADcc329B
+  XT deployed at: 0xfc5AEdDE0155D3e5E5C8CA584795Bb4620DC670F
+  GT deployed at: 0xb0e34bB7a2A2bf475B14D3FFbB49F027C48529De
+  
+  Treasurer: 0x719e77027952929ed3060dbFFC5D43EC50c1cf79
+  Maturity: 30MAY2025
+  Salt: 0
+  Lend Taker Fee Ratio: 2000000
+  Lend Maker Fee Ratio: 2000000
+  Borrow Taker Fee Ratio: 3000000
+  Borrow Maker Fee Ratio: 3000000
+  Mint GT Fee Ratio: 1000000
+  Issue FT Fee Ref: 2000000
+  Market config written to: /Users/vincent/Documents/ts-codes/termmax-contract/deployments/arb-mainnet/arb-mainnet-market-USDC-wstETH@30MAY2025.json
+  
+  ===== Market Info - 2 =====
+  Market deployed at: 0x49E11668EAc15896ecF5B31baeF63C98897D4263
+  Market name: USDC/WBTC@30MAY2025
+  Market symbol: USDC/WBTC@30MAY2025
+  Collateral (WBTC) address: 0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f
+  Underlying (USDC) address: 0xaf88d065e77c8cC2239327C5EDb3A432268e5831
+  Collateral price feed address: 0xd0C7101eACbB49F3deCcCc166d238410D6D46d57
+  Collateral heartbeat: 86400
+  Underlying price feed address: 0x50834F3163758fcC1Df9973b6e91f0F0F0434aD3
+  Underlying heartbeat: 86400
+  FT deployed at: 0xE9F18d347Fb782B7496d637D5EF5e8287d21Dd47
+  XT deployed at: 0x1B28415e1490262Ad20842D718b3272501dF27Cd
+  GT deployed at: 0xF1e33c79809159014207c4662A9C1A8a44c67744
+  
+  Treasurer: 0x719e77027952929ed3060dbFFC5D43EC50c1cf79
+  Maturity: 30MAY2025
+  Salt: 0
+  Lend Taker Fee Ratio: 2000000
+  Lend Maker Fee Ratio: 2000000
+  Borrow Taker Fee Ratio: 3000000
+  Borrow Maker Fee Ratio: 3000000
+  Mint GT Fee Ratio: 1000000
+  Issue FT Fee Ref: 2000000
+  Market config written to: /Users/vincent/Documents/ts-codes/termmax-contract/deployments/arb-mainnet/arb-mainnet-market-USDC-WBTC@30MAY2025.json
+  
+  ===== Market Info - 3 =====
+  Market deployed at: 0xa93A81835DAb4AC07649506B88AF7eE6DDaD03Ba
+  Market name: WETH/weETH@30MAY2025
+  Market symbol: WETH/weETH@30MAY2025
+  Collateral (weETH) address: 0x35751007a407ca6FEFfE80b3cB397736D2cf4dbe
+  Underlying (WETH) address: 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1
+  Collateral price feed address: 0x8f29Df42c617C222Bc2B416AC8a022E85e853276
+  Collateral heartbeat: 86400
+  Underlying price feed address: 0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612
+  Underlying heartbeat: 86400
+  FT deployed at: 0x60Cf9d67A072084f6891bf65E223DBa7E1182D6A
+  XT deployed at: 0x1761b7a22f13C8E32f15D650ACf73F07e3bE0C8A
+  GT deployed at: 0xa42B46Fd5Ad2fd38Edf6F8509D1702a16cFBC5b6
+  
+  Treasurer: 0x719e77027952929ed3060dbFFC5D43EC50c1cf79
+  Maturity: 30MAY2025
+  Salt: 0
+  Lend Taker Fee Ratio: 2000000
+  Lend Maker Fee Ratio: 2000000
+  Borrow Taker Fee Ratio: 3000000
+  Borrow Maker Fee Ratio: 3000000
+  Mint GT Fee Ratio: 1000000
+  Issue FT Fee Ref: 400000
+  Market config written to: /Users/vincent/Documents/ts-codes/termmax-contract/deployments/arb-mainnet/arb-mainnet-market-WETH-weETH@30MAY2025.json
+  
+  ===== Market Info - 4 =====
+  Market deployed at: 0x59e3D532727221ac3aeE2D6303cf3C39F1De65D7
+  Market name: USDC/WETH@30MAY2025
+  Market symbol: USDC/WETH@30MAY2025
+  Collateral (WETH) address: 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1
+  Underlying (USDC) address: 0xaf88d065e77c8cC2239327C5EDb3A432268e5831
+  Collateral price feed address: 0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612
+  Collateral heartbeat: 86400
+  Underlying price feed address: 0x50834F3163758fcC1Df9973b6e91f0F0F0434aD3
+  Underlying heartbeat: 86400
+  FT deployed at: 0x56c574463b44dF7FaC5eCf650F1F66e640806a46
+  XT deployed at: 0xD781f71b8D0B27a098f85bf532b9640CbDDdC565
+  GT deployed at: 0x602F667B90Aac06ba269884e51Ff52E8723634C9
+  
+  Treasurer: 0x719e77027952929ed3060dbFFC5D43EC50c1cf79
+  Maturity: 30MAY2025
+  Salt: 0
+  Lend Taker Fee Ratio: 2000000
+  Lend Maker Fee Ratio: 2000000
+  Borrow Taker Fee Ratio: 3000000
+  Borrow Maker Fee Ratio: 3000000
+  Mint GT Fee Ratio: 1000000
+  Issue FT Fee Ref: 2000000
+  Market config written to: /Users/vincent/Documents/ts-codes/termmax-contract/deployments/arb-mainnet/arb-mainnet-market-USDC-WETH@30MAY2025.json
+  
+  ===== Market Info - 5 =====
+  Market deployed at: 0x79A4963f8b2f8d997908615352A44192Bc3D23e7
+  Market name: USDC/ARB@30MAY2025
+  Market symbol: USDC/ARB@30MAY2025
+  Collateral (ARB) address: 0x912CE59144191C1204E64559FE8253a0e49E6548
+  Underlying (USDC) address: 0xaf88d065e77c8cC2239327C5EDb3A432268e5831
+  Collateral price feed address: 0xb2A824043730FE05F3DA2efaFa1CBbe83fa548D6
+  Collateral heartbeat: 86400
+  Underlying price feed address: 0x50834F3163758fcC1Df9973b6e91f0F0F0434aD3
+  Underlying heartbeat: 86400
+  FT deployed at: 0x4d924ee8d2201D7f4da0B4921Fd9d24CA912B7cD
+  XT deployed at: 0x7c7feD69BBdEEC00cBe381cE21BD97D2745857BA
+  GT deployed at: 0x34d324Ab749BE907f5d60FB58D05f58C9D401666
+  
+  Treasurer: 0x719e77027952929ed3060dbFFC5D43EC50c1cf79
+  Maturity: 30MAY2025
+  Salt: 0
+  Lend Taker Fee Ratio: 2000000
+  Lend Maker Fee Ratio: 2000000
+  Borrow Taker Fee Ratio: 3000000
+  Borrow Maker Fee Ratio: 3000000
+  Mint GT Fee Ratio: 1000000
+  Issue FT Fee Ref: 2000000
+  Market config written to: /Users/vincent/Documents/ts-codes/termmax-contract/deployments/arb-mainnet/arb-mainnet-market-USDC-ARB@30MAY2025.json
+  
+  ===== Market Info - 6 =====
+  Market deployed at: 0xA016DecA4AbdB8fd94BC221a5feB15BA3DB62031
+  Market name: WETH/PT-weETH-26JUN2025@27JUN2025
+  Market symbol: WETH/PT-weETH-26JUN2025@27JUN2025
+  Collateral (PT-weETH-26JUN2025) address: 0xb33808ea0e883138680BA29311a220A7377cdb92
+  Underlying (WETH) address: 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1
+  Collateral price feed address: 0x2a2a0e32c54670045256EBcA681887E32e689E97
+  Collateral heartbeat: 86400
+  Underlying price feed address: 0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612
+  Underlying heartbeat: 86400
+  FT deployed at: 0x19a60ba0a5731eA9A6D2dBDf8e42Fa9412b27faa
+  XT deployed at: 0x4190aE2FF7716875104ffC1994323C43d65EF184
+  GT deployed at: 0x10bC3066fb401131a4D5C58fF469f392988B0ffC
+  
+  Treasurer: 0x719e77027952929ed3060dbFFC5D43EC50c1cf79
+  Maturity: 27JUN2025
+  Salt: 0
+  Lend Taker Fee Ratio: 2000000
+  Lend Maker Fee Ratio: 2000000
+  Borrow Taker Fee Ratio: 3000000
+  Borrow Maker Fee Ratio: 3000000
+  Mint GT Fee Ratio: 1000000
+  Issue FT Fee Ref: 400000
+  Market config written to: /Users/vincent/Documents/ts-codes/termmax-contract/deployments/arb-mainnet/arb-mainnet-market-WETH-PT-weETH-26JUN2025@27JUN2025.json
+  
+
+## Setting up 1 EVM.
+
+==========================
+
+Chain 42161
+
+Estimated gas price: 0.037730001 gwei
+
+Estimated total gas used for script: 10088133
+
+Estimated amount required: 0.000380625268178133 ETH
+
+==========================
+
+
+==========================
+
+ONCHAIN EXECUTION COMPLETE & SUCCESSFUL.
+
+We haven't found any matching bytecode for the following contracts: [0xcc60d097222f45538159d43681fba4b1fd37de97, 0xdd7049672ab42af472d43849cbd25da619622f10, 0x39fdbccdd78ded330edcf11de4ffd805a7f69d5e, 0xc9244551127b07f0964a4320c86129a7c5f0826b, 0xc62b23864c1e909868471bf72cc457397bc52e13, 0xdd6a46c4520ec02b0d3243bd43eefc5aadcc329b, 0xfc5aedde0155d3e5e5c8ca584795bb4620dc670f, 0xb0e34bb7a2a2bf475b14d3ffbb49f027c48529de, 0x49e11668eac15896ecf5b31baef63c98897d4263, 0xe9f18d347fb782b7496d637d5ef5e8287d21dd47, 0x1b28415e1490262ad20842d718b3272501df27cd, 0xf1e33c79809159014207c4662a9c1a8a44c67744, 0xa93a81835dab4ac07649506b88af7ee6ddad03ba, 0x60cf9d67a072084f6891bf65e223dba7e1182d6a, 0x1761b7a22f13c8e32f15d650acf73f07e3be0c8a, 0xa42b46fd5ad2fd38edf6f8509d1702a16cfbc5b6, 0x59e3d532727221ac3aee2d6303cf3c39f1de65d7, 0x56c574463b44df7fac5ecf650f1f66e640806a46, 0xd781f71b8d0b27a098f85bf532b9640cbdddc565, 0x602f667b90aac06ba269884e51ff52e8723634c9, 0x79a4963f8b2f8d997908615352a44192bc3d23e7, 0x4d924ee8d2201d7f4da0b4921fd9d24ca912b7cd, 0x7c7fed69bbdeec00cbe381ce21bd97d2745857ba, 0x34d324ab749be907f5d60fb58d05f58c9d401666, 0xa016deca4abdb8fd94bc221a5feb15ba3db62031, 0x19a60ba0a5731ea9a6d2dbdf8e42fa9412b27faa, 0x4190ae2ff7716875104ffc1994323c43d65ef184, 0x10bc3066fb401131a4d5c58ff469f392988b0ffc].
+
+This may occur when resuming a verification, but the underlying source code or compiler version has changed.
+##
+Start verification for (0) contracts
+All (0) contracts were verified!
+
+Transactions saved to: /Users/vincent/Documents/ts-codes/termmax-contract/broadcast/DeployMarket.s.sol/42161/run-latest.json
+
+Sensitive values saved to: /Users/vincent/Documents/ts-codes/termmax-contract/cache/DeployMarket.s.sol/42161/run-latest.json
+
+[SUCCESS] market deployment to arb-mainnet completed successfully!

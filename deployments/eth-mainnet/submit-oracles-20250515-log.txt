@@ -1,0 +1,23 @@
+== Logs ==
+  Submitted oracle for collateral:  PT-slvlUSD-25SEP2025
+  Price feed:  0x5042768E83E2b5F9A7251A41C4E66855DD65fe31
+  Backup price feed:  0x5042768E83E2b5F9A7251A41C4E66855DD65fe31
+  Heartbeat:  86400
+  --------------------------------
+  Submitted oracle for collateral:  PT-mMEV-31JUL2025
+  Price feed:  0x6BE2Bb4FFBb9FE1975A419D144750E604e1D37a1
+  Backup price feed:  0x6BE2Bb4FFBb9FE1975A419D144750E604e1D37a1
+  Heartbeat:  86400
+  --------------------------------
+  Submitted oracle for collateral:  mMEV
+  Price feed:  0x5f09Aff8B9b1f488B7d1bbaD4D89648579e55d61
+  Backup price feed:  0x5f09Aff8B9b1f488B7d1bbaD4D89648579e55d61
+  Heartbeat:  86400
+  --------------------------------
+  Submitted oracle for collateral:  XAUM
+  Price feed:  0x214eD9Da11D2fbe465a6fc601a91E62EbEc1a0D6
+  Backup price feed:  0x214eD9Da11D2fbe465a6fc601a91E62EbEc1a0D6
+  Heartbeat:  86400
+  --------------------------------
+
+## Setting up 1 EVM.

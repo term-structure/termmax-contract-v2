@@ -1,0 +1,77 @@
+ ./script.sh eth-mainnet script:AcceptOracles --broadcast --verify
+Running on eth-mainnet...
+=== Configuration ===
+Operation: Script Execution
+Network: eth-mainnet
+Script: AcceptOracles.s.sol
+Path: script/AcceptOracles.s.sol
+RPC URL: http*****://eth-main*****.g.alch*****.com/v2/u8Dd*****-2C-AIUn*****
+Admin Address: 0x8409a9C1A911CED491892c5694E43994c9d47E8f
+Mode: Live Broadcast--broadcast
+Verification: Enabled--verify
+Tenderly Verification: Disabled
+Debug Mode: Disabled
+Uniswap V3 Router: 0xE592427A0AEce92De3Edee1F18E0157C05861564
+Odos V2 Router: 0xCf5540fFFCdC3d510B18bFcA6d2b9987b0772559
+Pendle Swap V3 Router: 0x888888888889758F76e7103c6CbF23ABbF58F946
+Oracle Timelock: 43200
+===============================
+Starting script execution...
+Executing: forge script script/AcceptOracles.s.sol --private-key [MASKED] --rpc-url [MASKED] --broadcast --slow --verify
+warning: Found unknown config section in foundry.toml: [soldeer]
+This notation for profiles has been deprecated and may result in the profile not being registered in future versions.
+Please use [profile.soldeer] instead or run `forge config --fix`.
+[⠒] Compiling...
+No files changed, compilation skipped
+Script ran successfully.
+
+== Logs ==
+  === Checking Pending Oracles ===
+  Oracle Aggregator Address: 0xE3a31690392E8E18DC3d862651C079339E2c1ADE
+  Network: eth-mainnet
+  Current Block Timestamp: 1744907987
+  
+  Accepted oracle for token:
+    Token Symbol: MC_USDCP
+    Token Address: 0xf1fd8AC6346eC7BC4116Ba7aDc81102B2BC4C52D
+    Previous Oracle: 0x0000000000000000000000000000000000000000
+    New Oracle: 0x4cF5F12c6c0D48F0d335DdB25e11cd526EAfD322
+    Heartbeat: 86400
+  --------------------------------
+  Accepted oracle for token:
+    Token Symbol: gtusdcf
+    Token Address: 0xc582F04d8a82795aa2Ff9c8bb4c1c889fe7b754e
+    Previous Oracle: 0x0000000000000000000000000000000000000000
+    New Oracle: 0x81195F8A79f6553A4078f89eF87b21a7d3C2855A
+    Heartbeat: 86400
+  --------------------------------
+  Accepted oracle for token:
+    Token Symbol: mhyETH
+    Token Address: 0x701907283a57FF77E255C3f1aAD790466B8CE4ef
+    Previous Oracle: 0x0000000000000000000000000000000000000000
+    New Oracle: 0x0221cd3fA8B1Bea16293fb0cD6B60977d531c931
+    Heartbeat: 86400
+  --------------------------------
+  
+  === Oracle Acceptance Summary ===
+  Total tokens checked: 5
+  Oracles accepted: 3
+  Oracles not ready: 2
+  
+  === Oracles Not Ready for Acceptance ===
+  1. USDC (0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48)
+     Price Feed: 0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6
+     Backup Price Feed: 0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6
+     Heartbeat: 86400
+     Status: Oracle is already configured with the correct values
+     ---
+  2. WETH (0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2)
+     Price Feed: 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419
+     Backup Price Feed: 0x67F6838e58859d612E4ddF04dA396d6DABB66Dc4
+     Heartbeat: 86400
+     Status: Oracle is already configured with the correct values
+     ---
+
+## Setting up 1 EVM.
+
+==========================

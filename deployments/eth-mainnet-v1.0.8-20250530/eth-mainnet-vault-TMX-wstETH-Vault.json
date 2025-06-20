@@ -1,0 +1,24 @@
+{
+  "gitInfo": {
+    "branch": "deploy/v1.0.9",
+    "commit": "0x0x3b6b686d5080fff47dc1aaa51357454b9614490d"
+  },
+  "blockInfo": {
+    "network": "eth-mainnet",
+    "blockNumber": "22325729",
+    "timestamp": "1745339159"
+  },
+  "vaultInfo": {
+    "name": "TermMax wstETH Vault",
+    "symbol": "TMX-wstETH-Vault",
+    "address": "0xDAdeAcC03a59639C0ecE5ec4fF3BC0d9920A47eC",
+    "asset": "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0",
+    "performanceFeeRate": 0,
+    "maxCapacity": "25000000000000000000000",
+    "timelock": 86400,
+    "admin": "0xDA4aAF85Bb924B53DCc2DFFa9e1A9C2Ef97aCFDF",
+    "curator": "0x008c7DC790fA31E6CA19D8Cb6d11C53f6A88DF6c",
+    "guardian": "0x6383EDe871F8B0167905C2466505381CDcD9cC78",
+    "allocator": "0x518C292A86450808E593Bcf26Fc29A7a7b682198"
+  }
+}

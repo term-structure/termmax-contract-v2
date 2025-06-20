@@ -1,0 +1,26 @@
+{
+  "network": "arb-mainnet",
+  "deployedAt": "1748946564",
+  "dateString": "03JUN2025",
+  "gitBranch": "deploy/v1.0.9",
+  "gitCommitHash": "0x0x0489591746b16bb969ea123423e618e76b7e2dcb",
+  "blockInfo": {
+    "number": "343446256",
+    "timestamp": "1748946564"
+  },
+  "deployer": "0x56E3665038C5F0b56Cc7D81aC66C86521274B251",
+  "admin": "0x0000000000000000000000000000000000000000",
+  "accessManager": "0xFaD175CAf9B0Ac0EBca3B1816ec799884EB04B9c",
+  "router": "0x7fa333b184868d88aC78a82eC06d5e87d4B0322E",
+  "contracts": {
+    "odosV2Adapter": "0xddc9Aabe0fD4270E3E537ea3C2c36b2aD5574FC7",
+    "pendleSwapV3Adapter": "0x924204d7Eae3A096C9bC0f6aE3D4140583b5E778",
+    "uniswapV3Adapter": "0x8b910b6bB8d9CBCEB68fFB5E5E1812C516182B70",
+    "erc4626VaultAdapter": "0x05B48bF072123BD7D20C965aE8BeF2A23dc2AfEE"
+  },
+  "routerAddresses": {
+    "uniswapV3Router": "0xE592427A0AEce92De3Edee1F18E0157C05861564",
+    "odosV2Router": "0xa669e7A0d4b3e4Fa48af2dE86BD4CD7126Be4e13",
+    "pendleSwapV3Router": "0x888888888889758F76e7103c6CbF23ABbF58F946"
+  }
+}

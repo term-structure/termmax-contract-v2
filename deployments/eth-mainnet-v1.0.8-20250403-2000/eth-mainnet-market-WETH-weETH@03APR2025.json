@@ -1,0 +1,38 @@
+{
+  "blockInfo": {
+    "number": "22179054",
+    "timestamp": "1743570719"
+  },
+  "market": "0xDA4003d48f355FA18586e6a5b96D2F93072129fa",
+  "collateral": {
+    "address": "0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee",
+    "symbol": "weETH",
+    "priceFeed": "0xdDb6F90fFb4d3257dd666b69178e5B3c5Bf41136",
+    "heartBeat": "21600"
+  },
+  "underlying": {
+    "address": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+    "symbol": "WETH",
+    "priceFeed": "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
+    "heartBeat": "3600"
+  },
+  "tokens": {
+    "ft": "0xFeE08e6119337f62dFd0175beD3Aa6363b1d6644",
+    "xt": "0x991cD2FAa4Ef2E13480755B117868B73Ca7cF614",
+    "gt": "0x14402B00E18Bc9ebD4193cB13F7B52a74C4073D5"
+  },
+  "config": {
+    "marketSymbol": "WETH/weETH@30MAY2025",
+    "treasurer": "0x719e77027952929ed3060dbFFC5D43EC50c1cf79",
+    "maturity": "03APR2025",
+    "salt": "0",
+    "fees": {
+      "lendTakerFeeRatio": "2000000",
+      "lendMakerFeeRatio": "2000000",
+      "borrowTakerFeeRatio": "3000000",
+      "borrowMakerFeeRatio": "3000000",
+      "mintGtFeeRatio": "1000000",
+      "mintGtFeeRef": "400000"
+    }
+  }
+}

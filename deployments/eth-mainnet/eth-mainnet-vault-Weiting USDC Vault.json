@@ -1,0 +1,24 @@
+{
+  "gitInfo": {
+    "branch": "deploy/v1.0.8",
+    "commit": "0x0xb07dca68abfa0915501a9f9b5e5f8ae686c02d95"
+  },
+  "blockInfo": {
+    "network": "eth-mainnet",
+    "blockNumber": "22215681",
+    "timestamp": "1744012679"
+  },
+  "vaultInfo": {
+    "name": "Weiting USDC Vault",
+    "symbol": "Weiting USDC Vault",
+    "address": "0x5C16d84e998c661D9F6C7Cc23e1144E4b7f39759",
+    "asset": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+    "performanceFeeRate": 10000000,
+    "maxCapacity": "1000000000000",
+    "timelock": 86400,
+    "admin": "0xDA4aAF85Bb924B53DCc2DFFa9e1A9C2Ef97aCFDF",
+    "curator": "0x1c59f7A0AA3f01DDACd17c0EF7Bc00c3D18feD0A",
+    "guardian": "0x1c59f7A0AA3f01DDACd17c0EF7Bc00c3D18feD0A",
+    "allocator": "0x1c59f7A0AA3f01DDACd17c0EF7Bc00c3D18feD0A"
+  }
+}

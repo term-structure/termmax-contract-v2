@@ -1,0 +1,12 @@
+./script.sh eth-mainnet script:SubmitOracles --broadcast
+
+== Logs ==
+  Submitted oracle for collateral:  PT-sUSDE-31JUL2025
+  Price feed:  0x53399c17DbB2Ba67BB3B6E5bf692251267A3F861
+  Backup price feed:  0x28eBF137e6659f9037b2393D7f52D37CD963B51a
+  Heartbeat:  86400
+  --------------------------------
+
+## Setting up 1 EVM.
+
+==========================

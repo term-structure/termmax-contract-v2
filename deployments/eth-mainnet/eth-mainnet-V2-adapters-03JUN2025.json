@@ -1,0 +1,26 @@
+{
+  "network": "eth-mainnet",
+  "deployedAt": "1748946155",
+  "dateString": "03JUN2025",
+  "gitBranch": "deploy/v1.0.9",
+  "gitCommitHash": "0x0x0489591746b16bb969ea123423e618e76b7e2dcb",
+  "blockInfo": {
+    "number": "22623501",
+    "timestamp": "1748946155"
+  },
+  "deployer": "0x56E3665038C5F0b56Cc7D81aC66C86521274B251",
+  "admin": "0x0000000000000000000000000000000000000000",
+  "accessManager": "0xDA4aAF85Bb924B53DCc2DFFa9e1A9C2Ef97aCFDF",
+  "router": "0xC47591F5c023e44931c78D5A993834875b79FB11",
+  "contracts": {
+    "odosV2Adapter": "0xDDBDF3B7e314A806aC296E6932135Db026B11a85",
+    "pendleSwapV3Adapter": "0x01D3BAb30674740b3d3A323f0Bac067a82c4FC9c",
+    "uniswapV3Adapter": "0xCCf64e1A69273ACb15eAd25BC60D436a047F404f",
+    "erc4626VaultAdapter": "0xb57dd1092390eDd37EC91e86d11BA530D748D63C"
+  },
+  "routerAddresses": {
+    "uniswapV3Router": "0xE592427A0AEce92De3Edee1F18E0157C05861564",
+    "odosV2Router": "0xCf5540fFFCdC3d510B18bFcA6d2b9987b0772559",
+    "pendleSwapV3Router": "0x888888888889758F76e7103c6CbF23ABbF58F946"
+  }
+}

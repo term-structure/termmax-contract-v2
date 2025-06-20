@@ -1,0 +1,15 @@
+{
+  "network": "arb-sepolia",
+  "deployedAt": "1744097315",
+  "gitBranch": "deploy/v1.0.8",
+  "gitCommitHash": "0x0xb07dca68abfa0915501a9f9b5e5f8ae686c02d95",
+  "blockInfo": {
+    "number": "8075764",
+    "timestamp": "1744097315"
+  },
+  "deployer": "0xE355d5D8aa52EF0FbbD037C4a3C5E6Fd659cf46B",
+  "admin": "0x81f314f70702Bbe89FEd0F2cFe6841950275E0b7",
+  "contracts": {
+    "accessManager": "0x73582719184969d11baDf253D8e04c09867B66a8"
+  }
+}

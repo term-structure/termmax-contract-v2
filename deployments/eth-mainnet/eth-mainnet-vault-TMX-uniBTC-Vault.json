@@ -1,0 +1,24 @@
+{
+  "gitInfo": {
+    "branch": "deploy/v1.0.9",
+    "commit": "0x0xde6187269321ebd08b5d536ff89f9bb4a54c3a39"
+  },
+  "blockInfo": {
+    "network": "eth-mainnet",
+    "blockNumber": "22503727",
+    "timestamp": "1747496651"
+  },
+  "vaultInfo": {
+    "name": "TermMax uniBTC Vault",
+    "symbol": "TMX-uniBTC-Vault",
+    "address": "0xCD2291be7d2D71425A612C1d5837893de38a953B",
+    "asset": "0x004E9C3EF86bc1ca1f0bB5C7662861Ee93350568",
+    "performanceFeeRate": 0,
+    "maxCapacity": "10000000000",
+    "timelock": 86400,
+    "admin": "0xDA4aAF85Bb924B53DCc2DFFa9e1A9C2Ef97aCFDF",
+    "curator": "0x008c7DC790fA31E6CA19D8Cb6d11C53f6A88DF6c",
+    "guardian": "0x6383EDe871F8B0167905C2466505381CDcD9cC78",
+    "allocator": "0x518C292A86450808E593Bcf26Fc29A7a7b682198"
+  }
+}

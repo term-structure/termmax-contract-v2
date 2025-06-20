@@ -1,0 +1,28 @@
+Accepted oracle for token:
+    Token Symbol: PT-slvlUSD-25SEP2025
+    Token Address: 0x2CA5f2C4300450D53214B00546795c1c07B89acB
+    Previous Oracle: 0x0000000000000000000000000000000000000000
+    New Oracle: 0x5042768E83E2b5F9A7251A41C4E66855DD65fe31
+    Heartbeat: 86400
+  --------------------------------
+  Accepted oracle for token:
+    Token Symbol: PT-mMEV-31JUL2025
+    Token Address: 0x1132065009850C72E27B7950C0f9285d1D103589
+    Previous Oracle: 0x0000000000000000000000000000000000000000
+    New Oracle: 0x6BE2Bb4FFBb9FE1975A419D144750E604e1D37a1
+    Heartbeat: 86400
+  --------------------------------
+  Accepted oracle for token:
+    Token Symbol: mMEV
+    Token Address: 0x030b69280892c888670EDCDCD8B69Fd8026A0BF3
+    Previous Oracle: 0x0000000000000000000000000000000000000000
+    New Oracle: 0x5f09Aff8B9b1f488B7d1bbaD4D89648579e55d61
+    Heartbeat: 86400
+  --------------------------------
+  Accepted oracle for token:
+    Token Symbol: XAUM
+    Token Address: 0x2103E845C5E135493Bb6c2A4f0B8651956eA8682
+    Previous Oracle: 0x0000000000000000000000000000000000000000
+    New Oracle: 0x214eD9Da11D2fbe465a6fc601a91E62EbEc1a0D6
+    Heartbeat: 86400
+  --------------------------------

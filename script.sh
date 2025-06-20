@@ -13,6 +13,7 @@ if [ "$#" -lt 2 ]; then
     echo "     - deploy:order           - Deploy Order contracts"
     echo "     - deploy:vault           - Deploy Vault contracts"
     echo "     - deploy:pretmx          - Deploy PreTMX token contract"
+    echo "     - deploy:adapters        - Deploy Adapters contracts"
     echo ""
     echo "  2. Script Commands:"
     echo "     - script:<script-name>   - Run a custom script (e.g., script:GrantRoles, script:SubmitOracles)"
@@ -88,12 +89,12 @@ esac
 # If deploying, validate deployment type
 if [ "$OPERATION" = "deploy" ]; then
     case $TYPE in
-        "access-manager"|"core"|"market"|"order"|"vault"|"pretmx")
+        "access-manager"|"core"|"market"|"order"|"vault"|"pretmx"|"adapters")
             echo "Deployment type: $TYPE"
             ;;
         *)
             echo "Unsupported deployment type: $TYPE"
-            echo "Supported deployment types: access-manager, core, market, order, vault, pretmx"
+            echo "Supported deployment types: access-manager, core, market, order, vault, pretmx, adapters"
             exit 1
             ;;
     esac

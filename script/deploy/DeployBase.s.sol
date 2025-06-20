@@ -6,39 +6,39 @@ import {console} from "forge-std/console.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {TermMaxFactory} from "contracts/factory/TermMaxFactory.sol";
-import {ITermMaxFactory} from "contracts/factory/ITermMaxFactory.sol";
-import {TermMaxRouter} from "contracts/router/TermMaxRouter.sol";
-import {MarketViewer} from "contracts/router/MarketViewer.sol";
-import {ITermMaxRouter} from "contracts/router/ITermMaxRouter.sol";
-import {TermMaxMarket} from "contracts/TermMaxMarket.sol";
-import {TermMaxOrder} from "contracts/TermMaxOrder.sol";
-import {MockERC20} from "contracts/test/MockERC20.sol";
-import {MockPriceFeed} from "contracts/test/MockPriceFeed.sol";
-import {MockPriceFeed} from "contracts/test/MockPriceFeed.sol";
-import {IMintableERC20, MintableERC20} from "contracts/tokens/MintableERC20.sol";
-import {SwapAdapter} from "contracts/test/testnet/SwapAdapter.sol";
-import {Faucet} from "contracts/test/testnet/Faucet.sol";
+import {TermMaxFactory} from "contracts/v1/factory/TermMaxFactory.sol";
+import {ITermMaxFactory} from "contracts/v1/factory/ITermMaxFactory.sol";
+import {TermMaxRouter} from "contracts/v1/router/TermMaxRouter.sol";
+import {MarketViewer} from "contracts/v1/router/MarketViewer.sol";
+import {ITermMaxRouter} from "contracts/v1/router/ITermMaxRouter.sol";
+import {TermMaxMarket} from "contracts/v1/TermMaxMarket.sol";
+import {TermMaxOrder} from "contracts/v1/TermMaxOrder.sol";
+import {MockERC20} from "contracts/v1/test/MockERC20.sol";
+import {MockPriceFeed} from "contracts/v1/test/MockPriceFeed.sol";
+import {MockPriceFeed} from "contracts/v1/test/MockPriceFeed.sol";
+import {IMintableERC20, MintableERC20} from "contracts/v1/tokens/MintableERC20.sol";
+import {SwapAdapter} from "contracts/v1/test/testnet/SwapAdapter.sol";
+import {Faucet} from "contracts/v1/test/testnet/Faucet.sol";
 import {JsonLoader} from "../utils/JsonLoader.sol";
-import {FaucetERC20} from "contracts/test/testnet/FaucetERC20.sol";
-import {IOracle, OracleAggregator} from "contracts/oracle/OracleAggregator.sol";
-import {IOrderManager, OrderManager} from "contracts/vault/OrderManager.sol";
-import {ITermMaxVault, TermMaxVault} from "contracts/vault/TermMaxVault.sol";
-import {VaultFactory, IVaultFactory} from "contracts/factory/VaultFactory.sol";
+import {FaucetERC20} from "contracts/v1/test/testnet/FaucetERC20.sol";
+import {IOracle, OracleAggregator} from "contracts/v1/oracle/OracleAggregator.sol";
+import {IOrderManager, OrderManager} from "contracts/v1/vault/OrderManager.sol";
+import {ITermMaxVault, TermMaxVault} from "contracts/v1/vault/TermMaxVault.sol";
+import {VaultFactory, IVaultFactory} from "contracts/v1/factory/VaultFactory.sol";
 import {
     MarketConfig,
     FeeConfig,
     MarketInitialParams,
     LoanConfig,
     VaultInitialParams
-} from "contracts/storage/TermMaxStorage.sol";
-import {KyberswapV2Adapter} from "contracts/router/swapAdapters/KyberswapV2Adapter.sol";
-import {OdosV2Adapter} from "contracts/router/swapAdapters/OdosV2Adapter.sol";
-import {PendleSwapV3Adapter} from "contracts/router/swapAdapters/PendleSwapV3Adapter.sol";
-import {UniswapV3Adapter} from "contracts/router/swapAdapters/UniswapV3Adapter.sol";
-import {ERC4626VaultAdapter} from "contracts/router/swapAdapters/ERC4626VaultAdapter.sol";
+} from "contracts/v1/storage/TermMaxStorage.sol";
+import {KyberswapV2Adapter} from "contracts/v1/router/swapAdapters/KyberswapV2Adapter.sol";
+import {OdosV2Adapter} from "contracts/v1/router/swapAdapters/OdosV2Adapter.sol";
+import {PendleSwapV3Adapter} from "contracts/v1/router/swapAdapters/PendleSwapV3Adapter.sol";
+import {UniswapV3Adapter} from "contracts/v1/router/swapAdapters/UniswapV3Adapter.sol";
+import {ERC4626VaultAdapter} from "contracts/v1/router/swapAdapters/ERC4626VaultAdapter.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
-import {AccessManager} from "contracts/access/AccessManager.sol";
+import {AccessManager} from "contracts/v1/access/AccessManager.sol";
 import {StringHelper} from "../utils/StringHelper.sol";
 
 contract DeployBase is Script {
@@ -164,6 +164,39 @@ contract DeployBase is Script {
         accessManager.setAdapterWhitelist(router, address(vaultAdapter), true);
     }
 
+    function deployAdaptersMainnet(
+        address accessManagerAddr,
+        address routerAddr,
+        address uniswapV3Router,
+        address odosV2Router,
+        address pendleSwapV3Router
+    )
+        public
+        returns (
+            UniswapV3Adapter uniswapV3Adapter,
+            OdosV2Adapter odosV2Adapter,
+            PendleSwapV3Adapter pendleSwapV3Adapter,
+            ERC4626VaultAdapter vaultAdapter
+        )
+    {
+        // deploy access manager
+        AccessManager accessManager = AccessManager(accessManagerAddr);
+
+        // deploy router
+        TermMaxRouter router = TermMaxRouter(routerAddr);
+
+        // deploy and whitelist swap adapter
+        uniswapV3Adapter = new UniswapV3Adapter(address(uniswapV3Router));
+        odosV2Adapter = new OdosV2Adapter(odosV2Router);
+        pendleSwapV3Adapter = new PendleSwapV3Adapter(address(pendleSwapV3Router));
+        vaultAdapter = new ERC4626VaultAdapter();
+
+        accessManager.setAdapterWhitelist(router, address(uniswapV3Adapter), true);
+        accessManager.setAdapterWhitelist(router, address(odosV2Adapter), true);
+        accessManager.setAdapterWhitelist(router, address(pendleSwapV3Adapter), true);
+        accessManager.setAdapterWhitelist(router, address(vaultAdapter), true);
+    }
+
     function deployMarkets(
         address accessManagerAddr,
         address factoryAddr,
@@ -215,7 +248,7 @@ contract DeployBase is Script {
                 accessManager.submitPendingOracle(
                     oracle,
                     address(collateral),
-                    IOracle.Oracle(collateralPriceFeed, collateralPriceFeed, 0, uint32(365 days), uint32(365 days))
+                    IOracle.Oracle(collateralPriceFeed, collateralPriceFeed, uint32(365 days))
                 );
                 accessManager.acceptPendingOracle(oracle, address(collateral));
             } else {
@@ -245,7 +278,7 @@ contract DeployBase is Script {
                 accessManager.submitPendingOracle(
                     oracle,
                     address(underlying),
-                    IOracle.Oracle(underlyingPriceFeed, underlyingPriceFeed, 0, uint32(365 days), uint32(365 days))
+                    IOracle.Oracle(underlyingPriceFeed, underlyingPriceFeed, uint32(365 days))
                 );
                 accessManager.acceptPendingOracle(oracle, address(underlying));
             } else {

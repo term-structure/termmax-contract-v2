@@ -1,0 +1,24 @@
+{
+  "gitInfo": {
+    "branch": "deploy/v1.0.8",
+    "commit": "0x0x141ada4a7f722cd4faab7818834dada2688bdc69"
+  },
+  "blockInfo": {
+    "network": "arb-sepolia",
+    "blockNumber": "8076093",
+    "timestamp": "1744101443"
+  },
+  "vaultInfo": {
+    "name": "TermMax WETH Vault",
+    "symbol": "TMX-WETH",
+    "address": "0x8CAd8288C5AF8F721A0177Eb387744816836DD38",
+    "asset": "0xA12136197Fc7dDB83b89B2EDAEEcd88316FDE991",
+    "performanceFeeRate": 10000000,
+    "maxCapacity": "5000000000000000000000",
+    "timelock": 1,
+    "admin": "0x73582719184969d11baDf253D8e04c09867B66a8",
+    "curator": "0x2A58A3D405c527491Daae4C62561B949e7F87EFE",
+    "guardian": "0x2A58A3D405c527491Daae4C62561B949e7F87EFE",
+    "allocator": "0x2A58A3D405c527491Daae4C62561B949e7F87EFE"
+  }
+}

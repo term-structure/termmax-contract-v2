@@ -1,0 +1,73 @@
+Running on eth-mainnet...
+=== Configuration ===
+Operation: Script Execution
+Network: eth-mainnet
+Script: AcceptOracles.s.sol
+Path: script/AcceptOracles.s.sol
+RPC URL: http*****://eth-main*****.g.alch*****.com/v2/u8Dd*****-2C-AIUn*****
+Admin Address: 0x8409a9C1A911CED491892c5694E43994c9d47E8f
+Mode: Live Broadcast--broadcast
+Verification: Disabled
+Tenderly Verification: Disabled
+Debug Mode: Disabled
+Uniswap V3 Router: 0xE592427A0AEce92De3Edee1F18E0157C05861564
+Odos V2 Router: 0xCf5540fFFCdC3d510B18bFcA6d2b9987b0772559
+Pendle Swap V3 Router: 0x888888888889758F76e7103c6CbF23ABbF58F946
+Oracle Timelock: 43200
+===============================
+Starting script execution...
+Executing: forge script script/AcceptOracles.s.sol --private-key [MASKED] --rpc-url [MASKED] --broadcast --slow
+No files changed, compilation skipped
+Script ran successfully.
+
+== Logs ==
+  === Checking Pending Oracles ===
+  Oracle Aggregator Address: 0xE3a31690392E8E18DC3d862651C079339E2c1ADE
+  Network: eth-mainnet
+  Current Block Timestamp: 1748397779
+  
+  Accepted oracle for token:
+    Token Symbol: PT-USDS-14AUG2025
+    Token Address: 0xFfEc096c087C13Cc268497B89A613cACE4DF9A48
+    Previous Oracle: 0x0000000000000000000000000000000000000000
+    New Oracle: 0x4599f532E03458017Fa55F7DCF7A296267637B74
+    Heartbeat: 86400
+  --------------------------------
+  
+  === Oracle Acceptance Summary ===
+  Total tokens checked: 2
+  Oracles accepted: 1
+  Oracles not ready: 1
+  
+  === Oracles Not Ready for Acceptance ===
+  1. USDC (0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48)
+     Price Feed: 0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6
+     Backup Price Feed: 0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6
+     Heartbeat: 86400
+     Status: Oracle is already configured with the correct values
+     ---
+
+## Setting up 1 EVM.
+
+==========================
+
+Chain 1
+
+Estimated gas price: 2.208132754 gwei
+
+Estimated total gas used for script: 111038
+
+Estimated amount required: 0.000245186644738652 ETH
+
+==========================
+
+
+==========================
+
+ONCHAIN EXECUTION COMPLETE & SUCCESSFUL.
+
+Transactions saved to: /Users/vincent/Documents/ts-codes/termmax-contract/broadcast/AcceptOracles.s.sol/1/run-latest.json
+
+Sensitive values saved to: /Users/vincent/Documents/ts-codes/termmax-contract/cache/AcceptOracles.s.sol/1/run-latest.json
+
+[SUCCESS] Script AcceptOracles executed successfully on eth-mainnet (Broadcast mode)!
