@@ -21,12 +21,11 @@ import {Faucet} from "contracts/v1/test/testnet/Faucet.sol";
 import {DeployBase} from "./DeployBase.s.sol";
 import {IOracle} from "contracts/v1/oracle/IOracle.sol";
 import {VaultFactory, IVaultFactory} from "contracts/v1/factory/VaultFactory.sol";
-import {KyberswapV2Adapter} from "contracts/v1/router/swapAdapters/KyberswapV2Adapter.sol";
-import {OdosV2Adapter} from "contracts/v1/router/swapAdapters/OdosV2Adapter.sol";
-import {PendleSwapV3Adapter} from "contracts/v1/router/swapAdapters/PendleSwapV3Adapter.sol";
-import {UniswapV3Adapter} from "contracts/v1/router/swapAdapters/UniswapV3Adapter.sol";
-import {ERC4626VaultAdapter} from "contracts/v1/router/swapAdapters/ERC4626VaultAdapter.sol";
 import {AccessManager} from "contracts/v1/access/AccessManager.sol";
+import {UniswapV3AdapterV2} from "contracts/v1/router/specAdapters/UniswapV3AdapterV2.sol";
+import {OdosV2AdapterV2} from "contracts/v1/router/specAdapters/OdosV2AdapterV2.sol";
+import {PendleSwapV3AdapterV2} from "contracts/v1/router/specAdapters/PendleSwapV3AdapterV2.sol";
+import {ERC4626VaultAdapterV2} from "contracts/v1/router/specAdapters/ERC4626VaultAdapterV2.sol";
 
 contract DeployAdapters is DeployBase {
     // Network-specific config loaded from environment variables
@@ -42,10 +41,10 @@ contract DeployAdapters is DeployBase {
 
     AccessManager accessManager;
     ITermMaxRouter router;
-    UniswapV3Adapter uniswapV3Adapter;
-    OdosV2Adapter odosV2Adapter;
-    PendleSwapV3Adapter pendleSwapV3Adapter;
-    ERC4626VaultAdapter vaultAdapter;
+    UniswapV3AdapterV2 uniswapV3Adapter;
+    OdosV2AdapterV2 odosV2Adapter;
+    PendleSwapV3AdapterV2 pendleSwapV3Adapter;
+    ERC4626VaultAdapterV2 vaultAdapter;
 
     function setUp() public {
         // Load network from environment variable
@@ -95,6 +94,7 @@ contract DeployAdapters is DeployBase {
         if (
             keccak256(abi.encodePacked(network)) == keccak256(abi.encodePacked("eth-mainnet"))
                 || keccak256(abi.encodePacked(network)) == keccak256(abi.encodePacked("arb-mainnet"))
+                || keccak256(abi.encodePacked(network)) == keccak256(abi.encodePacked("bnb-mainnet"))
         ) {
             (uniswapV3Adapter, odosV2Adapter, pendleSwapV3Adapter, vaultAdapter) = deployAdaptersMainnet(
                 accessManagerAddr, routerAddr, uniswapV3RouterAddr, odosV2RouterAddr, pendleSwapV3RouterAddr

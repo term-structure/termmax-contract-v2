@@ -32,11 +32,14 @@ import {
     LoanConfig,
     VaultInitialParams
 } from "contracts/v1/storage/TermMaxStorage.sol";
-import {KyberswapV2Adapter} from "contracts/v1/router/swapAdapters/KyberswapV2Adapter.sol";
+import {ERC4626VaultAdapterV2} from "contracts/v1/router/specAdapters/ERC4626VaultAdapterV2.sol";
+import {OdosV2AdapterV2} from "contracts/v1/router/specAdapters/OdosV2AdapterV2.sol";
+import {PendleSwapV3AdapterV2} from "contracts/v1/router/specAdapters/PendleSwapV3AdapterV2.sol";
+import {UniswapV3AdapterV2} from "contracts/v1/router/specAdapters/UniswapV3AdapterV2.sol";
+import {ERC4626VaultAdapter} from "contracts/v1/router/swapAdapters/ERC4626VaultAdapter.sol";
 import {OdosV2Adapter} from "contracts/v1/router/swapAdapters/OdosV2Adapter.sol";
 import {PendleSwapV3Adapter} from "contracts/v1/router/swapAdapters/PendleSwapV3Adapter.sol";
 import {UniswapV3Adapter} from "contracts/v1/router/swapAdapters/UniswapV3Adapter.sol";
-import {ERC4626VaultAdapter} from "contracts/v1/router/swapAdapters/ERC4626VaultAdapter.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {AccessManager} from "contracts/v1/access/AccessManager.sol";
 import {StringHelper} from "../utils/StringHelper.sol";
@@ -173,10 +176,10 @@ contract DeployBase is Script {
     )
         public
         returns (
-            UniswapV3Adapter uniswapV3Adapter,
-            OdosV2Adapter odosV2Adapter,
-            PendleSwapV3Adapter pendleSwapV3Adapter,
-            ERC4626VaultAdapter vaultAdapter
+            UniswapV3AdapterV2 uniswapV3Adapter,
+            OdosV2AdapterV2 odosV2Adapter,
+            PendleSwapV3AdapterV2 pendleSwapV3Adapter,
+            ERC4626VaultAdapterV2 vaultAdapter
         )
     {
         // deploy access manager
@@ -186,10 +189,10 @@ contract DeployBase is Script {
         TermMaxRouter router = TermMaxRouter(routerAddr);
 
         // deploy and whitelist swap adapter
-        uniswapV3Adapter = new UniswapV3Adapter(address(uniswapV3Router));
-        odosV2Adapter = new OdosV2Adapter(odosV2Router);
-        pendleSwapV3Adapter = new PendleSwapV3Adapter(address(pendleSwapV3Router));
-        vaultAdapter = new ERC4626VaultAdapter();
+        uniswapV3Adapter = new UniswapV3AdapterV2(address(uniswapV3Router));
+        odosV2Adapter = new OdosV2AdapterV2(odosV2Router);
+        pendleSwapV3Adapter = new PendleSwapV3AdapterV2(address(pendleSwapV3Router));
+        vaultAdapter = new ERC4626VaultAdapterV2();
 
         accessManager.setAdapterWhitelist(router, address(uniswapV3Adapter), true);
         accessManager.setAdapterWhitelist(router, address(odosV2Adapter), true);

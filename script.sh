@@ -76,7 +76,7 @@ done
 
 # Validate network
 case $NETWORK in
-    "eth-sepolia"|"arb-sepolia"|"eth-mainnet"|"arb-mainnet")
+    "eth-sepolia"|"arb-sepolia"|"eth-mainnet"|"arb-mainnet"|"bnb-mainnet"|"bnb-testnet")
         echo "Running on $NETWORK..."
         ;;
     *)
