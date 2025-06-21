@@ -117,7 +117,7 @@ contract DeployAdapters is DeployBase {
 
         console.log("===== Core Info =====");
         console.log("Use access manager:", accessManagerAddr);
-        console.log("Use router:", address(router));
+        console.log("Use router:", routerAddr);
 
         // Write deployment results to a JSON file with timestamp
         string memory deploymentJson = string(
