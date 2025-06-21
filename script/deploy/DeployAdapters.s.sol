@@ -108,8 +108,6 @@ contract DeployAdapters is DeployBase {
 
         console.log("===== Git Info =====");
         console.log("Git branch:", getGitBranch());
-        console.log("Git commit hash:");
-        console.logBytes(getGitCommitHash());
         console.log();
 
         console.log("===== Block Info =====");
@@ -134,7 +132,7 @@ contract DeployAdapters is DeployBase {
                 '  "gitBranch": "',
                 getGitBranch(),
                 '",\n',
-                '  "gitCommitHash": "0x',
+                '  "gitCommitHash": "',
                 vm.toString(getGitCommitHash()),
                 '",\n',
                 '  "blockInfo": {\n',
@@ -154,6 +152,7 @@ contract DeployAdapters is DeployBase {
                 '    "swapAdapter": ',
                 keccak256(abi.encodePacked(network)) == keccak256(abi.encodePacked("eth-mainnet"))
                     || keccak256(abi.encodePacked(network)) == keccak256(abi.encodePacked("arb-mainnet"))
+                    || keccak256(abi.encodePacked(network)) == keccak256(abi.encodePacked("bnb-mainnet"))
                     ? string.concat(
                         "{\n",
                         '      "uniswapV3Adapter": "',
