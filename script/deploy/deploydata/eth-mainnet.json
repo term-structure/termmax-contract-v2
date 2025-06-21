@@ -1,13 +1,13 @@
 {
-  "configNum": "2",
+  "configNum": "1",
   "configs": {
     "configs_0": {
       "salt": 0,
-      "collateralCapForGt": "5000000000000",
-      "marketName": "USDC/xUSD@29AUG2025",
-      "marketSymbol": "USDC/xUSD@29AUG2025",
+      "collateralCapForGt": "5000000000000000000000000",
+      "marketName": "USDC/PT-cUSDO-20NOV2025@21NOV2025",
+      "marketSymbol": "USDC/PT-cUSDO-20NOV2025@21NOV2025",
       "marketConfig": {
-        "maturity": "1756425600",
+        "maturity": "1763683200",
         "lendTakerFeeRatio": "2000000",
         "lendMakerFeeRatio": "2000000",
         "borrowTakerFeeRatio": "3000000",
@@ -16,8 +16,8 @@
         "mintGtFeeRef": "6000000"
       },
       "loanConfig": {
-        "liquidationLtv": "94000000",
-        "maxLtv": "90000000",
+        "liquidationLtv": "91500000",
+        "maxLtv": "87500000",
         "liquidatable": true
       },
       "underlyingConfig": {
@@ -28,58 +28,17 @@
         "name": "USD Coin",
         "symbol": "USDC",
         "decimals": "6",
-        "initialPrice": "100131606"
+        "initialPrice": "100000000"
       },
       "collateralConfig": {
-        "tokenAddr": "0xE2Fc85BfB48C4cF147921fBE110cf92Ef9f26F94",
-        "priceFeedAddr": "0x91F37A3058A7fD3f4f66ED87d715CF05bB4fbfBd",
+        "tokenAddr": "0xb10da2f9147f9cf2b8826877cd0c95c18a0f42dc",
+        "priceFeedAddr": "0x1039F090392798Be2FeA222D6468676cB2F07699",
         "backupPriceFeedAddr": "0x0000000000000000000000000000000000000000",
         "heartBeat": "86400",
-        "name": "Staked Stream USD",
-        "symbol": "xUSD",
-        "decimals": "6",
-        "initialPrice": "100000000",
-        "gtKeyIdentifier": "GearingTokenWithERC20"
-      }
-    },
-    "configs_1": {
-      "salt": 0,
-      "collateralCapForGt": "5000000000000",
-      "marketName": "USDC/xUSD@26SEP2025",
-      "marketSymbol": "USDC/xUSD@26SEP2025",
-      "marketConfig": {
-        "maturity": "1758844800",
-        "lendTakerFeeRatio": "2000000",
-        "lendMakerFeeRatio": "2000000",
-        "borrowTakerFeeRatio": "3000000",
-        "borrowMakerFeeRatio": "3000000",
-        "mintGtFeeRatio": "10000000",
-        "mintGtFeeRef": "6000000"
-      },
-      "loanConfig": {
-        "liquidationLtv": "94000000",
-        "maxLtv": "90000000",
-        "liquidatable": true
-      },
-      "underlyingConfig": {
-        "tokenAddr": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-        "priceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
-        "backupPriceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
-        "heartBeat": "86400",
-        "name": "USD Coin",
-        "symbol": "USDC",
-        "decimals": "6",
-        "initialPrice": "99982129"
-      },
-      "collateralConfig": {
-        "tokenAddr": "0xE2Fc85BfB48C4cF147921fBE110cf92Ef9f26F94",
-        "priceFeedAddr": "0x91F37A3058A7fD3f4f66ED87d715CF05bB4fbfBd",
-        "backupPriceFeedAddr": "0x0000000000000000000000000000000000000000",
-        "heartBeat": "86400",
-        "name": "Staked Stream USD",
-        "symbol": "xUSD",
-        "decimals": "6",
-        "initialPrice": "100000000",
+        "name": "PT Compounding Open Dollar 20NOV2025",
+        "symbol": "PT-cUSDO-20NOV2025",
+        "decimals": "18",
+        "initialPrice": "260000000000",
         "gtKeyIdentifier": "GearingTokenWithERC20"
       }
     }
