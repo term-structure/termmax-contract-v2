@@ -1,0 +1,13 @@
+{
+  "network": "bnb-mainnet",
+  "deployedAt": "1750502264",
+  "gitBranch": "v1_special_adapter",
+  "gitCommitHash": "0x0x91637cffdc2f0f59f783893bcdae860420b4fa98",
+  "blockInfo": {
+    "number": "51838638",
+    "timestamp": "1750502264"
+  },
+  "deployer": "0x56E3665038C5F0b56Cc7D81aC66C86521274B251",
+  "admin": "0x8409a9C1A911CED491892c5694E43994c9d47E8f",
+    "swapAdapter": "
+}
