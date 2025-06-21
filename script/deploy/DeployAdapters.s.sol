@@ -86,6 +86,8 @@ contract DeployAdapters is DeployBase {
     function run() public {
         console.log("Network:", network);
         console.log("Deployer balance:", deployerAddr.balance);
+        console.log("Git commit hash:");
+        console.logBytes(getGitCommitHash());
 
         uint256 currentBlock = block.number;
         uint256 currentTimestamp = block.timestamp;
