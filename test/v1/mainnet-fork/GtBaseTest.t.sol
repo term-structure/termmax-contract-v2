@@ -8,6 +8,7 @@ import {StateChecker} from "../utils/StateChecker.sol";
 import {SwapUtils} from "../utils/SwapUtils.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {TermMaxFactory} from "contracts/v1/factory/TermMaxFactory.sol";
 import {Constants} from "contracts/v1/lib/Constants.sol";
 import {ITermMaxMarket, TermMaxMarket, MarketEvents} from "contracts/v1/TermMaxMarket.sol";
@@ -137,6 +138,7 @@ abstract contract GtBaseTest is ForkBaseTest {
             address(new OdosV2AdapterV2(vm.parseJsonAddress(jsonData, ".routers.odosRouter")));
         res.swapAdapters.vaultAdapter = address(new ERC4626VaultAdapterV2());
         res.router = deployRouter(res.marketInitialParams.admin);
+        vm.label(address(res.router), "TermMaxRouter");
         res.router.setAdapterWhitelist(res.swapAdapters.uniswapAdapter, true);
         res.router.setAdapterWhitelist(res.swapAdapters.pendleAdapter, true);
         res.router.setAdapterWhitelist(res.swapAdapters.odosAdapter, true);
@@ -220,6 +222,12 @@ abstract contract GtBaseTest is ForkBaseTest {
         uint128 tokenAmtIn,
         SwapUnit[] memory units
     ) internal returns (uint256 gtId) {
+        vm.startPrank(Ownable(address(res.router)).owner());
+        for (uint256 i = 0; i < units.length; i++) {
+            res.router.setAdapterWhitelist(units[i].adapter, true);
+        }
+        vm.stopPrank();
+
         vm.startPrank(taker);
         deal(taker, 1e8);
         deal(address(res.debtToken), taker, xtAmtIn);
@@ -260,6 +268,13 @@ abstract contract GtBaseTest is ForkBaseTest {
         uint128 tokenAmtIn,
         SwapUnit[] memory units
     ) internal returns (uint256 gtId) {
+        vm.label(taker, "Taker");
+        vm.startPrank(Ownable(address(res.router)).owner());
+        for (uint256 i = 0; i < units.length; i++) {
+            res.router.setAdapterWhitelist(units[i].adapter, true);
+        }
+        vm.stopPrank();
+
         vm.startPrank(taker);
         deal(taker, 1e8);
 
@@ -302,7 +317,19 @@ abstract contract GtBaseTest is ForkBaseTest {
     }
 
     function _testFlashRepay(GtTestRes memory res, uint256 gtId, address taker, SwapUnit[] memory units) internal {
+        vm.startPrank(Ownable(address(res.router)).owner());
+        for (uint256 i = 0; i < units.length; i++) {
+            res.router.setAdapterWhitelist(units[i].adapter, true);
+        }
+        vm.stopPrank();
+
         deal(taker, 1e18);
+
+        vm.startPrank(Ownable(address(res.router)).owner());
+        for (uint256 i = 0; i < units.length; i++) {
+            res.router.setAdapterWhitelist(units[i].adapter, true);
+        }
+        vm.stopPrank();
 
         vm.startPrank(taker);
 
@@ -325,6 +352,12 @@ abstract contract GtBaseTest is ForkBaseTest {
     }
 
     function _testFlashRepayByFt(GtTestRes memory res, uint256 gtId, address taker, SwapUnit[] memory units) internal {
+        vm.startPrank(Ownable(address(res.router)).owner());
+        for (uint256 i = 0; i < units.length; i++) {
+            res.router.setAdapterWhitelist(units[i].adapter, true);
+        }
+        vm.stopPrank();
+
         deal(taker, 1e18);
 
         vm.startPrank(taker);

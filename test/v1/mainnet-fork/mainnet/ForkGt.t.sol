@@ -5,7 +5,7 @@ import "../GtBaseTest.t.sol";
 
 contract ForkGtV1 is GtBaseTest {
     string MAINNET_RPC_URL = vm.envString("MAINNET_RPC_URL");
-    string DATA_PATH = string.concat(vm.projectRoot(), "/test/testdata/fork/mainnet.json");
+    string DATA_PATH = string.concat(vm.projectRoot(), "/test/testdata/fork/bsc.json");
 
     function _getForkRpcUrl() internal view override returns (string memory) {
         return MAINNET_RPC_URL;
@@ -32,23 +32,6 @@ contract ForkGtV1 is GtBaseTest {
         for (uint256 i = 0; i < tokenPairs.length; i++) {
             string memory tokenPair = tokenPairs[i];
             GtTestRes memory res = _initializeGtTestRes(tokenPair);
-            if (res.swapData.tokenType == TokenType.General) {
-                res.swapData.leverageUnits[0].adapter = res.swapAdapters.odosAdapter;
-            } else if (res.swapData.tokenType == TokenType.Pendle) {
-                if (res.swapData.leverageUnits.length == 1) {
-                    res.swapData.leverageUnits[0].adapter = res.swapAdapters.pendleAdapter;
-                } else {
-                    res.swapData.leverageUnits[1].adapter = res.swapAdapters.pendleAdapter;
-                    res.swapData.leverageUnits[0].adapter = res.swapAdapters.odosAdapter;
-                }
-            } else if (res.swapData.tokenType == TokenType.Morpho) {
-                if (res.swapData.leverageUnits.length == 1) {
-                    res.swapData.leverageUnits[0].adapter = res.swapAdapters.vaultAdapter;
-                } else {
-                    res.swapData.leverageUnits[1].adapter = res.swapAdapters.vaultAdapter;
-                    res.swapData.leverageUnits[0].adapter = res.swapAdapters.odosAdapter;
-                }
-            }
 
             address taker = vm.randomAddress();
 
@@ -60,32 +43,6 @@ contract ForkGtV1 is GtBaseTest {
         for (uint256 i = 0; i < tokenPairs.length; i++) {
             string memory tokenPair = tokenPairs[i];
             GtTestRes memory res = _initializeGtTestRes(tokenPair);
-            if (res.swapData.tokenType == TokenType.General) {
-                res.swapData.leverageUnits[0].adapter = res.swapAdapters.odosAdapter;
-                res.swapData.flashRepayUnits[0].adapter = res.swapAdapters.odosAdapter;
-            } else if (res.swapData.tokenType == TokenType.Pendle) {
-                if (res.swapData.leverageUnits.length == 1) {
-                    res.swapData.leverageUnits[0].adapter = res.swapAdapters.pendleAdapter;
-                    res.swapData.flashRepayUnits[0].adapter = res.swapAdapters.pendleAdapter;
-                } else {
-                    res.swapData.leverageUnits[1].adapter = res.swapAdapters.pendleAdapter;
-                    res.swapData.leverageUnits[0].adapter = res.swapAdapters.odosAdapter;
-
-                    res.swapData.flashRepayUnits[0].adapter = res.swapAdapters.pendleAdapter;
-                    res.swapData.flashRepayUnits[1].adapter = res.swapAdapters.odosAdapter;
-                }
-            } else if (res.swapData.tokenType == TokenType.Morpho) {
-                if (res.swapData.leverageUnits.length == 1) {
-                    res.swapData.leverageUnits[0].adapter = res.swapAdapters.vaultAdapter;
-                    res.swapData.flashRepayUnits[0].adapter = res.swapAdapters.vaultAdapter;
-                } else {
-                    res.swapData.leverageUnits[1].adapter = res.swapAdapters.vaultAdapter;
-                    res.swapData.leverageUnits[0].adapter = res.swapAdapters.odosAdapter;
-
-                    res.swapData.flashRepayUnits[0].adapter = res.swapAdapters.vaultAdapter;
-                    res.swapData.flashRepayUnits[1].adapter = res.swapAdapters.odosAdapter;
-                }
-            }
 
             address taker = vm.randomAddress();
             uint256 gtId = _testLeverageFromXt(
@@ -99,32 +56,6 @@ contract ForkGtV1 is GtBaseTest {
         for (uint256 i = 0; i < tokenPairs.length; i++) {
             string memory tokenPair = tokenPairs[i];
             GtTestRes memory res = _initializeGtTestRes(tokenPair);
-            if (res.swapData.tokenType == TokenType.General) {
-                res.swapData.leverageUnits[0].adapter = res.swapAdapters.odosAdapter;
-                res.swapData.flashRepayUnits[0].adapter = res.swapAdapters.odosAdapter;
-            } else if (res.swapData.tokenType == TokenType.Pendle) {
-                if (res.swapData.leverageUnits.length == 1) {
-                    res.swapData.leverageUnits[0].adapter = res.swapAdapters.pendleAdapter;
-                    res.swapData.flashRepayUnits[0].adapter = res.swapAdapters.pendleAdapter;
-                } else {
-                    res.swapData.leverageUnits[1].adapter = res.swapAdapters.pendleAdapter;
-                    res.swapData.leverageUnits[0].adapter = res.swapAdapters.odosAdapter;
-
-                    res.swapData.flashRepayUnits[0].adapter = res.swapAdapters.pendleAdapter;
-                    res.swapData.flashRepayUnits[1].adapter = res.swapAdapters.odosAdapter;
-                }
-            } else if (res.swapData.tokenType == TokenType.Morpho) {
-                if (res.swapData.leverageUnits.length == 1) {
-                    res.swapData.leverageUnits[0].adapter = res.swapAdapters.vaultAdapter;
-                    res.swapData.flashRepayUnits[0].adapter = res.swapAdapters.vaultAdapter;
-                } else {
-                    res.swapData.leverageUnits[1].adapter = res.swapAdapters.vaultAdapter;
-                    res.swapData.leverageUnits[0].adapter = res.swapAdapters.odosAdapter;
-
-                    res.swapData.flashRepayUnits[0].adapter = res.swapAdapters.vaultAdapter;
-                    res.swapData.flashRepayUnits[1].adapter = res.swapAdapters.odosAdapter;
-                }
-            }
 
             address taker = vm.randomAddress();
             uint256 gtId = _testLeverageFromXt(
@@ -146,7 +77,7 @@ contract ForkGtV1 is GtBaseTest {
             uint128 borrowAmt = uint128(res.orderInitialAmount / 20);
 
             uint256 gtId = _fastLoan(res, borrower, borrowAmt, collateralAmt);
-            _updateCollateralPrice(res, 0.5e8);
+            _updateCollateralPrice(res, 1);
 
             _testLiquidate(res, liquidator, gtId);
         }
