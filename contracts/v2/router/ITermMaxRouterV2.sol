@@ -6,9 +6,9 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ITermMaxMarket, IGearingToken} from "../../v1/ITermMaxMarket.sol";
 import {ITermMaxOrder} from "../../v1/ITermMaxOrder.sol";
 import {SwapUnit} from "../../v1/router/ISwapAdapter.sol";
-import {ISwapCallback} from "../../v1/ISwapCallback.sol";
 import {OrderConfig} from "../../v1/storage/TermMaxStorage.sol";
 import {ITermMaxMarketV2} from "../ITermMaxMarketV2.sol";
+import {IAaveV3PoolMinimal} from "../extensions/aave/IAaveV3PoolMinimal.sol";
 
 /// @title TermMaxSwapPath
 /// @notice Represents a path for swapping tokens in the TermMax protocol and third-party adapters
@@ -505,4 +505,30 @@ interface ITermMaxRouterV2 {
     function redeemFromVaultAndSwap(address recipient, IERC4626 vault, uint256 shareAmt, SwapPath memory swapPath)
         external
         returns (uint256 netOut);
+
+    function rollToAaveForV1(
+        address recipient,
+        ITermMaxMarket market,
+        uint256 gtId,
+        uint256 additionalCollateral,
+        uint256 additionalDebt,
+        IAaveV3PoolMinimal aave,
+        uint256 interestRateMode,
+        uint16 referralCode,
+        SwapPath memory collateralPath
+    ) external;
+
+    function rollToAaveForV2(
+        address recipient,
+        ITermMaxMarket market,
+        uint256 gtId,
+        uint128 repayAmt,
+        uint256 removedCollateral,
+        uint256 additionalCollateral,
+        uint256 additionalDebt,
+        IAaveV3PoolMinimal aave,
+        uint256 interestRateMode,
+        uint16 referralCode,
+        SwapPath memory collateralPath
+    ) external;
 }
