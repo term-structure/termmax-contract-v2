@@ -785,10 +785,11 @@ contract TermMaxRouterV2 is
             uint256 newCollateralAmt = _doSwap(collateral.balanceOf(address(this)), collateralPath.units);
             IERC20 newCollateral = IERC20(collateralPath.units[collateralPath.units.length - 1].tokenOut);
             newCollateral.safeIncreaseAllowance(address(aave), newCollateralAmt);
+            aave.deposit(address(newCollateral), newCollateralAmt, recipient, referralCode);
         } else {
             uint256 collateralAmt = collateral.balanceOf(address(this));
             collateral.safeIncreaseAllowance(address(aave), collateralAmt);
-            aave.supply(address(collateral), collateralAmt, recipient, referralCode);
+            aave.deposit(address(collateral), collateralAmt, recipient, referralCode);
         }
         repayAmt = repayAmt - debtToken.balanceOf(address(this));
         aave.borrow(address(debtToken), repayAmt, interestRateMode, referralCode, recipient);
