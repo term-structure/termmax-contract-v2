@@ -128,6 +128,7 @@ contract TermMaxVaultV2 is
     function _setPerformanceFeeRate(uint64 newPerformanceFeeRate) internal {
         _delegateCall(abi.encodeCall(IOrderManager.accruedInterest, ()));
         _performanceFeeRate = newPerformanceFeeRate;
+        emit SetPerformanceFeeRate(_msgSender(), newPerformanceFeeRate);
     }
 
     /// @notice View functions
