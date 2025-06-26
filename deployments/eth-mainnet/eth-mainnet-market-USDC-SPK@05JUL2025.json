@@ -1,0 +1,38 @@
+{
+  "blockInfo": {
+    "number": "22785845",
+    "timestamp": "1750907471"
+  },
+  "market": "0x6B24654F5154214D1A39b09AE0E2342bB48eFE08",
+  "collateral": {
+    "address": "0xc20059e0317DE91738d13af027DfC4a50781b066",
+    "symbol": "SPK",
+    "priceFeed": "0x552116E747a5b386B2E7EEd4371002359cf2A574",
+    "heartBeat": "86400"
+  },
+  "underlying": {
+    "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+    "symbol": "USDC",
+    "priceFeed": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+    "heartBeat": "86400"
+  },
+  "tokens": {
+    "ft": "0xEF73A3623A6c23C0271c4fC798CB6A745e211487",
+    "xt": "0xa11A440e7720c55caAF5b2155B172E6F32339813",
+    "gt": "0x72036acE0D05c6De44a3bD0fF47F59F41efa386E"
+  },
+  "config": {
+    "marketSymbol": "USDC/SPK@05JUL2025",
+    "treasurer": "0x719e77027952929ed3060dbFFC5D43EC50c1cf79",
+    "maturity": "05JUL2025",
+    "salt": "0",
+    "fees": {
+      "lendTakerFeeRatio": "2000000",
+      "lendMakerFeeRatio": "2000000",
+      "borrowTakerFeeRatio": "3000000",
+      "borrowMakerFeeRatio": "3000000",
+      "mintGtFeeRatio": "10000000",
+      "mintGtFeeRef": "6000000"
+    }
+  }
+}
