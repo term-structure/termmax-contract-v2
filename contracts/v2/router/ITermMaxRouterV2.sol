@@ -290,6 +290,18 @@ interface ITermMaxRouterV2 {
     ) external returns (uint256 returnAmt);
 
     /**
+     * @notice Repays a GT in a TermMax market
+     * @param market The TermMax market to repay in
+     * @param gtId The ID of the GT to repay
+     * @param maxRepayAmt Maximum amount of tokens to repay
+     * @param byDebtToken Whether to repay using debt tokens
+     * @return repayAmt The actual amount repaid
+     */
+    function repayGt(ITermMaxMarket market, uint256 gtId, uint128 maxRepayAmt, bool byDebtToken)
+        external
+        returns (uint128 repayAmt);
+
+    /**
      * @notice Redeems FT tokens and swaps for underlying tokens
      * @dev Executes a swap to redeem FT tokens
      * @param recipient Address to receive the output tokens

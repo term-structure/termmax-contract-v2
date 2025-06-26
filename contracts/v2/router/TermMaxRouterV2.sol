@@ -436,6 +436,28 @@ contract TermMaxRouterV2 is
     /**
      * @inheritdoc ITermMaxRouterV2
      */
+    function repayGt(ITermMaxMarket market, uint256 gtId, uint128 maxRepayAmt, bool byDebtToken)
+        external
+        override
+        whenNotPaused
+        returns (uint128 repayAmt)
+    {
+        (IERC20 ft,, IGearingToken gt,, IERC20 debtToken) = market.tokens();
+        (, uint128 debtAmt,) = gt.loanInfo(gtId); // Ensure gtId is valid
+        if (maxRepayAmt > debtAmt) {
+            repayAmt = debtAmt;
+        } else {
+            repayAmt = maxRepayAmt;
+        }
+        IERC20 repayToken = byDebtToken ? debtToken : ft;
+        repayToken.safeTransferFrom(msg.sender, address(this), repayAmt);
+        repayToken.safeIncreaseAllowance(address(gt), repayAmt);
+        gt.repay(gtId, repayAmt, byDebtToken);
+    }
+
+    /**
+     * @inheritdoc ITermMaxRouterV2
+     */
     function redeemAndSwap(
         address recipient,
         ITermMaxMarket market,
