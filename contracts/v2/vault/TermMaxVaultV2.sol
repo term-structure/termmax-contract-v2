@@ -111,6 +111,7 @@ contract TermMaxVaultV2 is
         __ReentrancyGuard_init_unchained();
         __Pausable_init_unchained();
 
+        _checkPerformanceFeeRateBounds(params.performanceFeeRate);
         _setPerformanceFeeRate(params.performanceFeeRate);
         _checkTimelockBounds(params.timelock);
         _setTimelock(params.timelock);
@@ -568,13 +569,17 @@ contract TermMaxVaultV2 is
         if (newTimelock < VaultConstants.POST_INITIALIZATION_MIN_TIMELOCK) revert BelowMinTimelock();
     }
 
+    function _checkPerformanceFeeRateBounds(uint256 newPerformanceFeeRate) internal pure {
+        if (newPerformanceFeeRate > VaultConstants.MAX_PERFORMANCE_FEE_RATE) revert PerformanceFeeRateExceeded();
+    }
+
     /**
      * @inheritdoc ITermMaxVault
      */
     function submitPerformanceFeeRate(uint184 newPerformanceFeeRate) external virtual onlyCuratorRole {
         if (newPerformanceFeeRate == _performanceFeeRate) revert AlreadySet();
         if (_pendingPerformanceFeeRate.validAt != 0) revert AlreadyPending();
-        if (newPerformanceFeeRate > VaultConstants.MAX_PERFORMANCE_FEE_RATE) revert PerformanceFeeRateExceeded();
+        _checkPerformanceFeeRateBounds(newPerformanceFeeRate);
         if (newPerformanceFeeRate < _performanceFeeRate) {
             _setPerformanceFeeRate(uint256(newPerformanceFeeRate).toUint64());
             emit SetPerformanceFeeRate(_msgSender(), newPerformanceFeeRate);
