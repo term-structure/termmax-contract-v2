@@ -29,7 +29,7 @@ import {VaultErrors} from "../../v1/errors/VaultErrors.sol";
 import {VaultEvents} from "../../v1/events/VaultEvents.sol";
 import {VaultEventsV2} from "../events/VaultEventsV2.sol";
 import {IOrderManager} from "../../v1/vault/IOrderManager.sol";
-import {VaultStorageV2, OrderInfo} from "../../v2/vault/VaultStorageV2.sol";
+import {VaultStorageV2, OrderInfo} from "./VaultStorageV2.sol";
 import {Constants} from "../../v1/lib/Constants.sol";
 import {ITermMaxVault} from "../../v1/vault/ITermMaxVault.sol";
 import {ITermMaxVaultV2} from "./ITermMaxVaultV2.sol";
