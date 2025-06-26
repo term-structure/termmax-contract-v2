@@ -84,9 +84,6 @@ contract TermMaxVaultV2 is
     }
 
     modifier marketIsWhitelisted(address market) {
-        if (_pendingMarkets[market].validAt != 0 && block.timestamp > _pendingMarkets[market].validAt) {
-            _marketWhitelist[market] = true;
-        }
         if (!_marketWhitelist[market]) revert MarketNotWhitelisted();
         _;
     }
