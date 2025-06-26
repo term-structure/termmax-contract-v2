@@ -274,7 +274,7 @@ contract TermMaxVaultV2 is
     function apy() external view virtual override returns (uint256) {
         uint256 accretingPrincipal_ = _accretingPrincipal;
         if (accretingPrincipal_ == 0) return 0;
-        return (accretingPrincipal_ * (Constants.DECIMAL_BASE - _performanceFeeRate)) / (accretingPrincipal_);
+        return (_annualizedInterest * (Constants.DECIMAL_BASE - _performanceFeeRate)) / (accretingPrincipal_);
     }
 
     /**
