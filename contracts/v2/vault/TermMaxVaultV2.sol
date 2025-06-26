@@ -105,11 +105,11 @@ contract TermMaxVaultV2 is
     }
 
     function initialize(VaultInitialParamsV2 memory params) external virtual initializer {
-        __ERC20_init(params.name, params.symbol);
-        __Ownable_init(params.admin);
-        __ERC4626_init(params.asset);
-        __ReentrancyGuard_init();
-        __Pausable_init();
+        __ERC20_init_unchained(params.name, params.symbol);
+        __Ownable_init_unchained(params.admin);
+        __ERC4626_init_unchained(params.asset);
+        __ReentrancyGuard_init_unchained();
+        __Pausable_init_unchained();
 
         _setPerformanceFeeRate(params.performanceFeeRate);
         _checkTimelockBounds(params.timelock);
