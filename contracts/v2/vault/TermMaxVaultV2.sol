@@ -272,8 +272,9 @@ contract TermMaxVaultV2 is
      * @inheritdoc ITermMaxVaultV2
      */
     function apy() external view virtual override returns (uint256) {
-        if (_accretingPrincipal == 0) return 0;
-        return (_annualizedInterest * (Constants.DECIMAL_BASE - _performanceFeeRate)) / (_accretingPrincipal);
+        uint256 accretingPrincipal_ = _accretingPrincipal;
+        if (accretingPrincipal_ == 0) return 0;
+        return (accretingPrincipal_ * (Constants.DECIMAL_BASE - _performanceFeeRate)) / (accretingPrincipal_);
     }
 
     /**
