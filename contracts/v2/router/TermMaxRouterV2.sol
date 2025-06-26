@@ -191,7 +191,9 @@ contract TermMaxRouterV2 is
         (uint256 maxBurn, IERC20 toenToSell) = ftInAmt > xtInAmt ? (xtInAmt, ft) : (ftInAmt, xt);
         ft.transferFrom(msg.sender, address(this), ftInAmt);
         xt.transferFrom(msg.sender, address(this), xtInAmt);
-        ITermMaxMarketV2(address(market)).burn(address(this), recipient, maxBurn);
+        ft.safeIncreaseAllowance(address(market), ftInAmt);
+        xt.safeIncreaseAllowance(address(market), xtInAmt);
+        market.burn(recipient, maxBurn);
 
         netTokenOut = _swapExactTokenToToken(toenToSell, debtToken, recipient, orders, amtsToSellTokens, 0, deadline);
         netTokenOut += maxBurn;
@@ -214,10 +216,9 @@ contract TermMaxRouterV2 is
         uint256 totalAmtToBuyXt = sum(amtsToBuyXt);
         debtToken.safeTransferFrom(msg.sender, address(this), tokenToSwap + totalAmtToBuyXt);
         netXtOut = _swapExactTokenToToken(debtToken, xt, address(this), orders, amtsToBuyXt, minXtOut, deadline);
-
+        xt.safeIncreaseAllowance(address(market), netXtOut);
         bytes memory callbackData = abi.encode(address(gt), tokenToSwap, units, FlashLoanType.DEBT);
-        gtId =
-            ITermMaxMarketV2(address(market)).leverageByXt(address(this), recipient, netXtOut.toUint128(), callbackData);
+        gtId = market.leverageByXt(recipient, netXtOut.toUint128(), callbackData);
         (,, bytes memory collateralData) = gt.loanInfo(gtId);
         (, uint128 ltv,) = gt.getLiquidationInfo(gtId);
         if (ltv > maxLtv) {
@@ -237,11 +238,13 @@ contract TermMaxRouterV2 is
         uint128 maxLtv,
         SwapUnit[] memory units
     ) external whenNotPaused returns (uint256 gtId) {
-        (,, IGearingToken gt,, IERC20 debtToken) = market.tokens();
+        (, IERC20 xt, IGearingToken gt,, IERC20 debtToken) = market.tokens();
         debtToken.safeTransferFrom(msg.sender, address(this), tokenInAmt);
+        xt.safeTransferFrom(msg.sender, address(this), xtInAmt);
+        xt.safeIncreaseAllowance(address(market), xtInAmt);
 
         bytes memory callbackData = abi.encode(address(gt), tokenInAmt, units, FlashLoanType.DEBT);
-        gtId = ITermMaxMarketV2(address(market)).leverageByXt(msg.sender, recipient, xtInAmt.toUint128(), callbackData);
+        gtId = market.leverageByXt(recipient, xtInAmt.toUint128(), callbackData);
 
         (,, bytes memory collateralData) = gt.loanInfo(gtId);
         (, uint128 ltv,) = gt.getLiquidationInfo(gtId);
@@ -262,13 +265,17 @@ contract TermMaxRouterV2 is
         uint128 maxLtv,
         SwapUnit[] memory units
     ) external whenNotPaused returns (uint256 gtId) {
-        (,, IGearingToken gt, address collAddr,) = market.tokens();
+        (, IERC20 xt, IGearingToken gt, address collAddr,) = market.tokens();
         IERC20 collateral = IERC20(collAddr);
 
         collateral.safeTransferFrom(msg.sender, address(this), collateralInAmt);
+        collateral.safeIncreaseAllowance(address(market), collateralInAmt);
+
+        xt.safeTransferFrom(msg.sender, address(this), xtInAmt);
+        xt.safeIncreaseAllowance(address(market), xtInAmt);
 
         bytes memory callbackData = abi.encode(address(gt), 0, units, FlashLoanType.COLLATERAL);
-        gtId = ITermMaxMarketV2(address(market)).leverageByXt(msg.sender, recipient, xtInAmt.toUint128(), callbackData);
+        gtId = market.leverageByXt(recipient, xtInAmt.toUint128(), callbackData);
 
         (,, bytes memory collateralData) = gt.loanInfo(gtId);
         (, uint128 ltv,) = gt.getLiquidationInfo(gtId);
@@ -313,7 +320,7 @@ contract TermMaxRouterV2 is
         whenNotPaused
         returns (uint256)
     {
-        (, IERC20 xt, IGearingToken gt, address collateralAddr,) = market.tokens();
+        (IERC20 ft, IERC20 xt, IGearingToken gt, address collateralAddr,) = market.tokens();
 
         IERC20(collateralAddr).safeTransferFrom(msg.sender, address(this), collInAmt);
         IERC20(collateralAddr).safeIncreaseAllowance(address(gt), collInAmt);
@@ -324,8 +331,9 @@ contract TermMaxRouterV2 is
         (uint256 gtId, uint128 ftOutAmt) = market.issueFt(address(this), debtAmt, _encodeAmount(collInAmt));
         borrowAmt = borrowAmt.min(ftOutAmt);
         xt.safeTransferFrom(msg.sender, address(this), borrowAmt);
-
-        ITermMaxMarketV2(address(market)).burn(address(this), recipient, borrowAmt);
+        ft.safeIncreaseAllowance(address(market), borrowAmt);
+        xt.safeIncreaseAllowance(address(market), borrowAmt);
+        market.burn(recipient, borrowAmt);
 
         gt.safeTransferFrom(address(this), recipient, gtId);
         emit Borrow(market, gtId, msg.sender, recipient, collInAmt, debtAmt, borrowAmt.toUint128());
@@ -336,7 +344,7 @@ contract TermMaxRouterV2 is
         external
         whenNotPaused
     {
-        (, IERC20 xt, IGearingToken gt,,) = market.tokens();
+        (IERC20 ft, IERC20 xt, IGearingToken gt,,) = market.tokens();
 
         if (gt.ownerOf(gtId) != msg.sender) {
             revert GtNotOwnedBySender();
@@ -348,8 +356,9 @@ contract TermMaxRouterV2 is
         uint256 ftOutAmt = market.issueFtByExistedGt(address(this), debtAmt, gtId);
         borrowAmt = borrowAmt.min(ftOutAmt);
         xt.safeTransferFrom(msg.sender, address(this), borrowAmt);
-
-        ITermMaxMarketV2(address(market)).burn(address(this), recipient, borrowAmt);
+        ft.safeIncreaseAllowance(address(market), borrowAmt);
+        xt.safeIncreaseAllowance(address(market), borrowAmt);
+        market.burn(recipient, borrowAmt);
 
         emit Borrow(market, gtId, msg.sender, recipient, 0, debtAmt, borrowAmt.toUint128());
     }
@@ -465,9 +474,10 @@ contract TermMaxRouterV2 is
         SwapUnit[] memory units,
         uint256 minTokenOut
     ) external whenNotPaused returns (uint256) {
-        (,,,, IERC20 debtToken) = market.tokens();
-        (uint256 redeemedAmt, bytes memory collateralData) =
-            ITermMaxMarketV2(address(market)).redeem(msg.sender, address(this), ftAmount);
+        (IERC20 ft,,,, IERC20 debtToken) = market.tokens();
+        ft.safeTransferFrom(msg.sender, address(this), ftAmount);
+        ft.safeIncreaseAllowance(address(market), ftAmount);
+        (uint256 redeemedAmt, bytes memory collateralData) = market.redeem(ftAmount, address(this));
         redeemedAmt += _doSwap(_decodeAmount(collateralData), units);
         if (redeemedAmt < minTokenOut) {
             revert InsufficientTokenOut(address(debtToken), redeemedAmt, minTokenOut);
