@@ -99,7 +99,6 @@ contract TermMaxVaultV2 is
     }
 
     constructor(address ORDER_MANAGER_SINGLETON_) {
-        if (ORDER_MANAGER_SINGLETON_ == address(0)) revert InvalidImplementation();
         ORDER_MANAGER_SINGLETON = ORDER_MANAGER_SINGLETON_;
         _disableInitializers();
     }
