@@ -10,13 +10,13 @@ interface VaultErrorsV2 {
     error ArrayLengthMismatch();
     /// @notice Error thrown when dealing unexpected collateral
     error CollateralIsAsset();
-    /// @notice Error thrown when an invalid or unsupported functions is called
+    /// @notice Error thrown when initializing the vault using V1 initializing function
     error UseVaultInitialParamsV2();
-    /// @notice Error thrown when an invalid or unsupported functions is called
+    /// @notice Error thrown when calling functions about supply queue
     error SupplyQueueNoLongerSupported();
-    /// @notice Error thrown when an invalid or unsupported functions is called
+    /// @notice Error thrown when calling functions about withdrawal queue
     error WithdrawalQueueNoLongerSupported();
-    /// @notice Error thrown when an invalid or unsupported functions is called
+    /// @notice Error thrown when calling apr function
     error UseApyInsteadOfApr();
     /// @notice Error thrown when the APY is too low
     error ApyTooLow(uint256 apy, uint256 minApy);
