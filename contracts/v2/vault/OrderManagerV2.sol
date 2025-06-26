@@ -136,12 +136,15 @@ contract OrderManagerV2 is VaultStorageV2, VaultErrors, VaultEvents, IOrderManag
             orderInfo.ft.safeIncreaseAllowance(address(orderInfo.market), withdrawChanges);
             orderInfo.xt.safeIncreaseAllowance(address(orderInfo.market), withdrawChanges);
             orderInfo.market.burn(address(this), withdrawChanges);
-        } else {
+        } else if (changes > 0) {
             // deposit assets to order
             uint256 depositChanges = uint256(changes);
             asset.safeIncreaseAllowance(address(orderInfo.market), depositChanges);
             orderInfo.market.mint(address(order), depositChanges);
             // update curve cuts
+            order.updateOrder(newOrderConfig, 0, 0);
+        } else {
+            // no changes, just update curve cuts
             order.updateOrder(newOrderConfig, 0, 0);
         }
         _orderMapping[address(order)] = orderInfo;
