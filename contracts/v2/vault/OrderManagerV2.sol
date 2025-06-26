@@ -100,7 +100,6 @@ contract OrderManagerV2 is VaultStorageV2, VaultErrors, VaultEvents, IOrderManag
     ) external onlyProxy returns (ITermMaxOrder order) {
         _accruedInterest();
         (IERC20 ft, IERC20 xt,,, IERC20 debtToken) = market.tokens();
-        if (asset != debtToken) revert InconsistentAsset();
 
         order = market.createOrder(address(this), maxSupply, ISwapCallback(address(this)), curveCuts);
         if (initialReserve > 0) {
