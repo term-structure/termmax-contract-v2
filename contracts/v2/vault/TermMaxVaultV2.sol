@@ -55,8 +55,10 @@ contract TermMaxVaultV2 is
 
     address public immutable ORDER_MANAGER_SINGLETON;
 
-    uint256 private constant ACTION_DEPOSIT = uint256(keccak256("ACTION_DEPOSIT"));
-    uint256 private constant ACTION_WITHDRAW = uint256(keccak256("ACTION_WITHDRAW"));
+    // keccak256(abi.encode(uint256(keccak256("termmax.tsstorage.vault.actionDeposit")) - 1)) & ~bytes32(uint256(0xff))
+    uint256 private constant ACTION_DEPOSIT = 0x1d9ff85e70b948f53a2cc45fa6f42c020b2a8eec3349351855dea946b0635700;
+    // keccak256(abi.encode(uint256(keccak256("termmax.tsstorage.vault.actionWithdraw")) - 1)) & ~bytes32(uint256(0xff))
+    uint256 private constant ACTION_WITHDRAW = 0xfcb0c32c4f653382a412cb0caa6a29f9e46d74bae452ca200c67f1e5e6389300;
 
     modifier onlyCuratorRole() {
         address sender = _msgSender();

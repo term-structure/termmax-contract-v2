@@ -190,7 +190,7 @@ contract OrderManagerV2 is VaultStorageV2, VaultErrors, VaultEvents, IOrderManag
         uint256 amplifiedAmt = amount * Constants.DECIMAL_BASE_SQ;
         _performanceFee -= amplifiedAmt;
         _totalFt -= amplifiedAmt;
-        
+
         asset.safeTransfer(recipient, amount);
         emit WithdrawPerformanceFee(msg.sender, recipient, amount);
     }
