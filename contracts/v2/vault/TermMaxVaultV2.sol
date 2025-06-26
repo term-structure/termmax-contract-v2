@@ -508,7 +508,7 @@ contract TermMaxVaultV2 is
         shares = previewWithdraw(badDebtAmt);
         uint256 maxShares = maxRedeem(owner);
         if (shares > maxShares) {
-            revert ERC4626ExceededMaxMint(recipient, shares, maxShares);
+            revert ERC4626ExceededMaxRedeem(recipient, shares, maxShares);
         }
 
         if (caller != owner) {
