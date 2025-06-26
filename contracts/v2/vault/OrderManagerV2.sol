@@ -179,25 +179,19 @@ contract OrderManagerV2 is VaultStorageV2, VaultErrors, VaultEvents, IOrderManag
      */
     function withdrawAssets(IERC20 asset, address recipient, uint256 amount) external override onlyProxy {
         _accruedInterest();
-        uint256 assetBalance = asset.balanceOf(address(this));
-        if (assetBalance >= amount) {
-            asset.safeTransfer(recipient, amount);
-        } else {
-            revert InsufficientFunds(assetBalance, amount);
-        }
         uint256 amplifiedAmt = amount * Constants.DECIMAL_BASE_SQ;
         _totalFt -= amplifiedAmt;
         _accretingPrincipal -= amplifiedAmt;
+
+        asset.safeTransfer(recipient, amount);
     }
 
     function _withdrawPerformanceFee(IERC20 asset, address recipient, uint256 amount) internal {
         uint256 amplifiedAmt = amount * Constants.DECIMAL_BASE_SQ;
-        if (amplifiedAmt > _performanceFee) {
-            revert InsufficientFunds(_performanceFee / Constants.DECIMAL_BASE_SQ, amount);
-        }
-        asset.safeTransfer(recipient, amount);
         _performanceFee -= amplifiedAmt;
         _totalFt -= amplifiedAmt;
+        
+        asset.safeTransfer(recipient, amount);
         emit WithdrawPerformanceFee(msg.sender, recipient, amount);
     }
 
