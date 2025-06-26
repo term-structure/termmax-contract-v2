@@ -52,34 +52,8 @@ contract TermMaxOrderV2 is
 
     uint64 private maturity;
 
-    // keccak256(abi.encode(uint256(keccak256("termmax.tsstorage.order.ftReserve")) - 1)) & ~bytes32(uint256(0xff))
-    uint256 private constant T_FT_RESERVE_STORE = 0x2a12e4f8e6ef46c978fd57eac04c67eb8dcdc9f0eec6327794e0ab372ed36000;
-    // keccak256(abi.encode(uint256(keccak256("termmax.tsstorage.order.xtReserve")) - 1)) & ~bytes32(uint256(0xff))
-    uint256 private constant T_XT_RESERVE_STORE = 0x2688c417e2e5b2d9eeee9f203d038d530482d06e29ca0badc05b91bdc9593000;
-
-    function setInitialFtReserve(uint256 ftReserve) private {
-        assembly {
-            tstore(T_FT_RESERVE_STORE, ftReserve)
-        }
-    }
-
-    function setInitialXtReserve(uint256 xtReserve) private {
-        assembly {
-            tstore(T_XT_RESERVE_STORE, xtReserve)
-        }
-    }
-
-    function getInitialFtReserve() private view returns (uint256 ftReserve) {
-        assembly {
-            ftReserve := tload(T_FT_RESERVE_STORE)
-        }
-    }
-
-    function getInitialXtReserve() private view returns (uint256 xtReserve) {
-        assembly {
-            xtReserve := tload(T_XT_RESERVE_STORE)
-        }
-    }
+    uint256 private _ftReserve;
+    uint256 private _xtReserve;
 
     /// @notice Check if the market is borrowing allowed
     modifier isBorrowingAllowed(OrderConfig memory config) {
@@ -230,6 +204,9 @@ contract TermMaxOrderV2 is
         } else if (xtChangeAmt < 0) {
             xt.safeTransfer(msg.sender, (-xtChangeAmt).toUint256());
         }
+        // Update the ft and xt reserve
+        _ftReserve = ft.balanceOf(address(this));
+        _xtReserve = xt.balanceOf(address(this));
         _orderConfig.maxXtReserve = newOrderConfig.maxXtReserve;
         _orderConfig.gtId = newOrderConfig.gtId;
         _orderConfig.swapTrigger = newOrderConfig.swapTrigger;
@@ -321,6 +298,16 @@ contract TermMaxOrderV2 is
         }
     }
 
+    function _updateReserves(uint256 ftChangeAmt, uint256 xtChangeAmt, bool isNegetiveXt) internal {
+        if (isNegetiveXt) {
+            _ftReserve = _ftReserve + ftChangeAmt;
+            _xtReserve = _xtReserve - xtChangeAmt;
+        } else {
+            _ftReserve = _ftReserve - ftChangeAmt;
+            _xtReserve = _xtReserve + xtChangeAmt;
+        }
+    }
+
     function updateFeeConfig(FeeConfig memory newFeeConfig) external virtual override onlyMarket {
         _orderConfig.feeConfig = newFeeConfig;
         emit UpdateFeeConfig(newFeeConfig);
@@ -347,35 +334,40 @@ contract TermMaxOrderV2 is
         OrderConfig memory config = _orderConfig;
         uint256 feeAmt;
         if (tokenAmtIn != 0) {
-            // Store ft and xt reserve before swap
-            setInitialFtReserve(ft.balanceOf(address(this)));
-            setInitialXtReserve(xt.balanceOf(address(this)));
+            uint256 deltaFt;
+            uint256 deltaXt;
+            bool isNegetiveXt;
+
             if (tokenIn == ft && tokenOut == debtToken) {
-                (netTokenOut, feeAmt) = _sellFt(tokenAmtIn, minTokenOut, msg.sender, recipient, config);
+                (netTokenOut, feeAmt, deltaFt, deltaXt, isNegetiveXt) =
+                    _sellFt(_ftReserve, _xtReserve, tokenAmtIn, minTokenOut, msg.sender, recipient, config);
             } else if (tokenIn == xt && tokenOut == debtToken) {
-                (netTokenOut, feeAmt) = _sellXt(tokenAmtIn, minTokenOut, msg.sender, recipient, config);
+                (netTokenOut, feeAmt, deltaFt, deltaXt, isNegetiveXt) =
+                    _sellXt(_ftReserve, _xtReserve, tokenAmtIn, minTokenOut, msg.sender, recipient, config);
             } else if (tokenIn == debtToken && tokenOut == ft) {
-                (netTokenOut, feeAmt) = _buyFt(tokenAmtIn, minTokenOut, msg.sender, recipient, config);
+                (netTokenOut, feeAmt, deltaFt, deltaXt, isNegetiveXt) =
+                    _buyFt(_ftReserve, _xtReserve, tokenAmtIn, minTokenOut, msg.sender, recipient, config);
             } else if (tokenIn == debtToken && tokenOut == xt) {
-                (netTokenOut, feeAmt) = _buyXt(tokenAmtIn, minTokenOut, msg.sender, recipient, config);
+                (netTokenOut, feeAmt, deltaFt, deltaXt, isNegetiveXt) =
+                    _buyXt(_ftReserve, _xtReserve, tokenAmtIn, minTokenOut, msg.sender, recipient, config);
             } else {
                 revert CantNotSwapToken(tokenIn, tokenOut);
             }
             // transfer fee to treasurer
             ft.safeTransfer(market.config().treasurer, feeAmt);
+            _updateReserves(deltaFt, deltaXt, isNegetiveXt);
+
             /// @dev callback the changes of ft and xt reserve to trigger
             if (address(_orderConfig.swapTrigger) != address(0)) {
-                uint256 ftReserve = ft.balanceOf(address(this));
-                uint256 xtReserve = xt.balanceOf(address(this));
-                int256 deltaFt = ftReserve.toInt256() - getInitialFtReserve().toInt256();
-                int256 deltaXt = xtReserve.toInt256() - getInitialXtReserve().toInt256();
-                _orderConfig.swapTrigger.afterSwap(ftReserve, xtReserve, deltaFt, deltaXt);
+                if (isNegetiveXt) {
+                    _orderConfig.swapTrigger.afterSwap(_ftReserve, _xtReserve, deltaFt.toInt256(), -deltaXt.toInt256());
+                } else {
+                    _orderConfig.swapTrigger.afterSwap(_ftReserve, _xtReserve, -deltaFt.toInt256(), deltaXt.toInt256());
+                }
             }
         } else {
             if (address(_orderConfig.swapTrigger) != address(0)) {
-                uint256 ftReserve = ft.balanceOf(address(this));
-                uint256 xtReserve = xt.balanceOf(address(this));
-                _orderConfig.swapTrigger.afterSwap(ftReserve, xtReserve, 0, 0);
+                _orderConfig.swapTrigger.afterSwap(_ftReserve, _xtReserve, 0, 0);
             }
         }
 
@@ -385,63 +377,92 @@ contract TermMaxOrderV2 is
     }
 
     function _buyFt(
+        uint256 ftReserve,
+        uint256 xtReserve,
         uint256 debtTokenAmtIn,
         uint256 minTokenOut,
         address caller,
         address recipient,
         OrderConfig memory config
-    ) internal isLendingAllowed(config) returns (uint256 netOut, uint256 feeAmt) {
-        (netOut, feeAmt) = _buyToken(caller, recipient, debtTokenAmtIn, minTokenOut, config, _buyFtStep);
+    )
+        internal
+        isLendingAllowed(config)
+        returns (uint256 netOut, uint256 feeAmt, uint256 deltaFt, uint256 deltaXt, bool isNegetiveXt)
+    {
+        (netOut, feeAmt, deltaFt, deltaXt, isNegetiveXt) =
+            _buyToken(ftReserve, xtReserve, caller, recipient, debtTokenAmtIn, minTokenOut, config, _buyFtStep);
         if (xt.balanceOf(address(this)) > config.maxXtReserve) {
             revert XtReserveTooHigh();
         }
     }
 
     function _buyXt(
+        uint256 ftReserve,
+        uint256 xtReserve,
         uint256 debtTokenAmtIn,
         uint256 minTokenOut,
         address caller,
         address recipient,
         OrderConfig memory config
-    ) internal isBorrowingAllowed(config) returns (uint256 netOut, uint256 feeAmt) {
-        (netOut, feeAmt) = _buyToken(caller, recipient, debtTokenAmtIn, minTokenOut, config, _buyXtStep);
+    )
+        internal
+        isBorrowingAllowed(config)
+        returns (uint256 netOut, uint256 feeAmt, uint256 deltaFt, uint256 deltaXt, bool isNegetiveXt)
+    {
+        (netOut, feeAmt, deltaFt, deltaXt, isNegetiveXt) =
+            _buyToken(ftReserve, xtReserve, caller, recipient, debtTokenAmtIn, minTokenOut, config, _buyXtStep);
     }
 
     function _sellFt(
+        uint256 ftReserve,
+        uint256 xtReserve,
         uint256 ftAmtIn,
         uint256 minDebtTokenOut,
         address caller,
         address recipient,
         OrderConfig memory config
-    ) internal isBorrowingAllowed(config) returns (uint256 netOut, uint256 feeAmt) {
-        (netOut, feeAmt) = _sellToken(caller, recipient, ftAmtIn, minDebtTokenOut, config, _sellFtStep);
+    )
+        internal
+        isBorrowingAllowed(config)
+        returns (uint256 netOut, uint256 feeAmt, uint256 deltaFt, uint256 deltaXt, bool isNegetiveXt)
+    {
+        (netOut, feeAmt, deltaFt, deltaXt, isNegetiveXt) =
+            _sellToken(ftReserve, xtReserve, caller, recipient, ftAmtIn, minDebtTokenOut, config, _sellFtStep);
     }
 
     function _sellXt(
+        uint256 ftReserve,
+        uint256 xtReserve,
         uint256 xtAmtIn,
         uint256 minDebtTokenOut,
         address caller,
         address recipient,
         OrderConfig memory config
-    ) internal isLendingAllowed(config) returns (uint256 netOut, uint256 feeAmt) {
-        (netOut, feeAmt) = _sellToken(caller, recipient, xtAmtIn, minDebtTokenOut, config, _sellXtStep);
+    )
+        internal
+        isLendingAllowed(config)
+        returns (uint256 netOut, uint256 feeAmt, uint256 deltaFt, uint256 deltaXt, bool isNegetiveXt)
+    {
+        (netOut, feeAmt, deltaFt, deltaXt, isNegetiveXt) =
+            _sellToken(ftReserve, xtReserve, caller, recipient, xtAmtIn, minDebtTokenOut, config, _sellXtStep);
         if (xt.balanceOf(address(this)) > config.maxXtReserve) {
             revert XtReserveTooHigh();
         }
     }
 
     function _buyToken(
+        uint256 oriFtReserve,
+        uint256 oriXtReserve,
         address caller,
         address recipient,
         uint256 debtTokenAmtIn,
         uint256 minTokenOut,
         OrderConfig memory config,
-        function(uint, uint, uint, OrderConfig memory) internal view returns (uint, uint, IERC20) func
-    ) internal returns (uint256, uint256) {
+        function(uint, uint, uint, OrderConfig memory) internal view returns (uint, uint, IERC20,uint,uint, bool) func
+    ) internal returns (uint256, uint256, uint256, uint256, bool) {
         uint256 daysToMaturity = _daysToMaturity();
-        uint256 oriXtReserve = getInitialXtReserve();
 
-        (uint256 tokenAmtOut, uint256 feeAmt, IERC20 tokenOut) =
+        (uint256 tokenAmtOut, uint256 feeAmt, IERC20 tokenOut, uint256 deltaFt, uint256 deltaXt, bool isNegetiveXt) =
             func(daysToMaturity, oriXtReserve, debtTokenAmtIn, config);
 
         uint256 netOut = tokenAmtOut + debtTokenAmtIn;
@@ -452,91 +473,138 @@ contract TermMaxOrderV2 is
         debtToken.safeIncreaseAllowance(address(market), debtTokenAmtIn);
         market.mint(address(this), debtTokenAmtIn);
         if (tokenOut == ft) {
-            uint256 ftReserve = getInitialFtReserve();
-            _issueFtToSelf(ftReserve + debtTokenAmtIn, netOut + feeAmt, config);
+            uint256 ftIssued = _issueFtToSelf(oriFtReserve + debtTokenAmtIn, netOut + feeAmt, config);
+            if (ftIssued > 0) {
+                deltaFt = isNegetiveXt ? deltaFt + ftIssued : deltaFt - ftIssued;
+            }
         }
 
         tokenOut.safeTransfer(recipient, netOut);
 
-        return (netOut, feeAmt);
+        return (netOut, feeAmt, deltaFt, deltaXt, isNegetiveXt);
     }
 
     function _buyFtStep(uint256 daysToMaturity, uint256 oriXtReserve, uint256 debtTokenAmtIn, OrderConfig memory config)
         internal
         view
-        returns (uint256 tokenAmtOut, uint256 feeAmt, IERC20 tokenOut)
+        returns (
+            uint256 tokenAmtOut,
+            uint256 feeAmt,
+            IERC20 tokenOut,
+            uint256 deltaFt,
+            uint256 deltaXt,
+            bool isNegetiveXt
+        )
     {
         FeeConfig memory feeConfig = config.feeConfig;
         CurveCut[] memory cuts = config.curveCuts.borrowCurveCuts;
         uint256 nif = Constants.DECIMAL_BASE - uint256(feeConfig.lendTakerFeeRatio);
-        (, tokenAmtOut) = TermMaxCurve.buyFt(nif, daysToMaturity, cuts, oriXtReserve, debtTokenAmtIn);
+        (deltaXt, tokenAmtOut) = TermMaxCurve.buyFt(nif, daysToMaturity, cuts, oriXtReserve, debtTokenAmtIn);
         feeAmt = (tokenAmtOut * (Constants.DECIMAL_BASE + uint256(feeConfig.borrowMakerFeeRatio))) / nif - tokenAmtOut;
         tokenOut = ft;
+        // ft reserve decrease, xt reserve increase
+        deltaFt = tokenAmtOut + feeAmt;
+        isNegetiveXt = false;
     }
 
     function _buyXtStep(uint256 daysToMaturity, uint256 oriXtReserve, uint256 debtTokenAmtIn, OrderConfig memory config)
         internal
         view
-        returns (uint256 tokenAmtOut, uint256 feeAmt, IERC20 tokenOut)
+        returns (
+            uint256 tokenAmtOut,
+            uint256 feeAmt,
+            IERC20 tokenOut,
+            uint256 deltaFt,
+            uint256 deltaXt,
+            bool isNegetiveXt
+        )
     {
         FeeConfig memory feeConfig = config.feeConfig;
         CurveCut[] memory cuts = config.curveCuts.lendCurveCuts;
         uint256 nif = Constants.DECIMAL_BASE + uint256(feeConfig.borrowTakerFeeRatio);
-        uint256 deltaFt;
         (tokenAmtOut, deltaFt) = TermMaxCurve.buyXt(nif, daysToMaturity, cuts, oriXtReserve, debtTokenAmtIn);
         feeAmt = deltaFt - (deltaFt * (Constants.DECIMAL_BASE - uint256(feeConfig.lendMakerFeeRatio))) / nif;
         tokenOut = xt;
+        // ft reserve increase, xt reserve decrease
+        deltaFt -= feeAmt;
+        deltaXt = tokenAmtOut;
+        isNegetiveXt = true;
     }
 
     function _sellToken(
+        uint256 oriFtReserve,
+        uint256 oriXtReserve,
         address caller,
         address recipient,
         uint256 tokenAmtIn,
         uint256 minDebtTokenOut,
         OrderConfig memory config,
-        function(uint, uint, uint, OrderConfig memory) internal view returns (uint, uint, IERC20) func
-    ) internal returns (uint256, uint256) {
+        function(uint, uint, uint, OrderConfig memory) internal view returns (uint, uint, IERC20, uint, uint, bool) func
+    ) internal returns (uint256, uint256, uint256, uint256, bool) {
         uint256 daysToMaturity = _daysToMaturity();
-        uint256 oriXtReserve = getInitialXtReserve();
-
-        (uint256 netOut, uint256 feeAmt, IERC20 tokenIn) = func(daysToMaturity, oriXtReserve, tokenAmtIn, config);
+        (uint256 netOut, uint256 feeAmt, IERC20 tokenIn, uint256 deltaFt, uint256 deltaXt, bool isNegetiveXt) =
+            func(daysToMaturity, oriXtReserve, tokenAmtIn, config);
         if (netOut < minDebtTokenOut) revert UnexpectedAmount(minDebtTokenOut, netOut);
 
         tokenIn.safeTransferFrom(caller, address(this), tokenAmtIn);
         if (tokenIn == xt) {
-            uint256 ftReserve = getInitialFtReserve();
-            _issueFtToSelf(ftReserve, netOut + feeAmt, config);
+            uint256 ftIssued = _issueFtToSelf(oriFtReserve, netOut + feeAmt, config);
+            if (ftIssued > 0) {
+                // if xt is negative, we need to increase ft reserve
+                deltaFt = isNegetiveXt ? deltaFt + ftIssued : deltaFt - ftIssued;
+            }
         }
         ITermMaxMarketV2(address(market)).burn(address(this), recipient, netOut);
-        return (netOut, feeAmt);
+        return (netOut, feeAmt, deltaFt, deltaXt, isNegetiveXt);
     }
 
     function _sellFtStep(uint256 daysToMaturity, uint256 oriXtReserve, uint256 tokenAmtIn, OrderConfig memory config)
         internal
         view
-        returns (uint256 debtTokenAmtOut, uint256 feeAmt, IERC20 tokenIn)
+        returns (
+            uint256 debtTokenAmtOut,
+            uint256 feeAmt,
+            IERC20 tokenIn,
+            uint256 deltaFt,
+            uint256 deltaXt,
+            bool isNegetiveXt
+        )
     {
         FeeConfig memory feeConfig = config.feeConfig;
         CurveCut[] memory cuts = config.curveCuts.lendCurveCuts;
         uint256 nif = Constants.DECIMAL_BASE + uint256(feeConfig.borrowTakerFeeRatio);
-        uint256 deltaFt;
         (debtTokenAmtOut, deltaFt) = TermMaxCurve.sellFt(nif, daysToMaturity, cuts, oriXtReserve, tokenAmtIn);
         feeAmt = deltaFt - (deltaFt * (Constants.DECIMAL_BASE - uint256(feeConfig.lendMakerFeeRatio))) / nif;
         tokenIn = ft;
+
+        // ft reserve increase, xt reserve decrease
+        deltaFt -= feeAmt;
+        deltaXt = debtTokenAmtOut;
+        isNegetiveXt = true;
     }
 
     function _sellXtStep(uint256 daysToMaturity, uint256 oriXtReserve, uint256 tokenAmtIn, OrderConfig memory config)
         internal
         view
-        returns (uint256 debtTokenAmtOut, uint256 feeAmt, IERC20 tokenIn)
+        returns (
+            uint256 debtTokenAmtOut,
+            uint256 feeAmt,
+            IERC20 tokenIn,
+            uint256 deltaFt,
+            uint256 deltaXt,
+            bool isNegetiveXt
+        )
     {
         FeeConfig memory feeConfig = config.feeConfig;
         CurveCut[] memory cuts = config.curveCuts.borrowCurveCuts;
         uint256 nif = Constants.DECIMAL_BASE - uint256(feeConfig.lendTakerFeeRatio);
-        (, debtTokenAmtOut) = TermMaxCurve.sellXt(nif, daysToMaturity, cuts, oriXtReserve, tokenAmtIn);
+        (deltaXt, debtTokenAmtOut) = TermMaxCurve.sellXt(nif, daysToMaturity, cuts, oriXtReserve, tokenAmtIn);
         feeAmt = (debtTokenAmtOut * (Constants.DECIMAL_BASE + uint256(feeConfig.borrowMakerFeeRatio))) / nif
             - debtTokenAmtOut;
         tokenIn = xt;
+        // ft reserve decrease, xt reserve increase
+        deltaFt = debtTokenAmtOut + feeAmt;
+        isNegetiveXt = false;
     }
 
     /**
@@ -555,37 +623,40 @@ contract TermMaxOrderV2 is
         OrderConfig memory config = _orderConfig;
         uint256 feeAmt;
         if (tokenAmtOut != 0 && maxTokenIn != 0) {
-            // Storage current ft and xt reserve
-            setInitialFtReserve(ft.balanceOf(address(this)));
-            setInitialXtReserve(xt.balanceOf(address(this)));
+            uint256 deltaFt;
+            uint256 deltaXt;
+            bool isNegetiveXt;
 
             if (tokenIn == debtToken && tokenOut == ft) {
-                (netTokenIn, feeAmt) = _buyExactFt(tokenAmtOut, maxTokenIn, msg.sender, recipient, config);
+                (netTokenIn, feeAmt, deltaFt, deltaXt, isNegetiveXt) =
+                    _buyExactFt(_ftReserve, _xtReserve, tokenAmtOut, maxTokenIn, msg.sender, recipient, config);
             } else if (tokenIn == debtToken && tokenOut == xt) {
-                (netTokenIn, feeAmt) = _buyExactXt(tokenAmtOut, maxTokenIn, msg.sender, recipient, config);
+                (netTokenIn, feeAmt, deltaFt, deltaXt, isNegetiveXt) =
+                    _buyExactXt(_ftReserve, _xtReserve, tokenAmtOut, maxTokenIn, msg.sender, recipient, config);
             } else if (tokenIn == ft && tokenOut == debtToken) {
-                (netTokenIn, feeAmt) = _sellFtForExactToken(tokenAmtOut, maxTokenIn, msg.sender, recipient, config);
+                (netTokenIn, feeAmt, deltaFt, deltaXt, isNegetiveXt) =
+                    _sellFtForExactToken(_ftReserve, _xtReserve, tokenAmtOut, maxTokenIn, msg.sender, recipient, config);
             } else if (tokenIn == xt && tokenOut == debtToken) {
-                (netTokenIn, feeAmt) = _sellXtForExactToken(tokenAmtOut, maxTokenIn, msg.sender, recipient, config);
+                (netTokenIn, feeAmt, deltaFt, deltaXt, isNegetiveXt) =
+                    _sellXtForExactToken(_ftReserve, _xtReserve, tokenAmtOut, maxTokenIn, msg.sender, recipient, config);
             } else {
                 revert CantNotSwapToken(tokenIn, tokenOut);
             }
             // transfer fee to treasurer
             ft.safeTransfer(market.config().treasurer, feeAmt);
+            _updateReserves(deltaFt, deltaXt, isNegetiveXt);
 
             /// @dev callback the changes of ft and xt reserve to trigger
             if (address(_orderConfig.swapTrigger) != address(0)) {
-                uint256 ftReserve = ft.balanceOf(address(this));
-                uint256 xtReserve = xt.balanceOf(address(this));
-                int256 deltaFt = ftReserve.toInt256() - getInitialFtReserve().toInt256();
-                int256 deltaXt = xtReserve.toInt256() - getInitialXtReserve().toInt256();
-                _orderConfig.swapTrigger.afterSwap(ftReserve, xtReserve, deltaFt, deltaXt);
+                if (isNegetiveXt) {
+                    _orderConfig.swapTrigger.afterSwap(_ftReserve, _xtReserve, deltaFt.toInt256(), -deltaXt.toInt256());
+                } else {
+                    _orderConfig.swapTrigger.afterSwap(_ftReserve, _xtReserve, -deltaFt.toInt256(), deltaXt.toInt256());
+                }
             }
         } else {
             if (address(_orderConfig.swapTrigger) != address(0)) {
-                uint256 ftReserve = ft.balanceOf(address(this));
-                uint256 xtReserve = xt.balanceOf(address(this));
-                _orderConfig.swapTrigger.afterSwap(ftReserve, xtReserve, 0, 0);
+                _orderConfig.swapTrigger.afterSwap(_ftReserve, _xtReserve, 0, 0);
             }
         }
 
@@ -595,40 +666,56 @@ contract TermMaxOrderV2 is
     }
 
     function _buyExactFt(
+        uint256 ftReserve,
+        uint256 xtReserve,
         uint256 tokenAmtOut,
         uint256 maxTokenIn,
         address caller,
         address recipient,
         OrderConfig memory config
-    ) internal isLendingAllowed(config) returns (uint256 netTokenIn, uint256 feeAmt) {
-        (netTokenIn, feeAmt) = _buyExactToken(caller, recipient, tokenAmtOut, maxTokenIn, config, _buyExactFtStep);
+    )
+        internal
+        isLendingAllowed(config)
+        returns (uint256 netTokenIn, uint256 feeAmt, uint256 deltaFt, uint256 deltaXt, bool isNegetiveXt)
+    {
+        (netTokenIn, feeAmt, deltaFt, deltaXt, isNegetiveXt) =
+            _buyExactToken(ftReserve, xtReserve, caller, recipient, tokenAmtOut, maxTokenIn, config, _buyExactFtStep);
         if (xt.balanceOf(address(this)) > config.maxXtReserve) {
             revert XtReserveTooHigh();
         }
     }
 
     function _buyExactXt(
+        uint256 ftReserve,
+        uint256 xtReserve,
         uint256 tokenAmtOut,
         uint256 maxTokenIn,
         address caller,
         address recipient,
         OrderConfig memory config
-    ) internal isBorrowingAllowed(config) returns (uint256 netTokenIn, uint256 feeAmt) {
-        (netTokenIn, feeAmt) = _buyExactToken(caller, recipient, tokenAmtOut, maxTokenIn, config, _buyExactXtStep);
+    )
+        internal
+        isBorrowingAllowed(config)
+        returns (uint256 netTokenIn, uint256 feeAmt, uint256 deltaFt, uint256 deltaXt, bool isNegetiveXt)
+    {
+        (netTokenIn, feeAmt, deltaFt, deltaXt, isNegetiveXt) =
+            _buyExactToken(ftReserve, xtReserve, caller, recipient, tokenAmtOut, maxTokenIn, config, _buyExactXtStep);
     }
 
     function _buyExactToken(
+        uint256 oriFtReserve,
+        uint256 oriXtReserve,
         address caller,
         address recipient,
         uint256 tokenAmtOut,
         uint256 maxTokenIn,
         OrderConfig memory config,
-        function(uint, uint, uint, OrderConfig memory) internal view returns (uint, uint, IERC20) func
-    ) internal returns (uint256, uint256) {
+        function(uint, uint, uint, OrderConfig memory) internal view returns (uint, uint, IERC20,uint,uint,bool) func
+    ) internal returns (uint256, uint256, uint256, uint256, bool) {
         uint256 daysToMaturity = _daysToMaturity();
-        uint256 oriXtReserve = getInitialXtReserve();
 
-        (uint256 netTokenIn, uint256 feeAmt, IERC20 tokenOut) = func(daysToMaturity, oriXtReserve, tokenAmtOut, config);
+        (uint256 netTokenIn, uint256 feeAmt, IERC20 tokenOut, uint256 deltaFt, uint256 deltaXt, bool isNegetiveXt) =
+            func(daysToMaturity, oriXtReserve, tokenAmtOut, config);
 
         if (netTokenIn > maxTokenIn) revert UnexpectedAmount(maxTokenIn, netTokenIn);
 
@@ -637,92 +724,131 @@ contract TermMaxOrderV2 is
         debtToken.safeIncreaseAllowance(address(market), netTokenIn);
         market.mint(address(this), netTokenIn);
         if (tokenOut == ft) {
-            uint256 ftReserve = getInitialFtReserve();
-            _issueFtToSelf(ftReserve + netTokenIn, tokenAmtOut + feeAmt, config);
+            uint256 ftIssued = _issueFtToSelf(oriFtReserve + netTokenIn, tokenAmtOut + feeAmt, config);
+            if (ftIssued > 0) {
+                deltaFt = isNegetiveXt ? deltaFt + ftIssued : deltaFt - ftIssued;
+            }
         }
 
         tokenOut.safeTransfer(recipient, tokenAmtOut);
 
-        return (netTokenIn, feeAmt);
+        return (netTokenIn, feeAmt, deltaFt, deltaXt, isNegetiveXt);
     }
 
     function _buyExactFtStep(uint256 daysToMaturity, uint256 oriXtReserve, uint256 ftAmtOut, OrderConfig memory config)
         internal
         view
-        returns (uint256 debtTokenAmtIn, uint256 feeAmt, IERC20 tokenOut)
+        returns (
+            uint256 debtTokenAmtIn,
+            uint256 feeAmt,
+            IERC20 tokenOut,
+            uint256 deltaFt,
+            uint256 deltaXt,
+            bool isNegetiveXt
+        )
     {
         FeeConfig memory feeConfig = config.feeConfig;
         CurveCut[] memory cuts = config.curveCuts.borrowCurveCuts;
         uint256 nif = Constants.DECIMAL_BASE - uint256(feeConfig.lendTakerFeeRatio);
-        (uint256 deltaXt, uint256 negDeltaFt) =
-            TermMaxCurve.buyExactFt(nif, daysToMaturity, cuts, oriXtReserve, ftAmtOut);
+        (deltaXt, deltaFt) = TermMaxCurve.buyExactFt(nif, daysToMaturity, cuts, oriXtReserve, ftAmtOut);
         debtTokenAmtIn = deltaXt;
-        feeAmt = (negDeltaFt * (Constants.DECIMAL_BASE + uint256(feeConfig.borrowMakerFeeRatio))) / nif - negDeltaFt;
+        feeAmt = (deltaFt * (Constants.DECIMAL_BASE + uint256(feeConfig.borrowMakerFeeRatio))) / nif - deltaFt;
         tokenOut = ft;
+        // ft reserve decrease, xt reserve increase
+        deltaFt += feeAmt;
+        isNegetiveXt = false;
     }
 
     function _buyExactXtStep(uint256 daysToMaturity, uint256 oriXtReserve, uint256 xtAmtOut, OrderConfig memory config)
         internal
         view
-        returns (uint256 debtTokenAmtIn, uint256 feeAmt, IERC20 tokenOut)
+        returns (
+            uint256 debtTokenAmtIn,
+            uint256 feeAmt,
+            IERC20 tokenOut,
+            uint256 deltaFt,
+            uint256 deltaXt,
+            bool isNegetiveXt
+        )
     {
         FeeConfig memory feeConfig = config.feeConfig;
         CurveCut[] memory cuts = config.curveCuts.lendCurveCuts;
         uint256 nif = Constants.DECIMAL_BASE + uint256(feeConfig.borrowTakerFeeRatio);
-        (, uint256 deltaFt) = TermMaxCurve.buyExactXt(nif, daysToMaturity, cuts, oriXtReserve, xtAmtOut);
+        (deltaXt, deltaFt) = TermMaxCurve.buyExactXt(nif, daysToMaturity, cuts, oriXtReserve, xtAmtOut);
         debtTokenAmtIn = deltaFt;
         feeAmt = deltaFt - (deltaFt * (Constants.DECIMAL_BASE - uint256(feeConfig.lendMakerFeeRatio))) / nif;
         tokenOut = xt;
+        // ft reserve increase, xt reserve decrease
+        deltaFt -= feeAmt;
+        isNegetiveXt = true;
     }
 
     function _sellFtForExactToken(
+        uint256 ftReserve,
+        uint256 xtReserve,
         uint256 debtTokenAmtOut,
         uint256 maxFtIn,
         address caller,
         address recipient,
         OrderConfig memory config
-    ) internal isBorrowingAllowed(config) returns (uint256 netIn, uint256 feeAmt) {
-        (netIn, feeAmt) =
-            _sellTokenForExactToken(caller, recipient, debtTokenAmtOut, maxFtIn, config, _sellFtForExactTokenStep);
+    )
+        internal
+        isBorrowingAllowed(config)
+        returns (uint256 netIn, uint256 feeAmt, uint256 deltaFt, uint256 deltaXt, bool isNegetiveXt)
+    {
+        (netIn, feeAmt, deltaFt, deltaXt, isNegetiveXt) = _sellTokenForExactToken(
+            ftReserve, xtReserve, caller, recipient, debtTokenAmtOut, maxFtIn, config, _sellFtForExactTokenStep
+        );
     }
 
     function _sellXtForExactToken(
+        uint256 ftReserve,
+        uint256 xtReserve,
         uint256 debtTokenAmtOut,
         uint256 maxXtIn,
         address caller,
         address recipient,
         OrderConfig memory config
-    ) internal isLendingAllowed(config) returns (uint256 netIn, uint256 feeAmt) {
-        (netIn, feeAmt) =
-            _sellTokenForExactToken(caller, recipient, debtTokenAmtOut, maxXtIn, config, _sellXtForExactTokenStep);
+    )
+        internal
+        isLendingAllowed(config)
+        returns (uint256 netIn, uint256 feeAmt, uint256 deltaFt, uint256 deltaXt, bool isNegetiveXt)
+    {
+        (netIn, feeAmt, deltaFt, deltaXt, isNegetiveXt) = _sellTokenForExactToken(
+            ftReserve, xtReserve, caller, recipient, debtTokenAmtOut, maxXtIn, config, _sellXtForExactTokenStep
+        );
         if (xt.balanceOf(address(this)) > config.maxXtReserve) {
             revert XtReserveTooHigh();
         }
     }
 
     function _sellTokenForExactToken(
+        uint256 oriFtReserve,
+        uint256 oriXtReserve,
         address caller,
         address recipient,
         uint256 debtTokenAmtOut,
         uint256 maxTokenIn,
         OrderConfig memory config,
-        function(uint, uint, uint, OrderConfig memory) internal view returns (uint, uint, IERC20) func
-    ) internal returns (uint256, uint256) {
+        function(uint, uint, uint, OrderConfig memory) internal returns (uint, uint, IERC20,uint,uint,bool) func
+    ) internal returns (uint256, uint256, uint256, uint256, bool) {
         uint256 daysToMaturity = _daysToMaturity();
-        uint256 oriXtReserve = getInitialXtReserve();
 
-        (uint256 netTokenIn, uint256 feeAmt, IERC20 tokenIn) =
+        (uint256 netTokenIn, uint256 feeAmt, IERC20 tokenIn, uint256 deltaFt, uint256 deltaXt, bool isNegetiveXt) =
             func(daysToMaturity, oriXtReserve, debtTokenAmtOut, config);
 
         if (netTokenIn > maxTokenIn) revert UnexpectedAmount(maxTokenIn, netTokenIn);
 
         tokenIn.safeTransferFrom(caller, address(this), netTokenIn);
         if (tokenIn == xt) {
-            uint256 ftReserve = getInitialFtReserve();
-            _issueFtToSelf(ftReserve, debtTokenAmtOut + feeAmt, config);
+            uint256 ftIssued = _issueFtToSelf(oriFtReserve, debtTokenAmtOut + feeAmt, config);
+            if (ftIssued > 0) {
+                // if xt is negative, we need to increase ft reserve
+                deltaFt = isNegetiveXt ? deltaFt + ftIssued : deltaFt - ftIssued;
+            }
         }
         ITermMaxMarketV2(address(market)).burn(address(this), recipient, debtTokenAmtOut);
-        return (netTokenIn, feeAmt);
+        return (netTokenIn, feeAmt, deltaFt, deltaXt, isNegetiveXt);
     }
 
     function _sellFtForExactTokenStep(
@@ -730,17 +856,25 @@ contract TermMaxOrderV2 is
         uint256 oriXtReserve,
         uint256 debtTokenOut,
         OrderConfig memory config
-    ) internal view returns (uint256 ftAmtIn, uint256 feeAmt, IERC20 tokenIn) {
+    )
+        internal
+        view
+        returns (uint256 ftAmtIn, uint256 feeAmt, IERC20 tokenIn, uint256 deltaFt, uint256 deltaXt, bool isNegetiveXt)
+    {
         FeeConfig memory feeConfig = config.feeConfig;
         CurveCut[] memory cuts = config.curveCuts.lendCurveCuts;
         uint256 nif = Constants.DECIMAL_BASE + uint256(feeConfig.borrowTakerFeeRatio);
 
-        (, uint256 deltaFt) =
-            TermMaxCurve.sellFtForExactDebtToken(nif, daysToMaturity, cuts, oriXtReserve, debtTokenOut);
+        (deltaXt, deltaFt) = TermMaxCurve.sellFtForExactDebtToken(nif, daysToMaturity, cuts, oriXtReserve, debtTokenOut);
         ftAmtIn = deltaFt + debtTokenOut;
 
         feeAmt = deltaFt - (deltaFt * (Constants.DECIMAL_BASE - uint256(feeConfig.lendMakerFeeRatio))) / nif;
         tokenIn = ft;
+
+        // ft reserve increase, xt reserve decrease
+        deltaFt -= feeAmt;
+        deltaXt = debtTokenOut;
+        isNegetiveXt = true;
     }
 
     function _sellXtForExactTokenStep(
@@ -748,29 +882,39 @@ contract TermMaxOrderV2 is
         uint256 oriXtReserve,
         uint256 debtTokenOut,
         OrderConfig memory config
-    ) internal view returns (uint256 xtAmtIn, uint256 feeAmt, IERC20 tokenIn) {
+    )
+        internal
+        view
+        returns (uint256 xtAmtIn, uint256 feeAmt, IERC20 tokenIn, uint256 deltaFt, uint256 deltaXt, bool isNegetiveXt)
+    {
         FeeConfig memory feeConfig = config.feeConfig;
         CurveCut[] memory cuts = config.curveCuts.borrowCurveCuts;
         uint256 nif = Constants.DECIMAL_BASE - uint256(feeConfig.lendTakerFeeRatio);
-        (uint256 deltaXt, uint256 negDeltaFt) =
-            TermMaxCurve.sellXtForExactDebtToken(nif, daysToMaturity, cuts, oriXtReserve, debtTokenOut);
+        (deltaXt, deltaFt) = TermMaxCurve.sellXtForExactDebtToken(nif, daysToMaturity, cuts, oriXtReserve, debtTokenOut);
         xtAmtIn = deltaXt + debtTokenOut;
 
-        feeAmt = (negDeltaFt * (Constants.DECIMAL_BASE + uint256(feeConfig.borrowMakerFeeRatio))) / nif - negDeltaFt;
+        feeAmt = (deltaFt * (Constants.DECIMAL_BASE + uint256(feeConfig.borrowMakerFeeRatio))) / nif - deltaFt;
         tokenIn = xt;
+
+        // ft reserve decrease, xt reserve increase
+        deltaFt += feeAmt;
+        deltaXt = debtTokenOut;
+        isNegetiveXt = false;
     }
 
     /**
      * @notice Issue ft by existed gt.
      * @notice This fuction will be triggered when ft reserve can not cover the output amount.
      */
-    function _issueFtToSelf(uint256 ftReserve, uint256 targetFtReserve, OrderConfig memory config) internal {
-        if (ftReserve >= targetFtReserve) return;
+    function _issueFtToSelf(uint256 ftReserve, uint256 targetFtReserve, OrderConfig memory config)
+        internal
+        returns (uint256 deltaFt)
+    {
+        if (ftReserve >= targetFtReserve) return 0;
         if (config.gtId == 0) revert CantNotIssueFtWithoutGt();
-        uint256 debtAmtToIssue = ((targetFtReserve - ftReserve) * Constants.DECIMAL_BASE)
-            / (Constants.DECIMAL_BASE - market.mintGtFeeRatio());
+        deltaFt = targetFtReserve - ftReserve;
+        uint256 debtAmtToIssue = (deltaFt * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - market.mintGtFeeRatio());
         market.issueFtByExistedGt(address(this), (debtAmtToIssue).toUint128(), config.gtId);
-        setInitialFtReserve(targetFtReserve);
     }
 
     function withdrawAssets(IERC20 token, address recipient, uint256 amount) external virtual onlyOwner {
@@ -779,6 +923,9 @@ contract TermMaxOrderV2 is
         } else {
             token.safeTransfer(recipient, amount);
         }
+        // Update the ft and xt reserve
+        _ftReserve = ft.balanceOf(address(this));
+        _xtReserve = xt.balanceOf(address(this));
         emit WithdrawAssets(token, _msgSender(), recipient, amount);
     }
 

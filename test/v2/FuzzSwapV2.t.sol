@@ -74,6 +74,9 @@ contract FuzzSwapTestV2 is Test {
         res.swapRange = JSONLoader.getSwapRangeFromJson(testdata, ".maxInput");
 
         vm.stopPrank();
+
+        vm.prank(maker);
+        res.order.updateOrder(res.orderConfig, 0, 0);
     }
 
     function testBuyFt(uint256 index, uint128 tokenAmtIn) public {
