@@ -19,9 +19,6 @@ contract TermMaxVaultFactoryV2 is ITermMaxVaultFactoryV2 {
     address public immutable TERMMAX_VAULT_IMPLEMENTATION;
 
     constructor(address TERMMAX_VAULT_IMPLEMENTATION_) {
-        if (TERMMAX_VAULT_IMPLEMENTATION_ == address(0)) {
-            revert FactoryErrors.InvalidImplementation();
-        }
         TERMMAX_VAULT_IMPLEMENTATION = TERMMAX_VAULT_IMPLEMENTATION_;
     }
 
