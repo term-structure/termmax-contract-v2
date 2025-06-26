@@ -6,6 +6,8 @@ pragma solidity ^0.8.0;
  * @author Term Structure Labs
  */
 interface VaultErrorsV2 {
+    /// @notice Error thrown when the parameters of updating orders are invalid
+    error ArrayLengthMismatch();
     /// @notice Error thrown when dealing unexpected collateral
     error CollateralIsAsset();
     /// @notice Error thrown when an invalid or unsupported functions is called

@@ -56,6 +56,11 @@ contract OrderManagerV2 is VaultStorageV2, VaultErrors, VaultEvents, IOrderManag
         uint256[] memory maxSupplies,
         CurveCuts[] memory curveCuts
     ) external override onlyProxy {
+        uint256 length = orders.length;
+        if (length != changes.length || length != maxSupplies.length || length != curveCuts.length) {
+            revert VaultErrorsV2.ArrayLengthMismatch();
+        }
+
         _accruedInterest();
         int256 totalChanges = 0;
         for (uint256 i = 0; i < orders.length; ++i) {
