@@ -141,6 +141,10 @@ contract RouterTestV2_tmxToken is Test {
         res.vault = DeployUtils.deployVault(vaultParams);
 
         vm.stopPrank();
+
+        vm.prank(maker);
+        res.order.updateOrder(orderConfig, 0, 0);
+
     }
 
     function testSwapExactTokenToTokenWithWrap() public {

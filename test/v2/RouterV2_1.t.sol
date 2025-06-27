@@ -123,6 +123,10 @@ contract RouterTestV2_1 is Test {
         res.router.setAdapterWhitelist(address(termMaxTokenAdapter), true);
 
         vm.stopPrank();
+
+        vm.prank(maker);
+        res.order.updateOrder(orderConfig, 0, 0);
+
     }
 
     function testSwapExactTokenToToken() public {

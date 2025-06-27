@@ -110,6 +110,9 @@ contract RouterTestV2 is Test {
         res.router.setAdapterWhitelist(address(adapter), true);
 
         vm.stopPrank();
+
+        vm.prank(maker);
+        res.order.updateOrder(orderConfig, 0, 0);
     }
 
     function testSetAdapterWhitelist() public {
@@ -155,55 +158,6 @@ contract RouterTestV2 is Test {
 
         vm.stopPrank();
     }
-
-    // function testRedeemAndSwap() public {
-    //     address bob = vm.randomAddress();
-    //     address alice = vm.randomAddress();
-
-    //     uint128 depositAmt = 1000e8;
-    //     uint128 debtAmt = 100e8;
-    //     uint256 collateralAmt = 1e18;
-
-    //     vm.startPrank(bob);
-    //     res.debt.mint(bob, depositAmt);
-    //     res.debt.approve(address(res.market), depositAmt);
-    //     res.market.mint(bob, depositAmt);
-
-    //     res.xt.transfer(alice, debtAmt);
-    //     vm.stopPrank();
-
-    //     vm.startPrank(alice);
-
-    //     MockFlashLoanReceiver receiver = new MockFlashLoanReceiver(res.market);
-    //     res.collateral.mint(address(receiver), collateralAmt);
-
-    //     res.xt.approve(address(receiver), debtAmt);
-    //     receiver.leverageByXt(debtAmt, abi.encode(alice, collateralAmt));
-    //     vm.stopPrank();
-
-    //     vm.warp(marketConfig.maturity + Constants.LIQUIDATION_WINDOW);
-
-    //     vm.startPrank(bob);
-
-    //     uint256 minDebtOutAmt = 1000e8;
-    //     SwapUnit[] memory units = new SwapUnit[](1);
-    //     units[0] = SwapUnit(address(adapter), address(res.collateral), address(res.debt), abi.encode(minDebtOutAmt));
-
-    //     res.ft.approve(address(res.router), depositAmt);
-    //     uint256 ftTotalSupply = res.ft.totalSupply();
-    //     uint256 redeemedDebtToken = (res.debt.balanceOf(address(res.market)) * depositAmt) / ftTotalSupply;
-
-    //     uint256 expectedOutput = redeemedDebtToken + minDebtOutAmt;
-
-    //     vm.expectEmit();
-    //     emit RouterEvents.RedeemAndSwap(res.market, depositAmt, bob, bob, expectedOutput);
-    //     uint256 netOutput = res.router.redeemAndSwap(bob, res.market, depositAmt, units, expectedOutput);
-
-    //     assertEq(netOutput, expectedOutput);
-    //     assertEq(res.debt.balanceOf(bob), netOutput);
-
-    //     vm.stopPrank();
-    // }
 
     function testPlaceOrderForV1() public {
         vm.startPrank(sender);

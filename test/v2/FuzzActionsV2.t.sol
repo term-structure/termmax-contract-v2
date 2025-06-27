@@ -89,6 +89,9 @@ contract FuzzActionsTestV2 is Test {
         res.xt.transfer(address(res.order), xtReserve);
 
         vm.stopPrank();
+
+        vm.prank(maker);
+        res.order.updateOrder(res.orderConfig, 0, 0);
     }
 
     function _parseActions() internal returns (Action[] memory actions) {

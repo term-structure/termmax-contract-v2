@@ -75,6 +75,9 @@ contract OrderTestV2 is Test {
         res.xt.transfer(address(res.order), amount);
 
         vm.stopPrank();
+
+        vm.prank(maker);
+        res.order.updateOrder(orderConfig, 0, 0);
     }
 
     function testInvalidCurveCuts() public {
@@ -101,6 +104,9 @@ contract OrderTestV2 is Test {
         }
 
         vm.stopPrank();
+
+        vm.prank(maker);
+        res.order.updateOrder(orderConfig, 0, 0);
     }
 
     function testBuyFt() public {
