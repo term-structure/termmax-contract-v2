@@ -167,7 +167,7 @@ contract DeployBase is Script {
         accessManager.setAdapterWhitelist(router, address(vaultAdapter), true);
     }
 
-    function deployAdaptersMainnet(
+    function deployAdapters(
         address accessManagerAddr,
         address routerAddr,
         address uniswapV3Router,
@@ -452,7 +452,7 @@ contract DeployBase is Script {
 
     // Helper function to generate date suffix for JSON files
     function getDateSuffix() internal view returns (string memory) {
-        return StringHelper.convertTimestampToDateString(block.timestamp);
+        return StringHelper.convertTimestampToDateString(block.timestamp, "YYYYMMDD");
     }
 
     // Helper function to create deployment file path with date suffix

@@ -26,6 +26,7 @@ import {UniswapV3AdapterV2} from "contracts/v1/router/specAdapters/UniswapV3Adap
 import {OdosV2AdapterV2} from "contracts/v1/router/specAdapters/OdosV2AdapterV2.sol";
 import {PendleSwapV3AdapterV2} from "contracts/v1/router/specAdapters/PendleSwapV3AdapterV2.sol";
 import {ERC4626VaultAdapterV2} from "contracts/v1/router/specAdapters/ERC4626VaultAdapterV2.sol";
+import {StringHelper} from "../utils/StringHelper.sol";
 
 contract DeployAdapters is DeployBase {
     // Network-specific config loaded from environment variables
@@ -67,7 +68,6 @@ contract DeployAdapters is DeployBase {
             string memory uniswapV3RouterVar = string.concat(networkUpper, "_UNISWAP_V3_ROUTER_ADDRESS");
             string memory odosV2RouterVar = string.concat(networkUpper, "_ODOS_V2_ROUTER_ADDRESS");
             string memory pendleSwapV3RouterVar = string.concat(networkUpper, "_PENDLE_SWAP_V3_ROUTER_ADDRESS");
-            string memory oracleTimelockVar = string.concat(networkUpper, "_ORACLE_TIMELOCK");
             uniswapV3RouterAddr = vm.envAddress(uniswapV3RouterVar);
             odosV2RouterAddr = vm.envAddress(odosV2RouterVar);
             pendleSwapV3RouterAddr = vm.envAddress(pendleSwapV3RouterVar);
@@ -93,17 +93,16 @@ contract DeployAdapters is DeployBase {
         uint256 currentTimestamp = block.timestamp;
 
         vm.startBroadcast(deployerPrivateKey);
-        if (
-            keccak256(abi.encodePacked(network)) == keccak256(abi.encodePacked("eth-mainnet"))
-                || keccak256(abi.encodePacked(network)) == keccak256(abi.encodePacked("arb-mainnet"))
-                || keccak256(abi.encodePacked(network)) == keccak256(abi.encodePacked("bnb-mainnet"))
-        ) {
-            (uniswapV3Adapter, odosV2Adapter, pendleSwapV3Adapter, vaultAdapter) = deployAdaptersMainnet(
-                accessManagerAddr, routerAddr, uniswapV3RouterAddr, odosV2RouterAddr, pendleSwapV3RouterAddr
-            );
-        } else {
-            revert("This script is only for mainnet deployments");
-        }
+        // if (
+        //     keccak256(abi.encodePacked(network)) == keccak256(abi.encodePacked("eth-mainnet"))
+        //         || keccak256(abi.encodePacked(network)) == keccak256(abi.encodePacked("arb-mainnet"))
+        //         || keccak256(abi.encodePacked(network)) == keccak256(abi.encodePacked("bnb-mainnet"))
+        // ) {
+        (uniswapV3Adapter, odosV2Adapter, pendleSwapV3Adapter, vaultAdapter) =
+            deployAdapters(accessManagerAddr, routerAddr, uniswapV3RouterAddr, odosV2RouterAddr, pendleSwapV3RouterAddr);
+        // } else {
+        //     revert("This script is only for mainnet deployments");
+        // }
         vm.stopBroadcast();
 
         console.log("===== Git Info =====");
@@ -149,27 +148,23 @@ contract DeployAdapters is DeployBase {
                 '  "admin": "',
                 vm.toString(adminAddr),
                 '",\n',
-                '    "swapAdapter": ',
-                keccak256(abi.encodePacked(network)) == keccak256(abi.encodePacked("eth-mainnet"))
-                    || keccak256(abi.encodePacked(network)) == keccak256(abi.encodePacked("arb-mainnet"))
-                    || keccak256(abi.encodePacked(network)) == keccak256(abi.encodePacked("bnb-mainnet"))
-                    ? string.concat(
-                        "{\n",
-                        '      "uniswapV3Adapter": "',
-                        vm.toString(address(uniswapV3Adapter)),
-                        '",\n',
-                        '      "odosV2Adapter": "',
-                        vm.toString(address(odosV2Adapter)),
-                        '",\n',
-                        '      "pendleSwapV3Adapter": "',
-                        vm.toString(address(pendleSwapV3Adapter)),
-                        '",\n',
-                        '      "ERC4626VaultAdapter": "',
-                        vm.toString(address(vaultAdapter)),
-                        '"\n',
-                        "    },\n"
-                    )
-                    : '"\n',
+                '  "swapAdapter": ',
+                string.concat(
+                    "{\n",
+                    '    "uniswapV3Adapter": "',
+                    vm.toString(address(uniswapV3Adapter)),
+                    '",\n',
+                    '    "odosV2Adapter": "',
+                    vm.toString(address(odosV2Adapter)),
+                    '",\n',
+                    '    "pendleSwapV3Adapter": "',
+                    vm.toString(address(pendleSwapV3Adapter)),
+                    '",\n',
+                    '    "ERC4626VaultAdapter": "',
+                    vm.toString(address(vaultAdapter)),
+                    '"\n',
+                    "  }\n"
+                ),
                 "}"
             )
         );
@@ -181,7 +176,9 @@ contract DeployAdapters is DeployBase {
             vm.createDir(deploymentsDir, true);
         }
 
-        string memory deploymentPath = string.concat(deploymentsDir, "/", network, "-adapters.json");
+        // Create filename with date string using StringHelper
+        string memory dateString = getDateSuffix();
+        string memory deploymentPath = string.concat(deploymentsDir, "/", network, "-adapters-", dateString, ".json");
         vm.writeFile(deploymentPath, deploymentJson);
         console.log("Deployment info written to:", deploymentPath);
     }
