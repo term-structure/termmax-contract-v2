@@ -392,33 +392,26 @@ contract TermMaxOrderV2WithStaking is
             uint256 xtBalance = _xt.balanceOf(address(this));
 
             if (tokenOut == _debtToken) {
-                uint256 totalOut = netTokenOut;
-                if(ftBalance >= feeAmt){
-                    ft.safeTransfer(market.config().treasurer, feeAmt);
-                    ftBalance -= feeAmt;
-                } else {
-                    totalOut = netTokenOut + feeAmt - ftBalance;
+                ftBalance = _payFee(ftBalance, feeAmt);
+                // Burn tokens (min of ftBalance, xtBalance)
+                uint256 burnAmt = ftBalance < xtBalance ? ftBalance : xtBalance;
+                if (burnAmt > 0) {
+                    market.burn(address(this), burnAmt);
                 }
-                uint256 tokenToBurn = ftBalance < xtBalance ? ftBalance : xtBalance;
-                ftBalance -= tokenToBurn;
-                market.burn(address(this), tokenToBurn);
+                // Withdraw output to recipient
                 _withdrawWithBuffer(address(tokenOut), recipient, netTokenOut);
             } else{
+                
                 uint256 tokenToMint = tokenOut == _ft? netTokenOut + feeAmt : netTokenOut;
                 _withdrawWithBuffer(address(debtToken), address(this), tokenToMint);
                 _debtToken.safeIncreaseAllowance(address(market), tokenToMint);
                 market.mint(address(this), tokenToMint);
                 // transfer net token out
                 tokenOut.safeTransfer(recipient, netTokenOut);
-            }
-            if (ftBalance < feeAmt) {
-                _withdrawWithBuffer(address(debtToken), address(this), feeAmt - ftBalance);
-                _debtToken.safeIncreaseAllowance(address(market), feeAmt - ftBalance);
-                market.mint(address(this), feeAmt - ftBalance);  
                 // transfer fee to treasurer
-                ft.safeTransfer(market.config().treasurer, feeAmt);
+                _ft.safeTransfer(market.config().treasurer, feeAmt);
             }
-            
+            // deposit to/withdraw from pool if needed
         } else {
             if (address(_orderConfig.swapTrigger) != address(0)) {
                 _orderConfig.swapTrigger.afterSwap(_ftReserve, _xtReserve, 0, 0);
@@ -434,6 +427,19 @@ contract TermMaxOrderV2WithStaking is
             netTokenOut.toUint128(),
             feeAmt.toUint128()
         );
+    }
+
+    // Helper to pay fee, minting if needed
+    function _payFee(uint256 ftBalance, uint256 feeAmt) internal returns (uint256) {
+        if (ftBalance < feeAmt) {
+            uint256 mintAmt = feeAmt - ftBalance;
+            _withdrawWithBuffer(address(debtToken), address(this), mintAmt);
+            debtToken.safeIncreaseAllowance(address(market), mintAmt);
+            market.mint(address(this), mintAmt);
+            return 0;
+        }
+        ft.safeTransfer(market.config().treasurer, feeAmt);
+        return ftBalance - feeAmt;  
     }
 
     function _buyFt(
