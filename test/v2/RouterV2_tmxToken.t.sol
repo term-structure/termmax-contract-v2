@@ -144,7 +144,6 @@ contract RouterTestV2_tmxToken is Test {
 
         vm.prank(maker);
         res.order.updateOrder(orderConfig, 0, 0);
-
     }
 
     function testSwapExactTokenToTokenWithWrap() public {

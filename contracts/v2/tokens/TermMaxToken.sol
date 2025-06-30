@@ -10,7 +10,7 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 import {IERC20Metadata, IERC20} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {IAaveV3Minimal} from "../extensions/aave/IAaveV3Minimal.sol";
-import {TransferUtils} from "../../v1/lib/TransferUtils.sol";
+import {TransferUtilsV2} from "../lib/TransferUtilsV2.sol";
 import {StakingBuffer} from "./StakingBuffer.sol";
 import {TermMaxTokenEvents} from "../events/TermMaxTokenEvents.sol";
 import {TermMaxTokenErrors} from "../errors/TermMaxTokenErrors.sol";
@@ -25,7 +25,7 @@ contract TermMaxToken is
     TermMaxTokenEvents,
     TermMaxTokenErrors
 {
-    using TransferUtils for IERC20;
+    using TransferUtilsV2 for IERC20;
     using PendingLib for PendingAddress;
 
     IAaveV3Minimal public immutable aavePool;
@@ -137,7 +137,7 @@ contract TermMaxToken is
         require(receivedAmount == amount, AaveWithdrawFailed(amount, receivedAmount));
     }
 
-    function _aTokenBalance(address) internal view virtual override returns (uint256 amount) {
+    function _assetInPool(address) internal view virtual override returns (uint256 amount) {
         amount = aToken.balanceOf(address(this));
     }
 

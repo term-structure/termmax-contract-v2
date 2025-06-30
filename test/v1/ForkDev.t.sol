@@ -19,9 +19,8 @@ contract ForkDevTest is Test {
         uint256 a2 = 2315440372228375033;
         console.log((a1 + a2) / 10);
 
-
         uint256 p1 = 426130346645352599;
         uint256 p2 = 115799907525091444;
-        console.log(p1*2 + p2*2);
+        console.log(p1 * 2 + p2 * 2);
     }
 }

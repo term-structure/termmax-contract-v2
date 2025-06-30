@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import {TransferUtils, IERC20} from "../../v1/lib/TransferUtils.sol";
+import {TransferUtilsV2, IERC20} from "../lib/TransferUtilsV2.sol";
 
 abstract contract StakingBuffer {
-    using TransferUtils for IERC20;
+    using TransferUtilsV2 for IERC20;
 
     error InvalidBuffer(uint256 minimumBuffer, uint256 maximumBuffer, uint256 buffer);
 
@@ -34,7 +34,7 @@ abstract contract StakingBuffer {
         // Not enough buffer, withdraw from pool
         uint256 targetBalance = bufferConfig.buffer + amount;
         uint256 amountFromPool = targetBalance - assetBalance;
-        uint256 aTokenBalance = _aTokenBalance(assetAddr);
+        uint256 aTokenBalance = _assetInPool(assetAddr);
         if (amountFromPool > aTokenBalance) {
             amountFromPool = aTokenBalance;
         }
@@ -52,7 +52,7 @@ abstract contract StakingBuffer {
 
     function _withdrawFromPool(address assetAddr, address to, uint256 amount) internal virtual;
 
-    function _aTokenBalance(address assetAddr) internal view virtual returns (uint256 amount);
+    function _assetInPool(address assetAddr) internal view virtual returns (uint256 amount);
 
     function _checkBufferConfig(uint256 minimumBuffer, uint256 maximumBuffer, uint256 buffer) internal pure {
         if (minimumBuffer > maximumBuffer || buffer < minimumBuffer || buffer > maximumBuffer) {

@@ -126,7 +126,6 @@ contract RouterTestV2_1 is Test {
 
         vm.prank(maker);
         res.order.updateOrder(orderConfig, 0, 0);
-
     }
 
     function testSwapExactTokenToToken() public {
