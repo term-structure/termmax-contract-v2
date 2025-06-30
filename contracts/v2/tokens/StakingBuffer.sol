@@ -34,9 +34,9 @@ abstract contract StakingBuffer {
         // Not enough buffer, withdraw from pool
         uint256 targetBalance = bufferConfig.buffer + amount;
         uint256 amountFromPool = targetBalance - assetBalance;
-        uint256 aTokenBalance = _assetInPool(assetAddr);
-        if (amountFromPool > aTokenBalance) {
-            amountFromPool = aTokenBalance;
+        uint256 assetInPool = _assetInPool(assetAddr);
+        if (amountFromPool > assetInPool) {
+            amountFromPool = assetInPool;
         }
         if (amountFromPool == amount) {
             _withdrawFromPool(assetAddr, to, amountFromPool);
