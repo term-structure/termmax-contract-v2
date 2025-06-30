@@ -329,8 +329,11 @@ contract TermMaxOrderV2WithStaking is
             uint256 deltaFt;
             uint256 deltaXt;
             bool isNegetiveXt;
+            IERC20 _debtToken = debtToken;
+            IERC20 _ft = ft;
+            IERC20 _xt = xt;
 
-            if (tokenIn == ft && tokenOut == debtToken) {
+            if (tokenIn == _ft && tokenOut == _debtToken) {
                 (netTokenOut, feeAmt, deltaFt, deltaXt, isNegetiveXt) = _sellFt(
                     _ftReserve,
                     _xtReserve,
@@ -340,7 +343,7 @@ contract TermMaxOrderV2WithStaking is
                     recipient,
                     config
                 );
-            } else if (tokenIn == xt && tokenOut == debtToken) {
+            } else if (tokenIn == _xt && tokenOut == _debtToken) {
                 (netTokenOut, feeAmt, deltaFt, deltaXt, isNegetiveXt) = _sellXt(
                     _ftReserve,
                     _xtReserve,
@@ -350,7 +353,7 @@ contract TermMaxOrderV2WithStaking is
                     recipient,
                     config
                 );
-            } else if (tokenIn == debtToken && tokenOut == ft) {
+            } else if (tokenIn == _debtToken && tokenOut == _ft) {
                 (netTokenOut, feeAmt, deltaFt, deltaXt, isNegetiveXt) = _buyFt(
                     _ftReserve,
                     _xtReserve,
@@ -360,7 +363,7 @@ contract TermMaxOrderV2WithStaking is
                     recipient,
                     config
                 );
-            } else if (tokenIn == debtToken && tokenOut == xt) {
+            } else if (tokenIn == _debtToken && tokenOut == _xt) {
                 (netTokenOut, feeAmt, deltaFt, deltaXt, isNegetiveXt) = _buyXt(
                     _ftReserve,
                     _xtReserve,
@@ -373,8 +376,6 @@ contract TermMaxOrderV2WithStaking is
             } else {
                 revert CantNotSwapToken(tokenIn, tokenOut);
             }
-            // transfer fee to treasurer
-            ft.safeTransfer(market.config().treasurer, feeAmt);
             _updateReserves(deltaFt, deltaXt, isNegetiveXt);
 
             /// @dev callback the changes of ft and xt reserve to trigger
@@ -385,6 +386,39 @@ contract TermMaxOrderV2WithStaking is
                     _orderConfig.swapTrigger.afterSwap(_ftReserve, _xtReserve, -deltaFt.toInt256(), deltaXt.toInt256());
                 }
             }
+            // transfer token in
+            tokenIn.safeTransferFrom(msg.sender, address(this), tokenAmtIn);
+            uint256 ftBalance = _ft.balanceOf(address(this));
+            uint256 xtBalance = _xt.balanceOf(address(this));
+
+            if (tokenOut == _debtToken) {
+                uint256 totalOut = netTokenOut;
+                if(ftBalance >= feeAmt){
+                    ft.safeTransfer(market.config().treasurer, feeAmt);
+                    ftBalance -= feeAmt;
+                } else {
+                    totalOut = netTokenOut + feeAmt - ftBalance;
+                }
+                uint256 tokenToBurn = ftBalance < xtBalance ? ftBalance : xtBalance;
+                ftBalance -= tokenToBurn;
+                market.burn(address(this), tokenToBurn);
+                _withdrawWithBuffer(address(tokenOut), recipient, netTokenOut);
+            } else{
+                uint256 tokenToMint = tokenOut == _ft? netTokenOut + feeAmt : netTokenOut;
+                _withdrawWithBuffer(address(debtToken), address(this), tokenToMint);
+                _debtToken.safeIncreaseAllowance(address(market), tokenToMint);
+                market.mint(address(this), tokenToMint);
+                // transfer net token out
+                tokenOut.safeTransfer(recipient, netTokenOut);
+            }
+            if (ftBalance < feeAmt) {
+                _withdrawWithBuffer(address(debtToken), address(this), feeAmt - ftBalance);
+                _debtToken.safeIncreaseAllowance(address(market), feeAmt - ftBalance);
+                market.mint(address(this), feeAmt - ftBalance);  
+                // transfer fee to treasurer
+                ft.safeTransfer(market.config().treasurer, feeAmt);
+            }
+            
         } else {
             if (address(_orderConfig.swapTrigger) != address(0)) {
                 _orderConfig.swapTrigger.afterSwap(_ftReserve, _xtReserve, 0, 0);
@@ -1138,6 +1172,7 @@ contract TermMaxOrderV2WithStaking is
     function _depositToPool(address assetAddr, uint256 amount) internal virtual override {
         if (address(pool) != address(0)) {
             _totalStaked += amount;
+            market.burn(address(this), amount);
             IERC20(assetAddr).safeIncreaseAllowance(address(pool), amount);
             pool.deposit(amount, address(this));
         }
