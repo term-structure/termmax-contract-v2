@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {OrderConfig} from "../../v1/storage/TermMaxStorage.sol";
+import {OrderConfig, CurveCuts, ISwapCallback} from "../../v1/storage/TermMaxStorage.sol";
 
 /**
  * @title Order Events v2
@@ -13,4 +13,8 @@ interface OrderEventsV2 {
     /// @param market The address of the market associated with the order
     /// @param orderConfig The configuration of the order
     event OrderInitialized(address indexed maker, address indexed market, OrderConfig orderConfig);
+
+    event CurveUpdated(CurveCuts curveCuts);
+
+    event GeneralConfigUpdated(uint256 gtId, uint256 maxXtReserve, ISwapCallback swapTrigger, uint256 virtualXtReserve);
 }

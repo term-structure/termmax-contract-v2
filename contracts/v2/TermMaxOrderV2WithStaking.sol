@@ -42,6 +42,7 @@ contract TermMaxOrderV2WithStaking is
     using SafeCast for uint256;
     using SafeCast for int256;
     using TransferUtils for IERC20;
+    using TransferUtils for IERC4626;
     using MathLib for *;
 
     ITermMaxMarket public market;
@@ -57,7 +58,7 @@ contract TermMaxOrderV2WithStaking is
 
     uint256 private _ftReserve;
     /// @notice The virtual xt reserve can present current price, which only changed when swap happens
-    uint256 private _xtReserve;
+    uint256 private _virtualXtReserve;
     IERC4626 public pool;
     uint256 private _totalStaked;
 
@@ -212,7 +213,7 @@ contract TermMaxOrderV2WithStaking is
         }
         // Update the ft and xt reserve
         _ftReserve = ft.balanceOf(address(this));
-        _xtReserve = xt.balanceOf(address(this));
+        _virtualXtReserve = xt.balanceOf(address(this));
         _orderConfig.maxXtReserve = newOrderConfig.maxXtReserve;
         _orderConfig.gtId = newOrderConfig.gtId;
         _orderConfig.swapTrigger = newOrderConfig.swapTrigger;
@@ -227,95 +228,130 @@ contract TermMaxOrderV2WithStaking is
     }
 
     function _updateCurve(CurveCuts memory newCurveCuts) internal {
-        bytes32 newCurveCutsHash = keccak256(abi.encode(newCurveCuts));
-        CurveCuts memory oldCurveCuts = _orderConfig.curveCuts;
-        if (keccak256(abi.encode(oldCurveCuts)) != newCurveCutsHash) {
-            if (newCurveCuts.lendCurveCuts.length > 0) {
-                if (newCurveCuts.lendCurveCuts[0].liqSquare == 0 || newCurveCuts.lendCurveCuts[0].xtReserve != 0) {
-                    revert InvalidCurveCuts();
-                }
+        if (newCurveCuts.lendCurveCuts.length > 0) {
+            if (newCurveCuts.lendCurveCuts[0].liqSquare == 0 || newCurveCuts.lendCurveCuts[0].xtReserve != 0) {
+                revert InvalidCurveCuts();
             }
-            for (uint256 i = 1; i < newCurveCuts.lendCurveCuts.length; i++) {
-                if (
-                    newCurveCuts.lendCurveCuts[i].liqSquare == 0
-                        || newCurveCuts.lendCurveCuts[i].xtReserve <= newCurveCuts.lendCurveCuts[i - 1].xtReserve
-                ) {
-                    revert InvalidCurveCuts();
-                }
-                /*
+        }
+        for (uint256 i = 1; i < newCurveCuts.lendCurveCuts.length; i++) {
+            if (
+                newCurveCuts.lendCurveCuts[i].liqSquare == 0
+                    || newCurveCuts.lendCurveCuts[i].xtReserve <= newCurveCuts.lendCurveCuts[i - 1].xtReserve
+            ) {
+                revert InvalidCurveCuts();
+            }
+            /*
                     R := (x' + beta') ^ 2 * DECIMAL_BASE / (x' + beta) ^ 2
                     L' ^ 2 := L ^ 2 * R / DECIMAL_BASE
                 */
-                if (
-                    newCurveCuts.lendCurveCuts[i].liqSquare
-                        != (
-                            newCurveCuts.lendCurveCuts[i - 1].liqSquare
-                                * (
-                                    (
-                                        (
-                                            newCurveCuts.lendCurveCuts[i].xtReserve.plusInt256(
-                                                newCurveCuts.lendCurveCuts[i].offset
-                                            )
-                                        ) ** 2 * Constants.DECIMAL_BASE
-                                    )
-                                        / (
-                                            newCurveCuts.lendCurveCuts[i].xtReserve.plusInt256(
-                                                newCurveCuts.lendCurveCuts[i - 1].offset
-                                            ) ** 2
-                                        )
+            if (
+                newCurveCuts.lendCurveCuts[i].liqSquare
+                    != (
+                        newCurveCuts.lendCurveCuts[i - 1].liqSquare
+                            * (
+                                (
+                                    (newCurveCuts.lendCurveCuts[i].xtReserve.plusInt256(newCurveCuts.lendCurveCuts[i].offset))
+                                        ** 2 * Constants.DECIMAL_BASE
                                 )
-                        ) / Constants.DECIMAL_BASE
-                ) revert InvalidCurveCuts();
-            }
-            if (newCurveCuts.borrowCurveCuts.length > 0) {
-                if (newCurveCuts.borrowCurveCuts[0].liqSquare == 0 || newCurveCuts.borrowCurveCuts[0].xtReserve != 0) {
-                    revert InvalidCurveCuts();
-                }
-            }
-            for (uint256 i = 1; i < newCurveCuts.borrowCurveCuts.length; i++) {
-                if (
-                    newCurveCuts.borrowCurveCuts[i].liqSquare == 0
-                        || newCurveCuts.borrowCurveCuts[i].xtReserve <= newCurveCuts.borrowCurveCuts[i - 1].xtReserve
-                ) {
-                    revert InvalidCurveCuts();
-                }
-                if (
-                    newCurveCuts.borrowCurveCuts[i].liqSquare
-                        != (
-                            newCurveCuts.borrowCurveCuts[i - 1].liqSquare
-                                * (
-                                    (
-                                        (
-                                            newCurveCuts.borrowCurveCuts[i].xtReserve.plusInt256(
-                                                newCurveCuts.borrowCurveCuts[i].offset
-                                            )
-                                        ) ** 2 * Constants.DECIMAL_BASE
+                                    / (
+                                        newCurveCuts.lendCurveCuts[i].xtReserve.plusInt256(newCurveCuts.lendCurveCuts[i - 1].offset)
+                                            ** 2
                                     )
-                                        / (
-                                            newCurveCuts.borrowCurveCuts[i].xtReserve.plusInt256(
-                                                newCurveCuts.borrowCurveCuts[i - 1].offset
-                                            ) ** 2
-                                        )
-                                )
-                        ) / Constants.DECIMAL_BASE
-                ) revert InvalidCurveCuts();
-            }
-            _orderConfig.curveCuts = newCurveCuts;
+                            )
+                    ) / Constants.DECIMAL_BASE
+            ) revert InvalidCurveCuts();
         }
+        if (newCurveCuts.borrowCurveCuts.length > 0) {
+            if (newCurveCuts.borrowCurveCuts[0].liqSquare == 0 || newCurveCuts.borrowCurveCuts[0].xtReserve != 0) {
+                revert InvalidCurveCuts();
+            }
+        }
+        for (uint256 i = 1; i < newCurveCuts.borrowCurveCuts.length; i++) {
+            if (
+                newCurveCuts.borrowCurveCuts[i].liqSquare == 0
+                    || newCurveCuts.borrowCurveCuts[i].xtReserve <= newCurveCuts.borrowCurveCuts[i - 1].xtReserve
+            ) {
+                revert InvalidCurveCuts();
+            }
+            if (
+                newCurveCuts.borrowCurveCuts[i].liqSquare
+                    != (
+                        newCurveCuts.borrowCurveCuts[i - 1].liqSquare
+                            * (
+                                (
+                                    (
+                                        newCurveCuts.borrowCurveCuts[i].xtReserve.plusInt256(
+                                            newCurveCuts.borrowCurveCuts[i].offset
+                                        )
+                                    ) ** 2 * Constants.DECIMAL_BASE
+                                )
+                                    / (
+                                        newCurveCuts.borrowCurveCuts[i].xtReserve.plusInt256(
+                                            newCurveCuts.borrowCurveCuts[i - 1].offset
+                                        ) ** 2
+                                    )
+                            )
+                    ) / Constants.DECIMAL_BASE
+            ) revert InvalidCurveCuts();
+        }
+        _orderConfig.curveCuts = newCurveCuts;
+        emit OrderEventsV2.CurveUpdated(newCurveCuts);
     }
 
-    function _updateVirtualXtReserve(uint256 xtChangeAmt, bool isNegetiveXt) internal {
-        if (isNegetiveXt) {
-            _xtReserve = _xtReserve - xtChangeAmt;
-        } else {
-            _xtReserve = _xtReserve + xtChangeAmt;
+    function setCurve(CurveCuts memory newCurveCuts) external virtual onlyOwner {
+        _updateCurve(newCurveCuts);
+    }
+
+    function _updateGeneralConfig(
+        uint256 gtId,
+        uint256 maxXtReserve,
+        ISwapCallback swapTrigger,
+        uint256 virtualXtReserve
+    ) internal {
+        _orderConfig.gtId = gtId;
+        _orderConfig.maxXtReserve = virtualXtReserve + maxXtReserve;
+        _orderConfig.swapTrigger = swapTrigger;
+        _virtualXtReserve = virtualXtReserve;
+        emit OrderEventsV2.GeneralConfigUpdated(gtId, maxXtReserve, swapTrigger, virtualXtReserve);
+    }
+
+    function setGeneralConfig(uint256 gtId, uint256 maxXtReserve, ISwapCallback swapTrigger, uint256 virtualXtReserve)
+        external
+        virtual
+        onlyOwner
+    {
+        _updateGeneralConfig(gtId, maxXtReserve, swapTrigger, virtualXtReserve);
+    }
+
+    function depositToPool(uint256 additionalAmount) external virtual onlyOwner {
+        IERC20 _debtToken = debtToken;
+        IERC4626 _pool = pool;
+        if (additionalAmount != 0) {
+            _debtToken.safeTransferFrom(msg.sender, address(this), additionalAmount);
         }
+        // Burn ft and xt to debt token and deposit to pool
+        uint256 ftBalance = ft.balanceOf(address(this));
+        uint256 xtBalance = xt.balanceOf(address(this));
+        uint256 debtTokenToMint = ftBalance > xtBalance ? ftBalance : xtBalance;
+        debtTokenToMint += additionalAmount;
+        market.burn(address(this), debtTokenToMint);
+        debtToken.safeIncreaseAllowance(address(_pool), debtTokenToMint);
+        _pool.deposit(debtTokenToMint, address(this));
+    }
+
+    function getRealReserves() external view virtual returns (uint256 ftReserve, uint256 xtReserve) {
+        uint256 assetsInPool = _assetsInPool();
+        ftReserve = ft.balanceOf(address(this)) + assetsInPool;
+        xtReserve = xt.balanceOf(address(this)) + assetsInPool;
     }
 
     function _getFtReserve() internal view returns (uint256 ftBalance) {
-        ftBalance = ft.balanceOf(address(this));
+        ftBalance = ft.balanceOf(address(this)) + _assetsInPool();
+    }
+
+    function _assetsInPool() internal view returns (uint256 assets) {
         if (pool != IERC4626(address(0))) {
-            ftBalance += pool.convertToAssets(pool.balanceOf(address(this)));
+            assets = pool.convertToAssets(pool.balanceOf(address(this)));
         }
     }
 
@@ -387,14 +423,21 @@ contract TermMaxOrderV2WithStaking is
         (uint256 netAmt, uint256 feeAmt, uint256 deltaFt, uint256 deltaXt, bool isNegetiveXt) =
             func(tokenAmtInOrOut, limitTokenAmt, orderConfig_);
         // check ft reserve and issue ft to self if needed
+        uint256 newXtReserve = _virtualXtReserve;
         if (!isNegetiveXt) {
             uint256 ftReserve = _getFtReserve();
             if (ftReserve < deltaFt) {
                 _issueFtToSelf(deltaFt - ftReserve, orderConfig_);
             }
+            // check xt reserve
+            newXtReserve += deltaXt;
+            if (newXtReserve > orderConfig_.maxXtReserve) {
+                revert XtReserveTooHigh();
+            }
+        } else {
+            newXtReserve -= deltaXt;
         }
-
-        _updateVirtualXtReserve(deltaXt, isNegetiveXt);
+        _virtualXtReserve = newXtReserve;
 
         /// @dev callback the changes of ft and xt reserve to trigger
         _triggerSwapCallback(deltaFt, deltaXt, isNegetiveXt);
@@ -465,9 +508,13 @@ contract TermMaxOrderV2WithStaking is
     function _triggerSwapCallback(uint256 deltaFt, uint256 deltaXt, bool isNegetiveXt) private {
         if (address(_orderConfig.swapTrigger) != address(0)) {
             if (isNegetiveXt) {
-                _orderConfig.swapTrigger.afterSwap(_ftReserve, _xtReserve, deltaFt.toInt256(), -deltaXt.toInt256());
+                _orderConfig.swapTrigger.afterSwap(
+                    _ftReserve, _virtualXtReserve, deltaFt.toInt256(), -deltaXt.toInt256()
+                );
             } else {
-                _orderConfig.swapTrigger.afterSwap(_ftReserve, _xtReserve, -deltaFt.toInt256(), deltaXt.toInt256());
+                _orderConfig.swapTrigger.afterSwap(
+                    _ftReserve, _virtualXtReserve, -deltaFt.toInt256(), deltaXt.toInt256()
+                );
             }
         }
     }
@@ -479,9 +526,6 @@ contract TermMaxOrderV2WithStaking is
         returns (uint256 netOut, uint256 feeAmt, uint256 deltaFt, uint256 deltaXt, bool isNegetiveXt)
     {
         (netOut, feeAmt, deltaFt, deltaXt, isNegetiveXt) = _buyToken(debtTokenAmtIn, minTokenOut, config, _buyFtStep);
-        if (xt.balanceOf(address(this)) > config.maxXtReserve) {
-            revert XtReserveTooHigh();
-        }
     }
 
     function _buyXt(uint256 debtTokenAmtIn, uint256 minTokenOut, OrderConfig memory config)
@@ -509,9 +553,6 @@ contract TermMaxOrderV2WithStaking is
         returns (uint256 netOut, uint256 feeAmt, uint256 deltaFt, uint256 deltaXt, bool isNegetiveXt)
     {
         (netOut, feeAmt, deltaFt, deltaXt, isNegetiveXt) = _sellToken(xtAmtIn, minDebtTokenOut, config, _sellXtStep);
-        if (xt.balanceOf(address(this)) > config.maxXtReserve) {
-            revert XtReserveTooHigh();
-        }
     }
 
     function _buyToken(
@@ -521,7 +562,8 @@ contract TermMaxOrderV2WithStaking is
         function(uint256, uint256, uint256, OrderConfig memory) internal view returns (uint256, uint256, uint256, uint256, bool)
             func
     ) internal view returns (uint256 netOut, uint256 feeAmt, uint256 deltaFt, uint256 deltaXt, bool isNegetiveXt) {
-        (netOut, feeAmt, deltaFt, deltaXt, isNegetiveXt) = func(_daysToMaturity(), _xtReserve, debtTokenAmtIn, config);
+        (netOut, feeAmt, deltaFt, deltaXt, isNegetiveXt) =
+            func(_daysToMaturity(), _virtualXtReserve, debtTokenAmtIn, config);
 
         netOut += debtTokenAmtIn;
         if (netOut < minTokenOut) revert UnexpectedAmount(minTokenOut, netOut);
@@ -577,7 +619,7 @@ contract TermMaxOrderV2WithStaking is
             func
     ) internal view returns (uint256, uint256, uint256, uint256, bool) {
         (uint256 netOut, uint256 feeAmt, uint256 deltaFt, uint256 deltaXt, bool isNegetiveXt) =
-            func(_daysToMaturity(), _xtReserve, tokenAmtIn, config);
+            func(_daysToMaturity(), _virtualXtReserve, tokenAmtIn, config);
         if (netOut < minDebtTokenOut) revert UnexpectedAmount(minDebtTokenOut, netOut);
         // if (tokenIn == xt) {
         //     uint256 ftIssued = _issueFtToSelf(oriFtReserve, netOut + feeAmt, config);
@@ -675,9 +717,6 @@ contract TermMaxOrderV2WithStaking is
     {
         (netTokenIn, feeAmt, deltaFt, deltaXt, isNegetiveXt) =
             _buyExactToken(tokenAmtOut, maxTokenIn, config, _buyExactFtStep);
-        if (xt.balanceOf(address(this)) > config.maxXtReserve) {
-            revert XtReserveTooHigh();
-        }
     }
 
     function _buyExactXt(uint256 tokenAmtOut, uint256 maxTokenIn, OrderConfig memory config)
@@ -698,7 +737,7 @@ contract TermMaxOrderV2WithStaking is
             func
     ) internal view returns (uint256, uint256, uint256, uint256, bool) {
         (uint256 netTokenIn, uint256 feeAmt, uint256 deltaFt, uint256 deltaXt, bool isNegetiveXt) =
-            func(_daysToMaturity(), _xtReserve, tokenAmtOut, config);
+            func(_daysToMaturity(), _virtualXtReserve, tokenAmtOut, config);
 
         if (netTokenIn > maxTokenIn) revert UnexpectedAmount(maxTokenIn, netTokenIn);
 
@@ -764,9 +803,6 @@ contract TermMaxOrderV2WithStaking is
     {
         (netIn, feeAmt, deltaFt, deltaXt, isNegetiveXt) =
             _sellTokenForExactToken(debtTokenAmtOut, maxXtIn, config, _sellXtForExactTokenStep);
-        if (xt.balanceOf(address(this)) > config.maxXtReserve) {
-            revert XtReserveTooHigh();
-        }
     }
 
     function _sellTokenForExactToken(
@@ -777,7 +813,7 @@ contract TermMaxOrderV2WithStaking is
             func
     ) internal view returns (uint256, uint256, uint256, uint256, bool) {
         (uint256 netTokenIn, uint256 feeAmt, uint256 deltaFt, uint256 deltaXt, bool isNegetiveXt) =
-            func(_daysToMaturity(), _xtReserve, debtTokenAmtOut, config);
+            func(_daysToMaturity(), _virtualXtReserve, debtTokenAmtOut, config);
 
         if (netTokenIn > maxTokenIn) revert UnexpectedAmount(maxTokenIn, netTokenIn);
 
@@ -850,7 +886,7 @@ contract TermMaxOrderV2WithStaking is
         }
         // Update the ft and xt reserve
         _ftReserve = ft.balanceOf(address(this)) + _totalStaked;
-        _xtReserve = xt.balanceOf(address(this)) + _totalStaked;
+        _virtualXtReserve = xt.balanceOf(address(this)) + _totalStaked;
         emit WithdrawAssets(token, _msgSender(), recipient, amount);
     }
 
@@ -896,7 +932,7 @@ contract TermMaxOrderV2WithStaking is
         IERC4626 _pool = pool;
         if (address(_pool) != address(0)) {
             uint256 shares = _pool.balanceOf(address(this));
-            _pool.redeem(shares, recipient, address(this));
+            _pool.safeTransfer(recipient, shares);
         }
         uint256 ftBalance = ft.balanceOf(address(this));
         if (ftBalance != 0) {
