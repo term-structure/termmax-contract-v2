@@ -3,7 +3,7 @@ pragma solidity ^0.8.27;
 
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
-import {StringHelper} from "./StringHelper.sol";
+import {StringHelper} from "../utils/StringHelper.sol";
 
 /**
  * @title ScriptBase
@@ -12,7 +12,7 @@ import {StringHelper} from "./StringHelper.sol";
 contract ScriptBase is Script {
     // Helper function to generate date suffix for JSON files
     function getDateSuffix() internal view returns (string memory) {
-        return StringHelper.convertTimestampToDateString(block.timestamp);
+        return StringHelper.convertTimestampToDateString(block.timestamp, "YYYY-MM-DD");
     }
 
     // Helper function to create script execution file path with date suffix

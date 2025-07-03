@@ -168,7 +168,7 @@ contract DeloyMarket is DeployBase {
         console.log();
 
         console.log("Treasurer:", treasurerAddr);
-        console.log("Maturity:", StringHelper.convertTimestampToDateString(marketConfig.maturity));
+        console.log("Maturity:", StringHelper.convertTimestampToDateString(marketConfig.maturity, "YYYY-MM-DD"));
         console.log("Salt:", config.salt);
         console.log("Lend Taker Fee Ratio:", marketConfig.feeConfig.lendTakerFeeRatio);
         console.log("Lend Maker Fee Ratio:", marketConfig.feeConfig.lendMakerFeeRatio);
@@ -218,7 +218,7 @@ contract DeloyMarket is DeployBase {
             "-",
             IERC20Metadata(collateralAddr).symbol(),
             "@",
-            StringHelper.convertTimestampToDateString(maturity),
+            StringHelper.convertTimestampToDateString(maturity, "YYYY-MM-DD"),
             ".json"
         );
     }
@@ -338,7 +338,7 @@ contract DeloyMarket is DeployBase {
                 vm.toString(marketConfig.treasurer),
                 '",\n',
                 '    "maturity": "',
-                StringHelper.convertTimestampToDateString(marketConfig.maturity),
+                StringHelper.convertTimestampToDateString(marketConfig.maturity, "YYYY-MM-DD"),
                 '",\n',
                 '    "salt": "',
                 vm.toString(salt),
