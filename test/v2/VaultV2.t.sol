@@ -163,7 +163,7 @@ contract VaultTestV2 is Test {
         vault.deposit(amount, deployer);
         assertEq(res.debt.balanceOf(address(vault)), amount);
 
-        res.order = vault.createOrder(res.market, maxCapacity, amount, orderConfig.curveCuts);
+        res.order = TermMaxOrderV2(address(vault.createOrder(res.market, maxCapacity, amount, orderConfig.curveCuts)));
         vm.label(address(res.order), "order");
         res.debt.mint(deployer, 10000e18);
         res.debt.approve(address(res.market), 10000e18);

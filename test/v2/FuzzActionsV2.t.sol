@@ -78,7 +78,9 @@ contract FuzzActionsTestV2 is Test {
         res.orderConfig = JSONLoader.getOrderConfigFromJson(testdata, ".orderConfig");
 
         MockSwapCallback afterSwap = new MockSwapCallback(res.ft, res.xt);
-        res.order = res.market.createOrder(maker, res.orderConfig.maxXtReserve, afterSwap, res.orderConfig.curveCuts);
+        res.order = TermMaxOrderV2(
+            address(res.market.createOrder(maker, res.orderConfig.maxXtReserve, afterSwap, res.orderConfig.curveCuts))
+        );
 
         uint256 ftReserve = vm.parseJsonUint(testdata, ".orderConfig.ftReserve");
         uint256 xtReserve = vm.parseJsonUint(testdata, ".orderConfig.xtReserve");

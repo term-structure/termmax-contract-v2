@@ -26,6 +26,7 @@ import {Constants} from "contracts/v1/lib/Constants.sol";
 import "contracts/v1/storage/TermMaxStorage.sol";
 import {IOracleV2} from "contracts/v2/oracle/IOracleV2.sol";
 import {VaultInitialParamsV2} from "contracts/v2/storage/TermMaxStorageV2.sol";
+import {TermMaxOrderV2} from "contracts/v2/TermMaxOrderV2.sol";
 
 contract AccessManagerTestV2 is Test {
     using JSONLoader for *;
@@ -54,8 +55,13 @@ contract AccessManagerTestV2 is Test {
 
         res = DeployUtils.deployMarket(deployer, marketConfig, maxLtv, liquidationLtv);
 
-        res.order =
-            res.market.createOrder(maker, orderConfig.maxXtReserve, ISwapCallback(address(0)), orderConfig.curveCuts);
+        res.order = TermMaxOrderV2(
+            address(
+                res.market.createOrder(
+                    maker, orderConfig.maxXtReserve, ISwapCallback(address(0)), orderConfig.curveCuts
+                )
+            )
+        );
 
         vm.warp(vm.parseUint(vm.parseJsonString(testdata, ".currentTime")));
 

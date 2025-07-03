@@ -47,6 +47,7 @@ import {
 import {MockFlashLoanReceiver} from "contracts/v1/test/MockFlashLoanReceiver.sol";
 import {MockFlashRepayerV2} from "contracts/v2/test/MockFlashRepayerV2.sol";
 import {ISwapCallback} from "contracts/v1/ISwapCallback.sol";
+import {TermMaxOrderV2} from "contracts/v2/TermMaxOrderV2.sol";
 
 contract GtTestV2 is Test {
     using JSONLoader for *;
@@ -80,8 +81,13 @@ contract GtTestV2 is Test {
         orderConfig.maxXtReserve = type(uint128).max;
         res = DeployUtils.deployMarket(deployer, marketConfig, maxLtv, liquidationLtv);
 
-        res.order =
-            res.market.createOrder(maker, orderConfig.maxXtReserve, ISwapCallback(address(0)), orderConfig.curveCuts);
+        res.order = TermMaxOrderV2(
+            address(
+                res.market.createOrder(
+                    maker, orderConfig.maxXtReserve, ISwapCallback(address(0)), orderConfig.curveCuts
+                )
+            )
+        );
 
         vm.warp(vm.parseUint(vm.parseJsonString(testdata, ".currentTime")));
 

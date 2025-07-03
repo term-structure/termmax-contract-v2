@@ -456,7 +456,7 @@ contract TermMaxMarketV2 is
     /**
      * @inheritdoc ITermMaxMarketV2
      */
-    function createOrder(OrderInitialParams memory params) external returns (ITermMaxOrder) {
+    function createOrder(OrderInitialParams memory params) external nonReentrant isOpen returns (ITermMaxOrder) {
         return _createOrder(params);
     }
 

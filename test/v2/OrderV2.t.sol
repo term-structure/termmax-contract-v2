@@ -15,7 +15,14 @@ import {IFlashLoanReceiver} from "contracts/v1/IFlashLoanReceiver.sol";
 import {
     ITermMaxMarketV2, TermMaxMarketV2, Constants, MarketErrors, MarketEvents
 } from "contracts/v2/TermMaxMarketV2.sol";
-import {ITermMaxOrder, TermMaxOrderV2, ISwapCallback, OrderEvents, OrderErrors} from "contracts/v2/TermMaxOrderV2.sol";
+import {
+    ITermMaxOrder,
+    TermMaxOrderV2,
+    ISwapCallback,
+    OrderEvents,
+    OrderErrors,
+    OrderInitialParams
+} from "contracts/v2/TermMaxOrderV2.sol";
 import {MockERC20, ERC20} from "contracts/v1/test/MockERC20.sol";
 import {MockPriceFeed} from "contracts/v1/test/MockPriceFeed.sol";
 import {MockFlashLoanReceiver} from "contracts/v1/test/MockFlashLoanReceiver.sol";
@@ -58,8 +65,12 @@ contract OrderTestV2 is Test {
 
         res = DeployUtils.deployMarket(deployer, marketConfig, maxLtv, liquidationLtv);
 
-        res.order =
-            res.market.createOrder(maker, orderConfig.maxXtReserve, ISwapCallback(address(0)), orderConfig.curveCuts);
+        OrderInitialParams memory orderParams;
+        orderParams.maker = maker;
+        orderParams.orderConfig = orderConfig;
+        uint256 amount = 150e8;
+        orderParams.virtualXtReserve = amount;
+        res.order = TermMaxOrderV2(address(res.market.createOrder(orderParams)));
 
         vm.warp(vm.parseUint(vm.parseJsonString(testdata, ".currentTime")));
 
@@ -67,7 +78,6 @@ contract OrderTestV2 is Test {
         res.collateralOracle.updateRoundData(JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_2000_DAI_1.eth"));
         res.debtOracle.updateRoundData(JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_2000_DAI_1.dai"));
 
-        uint256 amount = 150e8;
         res.debt.mint(deployer, amount);
         res.debt.approve(address(res.market), amount);
         res.market.mint(deployer, amount);
@@ -75,9 +85,6 @@ contract OrderTestV2 is Test {
         res.xt.transfer(address(res.order), amount);
 
         vm.stopPrank();
-
-        vm.prank(maker);
-        res.order.updateOrder(orderConfig, 0, 0);
     }
 
     function testInvalidCurveCuts() public {

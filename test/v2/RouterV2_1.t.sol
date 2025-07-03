@@ -60,6 +60,7 @@ import {MockSwapAdapterV2} from "contracts/v2/test/MockSwapAdapterV2.sol";
 import {ITermMaxOrder} from "contracts/v1/ITermMaxOrder.sol";
 import {TermMaxSwapData, TermMaxSwapAdapter} from "contracts/v2/router/swapAdapters/TermMaxSwapAdapter.sol";
 import {TermMaxTokenAdapter} from "contracts/v2/router/swapAdapters/TermMaxTokenAdapter.sol";
+import {TermMaxOrderV2} from "contracts/v2/TermMaxOrderV2.sol";
 
 contract RouterTestV2_1 is Test {
     using JSONLoader for *;
@@ -96,8 +97,13 @@ contract RouterTestV2_1 is Test {
 
         res = DeployUtils.deployMarket(deployer, marketConfig, maxLtv, liquidationLtv);
 
-        res.order =
-            res.market.createOrder(maker, orderConfig.maxXtReserve, ISwapCallback(address(0)), orderConfig.curveCuts);
+        res.order = TermMaxOrderV2(
+            address(
+                res.market.createOrder(
+                    maker, orderConfig.maxXtReserve, ISwapCallback(address(0)), orderConfig.curveCuts
+                )
+            )
+        );
 
         vm.warp(vm.parseUint(vm.parseJsonString(testdata, ".currentTime")));
 

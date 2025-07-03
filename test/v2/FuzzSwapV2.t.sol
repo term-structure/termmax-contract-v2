@@ -8,7 +8,14 @@ import {IFlashLoanReceiver} from "contracts/v1/IFlashLoanReceiver.sol";
 import {
     ITermMaxMarketV2, TermMaxMarketV2, Constants, MarketErrors, MarketEvents
 } from "contracts/v2/TermMaxMarketV2.sol";
-import {ITermMaxOrder, TermMaxOrderV2, ISwapCallback, OrderEvents, OrderErrors} from "contracts/v2/TermMaxOrderV2.sol";
+import {
+    ITermMaxOrder,
+    TermMaxOrderV2,
+    ISwapCallback,
+    OrderEvents,
+    OrderErrors,
+    OrderInitialParams
+} from "contracts/v2/TermMaxOrderV2.sol";
 import {MockERC20, ERC20} from "contracts/v1/test/MockERC20.sol";
 import {MockPriceFeed} from "contracts/v1/test/MockPriceFeed.sol";
 import {MockFlashLoanReceiver} from "contracts/v1/test/MockFlashLoanReceiver.sol";
@@ -63,10 +70,15 @@ contract FuzzSwapTestV2 is Test {
         res.orderConfig = JSONLoader.getOrderConfigFromJson(testdata, ".orderConfig");
 
         MockSwapCallback afterSwap = new MockSwapCallback(res.ft, res.xt);
-
-        res.order = res.market.createOrder(maker, res.orderConfig.maxXtReserve, afterSwap, res.orderConfig.curveCuts);
-
         uint256 orderInitialAmount = vm.parseJsonUint(testdata, ".orderInitialAmount");
+
+        OrderInitialParams memory orderParams;
+        orderParams.maker = maker;
+        orderParams.orderConfig = res.orderConfig;
+        orderParams.virtualXtReserve = orderInitialAmount;
+        orderParams.orderConfig.swapTrigger = ISwapCallback(address(afterSwap));
+        res.order = TermMaxOrderV2(address(res.market.createOrder(orderParams)));
+
         res.debt.mint(admin, orderInitialAmount);
         res.debt.approve(address(res.market), orderInitialAmount);
         res.market.mint(address(res.order), orderInitialAmount);
@@ -74,9 +86,6 @@ contract FuzzSwapTestV2 is Test {
         res.swapRange = JSONLoader.getSwapRangeFromJson(testdata, ".maxInput");
 
         vm.stopPrank();
-
-        vm.prank(maker);
-        res.order.updateOrder(res.orderConfig, 0, 0);
     }
 
     function testBuyFt(uint256 index, uint128 tokenAmtIn) public {
@@ -240,18 +249,18 @@ contract MockSwapCallback is ISwapCallback {
         xt = xt_;
     }
 
-    function afterSwap(uint256 ftReserve_, uint256 xtReserve_, int256 deltaFt_, int256 deltaXt_) external override {
+    function afterSwap(uint256, uint256, int256 deltaFt_, int256 deltaXt_) external override {
         deltaFt = deltaFt_;
         deltaXt = deltaXt_;
         if (ftReserve == 0 || xtReserve == 0) {
-            ftReserve = int256(ftReserve_);
-            xtReserve = int256(xtReserve_);
+            ftReserve = ft.balanceOf(msg.sender).toInt256();
+            xtReserve = xt.balanceOf(msg.sender).toInt256();
             return;
         } else {
             ftReserve += deltaFt;
             xtReserve += deltaXt;
-            require(uint256(ftReserve) == ftReserve_, "ft reserve not as expected");
-            require(uint256(xtReserve) == xtReserve_, "xt reserve not as expected");
+            require(uint256(ftReserve) == ft.balanceOf(msg.sender), "ft reserve not as expected");
+            require(uint256(xtReserve) == xt.balanceOf(msg.sender), "xt reserve not as expected");
         }
     }
 }

@@ -53,11 +53,11 @@ library DeployUtils {
         ITermMaxVault vault;
         IVaultFactory vaultFactory;
         TermMaxFactoryV2 factory;
-        ITermMaxOrder order;
+        TermMaxOrderV2 order;
         TermMaxRouterV2 router;
         MarketConfig marketConfig;
         OrderConfig orderConfig;
-        ITermMaxMarket market;
+        TermMaxMarketV2 market;
         IMintableERC20 ft;
         IMintableERC20 xt;
         IGearingToken gt;
@@ -121,7 +121,7 @@ library DeployUtils {
         });
 
         res.marketConfig = marketConfig;
-        res.market = ITermMaxMarket(res.factory.createMarket(GT_ERC20, initialParams, 0));
+        res.market = TermMaxMarketV2(res.factory.createMarket(GT_ERC20, initialParams, 0));
 
         (res.ft, res.xt, res.gt,,) = res.market.tokens();
     }
@@ -183,7 +183,7 @@ library DeployUtils {
         });
 
         res.marketConfig = marketConfig;
-        res.market = ITermMaxMarket(res.factory.createMarket(GT_ERC20, initialParams, 0));
+        res.market = TermMaxMarketV2(res.factory.createMarket(GT_ERC20, initialParams, 0));
 
         (res.ft, res.xt, res.gt,,) = res.market.tokens();
     }
@@ -241,7 +241,7 @@ library DeployUtils {
         });
 
         res.marketConfig = marketConfig;
-        res.market = ITermMaxMarket(res.factory.createMarket(GT_ERC20, initialParams, 0));
+        res.market = TermMaxMarketV2(res.factory.createMarket(GT_ERC20, initialParams, 0));
 
         (res.ft, res.xt, res.gt,,) = res.market.tokens();
     }
@@ -301,7 +301,7 @@ library DeployUtils {
         });
 
         res.marketConfig = marketConfig;
-        res.market = ITermMaxMarket(res.factory.createMarket(GT_ERC20, initialParams, 0));
+        res.market = TermMaxMarketV2(res.factory.createMarket(GT_ERC20, initialParams, 0));
 
         (res.ft, res.xt, res.gt,,) = res.market.tokens();
     }
@@ -355,7 +355,7 @@ library DeployUtils {
         });
 
         res.marketConfig = marketConfig;
-        res.market = ITermMaxMarket(res.factory.createMarket(GT_ERC20, initialParams, 0));
+        res.market = TermMaxMarketV2(res.factory.createMarket(GT_ERC20, initialParams, 0));
 
         (res.ft, res.xt, res.gt,,) = res.market.tokens();
     }

@@ -27,6 +27,7 @@ import {
     CurveCuts
 } from "contracts/v1/storage/TermMaxStorage.sol";
 import {OrderEventsV2} from "contracts/v2/events/OrderEventsV2.sol";
+import {TermMaxOrderV2} from "contracts/v2/TermMaxOrderV2.sol";
 
 contract MarketV2Test is Test {
     using JSONLoader for *;
@@ -53,8 +54,13 @@ contract MarketV2Test is Test {
         orderConfig = JSONLoader.getOrderConfigFromJson(testdata, ".orderConfig");
         res = DeployUtils.deployMarket(deployer, marketConfig, maxLtv, liquidationLtv);
 
-        res.order =
-            res.market.createOrder(maker, orderConfig.maxXtReserve, ISwapCallback(address(0)), orderConfig.curveCuts);
+        res.order = TermMaxOrderV2(
+            address(
+                res.market.createOrder(
+                    maker, orderConfig.maxXtReserve, ISwapCallback(address(0)), orderConfig.curveCuts
+                )
+            )
+        );
 
         vm.warp(vm.parseUint(vm.parseJsonString(testdata, ".currentTime")));
 
