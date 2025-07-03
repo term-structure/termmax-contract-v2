@@ -370,11 +370,11 @@ contract TermMaxOrderV2 is
     // LIQUIDITY MANAGEMENT FUNCTIONS
     // =============================================================================
 
-    function addLiquidity(IERC20 asset, uint256 amount) external onlyOwner {
+    function addLiquidity(IERC20 asset, uint256 amount) external nonReentrant onlyOwner {
         _addLiquidity(asset, amount);
     }
 
-    function removeLiquidity(IERC20 asset, uint256 amount, address recipient) external onlyOwner {
+    function removeLiquidity(IERC20 asset, uint256 amount, address recipient) external nonReentrant onlyOwner {
         _removeLiquidity(asset, amount, recipient);
     }
 
@@ -455,6 +455,7 @@ contract TermMaxOrderV2 is
     function redeemAll(IERC20 asset, address recipient)
         external
         virtual
+        nonReentrant
         onlyOwner
         returns (uint256 badDebt, bytes memory deliveryData)
     {
@@ -466,7 +467,10 @@ contract TermMaxOrderV2 is
             (received, deliveryData) = market.redeem(ftBalance, recipient);
             // if pool is set, redeem all shares
             if (address(_pool) != address(0)) {
-                _pool.redeem(_pool.balanceOf(address(this)), recipient, address(this));
+                uint256 receivedFromPool = _pool.redeem(_pool.balanceOf(address(this)), recipient, address(this));
+                emit OrderEventsV2.LiquidityRemoved(asset, receivedFromPool);
+            } else {
+                emit OrderEventsV2.LiquidityRemoved(asset, received);
             }
         } else {
             /// @dev You have to deal with the delivery data by yourself if you want to redeem to shares
@@ -474,7 +478,9 @@ contract TermMaxOrderV2 is
             // if pool is set, withdraw all shares
             _debtToken.safeIncreaseAllowance(address(_pool), received);
             _pool.deposit(received, address(this));
-            _pool.safeTransfer(recipient, _pool.balanceOf(address(this)));
+            uint256 totalShares = _pool.balanceOf(address(this));
+            _pool.safeTransfer(recipient, totalShares);
+            emit OrderEventsV2.LiquidityRemoved(asset, totalShares);
         }
         // Calculate bad debt
         badDebt = ftBalance - received;
@@ -762,16 +768,17 @@ contract TermMaxOrderV2 is
         uint256 ftBalance = _ft.balanceOf(address(this));
         uint256 xtBalance = _xt.balanceOf(address(this));
         uint256 tokenToMint = netTokenOut + feeAmt;
+        ITermMaxMarket _market = market;
 
         if (tokenToMint > ftBalance || netTokenOut > xtBalance) {
             uint256 mintAmount = _calculateMintAmount(tokenToMint, netTokenOut, ftBalance, xtBalance);
-            _withdrawFromPool(address(this), mintAmount);
-            _debtToken.safeIncreaseAllowance(address(market), mintAmount);
-            market.mint(address(this), mintAmount);
+            pool.withdraw(mintAmount, address(this), address(this));
+            _debtToken.safeIncreaseAllowance(address(_market), mintAmount);
+            _market.mint(address(this), mintAmount);
         }
 
-        market.burn(recipient, netTokenOut);
-        _ft.safeTransfer(market.config().treasurer, feeAmt);
+        _market.burn(recipient, netTokenOut);
+        _ft.safeTransfer(_market.config().treasurer, feeAmt);
     }
 
     /**
@@ -793,20 +800,19 @@ contract TermMaxOrderV2 is
         IERC20 _ft,
         IERC20 _debtToken
     ) private {
-        // Mint debt token to ft and xt
-        _debtToken.safeIncreaseAllowance(address(market), tokenAmtIn);
-        market.mint(address(this), tokenAmtIn);
-
+        ITermMaxMarket _market = market;
+        // mint input token to ft and xt
+        _debtToken.safeIncreaseAllowance(address(_market), tokenAmtIn);
+        _market.mint(address(this), tokenAmtIn);
         // Pay fee
-        _ft.safeTransfer(market.config().treasurer, feeAmt);
-
+        _ft.safeTransfer(_market.config().treasurer, feeAmt);
         // Check if we need to withdraw additional tokens
         uint256 availableBalance = tokenOut.balanceOf(address(this));
         if (availableBalance < netTokenOut) {
             uint256 tokenToWithdraw = netTokenOut - availableBalance;
-            _withdrawFromPool(address(this), tokenToWithdraw);
-            _debtToken.safeIncreaseAllowance(address(market), tokenToWithdraw);
-            market.mint(address(this), tokenToWithdraw);
+            pool.withdraw(tokenToWithdraw, address(this), address(this));
+            _debtToken.safeIncreaseAllowance(address(_market), tokenToWithdraw);
+            _market.mint(address(this), tokenToWithdraw);
         }
 
         tokenOut.safeTransfer(recipient, netTokenOut);
@@ -1381,20 +1387,5 @@ contract TermMaxOrderV2 is
         deltaFt += feeAmt;
         deltaXt = debtTokenOut;
         isNegetiveXt = false;
-    }
-
-    // =============================================================================
-    // STAKING FUNCTIONS
-    // =============================================================================
-    /**
-     * @notice Withdraw from pool function
-     * @param to Recipient address
-     * @param amount Amount to withdraw
-     */
-    function _withdrawFromPool(address to, uint256 amount) internal virtual {
-        IERC4626 _pool = pool;
-        if (address(_pool) != address(0)) {
-            _pool.withdraw(amount, address(this), to);
-        }
     }
 }
