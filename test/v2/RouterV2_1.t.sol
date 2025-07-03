@@ -60,7 +60,7 @@ import {MockSwapAdapterV2} from "contracts/v2/test/MockSwapAdapterV2.sol";
 import {ITermMaxOrder} from "contracts/v1/ITermMaxOrder.sol";
 import {TermMaxSwapData, TermMaxSwapAdapter} from "contracts/v2/router/swapAdapters/TermMaxSwapAdapter.sol";
 import {TermMaxTokenAdapter} from "contracts/v2/router/swapAdapters/TermMaxTokenAdapter.sol";
-import {TermMaxOrderV2} from "contracts/v2/TermMaxOrderV2.sol";
+import {TermMaxOrderV2, OrderInitialParams} from "contracts/v2/TermMaxOrderV2.sol";
 
 contract RouterTestV2_1 is Test {
     using JSONLoader for *;
@@ -105,13 +105,19 @@ contract RouterTestV2_1 is Test {
             )
         );
 
+        OrderInitialParams memory orderParams;
+        orderParams.maker = maker;
+        orderParams.orderConfig = orderConfig;
+        uint256 amount = 150e8;
+        orderParams.virtualXtReserve = amount;
+        res.order = TermMaxOrderV2(address(res.market.createOrder(orderParams)));
+
         vm.warp(vm.parseUint(vm.parseJsonString(testdata, ".currentTime")));
 
         // update oracle
         res.collateralOracle.updateRoundData(JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_2000_DAI_1.eth"));
         res.debtOracle.updateRoundData(JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_2000_DAI_1.dai"));
 
-        uint256 amount = 150e8;
         res.debt.mint(deployer, amount);
         res.debt.approve(address(res.market), amount);
         res.market.mint(deployer, amount);

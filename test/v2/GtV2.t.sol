@@ -47,7 +47,7 @@ import {
 import {MockFlashLoanReceiver} from "contracts/v1/test/MockFlashLoanReceiver.sol";
 import {MockFlashRepayerV2} from "contracts/v2/test/MockFlashRepayerV2.sol";
 import {ISwapCallback} from "contracts/v1/ISwapCallback.sol";
-import {TermMaxOrderV2} from "contracts/v2/TermMaxOrderV2.sol";
+import {TermMaxOrderV2, OrderInitialParams} from "contracts/v2/TermMaxOrderV2.sol";
 
 contract GtTestV2 is Test {
     using JSONLoader for *;
@@ -89,13 +89,19 @@ contract GtTestV2 is Test {
             )
         );
 
+        OrderInitialParams memory orderParams;
+        orderParams.maker = maker;
+        orderParams.orderConfig = orderConfig;
+        uint256 amount = 15000e8;
+        orderParams.virtualXtReserve = amount;
+        res.order = TermMaxOrderV2(address(res.market.createOrder(orderParams)));
+
         vm.warp(vm.parseUint(vm.parseJsonString(testdata, ".currentTime")));
 
         // update oracle
         res.collateralOracle.updateRoundData(JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_2000_DAI_1.eth"));
         res.debtOracle.updateRoundData(JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_2000_DAI_1.dai"));
 
-        uint256 amount = 15000e8;
         res.debt.mint(deployer, amount);
         res.debt.approve(address(res.market), amount);
         res.market.mint(deployer, amount);

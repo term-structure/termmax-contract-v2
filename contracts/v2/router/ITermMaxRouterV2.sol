@@ -9,6 +9,7 @@ import {SwapUnit} from "../../v1/router/ISwapAdapter.sol";
 import {OrderConfig} from "../../v1/storage/TermMaxStorage.sol";
 import {ITermMaxMarketV2} from "../ITermMaxMarketV2.sol";
 import {IAaveV3PoolMinimal} from "../extensions/aave/IAaveV3PoolMinimal.sol";
+import {OrderInitialParams} from "../ITermMaxOrderV2.sol";
 
 /// @title TermMaxSwapPath
 /// @notice Represents a path for swapping tokens in the TermMax protocol and third-party adapters
@@ -389,23 +390,21 @@ interface ITermMaxRouterV2 {
      * @notice Places an order and mints a GT token(the gt token will be linked to the order)
      * @dev This function is used to create a new order in the TermMax protocol
      * @param market The market to place the order in
-     * @param maker The address of the maker placing the order
      * @param collateralToMintGt Amount of collateral to mint GT tokens
      * @param debtTokenToDeposit Amount of debt tokens to deposit
      * @param ftToDeposit Amount of FT tokens to deposit
      * @param xtToDeposit Amount of XT tokens to deposit
-     * @param orderConfig Configuration parameters for the order
+     * @param initialParams Configuration parameters for the order
      * @return order The created ITermMaxOrder instance
      * @return gtId The ID of the minted GT token
      */
     function placeOrderForV2(
         ITermMaxMarket market,
-        address maker,
         uint256 collateralToMintGt,
         uint256 debtTokenToDeposit,
         uint128 ftToDeposit,
         uint128 xtToDeposit,
-        OrderConfig memory orderConfig
+        OrderInitialParams memory initialParams
     ) external returns (ITermMaxOrder order, uint256 gtId);
 
     /**

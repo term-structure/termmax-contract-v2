@@ -57,7 +57,7 @@ import {
 import {ITermMaxRouter} from "contracts/v1/router/ITermMaxRouter.sol";
 import {MockSwapAdapterV2} from "contracts/v2/test/MockSwapAdapterV2.sol";
 import {ITermMaxOrder} from "contracts/v1/ITermMaxOrder.sol";
-import {TermMaxOrderV2} from "contracts/v2/TermMaxOrderV2.sol";
+import {TermMaxOrderV2, OrderInitialParams} from "contracts/v2/TermMaxOrderV2.sol";
 
 contract RouterTestV2 is Test {
     using JSONLoader for *;
@@ -209,8 +209,12 @@ contract RouterTestV2 is Test {
         res.collateral.mint(sender, collateralToMintGt);
         res.collateral.approve(address(res.router), collateralToMintGt);
 
+        OrderInitialParams memory initialParams;
+        initialParams.maker = sender;
+        initialParams.orderConfig = orderConfig;
+        initialParams.virtualXtReserve = 1e8;
         (ITermMaxOrder order, uint256 gtId) = res.router.placeOrderForV2(
-            res.market, sender, collateralToMintGt, debtTokenToDeposit, ftToDeposit, xtToDeposit, orderConfig
+            res.market, collateralToMintGt, debtTokenToDeposit, ftToDeposit, xtToDeposit, initialParams
         );
 
         assertEq(gtId, order.orderConfig().gtId);

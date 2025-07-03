@@ -8,7 +8,14 @@ import {IFlashLoanReceiver} from "contracts/v1/IFlashLoanReceiver.sol";
 import {
     ITermMaxMarketV2, TermMaxMarketV2, Constants, MarketErrors, MarketEvents
 } from "contracts/v2/TermMaxMarketV2.sol";
-import {ITermMaxOrder, TermMaxOrderV2, ISwapCallback, OrderEvents, OrderErrors} from "contracts/v2/TermMaxOrderV2.sol";
+import {
+    ITermMaxOrder,
+    TermMaxOrderV2,
+    ISwapCallback,
+    OrderEvents,
+    OrderErrors,
+    OrderInitialParams
+} from "contracts/v2/TermMaxOrderV2.sol";
 import {MockERC20, ERC20} from "contracts/v1/test/MockERC20.sol";
 import {MockPriceFeed} from "contracts/v1/test/MockPriceFeed.sol";
 import {MockFlashLoanReceiver} from "contracts/v1/test/MockFlashLoanReceiver.sol";
@@ -78,12 +85,17 @@ contract FuzzActionsTestV2 is Test {
         res.orderConfig = JSONLoader.getOrderConfigFromJson(testdata, ".orderConfig");
 
         MockSwapCallback afterSwap = new MockSwapCallback(res.ft, res.xt);
-        res.order = TermMaxOrderV2(
-            address(res.market.createOrder(maker, res.orderConfig.maxXtReserve, afterSwap, res.orderConfig.curveCuts))
-        );
 
         uint256 ftReserve = vm.parseJsonUint(testdata, ".orderConfig.ftReserve");
         uint256 xtReserve = vm.parseJsonUint(testdata, ".orderConfig.xtReserve");
+
+        OrderInitialParams memory orderParams;
+        orderParams.maker = maker;
+        orderParams.orderConfig = res.orderConfig;
+        orderParams.virtualXtReserve = xtReserve;
+        orderParams.orderConfig.swapTrigger = ISwapCallback(address(afterSwap));
+        res.order = TermMaxOrderV2(address(res.market.createOrder(orderParams)));
+
         res.debt.mint(admin, ftReserve + xtReserve);
         res.debt.approve(address(res.market), ftReserve + xtReserve);
         res.market.mint(admin, ftReserve + xtReserve);
@@ -91,9 +103,6 @@ contract FuzzActionsTestV2 is Test {
         res.xt.transfer(address(res.order), xtReserve);
 
         vm.stopPrank();
-
-        vm.prank(maker);
-        res.order.updateOrder(res.orderConfig, 0, 0);
     }
 
     function _parseActions() internal returns (Action[] memory actions) {
