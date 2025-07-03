@@ -1,0 +1,25 @@
+{
+  "network": "bnb-mainnet",
+  "deployedAt": "1748523134",
+  "gitBranch": "deploy/v1.0.9",
+  "gitCommitHash": "0x0xe3a5c207cb14ce86cbfbd9ae89417a4f5e6192e2",
+  "blockInfo": {
+    "number": "50519540",
+    "timestamp": "1748523134"
+  },
+  "deployer": "0x56E3665038C5F0b56Cc7D81aC66C86521274B251",
+  "admin": "0x8409a9C1A911CED491892c5694E43994c9d47E8f",
+  "contracts": {
+    "factory": "0x8Df05E11e72378c1710e296450Bf6b72e2F12019",
+    "vaultFactory": "0x48bCd27e208dC973C3F56812F762077A90E88Cea",
+    "oracleAggregator": "0xC7dE1A55758bDBa5CC6b6f7535006eE1349A6d37",
+    "router": "0xb7634dB4f4710bb992118bC37d1F63e00e2704A4",
+    "swapAdapter": {
+      "uniswapV3Adapter": "0xbb35188CD8Ba0A85ED8C8406187cA6443203423d",
+      "odosV2Adapter": "0x6Ac37B549660F2c9F1a77597Ee1ACA5F742C7093",
+      "pendleSwapV3Adapter": "0xFa8BE638a78fa426C4228Df1002fD54fA48A6CAF",
+      "ERC4626VaultAdapter": "0x6Fa11E0e1e0eE768DEB0E728a08a4407d15EE466"
+    },
+    "marketViewer": "0x8b2ae4e2070b3E9bf9625FC61290700a2E24A808"
+  }
+}

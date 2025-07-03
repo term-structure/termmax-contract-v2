@@ -1,0 +1,25 @@
+{
+  "network": "eth-mainnet",
+  "deployedAt": "1743497402",
+  "gitBranch": "deploy/v1.0.8",
+  "gitCommitHash": "0x0x63beb3e4a59b16c67274f2a221a2b31cbdd405f0",
+  "blockInfo": {
+    "number": "22095410",
+    "timestamp": "1743497402"
+  },
+  "deployer": "0xE355d5D8aa52EF0FbbD037C4a3C5E6Fd659cf46B",
+  "admin": "0x81f314f70702Bbe89FEd0F2cFe6841950275E0b7",
+  "contracts": {
+    "factory": "0xeE43AE1fa906497F4dbC561F77856E21238A1E25",
+    "vaultFactory": "0x7c48A59E3346D8A0cdDB221a836b84F706dc372e",
+    "oracleAggregator": "0xf6B4a5b64d9AA15689e03A0116499c38410b045f",
+    "router": "0x23cafE3c010e8BdA1f247b9d97A87d3c173318A7",
+    "swapAdapter": {
+      "uniswapV3Adapter": "0x21C2376eb9Ec0B832f7eE7E25028AEA1602b9531",
+      "odosV2Adapter": "0xB9D03162de01d9303Fb729287BB65363895ac9f2",
+      "pendleSwapV3Adapter": "0xDa7cD8EFA0D019F1644171E3F122e9A7454C916E",
+      "ERC4626VaultAdapter": "0x8ade0c89f9a751fB2112AeF41C4E817dC62Cd0c5"
+    },
+    "marketViewer": "0xdC325533007E364fCc715667228B5278C75CC416"
+  }
+}

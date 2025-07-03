@@ -1,0 +1,16 @@
+ forge script script/deploy/DeployPriceFeedsEthInWstETH.s.sol --rpc-url $ETH_MAINNET_RPC_URL --broadcast --verify
+warning: Found unknown config section in foundry.toml: [soldeer]
+This notation for profiles has been deprecated and may result in the profile not being registered in future versions.
+Please use [profile.soldeer] instead or run `forge config --fix`.
+[⠆] Compiling...
+No files changed, compilation skipped
+Script ran successfully.
+
+== Logs ==
+  PriceFeedFactory deployed at 0xA40239B024012E427D3981c3DA055c4C5A58D0b3
+  inwstETH price feed address 0x4dDD3d3F3a92939BF352d503aFd4666773fEfa1B
+  inwstETH last answer 213780497802
+
+## Setting up 1 EVM.
+
+==========================

@@ -1,0 +1,24 @@
+{
+  "gitInfo": {
+    "branch": "deploy/v1.0.8",
+    "commit": "0x0xf0e7aead33f178cc18e33b5c6e07f406fb95194d"
+  },
+  "blockInfo": {
+    "network": "eth-mainnet",
+    "blockNumber": "22175304",
+    "timestamp": "1743525527"
+  },
+  "vaultInfo": {
+    "name": "TermMax WETH Vault",
+    "symbol": "TermMax WETH Vault",
+    "address": "0xfa9e4093875cE1a3b4d5C220A387aCc24ffdc64c",
+    "asset": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+    "performanceFeeRate": 10000000,
+    "maxCapacity": "500000000000000000000",
+    "timelock": 86400,
+    "admin": "0xDA4aAF85Bb924B53DCc2DFFa9e1A9C2Ef97aCFDF",
+    "curator": "0x96e65A7a861D70A1c024774d7a48af44bCAD502b",
+    "guardian": "0x96e65A7a861D70A1c024774d7a48af44bCAD502b",
+    "allocator": "0x96e65A7a861D70A1c024774d7a48af44bCAD502b"
+  }
+}

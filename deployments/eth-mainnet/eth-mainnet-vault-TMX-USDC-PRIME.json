@@ -1,0 +1,24 @@
+{
+  "gitInfo": {
+    "branch": "deploy/v1.0.9",
+    "commit": "0x0x9ccea93c0ceff6a76f38270be9ea3d3aad9552d7"
+  },
+  "blockInfo": {
+    "network": "eth-mainnet",
+    "blockNumber": "22283141",
+    "timestamp": "1744825595"
+  },
+  "vaultInfo": {
+    "name": "TermMax USDC Prime",
+    "symbol": "TMX-USDC-PRIME",
+    "address": "0x13e361dC94459a01bc4991F9e681033Dc2b0fA5A",
+    "asset": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+    "performanceFeeRate": 0,
+    "maxCapacity": "50000000000000",
+    "timelock": 86400,
+    "admin": "0xDA4aAF85Bb924B53DCc2DFFa9e1A9C2Ef97aCFDF",
+    "curator": "0x008c7DC790fA31E6CA19D8Cb6d11C53f6A88DF6c",
+    "guardian": "0x6383EDe871F8B0167905C2466505381CDcD9cC78",
+    "allocator": "0x518C292A86450808E593Bcf26Fc29A7a7b682198"
+  }
+}

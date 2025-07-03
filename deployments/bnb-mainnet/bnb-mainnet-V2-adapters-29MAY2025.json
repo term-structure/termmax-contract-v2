@@ -1,0 +1,26 @@
+{
+  "network": "bnb-mainnet",
+  "deployedAt": "1748526829",
+  "dateString": "29MAY2025",
+  "gitBranch": "deploy/v1.0.9",
+  "gitCommitHash": "0x0xf2fc71ad48a28d22075027313412d5b61d0b7ef5",
+  "blockInfo": {
+    "number": "50522003",
+    "timestamp": "1748526829"
+  },
+  "deployer": "0x56E3665038C5F0b56Cc7D81aC66C86521274B251",
+  "admin": "0x0000000000000000000000000000000000000000",
+  "accessManager": "0x9498764f0c62257B83A04e2A757De30908EC793d",
+  "router": "0xb7634dB4f4710bb992118bC37d1F63e00e2704A4",
+  "contracts": {
+    "odosV2Adapter": "0xBd795F755dbB5A5358D6c60AED53ceB486Fa8517",
+    "pendleSwapV3Adapter": "0x02F389E230a4844203692c9a1DBC0ee8f8D2F70b",
+    "uniswapV3Adapter": "0x78834843E9cFaeDC03471ba8b5b648c2C8cFd0B5",
+    "erc4626VaultAdapter": "0xa9b7719CefE39A0233B77960ACcca015aD5f3184"
+  },
+  "routerAddresses": {
+    "uniswapV3Router": "0xB971eF87ede563556b2ED4b1C0b0019111Dd85d2",
+    "odosV2Router": "0x89b8AA89FDd0507a99d334CBe3C808fAFC7d850E",
+    "pendleSwapV3Router": "0x888888888889758F76e7103c6CbF23ABbF58F946"
+  }
+}

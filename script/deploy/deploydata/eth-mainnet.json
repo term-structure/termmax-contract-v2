@@ -3,11 +3,11 @@
   "configs": {
     "configs_0": {
       "salt": 0,
-      "collateralCapForGt": "9832841690000000000000000",
-      "marketName": "USDC/cUSDO@25JUL2025",
-      "marketSymbol": "USDC/cUSDO@25JUL2025",
+      "collateralCapForGt": "50000000000000000000000000",
+      "marketName": "USDC/SPK@05JUL2025",
+      "marketSymbol": "USDC/SPK@05JUL2025",
       "marketConfig": {
-        "maturity": "1753401600",
+        "maturity": "1751673600",
         "lendTakerFeeRatio": "2000000",
         "lendMakerFeeRatio": "2000000",
         "borrowTakerFeeRatio": "3000000",
@@ -16,8 +16,8 @@
         "mintGtFeeRef": "6000000"
       },
       "loanConfig": {
-        "liquidationLtv": "94000000",
-        "maxLtv": "92000000",
+        "liquidationLtv": "70000000",
+        "maxLtv": "60000000",
         "liquidatable": true
       },
       "underlyingConfig": {
@@ -28,17 +28,17 @@
         "name": "USD Coin",
         "symbol": "USDC",
         "decimals": "6",
-        "initialPrice": "99845377"
+        "initialPrice": "100000000"
       },
       "collateralConfig": {
-        "tokenAddr": "0xaD55aebc9b8c03FC43cd9f62260391c13c23e7c0",
-        "priceFeedAddr": "0xf158000de86899b5EB5E6fA3BB78F32A072bD14b",
-        "backupPriceFeedAddr": "0xf158000de86899b5EB5E6fA3BB78F32A072bD14b",
+        "tokenAddr": "0xc20059e0317DE91738d13af027DfC4a50781b066",
+        "priceFeedAddr": "0x552116E747a5b386B2E7EEd4371002359cf2A574",
+        "backupPriceFeedAddr": "0x0000000000000000000000000000000000000000",
         "heartBeat": "86400",
-        "name": "Compounding Open Dollar",
-        "symbol": "cUSDO",
+        "name": "Spark",
+        "symbol": "SPK",
         "decimals": "18",
-        "initialPrice": "101885665",
+        "initialPrice": "4000000",
         "gtKeyIdentifier": "GearingTokenWithERC20"
       }
     }

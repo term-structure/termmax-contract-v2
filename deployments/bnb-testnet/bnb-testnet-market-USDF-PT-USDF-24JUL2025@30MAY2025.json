@@ -1,0 +1,38 @@
+{
+  "blockInfo": {
+    "number": "50446056",
+    "timestamp": "1745081875"
+  },
+  "market": "0xCEBfcCeAE78523cAb0a651BB9F50F2a42cD02334",
+  "collateral": {
+    "address": "0x99EE8b5FCaAFfe20F13Ea2d1f98CC0E5007bC0B4",
+    "symbol": "PT-USDF-24JUL2025",
+    "priceFeed": "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
+    "heartBeat": "86400"
+  },
+  "underlying": {
+    "address": "0xE0542c184612e3bA238c04a13BC2400B78740278",
+    "symbol": "USDF",
+    "priceFeed": "0xdDb6F90fFb4d3257dd666b69178e5B3c5Bf41136",
+    "heartBeat": "86400"
+  },
+  "tokens": {
+    "ft": "0x256056E4413338fc965D30d70b7E593b042cF728",
+    "xt": "0x4829f19FA3AcBb85Ac518b4e8712D7625848683d",
+    "gt": "0x8DFa26A1745bCf7EEb10302025EA090777973C2F"
+  },
+  "config": {
+    "marketSymbol": "USDF/PT-USDF-24JUL2025@24JUL2025",
+    "treasurer": "0x9ec927F61542DCD12DEF83797D8d1022064dcfA4",
+    "maturity": "30MAY2025",
+    "salt": "0",
+    "fees": {
+      "lendTakerFeeRatio": "2000000",
+      "lendMakerFeeRatio": "2000000",
+      "borrowTakerFeeRatio": "3000000",
+      "borrowMakerFeeRatio": "3000000",
+      "mintGtFeeRatio": "1000000",
+      "mintGtFeeRef": "400000"
+    }
+  }
+}

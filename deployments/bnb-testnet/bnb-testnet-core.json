@@ -1,0 +1,21 @@
+{
+  "network": "bnb-testnet",
+  "deployedAt": "1745079294",
+  "gitBranch": "deploy/v1.0.9",
+  "gitCommitHash": "0x0x9ccea93c0ceff6a76f38270be9ea3d3aad9552d7",
+  "blockInfo": {
+    "number": "50444336",
+    "timestamp": "1745079294"
+  },
+  "deployer": "0xE355d5D8aa52EF0FbbD037C4a3C5E6Fd659cf46B",
+  "admin": "0x81f314f70702Bbe89FEd0F2cFe6841950275E0b7",
+  "contracts": {
+    "factory": "0x3b25e0b9AFff38620b7c070C0E21C49520F1933B",
+    "vaultFactory": "0xa2450A147a1e03109c9ecea50590f13F1e4F10e5",
+    "oracleAggregator": "0x23b6CAd9F1376A2146C7ab469b371ae090246dD4",
+    "router": "0xfe1dFCe548E8AEBe2964D5C0c9906FcE981d7E47",
+    "swapAdapter": "0x7584B2003c208629748dE4B28c925b011F79200b",
+    "faucet": "0xD0F4bA61A691F31463a459B631E997580B6C2C26",
+    "marketViewer": "0x43D245c1106f38721A8bbd0022108DA02d8073a5"
+  }
+}

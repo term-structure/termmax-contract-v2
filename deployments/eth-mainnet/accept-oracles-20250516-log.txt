@@ -1,0 +1,21 @@
+=== Checking Pending Oracles ===
+  Oracle Aggregator Address: 0xE3a31690392E8E18DC3d862651C079339E2c1ADE
+  Network: eth-mainnet
+  Current Block Timestamp: 1747362275
+  
+  Accepted oracle for token:
+    Token Symbol: PT-mMEV-31JUL2025
+    Token Address: 0x1132065009850C72E27B7950C0f9285d1D103589
+    Previous Oracle: 0x6BE2Bb4FFBb9FE1975A419D144750E604e1D37a1
+    New Oracle: 0x6BE2Bb4FFBb9FE1975A419D144750E604e1D37a1
+    Heartbeat: 432000
+  --------------------------------
+  Accepted oracle for token:
+    Token Symbol: mMEV
+    Token Address: 0x030b69280892c888670EDCDCD8B69Fd8026A0BF3
+    Previous Oracle: 0x5f09Aff8B9b1f488B7d1bbaD4D89648579e55d61
+    New Oracle: 0x5f09Aff8B9b1f488B7d1bbaD4D89648579e55d61
+    Heartbeat: 432000
+  --------------------------------
+  
+  === Oracle Acceptance Summary ===

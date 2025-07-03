@@ -1,0 +1,15 @@
+{
+  "network": "eth-mainnet",
+  "deployedAt": "1743496825",
+  "gitBranch": "deploy/v1.0.8",
+  "gitCommitHash": "0x0x63beb3e4a59b16c67274f2a221a2b31cbdd405f0",
+  "blockInfo": {
+    "number": "22095404",
+    "timestamp": "1743496825"
+  },
+  "deployer": "0xE355d5D8aa52EF0FbbD037C4a3C5E6Fd659cf46B",
+  "admin": "0x81f314f70702Bbe89FEd0F2cFe6841950275E0b7",
+  "contracts": {
+    "accessManager": "0x8A9954d09aa511c3d986167766244Eaf7B986dE5"
+  }
+}

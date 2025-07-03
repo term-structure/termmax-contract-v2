@@ -1,0 +1,38 @@
+{
+  "blockInfo": {
+    "number": "51480317",
+    "timestamp": "1749964600"
+  },
+  "market": "0x721BC0332754DAb1962afe2aBc784AeEBf1De11E",
+  "collateral": {
+    "address": "0x8d0D000Ee44948FC98c9B98A4FA4921476f08B0d",
+    "symbol": "USD1",
+    "priceFeed": "0xaD8b4e59A7f25B68945fAf0f3a3EAF027832FFB0",
+    "heartBeat": "86400"
+  },
+  "underlying": {
+    "address": "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
+    "symbol": "WBNB",
+    "priceFeed": "0x0567F2323251f0Aab15c8dFb1967E4e8A7D42aeE",
+    "heartBeat": "86400"
+  },
+  "tokens": {
+    "ft": "0x4b47864E34867Aef7cb76C3297088d8cbC5c6bBC",
+    "xt": "0xA5c5eCd8Ca806b78986e508c7338af012962aCfc",
+    "gt": "0xa623bB457FD8c99e0c903F74c1889Fa15e700f04"
+  },
+  "config": {
+    "marketSymbol": "WBNB/USD1@25JUL2025",
+    "treasurer": "0x719e77027952929ed3060dbFFC5D43EC50c1cf79",
+    "maturity": "25JUL2025",
+    "salt": "0",
+    "fees": {
+      "lendTakerFeeRatio": "2000000",
+      "lendMakerFeeRatio": "2000000",
+      "borrowTakerFeeRatio": "3000000",
+      "borrowMakerFeeRatio": "3000000",
+      "mintGtFeeRatio": "10000000",
+      "mintGtFeeRef": "3000000"
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "network": "eth-mainnet",
+  "deployedAt": "1744824947",
+  "gitBranch": "deploy/v1.0.9",
+  "gitCommitHash": "0x0x9ccea93c0ceff6a76f38270be9ea3d3aad9552d7",
+  "blockInfo": {
+    "number": "22283087",
+    "timestamp": "1744824947"
+  },
+  "deployer": "0x56E3665038C5F0b56Cc7D81aC66C86521274B251",
+  "contracts": {
+    "vaultFactory": "0x4778CBf91d8369843281c8f5a2D7b56d1420dFF5"
+  }
+}

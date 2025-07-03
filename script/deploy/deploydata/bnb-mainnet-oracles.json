@@ -1,0 +1,22 @@
+{
+  "oracles": [
+    {
+      "tokenAddr": "0x211Cc4DD073734dA055fbF44a2b4667d5E5fE5d2",
+      "priceFeedAddr": "0x7CD1174235476Ec8844A88de0d3E56A21E72ADa2",
+      "backupPriceFeedAddr": "0x59538B3BdF046f15F7bDD231aACfA314071b1DF1",
+      "heartBeat": 86400
+    },
+    {
+      "tokenAddr": "0xdd809435ba6c9d6903730f923038801781ca66ce",
+      "priceFeedAddr": "0xe532CD9609BADBF6c02778116034a1EbD1526d3C",
+      "backupPriceFeedAddr": "0x652cD426ffe87cb6f435317cC19BC81EC940Fd46",
+      "heartBeat": 86400
+    },
+    {
+      "tokenAddr": "0x32C830f5c34122C6afB8aE87ABA541B7900a2C5F",
+      "priceFeedAddr": "0x5F5376913E011AeDe8d93027B335832180411322",
+      "backupPriceFeedAddr": "0x0000000000000000000000000000000000000000",
+      "heartBeat": 3600
+    }
+  ]
+}

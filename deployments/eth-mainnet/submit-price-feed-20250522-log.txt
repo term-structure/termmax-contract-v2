@@ -1,0 +1,120 @@
+No files changed, compilation skipped
+Script ran successfully.
+
+== Logs ==
+  PriceFeedFactory deployed at 0xcac930B240163fDB71b74514E8FAA113ec0dA844
+  PT-eUSDE-14AUG2025 primary price feed address 0x1db66D3BAc8d405643716BF6605D1a045a4AC56C
+  PT-eUSDE-14AUG2025 primary last answer 98051069
+  PT-eUSDE-14AUG2025 secondary price feed address 0x00d14fD4D4525bBe8D6C7d67535df0FAf348f405
+  PT-eUSDE-14AUG2025 secondary last answer 98005405
+  lbtc primary price feed address 0x68D619f8a4E21c4CC0EAb3c4572ec0c9FeD78D3C
+  lbtc primary last answer 11033548163381
+  lbtc secondary price feed address 0xf338eA0349a717F665842752FabA755B741ee9CA
+  lbtc secondary last answer 11050039009139
+  PT-LBTC-26JUN2025 primary price feed address 0x592a2ef26E70663359514da51F9E2DA62Cfa65e9
+  PT-LBTC-26JUN2025 primary last answer 11013920137787
+  PT-LBTC-26JUN2025 secondary price feed address 0xEf3E4F385BeB78be528b67560e9E72f96B2Eee99
+  PT-LBTC-26JUN2025 secondary last answer 11030381647312
+  ynEthx primary price feed address 0x5FDaa369D623d86191105435c7DA03F25417753a
+  ynEthx primary last answer 278062302772
+  ynEthx secondary price feed address 0x2D9f82CcF2068686B46218B7A5Ad47177aF2ef7a
+  ynEthx secondary last answer 277746919835
+  PT-USDS-14AUG2025 primary price feed address 0x4599f532E03458017Fa55F7DCF7A296267637B74
+  PT-USDS-14AUG2025 primary last answer 97928861
+
+## Setting up 1 EVM.
+
+==========================
+
+Chain 1
+
+Estimated gas price: 5.73982903 gwei
+
+Estimated total gas used for script: 9105328
+
+Estimated amount required: 0.05226302598207184 ETH
+
+==========================
+
+
+==========================
+
+ONCHAIN EXECUTION COMPLETE & SUCCESSFUL.
+##
+Start verification for (9) contracts
+Start verifying contract `0x1db66D3BAc8d405643716BF6605D1a045a4AC56C` deployed on mainnet
+
+Submitting verification for [contracts/extensions/PTWithPriceFeed.sol:PTWithPriceFeed] 0x1db66D3BAc8d405643716BF6605D1a045a4AC56C.
+Submitted contract for verification:
+	Response: `OK`
+	GUID: `f3rbjgkxtzhwnkyrhagn6mgc9qrj3vexgxbbx4zfvhl4s8mv5t`
+	URL: https://etherscan.io/address/0x1db66d3bac8d405643716bf6605d1a045a4ac56c
+Start verifying contract `0x00d14fD4D4525bBe8D6C7d67535df0FAf348f405` deployed on mainnet
+
+Submitting verification for [contracts/extensions/PTWithPriceFeed.sol:PTWithPriceFeed] 0x00d14fD4D4525bBe8D6C7d67535df0FAf348f405.
+Submitted contract for verification:
+	Response: `OK`
+	GUID: `fmpygyj8xvjhn5lnq5s7gzszpnpv2juapf79gut3itctzzr5wk`
+	URL: https://etherscan.io/address/0x00d14fd4d4525bbe8d6c7d67535df0faf348f405
+Contract source code already verified
+Start verifying contract `0x68D619f8a4E21c4CC0EAb3c4572ec0c9FeD78D3C` deployed on mainnet
+
+Submitting verification for [contracts/extensions/PriceFeedConverter.sol:PriceFeedConverter] 0x68D619f8a4E21c4CC0EAb3c4572ec0c9FeD78D3C.
+Submitted contract for verification:
+	Response: `OK`
+	GUID: `bg9phpmkxq138idcd8ztybgdbrfvrvpuh8agca2julfcganrwd`
+	URL: https://etherscan.io/address/0x68d619f8a4e21c4cc0eab3c4572ec0c9fed78d3c
+Contract source code already verified
+Start verifying contract `0xf338eA0349a717F665842752FabA755B741ee9CA` deployed on mainnet
+
+Submitting verification for [contracts/extensions/PriceFeedConverter.sol:PriceFeedConverter] 0xf338eA0349a717F665842752FabA755B741ee9CA.
+Submitted contract for verification:
+	Response: `OK`
+	GUID: `izz7sz1veq9qu217kz8yzd7qqdw4yrup2cdpkbgbggkbadrdcz`
+	URL: https://etherscan.io/address/0xf338ea0349a717f665842752faba755b741ee9ca
+Contract source code already verified
+Start verifying contract `0x592a2ef26E70663359514da51F9E2DA62Cfa65e9` deployed on mainnet
+
+Submitting verification for [contracts/extensions/PTWithPriceFeed.sol:PTWithPriceFeed] 0x592a2ef26E70663359514da51F9E2DA62Cfa65e9.
+Submitted contract for verification:
+	Response: `OK`
+	GUID: `wldppnkfympazxzu2uubmjtgjufukvdxv6fvcygyu6w7wndvve`
+	URL: https://etherscan.io/address/0x592a2ef26e70663359514da51f9e2da62cfa65e9
+Contract source code already verified
+Start verifying contract `0xEf3E4F385BeB78be528b67560e9E72f96B2Eee99` deployed on mainnet
+
+Submitting verification for [contracts/extensions/PTWithPriceFeed.sol:PTWithPriceFeed] 0xEf3E4F385BeB78be528b67560e9E72f96B2Eee99.
+Submitted contract for verification:
+	Response: `OK`
+	GUID: `avsyilixfu8sjtahftidhwnvgffkkwhjphwh6nnudfslrtl2ye`
+	URL: https://etherscan.io/address/0xef3e4f385beb78be528b67560e9e72f96b2eee99
+Contract source code already verified
+Start verifying contract `0x5FDaa369D623d86191105435c7DA03F25417753a` deployed on mainnet
+
+Submitting verification for [contracts/extensions/PriceFeedWithERC4626.sol:PriceFeedWithERC4626] 0x5FDaa369D623d86191105435c7DA03F25417753a.
+Submitted contract for verification:
+	Response: `OK`
+	GUID: `rnhweftihe3wppmjnipblajxrihvflmjsy17y5yywcuc9khxpg`
+	URL: https://etherscan.io/address/0x5fdaa369d623d86191105435c7da03f25417753a
+Contract source code already verified
+Start verifying contract `0x2D9f82CcF2068686B46218B7A5Ad47177aF2ef7a` deployed on mainnet
+
+Submitting verification for [contracts/extensions/PriceFeedWithERC4626.sol:PriceFeedWithERC4626] 0x2D9f82CcF2068686B46218B7A5Ad47177aF2ef7a.
+Submitted contract for verification:
+	Response: `OK`
+	GUID: `q9q1nqek5vnyuwhi4rpfljjgfa77n71l6zwdjrbatdz4bx9xkq`
+	URL: https://etherscan.io/address/0x2d9f82ccf2068686b46218b7a5ad47177af2ef7a
+Contract source code already verified
+Start verifying contract `0x4599f532E03458017Fa55F7DCF7A296267637B74` deployed on mainnet
+
+Submitting verification for [contracts/extensions/PTWithPriceFeed.sol:PTWithPriceFeed] 0x4599f532E03458017Fa55F7DCF7A296267637B74.
+Submitted contract for verification:
+	Response: `OK`
+	GUID: `8adtm68vr3xycjcq4dxhbiee1dc25ewdngn8xwmq9avlxf49at`
+	URL: https://etherscan.io/address/0x4599f532e03458017fa55f7dcf7a296267637b74
+Contract successfully verified
+
+Transactions saved to: /Users/vincent/Documents/ts-codes/termmax-contract/broadcast/DeployPriceFeedsEth_20250522.s.sol/1/run-latest.json
+
+Sensitive values saved to: /Users/vincent/Documents/ts-codes/termmax-contract/cache/DeployPriceFeedsEth_20250522.s.sol/1/run-latest.json
+

@@ -1,0 +1,24 @@
+{
+  "gitInfo": {
+    "branch": "deploy/v1.0.8",
+    "commit": "0x0xe73e9755e483821e03ecc04b8928b63e51147d9e"
+  },
+  "blockInfo": {
+    "network": "arb-mainnet",
+    "blockNumber": "22186270",
+    "timestamp": "1743657771"
+  },
+  "vaultInfo": {
+    "name": "TermMax USDC Vault",
+    "symbol": "TermMax USDC Vault",
+    "address": "0x9170A095e7073559ffe1240ccF692Abb94F32a28",
+    "asset": "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+    "performanceFeeRate": 10000000,
+    "maxCapacity": "1000000000000",
+    "timelock": 86400,
+    "admin": "0xFaD175CAf9B0Ac0EBca3B1816ec799884EB04B9c",
+    "curator": "0x96e65A7a861D70A1c024774d7a48af44bCAD502b",
+    "guardian": "0x96e65A7a861D70A1c024774d7a48af44bCAD502b",
+    "allocator": "0x96e65A7a861D70A1c024774d7a48af44bCAD502b"
+  }
+}

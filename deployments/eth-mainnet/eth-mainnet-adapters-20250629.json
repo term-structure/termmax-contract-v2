@@ -1,0 +1,18 @@
+{
+  "network": "eth-mainnet",
+  "deployedAt": "1751205023",
+  "gitBranch": "v1_special_adapter",
+  "gitCommitHash": "0x01db0f8091230ac2c6befb08cc423cd7c3551428",
+  "blockInfo": {
+    "number": "22810493",
+    "timestamp": "1751205023"
+  },
+  "deployer": "0x56E3665038C5F0b56Cc7D81aC66C86521274B251",
+  "admin": "0x8409a9C1A911CED491892c5694E43994c9d47E8f",
+  "swapAdapter": {
+    "uniswapV3Adapter": "0xE7a88Ab1329cAD4168563516E35753b979d0c7a9",
+    "odosV2Adapter": "0x24c7e21a91cDB7760798e02EA5639d4C60b0C442",
+    "pendleSwapV3Adapter": "0x15Aa533cdEd42c2E38d2BC3ece5Bd2bFcf3dD2c0",
+    "ERC4626VaultAdapter": "0x98b0C4c13068C3010a809174Af31061AeF547Fbe"
+  }
+}
