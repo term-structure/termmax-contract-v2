@@ -11,10 +11,11 @@ interface OrderEventsV2 {
     /// @notice Emitted when an order is initialized
     /// @param maker The address of the maker who created the order
     /// @param market The address of the market associated with the order
-    /// @param orderConfig The configuration of the order
-    event OrderInitialized(address indexed maker, address indexed market, OrderConfig orderConfig);
+    event OrderInitialized(address indexed maker, address indexed market);
 
     event CurveUpdated(CurveCuts curveCuts);
+
+    event PoolUpdated(address indexed pool);
 
     event GeneralConfigUpdated(uint256 gtId, uint256 maxXtReserve, ISwapCallback swapTrigger, uint256 virtualXtReserve);
 }

@@ -311,7 +311,7 @@ contract MarketV2Test is Test {
         vm.startPrank(sender);
         orderConfig.feeConfig = res.market.config().feeConfig;
         vm.expectEmit();
-        emit OrderEventsV2.OrderInitialized(sender, address(res.market), orderConfig);
+        emit OrderEventsV2.OrderInitialized(sender, address(res.market));
         ITermMaxOrder order =
             res.market.createOrder(sender, orderConfig.maxXtReserve, ISwapCallback(address(0)), orderConfig.curveCuts);
         assertEq(address(order.market()), address(res.market));

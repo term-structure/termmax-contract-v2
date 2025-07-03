@@ -8,7 +8,7 @@ import {
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
-import {ITermMaxMarketV2} from "./ITermMaxMarketV2.sol";
+import {ITermMaxMarketV2, OrderInitialParams} from "./ITermMaxMarketV2.sol";
 import {IGearingToken} from "../v1/tokens/IGearingToken.sol";
 import {IFlashLoanReceiver} from "../v1/IFlashLoanReceiver.sol";
 import {ITermMaxOrder} from "../v1/ITermMaxOrder.sol";
@@ -445,24 +445,31 @@ contract TermMaxMarketV2 is
         isOpen
         returns (ITermMaxOrder)
     {
-        OrderConfig memory orderconfig;
-        orderconfig.maxXtReserve = maxXtReserve;
-        orderconfig.swapTrigger = swapTrigger;
-        orderconfig.curveCuts = curveCuts;
-        return _createOrder(maker, orderconfig);
+        OrderInitialParams memory params;
+        params.maker = maker;
+        params.orderConfig.maxXtReserve = maxXtReserve;
+        params.orderConfig.swapTrigger = swapTrigger;
+        params.orderConfig.curveCuts = curveCuts;
+        return _createOrder(params);
     }
 
     /**
      * @inheritdoc ITermMaxMarketV2
      */
-    function createOrder(address maker, OrderConfig memory orderconfig) external returns (ITermMaxOrder) {
-        return _createOrder(maker, orderconfig);
+    function createOrder(OrderInitialParams memory params) external returns (ITermMaxOrder) {
+        return _createOrder(params);
     }
 
-    function _createOrder(address maker, OrderConfig memory orderconfig) internal returns (ITermMaxOrder) {
+    function _createOrder(OrderInitialParams memory params) internal returns (ITermMaxOrder) {
         address order = Clones.clone(TERMMAX_ORDER_IMPLEMENT);
-        ITermMaxOrderV2(order).initialize(maker, [ft, xt, debtToken], gt, orderconfig, _config);
-        emit CreateOrder(maker, ITermMaxOrder(order));
+        params.orderConfig.feeConfig = _config.feeConfig;
+        params.maturity = _config.maturity;
+        params.ft = ft;
+        params.xt = xt;
+        params.gt = gt;
+        params.debtToken = debtToken;
+        ITermMaxOrderV2(order).initialize(params);
+        emit CreateOrder(params.maker, ITermMaxOrder(order));
         return ITermMaxOrder(order);
     }
 

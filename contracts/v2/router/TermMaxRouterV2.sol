@@ -512,7 +512,7 @@ contract TermMaxRouterV2 is
             IERC20(collateral).safeIncreaseAllowance(address(gt), collateralToMintGt);
             (orderConfig.gtId,) = market.issueFt(maker, 0, _encodeAmount(collateralToMintGt));
         }
-        order = ITermMaxMarketV2(address(market)).createOrder(maker, orderConfig);
+        // order = ITermMaxMarketV2(address(market)).createOrder(maker, orderConfig);
 
         if (debtTokenToDeposit > 0) {
             debtToken.safeTransferFrom(msg.sender, address(this), debtTokenToDeposit);

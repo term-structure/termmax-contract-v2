@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import {OrderConfig} from "../v1/storage/TermMaxStorage.sol";
 import {ITermMaxOrder} from "../v1/ITermMaxOrder.sol";
+import {OrderInitialParams} from "./storage/TermMaxStorageV2.sol";
 
 /**
  * @title TermMax Market V2 interface
@@ -51,5 +52,5 @@ interface ITermMaxMarketV2 {
      */
     function redeem(address ftOwner, address recipient, uint256 ftAmount) external returns (uint256, bytes memory);
 
-    function createOrder(address maker, OrderConfig memory orderconfig) external returns (ITermMaxOrder order);
+    function createOrder(OrderInitialParams memory params) external returns (ITermMaxOrder order);
 }

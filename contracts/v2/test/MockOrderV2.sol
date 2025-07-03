@@ -18,7 +18,7 @@ import {ISwapCallback} from "../../v1/ISwapCallback.sol";
 import {TransferUtils} from "../../v1/lib/TransferUtils.sol";
 import {ITermMaxMarketV2} from "../ITermMaxMarketV2.sol";
 import {OrderEventsV2} from "../events/OrderEventsV2.sol";
-import {ITermMaxOrderV2} from "../ITermMaxOrderV2.sol";
+import {ITermMaxOrderV2, OrderInitialParams} from "../ITermMaxOrderV2.sol";
 
 /**
  * @title TermMax Order
@@ -112,35 +112,6 @@ contract MockOrderV2 is
         debtToken = tokens[2];
         gt = gt_;
         emit OrderInitialized(market, maker_, maxXtReserve_, swapTrigger, curveCuts_);
-    }
-
-    /**
-     * @inheritdoc ITermMaxOrderV2
-     */
-    function initialize(
-        address maker_,
-        IERC20[3] memory tokens,
-        IGearingToken gt_,
-        OrderConfig memory orderConfig_,
-        MarketConfig memory marketConfig
-    ) external virtual override initializer {
-        __Ownable_init(maker_);
-        __ReentrancyGuard_init();
-        __Pausable_init();
-        market = ITermMaxMarket(_msgSender());
-        _updateCurve(orderConfig_.curveCuts);
-
-        _orderConfig.feeConfig = marketConfig.feeConfig;
-        _orderConfig.maxXtReserve = orderConfig_.maxXtReserve;
-        _orderConfig.swapTrigger = orderConfig_.swapTrigger;
-        maturity = marketConfig.maturity;
-        ft = tokens[0];
-        xt = tokens[1];
-        debtToken = tokens[2];
-        gt = gt_;
-
-        orderConfig_.feeConfig = marketConfig.feeConfig;
-        emit OrderEventsV2.OrderInitialized(maker_, address(market), orderConfig_);
     }
 
     /**
@@ -346,5 +317,27 @@ contract MockOrderV2 is
      */
     function unpause() external override onlyOwner {
         _unpause();
+    }
+
+    function initialize(OrderInitialParams memory params) external override {
+        __Ownable_init_unchained(params.maker);
+        __ReentrancyGuard_init_unchained();
+        __Pausable_init_unchained();
+        address _market = _msgSender();
+        market = ITermMaxMarket(_market);
+        maturity = params.maturity;
+        ft = params.ft;
+        xt = params.xt;
+        debtToken = params.debtToken;
+        gt = params.gt;
+        _orderConfig = params.orderConfig;
+
+        // _updateGeneralConfig(
+        //     params.orderConfig.gtId,
+        //     params.orderConfig.maxXtReserve,
+        //     params.orderConfig.swapTrigger,
+        //     params.virtualXtReserve
+        // );
+        emit OrderEventsV2.OrderInitialized(params.maker, _market);
     }
 }

@@ -2,6 +2,9 @@
 pragma solidity ^0.8.0;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
+import {IGearingToken} from "../../v1/tokens/IGearingToken.sol";
+import {OrderConfig} from "../../v1/storage/TermMaxStorage.sol";
 
 struct VaultInitialParamsV2 {
     address admin;
@@ -15,4 +18,16 @@ struct VaultInitialParamsV2 {
     uint64 performanceFeeRate;
     uint64 minApy;
     uint64 minIdleFundRate;
+}
+
+struct OrderInitialParams {
+    address maker;
+    IERC20 ft;
+    IERC20 xt;
+    IERC20 debtToken;
+    IGearingToken gt;
+    uint256 virtualXtReserve;
+    IERC4626 pool;
+    uint64 maturity;
+    OrderConfig orderConfig;
 }
