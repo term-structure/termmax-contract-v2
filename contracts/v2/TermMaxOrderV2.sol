@@ -19,7 +19,6 @@ import {OrderEvents} from "../v1/events/OrderEvents.sol";
 import {OrderConfig, MarketConfig, CurveCuts, CurveCut, FeeConfig} from "../v1/storage/TermMaxStorage.sol";
 import {ISwapCallback} from "../v1/ISwapCallback.sol";
 import {TransferUtils} from "../v1/lib/TransferUtils.sol";
-import {ITermMaxMarketV2} from "./ITermMaxMarketV2.sol";
 import {ITermMaxOrderV2, OrderInitialParams} from "./ITermMaxOrderV2.sol";
 import {OrderEventsV2} from "./events/OrderEventsV2.sol";
 import {OrderErrorsV2} from "./errors/OrderErrorsV2.sol";
@@ -60,7 +59,7 @@ contract TermMaxOrderV2 is
     uint64 private maturity;
 
     /// @notice The virtual xt reserve can present current price, which only changed when swap happens
-    uint256 private _virtualXtReserve;
+    uint256 public virtualXtReserve;
     IERC4626 public pool;
 
     // =============================================================================
@@ -303,19 +302,12 @@ contract TermMaxOrderV2 is
         _updateCurve(newCurveCuts);
     }
 
-    /**
-     * @notice Set general configuration parameters
-     * @param gtId Gearing token ID
-     * @param maxXtReserve Maximum XT reserve allowed
-     * @param swapTrigger Swap callback trigger
-     * @param virtualXtReserve Virtual XT reserve amount
-     */
-    function setGeneralConfig(uint256 gtId, uint256 maxXtReserve, ISwapCallback swapTrigger, uint256 virtualXtReserve)
+    function setGeneralConfig(uint256 gtId, uint256 maxXtReserve, ISwapCallback swapTrigger, uint256 virtualXtReserve_)
         external
         virtual
         onlyOwner
     {
-        _updateGeneralConfig(gtId, maxXtReserve, swapTrigger, virtualXtReserve);
+        _updateGeneralConfig(gtId, maxXtReserve, swapTrigger, virtualXtReserve_);
     }
 
     function setPool(IERC4626 newPool) external virtual onlyOwner {
@@ -684,19 +676,19 @@ contract TermMaxOrderV2 is
      * @param gtId Gearing token ID
      * @param maxXtReserve Maximum XT reserve
      * @param swapTrigger Swap callback trigger
-     * @param virtualXtReserve Virtual XT reserve
+     * @param virtualXtReserve_ Virtual XT reserve
      */
     function _updateGeneralConfig(
         uint256 gtId,
         uint256 maxXtReserve,
         ISwapCallback swapTrigger,
-        uint256 virtualXtReserve
+        uint256 virtualXtReserve_
     ) internal {
         _orderConfig.gtId = gtId;
-        _orderConfig.maxXtReserve = virtualXtReserve + maxXtReserve;
+        _orderConfig.maxXtReserve = virtualXtReserve_ + maxXtReserve;
         _orderConfig.swapTrigger = swapTrigger;
-        _virtualXtReserve = virtualXtReserve;
-        emit OrderEventsV2.GeneralConfigUpdated(gtId, maxXtReserve, swapTrigger, virtualXtReserve);
+        virtualXtReserve = virtualXtReserve_;
+        emit OrderEventsV2.GeneralConfigUpdated(gtId, maxXtReserve, swapTrigger, virtualXtReserve_);
     }
 
     function _updateFeeConfig(FeeConfig memory newFeeConfig) internal {
@@ -728,7 +720,7 @@ contract TermMaxOrderV2 is
         (uint256 netAmt, uint256 feeAmt, uint256 deltaFt, uint256 deltaXt, bool isNegetiveXt) =
             func(tokenAmtInOrOut, limitTokenAmt, orderConfig_);
 
-        uint256 newXtReserve = _virtualXtReserve;
+        uint256 newXtReserve = virtualXtReserve;
         if (!isNegetiveXt) {
             // check ft reserve and issue ft to self if needed
             uint256 ftReserve = _getFtReserve();
@@ -743,7 +735,7 @@ contract TermMaxOrderV2 is
         } else {
             newXtReserve -= deltaXt;
         }
-        _virtualXtReserve = newXtReserve;
+        virtualXtReserve = newXtReserve;
 
         /// @dev callback the changes of ft and xt reserve to trigger
         _triggerSwapCallback(deltaFt, deltaXt, isNegetiveXt);
@@ -1059,11 +1051,11 @@ contract TermMaxOrderV2 is
         uint256 debtTokenAmtIn,
         uint256 minTokenOut,
         OrderConfig memory config,
-        function(uint256, uint256, uint256, OrderConfig memory) internal view returns (uint256, uint256, uint256, uint256, bool)
+        function(uint256, uint256, uint256, OrderConfig memory) internal pure returns (uint256, uint256, uint256, uint256, bool)
             func
     ) internal view returns (uint256 netOut, uint256 feeAmt, uint256 deltaFt, uint256 deltaXt, bool isNegetiveXt) {
         (netOut, feeAmt, deltaFt, deltaXt, isNegetiveXt) =
-            func(_daysToMaturity(), _virtualXtReserve, debtTokenAmtIn, config);
+            func(_daysToMaturity(), virtualXtReserve, debtTokenAmtIn, config);
 
         netOut += debtTokenAmtIn;
         if (netOut < minTokenOut) revert UnexpectedAmount(minTokenOut, netOut);
@@ -1086,11 +1078,11 @@ contract TermMaxOrderV2 is
         uint256 tokenAmtOut,
         uint256 maxTokenIn,
         OrderConfig memory config,
-        function(uint256, uint256, uint256, OrderConfig memory) internal view returns (uint256, uint256, uint256, uint256, bool)
+        function(uint256, uint256, uint256, OrderConfig memory) internal pure returns (uint256, uint256, uint256, uint256, bool)
             func
     ) internal view returns (uint256, uint256, uint256, uint256, bool) {
         (uint256 netTokenIn, uint256 feeAmt, uint256 deltaFt, uint256 deltaXt, bool isNegetiveXt) =
-            func(_daysToMaturity(), _virtualXtReserve, tokenAmtOut, config);
+            func(_daysToMaturity(), virtualXtReserve, tokenAmtOut, config);
 
         if (netTokenIn > maxTokenIn) revert UnexpectedAmount(maxTokenIn, netTokenIn);
 
@@ -1113,11 +1105,11 @@ contract TermMaxOrderV2 is
         uint256 tokenAmtIn,
         uint256 minDebtTokenOut,
         OrderConfig memory config,
-        function(uint256, uint256, uint256, OrderConfig memory) internal view returns (uint256, uint256, uint256, uint256, bool)
+        function(uint256, uint256, uint256, OrderConfig memory) internal pure returns (uint256, uint256, uint256, uint256, bool)
             func
     ) internal view returns (uint256, uint256, uint256, uint256, bool) {
         (uint256 netOut, uint256 feeAmt, uint256 deltaFt, uint256 deltaXt, bool isNegetiveXt) =
-            func(_daysToMaturity(), _virtualXtReserve, tokenAmtIn, config);
+            func(_daysToMaturity(), virtualXtReserve, tokenAmtIn, config);
         if (netOut < minDebtTokenOut) revert UnexpectedAmount(minDebtTokenOut, netOut);
         return (netOut, feeAmt, deltaFt, deltaXt, isNegetiveXt);
     }
@@ -1138,11 +1130,11 @@ contract TermMaxOrderV2 is
         uint256 debtTokenAmtOut,
         uint256 maxTokenIn,
         OrderConfig memory config,
-        function(uint256, uint256, uint256, OrderConfig memory) internal view returns (uint256, uint256, uint256, uint256, bool)
+        function(uint256, uint256, uint256, OrderConfig memory) internal pure returns (uint256, uint256, uint256, uint256, bool)
             func
     ) internal view returns (uint256, uint256, uint256, uint256, bool) {
         (uint256 netTokenIn, uint256 feeAmt, uint256 deltaFt, uint256 deltaXt, bool isNegetiveXt) =
-            func(_daysToMaturity(), _virtualXtReserve, debtTokenAmtOut, config);
+            func(_daysToMaturity(), virtualXtReserve, debtTokenAmtOut, config);
 
         if (netTokenIn > maxTokenIn) revert UnexpectedAmount(maxTokenIn, netTokenIn);
 
@@ -1167,7 +1159,7 @@ contract TermMaxOrderV2 is
      */
     function _buyFtStep(uint256 daysToMaturity, uint256 oriXtReserve, uint256 debtTokenAmtIn, OrderConfig memory config)
         internal
-        view
+        pure
         returns (uint256 tokenAmtOut, uint256 feeAmt, uint256 deltaFt, uint256 deltaXt, bool isNegetiveXt)
     {
         FeeConfig memory feeConfig = config.feeConfig;
@@ -1195,7 +1187,7 @@ contract TermMaxOrderV2 is
      */
     function _buyXtStep(uint256 daysToMaturity, uint256 oriXtReserve, uint256 debtTokenAmtIn, OrderConfig memory config)
         internal
-        view
+        pure
         returns (uint256 tokenAmtOut, uint256 feeAmt, uint256 deltaFt, uint256 deltaXt, bool isNegetiveXt)
     {
         FeeConfig memory feeConfig = config.feeConfig;
@@ -1224,7 +1216,7 @@ contract TermMaxOrderV2 is
      */
     function _buyExactFtStep(uint256 daysToMaturity, uint256 oriXtReserve, uint256 ftAmtOut, OrderConfig memory config)
         internal
-        view
+        pure
         returns (uint256 debtTokenAmtIn, uint256 feeAmt, uint256 deltaFt, uint256 deltaXt, bool isNegetiveXt)
     {
         FeeConfig memory feeConfig = config.feeConfig;
@@ -1253,7 +1245,7 @@ contract TermMaxOrderV2 is
      */
     function _buyExactXtStep(uint256 daysToMaturity, uint256 oriXtReserve, uint256 xtAmtOut, OrderConfig memory config)
         internal
-        view
+        pure
         returns (uint256 debtTokenAmtIn, uint256 feeAmt, uint256 deltaFt, uint256 deltaXt, bool isNegetiveXt)
     {
         FeeConfig memory feeConfig = config.feeConfig;
@@ -1282,7 +1274,7 @@ contract TermMaxOrderV2 is
      */
     function _sellFtStep(uint256 daysToMaturity, uint256 oriXtReserve, uint256 tokenAmtIn, OrderConfig memory config)
         internal
-        view
+        pure
         returns (uint256 debtTokenAmtOut, uint256 feeAmt, uint256 deltaFt, uint256 deltaXt, bool isNegetiveXt)
     {
         FeeConfig memory feeConfig = config.feeConfig;
@@ -1311,7 +1303,7 @@ contract TermMaxOrderV2 is
      */
     function _sellXtStep(uint256 daysToMaturity, uint256 oriXtReserve, uint256 tokenAmtIn, OrderConfig memory config)
         internal
-        view
+        pure
         returns (uint256 debtTokenAmtOut, uint256 feeAmt, uint256 deltaFt, uint256 deltaXt, bool isNegetiveXt)
     {
         FeeConfig memory feeConfig = config.feeConfig;
@@ -1343,7 +1335,7 @@ contract TermMaxOrderV2 is
         uint256 oriXtReserve,
         uint256 debtTokenOut,
         OrderConfig memory config
-    ) internal view returns (uint256 ftAmtIn, uint256 feeAmt, uint256 deltaFt, uint256 deltaXt, bool isNegetiveXt) {
+    ) internal pure returns (uint256 ftAmtIn, uint256 feeAmt, uint256 deltaFt, uint256 deltaXt, bool isNegetiveXt) {
         FeeConfig memory feeConfig = config.feeConfig;
         CurveCut[] memory cuts = config.curveCuts.lendCurveCuts;
         uint256 nif = Constants.DECIMAL_BASE + uint256(feeConfig.borrowTakerFeeRatio);
@@ -1376,7 +1368,7 @@ contract TermMaxOrderV2 is
         uint256 oriXtReserve,
         uint256 debtTokenOut,
         OrderConfig memory config
-    ) internal view returns (uint256 xtAmtIn, uint256 feeAmt, uint256 deltaFt, uint256 deltaXt, bool isNegetiveXt) {
+    ) internal pure returns (uint256 xtAmtIn, uint256 feeAmt, uint256 deltaFt, uint256 deltaXt, bool isNegetiveXt) {
         FeeConfig memory feeConfig = config.feeConfig;
         CurveCut[] memory cuts = config.curveCuts.borrowCurveCuts;
         uint256 nif = Constants.DECIMAL_BASE - uint256(feeConfig.lendTakerFeeRatio);
@@ -1394,20 +1386,6 @@ contract TermMaxOrderV2 is
     // =============================================================================
     // STAKING FUNCTIONS
     // =============================================================================
-
-    /**
-     * @notice Deposit to pool function
-     * @param asset Asset to deposit (debt token)
-     * @param amount Amount to deposit
-     */
-    function _depositToPool(IERC20 asset, uint256 amount) internal virtual {
-        IERC4626 _pool = pool;
-        if (address(_pool) != address(0)) {
-            asset.safeIncreaseAllowance(address(_pool), amount);
-            _pool.deposit(amount, address(this));
-        }
-    }
-
     /**
      * @notice Withdraw from pool function
      * @param to Recipient address

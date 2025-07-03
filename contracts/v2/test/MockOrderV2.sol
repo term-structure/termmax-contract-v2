@@ -18,7 +18,7 @@ import {ISwapCallback} from "../../v1/ISwapCallback.sol";
 import {TransferUtils} from "../../v1/lib/TransferUtils.sol";
 import {ITermMaxMarketV2} from "../ITermMaxMarketV2.sol";
 import {OrderEventsV2} from "../events/OrderEventsV2.sol";
-import {ITermMaxOrderV2, OrderInitialParams} from "../ITermMaxOrderV2.sol";
+import {ITermMaxOrderV2, OrderInitialParams, IERC4626} from "../ITermMaxOrderV2.sol";
 
 /**
  * @title TermMax Order
@@ -340,4 +340,29 @@ contract MockOrderV2 is
         // );
         emit OrderEventsV2.OrderInitialized(params.maker, _market);
     }
+
+    function getRealReserves() external view override returns (uint256 ftReserve, uint256 xtReserve) {}
+
+    function setCurve(CurveCuts memory newCurveCuts) external override {}
+
+    function setGeneralConfig(uint256 gtId, uint256 maxXtReserve, ISwapCallback swapTrigger, uint256 virtualXtReserve)
+        external
+        override
+    {}
+
+    function setPool(IERC4626 newPool) external override {}
+
+    function addLiquidity(IERC20 asset, uint256 amount) external override {}
+
+    function removeLiquidity(IERC20 asset, uint256 amount, address recipient) external override {}
+
+    function redeemAll(IERC20 asset, address recipient)
+        external
+        override
+        returns (uint256 badDebt, bytes memory deliveryData)
+    {}
+
+    function pool() external view override returns (IERC4626) {}
+
+    function virtualXtReserve() external view override returns (uint256) {}
 }
