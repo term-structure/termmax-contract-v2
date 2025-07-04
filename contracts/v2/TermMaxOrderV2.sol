@@ -403,7 +403,6 @@ contract TermMaxOrderV2 is
                 _market.burn(address(this), maxBurned);
             }
             // if pool is set and asset is debt token, deposit to get shares
-            asset.safeTransferFrom(msg.sender, address(this), amount);
             amount += maxBurned;
             asset.safeIncreaseAllowance(address(_pool), amount);
             _pool.deposit(amount, address(this));
@@ -414,32 +413,30 @@ contract TermMaxOrderV2 is
         IERC4626 _pool = pool;
         ITermMaxMarket _market = market;
         IERC20 _debtToken = debtToken;
-        if (asset == _debtToken) {
-            if (address(_pool) == address(0)) {
-                _market.burn(recipient, amount);
-            } else {
-                uint256 ftBalance = ft.balanceOf(address(this));
-                uint256 xtBalance = xt.balanceOf(address(this));
-                uint256 maxBurned = ftBalance > xtBalance ? xtBalance : ftBalance;
+        if (address(_pool) == address(0) && asset == _debtToken) {
+            // if pool is not set, always burn ft and xt to recipient
+            _market.burn(recipient, amount);
+        } else if (address(_pool) != address(0)) {
+            uint256 ftBalance = ft.balanceOf(address(this));
+            uint256 xtBalance = xt.balanceOf(address(this));
+            uint256 maxBurned = ftBalance > xtBalance ? xtBalance : ftBalance;
 
+            if (asset == _debtToken) {
                 if (maxBurned >= amount) {
+                    // if enough ft and xt, burn to debt token
                     _market.burn(recipient, amount);
                 } else {
                     // if not enough ft and xt, burn all and withdraw from pool
                     _market.burn(recipient, maxBurned);
                     _pool.withdraw(amount - maxBurned, recipient, address(this));
                 }
-            }
-        } else if (address(pool) != address(0)) {
-            uint256 ftBalance = ft.balanceOf(address(this));
-            uint256 xtBalance = xt.balanceOf(address(this));
-            uint256 maxBurned = ftBalance > xtBalance ? xtBalance : ftBalance;
-            // deposit to pool to get shares
-            if (maxBurned != 0) {
-                _market.burn(address(this), maxBurned);
+            } else {
+                // transform ft and xt to debt token and deposit to pool
+                _market.burn(recipient, maxBurned);
                 _pool.deposit(maxBurned, address(this));
+                // transfer shares to recipient
+                _pool.safeTransfer(recipient, amount);
             }
-            _pool.safeTransferFrom(address(this), recipient, amount);
         }
     }
 

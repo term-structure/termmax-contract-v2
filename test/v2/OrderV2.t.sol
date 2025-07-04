@@ -926,6 +926,137 @@ contract OrderTestV2 is Test {
         assertEq(newPool.balanceOf(address(res.order)), 0, "Order should have no new pool shares");
         vm.stopPrank();
     }
+
+    function testSetCurve() public {
+        vm.startPrank(maker);
+
+        OrderConfig memory newOrderConfig = JSONLoader.getOrderConfigFromJson(testdata, ".newOrderConfig");
+
+        // Create new curve cuts
+        CurveCuts memory newCurveCuts = newOrderConfig.curveCuts;
+
+        res.order.setCurve(newCurveCuts);
+
+        // Verify the curve was updated
+        OrderConfig memory updatedConfig = res.order.orderConfig();
+
+        // Check lend curve cuts
+        for (uint256 i = 0; i < updatedConfig.curveCuts.lendCurveCuts.length; i++) {
+            assertEq(
+                updatedConfig.curveCuts.lendCurveCuts[i].xtReserve,
+                newCurveCuts.lendCurveCuts[i].xtReserve,
+                "Lend curve XT reserve should match"
+            );
+            assertEq(
+                updatedConfig.curveCuts.lendCurveCuts[i].liqSquare,
+                newCurveCuts.lendCurveCuts[i].liqSquare,
+                "Lend curve liq square should match"
+            );
+            assertEq(
+                updatedConfig.curveCuts.lendCurveCuts[i].offset,
+                newCurveCuts.lendCurveCuts[i].offset,
+                "Lend curve offset should match"
+            );
+        }
+
+        // Check borrow curve cuts
+        for (uint256 i = 0; i < updatedConfig.curveCuts.borrowCurveCuts.length; i++) {
+            assertEq(
+                updatedConfig.curveCuts.borrowCurveCuts[i].xtReserve,
+                newCurveCuts.borrowCurveCuts[i].xtReserve,
+                "Borrow curve XT reserve should match"
+            );
+            assertEq(
+                updatedConfig.curveCuts.borrowCurveCuts[i].liqSquare,
+                newCurveCuts.borrowCurveCuts[i].liqSquare,
+                "Borrow curve liq square should match"
+            );
+            assertEq(
+                updatedConfig.curveCuts.borrowCurveCuts[i].offset,
+                newCurveCuts.borrowCurveCuts[i].offset,
+                "Borrow curve offset should match"
+            );
+        }
+
+        vm.stopPrank();
+
+        // Test that non-maker cannot set curve
+        vm.startPrank(sender);
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", sender));
+        res.order.setCurve(newCurveCuts);
+        vm.stopPrank();
+
+        // Test invalid curve cuts
+        vm.startPrank(maker);
+        CurveCuts memory invalidCurveCuts = newCurveCuts;
+        invalidCurveCuts.lendCurveCuts[0].offset = 0;
+        vm.expectRevert(abi.encodeWithSelector(OrderErrors.InvalidCurveCuts.selector));
+        res.order.setCurve(invalidCurveCuts);
+        vm.stopPrank();
+    }
+
+    function testAddLiquidity() public {
+        vm.startPrank(maker);
+        uint256 ftBalanceBefore = res.ft.balanceOf(address(res.order));
+        uint256 xtBalanceBefore = res.xt.balanceOf(address(res.order));
+
+        uint256 addedAmt = 100e8;
+        res.debt.mint(maker, addedAmt);
+        res.debt.approve(address(res.order), addedAmt);
+        res.order.addLiquidity(res.debt, addedAmt);
+        uint256 ftBalanceAfter = res.ft.balanceOf(address(res.order));
+        uint256 xtBalanceAfter = res.xt.balanceOf(address(res.order));
+        assertEq(ftBalanceAfter, ftBalanceBefore + addedAmt, "FT balance should increase by added amount");
+        assertEq(xtBalanceAfter, xtBalanceBefore + addedAmt, "XT balance should increase by added amount");
+
+        MockERC4626 pool = new MockERC4626(res.debt);
+        res.order.setPool(pool);
+
+        res.debt.mint(maker, addedAmt);
+        res.debt.approve(address(res.order), addedAmt);
+        res.order.addLiquidity(res.debt, addedAmt);
+
+        assertEq(pool.balanceOf(address(res.order)), addedAmt * 2 + 150e8, "Pool shares should match added amount");
+        assertEq(res.debt.balanceOf(address(pool)), addedAmt * 2 + 150e8, "Pool should have debt balance");
+
+        res.debt.mint(maker, addedAmt);
+        res.debt.approve(address(pool), addedAmt);
+        pool.deposit(addedAmt, maker);
+        pool.approve(address(res.order), addedAmt);
+        res.order.addLiquidity(pool, addedAmt);
+
+        assertEq(pool.balanceOf(address(res.order)), addedAmt * 3 + 150e8, "Pool shares should match added amount");
+        assertEq(res.debt.balanceOf(address(pool)), addedAmt * 3 + 150e8, "Pool should have debt balance");
+
+        vm.stopPrank();
+    }
+
+    function testRemoveLiquidity() public {
+        vm.startPrank(maker);
+        uint256 ftBalanceBefore = res.ft.balanceOf(address(res.order));
+        uint256 xtBalanceBefore = res.xt.balanceOf(address(res.order));
+
+        uint256 removedAmt = 100e8;
+        res.order.removeLiquidity(res.debt, removedAmt, maker);
+        uint256 ftBalanceAfter = res.ft.balanceOf(address(res.order));
+        uint256 xtBalanceAfter = res.xt.balanceOf(address(res.order));
+        assertEq(ftBalanceAfter, ftBalanceBefore - removedAmt, "FT balance should decrease by removed amount");
+        assertEq(xtBalanceAfter, xtBalanceBefore - removedAmt, "XT balance should decrease by removed amount");
+
+        removedAmt = 10e8;
+        MockERC4626 pool = new MockERC4626(res.debt);
+        res.order.setPool(pool);
+
+        res.order.removeLiquidity(pool, removedAmt, maker);
+        assertEq(pool.balanceOf(address(res.order)), 50e8 - removedAmt, "Pool shares should match removed amount");
+        assertEq(pool.balanceOf(address(maker)), removedAmt, "Maker should receive removed shares");
+
+        res.order.removeLiquidity(res.debt, removedAmt, maker);
+        assertEq(pool.balanceOf(address(res.order)), 50e8 - removedAmt * 2, "Pool shares should match removed amount");
+        assertEq(pool.balanceOf(address(maker)), removedAmt, "Maker should receive no shares");
+        assertEq(res.debt.balanceOf(address(maker)), removedAmt + 100e8, "Maker should receive removed debt");
+        vm.stopPrank();
+    }
 }
 
 // Mock contracts for testing
