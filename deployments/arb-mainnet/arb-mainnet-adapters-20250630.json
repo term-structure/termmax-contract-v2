@@ -1,0 +1,18 @@
+{
+  "network": "arb-mainnet",
+  "deployedAt": "1751264239",
+  "gitBranch": "v1_special_adapter",
+  "gitCommitHash": "0x01db0f8091230ac2c6befb08cc423cd7c3551428",
+  "blockInfo": {
+    "number": "352689369",
+    "timestamp": "1751264239"
+  },
+  "deployer": "0x56E3665038C5F0b56Cc7D81aC66C86521274B251",
+  "admin": "0x8409a9C1A911CED491892c5694E43994c9d47E8f",
+  "swapAdapter": {
+    "uniswapV3Adapter": "0x048a54Deae47c41f760c42622B114bB89B836A9f",
+    "odosV2Adapter": "0xb986312024C8e0f895B00eBA32C81B5759C91ffF",
+    "pendleSwapV3Adapter": "0xf95130ddFA9EB132a25B121a29991cEA989eBB7c",
+    "ERC4626VaultAdapter": "0x133BF41c23eDFb2F0EF586B5B01063a17470e294"
+  }
+}

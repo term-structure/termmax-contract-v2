@@ -1,0 +1,579 @@
+Running on arb-mainnet...
+Deployment type: market
+=== Configuration ===
+Operation: Deployment
+Type: market
+Network: arb-mainnet
+Script: DeployMarket.s.sol
+Path: script/deploy/DeployMarket.s.sol
+RPC URL: http*****://arb-main*****.g.alch*****.com/v2/u8Dd*****-2C-AIUn*****
+Admin Address: 0x8409a9C1A911CED491892c5694E43994c9d47E8f
+Mode: Live Broadcast--broadcast
+Resume: Disabled
+Verification: Enabled--verify
+Using API Key: ARBSCAN_API_KEY
+Tenderly Verification: Disabled
+Debug Mode: Disabled
+===============================
+Starting deployment...
+Executing: forge script script/deploy/DeployMarket.s.sol --private-key [MASKED] --rpc-url [MASKED] --broadcast --slow --verify --etherscan-api-key [MASKED]
+No files changed, compilation skipped
+Script ran successfully.
+
+== Logs ==
+  ===== Git Info =====
+  Git branch: deploy/v1.0.8
+  Git commit hash:
+  0xa933ec01396c317772c0830fa6db0eaa420df34f
+  
+  ===== Block Info =====
+  Block number: 22215388
+  Block timestamp: 1744009113
+  
+  ===== Address Info =====
+  Deplyer: 0x56E3665038C5F0b56Cc7D81aC66C86521274B251
+  Deployed at block number: 22215388
+  
+  ===== Market Info - 0 =====
+  Market deployed at: 0x6D5dcE785FDA044dE81AaA0abaB881BA4bbC59B7
+  Market name: WETH/wstETH@30MAY2025
+  Market symbol: WETH/wstETH@30MAY2025
+  Collateral (wstETH) address: 0x5979D7b546E38E414F7E9822514be443A4800529
+  Underlying (WETH) address: 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1
+  Collateral price feed address: 0xB3ae8A16CF827d193Ae51a92fd2630e6839F5761
+  Collateral heartbeat: 86400
+  Underlying price feed address: 0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612
+  Underlying heartbeat: 86400
+  FT deployed at: 0xbE26080CE287A2Bb346baB44F7550DE18DBDB107
+  XT deployed at: 0xa628a5948B6613845F5A8f46ec53D817A216C745
+  GT deployed at: 0x706FD4696B070B9B525C1A9a2C0801b7b4E85d30
+  
+  Treasurer: 0x719e77027952929ed3060dbFFC5D43EC50c1cf79
+  Maturity: 09APR2025
+  Salt: 0
+  Lend Taker Fee Ratio: 2000000
+  Lend Maker Fee Ratio: 2000000
+  Borrow Taker Fee Ratio: 3000000
+  Borrow Maker Fee Ratio: 3000000
+  Mint GT Fee Ratio: 1000000
+  Issue FT Fee Ref: 400000
+  Market config written to: /Users/vincent/Documents/ts-codes/termmax-contract/deployments/arb-mainnet/arb-mainnet-market-WETH-wstETH@09APR2025.json
+  
+  ===== Market Info - 1 =====
+  Market deployed at: 0xb4B207969EbAcF10c1bd192f93e5B3217590C029
+  Market name: USDC/wstETH@30MAY2025
+  Market symbol: USDC/wstETH@30MAY2025
+  Collateral (wstETH) address: 0x5979D7b546E38E414F7E9822514be443A4800529
+  Underlying (USDC) address: 0xaf88d065e77c8cC2239327C5EDb3A432268e5831
+  Collateral price feed address: 0xB3ae8A16CF827d193Ae51a92fd2630e6839F5761
+  Collateral heartbeat: 86400
+  Underlying price feed address: 0x50834F3163758fcC1Df9973b6e91f0F0F0434aD3
+  Underlying heartbeat: 86400
+  FT deployed at: 0x9784AAe160d71EDf37B8a421E5FfA42AE9AA4ac9
+  XT deployed at: 0x312fce698b5ABf0B15cF894a89EaE67dAF97A03e
+  GT deployed at: 0xb71e701de5F9AeA020799049154830e902BdacBe
+  
+  Treasurer: 0x719e77027952929ed3060dbFFC5D43EC50c1cf79
+  Maturity: 09APR2025
+  Salt: 0
+  Lend Taker Fee Ratio: 2000000
+  Lend Maker Fee Ratio: 2000000
+  Borrow Taker Fee Ratio: 3000000
+  Borrow Maker Fee Ratio: 3000000
+  Mint GT Fee Ratio: 1000000
+  Issue FT Fee Ref: 2000000
+  Market config written to: /Users/vincent/Documents/ts-codes/termmax-contract/deployments/arb-mainnet/arb-mainnet-market-USDC-wstETH@09APR2025.json
+  
+  ===== Market Info - 2 =====
+  Market deployed at: 0x9bf834de7B951c7a0119eC3c0438B0d1e83D6BDF
+  Market name: USDC/WBTC@30MAY2025
+  Market symbol: USDC/WBTC@30MAY2025
+  Collateral (WBTC) address: 0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f
+  Underlying (USDC) address: 0xaf88d065e77c8cC2239327C5EDb3A432268e5831
+  Collateral price feed address: 0xd0C7101eACbB49F3deCcCc166d238410D6D46d57
+  Collateral heartbeat: 86400
+  Underlying price feed address: 0x50834F3163758fcC1Df9973b6e91f0F0F0434aD3
+  Underlying heartbeat: 86400
+  FT deployed at: 0x1cB872765b6d5AaC6B951a70E1002C470c8f0554
+  XT deployed at: 0x4D86E7d921C56D06a5b0f7fbdB80d7DFd8532a24
+  GT deployed at: 0x20F2A47f4297e9aE929002213Fbe7a168034b5Aa
+  
+  Treasurer: 0x719e77027952929ed3060dbFFC5D43EC50c1cf79
+  Maturity: 09APR2025
+  Salt: 0
+  Lend Taker Fee Ratio: 2000000
+  Lend Maker Fee Ratio: 2000000
+  Borrow Taker Fee Ratio: 3000000
+  Borrow Maker Fee Ratio: 3000000
+  Mint GT Fee Ratio: 1000000
+  Issue FT Fee Ref: 2000000
+  Market config written to: /Users/vincent/Documents/ts-codes/termmax-contract/deployments/arb-mainnet/arb-mainnet-market-USDC-WBTC@09APR2025.json
+  
+  ===== Market Info - 3 =====
+  Market deployed at: 0xe6C399f22d5D721058324A59E3cC772D13e1E274
+  Market name: WETH/weETH@30MAY2025
+  Market symbol: WETH/weETH@30MAY2025
+  Collateral (weETH) address: 0x35751007a407ca6FEFfE80b3cB397736D2cf4dbe
+  Underlying (WETH) address: 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1
+  Collateral price feed address: 0x8f29Df42c617C222Bc2B416AC8a022E85e853276
+  Collateral heartbeat: 86400
+  Underlying price feed address: 0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612
+  Underlying heartbeat: 86400
+  FT deployed at: 0x9A888F4feeF89D0E70bf97d93fe60e4F0B091e21
+  XT deployed at: 0x08359897bcDF58aaa73492776C6eeedb2C9dBf39
+  GT deployed at: 0xb3C0bfE13474c4CdD1409Ba6B6B4FcFdFb95827A
+  
+  Treasurer: 0x719e77027952929ed3060dbFFC5D43EC50c1cf79
+  Maturity: 09APR2025
+  Salt: 0
+  Lend Taker Fee Ratio: 2000000
+  Lend Maker Fee Ratio: 2000000
+  Borrow Taker Fee Ratio: 3000000
+  Borrow Maker Fee Ratio: 3000000
+  Mint GT Fee Ratio: 1000000
+  Issue FT Fee Ref: 400000
+  Market config written to: /Users/vincent/Documents/ts-codes/termmax-contract/deployments/arb-mainnet/arb-mainnet-market-WETH-weETH@09APR2025.json
+  
+  ===== Market Info - 4 =====
+  Market deployed at: 0xEF77c361d50B1A9976ba702feCA233b734639Fda
+  Market name: USDC/WETH@30MAY2025
+  Market symbol: USDC/WETH@30MAY2025
+  Collateral (WETH) address: 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1
+  Underlying (USDC) address: 0xaf88d065e77c8cC2239327C5EDb3A432268e5831
+  Collateral price feed address: 0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612
+  Collateral heartbeat: 86400
+  Underlying price feed address: 0x50834F3163758fcC1Df9973b6e91f0F0F0434aD3
+  Underlying heartbeat: 86400
+  FT deployed at: 0x51dE84c1dfc24b1EDD023972FFd48903B1FA66c3
+  XT deployed at: 0x95F4652078F45548AD749E6EC076B703495413B7
+  GT deployed at: 0x3B6476155f9A2E7e7648fA27d3648e0F4302059A
+  
+  Treasurer: 0x719e77027952929ed3060dbFFC5D43EC50c1cf79
+  Maturity: 09APR2025
+  Salt: 0
+  Lend Taker Fee Ratio: 2000000
+  Lend Maker Fee Ratio: 2000000
+  Borrow Taker Fee Ratio: 3000000
+  Borrow Maker Fee Ratio: 3000000
+  Mint GT Fee Ratio: 1000000
+  Issue FT Fee Ref: 2000000
+  Market config written to: /Users/vincent/Documents/ts-codes/termmax-contract/deployments/arb-mainnet/arb-mainnet-market-USDC-WETH@09APR2025.json
+  
+  ===== Market Info - 5 =====
+  Market deployed at: 0x0b4084ACEd7c8dFe84f1b084F50E12B9CE35a1b4
+  Market name: USDC/ARB@30MAY2025
+  Market symbol: USDC/ARB@30MAY2025
+  Collateral (ARB) address: 0x912CE59144191C1204E64559FE8253a0e49E6548
+  Underlying (USDC) address: 0xaf88d065e77c8cC2239327C5EDb3A432268e5831
+  Collateral price feed address: 0xb2A824043730FE05F3DA2efaFa1CBbe83fa548D6
+  Collateral heartbeat: 86400
+  Underlying price feed address: 0x50834F3163758fcC1Df9973b6e91f0F0F0434aD3
+  Underlying heartbeat: 86400
+  FT deployed at: 0x38A3D4197b7cD90Fe31fe2BB59763aF4627E2714
+  XT deployed at: 0x46c57404f90866b2b26a6EF5c3735fA73F306Ee8
+  GT deployed at: 0x172f496b78dc962f1aa4B2CD92c9C21093081331
+  
+  Treasurer: 0x719e77027952929ed3060dbFFC5D43EC50c1cf79
+  Maturity: 09APR2025
+  Salt: 0
+  Lend Taker Fee Ratio: 2000000
+  Lend Maker Fee Ratio: 2000000
+  Borrow Taker Fee Ratio: 3000000
+  Borrow Maker Fee Ratio: 3000000
+  Mint GT Fee Ratio: 1000000
+  Issue FT Fee Ref: 2000000
+  Market config written to: /Users/vincent/Documents/ts-codes/termmax-contract/deployments/arb-mainnet/arb-mainnet-market-USDC-ARB@09APR2025.json
+  
+  ===== Market Info - 6 =====
+  Market deployed at: 0x151F42b840DD287d108Bb624fD1438D823209F41
+  Market name: WETH/PT-weETH-26JUN2025@27JUN2025
+  Market symbol: WETH/PT-weETH-26JUN2025@27JUN2025
+  Collateral (PT-weETH-26JUN2025) address: 0xb33808ea0e883138680BA29311a220A7377cdb92
+  Underlying (WETH) address: 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1
+  Collateral price feed address: 0x2a2a0e32c54670045256EBcA681887E32e689E97
+  Collateral heartbeat: 86400
+  Underlying price feed address: 0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612
+  Underlying heartbeat: 86400
+  FT deployed at: 0xB346b2c6F8774423F92850186a2a8E9E957CB9fE
+  XT deployed at: 0x9F765ABd43859EA5FaBE04A3067f1076136BD7C8
+  GT deployed at: 0x7c92b79eD6bA4E84E914887D5Bf50aAC625129E6
+  
+  Treasurer: 0x719e77027952929ed3060dbFFC5D43EC50c1cf79
+  Maturity: 09APR2025
+  Salt: 0
+  Lend Taker Fee Ratio: 2000000
+  Lend Maker Fee Ratio: 2000000
+  Borrow Taker Fee Ratio: 3000000
+  Borrow Maker Fee Ratio: 3000000
+  Mint GT Fee Ratio: 1000000
+  Issue FT Fee Ref: 400000
+  Market config written to: /Users/vincent/Documents/ts-codes/termmax-contract/deployments/arb-mainnet/arb-mainnet-market-WETH-PT-weETH-26JUN2025@09APR2025.json
+  
+
+## Setting up 1 EVM.
+
+==========================
+
+Chain 42161
+
+Estimated gas price: 15.354864001 gwei
+
+Estimated total gas used for script: 10064039
+
+Estimated amount required: 0.154531950145760039 ETH
+
+==========================
+
+Transactions saved to: /Users/vincent/Documents/ts-codes/termmax-contract/broadcast/DeployMarket.s.sol/42161/run-latest.json
+
+Sensitive values saved to: /Users/vincent/Documents/ts-codes/termmax-contract/cache/DeployMarket.s.sol/42161/run-latest.json
+
+[ERROR] market deployment to arb-mainnet failed!
+You can resume the failed deployment by running the same command with the --resume option:
+./script.sh arb-mainnet deploy:market --broadcast --resume --verify  
+Running on arb-mainnet...
+Deployment type: market
+=== Configuration ===
+Operation: Deployment
+Type: market
+Network: arb-mainnet
+Script: DeployMarket.s.sol
+Path: script/deploy/DeployMarket.s.sol
+RPC URL: http*****://arb-main*****.g.alch*****.com/v2/u8Dd*****-2C-AIUn*****
+Admin Address: 0x8409a9C1A911CED491892c5694E43994c9d47E8f
+Mode: Live Broadcast--broadcast
+Resume: Enabled (will resume from last broadcasted transaction)
+Verification: Enabled--verify
+Using API Key: ARBSCAN_API_KEY
+Tenderly Verification: Disabled
+Debug Mode: Disabled
+===============================
+Starting deployment...
+Executing: forge script script/deploy/DeployMarket.s.sol --private-key [MASKED] --rpc-url [MASKED] --broadcast --slow --resume --verify --etherscan-api-key [MASKED]
+No files changed, compilation skipped
+
+Transactions saved to: /Users/vincent/Documents/ts-codes/termmax-contract/broadcast/DeployMarket.s.sol/42161/run-latest.json
+
+Sensitive values saved to: /Users/vincent/Documents/ts-codes/termmax-contract/cache/DeployMarket.s.sol/42161/run-latest.json
+
+[ERROR] market deployment to arb-mainnet failed!
+You can resume the failed deployment by running the same command with the --resume option:
+./script.sh arb-mainnet deploy:market --broadcast --resume --verify  
+Running on arb-mainnet...
+Deployment type: market
+=== Configuration ===
+Operation: Deployment
+Type: market
+Network: arb-mainnet
+Script: DeployMarket.s.sol
+Path: script/deploy/DeployMarket.s.sol
+RPC URL: http*****://arb-main*****.g.alch*****.com/v2/u8Dd*****-2C-AIUn*****
+Admin Address: 0x8409a9C1A911CED491892c5694E43994c9d47E8f
+Mode: Live Broadcast--broadcast
+Resume: Enabled (will resume from last broadcasted transaction)
+Verification: Enabled--verify
+Using API Key: ARBSCAN_API_KEY
+Tenderly Verification: Disabled
+Debug Mode: Disabled
+===============================
+Starting deployment...
+Executing: forge script script/deploy/DeployMarket.s.sol --private-key [MASKED] --rpc-url [MASKED] --broadcast --slow --resume --verify --etherscan-api-key [MASKED]
+No files changed, compilation skipped
+
+Transactions saved to: /Users/vincent/Documents/ts-codes/termmax-contract/broadcast/DeployMarket.s.sol/42161/run-latest.json
+
+Sensitive values saved to: /Users/vincent/Documents/ts-codes/termmax-contract/cache/DeployMarket.s.sol/42161/run-latest.json
+
+[ERROR] market deployment to arb-mainnet failed!
+You can resume the failed deployment by running the same command with the --resume option:
+./script.sh arb-mainnet deploy:market --broadcast --resume --verify  
+Running on arb-mainnet...
+Deployment type: market
+=== Configuration ===
+Operation: Deployment
+Type: market
+Network: arb-mainnet
+Script: DeployMarket.s.sol
+Path: script/deploy/DeployMarket.s.sol
+RPC URL: http*****://arb-main*****.g.alch*****.com/v2/u8Dd*****-2C-AIUn*****
+Admin Address: 0x8409a9C1A911CED491892c5694E43994c9d47E8f
+Mode: Live Broadcast--broadcast
+Resume: Enabled (will resume from last broadcasted transaction)
+Verification: Enabled--verify
+Using API Key: ARBSCAN_API_KEY
+Tenderly Verification: Disabled
+Debug Mode: Disabled
+===============================
+Starting deployment...
+Executing: forge script script/deploy/DeployMarket.s.sol --private-key [MASKED] --rpc-url [MASKED] --broadcast --slow --resume --verify --etherscan-api-key [MASKED]
+No files changed, compilation skipped
+
+Transactions saved to: /Users/vincent/Documents/ts-codes/termmax-contract/broadcast/DeployMarket.s.sol/42161/run-latest.json
+
+Sensitive values saved to: /Users/vincent/Documents/ts-codes/termmax-contract/cache/DeployMarket.s.sol/42161/run-latest.json
+
+[ERROR] market deployment to arb-mainnet failed!
+You can resume the failed deployment by running the same command with the --resume option:
+./script.sh arb-mainnet deploy:market --broadcast --resume --verify  
+Running on arb-mainnet...
+Deployment type: market
+=== Configuration ===
+Operation: Deployment
+Type: market
+Network: arb-mainnet
+Script: DeployMarket.s.sol
+Path: script/deploy/DeployMarket.s.sol
+RPC URL: http*****://arb-main*****.g.alch*****.com/v2/u8Dd*****-2C-AIUn*****
+Admin Address: 0x8409a9C1A911CED491892c5694E43994c9d47E8f
+Mode: Live Broadcast--broadcast
+Resume: Enabled (will resume from last broadcasted transaction)
+Verification: Enabled--verify
+Using API Key: ARBSCAN_API_KEY
+Tenderly Verification: Disabled
+Debug Mode: Disabled
+===============================
+Starting deployment...
+Executing: forge script script/deploy/DeployMarket.s.sol --private-key [MASKED] --rpc-url [MASKED] --broadcast --slow --resume --verify --etherscan-api-key [MASKED]
+No files changed, compilation skipped
+
+Transactions saved to: /Users/vincent/Documents/ts-codes/termmax-contract/broadcast/DeployMarket.s.sol/42161/run-latest.json
+
+Sensitive values saved to: /Users/vincent/Documents/ts-codes/termmax-contract/cache/DeployMarket.s.sol/42161/run-latest.json
+
+[ERROR] market deployment to arb-mainnet failed!
+You can resume the failed deployment by running the same command with the --resume option:
+./script.sh arb-mainnet deploy:market --broadcast --resume --verify  
+Running on arb-mainnet...
+Deployment type: market
+=== Configuration ===
+Operation: Deployment
+Type: market
+Network: arb-mainnet
+Script: DeployMarket.s.sol
+Path: script/deploy/DeployMarket.s.sol
+RPC URL: http*****://arb-main*****.g.alch*****.com/v2/u8Dd*****-2C-AIUn*****
+Admin Address: 0x8409a9C1A911CED491892c5694E43994c9d47E8f
+Mode: Live Broadcast--broadcast
+Resume: Enabled (will resume from last broadcasted transaction)
+Verification: Enabled--verify
+Using API Key: ARBSCAN_API_KEY
+Tenderly Verification: Disabled
+Debug Mode: Disabled
+===============================
+Starting deployment...
+Executing: forge script script/deploy/DeployMarket.s.sol --private-key [MASKED] --rpc-url [MASKED] --broadcast --slow --resume --verify --etherscan-api-key [MASKED]
+No files changed, compilation skipped
+
+Transactions saved to: /Users/vincent/Documents/ts-codes/termmax-contract/broadcast/DeployMarket.s.sol/42161/run-latest.json
+
+Sensitive values saved to: /Users/vincent/Documents/ts-codes/termmax-contract/cache/DeployMarket.s.sol/42161/run-latest.json
+
+[ERROR] market deployment to arb-mainnet failed!
+You can resume the failed deployment by running the same command with the --resume option:
+./script.sh arb-mainnet deploy:market --broadcast --resume --verify  
+Running on arb-mainnet...
+Deployment type: market
+=== Configuration ===
+Operation: Deployment
+Type: market
+Network: arb-mainnet
+Script: DeployMarket.s.sol
+Path: script/deploy/DeployMarket.s.sol
+RPC URL: http*****://arb-main*****.g.alch*****.com/v2/u8Dd*****-2C-AIUn*****
+Admin Address: 0x8409a9C1A911CED491892c5694E43994c9d47E8f
+Mode: Live Broadcast--broadcast
+Resume: Enabled (will resume from last broadcasted transaction)
+Verification: Enabled--verify
+Using API Key: ARBSCAN_API_KEY
+Tenderly Verification: Disabled
+Debug Mode: Disabled
+===============================
+Starting deployment...
+Executing: forge script script/deploy/DeployMarket.s.sol --private-key [MASKED] --rpc-url [MASKED] --broadcast --slow --resume --verify --etherscan-api-key [MASKED]
+No files changed, compilation skipped
+
+Transactions saved to: /Users/vincent/Documents/ts-codes/termmax-contract/broadcast/DeployMarket.s.sol/42161/run-latest.json
+
+Sensitive values saved to: /Users/vincent/Documents/ts-codes/termmax-contract/cache/DeployMarket.s.sol/42161/run-latest.json
+
+[ERROR] market deployment to arb-mainnet failed!
+You can resume the failed deployment by running the same command with the --resume option:
+./script.sh arb-mainnet deploy:market --broadcast --resume --verify  
+Running on arb-mainnet...
+Deployment type: market
+=== Configuration ===
+Operation: Deployment
+Type: market
+Network: arb-mainnet
+Script: DeployMarket.s.sol
+Path: script/deploy/DeployMarket.s.sol
+RPC URL: http*****://arb-main*****.g.alch*****.com/v2/u8Dd*****-2C-AIUn*****
+Admin Address: 0x8409a9C1A911CED491892c5694E43994c9d47E8f
+Mode: Live Broadcast--broadcast
+Resume: Enabled (will resume from last broadcasted transaction)
+Verification: Enabled--verify
+Using API Key: ARBSCAN_API_KEY
+Tenderly Verification: Disabled
+Debug Mode: Disabled
+===============================
+Starting deployment...
+Executing: forge script script/deploy/DeployMarket.s.sol --private-key [MASKED] --rpc-url [MASKED] --broadcast --slow --resume --verify --etherscan-api-key [MASKED]
+No files changed, compilation skipped
+
+Transactions saved to: /Users/vincent/Documents/ts-codes/termmax-contract/broadcast/DeployMarket.s.sol/42161/run-latest.json
+
+Sensitive values saved to: /Users/vincent/Documents/ts-codes/termmax-contract/cache/DeployMarket.s.sol/42161/run-latest.json
+
+[ERROR] market deployment to arb-mainnet failed!
+You can resume the failed deployment by running the same command with the --resume option:
+./script.sh arb-mainnet deploy:market --broadcast --resume --verify  
+Running on arb-mainnet...
+Deployment type: market
+=== Configuration ===
+Operation: Deployment
+Type: market
+Network: arb-mainnet
+Script: DeployMarket.s.sol
+Path: script/deploy/DeployMarket.s.sol
+RPC URL: http*****://arb-main*****.g.alch*****.com/v2/u8Dd*****-2C-AIUn*****
+Admin Address: 0x8409a9C1A911CED491892c5694E43994c9d47E8f
+Mode: Live Broadcast--broadcast
+Resume: Enabled (will resume from last broadcasted transaction)
+Verification: Enabled--verify
+Using API Key: ARBSCAN_API_KEY
+Tenderly Verification: Disabled
+Debug Mode: Disabled
+===============================
+Starting deployment...
+Executing: forge script script/deploy/DeployMarket.s.sol --private-key [MASKED] --rpc-url [MASKED] --broadcast --slow --resume --verify --etherscan-api-key [MASKED]
+No files changed, compilation skipped
+
+Transactions saved to: /Users/vincent/Documents/ts-codes/termmax-contract/broadcast/DeployMarket.s.sol/42161/run-latest.json
+
+Sensitive values saved to: /Users/vincent/Documents/ts-codes/termmax-contract/cache/DeployMarket.s.sol/42161/run-latest.json
+
+[ERROR] market deployment to arb-mainnet failed!
+You can resume the failed deployment by running the same command with the --resume option:
+./script.sh arb-mainnet deploy:market --broadcast --resume --verify  
+Running on arb-mainnet...
+Deployment type: market
+=== Configuration ===
+Operation: Deployment
+Type: market
+Network: arb-mainnet
+Script: DeployMarket.s.sol
+Path: script/deploy/DeployMarket.s.sol
+RPC URL: http*****://arb-main*****.g.alch*****.com/v2/u8Dd*****-2C-AIUn*****
+Admin Address: 0x8409a9C1A911CED491892c5694E43994c9d47E8f
+Mode: Live Broadcast--broadcast
+Resume: Enabled (will resume from last broadcasted transaction)
+Verification: Enabled--verify
+Using API Key: ARBSCAN_API_KEY
+Tenderly Verification: Disabled
+Debug Mode: Disabled
+===============================
+Starting deployment...
+Executing: forge script script/deploy/DeployMarket.s.sol --private-key [MASKED] --rpc-url [MASKED] --broadcast --slow --resume --verify --etherscan-api-key [MASKED]
+No files changed, compilation skipped
+
+Transactions saved to: /Users/vincent/Documents/ts-codes/termmax-contract/broadcast/DeployMarket.s.sol/42161/run-latest.json
+
+Sensitive values saved to: /Users/vincent/Documents/ts-codes/termmax-contract/cache/DeployMarket.s.sol/42161/run-latest.json
+
+[ERROR] market deployment to arb-mainnet failed!
+You can resume the failed deployment by running the same command with the --resume option:
+./script.sh arb-mainnet deploy:market --broadcast --resume --verify  
+Running on arb-mainnet...
+Deployment type: market
+=== Configuration ===
+Operation: Deployment
+Type: market
+Network: arb-mainnet
+Script: DeployMarket.s.sol
+Path: script/deploy/DeployMarket.s.sol
+RPC URL: http*****://arb-main*****.g.alch*****.com/v2/u8Dd*****-2C-AIUn*****
+Admin Address: 0x8409a9C1A911CED491892c5694E43994c9d47E8f
+Mode: Live Broadcast--broadcast
+Resume: Enabled (will resume from last broadcasted transaction)
+Verification: Enabled--verify
+Using API Key: ARBSCAN_API_KEY
+Tenderly Verification: Disabled
+Debug Mode: Disabled
+===============================
+Starting deployment...
+Executing: forge script script/deploy/DeployMarket.s.sol --private-key [MASKED] --rpc-url [MASKED] --broadcast --slow --resume --verify --etherscan-api-key [MASKED]
+No files changed, compilation skipped
+
+Transactions saved to: /Users/vincent/Documents/ts-codes/termmax-contract/broadcast/DeployMarket.s.sol/42161/run-latest.json
+
+Sensitive values saved to: /Users/vincent/Documents/ts-codes/termmax-contract/cache/DeployMarket.s.sol/42161/run-latest.json
+
+[ERROR] market deployment to arb-mainnet failed!
+You can resume the failed deployment by running the same command with the --resume option:
+./script.sh arb-mainnet deploy:market --broadcast --resume --verify  
+Running on arb-mainnet...
+Deployment type: market
+=== Configuration ===
+Operation: Deployment
+Type: market
+Network: arb-mainnet
+Script: DeployMarket.s.sol
+Path: script/deploy/DeployMarket.s.sol
+RPC URL: http*****://arb-main*****.g.alch*****.com/v2/u8Dd*****-2C-AIUn*****
+Admin Address: 0x8409a9C1A911CED491892c5694E43994c9d47E8f
+Mode: Live Broadcast--broadcast
+Resume: Enabled (will resume from last broadcasted transaction)
+Verification: Enabled--verify
+Using API Key: ARBSCAN_API_KEY
+Tenderly Verification: Disabled
+Debug Mode: Disabled
+===============================
+Starting deployment...
+Executing: forge script script/deploy/DeployMarket.s.sol --private-key [MASKED] --rpc-url [MASKED] --broadcast --slow --resume --verify --etherscan-api-key [MASKED]
+No files changed, compilation skipped
+
+Transactions saved to: /Users/vincent/Documents/ts-codes/termmax-contract/broadcast/DeployMarket.s.sol/42161/run-latest.json
+
+Sensitive values saved to: /Users/vincent/Documents/ts-codes/termmax-contract/cache/DeployMarket.s.sol/42161/run-latest.json
+
+[ERROR] market deployment to arb-mainnet failed!
+You can resume the failed deployment by running the same command with the --resume option:
+./script.sh arb-mainnet deploy:market --broadcast --resume --verify  
+Running on arb-mainnet...
+Deployment type: market
+=== Configuration ===
+Operation: Deployment
+Type: market
+Network: arb-mainnet
+Script: DeployMarket.s.sol
+Path: script/deploy/DeployMarket.s.sol
+RPC URL: http*****://arbi*****.gate*****.tend*****.co/agLs*****
+Admin Address: 0x8409a9C1A911CED491892c5694E43994c9d47E8f
+Mode: Live Broadcast--broadcast
+Resume: Enabled (will resume from last broadcasted transaction)
+Verification: Enabled--verify
+Using API Key: ARBSCAN_API_KEY
+Tenderly Verification: Disabled
+Debug Mode: Disabled
+===============================
+Starting deployment...
+Executing: forge script script/deploy/DeployMarket.s.sol --private-key [MASKED] --rpc-url [MASKED] --broadcast --slow --resume --verify --etherscan-api-key [MASKED]
+No files changed, compilation skipped
+
+
+==========================
+
+ONCHAIN EXECUTION COMPLETE & SUCCESSFUL.
+
+We haven't found any matching bytecode for the following contracts: [0x6d5dce785fda044de81aaa0abab881ba4bbc59b7, 0xbe26080ce287a2bb346bab44f7550de18dbdb107, 0xa628a5948b6613845f5a8f46ec53d817a216c745, 0x706fd4696b070b9b525c1a9a2c0801b7b4e85d30, 0xb4b207969ebacf10c1bd192f93e5b3217590c029, 0x9784aae160d71edf37b8a421e5ffa42ae9aa4ac9, 0x312fce698b5abf0b15cf894a89eae67daf97a03e, 0xb71e701de5f9aea020799049154830e902bdacbe, 0x9bf834de7b951c7a0119ec3c0438b0d1e83d6bdf, 0x1cb872765b6d5aac6b951a70e1002c470c8f0554, 0x4d86e7d921c56d06a5b0f7fbdb80d7dfd8532a24, 0x20f2a47f4297e9ae929002213fbe7a168034b5aa, 0xe6c399f22d5d721058324a59e3cc772d13e1e274, 0x9a888f4feef89d0e70bf97d93fe60e4f0b091e21, 0x08359897bcdf58aaa73492776c6eeedb2c9dbf39, 0xb3c0bfe13474c4cdd1409ba6b6b4fcfdfb95827a, 0xef77c361d50b1a9976ba702feca233b734639fda, 0x51de84c1dfc24b1edd023972ffd48903b1fa66c3, 0x95f4652078f45548ad749e6ec076b703495413b7, 0x3b6476155f9a2e7e7648fa27d3648e0f4302059a, 0x0b4084aced7c8dfe84f1b084f50e12b9ce35a1b4, 0x38a3d4197b7cd90fe31fe2bb59763af4627e2714, 0x46c57404f90866b2b26a6ef5c3735fa73f306ee8, 0x172f496b78dc962f1aa4b2cd92c9c21093081331, 0x151f42b840dd287d108bb624fd1438d823209f41, 0xb346b2c6f8774423f92850186a2a8e9e957cb9fe, 0x9f765abd43859ea5fabe04a3067f1076136bd7c8, 0x7c92b79ed6ba4e84e914887d5bf50aac625129e6].
+
+This may occur when resuming a verification, but the underlying source code or compiler version has changed.
+##
+Start verification for (0) contracts
+All (0) contracts were verified!
+
+Transactions saved to: /Users/vincent/Documents/ts-codes/termmax-contract/broadcast/DeployMarket.s.sol/42161/run-latest.json
+
+Sensitive values saved to: /Users/vincent/Documents/ts-codes/termmax-contract/cache/DeployMarket.s.sol/42161/run-latest.json
+
+[SUCCESS] market deployment to arb-mainnet completed successfully!

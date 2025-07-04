@@ -1,0 +1,15 @@
+{
+  "network": "arb-mainnet",
+  "deployedAt": "1748947028",
+  "dateString": "03JUN2025",
+  "gitBranch": "deploy/v1.0.9",
+  "gitCommitHash": "0x0x0489591746b16bb969ea123423e618e76b7e2dcb",
+  "blockInfo": {
+    "number": "343448104",
+    "timestamp": "1748947028"
+  },
+  "deployer": "0x56E3665038C5F0b56Cc7D81aC66C86521274B251",
+  "contracts": {
+    "vaultFactory": "0x4cB25655e7eED71F57d308c775c08a0e137E857d"
+  }
+}

@@ -17,7 +17,7 @@ interface FactoryEventsV2 {
      * @param debtToken The debt token interface
      * @param params The initial parameters for the market
      */
-    event CreateMarket(
+    event MarketCreated(
         address indexed market, address indexed collateral, IERC20 indexed debtToken, MarketInitialParams params
     );
 
@@ -27,7 +27,7 @@ interface FactoryEventsV2 {
      * @param creator The address of the vault creator
      * @param initialParams The initial parameters used to configure the vault
      */
-    event CreateVault(address indexed vault, address indexed creator, VaultInitialParamsV2 initialParams);
+    event VaultCreated(address indexed vault, address indexed creator, VaultInitialParamsV2 initialParams);
 
     /**
      * @notice Emitted when a new price feed is created

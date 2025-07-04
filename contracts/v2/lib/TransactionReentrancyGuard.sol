@@ -6,7 +6,7 @@ abstract contract TransactionReentrancyGuard {
     error ReentrantCall();
     /// @notice Error thrown when a reentrant call is detected between actions.
     error ReentrantCallBetweenActions(uint256 actionId, uint256 oldActionId);
-    /// @notice Error thrown when an invalid action ID is provided. (0 and 1 are reserved for the guard itself)
+    /// @notice Error thrown when using reserved ID. (0 and 1 are reserved id)
     error InvalidActionId();
 
     // keccak256(abi.encode(uint256(keccak256("termmax.tsstorage.TransactionReentrancyGuard")) - 1)) & ~bytes32(uint256(0xff))

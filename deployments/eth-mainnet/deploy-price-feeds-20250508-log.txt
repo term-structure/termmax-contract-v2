@@ -1,0 +1,34 @@
+% ./script.sh eth-mainnet script:DeployPriceFeedsEth_20250508 --broadcast --verify
+== Logs ==
+  PriceFeedFactory deployed at 0xcac930B240163fDB71b74514E8FAA113ec0dA844
+  pt_sUsde_31JUL2025 price feed address 0x53399c17DbB2Ba67BB3B6E5bf692251267A3F861
+  pt_sUsde_31JUL2025 last answer 98096991
+  pt_lvlUSD_25SEP2025 price feed address 0x32401387EDCB60CD74E2FCae50B3C542E03B1ec5
+  pt_lvlUSD_25SEP2025 last answer 97019308
+  cUSDO price feed address 0xf158000de86899b5EB5E6fA3BB78F32A072bD14b
+  cUSDO last answer 101257254
+  pt_cUSDO_19JUN2025 price feed address 0x1B4A4208d6AfD76332206F2Aefd977aeEf108575
+  pt_cUSDO_19JUN2025 last answer 98917556
+  wstUsr price feed address 0xD14a49eDF484ce994C3dD61c4eF36CC33C96179A
+  wstUsr last answer 107803645
+  pt_wstUSR_25SEP2025 price feed address 0xB94D176656220Ee22CAEA8e5827BE5854cB42035
+  pt_wstUSR_25SEP2025 last answer 97198117
+
+## Setting up 1 EVM.
+
+==========================
+
+
+% ./script.sh eth-mainnet script:DeployPriceFeedsEth_20250508_Backup --broadcast --verify
+== Logs ==
+  PriceFeedFactory deployed at 0xcac930B240163fDB71b74514E8FAA113ec0dA844
+  pt_sUsde_31JUL2025 price feed address 0x28eBF137e6659f9037b2393D7f52D37CD963B51a
+  pt_sUsde_31JUL2025 last answer 98307229
+  wstUsr price feed address 0xc7c005753d649a432EbC858f82B7bDd4338Fa333
+  wstUsr last answer 107785311
+  pt_wstUSR_25SEP2025 price feed address 0xBA06F387B245aE60289f16FE208867C1eE38934D
+  pt_wstUSR_25SEP2025 last answer 97181714
+
+## Setting up 1 EVM.
+
+==========================

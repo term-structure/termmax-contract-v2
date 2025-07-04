@@ -23,7 +23,14 @@ library StringHelper {
         return string(bUpper);
     }
 
-    function convertTimestampToDateString(uint256 timestamp) internal pure returns (string memory) {
+    // Format options:
+    // 'YYYYMMDD' = YYYYMMDD (e.g., 20250626)
+    // 'DDMMMYYYY' = DDMMMYYYY (e.g., 26JUN2025)
+    function convertTimestampToDateString(uint256 timestamp, string memory format)
+        internal
+        pure
+        returns (string memory)
+    {
         // Define arrays for date conversion
         string[12] memory months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
         uint8[12] memory daysPerMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
@@ -69,15 +76,33 @@ library StringHelper {
 
         VmSafe vm = VmSafe(address(uint160(uint256(keccak256("hevm cheat code")))));
 
-        // Format day with leading zero if needed
-        string memory dayStr;
-        if (day < 10) {
-            dayStr = string.concat("0", vm.toString(day));
-        } else {
-            dayStr = vm.toString(day);
-        }
+        if (keccak256(abi.encodePacked(format)) == keccak256(abi.encodePacked("YYYYMMDD"))) {
+            // Format YYYYMMDD: (e.g., 20250626)
+            string memory monthStr;
+            if (month + 1 < 10) {
+                monthStr = string.concat("0", vm.toString(month + 1));
+            } else {
+                monthStr = vm.toString(month + 1);
+            }
 
-        // Combine day, month, year
-        return string.concat(dayStr, months[month], vm.toString(year));
+            string memory dayStr;
+            if (day < 10) {
+                dayStr = string.concat("0", vm.toString(day));
+            } else {
+                dayStr = vm.toString(day);
+            }
+
+            return string.concat(vm.toString(year), monthStr, dayStr);
+        } else {
+            // Format DDMMMYYYY: (e.g., 26JUN2025)
+            string memory dayStr;
+            if (day < 10) {
+                dayStr = string.concat("0", vm.toString(day));
+            } else {
+                dayStr = vm.toString(day);
+            }
+
+            return string.concat(dayStr, months[month], vm.toString(year));
+        }
     }
 }

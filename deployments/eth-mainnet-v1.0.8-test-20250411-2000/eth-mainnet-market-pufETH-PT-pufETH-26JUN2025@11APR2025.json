@@ -1,0 +1,38 @@
+{
+  "blockInfo": {
+    "number": "22242960",
+    "timestamp": "1744341539"
+  },
+  "market": "0xcBB56d3978Be480358938Ac7dE6d92400e37ff6B",
+  "collateral": {
+    "address": "0x9cFc9917C171A384c7168D3529Fc7e851a2E0d6D",
+    "symbol": "PT-pufETH-26JUN2025",
+    "priceFeed": "0x5a27314e6D35B6fFCBaE6B3eb030e7Faf7EF34F1",
+    "heartBeat": "86400"
+  },
+  "underlying": {
+    "address": "0xD9A442856C234a39a81a089C06451EBAa4306a72",
+    "symbol": "pufETH",
+    "priceFeed": "0xB3ae8A16CF827d193Ae51a92fd2630e6839F5761",
+    "heartBeat": "86400"
+  },
+  "tokens": {
+    "ft": "0x9d3bD34323Ce8C999Dea6b998F4B6F8b3aF0DDB3",
+    "xt": "0xf448c05b099FDA6d9B9D2b62524ed6Ca4Cd6C67a",
+    "gt": "0x4a674822E59e8d7d2De36DC9fB4A55cA9f577A4e"
+  },
+  "config": {
+    "marketSymbol": "pufETH/PT-pufETH-26JUN2025@30MAY2025",
+    "treasurer": "0x719e77027952929ed3060dbFFC5D43EC50c1cf79",
+    "maturity": "11APR2025",
+    "salt": "0",
+    "fees": {
+      "lendTakerFeeRatio": "2000000",
+      "lendMakerFeeRatio": "2000000",
+      "borrowTakerFeeRatio": "3000000",
+      "borrowMakerFeeRatio": "3000000",
+      "mintGtFeeRatio": "1000000",
+      "mintGtFeeRef": "400000"
+    }
+  }
+}

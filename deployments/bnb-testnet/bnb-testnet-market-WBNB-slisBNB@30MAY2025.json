@@ -1,0 +1,38 @@
+{
+  "blockInfo": {
+    "number": "50446056",
+    "timestamp": "1745081875"
+  },
+  "market": "0x61b3cd6E5e8c41258789fCe40A4B77Cc5b3c769E",
+  "collateral": {
+    "address": "0x550AF08ceA3346EB5bA7ab88267E03C686a51eaC",
+    "symbol": "slisBNB",
+    "priceFeed": "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
+    "heartBeat": "86400"
+  },
+  "underlying": {
+    "address": "0x378b9B0224252f4F0e5fC5ef80Ae63389215d0b3",
+    "symbol": "WBNB",
+    "priceFeed": "0xdDb6F90fFb4d3257dd666b69178e5B3c5Bf41136",
+    "heartBeat": "86400"
+  },
+  "tokens": {
+    "ft": "0x374c3c33137a412F9DA82F8AAA4663B61C91837c",
+    "xt": "0xCDEC91fB09297DAb82770897b02A34fd4b614e57",
+    "gt": "0x2bA292497afe4b2E5a8459b34d301606F2bcEE20"
+  },
+  "config": {
+    "marketSymbol": "WBNB/slisBNB@30MAY2025",
+    "treasurer": "0x9ec927F61542DCD12DEF83797D8d1022064dcfA4",
+    "maturity": "30MAY2025",
+    "salt": "0",
+    "fees": {
+      "lendTakerFeeRatio": "2000000",
+      "lendMakerFeeRatio": "2000000",
+      "borrowTakerFeeRatio": "3000000",
+      "borrowMakerFeeRatio": "3000000",
+      "mintGtFeeRatio": "1000000",
+      "mintGtFeeRef": "400000"
+    }
+  }
+}

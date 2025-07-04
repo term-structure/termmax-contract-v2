@@ -147,7 +147,7 @@ contract FactoryTestV2 is Test {
             predictMarketAddress, "GT:test", "GT:test", abi.encode(type(uint256).max)
         );
         emit GearingTokenWithERC20V2.CollateralCapacityUpdated(type(uint256).max);
-        emit FactoryEventsV2.CreateMarket(predictMarketAddress, address(collateral), debt, params);
+        emit FactoryEventsV2.MarketCreated(predictMarketAddress, address(collateral), debt, params);
         factory.createMarket(DeployUtils.GT_ERC20, params, 0);
         vm.stopPrank();
     }

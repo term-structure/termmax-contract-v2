@@ -56,6 +56,11 @@ contract OrderManagerV2 is VaultStorageV2, VaultErrors, VaultEvents, IOrderManag
         uint256[] memory maxSupplies,
         CurveCuts[] memory curveCuts
     ) external override onlyProxy {
+        uint256 length = orders.length;
+        if (length != changes.length || length != maxSupplies.length || length != curveCuts.length) {
+            revert VaultErrorsV2.ArrayLengthMismatch();
+        }
+
         _accruedInterest();
         int256 totalChanges = 0;
         for (uint256 i = 0; i < orders.length; ++i) {
@@ -95,7 +100,6 @@ contract OrderManagerV2 is VaultStorageV2, VaultErrors, VaultEvents, IOrderManag
     ) external onlyProxy returns (ITermMaxOrder order) {
         _accruedInterest();
         (IERC20 ft, IERC20 xt,,, IERC20 debtToken) = market.tokens();
-        if (asset != debtToken) revert InconsistentAsset();
 
         order = market.createOrder(address(this), maxSupply, ISwapCallback(address(this)), curveCuts);
         if (initialReserve > 0) {
@@ -132,12 +136,15 @@ contract OrderManagerV2 is VaultStorageV2, VaultErrors, VaultEvents, IOrderManag
             orderInfo.ft.safeIncreaseAllowance(address(orderInfo.market), withdrawChanges);
             orderInfo.xt.safeIncreaseAllowance(address(orderInfo.market), withdrawChanges);
             orderInfo.market.burn(address(this), withdrawChanges);
-        } else {
+        } else if (changes > 0) {
             // deposit assets to order
             uint256 depositChanges = uint256(changes);
             asset.safeIncreaseAllowance(address(orderInfo.market), depositChanges);
             orderInfo.market.mint(address(order), depositChanges);
             // update curve cuts
+            order.updateOrder(newOrderConfig, 0, 0);
+        } else {
+            // no changes, just update curve cuts
             order.updateOrder(newOrderConfig, 0, 0);
         }
         _orderMapping[address(order)] = orderInfo;
@@ -174,25 +181,19 @@ contract OrderManagerV2 is VaultStorageV2, VaultErrors, VaultEvents, IOrderManag
      */
     function withdrawAssets(IERC20 asset, address recipient, uint256 amount) external override onlyProxy {
         _accruedInterest();
-        uint256 assetBalance = asset.balanceOf(address(this));
-        if (assetBalance >= amount) {
-            asset.safeTransfer(recipient, amount);
-        } else {
-            revert InsufficientFunds(assetBalance, amount);
-        }
         uint256 amplifiedAmt = amount * Constants.DECIMAL_BASE_SQ;
         _totalFt -= amplifiedAmt;
         _accretingPrincipal -= amplifiedAmt;
+
+        asset.safeTransfer(recipient, amount);
     }
 
     function _withdrawPerformanceFee(IERC20 asset, address recipient, uint256 amount) internal {
         uint256 amplifiedAmt = amount * Constants.DECIMAL_BASE_SQ;
-        if (amplifiedAmt > _performanceFee) {
-            revert InsufficientFunds(_performanceFee / Constants.DECIMAL_BASE_SQ, amount);
-        }
-        asset.safeTransfer(recipient, amount);
         _performanceFee -= amplifiedAmt;
         _totalFt -= amplifiedAmt;
+
+        asset.safeTransfer(recipient, amount);
         emit WithdrawPerformanceFee(msg.sender, recipient, amount);
     }
 

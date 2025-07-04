@@ -21,6 +21,7 @@ import {IGearingToken} from "contracts/v1/tokens/IGearingToken.sol";
 import {MockSwapAdapter} from "contracts/v1/test/MockSwapAdapter.sol";
 import {SwapUnit, ISwapAdapter} from "contracts/v1/router/ISwapAdapter.sol";
 import {RouterErrors, RouterEvents, TermMaxRouter} from "contracts/v1/router/TermMaxRouter.sol";
+import {TermMaxRouter_Repay_Gt} from "contracts/v1/router/TermMaxRouter_Repay_Gt.sol";
 import "contracts/v1/storage/TermMaxStorage.sol";
 
 contract RouterTest is Test {
@@ -690,5 +691,37 @@ contract RouterTest is Test {
             res.debt, res.ft, sender, orders, tradingAmts, maxAmountIn, block.timestamp + 1 hours
         );
         vm.stopPrank();
+    }
+
+    function testRepayGt(bool byDebtToken) public {
+        TermMaxRouter_Repay_Gt repayer = new TermMaxRouter_Repay_Gt();
+        vm.startPrank(deployer);
+        // upgrade res.router to support repayGt
+        res.router.upgradeToAndCall(address(repayer), bytes(""));
+        vm.stopPrank();
+
+        vm.startPrank(sender);
+
+        uint128 debtAmt = 100e8;
+        uint256 collateralAmt = 1e18;
+        (uint256 gtId,) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
+
+        uint128 maxRepayAmt = 50e8;
+        TermMaxRouter_Repay_Gt routerRepayer = TermMaxRouter_Repay_Gt(address(res.router));
+        IERC20 repayToken = byDebtToken ? IERC20(res.debt) : res.ft;
+        deal(address(repayToken), sender, maxRepayAmt);
+        repayToken.approve(address(routerRepayer), maxRepayAmt);
+        uint128 repayAmt = routerRepayer.repayGt(res.market, gtId, maxRepayAmt, byDebtToken);
+        assertEq(repayAmt, maxRepayAmt);
+        assertEq(repayToken.balanceOf(sender), 0);
+
+        maxRepayAmt = 100e8;
+        deal(address(repayToken), sender, maxRepayAmt);
+        repayToken.approve(address(routerRepayer), maxRepayAmt);
+        repayAmt = routerRepayer.repayGt(res.market, gtId, maxRepayAmt, byDebtToken);
+
+        assertEq(repayAmt, 50e8);
+        assertEq(repayToken.balanceOf(sender), 50e8);
+        assertEq(res.collateral.balanceOf(sender), collateralAmt);
     }
 }

@@ -1,0 +1,21 @@
+% forge script script/deploy/DeployPriceFeedsMorpho.s.sol --rpc-url $ETH_MAINNET_RPC_URL --broadcast --verify
+warning: Found unknown config section in foundry.toml: [soldeer]
+This notation for profiles has been deprecated and may result in the profile not being registered in future versions.
+Please use [profile.soldeer] instead or run `forge config --fix`.
+[⠒] Compiling...
+No files changed, compilation skipped
+Script ran successfully.
+
+== Logs ==
+  gtusdcf price feed address 0x81195F8A79f6553A4078f89eF87b21a7d3C2855A
+  gtusdcf last answer 101266087
+  mhyETH price feed address 0x0221cd3fA8B1Bea16293fb0cD6B60977d531c931
+  mhyETH last answer 161205311756
+  mhyETHBackup price feed address 0x00B96F0eBf39158cb4E3F801073966bD6Db7959C
+  mhyETHBackup last answer 162030447776
+  mevUsdcPrime price feed address 0x4cF5F12c6c0D48F0d335DdB25e11cd526EAfD322
+  mevUsdcPrime last answer 99992088
+
+## Setting up 1 EVM.
+
+==========================

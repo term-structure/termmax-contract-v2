@@ -1,0 +1,107 @@
+Running on arb-mainnet...
+=== Configuration ===
+Operation: Script Execution
+Network: arb-mainnet
+Script: AcceptOracles.s.sol
+Path: script/AcceptOracles.s.sol
+RPC URL: http*****://arb-main*****.g.alch*****.com/v2/u8Dd*****-2C-AIUn*****
+Admin Address: 0x8409a9C1A911CED491892c5694E43994c9d47E8f
+Mode: Live Broadcast--broadcast
+Verification: Disabled
+Tenderly Verification: Disabled
+Debug Mode: Disabled
+Uniswap V3 Router: 0xE592427A0AEce92De3Edee1F18E0157C05861564
+Odos V2 Router: 0xa669e7A0d4b3e4Fa48af2dE86BD4CD7126Be4e13
+Pendle Swap V3 Router: 0x888888888889758F76e7103c6CbF23ABbF58F946
+Oracle Timelock: 43200
+===============================
+Starting script execution...
+Executing: forge script script/AcceptOracles.s.sol --private-key [MASKED] --rpc-url [MASKED] --broadcast --slow
+No files changed, compilation skipped
+Script ran successfully.
+
+== Logs ==
+  === Checking Pending Oracles ===
+  Oracle Aggregator Address: 0x2e1c769A9BA8248C7c8128c2BEBa11331ebF98Aa
+  Network: arb-mainnet
+  Current Block Timestamp: 1743663209
+  
+  Accepted oracle for token:
+    Token Symbol: WETH
+    Token Address: 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1
+    Previous Oracle: 0x0000000000000000000000000000000000000000
+    New Oracle: 0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612
+    Heartbeat: 86400
+  --------------------------------
+  Accepted oracle for token:
+    Token Symbol: wstETH
+    Token Address: 0x5979D7b546E38E414F7E9822514be443A4800529
+    Previous Oracle: 0x0000000000000000000000000000000000000000
+    New Oracle: 0xB3ae8A16CF827d193Ae51a92fd2630e6839F5761
+    Heartbeat: 86400
+  --------------------------------
+  Accepted oracle for token:
+    Token Symbol: USDC
+    Token Address: 0xaf88d065e77c8cC2239327C5EDb3A432268e5831
+    Previous Oracle: 0x0000000000000000000000000000000000000000
+    New Oracle: 0x50834F3163758fcC1Df9973b6e91f0F0F0434aD3
+    Heartbeat: 86400
+  --------------------------------
+  Accepted oracle for token:
+    Token Symbol: WBTC
+    Token Address: 0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f
+    Previous Oracle: 0x0000000000000000000000000000000000000000
+    New Oracle: 0xd0C7101eACbB49F3deCcCc166d238410D6D46d57
+    Heartbeat: 86400
+  --------------------------------
+  Accepted oracle for token:
+    Token Symbol: weETH
+    Token Address: 0x35751007a407ca6FEFfE80b3cB397736D2cf4dbe
+    Previous Oracle: 0x0000000000000000000000000000000000000000
+    New Oracle: 0x8f29Df42c617C222Bc2B416AC8a022E85e853276
+    Heartbeat: 86400
+  --------------------------------
+  Accepted oracle for token:
+    Token Symbol: ARB
+    Token Address: 0x912CE59144191C1204E64559FE8253a0e49E6548
+    Previous Oracle: 0x0000000000000000000000000000000000000000
+    New Oracle: 0xb2A824043730FE05F3DA2efaFa1CBbe83fa548D6
+    Heartbeat: 86400
+  --------------------------------
+  Accepted oracle for token:
+    Token Symbol: PT-weETH-26JUN2025
+    Token Address: 0xb33808ea0e883138680BA29311a220A7377cdb92
+    Previous Oracle: 0x0000000000000000000000000000000000000000
+    New Oracle: 0x2a2a0e32c54670045256EBcA681887E32e689E97
+    Heartbeat: 86400
+  --------------------------------
+  
+  === Oracle Acceptance Summary ===
+  Total tokens checked: 7
+  Oracles accepted: 7
+  Oracles not ready: 0
+
+## Setting up 1 EVM.
+
+==========================
+
+Chain 42161
+
+Estimated gas price: 0.020000001 gwei
+
+Estimated total gas used for script: 914354
+
+Estimated amount required: 0.000018287080914354 ETH
+
+==========================
+
+
+==========================
+
+ONCHAIN EXECUTION COMPLETE & SUCCESSFUL.
+
+Transactions saved to: /Users/vincent/Documents/ts-codes/termmax-contract/broadcast/AcceptOracles.s.sol/42161/run-latest.json
+
+Sensitive values saved to: /Users/vincent/Documents/ts-codes/termmax-contract/cache/AcceptOracles.s.sol/42161/run-latest.json
+
+[SUCCESS] Script AcceptOracles executed successfully on arb-mainnet (Broadcast mode)!

@@ -1,0 +1,38 @@
+{
+  "blockInfo": {
+    "number": "8411286",
+    "timestamp": "1748273304"
+  },
+  "market": "0x9293a829E9f1BF86d3c0dbAD0D404b08672E5a3c",
+  "collateral": {
+    "address": "0x34EB42E88Ee00949212F98d86DF30DB10f306eef",
+    "symbol": "wstETH",
+    "priceFeed": "0x164b276057258d81941e97B0a900D4C7B358bCe0",
+    "heartBeat": "86400"
+  },
+  "underlying": {
+    "address": "0x7866f61d2cD2AFF9262C53bE9328e0Ab9f0f0D72",
+    "symbol": "USDC",
+    "priceFeed": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+    "heartBeat": "86400"
+  },
+  "tokens": {
+    "ft": "0x6A8980374c354c313be7B75f17Ac165569ca1D87",
+    "xt": "0xdB904a3568f944fF568232Dce6b057C48485057C",
+    "gt": "0xf64b12Cd1514d0c6Af80830A0F86E0104fDDffD9"
+  },
+  "config": {
+    "marketSymbol": "USDC/wstETH@30MAY2025",
+    "treasurer": "0x9ec927F61542DCD12DEF83797D8d1022064dcfA4",
+    "maturity": "27MAY2025",
+    "salt": "0",
+    "fees": {
+      "lendTakerFeeRatio": "2000000",
+      "lendMakerFeeRatio": "2000000",
+      "borrowTakerFeeRatio": "3000000",
+      "borrowMakerFeeRatio": "3000000",
+      "mintGtFeeRatio": "1000000",
+      "mintGtFeeRef": "2000000"
+    }
+  }
+}

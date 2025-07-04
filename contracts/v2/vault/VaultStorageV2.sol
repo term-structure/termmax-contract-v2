@@ -31,6 +31,9 @@ contract VaultStorageV2 {
 
     /// @dev A mapping from collateral address to bad debt
     mapping(address => uint256) internal _badDebtMapping;
+    /// @dev A mapping from order address to their order information
+    /// @dev The order information includes the market address, the ft token address,
+    ///      the xt token, the maximum supply, and the maturity
     mapping(address => OrderInfo) internal _orderMapping;
 
     /// @dev A one-way linked list presented using a mapping structure, recorded in order according to matiruty

@@ -15,8 +15,11 @@ struct VaultInitialParamsV2 {
     uint256 maxCapacity;
     string name;
     string symbol;
+    /// @notice The performance fee rate in base units, e.g. 20% = 0.2e8
     uint64 performanceFeeRate;
+    /// @notice The minimum APY in base units, e.g. 2% = 0.02e8
     uint64 minApy;
+    /// @notice The minimum idle fund rate in base units, e.g. 10% = 0.1e8
     uint64 minIdleFundRate;
 }
 

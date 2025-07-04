@@ -1,0 +1,38 @@
+{
+  "blockInfo": {
+    "number": "8108983",
+    "timestamp": "1744528585"
+  },
+  "market": "0x4eBC329DD5E72Ce1a46eE3e80C7861722a8dA399",
+  "collateral": {
+    "address": "0x4f24Cf75Ba4f347514E2F197Dc4F1f18dBC5Ef69",
+    "symbol": "ARB",
+    "priceFeed": "0xb2A824043730FE05F3DA2efaFa1CBbe83fa548D6",
+    "heartBeat": "86400"
+  },
+  "underlying": {
+    "address": "0x2b7443068c8ca0EBc3A862c160eDC1Ae353B6302",
+    "symbol": "USDC",
+    "priceFeed": "0x50834F3163758fcC1Df9973b6e91f0F0F0434aD3",
+    "heartBeat": "86400"
+  },
+  "tokens": {
+    "ft": "0x29816d95bFeceDF043cd6FA3E2E575C0FCF1F398",
+    "xt": "0x388D9Def2975789BD1e778b6EFf9365E742fa5a6",
+    "gt": "0x64b7A33ED8d752d871c166751a31c0f68D224003"
+  },
+  "config": {
+    "marketSymbol": "USDC/ARB@30MAY2025",
+    "treasurer": "0x9ec927F61542DCD12DEF83797D8d1022064dcfA4",
+    "maturity": "30MAY2025",
+    "salt": "0",
+    "fees": {
+      "lendTakerFeeRatio": "2000000",
+      "lendMakerFeeRatio": "2000000",
+      "borrowTakerFeeRatio": "3000000",
+      "borrowMakerFeeRatio": "3000000",
+      "mintGtFeeRatio": "1000000",
+      "mintGtFeeRef": "2000000"
+    }
+  }
+}

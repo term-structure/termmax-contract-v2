@@ -1,0 +1,38 @@
+{
+  "blockInfo": {
+    "number": "22214356",
+    "timestamp": "1743996659"
+  },
+  "market": "0x716589E75641c0751e987eC2f92Be81C8E430686",
+  "collateral": {
+    "address": "0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf",
+    "symbol": "cbBTC",
+    "priceFeed": "0x2665701293fCbEB223D11A08D826563EDcCE423A",
+    "heartBeat": "86400"
+  },
+  "underlying": {
+    "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+    "symbol": "USDC",
+    "priceFeed": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+    "heartBeat": "86400"
+  },
+  "tokens": {
+    "ft": "0x8673846F426fc920CA6aa4b14643eee58a703974",
+    "xt": "0x3585dbd668a7AA5a7E4d7abb13805413c6aC4454",
+    "gt": "0x5Db08775aFE41D07C9d13b13068C1829b2fB5C9d"
+  },
+  "config": {
+    "marketSymbol": "USDC/cbBTC@30MAY2025",
+    "treasurer": "0x719e77027952929ed3060dbFFC5D43EC50c1cf79",
+    "maturity": "08APR2025",
+    "salt": "0",
+    "fees": {
+      "lendTakerFeeRatio": "2000000",
+      "lendMakerFeeRatio": "2000000",
+      "borrowTakerFeeRatio": "3000000",
+      "borrowMakerFeeRatio": "3000000",
+      "mintGtFeeRatio": "1000000",
+      "mintGtFeeRef": "2000000"
+    }
+  }
+}

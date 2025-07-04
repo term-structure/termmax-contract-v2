@@ -1,0 +1,25 @@
+{
+  "gitInfo": {
+    "branch": "deploy/v1.0.9",
+    "commit": "0x0x8fb8627bea884c615df68b127ae9a09b4e20db1d"
+  },
+  "blockInfo": {
+    "network": "bnb-mainnet",
+    "blockNumber": "51385092",
+    "timestamp": "1749821745",
+    "dateString": "13JUN2025"
+  },
+  "vaultInfo": {
+    "name": "TermMax USDT Vault",
+    "symbol": "TMX-USDT-Vault",
+    "address": "0x86c958CAc8aeE37dE62715691c0D597c710Eca51",
+    "asset": "0x55d398326f99059fF775485246999027B3197955",
+    "performanceFeeRate": 0,
+    "maxCapacity": "50000000000000000000000000",
+    "timelock": 86400,
+    "admin": "0x9498764f0c62257B83A04e2A757De30908EC793d",
+    "curator": "0x008c7DC790fA31E6CA19D8Cb6d11C53f6A88DF6c",
+    "guardian": "0x6383EDe871F8B0167905C2466505381CDcD9cC78",
+    "allocator": "0x518C292A86450808E593Bcf26Fc29A7a7b682198"
+  }
+}

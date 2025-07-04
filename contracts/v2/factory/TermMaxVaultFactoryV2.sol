@@ -19,9 +19,6 @@ contract TermMaxVaultFactoryV2 is ITermMaxVaultFactoryV2 {
     address public immutable TERMMAX_VAULT_IMPLEMENTATION;
 
     constructor(address TERMMAX_VAULT_IMPLEMENTATION_) {
-        if (TERMMAX_VAULT_IMPLEMENTATION_ == address(0)) {
-            revert FactoryErrors.InvalidImplementation();
-        }
         TERMMAX_VAULT_IMPLEMENTATION = TERMMAX_VAULT_IMPLEMENTATION_;
     }
 
@@ -49,6 +46,6 @@ contract TermMaxVaultFactoryV2 is ITermMaxVaultFactoryV2 {
             keccak256(abi.encode(msg.sender, initialParams.asset, initialParams.name, initialParams.symbol, salt))
         );
         ITermMaxVaultV2(vault).initialize(initialParams);
-        emit FactoryEventsV2.CreateVault(vault, msg.sender, initialParams);
+        emit FactoryEventsV2.VaultCreated(vault, msg.sender, initialParams);
     }
 }

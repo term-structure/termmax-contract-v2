@@ -1,0 +1,15 @@
+{
+  "network": "bnb-testnet",
+  "deployedAt": "1745078880",
+  "gitBranch": "deploy/v1.0.9",
+  "gitCommitHash": "0x0x9ccea93c0ceff6a76f38270be9ea3d3aad9552d7",
+  "blockInfo": {
+    "number": "50444060",
+    "timestamp": "1745078880"
+  },
+  "deployer": "0xE355d5D8aa52EF0FbbD037C4a3C5E6Fd659cf46B",
+  "admin": "0x81f314f70702Bbe89FEd0F2cFe6841950275E0b7",
+  "contracts": {
+    "accessManager": "0xF28546cFbBBB0474aa77ec692e35AbebB6ba98E1"
+  }
+}

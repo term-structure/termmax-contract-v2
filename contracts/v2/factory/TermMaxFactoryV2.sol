@@ -118,6 +118,6 @@ contract TermMaxFactoryV2 is Ownable2Step, ITermMaxFactory, FactoryEventsV2 {
         ITermMaxMarket(market).initialize(params);
 
         // Emit event for market creation tracking
-        emit FactoryEventsV2.CreateMarket(market, params.collateral, params.debtToken, params);
+        emit FactoryEventsV2.MarketCreated(market, params.collateral, params.debtToken, params);
     }
 }

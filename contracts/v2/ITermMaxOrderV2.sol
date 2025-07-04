@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.27;
+pragma solidity ^0.8.0;
 
 import {IERC20} from "../v1/tokens/IMintableERC20.sol";
 import {OrderInitialParams} from "./storage/TermMaxStorageV2.sol";

@@ -29,7 +29,7 @@ import {VaultErrors} from "../../v1/errors/VaultErrors.sol";
 import {VaultEvents} from "../../v1/events/VaultEvents.sol";
 import {VaultEventsV2} from "../events/VaultEventsV2.sol";
 import {IOrderManager} from "../../v1/vault/IOrderManager.sol";
-import {VaultStorageV2, OrderInfo} from "../../v2/vault/VaultStorageV2.sol";
+import {VaultStorageV2, OrderInfo} from "./VaultStorageV2.sol";
 import {Constants} from "../../v1/lib/Constants.sol";
 import {ITermMaxVault} from "../../v1/vault/ITermMaxVault.sol";
 import {ITermMaxVaultV2} from "./ITermMaxVaultV2.sol";
@@ -55,8 +55,10 @@ contract TermMaxVaultV2 is
 
     address public immutable ORDER_MANAGER_SINGLETON;
 
-    uint256 private constant ACTION_DEPOSIT = uint256(keccak256("ACTION_DEPOSIT"));
-    uint256 private constant ACTION_WITHDRAW = uint256(keccak256("ACTION_WITHDRAW"));
+    // keccak256(abi.encode(uint256(keccak256("termmax.tsstorage.vault.actionDeposit")) - 1)) & ~bytes32(uint256(0xff))
+    uint256 private constant ACTION_DEPOSIT = 0x1d9ff85e70b948f53a2cc45fa6f42c020b2a8eec3349351855dea946b0635700;
+    // keccak256(abi.encode(uint256(keccak256("termmax.tsstorage.vault.actionWithdraw")) - 1)) & ~bytes32(uint256(0xff))
+    uint256 private constant ACTION_WITHDRAW = 0xfcb0c32c4f653382a412cb0caa6a29f9e46d74bae452ca200c67f1e5e6389300;
 
     modifier onlyCuratorRole() {
         address sender = _msgSender();
@@ -82,9 +84,6 @@ contract TermMaxVaultV2 is
     }
 
     modifier marketIsWhitelisted(address market) {
-        if (_pendingMarkets[market].validAt != 0 && block.timestamp > _pendingMarkets[market].validAt) {
-            _marketWhitelist[market] = true;
-        }
         if (!_marketWhitelist[market]) revert MarketNotWhitelisted();
         _;
     }
@@ -100,18 +99,18 @@ contract TermMaxVaultV2 is
     }
 
     constructor(address ORDER_MANAGER_SINGLETON_) {
-        if (ORDER_MANAGER_SINGLETON_ == address(0)) revert InvalidImplementation();
         ORDER_MANAGER_SINGLETON = ORDER_MANAGER_SINGLETON_;
         _disableInitializers();
     }
 
     function initialize(VaultInitialParamsV2 memory params) external virtual initializer {
-        __ERC20_init(params.name, params.symbol);
-        __Ownable_init(params.admin);
-        __ERC4626_init(params.asset);
-        __ReentrancyGuard_init();
-        __Pausable_init();
+        __ERC20_init_unchained(params.name, params.symbol);
+        __Ownable_init_unchained(params.admin);
+        __ERC4626_init_unchained(params.asset);
+        __ReentrancyGuard_init_unchained();
+        __Pausable_init_unchained();
 
+        _checkPerformanceFeeRateBounds(params.performanceFeeRate);
         _setPerformanceFeeRate(params.performanceFeeRate);
         _checkTimelockBounds(params.timelock);
         _setTimelock(params.timelock);
@@ -129,6 +128,7 @@ contract TermMaxVaultV2 is
     function _setPerformanceFeeRate(uint64 newPerformanceFeeRate) internal {
         _delegateCall(abi.encodeCall(IOrderManager.accruedInterest, ()));
         _performanceFeeRate = newPerformanceFeeRate;
+        emit SetPerformanceFeeRate(_msgSender(), newPerformanceFeeRate);
     }
 
     /// @notice View functions
@@ -272,8 +272,9 @@ contract TermMaxVaultV2 is
      * @inheritdoc ITermMaxVaultV2
      */
     function apy() external view virtual override returns (uint256) {
-        if (_accretingPrincipal == 0) return 0;
-        return (_annualizedInterest * (Constants.DECIMAL_BASE - _performanceFeeRate)) / (_accretingPrincipal);
+        uint256 accretingPrincipal_ = _accretingPrincipal;
+        if (accretingPrincipal_ == 0) return 0;
+        return (_annualizedInterest * (Constants.DECIMAL_BASE - _performanceFeeRate)) / (accretingPrincipal_);
     }
 
     /**
@@ -508,7 +509,7 @@ contract TermMaxVaultV2 is
         shares = previewWithdraw(badDebtAmt);
         uint256 maxShares = maxRedeem(owner);
         if (shares > maxShares) {
-            revert ERC4626ExceededMaxMint(recipient, shares, maxShares);
+            revert ERC4626ExceededMaxRedeem(recipient, shares, maxShares);
         }
 
         if (caller != owner) {
@@ -569,13 +570,17 @@ contract TermMaxVaultV2 is
         if (newTimelock < VaultConstants.POST_INITIALIZATION_MIN_TIMELOCK) revert BelowMinTimelock();
     }
 
+    function _checkPerformanceFeeRateBounds(uint256 newPerformanceFeeRate) internal pure {
+        if (newPerformanceFeeRate > VaultConstants.MAX_PERFORMANCE_FEE_RATE) revert PerformanceFeeRateExceeded();
+    }
+
     /**
      * @inheritdoc ITermMaxVault
      */
     function submitPerformanceFeeRate(uint184 newPerformanceFeeRate) external virtual onlyCuratorRole {
         if (newPerformanceFeeRate == _performanceFeeRate) revert AlreadySet();
         if (_pendingPerformanceFeeRate.validAt != 0) revert AlreadyPending();
-        if (newPerformanceFeeRate > VaultConstants.MAX_PERFORMANCE_FEE_RATE) revert PerformanceFeeRateExceeded();
+        _checkPerformanceFeeRateBounds(newPerformanceFeeRate);
         if (newPerformanceFeeRate < _performanceFeeRate) {
             _setPerformanceFeeRate(uint256(newPerformanceFeeRate).toUint64());
             emit SetPerformanceFeeRate(_msgSender(), newPerformanceFeeRate);

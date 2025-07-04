@@ -1,0 +1,37 @@
+./script.sh eth-mainnet script:SubmitOracles --broadcast
+Running on eth-mainnet...
+=== Configuration ===
+Operation: Script Execution
+Network: eth-mainnet
+Script: SubmitOracles.s.sol
+Path: script/SubmitOracles.s.sol
+RPC URL: http*****://eth-main*****.g.alch*****.com/v2/u8Dd*****-2C-AIUn*****
+Admin Address: 0x8409a9C1A911CED491892c5694E43994c9d47E8f
+Mode: Live Broadcast--broadcast
+Verification: Disabled
+Tenderly Verification: Disabled
+Debug Mode: Disabled
+Uniswap V3 Router: 0xE592427A0AEce92De3Edee1F18E0157C05861564
+Odos V2 Router: 0xCf5540fFFCdC3d510B18bFcA6d2b9987b0772559
+Pendle Swap V3 Router: 0x888888888889758F76e7103c6CbF23ABbF58F946
+Oracle Timelock: 43200
+===============================
+Starting script execution...
+Executing: forge script script/SubmitOracles.s.sol --private-key [MASKED] --rpc-url [MASKED] --broadcast --slow
+warning: Found unknown config section in foundry.toml: [soldeer]
+This notation for profiles has been deprecated and may result in the profile not being registered in future versions.
+Please use [profile.soldeer] instead or run `forge config --fix`.
+[⠒] Compiling...
+No files changed, compilation skipped
+Script ran successfully.
+
+== Logs ==
+  Submitted oracle for collateral:  inwstETHs
+  Price feed:  0x4dDD3d3F3a92939BF352d503aFd4666773fEfa1B
+  Backup price feed:  0x4dDD3d3F3a92939BF352d503aFd4666773fEfa1B
+  Heartbeat:  86400
+  --------------------------------
+
+## Setting up 1 EVM.
+
+==========================

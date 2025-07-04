@@ -1,0 +1,38 @@
+{
+  "blockInfo": {
+    "number": "22482505",
+    "timestamp": "1747239083"
+  },
+  "market": "0x975CBA8Bad13EF86BC4d2BBb3Eb7497327c640d1",
+  "collateral": {
+    "address": "0x2103E845C5E135493Bb6c2A4f0B8651956eA8682",
+    "symbol": "XAUM",
+    "priceFeed": "0x214eD9Da11D2fbe465a6fc601a91E62EbEc1a0D6",
+    "heartBeat": "86400"
+  },
+  "underlying": {
+    "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+    "symbol": "USDC",
+    "priceFeed": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+    "heartBeat": "86400"
+  },
+  "tokens": {
+    "ft": "0xF8c1CdA465071665D3ECAf906732899186fD4856",
+    "xt": "0xf7e8F91286E3D4685A4D8e4F2a7413FE273DB503",
+    "gt": "0x6216D113CbBC1c4a1017699E691E949D1Dee8812"
+  },
+  "config": {
+    "marketSymbol": "USDC/XAUm@27JUN2025",
+    "treasurer": "0x719e77027952929ed3060dbFFC5D43EC50c1cf79",
+    "maturity": "27JUN2025",
+    "salt": "0",
+    "fees": {
+      "lendTakerFeeRatio": "2000000",
+      "lendMakerFeeRatio": "2000000",
+      "borrowTakerFeeRatio": "3000000",
+      "borrowMakerFeeRatio": "3000000",
+      "mintGtFeeRatio": "10000000",
+      "mintGtFeeRef": "6000000"
+    }
+  }
+}

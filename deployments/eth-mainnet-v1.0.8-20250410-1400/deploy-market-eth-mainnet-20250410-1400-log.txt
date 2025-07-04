@@ -1,0 +1,368 @@
+Running on eth-mainnet...
+Deployment type: market
+=== Configuration ===
+Operation: Deployment
+Type: market
+Network: eth-mainnet
+Script: DeployMarket.s.sol
+Path: script/deploy/DeployMarket.s.sol
+RPC URL: http*****://eth-main*****.g.alch*****.com/v2/u8Dd*****-2C-AIUn*****
+Admin Address: 0x8409a9C1A911CED491892c5694E43994c9d47E8f
+Mode: Live Broadcast--broadcast
+Resume: Disabled
+Verification: Enabled--verify
+Using API Key: ETHERSCAN_API_KEY
+Tenderly Verification: Disabled
+Debug Mode: Disabled
+===============================
+Starting deployment...
+Executing: forge script script/deploy/DeployMarket.s.sol --private-key [MASKED] --rpc-url [MASKED] --broadcast --slow --verify --etherscan-api-key [MASKED]
+No files changed, compilation skipped
+Script ran successfully.
+
+== Logs ==
+  ===== Git Info =====
+  Git branch: deploy/v1.0.8
+  Git commit hash:
+  0x5a059d3a272b20ad129ffbe37b9903a61a03595e
+  
+  ===== Block Info =====
+  Block number: 22214655
+  Block timestamp: 1744000271
+  
+  ===== Address Info =====
+  Deplyer: 0x56E3665038C5F0b56Cc7D81aC66C86521274B251
+  Deployed at block number: 22214655
+  
+  ===== Market Info - 0 =====
+  Market deployed at: 0xA4D14471FeD74B1664Fb888bcbA398dcBEBA2890
+  Market name: WETH/weETH@30MAY2025
+  Market symbol: WETH/weETH@30MAY2025
+  Collateral (weETH) address: 0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee
+  Underlying (WETH) address: 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2
+  Collateral price feed address: 0xdDb6F90fFb4d3257dd666b69178e5B3c5Bf41136
+  Collateral heartbeat: 21600
+  Underlying price feed address: 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419
+  Underlying heartbeat: 3600
+  FT deployed at: 0xbc6b184b468A9B7e2d165AdeA77b58773Db2a8c3
+  XT deployed at: 0xA9D9Cc4471D68433751691b2AbCbFad95A0330e2
+  GT deployed at: 0xE68AB0a7C0BE3d4c9149A8601c7Df566276CB11A
+  
+  Treasurer: 0x719e77027952929ed3060dbFFC5D43EC50c1cf79
+  Maturity: 10APR2025
+  Salt: 0
+  Lend Taker Fee Ratio: 2000000
+  Lend Maker Fee Ratio: 2000000
+  Borrow Taker Fee Ratio: 3000000
+  Borrow Maker Fee Ratio: 3000000
+  Mint GT Fee Ratio: 1000000
+  Issue FT Fee Ref: 400000
+  Market config written to: /Users/vincent/Documents/ts-codes/termmax-contract/deployments/eth-mainnet/eth-mainnet-market-WETH-weETH@10APR2025.json
+  
+  ===== Market Info - 1 =====
+  Market deployed at: 0x663e9f58e9ce3231A95a137F30E934ff6473bF9f
+  Market name: USDC/wstETH@30MAY2025
+  Market symbol: USDC/wstETH@30MAY2025
+  Collateral (wstETH) address: 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0
+  Underlying (USDC) address: 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
+  Collateral price feed address: 0x164b276057258d81941e97B0a900D4C7B358bCe0
+  Collateral heartbeat: 86400
+  Underlying price feed address: 0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6
+  Underlying heartbeat: 86400
+  FT deployed at: 0x44E07a9c79a15Cc743C7e04B55064A8bc596B752
+  XT deployed at: 0xE383f7f99D7F28A0EEDA31B20E8092E6534AA192
+  GT deployed at: 0x4AE866FfA4c8B5173E2239694bE5515C63C5DCfd
+  
+  Treasurer: 0x719e77027952929ed3060dbFFC5D43EC50c1cf79
+  Maturity: 10APR2025
+  Salt: 0
+  Lend Taker Fee Ratio: 2000000
+  Lend Maker Fee Ratio: 2000000
+  Borrow Taker Fee Ratio: 3000000
+  Borrow Maker Fee Ratio: 3000000
+  Mint GT Fee Ratio: 1000000
+  Issue FT Fee Ref: 2000000
+  Market config written to: /Users/vincent/Documents/ts-codes/termmax-contract/deployments/eth-mainnet/eth-mainnet-market-USDC-wstETH@10APR2025.json
+  
+  ===== Market Info - 2 =====
+  Market deployed at: 0x37EA82A997Bb160291a05c1c86F869fAb1c4163A
+  Market name: USDC/sUSDe@30MAY2025
+  Market symbol: USDC/sUSDe@30MAY2025
+  Collateral (sUSDe) address: 0x9D39A5DE30e57443BfF2A8307A4256c8797A3497
+  Underlying (USDC) address: 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
+  Collateral price feed address: 0xFF3BC18cCBd5999CE63E788A1c250a88626aD099
+  Collateral heartbeat: 86400
+  Underlying price feed address: 0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6
+  Underlying heartbeat: 86400
+  FT deployed at: 0x60a11DA2Cc690F69F57ee57C12Ff8D599D1609bA
+  XT deployed at: 0x5086224274b1f38436B16C1Da5b9c5829F66E25C
+  GT deployed at: 0x79151612e7Ccc54fbCf0048f1Be93EB5aBf7E74d
+  
+  Treasurer: 0x719e77027952929ed3060dbFFC5D43EC50c1cf79
+  Maturity: 10APR2025
+  Salt: 0
+  Lend Taker Fee Ratio: 2000000
+  Lend Maker Fee Ratio: 2000000
+  Borrow Taker Fee Ratio: 3000000
+  Borrow Maker Fee Ratio: 3000000
+  Mint GT Fee Ratio: 1000000
+  Issue FT Fee Ref: 2000000
+  Market config written to: /Users/vincent/Documents/ts-codes/termmax-contract/deployments/eth-mainnet/eth-mainnet-market-USDC-sUSDe@10APR2025.json
+  
+  ===== Market Info - 3 =====
+  Market deployed at: 0x1B5596B24823109352d6c9FeF8c3186df68AFeE7
+  Market name: USDC/PT-sUSDE-29MAY2025@30MAY2025
+  Market symbol: USDC/PT-sUSDE-29MAY2025@30MAY2025
+  Collateral (PT-sUSDE-29MAY2025) address: 0xb7de5dFCb74d25c2f21841fbd6230355C50d9308
+  Underlying (USDC) address: 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
+  Collateral price feed address: 0x8f29Df42c617C222Bc2B416AC8a022E85e853276
+  Collateral heartbeat: 86400
+  Underlying price feed address: 0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6
+  Underlying heartbeat: 86400
+  FT deployed at: 0x1B1Ef48a948696Ed367aDac232A28C5F1205918b
+  XT deployed at: 0xFA8627D4219eAAEB10F93419872294F09f9D72D7
+  GT deployed at: 0xfcCAe4a1B02E160010Ba7d0D97299456C8fb57C0
+  
+  Treasurer: 0x719e77027952929ed3060dbFFC5D43EC50c1cf79
+  Maturity: 10APR2025
+  Salt: 0
+  Lend Taker Fee Ratio: 2000000
+  Lend Maker Fee Ratio: 2000000
+  Borrow Taker Fee Ratio: 3000000
+  Borrow Maker Fee Ratio: 3000000
+  Mint GT Fee Ratio: 1000000
+  Issue FT Fee Ref: 2000000
+  Market config written to: /Users/vincent/Documents/ts-codes/termmax-contract/deployments/eth-mainnet/eth-mainnet-market-USDC-PT-sUSDE-29MAY2025@10APR2025.json
+  
+  ===== Market Info - 4 =====
+  Market deployed at: 0xdD1f122F075438De597487494A3acb9C98601e0F
+  Market name: USDC/USUALUSDC+@30MAY2025
+  Market symbol: USDC/USUALUSDC+@30MAY2025
+  Collateral (USUALUSDC+) address: 0xd63070114470f685b75B74D60EEc7c1113d33a3D
+  Underlying (USDC) address: 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
+  Collateral price feed address: 0x2a2a0e32c54670045256EBcA681887E32e689E97
+  Collateral heartbeat: 86400
+  Underlying price feed address: 0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6
+  Underlying heartbeat: 86400
+  FT deployed at: 0x0dE1b0cd455139F162699847973AF08ebbd98c0B
+  XT deployed at: 0xB67E81A0CE4834FdC0B7Fef2A52A2DCe4D00756C
+  GT deployed at: 0x1db01Bb963Ea7f69DedabB148CDD253A23Fd3C86
+  
+  Treasurer: 0x719e77027952929ed3060dbFFC5D43EC50c1cf79
+  Maturity: 10APR2025
+  Salt: 0
+  Lend Taker Fee Ratio: 2000000
+  Lend Maker Fee Ratio: 2000000
+  Borrow Taker Fee Ratio: 3000000
+  Borrow Maker Fee Ratio: 3000000
+  Mint GT Fee Ratio: 1000000
+  Issue FT Fee Ref: 2000000
+  Market config written to: /Users/vincent/Documents/ts-codes/termmax-contract/deployments/eth-mainnet/eth-mainnet-market-USDC-USUALUSDC+@10APR2025.json
+  
+  ===== Market Info - 5 =====
+  Market deployed at: 0x06ca18bD6DC9dBDe841315A503AFA11Bd68c7DC8
+  Market name: WETH/MCwETH@30MAY2025
+  Market symbol: WETH/MCwETH@30MAY2025
+  Collateral (MCwETH) address: 0x9a8bC3B04b7f3D87cfC09ba407dCED575f2d61D8
+  Underlying (WETH) address: 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2
+  Collateral price feed address: 0xF1D1c1e387820c2eFDB9B863960FaA5d035C2006
+  Collateral heartbeat: 3600
+  Underlying price feed address: 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419
+  Underlying heartbeat: 3600
+  FT deployed at: 0xeBAfB711848c01271A9bd7A1A76A0bF4a5AaE193
+  XT deployed at: 0xe298937ac37A2DAA0ECe8C495c6F2ceeaED1795B
+  GT deployed at: 0x4Fd71e0D3d96D3B732Dc217CE9aca75acB17Fe62
+  
+  Treasurer: 0x719e77027952929ed3060dbFFC5D43EC50c1cf79
+  Maturity: 10APR2025
+  Salt: 0
+  Lend Taker Fee Ratio: 2000000
+  Lend Maker Fee Ratio: 2000000
+  Borrow Taker Fee Ratio: 3000000
+  Borrow Maker Fee Ratio: 3000000
+  Mint GT Fee Ratio: 1000000
+  Issue FT Fee Ref: 400000
+  Market config written to: /Users/vincent/Documents/ts-codes/termmax-contract/deployments/eth-mainnet/eth-mainnet-market-WETH-MCwETH@10APR2025.json
+  
+  ===== Market Info - 6 =====
+  Market deployed at: 0x9647aa6Bd43D004Ff709737cc49Dae17a39Fd9d4
+  Market name: pufETH/PT-pufETH-26JUN2025@30MAY2025
+  Market symbol: pufETH/PT-pufETH-26JUN2025@30MAY2025
+  Collateral (PT-pufETH-26JUN2025) address: 0x9cFc9917C171A384c7168D3529Fc7e851a2E0d6D
+  Underlying (pufETH) address: 0xD9A442856C234a39a81a089C06451EBAa4306a72
+  Collateral price feed address: 0x5a27314e6D35B6fFCBaE6B3eb030e7Faf7EF34F1
+  Collateral heartbeat: 86400
+  Underlying price feed address: 0xB3ae8A16CF827d193Ae51a92fd2630e6839F5761
+  Underlying heartbeat: 86400
+  FT deployed at: 0x64cAa30d514b255bde2B3a39AAda58cFdE0C7bA6
+  XT deployed at: 0xf3c804B5F13ce6E6831687b5ace4d26B495Db588
+  GT deployed at: 0x6c6F9757BAD25b6A0091A1E83dbF8f3313d25FE0
+  
+  Treasurer: 0x719e77027952929ed3060dbFFC5D43EC50c1cf79
+  Maturity: 10APR2025
+  Salt: 0
+  Lend Taker Fee Ratio: 2000000
+  Lend Maker Fee Ratio: 2000000
+  Borrow Taker Fee Ratio: 3000000
+  Borrow Maker Fee Ratio: 3000000
+  Mint GT Fee Ratio: 1000000
+  Issue FT Fee Ref: 400000
+  Market config written to: /Users/vincent/Documents/ts-codes/termmax-contract/deployments/eth-mainnet/eth-mainnet-market-pufETH-PT-pufETH-26JUN2025@10APR2025.json
+  
+  ===== Market Info - 7 =====
+  Market deployed at: 0x411cC697dC35362B1b2b87a1FBefD762CA017ed0
+  Market name: USDC/eUSDe@29MAY2025
+  Market symbol: USDC/eUSDe@29MAY2025
+  Collateral (eUSDe) address: 0x90D2af7d622ca3141efA4d8f1F24d86E5974Cc8F
+  Underlying (USDC) address: 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
+  Collateral price feed address: 0xB6549635409Ae9c0eeBB71B3F904cB004F2D97D3
+  Collateral heartbeat: 86400
+  Underlying price feed address: 0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6
+  Underlying heartbeat: 86400
+  FT deployed at: 0x4dBb4b99b98D7dE3E4335bC3B638D480546A0158
+  XT deployed at: 0x3E0cC1C776BCEFea410f95d78B7D4cc9c558aa52
+  GT deployed at: 0x4A9AeB1398DD87AA1449df58e8EE8578FCE2900f
+  
+  Treasurer: 0x719e77027952929ed3060dbFFC5D43EC50c1cf79
+  Maturity: 10APR2025
+  Salt: 0
+  Lend Taker Fee Ratio: 2000000
+  Lend Maker Fee Ratio: 2000000
+  Borrow Taker Fee Ratio: 3000000
+  Borrow Maker Fee Ratio: 3000000
+  Mint GT Fee Ratio: 1000000
+  Issue FT Fee Ref: 2000000
+  Market config written to: /Users/vincent/Documents/ts-codes/termmax-contract/deployments/eth-mainnet/eth-mainnet-market-USDC-eUSDe@10APR2025.json
+  
+  ===== Market Info - 8 =====
+  Market deployed at: 0x9d813574687cb3B4b5C8F2311eEBa7382D5b229c
+  Market name: WETH/pufETH@30MAY2025
+  Market symbol: WETH/pufETH@30MAY2025
+  Collateral (pufETH) address: 0xD9A442856C234a39a81a089C06451EBAa4306a72
+  Underlying (WETH) address: 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2
+  Collateral price feed address: 0xB3ae8A16CF827d193Ae51a92fd2630e6839F5761
+  Collateral heartbeat: 86400
+  Underlying price feed address: 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419
+  Underlying heartbeat: 3600
+  FT deployed at: 0xD2b14ca4Dc6cb7741752Ef9178ed4D5c094b6229
+  XT deployed at: 0x183F35437746cC8bCa62868B17d16Ab576EF1Cbf
+  GT deployed at: 0xcdec35492939e4c254Eec4492A4E9E7D1D939DAB
+  
+  Treasurer: 0x719e77027952929ed3060dbFFC5D43EC50c1cf79
+  Maturity: 10APR2025
+  Salt: 0
+  Lend Taker Fee Ratio: 2000000
+  Lend Maker Fee Ratio: 2000000
+  Borrow Taker Fee Ratio: 3000000
+  Borrow Maker Fee Ratio: 3000000
+  Mint GT Fee Ratio: 1000000
+  Issue FT Fee Ref: 400000
+  Market config written to: /Users/vincent/Documents/ts-codes/termmax-contract/deployments/eth-mainnet/eth-mainnet-market-WETH-pufETH@10APR2025.json
+  
+  ===== Market Info - 9 =====
+  Market deployed at: 0xFB9Bd7Fa2a707eCC618a5DEc78a916AF3Bc27f8F
+  Market name: USDC/WBTC@30MAY2025
+  Market symbol: USDC/WBTC@30MAY2025
+  Collateral (WBTC) address: 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599
+  Underlying (USDC) address: 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
+  Collateral price feed address: 0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c
+  Collateral heartbeat: 3600
+  Underlying price feed address: 0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6
+  Underlying heartbeat: 86400
+  FT deployed at: 0x601D83443eb61f8C8FC6115C937f32855FdcfdbF
+  XT deployed at: 0xEcbe342E80da2439535440b412DD74D790372179
+  GT deployed at: 0xF6654f28D2e92E0Bc03438b3590D56a8380a47D6
+  
+  Treasurer: 0x719e77027952929ed3060dbFFC5D43EC50c1cf79
+  Maturity: 10APR2025
+  Salt: 0
+  Lend Taker Fee Ratio: 2000000
+  Lend Maker Fee Ratio: 2000000
+  Borrow Taker Fee Ratio: 3000000
+  Borrow Maker Fee Ratio: 3000000
+  Mint GT Fee Ratio: 1000000
+  Issue FT Fee Ref: 2000000
+  Market config written to: /Users/vincent/Documents/ts-codes/termmax-contract/deployments/eth-mainnet/eth-mainnet-market-USDC-WBTC@10APR2025.json
+  
+  ===== Market Info - 10 =====
+  Market deployed at: 0x68eb044886980d657B48094F9daB6CaCc4208Ba5
+  Market name: USDC/cbBTC@30MAY2025
+  Market symbol: USDC/cbBTC@30MAY2025
+  Collateral (cbBTC) address: 0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf
+  Underlying (USDC) address: 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
+  Collateral price feed address: 0x2665701293fCbEB223D11A08D826563EDcCE423A
+  Collateral heartbeat: 86400
+  Underlying price feed address: 0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6
+  Underlying heartbeat: 86400
+  FT deployed at: 0xD0c19bF74d47E17404EdF8D57aDE39Ed0944f110
+  XT deployed at: 0x72e9052DFD7d4a3393956D32616cc53471f47093
+  GT deployed at: 0x3a1778527145d0C6B259055d5DBA2601F5AE1e19
+  
+  Treasurer: 0x719e77027952929ed3060dbFFC5D43EC50c1cf79
+  Maturity: 10APR2025
+  Salt: 0
+  Lend Taker Fee Ratio: 2000000
+  Lend Maker Fee Ratio: 2000000
+  Borrow Taker Fee Ratio: 3000000
+  Borrow Maker Fee Ratio: 3000000
+  Mint GT Fee Ratio: 1000000
+  Issue FT Fee Ref: 2000000
+  Market config written to: /Users/vincent/Documents/ts-codes/termmax-contract/deployments/eth-mainnet/eth-mainnet-market-USDC-cbBTC@10APR2025.json
+  
+  ===== Market Info - 11 =====
+  Market deployed at: 0xe27E75967c162F97Ab99cE4b0A881D5CB2ABec85
+  Market name: WETH/gtWETH@30MAY2025
+  Market symbol: WETH/gtWETH@30MAY2025
+  Collateral (gtWETH) address: 0x2371e134e3455e0593363cBF89d3b6cf53740618
+  Underlying (WETH) address: 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2
+  Collateral price feed address: 0xdc0115fe09600FeDa15D317cCa3D2f21F389036d
+  Collateral heartbeat: 3600
+  Underlying price feed address: 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419
+  Underlying heartbeat: 3600
+  FT deployed at: 0x48Ba7d3Bb5A604c4e06bbAdb985aCF27a45Cb8d7
+  XT deployed at: 0xb76DFE249B9653A2C77216bf310438e6B2a8BdC5
+  GT deployed at: 0x200D174855f706e40B75eC5399fbdfAFEEFD02C2
+  
+  Treasurer: 0x719e77027952929ed3060dbFFC5D43EC50c1cf79
+  Maturity: 10APR2025
+  Salt: 0
+  Lend Taker Fee Ratio: 2000000
+  Lend Maker Fee Ratio: 2000000
+  Borrow Taker Fee Ratio: 3000000
+  Borrow Maker Fee Ratio: 3000000
+  Mint GT Fee Ratio: 1000000
+  Issue FT Fee Ref: 400000
+  Market config written to: /Users/vincent/Documents/ts-codes/termmax-contract/deployments/eth-mainnet/eth-mainnet-market-WETH-gtWETH@10APR2025.json
+  
+
+## Setting up 1 EVM.
+
+==========================
+
+Chain 1
+
+Estimated gas price: 1.931674392 gwei
+
+Estimated total gas used for script: 17308392
+
+Estimated amount required: 0.033434177593097664 ETH
+
+==========================
+
+
+==========================
+
+ONCHAIN EXECUTION COMPLETE & SUCCESSFUL.
+
+We haven't found any matching bytecode for the following contracts: [0xa4d14471fed74b1664fb888bcba398dcbeba2890, 0xbc6b184b468a9b7e2d165adea77b58773db2a8c3, 0xa9d9cc4471d68433751691b2abcbfad95a0330e2, 0xe68ab0a7c0be3d4c9149a8601c7df566276cb11a, 0x663e9f58e9ce3231a95a137f30e934ff6473bf9f, 0x44e07a9c79a15cc743c7e04b55064a8bc596b752, 0xe383f7f99d7f28a0eeda31b20e8092e6534aa192, 0x4ae866ffa4c8b5173e2239694be5515c63c5dcfd, 0x37ea82a997bb160291a05c1c86f869fab1c4163a, 0x60a11da2cc690f69f57ee57c12ff8d599d1609ba, 0x5086224274b1f38436b16c1da5b9c5829f66e25c, 0x79151612e7ccc54fbcf0048f1be93eb5abf7e74d, 0x1b5596b24823109352d6c9fef8c3186df68afee7, 0x1b1ef48a948696ed367adac232a28c5f1205918b, 0xfa8627d4219eaaeb10f93419872294f09f9d72d7, 0xfccae4a1b02e160010ba7d0d97299456c8fb57c0, 0xdd1f122f075438de597487494a3acb9c98601e0f, 0x0de1b0cd455139f162699847973af08ebbd98c0b, 0xb67e81a0ce4834fdc0b7fef2a52a2dce4d00756c, 0x1db01bb963ea7f69dedabb148cdd253a23fd3c86, 0x06ca18bd6dc9dbde841315a503afa11bd68c7dc8, 0xebafb711848c01271a9bd7a1a76a0bf4a5aae193, 0xe298937ac37a2daa0ece8c495c6f2ceeaed1795b, 0x4fd71e0d3d96d3b732dc217ce9aca75acb17fe62, 0x9647aa6bd43d004ff709737cc49dae17a39fd9d4, 0x64caa30d514b255bde2b3a39aada58cfde0c7ba6, 0xf3c804b5f13ce6e6831687b5ace4d26b495db588, 0x6c6f9757bad25b6a0091a1e83dbf8f3313d25fe0, 0x411cc697dc35362b1b2b87a1fbefd762ca017ed0, 0x4dbb4b99b98d7de3e4335bc3b638d480546a0158, 0x3e0cc1c776bcefea410f95d78b7d4cc9c558aa52, 0x4a9aeb1398dd87aa1449df58e8ee8578fce2900f, 0x9d813574687cb3b4b5c8f2311eeba7382d5b229c, 0xd2b14ca4dc6cb7741752ef9178ed4d5c094b6229, 0x183f35437746cc8bca62868b17d16ab576ef1cbf, 0xcdec35492939e4c254eec4492a4e9e7d1d939dab, 0xfb9bd7fa2a707ecc618a5dec78a916af3bc27f8f, 0x601d83443eb61f8c8fc6115c937f32855fdcfdbf, 0xecbe342e80da2439535440b412dd74d790372179, 0xf6654f28d2e92e0bc03438b3590d56a8380a47d6, 0x68eb044886980d657b48094f9dab6cacc4208ba5, 0xd0c19bf74d47e17404edf8d57ade39ed0944f110, 0x72e9052dfd7d4a3393956d32616cc53471f47093, 0x3a1778527145d0c6b259055d5dba2601f5ae1e19, 0xe27e75967c162f97ab99ce4b0a881d5cb2abec85, 0x48ba7d3bb5a604c4e06bbadb985acf27a45cb8d7, 0xb76dfe249b9653a2c77216bf310438e6b2a8bdc5, 0x200d174855f706e40b75ec5399fbdfafeefd02c2].
+
+This may occur when resuming a verification, but the underlying source code or compiler version has changed.
+##
+Start verification for (0) contracts
+All (0) contracts were verified!
+
+Transactions saved to: /Users/vincent/Documents/ts-codes/termmax-contract/broadcast/DeployMarket.s.sol/1/run-latest.json
+
+Sensitive values saved to: /Users/vincent/Documents/ts-codes/termmax-contract/cache/DeployMarket.s.sol/1/run-latest.json
+
+[SUCCESS] market deployment to eth-mainnet completed successfully!

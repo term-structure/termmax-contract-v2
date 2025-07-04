@@ -8,6 +8,7 @@ import {StateChecker} from "../utils/StateChecker.sol";
 import {SwapUtils} from "../utils/SwapUtils.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {TermMaxFactory} from "contracts/v1/factory/TermMaxFactory.sol";
 import {Constants} from "contracts/v1/lib/Constants.sol";
 import {ITermMaxMarket, TermMaxMarket, MarketEvents} from "contracts/v1/TermMaxMarket.sol";
@@ -21,10 +22,10 @@ import {IOracle, OracleAggregator, AggregatorV3Interface} from "contracts/v1/ora
 import {
     TermMaxRouter, ISwapAdapter, ITermMaxRouter, SwapUnit, RouterErrors
 } from "contracts/v1/router/TermMaxRouter.sol";
-import {UniswapV3Adapter, ERC20SwapAdapter} from "contracts/v1/router/swapAdapters/UniswapV3Adapter.sol";
-import {PendleSwapV3Adapter} from "contracts/v1/router/swapAdapters/PendleSwapV3Adapter.sol";
-import {OdosV2Adapter, IOdosRouterV2} from "contracts/v1/router/swapAdapters/OdosV2Adapter.sol";
-import {ERC4626VaultAdapter} from "contracts/v1/router/swapAdapters/ERC4626VaultAdapter.sol";
+import {UniswapV3AdapterV2, ERC20SwapAdapterV2} from "contracts/v1/router/specAdapters/UniswapV3AdapterV2.sol";
+import {PendleSwapV3AdapterV2} from "contracts/v1/router/specAdapters/PendleSwapV3AdapterV2.sol";
+import {OdosV2AdapterV2, IOdosRouterV2} from "contracts/v1/router/specAdapters/OdosV2AdapterV2.sol";
+import {ERC4626VaultAdapterV2} from "contracts/v1/router/specAdapters/ERC4626VaultAdapterV2.sol";
 import {TermMaxOrder, ITermMaxOrder} from "contracts/v1/TermMaxOrder.sol";
 import {ForkBaseTest} from "./ForkBaseTest.sol";
 import {RouterEvents} from "contracts/v1/events/RouterEvents.sol";
@@ -130,12 +131,14 @@ abstract contract GtBaseTest is ForkBaseTest {
             res.market.createOrder(res.maker, res.maxXtReserve, ISwapCallback(address(0)), res.orderConfig.curveCuts);
 
         res.swapAdapters.uniswapAdapter =
-            address(new UniswapV3Adapter(vm.parseJsonAddress(jsonData, ".routers.uniswapRouter")));
+            address(new UniswapV3AdapterV2(vm.parseJsonAddress(jsonData, ".routers.uniswapRouter")));
         res.swapAdapters.pendleAdapter =
-            address(new PendleSwapV3Adapter(vm.parseJsonAddress(jsonData, ".routers.pendleRouter")));
-        res.swapAdapters.odosAdapter = address(new OdosV2Adapter(vm.parseJsonAddress(jsonData, ".routers.odosRouter")));
-        res.swapAdapters.vaultAdapter = address(new ERC4626VaultAdapter());
+            address(new PendleSwapV3AdapterV2(vm.parseJsonAddress(jsonData, ".routers.pendleRouter")));
+        res.swapAdapters.odosAdapter =
+            address(new OdosV2AdapterV2(vm.parseJsonAddress(jsonData, ".routers.odosRouter")));
+        res.swapAdapters.vaultAdapter = address(new ERC4626VaultAdapterV2());
         res.router = deployRouter(res.marketInitialParams.admin);
+        vm.label(address(res.router), "TermMaxRouter");
         res.router.setAdapterWhitelist(res.swapAdapters.uniswapAdapter, true);
         res.router.setAdapterWhitelist(res.swapAdapters.pendleAdapter, true);
         res.router.setAdapterWhitelist(res.swapAdapters.odosAdapter, true);
@@ -219,6 +222,12 @@ abstract contract GtBaseTest is ForkBaseTest {
         uint128 tokenAmtIn,
         SwapUnit[] memory units
     ) internal returns (uint256 gtId) {
+        vm.startPrank(Ownable(address(res.router)).owner());
+        for (uint256 i = 0; i < units.length; i++) {
+            res.router.setAdapterWhitelist(units[i].adapter, true);
+        }
+        vm.stopPrank();
+
         vm.startPrank(taker);
         deal(taker, 1e8);
         deal(address(res.debtToken), taker, xtAmtIn);
@@ -259,6 +268,13 @@ abstract contract GtBaseTest is ForkBaseTest {
         uint128 tokenAmtIn,
         SwapUnit[] memory units
     ) internal returns (uint256 gtId) {
+        vm.label(taker, "Taker");
+        vm.startPrank(Ownable(address(res.router)).owner());
+        for (uint256 i = 0; i < units.length; i++) {
+            res.router.setAdapterWhitelist(units[i].adapter, true);
+        }
+        vm.stopPrank();
+
         vm.startPrank(taker);
         deal(taker, 1e8);
 
@@ -301,7 +317,19 @@ abstract contract GtBaseTest is ForkBaseTest {
     }
 
     function _testFlashRepay(GtTestRes memory res, uint256 gtId, address taker, SwapUnit[] memory units) internal {
+        vm.startPrank(Ownable(address(res.router)).owner());
+        for (uint256 i = 0; i < units.length; i++) {
+            res.router.setAdapterWhitelist(units[i].adapter, true);
+        }
+        vm.stopPrank();
+
         deal(taker, 1e18);
+
+        vm.startPrank(Ownable(address(res.router)).owner());
+        for (uint256 i = 0; i < units.length; i++) {
+            res.router.setAdapterWhitelist(units[i].adapter, true);
+        }
+        vm.stopPrank();
 
         vm.startPrank(taker);
 
@@ -324,6 +352,12 @@ abstract contract GtBaseTest is ForkBaseTest {
     }
 
     function _testFlashRepayByFt(GtTestRes memory res, uint256 gtId, address taker, SwapUnit[] memory units) internal {
+        vm.startPrank(Ownable(address(res.router)).owner());
+        for (uint256 i = 0; i < units.length; i++) {
+            res.router.setAdapterWhitelist(units[i].adapter, true);
+        }
+        vm.stopPrank();
+
         deal(taker, 1e18);
 
         vm.startPrank(taker);

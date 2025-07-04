@@ -1,0 +1,18 @@
+{
+  "network": "bnb-testnet",
+  "deployedAt": "1751010431",
+  "gitBranch": "v1_special_adapter",
+  "gitCommitHash": "0x23b76ca54b9c28b2b4fc0b4d07d64b3f17c4ee36",
+  "blockInfo": {
+    "number": "56241046",
+    "timestamp": "1751010431"
+  },
+  "deployer": "0xE355d5D8aa52EF0FbbD037C4a3C5E6Fd659cf46B",
+  "admin": "0x81f314f70702Bbe89FEd0F2cFe6841950275E0b7",
+  "swapAdapter": {
+    "uniswapV3Adapter": "0xC8175570536849923D2A38FDFC33f2EA9ace4134",
+    "odosV2Adapter": "0x55f73C3D6F90e0858423A813969270D735fF0015",
+    "pendleSwapV3Adapter": "0x7D799FE4Ea4b4Fea5BA8545f2b4f04f0c151B2AC",
+    "ERC4626VaultAdapter": "0xAe3C3a1677Ec9f061c768edD6C0d50A6A67F4656"
+  }
+}

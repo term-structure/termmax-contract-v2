@@ -3,7 +3,7 @@ pragma solidity ^0.8.27;
 
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
-import {MarketViewer} from "../../contracts/router/MarketViewer.sol";
+import {MarketViewer} from "contracts/v1/router/MarketViewer.sol";
 import {StringHelper} from "../utils/StringHelper.sol";
 
 contract DeployMarketViewer is Script {

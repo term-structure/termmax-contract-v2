@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.27;
+pragma solidity ^0.8.0;
 
 import {PendingAddress, PendingUint192} from "../../v1/lib/PendingLib.sol";
 import {VaultInitialParamsV2} from "../storage/TermMaxStorageV2.sol";
@@ -19,21 +19,21 @@ interface ITermMaxVaultV2 {
     function initialize(VaultInitialParamsV2 memory params) external;
 
     /**
-     * @notice Returns the current annual percentage yield based on accreting principal
+     * @notice Returns the current annual percentage yield based on accreting principal, eg. 5% APY = 0.05e8
      * @dev APY is calculated based on the vault's current performance and accruing interest
      * @return The current APY as a uint256 value
      */
     function apy() external view returns (uint256);
 
     /**
-     * @notice Returns the minimum guaranteed APY for the vault
+     * @notice Returns the minimum guaranteed APY for the vault, e.g. 5% APY = 0.05e8
      * @dev This represents the floor APY that the vault aims to maintain
      * @return The minimum APY as a uint64 value
      */
     function minApy() external view returns (uint64);
 
     /**
-     * @notice Returns the minimum rate for idle funds in the vault
+     * @notice Returns the minimum rate for idle funds in the vault, e.g. 10% idle fund rate = 0.05e8
      * @dev This rate applies to funds that are not actively deployed in strategies
      * @return The minimum idle fund rate as a uint64 value
      */
@@ -42,28 +42,32 @@ interface ITermMaxVaultV2 {
     /**
      * @notice Returns the pending minimum APY update details
      * @dev Contains the proposed new value and timing information for the pending change
-     * @return PendingUint192 struct with pending minimum APY data
+     * @return PendingUint192 struct with pending minimum APY data, structure includes:
+     *         - new value: the proposed new minimum APY
+     *         - valid at: the timestamp when the change was proposed
      */
     function pendingMinApy() external view returns (PendingUint192 memory);
 
     /**
      * @notice Returns the pending minimum idle fund rate update details
      * @dev Contains the proposed new value and timing information for the pending change
-     * @return PendingUint192 struct with pending minimum idle fund rate data
+     * @return PendingUint192 struct with pending minimum idle fund rate data, structure includes:
+     *         - new value: the proposed new minimum idle fund rate
+     *         - valid at: the timestamp when the change was proposed
      */
     function pendingMinIdleFundRate() external view returns (PendingUint192 memory);
 
     /**
      * @notice Submits a new minimum APY for pending approval
      * @dev Initiates a timelock period before the new minimum APY can be applied
-     * @param newMinApy The proposed new minimum APY value
+     * @param newMinApy The proposed new minimum APY value, e.g. 5% APY = 0.05e8
      */
     function submitPendingMinApy(uint64 newMinApy) external;
 
     /**
      * @notice Submits a new minimum idle fund rate for pending approval
      * @dev Initiates a timelock period before the new rate can be applied
-     * @param newMinIdleFundRate The proposed new minimum idle fund rate
+     * @param newMinIdleFundRate The proposed new minimum idle fund rate, e.g. 10% idle fund rate = 0.10e8
      */
     function submitPendingMinIdleFundRate(uint64 newMinIdleFundRate) external;
 

@@ -1,0 +1,21 @@
+== Logs ==
+  Network: eth-mainnet
+  Deployer balance: 158879257545733090
+  ===== Git Info =====
+  Git branch: deploy/v1.0.8
+  Git commit hash:
+  0xf0e7aead33f178cc18e33b5c6e07f406fb95194d
+  
+  ===== Block Info =====
+  Block number: 22175070
+  Block timestamp: 1743522719
+  
+  ===== Oracle Aggregator Info =====
+  Deployer: 0x56E3665038C5F0b56Cc7D81aC66C86521274B251
+  Admin: 0x8409a9C1A911CED491892c5694E43994c9d47E8f
+  Oracle Aggregator deployed at: 0xE3a31690392E8E18DC3d862651C079339E2c1ADE
+  Oracle Timelock: 43200
+
+## Setting up 1 EVM.
+
+==========================
