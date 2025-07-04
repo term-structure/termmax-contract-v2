@@ -441,7 +441,6 @@ contract TermMaxMarketV2 is
     function createOrder(address maker, uint256 maxXtReserve, ISwapCallback swapTrigger, CurveCuts memory curveCuts)
         external
         virtual
-        nonReentrant
         isOpen
         returns (ITermMaxOrder)
     {

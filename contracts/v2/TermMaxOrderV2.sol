@@ -312,8 +312,7 @@ contract TermMaxOrderV2 is
     }
 
     function setPool(IERC4626 newPool) external virtual onlyOwner {
-        pool = newPool;
-        emit OrderEventsV2.PoolUpdated(address(newPool));
+        _setPool(newPool);
     }
 
     function _setPool(IERC4626 newPool) internal {
@@ -326,18 +325,26 @@ contract TermMaxOrderV2 is
                 debtTokenAmt = oldPool.redeem(shares, address(this), address(this));
             }
         }
-        pool = newPool;
-        // mint new debt or ft/xt
-        if (debtTokenAmt != 0) {
-            if (address(newPool) != address(0)) {
+        if (address(newPool) != address(0)) {
+            uint256 ftBalance = ft.balanceOf(address(this));
+            uint256 xtBalance = xt.balanceOf(address(this));
+            uint256 maxBurned = ftBalance > xtBalance ? xtBalance : ftBalance;
+            if (maxBurned != 0) {
+                ITermMaxMarket _market = market;
+                _market.burn(address(this), maxBurned);
+                debtTokenAmt += maxBurned;
+            }
+            if (debtTokenAmt != 0) {
+                // If new pool is set, deposit all debt token to the new pool
                 debtToken.safeIncreaseAllowance(address(newPool), debtTokenAmt);
                 newPool.deposit(debtTokenAmt, address(this));
-            } else {
-                ITermMaxMarket _market = market;
-                debtToken.safeIncreaseAllowance(address(_market), debtTokenAmt);
-                _market.mint(address(this), debtTokenAmt);
             }
+        } else if (debtTokenAmt != 0) {
+            ITermMaxMarket _market = market;
+            debtToken.safeIncreaseAllowance(address(_market), debtTokenAmt);
+            _market.mint(address(this), debtTokenAmt);
         }
+        pool = newPool;
         emit OrderEventsV2.PoolUpdated(address(newPool));
     }
 

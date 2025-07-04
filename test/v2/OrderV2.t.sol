@@ -37,6 +37,7 @@ import {
     CurveCuts,
     FeeConfig
 } from "contracts/v1/storage/TermMaxStorage.sol";
+import {MockERC4626} from "contracts/v2/test/MockERC4626.sol";
 
 contract OrderTestV2 is Test {
     using JSONLoader for *;
@@ -890,6 +891,39 @@ contract OrderTestV2 is Test {
         vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", sender));
         res.order.setGeneralConfig(newGtId, newMaxXtReserve, newTrigger, newVirtualXtReserve);
 
+        vm.stopPrank();
+    }
+
+    function testSetPool() public {
+        vm.startPrank(maker);
+
+        uint256 amount = res.ft.balanceOf(address(res.order));
+        MockERC4626 pool = new MockERC4626(res.debt);
+        res.order.setPool(pool);
+        assertEq(address(res.order.pool()), address(pool), "Pool should match");
+        assertEq(res.debt.balanceOf(address(res.order)), 0, "Order should have no debt balance");
+        assertEq(res.ft.balanceOf(address(res.order)), 0, "Order should have no FT balance");
+        assertEq(res.xt.balanceOf(address(res.order)), 0, "Order should have no XT balance");
+        assertEq(pool.balanceOf(address(res.order)), amount, "Order should have pool shares");
+        assertEq(res.debt.balanceOf(address(pool)), amount, "Pool should have debt balance");
+
+        MockERC4626 newPool = new MockERC4626(res.debt);
+        res.order.setPool(newPool);
+        assertEq(address(res.order.pool()), address(newPool), "New Pool should match");
+        assertEq(res.debt.balanceOf(address(res.order)), 0, "Order should have no debt balance");
+        assertEq(res.ft.balanceOf(address(res.order)), 0, "Order should have no FT balance");
+        assertEq(res.xt.balanceOf(address(res.order)), 0, "Order should have no XT balance");
+        assertEq(newPool.balanceOf(address(res.order)), amount, "Order should have new pool shares");
+        assertEq(res.debt.balanceOf(address(newPool)), amount, "Pool should have debt balance");
+
+        res.order.setPool(MockERC4626(address(0)));
+        // Verify the pool was set to zero address
+        assertEq(address(res.order.pool()), address(0), "Pool should be zero address");
+        assertEq(res.ft.balanceOf(address(res.order)), amount, "Order should have FT balance");
+        assertEq(res.xt.balanceOf(address(res.order)), amount, "Order should have XT balance");
+        assertEq(res.debt.balanceOf(address(res.order)), 0, "Order should have no debt balance");
+        assertEq(pool.balanceOf(address(res.order)), 0, "Order should have no pool shares");
+        assertEq(newPool.balanceOf(address(res.order)), 0, "Order should have no new pool shares");
         vm.stopPrank();
     }
 }
