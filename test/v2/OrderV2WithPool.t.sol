@@ -434,11 +434,17 @@ contract OrderTestV2WithPool is Test {
         (uint256 gtId,) = LoanUtils.fastMintGt(res, maker, 100e8, 1e18);
         res.gt.approve(address(res.order), gtId);
         orderConfig.gtId = gtId;
-        res.order.updateOrder(orderConfig, -150e8, 0);
+        res.order.setGeneralConfig(
+            orderConfig.gtId, orderConfig.maxXtReserve, orderConfig.swapTrigger, res.order.virtualXtReserve()
+        );
+        res.order.withdrawAssets(pool, maker, 150e8);
         vm.stopPrank();
 
-        uint128 ftOutAmt = 151e8;
-        uint128 maxTokenIn = 150e8;
+        // Inscrease the pool shares's value
+        res.debt.mint(address(pool), 10e8);
+
+        uint128 ftOutAmt = 161e8;
+        uint128 maxTokenIn = 160e8;
         vm.startPrank(sender);
         res.debt.mint(sender, maxTokenIn);
         res.debt.approve(address(res.order), maxTokenIn);

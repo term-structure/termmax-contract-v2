@@ -536,8 +536,10 @@ contract TermMaxOrderV2 is
 
             if (tokenOut == _debtToken) {
                 _handleDebtTokenOutput(netTokenOut, feeAmt, recipient, _ft, _xt, _debtToken);
+            } else if (tokenOut == _ft) {
+                _handleFtOutput(tokenOut, netTokenOut, feeAmt, tokenAmtIn, recipient, _debtToken, _orderConfig);
             } else {
-                _handleFtXtOutput(tokenOut, netTokenOut, feeAmt, tokenAmtIn, recipient, _ft, _debtToken);
+                _handleXtOutput(tokenOut, netTokenOut, feeAmt, tokenAmtIn, recipient, _ft, _debtToken);
             }
         }
 
@@ -588,8 +590,10 @@ contract TermMaxOrderV2 is
 
             if (tokenOut == _debtToken) {
                 _handleDebtTokenOutput(tokenAmtOut, feeAmt, recipient, _ft, _xt, _debtToken);
+            } else if (tokenOut == _ft) {
+                _handleFtOutput(tokenOut, tokenAmtOut, feeAmt, netTokenIn, recipient, _debtToken, _orderConfig);
             } else {
-                _handleFtXtOutput(tokenOut, tokenAmtOut, feeAmt, netTokenIn, recipient, _ft, _debtToken);
+                _handleXtOutput(tokenOut, tokenAmtOut, feeAmt, netTokenIn, recipient, _ft, _debtToken);
             }
         }
 
@@ -728,11 +732,6 @@ contract TermMaxOrderV2 is
 
         uint256 newXtReserve = virtualXtReserve;
         if (!isNegetiveXt) {
-            // check ft reserve and issue ft to self if needed
-            uint256 ftReserve = _getFtReserve();
-            if (ftReserve < deltaFt) {
-                _issueFtToSelf(deltaFt - ftReserve, orderConfig_);
-            }
             newXtReserve += deltaXt;
             // check xt reserve when lending to order
             if (newXtReserve > orderConfig_.maxXtReserve) {
@@ -781,17 +780,50 @@ contract TermMaxOrderV2 is
         _ft.safeTransfer(_market.config().treasurer, feeAmt);
     }
 
-    /**
-     * @notice Handle FT/XT token output after swap
-     * @param tokenOut Output token
-     * @param netTokenOut Net tokens to output
-     * @param feeAmt Fee amount
-     * @param tokenAmtIn Input token amount
-     * @param recipient Recipient address
-     * @param _ft FT token reference
-     * @param _debtToken Debt token reference
-     */
-    function _handleFtXtOutput(
+    // /**
+    //  * @notice Handle FT/XT token output after swap
+    //  * @param tokenOut Output token
+    //  * @param netTokenOut Net tokens to output
+    //  * @param feeAmt Fee amount
+    //  * @param tokenAmtIn Input token amount
+    //  * @param recipient Recipient address
+    //  * @param _ft FT token reference
+    //  * @param _debtToken Debt token reference
+    //  */
+    // function _handleFtXtOutput(
+    //     IERC20 tokenOut,
+    //     uint256 netTokenOut,
+    //     uint256 feeAmt,
+    //     uint256 tokenAmtIn,
+    //     address recipient,
+    //     IERC20 _ft,
+    //     IERC20 _debtToken
+    // ) private {
+    //     ITermMaxMarket _market = market;
+    //     // mint input token to ft and xt
+    //     _debtToken.safeIncreaseAllowance(address(_market), tokenAmtIn);
+    //     _market.mint(address(this), tokenAmtIn);
+    //     // Pay fee
+    //     _ft.safeTransfer(_market.config().treasurer, feeAmt);
+
+    //     // check ft reserve and issue ft to self if needed
+    //     uint256 ftReserve = _getFtReserve();
+    //     if (ftReserve < deltaFt) {
+    //         _issueFtToSelf(deltaFt - ftReserve, orderConfig_);
+    //     }
+    //     // Check if we need to withdraw additional tokens
+    //     uint256 availableBalance = tokenOut.balanceOf(address(this));
+    //     if (availableBalance < netTokenOut) {
+    //         uint256 tokenToWithdraw = netTokenOut - availableBalance;
+    //         pool.withdraw(tokenToWithdraw, address(this), address(this));
+    //         _debtToken.safeIncreaseAllowance(address(_market), tokenToWithdraw);
+    //         _market.mint(address(this), tokenToWithdraw);
+    //     }
+
+    //     tokenOut.safeTransfer(recipient, netTokenOut);
+    // }
+
+    function _handleXtOutput(
         IERC20 tokenOut,
         uint256 netTokenOut,
         uint256 feeAmt,
@@ -799,22 +831,67 @@ contract TermMaxOrderV2 is
         address recipient,
         IERC20 _ft,
         IERC20 _debtToken
-    ) private {
+    ) internal {
+        uint256 ftBalance = _ft.balanceOf(address(this));
+        uint256 xtBalance = tokenOut.balanceOf(address(this));
+
+        // withdraw debt token from pool if needed
+        if (xtBalance + tokenAmtIn < netTokenOut) {
+            uint256 debtToWithdraw = netTokenOut - xtBalance - tokenAmtIn;
+            // we dont need to check pool balance here because it means insufficient liquidity if reverted
+            try pool.withdraw(debtToWithdraw, address(this), address(this)) {}
+            catch {
+                revert TermMaxCurve.InsufficientLiquidity();
+            }
+            tokenAmtIn += debtToWithdraw;
+        }
         ITermMaxMarket _market = market;
-        // mint input token to ft and xt
         _debtToken.safeIncreaseAllowance(address(_market), tokenAmtIn);
         _market.mint(address(this), tokenAmtIn);
-        // Pay fee
-        _ft.safeTransfer(_market.config().treasurer, feeAmt);
-        // Check if we need to withdraw additional tokens
-        uint256 availableBalance = tokenOut.balanceOf(address(this));
-        if (availableBalance < netTokenOut) {
-            uint256 tokenToWithdraw = netTokenOut - availableBalance;
-            pool.withdraw(tokenToWithdraw, address(this), address(this));
-            _debtToken.safeIncreaseAllowance(address(_market), tokenToWithdraw);
-            _market.mint(address(this), tokenToWithdraw);
-        }
 
+        // Pay fee
+        _ft.safeTransfer(market.config().treasurer, feeAmt);
+        // transfer output tokens
+        tokenOut.safeTransfer(recipient, netTokenOut);
+    }
+
+    function _handleFtOutput(
+        IERC20 tokenOut,
+        uint256 netTokenOut,
+        uint256 feeAmt,
+        uint256 tokenAmtIn,
+        address recipient,
+        IERC20 _debtToken,
+        OrderConfig memory orderConfig_
+    ) internal {
+        uint256 ftBalance = tokenOut.balanceOf(address(this)) + tokenAmtIn;
+        uint256 requiredFtBalance = netTokenOut + feeAmt;
+        if (ftBalance < requiredFtBalance) {
+            // check ft reserves
+            IERC4626 _pool = pool;
+            if (address(_pool) != address(0)) {
+                uint256 assetsInPool = _pool.convertToAssets(_pool.balanceOf(address(this)));
+                uint256 withdrawAmount = requiredFtBalance - ftBalance;
+                if (withdrawAmount > assetsInPool) {
+                    _pool.withdraw(assetsInPool, address(this), address(this));
+                    tokenAmtIn += assetsInPool;
+                    _issueFtToSelf(withdrawAmount - assetsInPool, orderConfig_.gtId);
+                } else {
+                    _pool.withdraw(withdrawAmount, address(this), address(this));
+                    tokenAmtIn += withdrawAmount;
+                }
+            } else {
+                _issueFtToSelf(requiredFtBalance - ftBalance, orderConfig_.gtId);
+            }
+        }
+        ITermMaxMarket _market = market;
+        // mint ft and xt
+        _debtToken.safeIncreaseAllowance(address(_market), tokenAmtIn);
+        _market.mint(address(this), tokenAmtIn);
+
+        // Pay fee
+        tokenOut.safeTransfer(_market.config().treasurer, feeAmt);
+        // transfer output tokens
         tokenOut.safeTransfer(recipient, netTokenOut);
     }
 
@@ -857,12 +934,12 @@ contract TermMaxOrderV2 is
     /**
      * @notice Issue FT tokens to self when needed
      * @param amount Amount of FT to issue
-     * @param config Order configuration
+     * @param gtId The gearing token ID
      */
-    function _issueFtToSelf(uint256 amount, OrderConfig memory config) internal {
-        if (config.gtId == 0) revert CantNotIssueFtWithoutGt();
+    function _issueFtToSelf(uint256 amount, uint256 gtId) internal {
+        if (gtId == 0) revert CantNotIssueFtWithoutGt();
         uint256 debtAmtToIssue = (amount * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - market.mintGtFeeRatio());
-        market.issueFtByExistedGt(address(this), (debtAmtToIssue).toUint128(), config.gtId);
+        market.issueFtByExistedGt(address(this), (debtAmtToIssue).toUint128(), gtId);
     }
 
     // =============================================================================
