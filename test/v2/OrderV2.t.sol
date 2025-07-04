@@ -857,6 +857,41 @@ contract OrderTestV2 is Test {
 
         vm.stopPrank();
     }
+
+    function testSetGeneralConfig(
+        uint256 newGtId,
+        uint256 newMaxXtReserve,
+        ISwapCallback newTrigger,
+        uint256 newVirtualXtReserve
+    ) public {
+        vm.startPrank(maker);
+
+        res.order.setGeneralConfig(newGtId, newMaxXtReserve, newTrigger, newVirtualXtReserve);
+
+        // Verify the configuration was updated
+        OrderConfig memory updatedConfig = res.order.orderConfig();
+        assertEq(updatedConfig.gtId, newGtId, "GT ID should match");
+        assertEq(updatedConfig.maxXtReserve, newMaxXtReserve, "Max XT reserve should match");
+        assertEq(address(updatedConfig.swapTrigger), address(newTrigger), "Swap trigger should match");
+        assertEq(res.order.virtualXtReserve(), newVirtualXtReserve, "Virtual XT reserve should match");
+
+        vm.stopPrank();
+    }
+
+    function testSetGeneralConfigOnlyMaker() public {
+        vm.startPrank(sender);
+
+        uint256 newGtId = 12345;
+        uint256 newMaxXtReserve = 200e8;
+        ISwapCallback newTrigger = ISwapCallback(address(0));
+        uint256 newVirtualXtReserve = 180e8;
+
+        // Test that non-maker cannot update
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", sender));
+        res.order.setGeneralConfig(newGtId, newMaxXtReserve, newTrigger, newVirtualXtReserve);
+
+        vm.stopPrank();
+    }
 }
 
 // Mock contracts for testing

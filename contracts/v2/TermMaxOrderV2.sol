@@ -518,15 +518,15 @@ contract TermMaxOrderV2 is
             IERC20 _debtToken = debtToken;
             IERC20 _ft = ft;
             IERC20 _xt = xt;
-
+            OrderConfig memory orderConfig_ = _orderConfig;
             if (tokenIn == _ft && tokenOut == _debtToken) {
-                (netTokenOut, feeAmt) = _swapAndUpdateReserves(tokenAmtIn, minTokenOut, _sellFt);
+                (netTokenOut, feeAmt) = _swapAndUpdateReserves(tokenAmtIn, minTokenOut, orderConfig_, _sellFt);
             } else if (tokenIn == _xt && tokenOut == _debtToken) {
-                (netTokenOut, feeAmt) = _swapAndUpdateReserves(tokenAmtIn, minTokenOut, _sellXt);
+                (netTokenOut, feeAmt) = _swapAndUpdateReserves(tokenAmtIn, minTokenOut, orderConfig_, _sellXt);
             } else if (tokenIn == _debtToken && tokenOut == _ft) {
-                (netTokenOut, feeAmt) = _swapAndUpdateReserves(tokenAmtIn, minTokenOut, _buyFt);
+                (netTokenOut, feeAmt) = _swapAndUpdateReserves(tokenAmtIn, minTokenOut, orderConfig_, _buyFt);
             } else if (tokenIn == _debtToken && tokenOut == _xt) {
-                (netTokenOut, feeAmt) = _swapAndUpdateReserves(tokenAmtIn, minTokenOut, _buyXt);
+                (netTokenOut, feeAmt) = _swapAndUpdateReserves(tokenAmtIn, minTokenOut, orderConfig_, _buyXt);
             } else {
                 revert CantNotSwapToken(tokenIn, tokenOut);
             }
@@ -537,7 +537,7 @@ contract TermMaxOrderV2 is
             if (tokenOut == _debtToken) {
                 _handleDebtTokenOutput(netTokenOut, feeAmt, recipient, _ft, _xt, _debtToken);
             } else if (tokenOut == _ft) {
-                _handleFtOutput(tokenOut, netTokenOut, feeAmt, tokenAmtIn, recipient, _debtToken, _orderConfig);
+                _handleFtOutput(tokenOut, netTokenOut, feeAmt, tokenAmtIn, recipient, _debtToken, orderConfig_.gtId);
             } else {
                 _handleXtOutput(tokenOut, netTokenOut, feeAmt, tokenAmtIn, recipient, _ft, _debtToken);
             }
@@ -574,14 +574,17 @@ contract TermMaxOrderV2 is
             IERC20 _debtToken = debtToken;
             IERC20 _ft = ft;
             IERC20 _xt = xt;
+            OrderConfig memory orderConfig_ = _orderConfig;
             if (tokenIn == _debtToken && tokenOut == _ft) {
-                (netTokenIn, feeAmt) = _swapAndUpdateReserves(tokenAmtOut, maxTokenIn, _buyExactFt);
+                (netTokenIn, feeAmt) = _swapAndUpdateReserves(tokenAmtOut, maxTokenIn, orderConfig_, _buyExactFt);
             } else if (tokenIn == _debtToken && tokenOut == _xt) {
-                (netTokenIn, feeAmt) = _swapAndUpdateReserves(tokenAmtOut, maxTokenIn, _buyExactXt);
+                (netTokenIn, feeAmt) = _swapAndUpdateReserves(tokenAmtOut, maxTokenIn, orderConfig_, _buyExactXt);
             } else if (tokenIn == _ft && tokenOut == _debtToken) {
-                (netTokenIn, feeAmt) = _swapAndUpdateReserves(tokenAmtOut, maxTokenIn, _sellFtForExactToken);
+                (netTokenIn, feeAmt) =
+                    _swapAndUpdateReserves(tokenAmtOut, maxTokenIn, orderConfig_, _sellFtForExactToken);
             } else if (tokenIn == _xt && tokenOut == _debtToken) {
-                (netTokenIn, feeAmt) = _swapAndUpdateReserves(tokenAmtOut, maxTokenIn, _sellXtForExactToken);
+                (netTokenIn, feeAmt) =
+                    _swapAndUpdateReserves(tokenAmtOut, maxTokenIn, orderConfig_, _sellXtForExactToken);
             } else {
                 revert CantNotSwapToken(tokenIn, tokenOut);
             }
@@ -591,7 +594,7 @@ contract TermMaxOrderV2 is
             if (tokenOut == _debtToken) {
                 _handleDebtTokenOutput(tokenAmtOut, feeAmt, recipient, _ft, _xt, _debtToken);
             } else if (tokenOut == _ft) {
-                _handleFtOutput(tokenOut, tokenAmtOut, feeAmt, netTokenIn, recipient, _debtToken, _orderConfig);
+                _handleFtOutput(tokenOut, tokenAmtOut, feeAmt, netTokenIn, recipient, _debtToken, orderConfig_.gtId);
             } else {
                 _handleXtOutput(tokenOut, tokenAmtOut, feeAmt, netTokenIn, recipient, _ft, _debtToken);
             }
@@ -695,7 +698,7 @@ contract TermMaxOrderV2 is
         uint256 virtualXtReserve_
     ) internal {
         _orderConfig.gtId = gtId;
-        _orderConfig.maxXtReserve = virtualXtReserve_ + maxXtReserve;
+        _orderConfig.maxXtReserve = maxXtReserve;
         _orderConfig.swapTrigger = swapTrigger;
         virtualXtReserve = virtualXtReserve_;
         emit OrderEventsV2.GeneralConfigUpdated(gtId, maxXtReserve, swapTrigger, virtualXtReserve_);
@@ -721,12 +724,12 @@ contract TermMaxOrderV2 is
     function _swapAndUpdateReserves(
         uint256 tokenAmtInOrOut,
         uint256 limitTokenAmt,
+        OrderConfig memory orderConfig_,
         function(
         uint256,
         uint256,
         OrderConfig memory) internal view returns (uint256, uint256, uint256, uint256, bool) func
     ) private returns (uint256, uint256) {
-        OrderConfig memory orderConfig_ = _orderConfig;
         (uint256 netAmt, uint256 feeAmt, uint256 deltaFt, uint256 deltaXt, bool isNegetiveXt) =
             func(tokenAmtInOrOut, limitTokenAmt, orderConfig_);
 
@@ -862,7 +865,7 @@ contract TermMaxOrderV2 is
         uint256 tokenAmtIn,
         address recipient,
         IERC20 _debtToken,
-        OrderConfig memory orderConfig_
+        uint256 gtId
     ) internal {
         uint256 ftBalance = tokenOut.balanceOf(address(this)) + tokenAmtIn;
         uint256 requiredFtBalance = netTokenOut + feeAmt;
@@ -875,13 +878,13 @@ contract TermMaxOrderV2 is
                 if (withdrawAmount > assetsInPool) {
                     _pool.withdraw(assetsInPool, address(this), address(this));
                     tokenAmtIn += assetsInPool;
-                    _issueFtToSelf(withdrawAmount - assetsInPool, orderConfig_.gtId);
+                    _issueFtToSelf(withdrawAmount - assetsInPool, gtId);
                 } else {
                     _pool.withdraw(withdrawAmount, address(this), address(this));
                     tokenAmtIn += withdrawAmount;
                 }
             } else {
-                _issueFtToSelf(requiredFtBalance - ftBalance, orderConfig_.gtId);
+                _issueFtToSelf(requiredFtBalance - ftBalance, gtId);
             }
         }
         ITermMaxMarket _market = market;
