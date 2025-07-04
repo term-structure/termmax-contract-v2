@@ -135,6 +135,7 @@ contract TermMaxOrderV2 is
         xt = params.xt;
         debtToken = params.debtToken;
         gt = params.gt;
+        _setPool(params.pool);
         _updateFeeConfig(params.orderConfig.feeConfig);
         _updateCurve(params.orderConfig.curveCuts);
         _updateGeneralConfig(
@@ -329,7 +330,6 @@ contract TermMaxOrderV2 is
         // mint new debt or ft/xt
         if (debtTokenAmt != 0) {
             if (address(newPool) != address(0)) {
-                IERC20 _debtToken = debtToken;
                 debtToken.safeIncreaseAllowance(address(newPool), debtTokenAmt);
                 newPool.deposit(debtTokenAmt, address(this));
             } else {

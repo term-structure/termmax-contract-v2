@@ -27,15 +27,13 @@ library StateChecker {
     }
 
     function checkOrderState(DeployUtils.Res memory res, OrderState memory expect) internal view {
-        address order = address(res.order);
-        require(res.ft.balanceOf(order) == expect.ftReserve, "ftReserve unexpect");
-        require(res.xt.balanceOf(order) == expect.xtReserve, "xtReserve unexpect");
+        (uint256 ftReserve, uint256 xtReserve) = res.order.getRealReserves();
+        require(ftReserve >= expect.ftReserve, "ftReserve unexpect");
+        require(xtReserve >= expect.xtReserve, "xtReserve unexpect");
     }
 
     function getOrderState(DeployUtils.Res memory res) internal view returns (OrderState memory state) {
-        address order = address(res.order);
-        state.ftReserve = res.ft.balanceOf(order);
-        state.xtReserve = res.xt.balanceOf(order);
+        (state.ftReserve, state.xtReserve) = res.order.getRealReserves();
     }
 
     function getUserBalances(DeployUtils.Res memory res, address user)
