@@ -141,6 +141,10 @@ contract TermMaxVaultV2 is
         return _pendingMarkets[market];
     }
 
+    function pendingPools(address pool) external view virtual returns (PendingUint192 memory) {
+        return _pendingPools[pool];
+    }
+
     function pendingTimelock() external view virtual returns (PendingUint192 memory) {
         return _pendingTimelock;
     }
@@ -561,16 +565,16 @@ contract TermMaxVaultV2 is
         delete _pendingMarkets[market];
     }
 
-    function submitPool(IERC4626 pool, bool isWhitelisted) external virtual onlyCuratorRole {
-        if (!_submitPendingWhitelist(_poolWhitelist, _pendingPools, _setPoolWhitelist, address(pool), isWhitelisted)) {
-            emit VaultEventsV2.SubmitPoolToWhitelist(address(pool), _pendingPools[address(pool)].validAt);
+    function submitPool(address pool, bool isWhitelisted) external virtual onlyCuratorRole {
+        if (!_submitPendingWhitelist(_poolWhitelist, _pendingPools, _setPoolWhitelist, pool, isWhitelisted)) {
+            emit VaultEventsV2.SubmitPoolToWhitelist(pool, _pendingPools[pool].validAt);
         }
     }
 
     function _setPoolWhitelist(address pool, bool isWhitelisted) internal {
         _poolWhitelist[pool] = isWhitelisted;
-        emit VaultEventsV2.SetPoolWhitelist(_msgSender(), address(pool), isWhitelisted);
-        delete _pendingPools[address(pool)];
+        emit VaultEventsV2.SetPoolWhitelist(_msgSender(), pool, isWhitelisted);
+        delete _pendingPools[pool];
     }
 
     function _submitPendingWhitelist(
@@ -620,6 +624,12 @@ contract TermMaxVaultV2 is
         delete _pendingMarkets[market];
 
         emit VaultEvents.RevokePendingMarket(_msgSender(), market);
+    }
+
+    function revokePendingPool(address pool) external virtual onlyGuardianRole {
+        delete _pendingPools[pool];
+
+        emit VaultEventsV2.RevokePendingPool(_msgSender(), pool);
     }
 
     function revokePendingPerformanceFeeRate() external virtual onlyGuardianRole {
