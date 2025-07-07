@@ -23,7 +23,8 @@ import {SwapAdapter} from "contracts/v1/test/testnet/SwapAdapter.sol";
 import {IOracleV2, OracleAggregatorV2} from "contracts/v2/oracle/OracleAggregatorV2.sol";
 import {IOracle} from "contracts/v1/oracle/IOracle.sol";
 import {IOrderManager, OrderManager} from "contracts/v1/vault/OrderManager.sol";
-import {ITermMaxVault, ITermMaxVaultV2, TermMaxVaultV2} from "contracts/v2/vault/TermMaxVaultV2.sol";
+import {ITermMaxVaultV2, TermMaxVaultV2} from "contracts/v2/vault/TermMaxVaultV2.sol";
+import {ITermMaxVault} from "contracts/v1/vault/ITermMaxVault.sol";
 import {VaultFactory, IVaultFactory} from "contracts/v1/factory/VaultFactory.sol";
 import {
     MarketConfig,

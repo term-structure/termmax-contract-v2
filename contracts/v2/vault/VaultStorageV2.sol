@@ -4,14 +4,21 @@ pragma solidity ^0.8.27;
 import {PendingAddress, PendingUint192} from "../../v1/lib/PendingLib.sol";
 import {OrderInfo} from "../../v1/vault/VaultStorage.sol";
 
+struct OrderV2ConfigurationParams {
+    uint256 maxXtReserve;
+    uint256 virtualXtReserve;
+    int256 liquidityChanges;
+}
+
 contract VaultStorageV2 {
     // State variables
     address internal _guardian;
     address internal _curator;
 
-    mapping(address => bool) internal _isAllocator;
     mapping(address => bool) internal _marketWhitelist;
+    mapping(address => bool) internal _poolWhitelist;
     mapping(address => PendingUint192) internal _pendingMarkets;
+    mapping(address => PendingUint192) internal _pendingPools;
 
     PendingUint192 internal _pendingTimelock;
     PendingUint192 internal _pendingPerformanceFeeRate;
@@ -31,10 +38,9 @@ contract VaultStorageV2 {
 
     /// @dev A mapping from collateral address to bad debt
     mapping(address => uint256) internal _badDebtMapping;
-    /// @dev A mapping from order address to their order information
-    /// @dev The order information includes the market address, the ft token address,
-    ///      the xt token, the maximum supply, and the maturity
-    mapping(address => OrderInfo) internal _orderMapping;
+
+    /// @dev A mapping from order address to its maturity
+    mapping(address => uint256) internal _orderMaturityMapping;
 
     /// @dev A one-way linked list presented using a mapping structure, recorded in order according to matiruty
     /// @dev The key is the maturity, and the value is the next maturity

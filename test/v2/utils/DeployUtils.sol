@@ -19,7 +19,8 @@ import {IOracle} from "contracts/v1/oracle/IOracle.sol";
 import {MockOrderV2} from "contracts/v2/test/MockOrderV2.sol";
 import {VaultFactory, IVaultFactory} from "contracts/v1/factory/VaultFactory.sol";
 import {OrderManagerV2} from "contracts/v2/vault/OrderManagerV2.sol";
-import {TermMaxVaultV2, ITermMaxVault} from "contracts/v2/vault/TermMaxVaultV2.sol";
+import {TermMaxVaultV2} from "contracts/v2/vault/TermMaxVaultV2.sol";
+import {ITermMaxVault} from "contracts/v1/vault/ITermMaxVault.sol";
 import {AccessManager} from "contracts/v2/access/AccessManagerV2.sol";
 import {
     VaultInitialParams,

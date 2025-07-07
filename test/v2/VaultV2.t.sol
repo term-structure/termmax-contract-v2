@@ -35,14 +35,13 @@ import {
     IOracle
 } from "contracts/v1/storage/TermMaxStorage.sol";
 import {
-    ITermMaxVault,
     ITermMaxVaultV2,
     TermMaxVaultV2,
     VaultErrors,
     VaultEvents,
-    VaultConstants,
-    OrderInfo
+    VaultConstants
 } from "contracts/v2/vault/TermMaxVaultV2.sol";
+import {ITermMaxVault, OrderInfo} from "contracts/v1/vault/ITermMaxVault.sol";
 import {PendingUint192, PendingLib} from "contracts/v1/lib/PendingLib.sol";
 import {VaultErrorsV2} from "contracts/v2/errors/VaultErrorsV2.sol";
 import {IPausable} from "contracts/v1/access/AccessManager.sol";

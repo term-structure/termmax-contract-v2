@@ -21,7 +21,8 @@ import {MarketConfig, FeeConfig, MarketInitialParams} from "contracts/v1/storage
 import {IOwnable, IPausable, AccessManagerV2, AccessManager} from "contracts/v2/access/AccessManagerV2.sol";
 import {TermMaxRouterV2} from "contracts/v2/router/TermMaxRouterV2.sol";
 import {ITermMaxRouter} from "contracts/v1/router/ITermMaxRouter.sol";
-import {ITermMaxVault, TermMaxVaultV2} from "contracts/v2/vault/TermMaxVaultV2.sol";
+import {TermMaxVaultV2} from "contracts/v2/vault/TermMaxVaultV2.sol";
+import {ITermMaxVault} from "contracts/v1/vault/ITermMaxVault.sol";
 import {Constants} from "contracts/v1/lib/Constants.sol";
 import "contracts/v1/storage/TermMaxStorage.sol";
 import {IOracleV2} from "contracts/v2/oracle/IOracleV2.sol";

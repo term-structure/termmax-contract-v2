@@ -15,7 +15,8 @@ import {IMintableERC20} from "contracts/v1/tokens/IMintableERC20.sol";
 import {SwapAdapter} from "contracts/v1/test/testnet/SwapAdapter.sol";
 import {IOracleV2, OracleAggregatorV2} from "contracts/v2/oracle/OracleAggregatorV2.sol";
 import {IOrderManager, OrderManager} from "contracts/v1/vault/OrderManager.sol";
-import {ITermMaxVault, ITermMaxVaultV2, TermMaxVaultV2} from "contracts/v2/vault/TermMaxVaultV2.sol";
+import {ITermMaxVaultV2, TermMaxVaultV2} from "contracts/v2/vault/TermMaxVaultV2.sol";
+import {ITermMaxVault} from "contracts/v1/vault/ITermMaxVault.sol";
 import {OrderManagerV2} from "contracts/v2/vault/OrderManagerV2.sol";
 import {TermMaxVaultFactoryV2} from "contracts/v2/factory/TermMaxVaultFactoryV2.sol";
 import {
