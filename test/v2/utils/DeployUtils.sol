@@ -20,7 +20,6 @@ import {MockOrderV2} from "contracts/v2/test/MockOrderV2.sol";
 import {VaultFactory, IVaultFactory} from "contracts/v1/factory/VaultFactory.sol";
 import {OrderManagerV2} from "contracts/v2/vault/OrderManagerV2.sol";
 import {TermMaxVaultV2} from "contracts/v2/vault/TermMaxVaultV2.sol";
-import {ITermMaxVault} from "contracts/v1/vault/ITermMaxVault.sol";
 import {AccessManager} from "contracts/v2/access/AccessManagerV2.sol";
 import {
     VaultInitialParams,
@@ -51,7 +50,7 @@ library DeployUtils {
     }
 
     struct Res {
-        ITermMaxVault vault;
+        TermMaxVaultV2 vault;
         IVaultFactory vaultFactory;
         TermMaxFactoryV2 factory;
         TermMaxOrderV2 order;
@@ -407,12 +406,12 @@ library DeployUtils {
         router = TermMaxRouterV2(address(proxy));
     }
 
-    function deployVault(VaultInitialParamsV2 memory initialParams) public returns (ITermMaxVault vault) {
+    function deployVault(VaultInitialParamsV2 memory initialParams) public returns (TermMaxVaultV2 vault) {
         OrderManagerV2 orderManager = new OrderManagerV2();
         TermMaxVaultV2 implementation = new TermMaxVaultV2(address(orderManager));
         TermMaxVaultFactoryV2 vaultFactory = new TermMaxVaultFactoryV2(address(implementation));
 
-        vault = ITermMaxVault(vaultFactory.createVault(initialParams, 0));
+        vault = TermMaxVaultV2(vaultFactory.createVault(initialParams, 0));
     }
 
     function deployAccessManager(address admin) internal returns (AccessManager accessManager) {

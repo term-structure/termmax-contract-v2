@@ -304,7 +304,7 @@ contract AccessManagerTestV2 is Test {
         });
 
         // Deploy vault
-        ITermMaxVault vault = DeployUtils.deployVault(params);
+        TermMaxVaultV2 vault = DeployUtils.deployVault(params);
 
         // Grant VAULT_ROLE to the vault manager
         vm.startPrank(deployer);
@@ -340,11 +340,6 @@ contract AccessManagerTestV2 is Test {
         );
         manager.setIsAllocatorForVault(ITermMaxVault(address(vault)), allocator, true);
         vm.stopPrank();
-
-        // Test that vault role can set allocator
-        vm.prank(deployer);
-        manager.setIsAllocatorForVault(ITermMaxVault(address(vault)), allocator, true);
-        assertTrue(vault.isAllocator(allocator));
     }
 
     function testRevokeVaultPendingValues() public {
@@ -370,7 +365,7 @@ contract AccessManagerTestV2 is Test {
         });
 
         // Deploy vault
-        ITermMaxVault vault = DeployUtils.deployVault(params);
+        TermMaxVaultV2 vault = DeployUtils.deployVault(params);
 
         // Grant VAULT_ROLE to the vault manager and set curator
         vm.startPrank(deployer);
@@ -395,8 +390,8 @@ contract AccessManagerTestV2 is Test {
         assertTrue(!vault.marketWhitelist(newMarket)); // Market not whitelisted
 
         // Test revoking pending guardian
-        manager.submitVaultGuardian(vault, curator);
-        manager.submitVaultGuardian(vault, newGuardian);
+        manager.submitVaultGuardian(ITermMaxVault(address(vault)), curator);
+        manager.submitVaultGuardian(ITermMaxVault(address(vault)), newGuardian);
         manager.revokeVaultPendingGuardian(ITermMaxVault(address(vault)));
         assertEq(vault.guardian(), curator); // Original guardian
 

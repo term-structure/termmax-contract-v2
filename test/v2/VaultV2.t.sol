@@ -9,6 +9,7 @@ import {StateChecker} from "./utils/StateChecker.sol";
 import {SwapUtils} from "./utils/SwapUtils.sol";
 import {LoanUtils} from "./utils/LoanUtils.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {IFlashLoanReceiver} from "contracts/v1/IFlashLoanReceiver.sol";
@@ -39,7 +40,10 @@ import {
     TermMaxVaultV2,
     VaultErrors,
     VaultEvents,
-    VaultConstants
+    VaultErrorsV2,
+    VaultEventsV2,
+    VaultConstants,
+    OrderV2ConfigurationParams
 } from "contracts/v2/vault/TermMaxVaultV2.sol";
 import {ITermMaxVault, OrderInfo} from "contracts/v1/vault/ITermMaxVault.sol";
 import {PendingUint192, PendingLib} from "contracts/v1/lib/PendingLib.sol";
@@ -60,13 +64,12 @@ contract VaultTestV2 is Test {
 
     address deployer = vm.randomAddress();
     address curator = vm.randomAddress();
-    address allocator = vm.randomAddress();
     address guardian = vm.randomAddress();
     address lper = vm.randomAddress();
     address treasurer = vm.randomAddress();
     string testdata;
 
-    ITermMaxVault vault;
+    TermMaxVaultV2 vault;
 
     uint256 timelock = 86400;
     uint256 maxCapacity = 1000000e18;
@@ -142,8 +145,6 @@ contract VaultTestV2 is Test {
 
         vm.label(address(vault), "vault");
         vm.label(guardian, "guardian");
-        vault.setIsAllocator(allocator, true);
-        vm.label(allocator, "allocator");
         vm.label(curator, "curator");
         vm.label(deployer, "deployer");
         vm.label(lper, "lper");
@@ -162,7 +163,15 @@ contract VaultTestV2 is Test {
         vault.deposit(amount, deployer);
         assertEq(res.debt.balanceOf(address(vault)), amount);
 
-        res.order = TermMaxOrderV2(address(vault.createOrder(res.market, maxCapacity, amount, orderConfig.curveCuts)));
+        OrderV2ConfigurationParams memory orderConfigParams = OrderV2ConfigurationParams({
+            maxXtReserve: maxCapacity,
+            virtualXtReserve: amount,
+            liquidityChanges: amount.toInt256()
+        });
+
+        res.order = TermMaxOrderV2(
+            address(vault.createOrder(res.market, IERC4626(address(0)), orderConfigParams, orderConfig.curveCuts))
+        );
         vm.label(address(res.order), "order");
         res.debt.mint(deployer, 10000e18);
         res.debt.approve(address(res.market), 10000e18);
@@ -174,7 +183,6 @@ contract VaultTestV2 is Test {
         // Test initial roles
         assertEq(vault.guardian(), guardian);
         assertEq(vault.curator(), curator);
-        assertTrue(vault.isAllocator(allocator));
 
         // Test guardian role checks
         vm.startPrank(deployer);
@@ -204,18 +212,13 @@ contract VaultTestV2 is Test {
         address newCurator = address(0x456);
         vault.setCurator(newCurator);
         assertEq(vault.curator(), newCurator);
-
-        // Test allocator management
-        vm.prank(deployer);
-        address newAllocator = address(0x789);
-        vault.setIsAllocator(newAllocator, true);
-        assertTrue(vault.isAllocator(newAllocator));
     }
 
     function test_RevertSetGuardian() public {
         address newGuardian = address(0x123);
-        vm.prank(allocator);
-        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, allocator));
+        address alice = vm.randomAddress();
+        vm.prank(alice);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, alice));
         vault.submitGuardian(newGuardian);
 
         vm.startPrank(deployer);
@@ -298,18 +301,21 @@ contract VaultTestV2 is Test {
     }
 
     function test_RevertCreateOrder() public {
-        ITermMaxMarket market = ITermMaxMarket(address(0x123));
+        ITermMaxMarketV2 market = ITermMaxMarketV2(address(0x123));
         address bob = lper;
         vm.startPrank(bob);
 
+        OrderV2ConfigurationParams memory orderConfigParams =
+            OrderV2ConfigurationParams({maxXtReserve: maxCapacity, virtualXtReserve: 0, liquidityChanges: 0});
+
         vm.expectRevert(VaultErrors.NotCuratorRole.selector);
-        vault.createOrder(market, maxCapacity, 0, orderConfig.curveCuts);
+        vault.createOrder(market, IERC4626(address(0)), orderConfigParams, orderConfig.curveCuts);
 
         vm.stopPrank();
 
         vm.startPrank(curator);
         vm.expectRevert(VaultErrors.MarketNotWhitelisted.selector);
-        vault.createOrder(market, maxCapacity, 0, orderConfig.curveCuts);
+        vault.createOrder(market, IERC4626(address(0)), orderConfigParams, orderConfig.curveCuts);
         vm.stopPrank();
     }
 
@@ -442,97 +448,6 @@ contract VaultTestV2 is Test {
         vm.stopPrank();
     }
 
-    function testSupplyQueue() public {
-        vm.expectRevert(VaultErrorsV2.SupplyQueueNoLongerSupported.selector);
-        vault.supplyQueueLength();
-
-        vm.expectRevert(VaultErrorsV2.SupplyQueueNoLongerSupported.selector);
-        vault.supplyQueue(0);
-
-        vm.startPrank(curator);
-        uint256[] memory indexes = new uint256[](2);
-        vm.expectRevert(VaultErrorsV2.SupplyQueueNoLongerSupported.selector);
-        vault.updateSupplyQueue(indexes);
-
-        vm.stopPrank();
-    }
-
-    function testWithdrawQueue() public {
-        vm.expectRevert(VaultErrorsV2.WithdrawalQueueNoLongerSupported.selector);
-        vault.withdrawQueueLength();
-
-        vm.expectRevert(VaultErrorsV2.WithdrawalQueueNoLongerSupported.selector);
-        vault.withdrawQueue(0);
-
-        vm.startPrank(curator);
-        uint256[] memory indexes = new uint256[](2);
-        vm.expectRevert(VaultErrorsV2.WithdrawalQueueNoLongerSupported.selector);
-        vault.updateWithdrawQueue(indexes);
-
-        vm.stopPrank();
-    }
-
-    function shuffle(uint256[] memory arr, uint256 seed) public pure returns (uint256[] memory) {
-        uint256 length = arr.length;
-
-        for (uint256 i = length - 1; i > 0; i--) {
-            uint256 j = seed % (i + 1);
-
-            uint256 temp = arr[i];
-            arr[i] = arr[j];
-            arr[j] = temp;
-        }
-
-        return arr;
-    }
-
-    function testUpdateOrder() public {
-        vm.startPrank(curator);
-        ITermMaxOrder[] memory orders = new ITermMaxOrder[](3);
-        orders[0] = res.order;
-        orders[1] = vault.createOrder(res.market, maxCapacity, 0, orderConfig.curveCuts);
-        orders[2] = vault.createOrder(res.market, maxCapacity, 0, orderConfig.curveCuts);
-
-        int256[] memory changes = new int256[](3);
-        changes[0] = -3000;
-        changes[1] = 2000;
-        changes[2] = 1000;
-
-        uint256[] memory maxSupplies = new uint256[](3);
-        maxSupplies[0] = maxCapacity - 1;
-        maxSupplies[1] = maxCapacity + 1;
-        maxSupplies[2] = maxCapacity;
-
-        CurveCuts[] memory curveCuts = new CurveCuts[](3);
-        CurveCuts memory newCurveCuts = orderConfig.curveCuts;
-        newCurveCuts.lendCurveCuts[0].liqSquare++;
-        curveCuts[0] = newCurveCuts;
-        newCurveCuts.lendCurveCuts[0].liqSquare++;
-        curveCuts[1] = newCurveCuts;
-        newCurveCuts.lendCurveCuts[0].liqSquare++;
-        curveCuts[2] = newCurveCuts;
-
-        uint256[] memory balancesBefore = new uint256[](3);
-        balancesBefore[0] = res.ft.balanceOf(address(orders[0]));
-        balancesBefore[1] = res.ft.balanceOf(address(orders[1]));
-        balancesBefore[2] = res.ft.balanceOf(address(orders[2]));
-        vault.updateOrders(orders, changes, maxSupplies, curveCuts);
-
-        for (uint256 i = 0; i < orders.length; i++) {
-            assertEq(orders[i].orderConfig().maxXtReserve, maxSupplies[i]);
-            if (changes[i] < 0) {
-                assertEq(res.ft.balanceOf(address(orders[i])), balancesBefore[i] - (-changes[i]).toUint256());
-            } else {
-                assertEq(res.ft.balanceOf(address(orders[i])), balancesBefore[i] + changes[i].toUint256());
-            }
-            assertEq(
-                orders[i].orderConfig().curveCuts.lendCurveCuts[0].liqSquare, curveCuts[i].lendCurveCuts[0].liqSquare
-            );
-        }
-
-        vm.stopPrank();
-    }
-
     function testDeposit() public {
         vm.warp(currentTime + 2 days);
         buyXt(48.219178e8, 1000e8);
@@ -553,7 +468,7 @@ contract VaultTestV2 is Test {
     function testDepositWhenNoOrders() public {
         initialParams.name = "Vault-DAI2";
         initialParams.symbol = "Vault-DAI2";
-        ITermMaxVault vault2 = DeployUtils.deployVault(initialParams);
+        TermMaxVaultV2 vault2 = DeployUtils.deployVault(initialParams);
         vm.startPrank(deployer);
         uint256 amount = 10000e8;
         res.debt.mint(deployer, amount);
@@ -936,7 +851,10 @@ contract VaultTestV2 is Test {
 
     function testFixFindings101() public {
         vm.prank(curator);
-        vault.createOrder(res.market, maxCapacity, 0, orderConfig.curveCuts);
+        OrderV2ConfigurationParams memory orderConfigParams =
+            OrderV2ConfigurationParams({maxXtReserve: maxCapacity, virtualXtReserve: 0, liquidityChanges: 0});
+
+        vault.createOrder(res.market, IERC4626(address(0)), orderConfigParams, orderConfig.curveCuts);
         lper = vm.randomAddress();
 
         res.debt.mint(lper, 100 ether);
@@ -957,17 +875,21 @@ contract VaultTestV2 is Test {
         daysToMaturity = (res.market.config().maturity - _now + Constants.SECONDS_IN_DAY - 1) / Constants.SECONDS_IN_DAY;
     }
 
-    function _depositToOrder(ITermMaxVault vault, ITermMaxOrder order, int256 amount) internal {
+    function _depositToOrder(TermMaxVaultV2 vault, TermMaxOrderV2 order, int256 amount) internal {
         vm.startPrank(vault.curator());
-        CurveCuts[] memory curveCuts = new CurveCuts[](1);
-        curveCuts[0] = order.orderConfig().curveCuts;
-        int256[] memory amounts = new int256[](1);
-        amounts[0] = amount;
-        ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
-        orders[0] = order;
-        uint256[] memory maxSupplies = new uint256[](1);
-        maxSupplies[0] = maxCapacity;
-        vault.updateOrders(orders, amounts, maxSupplies, curveCuts);
+
+        uint256 currentCapacity = order.virtualXtReserve();
+        currentCapacity = amount > 0 ? currentCapacity + uint256(amount) : currentCapacity - uint256(-amount);
+        OrderV2ConfigurationParams[] memory orderConfigParamsArray = new OrderV2ConfigurationParams[](1);
+        orderConfigParamsArray[0] = OrderV2ConfigurationParams({
+            maxXtReserve: maxCapacity,
+            virtualXtReserve: currentCapacity,
+            liquidityChanges: amount
+        });
+        address[] memory orders = new address[](1);
+        orders[0] = address(order);
+
+        vault.updateOrdersConfigAndLiquidity(orders, orderConfigParamsArray);
         vm.stopPrank();
     }
 

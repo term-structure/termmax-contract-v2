@@ -16,7 +16,7 @@ import {MathLib} from "../../v1/lib/MathLib.sol";
 import {LinkedList} from "../../v1/lib/LinkedList.sol";
 import {IOrderManager} from "../../v1/vault/IOrderManager.sol";
 import {ISwapCallback} from "../../v1/ISwapCallback.sol";
-import {OrderInfo, VaultStorageV2, OrderV2ConfigurationParams} from "./VaultStorageV2.sol";
+import {VaultStorageV2, OrderV2ConfigurationParams} from "./VaultStorageV2.sol";
 import {VaultErrorsV2} from "../errors/VaultErrorsV2.sol";
 import {VaultEventsV2} from "../events/VaultEventsV2.sol";
 import {ITermMaxOrderV2} from "../ITermMaxOrderV2.sol";
@@ -67,7 +67,10 @@ contract OrderManagerV2 is VaultStorageV2, OnlyProxyCall, IOrderManagerV2 {
     }
 
     function _checkPool(IERC4626 pool) internal view {
-        require(_poolWhitelist[address(pool)], VaultErrorsV2.PoolNotWhitelisted(address(pool)));
+        require(
+            address(pool) == address(0) || _poolWhitelist[address(pool)],
+            VaultErrorsV2.PoolNotWhitelisted(address(pool))
+        );
     }
 
     function updateOrdersConfigAndLiquidity(

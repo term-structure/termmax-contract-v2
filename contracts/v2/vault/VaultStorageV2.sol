@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.27;
+pragma solidity ^0.8.0;
 
 import {PendingAddress, PendingUint192} from "../../v1/lib/PendingLib.sol";
-import {OrderInfo} from "../../v1/vault/VaultStorage.sol";
 
 struct OrderV2ConfigurationParams {
     uint256 maxXtReserve;
