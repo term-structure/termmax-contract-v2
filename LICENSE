@@ -60,13 +60,13 @@ The Business Source License (this document, or the "License") is not an Open Sou
 This project incorporates code from or depends upon the following projects:
 
 ### GPL-licensed dependencies:
-- **Uniswap V3 Core and Periphery** ([v3-core](https://github.com/Uniswap/v3-core), [v3-periphery](https://github.com/Uniswap/v3-periphery)), licensed under GPL-2.0-or-later
-- **Morpho's MetaMorpho** ([metamorpho](https://github.com/morpho-org/metamorpho)), licensed under GPL-2.0
+- **Uniswap V3 Core and Periphery** (use its interface for the AMM model without modification to the dependency) ([v3-core](https://github.com/Uniswap/v3-core), [v3-periphery](https://github.com/Uniswap/v3-periphery)), licensed under GPL-2.0-or-later
+- **Morpho's MetaMorpho**( use its interface to swap tokens on Morpho without modification to the dependency) ([metamorpho](https://github.com/morpho-org/metamorpho)), licensed under GPL-2.0
+- **Pendle Core V2** (use its interface to swap tokens on Pendle without modification to the dependency) ([pendle-core-v2-public](https://github.com/pendle-finance/pendle-core-v2-public)), licensed under GPL-3.0-or-later
 
-### Other dependencies:
+### MIT-licensed dependencies:
 - **OpenZeppelin Contracts** ([openzeppelin-contracts](https://github.com/OpenZeppelin/openzeppelin-contracts), [openzeppelin-contracts-upgradeable](https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable)), licensed under MIT
 - **Chainlink** ([chainlink](https://github.com/smartcontractkit/chainlink)), licensed under MIT
-- **Pendle Core V2** ([pendle-core-v2-public](https://github.com/pendle-finance/pendle-core-v2-public)), licensed under BUSL-1.1
 - **Foundry's forge-std** ([forge-std](https://github.com/foundry-rs/forge-std)), licensed under MIT
 
 Users of this software must comply with the terms of all applicable licenses.
