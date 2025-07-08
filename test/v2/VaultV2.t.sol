@@ -1022,7 +1022,6 @@ contract VaultTestV2 is Test {
         uint256 apy = vaultV2.apy();
         uint256 annualizedInterest = vault.annualizedInterest();
         uint256 accretingPrincipal = vault.accretingPrincipal();
-        uint256 performanceFeeRate = vault.performanceFeeRate();
 
         // APY should be calculated as: (annualizedInterest * (1 - performanceFeeRate)) / accretingPrincipal
         uint256 expectedApy = (annualizedInterest * (Constants.DECIMAL_BASE - performanceFeeRate)) / accretingPrincipal;
@@ -1259,8 +1258,6 @@ contract VaultTestV2 is Test {
     // ========== Tests for ITermMaxVaultV2 nonTxReentrantBetweenActions ==========
     /// @dev remove --isolate to run this test
     function testMultipleDeposits() public {
-        ITermMaxVaultV2 vaultV2 = ITermMaxVaultV2(address(vault));
-
         // Initial deposit
         vm.startPrank(deployer);
         res.debt.mint(deployer, 1000e8);
@@ -1278,8 +1275,6 @@ contract VaultTestV2 is Test {
 
     /// @dev remove --isolate to run this test
     function testMultipleWithdrawals() public {
-        ITermMaxVaultV2 vaultV2 = ITermMaxVaultV2(address(vault));
-
         _depositToOrder(vault, res.order, -10e8.toInt256());
 
         // First withdrawal
