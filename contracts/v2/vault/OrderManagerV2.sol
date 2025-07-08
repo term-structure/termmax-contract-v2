@@ -14,7 +14,6 @@ import {Constants} from "../../v1/lib/Constants.sol";
 import {ArrayUtils} from "../../v1/lib/ArrayUtils.sol";
 import {MathLib} from "../../v1/lib/MathLib.sol";
 import {LinkedList} from "../../v1/lib/LinkedList.sol";
-import {IOrderManager} from "../../v1/vault/IOrderManager.sol";
 import {ISwapCallback} from "../../v1/ISwapCallback.sol";
 import {VaultStorageV2, OrderV2ConfigurationParams} from "./VaultStorageV2.sol";
 import {VaultErrorsV2} from "../errors/VaultErrorsV2.sol";
@@ -118,11 +117,14 @@ contract OrderManagerV2 is VaultStorageV2, OnlyProxyCall, IOrderManagerV2 {
         if (badDebt != 0) {
             // store bad debt
             ITermMaxMarket market = ITermMaxOrder(order).market();
-            (,,, address collateral,) = market.tokens();
+            (,,, address collateral, IERC20 debtToken) = market.tokens();
             _badDebtMapping[collateral] += badDebt;
-            // transfer collateral to the vault
-            deliveryCollateral = abi.decode(deliveryData, (uint256));
-            ITermMaxOrder(order).withdrawAssets(IERC20(collateral), address(this), deliveryCollateral);
+            // That means the order use pool if the debt token is not the same as the asset
+            if (debtToken != asset) {
+                // transfer collateral to the vault
+                deliveryCollateral = abi.decode(deliveryData, (uint256));
+                ITermMaxOrder(order).withdrawAssets(IERC20(collateral), address(this), deliveryCollateral);
+            }
         }
         delete _orderMaturityMapping[order];
         emit VaultEventsV2.RedeemOrder(msg.sender, order, badDebt, deliveryCollateral);
@@ -153,6 +155,7 @@ contract OrderManagerV2 is VaultStorageV2, OnlyProxyCall, IOrderManagerV2 {
             uint256 initialReserve = uint256(params.liquidityChanges);
             asset.safeIncreaseAllowance(address(order), initialReserve);
             ITermMaxOrderV2(address(order)).addLiquidity(asset, initialReserve);
+            _checkIdleFundRate(asset);
         }
         uint64 orderMaturity = ITermMaxMarket(address(market)).config().maturity;
         _orderMaturityMapping[address(order)] = orderMaturity;

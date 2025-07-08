@@ -314,7 +314,7 @@ contract VaultTestV2 is Test {
         vm.stopPrank();
 
         vm.startPrank(curator);
-        vm.expectRevert(VaultErrors.MarketNotWhitelisted.selector);
+        vm.expectRevert(abi.encodeWithSelector(VaultErrorsV2.MarketNotWhitelisted.selector, address(market)));
         vault.createOrder(market, IERC4626(address(0)), orderConfigParams, orderConfig.curveCuts);
         vm.stopPrank();
     }
@@ -536,19 +536,14 @@ contract VaultTestV2 is Test {
         vm.stopPrank();
 
         vm.startPrank(curator);
-        ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
-        orders[0] = res.order;
+        address[] memory orders = new address[](1);
+        orders[0] = address(res.order);
 
-        int256[] memory changes = new int256[](1);
-        changes[0] = -1000e8;
+        OrderV2ConfigurationParams[] memory orderConfigParamsArray = new OrderV2ConfigurationParams[](1);
+        orderConfigParamsArray[0] =
+            OrderV2ConfigurationParams({maxXtReserve: maxCapacity, virtualXtReserve: 0, liquidityChanges: -1000e8});
 
-        uint256[] memory maxSupplies = new uint256[](1);
-        maxSupplies[0] = maxCapacity;
-
-        CurveCuts[] memory curveCuts = new CurveCuts[](1);
-        curveCuts[0] = orderConfig.curveCuts;
-
-        vault.updateOrders(orders, changes, maxSupplies, curveCuts);
+        vault.updateOrdersConfigAndLiquidity(orders, orderConfigParamsArray);
         vm.stopPrank();
 
         vm.startPrank(deployer);
@@ -875,21 +870,16 @@ contract VaultTestV2 is Test {
         daysToMaturity = (res.market.config().maturity - _now + Constants.SECONDS_IN_DAY - 1) / Constants.SECONDS_IN_DAY;
     }
 
-    function _depositToOrder(TermMaxVaultV2 vault, TermMaxOrderV2 order, int256 amount) internal {
-        vm.startPrank(vault.curator());
+    function _depositToOrder(TermMaxVaultV2 _vault, TermMaxOrderV2 order, int256 amount) internal {
+        vm.startPrank(_vault.curator());
 
-        uint256 currentCapacity = order.virtualXtReserve();
-        currentCapacity = amount > 0 ? currentCapacity + uint256(amount) : currentCapacity - uint256(-amount);
         OrderV2ConfigurationParams[] memory orderConfigParamsArray = new OrderV2ConfigurationParams[](1);
-        orderConfigParamsArray[0] = OrderV2ConfigurationParams({
-            maxXtReserve: maxCapacity,
-            virtualXtReserve: currentCapacity,
-            liquidityChanges: amount
-        });
+        orderConfigParamsArray[0] =
+            OrderV2ConfigurationParams({maxXtReserve: maxCapacity, virtualXtReserve: 0, liquidityChanges: amount});
         address[] memory orders = new address[](1);
         orders[0] = address(order);
 
-        vault.updateOrdersConfigAndLiquidity(orders, orderConfigParamsArray);
+        _vault.updateOrdersConfigAndLiquidity(orders, orderConfigParamsArray);
         vm.stopPrank();
     }
 
@@ -1231,20 +1221,18 @@ contract VaultTestV2 is Test {
         vm.startPrank(curator);
         vaultV2.submitPendingMinIdleFundRate(0.1e8); // minIdleFundRate = 10%
 
-        CurveCuts[] memory curveCuts = new CurveCuts[](1);
-        curveCuts[0] = res.order.orderConfig().curveCuts;
-        int256[] memory amounts = new int256[](1);
-        amounts[0] = -3000e8; // Withdraw 3000e8 from the order
-        ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
-        orders[0] = res.order;
-        uint256[] memory maxSupplies = new uint256[](1);
-        maxSupplies[0] = maxCapacity;
+        // Withdraw 3000e8 from the order
+        OrderV2ConfigurationParams[] memory orderConfigParams = new OrderV2ConfigurationParams[](1);
+        orderConfigParams[0] =
+            OrderV2ConfigurationParams({maxXtReserve: maxCapacity, virtualXtReserve: 0, liquidityChanges: -3000e8});
 
-        vault.updateOrders(orders, amounts, maxSupplies, curveCuts);
+        address[] memory orders = new address[](1);
+        orders[0] = address(res.order);
+        vault.updateOrdersConfigAndLiquidity(orders, orderConfigParams);
 
-        amounts[0] = 3000e8; // deposit 3000e8 from the order
+        orderConfigParams[0].liquidityChanges = 3000e8; // deposit 3000e8 from the order
         vm.expectRevert(abi.encodeWithSelector(VaultErrorsV2.IdleFundRateTooLow.selector, 0, 0.1e8));
-        vault.updateOrders(orders, amounts, maxSupplies, curveCuts);
+        vault.updateOrdersConfigAndLiquidity(orders, orderConfigParams);
 
         vm.stopPrank();
     }

@@ -36,6 +36,7 @@ contract MockOrderV2 is
     using SafeCast for uint256;
     using SafeCast for int256;
     using TransferUtils for IERC20;
+    using TransferUtils for IERC4626;
 
     ITermMaxMarket public market;
 
@@ -319,7 +320,7 @@ contract MockOrderV2 is
         _unpause();
     }
 
-    function initialize(OrderInitialParams memory params) external override {
+    function initialize(OrderInitialParams memory params) external override initializer {
         __Ownable_init_unchained(params.maker);
         __ReentrancyGuard_init_unchained();
         __Pausable_init_unchained();
@@ -352,17 +353,51 @@ contract MockOrderV2 is
 
     function setPool(IERC4626 newPool) external override {}
 
-    function addLiquidity(IERC20 asset, uint256 amount) external override {}
+    function addLiquidity(IERC20 asset, uint256 amount) external override {
+        asset.safeTransferFrom(msg.sender, address(this), amount);
+        asset.safeIncreaseAllowance(address(market), amount);
+        market.mint(address(this), amount);
+    }
 
-    function removeLiquidity(IERC20 asset, uint256 amount, address recipient) external override {}
+    function removeLiquidity(IERC20, uint256 amount, address recipient) external override {
+        market.burn(recipient, amount);
+    }
 
     function redeemAll(IERC20 asset, address recipient)
         external
         override
         returns (uint256 badDebt, bytes memory deliveryData)
-    {}
+    {
+        IERC4626 _pool = pool();
+        IERC20 _debtToken = debtToken;
+        uint256 ftBalance = ft.balanceOf(address(this));
+        uint256 received;
+        if (asset == _debtToken) {
+            (received, deliveryData) = market.redeem(ftBalance, recipient);
+            // if pool is set, redeem all shares
+            if (address(_pool) != address(0)) {
+                uint256 receivedFromPool = _pool.redeem(_pool.balanceOf(address(this)), recipient, address(this));
+                emit OrderEventsV2.LiquidityRemoved(asset, receivedFromPool);
+            } else {
+                emit OrderEventsV2.LiquidityRemoved(asset, received);
+            }
+        } else {
+            /// @dev You have to deal with the delivery data by yourself if you want to redeem to shares
+            (received, deliveryData) = market.redeem(ftBalance, address(this));
+            // if pool is set, withdraw all shares
+            _debtToken.safeIncreaseAllowance(address(_pool), received);
+            _pool.deposit(received, address(this));
+            uint256 totalShares = _pool.balanceOf(address(this));
+            _pool.safeTransfer(recipient, totalShares);
+            emit OrderEventsV2.LiquidityRemoved(asset, totalShares);
+        }
+        // Calculate bad debt
+        badDebt = ftBalance - received;
+        // Clear order configuration
+        delete _orderConfig;
+    }
 
-    function pool() external view override returns (IERC4626) {}
+    function pool() public view override returns (IERC4626) {}
 
     function virtualXtReserve() external view override returns (uint256) {}
 }
