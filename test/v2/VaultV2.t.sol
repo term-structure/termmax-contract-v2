@@ -300,6 +300,78 @@ contract VaultTestV2 is Test {
         vm.stopPrank();
     }
 
+    function testPoolWhitelist() public {
+        // check current timelock value
+        assertEq(vault.timelock(), 86400);
+
+        // submit pool
+        vm.startPrank(curator);
+        address pool = address(0x789);
+        vault.submitPool(pool, false);
+
+        assertEq(vault.poolWhitelist(pool), false);
+        vm.expectEmit();
+        emit VaultEventsV2.SubmitPoolToWhitelist(pool, uint64(block.timestamp + 86400));
+        vault.submitPool(pool, true);
+
+        assertEq(vault.poolWhitelist(pool), false);
+
+        // The validAt of the newly submitted pool is the current time + timelock
+        PendingUint192 memory pendingPool = vault.pendingPools(pool);
+        assertEq(pendingPool.validAt, block.timestamp + 86400);
+
+        vm.warp(block.timestamp + 86400 + 1);
+        vault.acceptPool(pool);
+        assertEq(vault.poolWhitelist(pool), true);
+
+        vault.submitPool(pool, false);
+        assertEq(vault.poolWhitelist(pool), false);
+        vm.stopPrank();
+
+        // Test revoke pool
+        address newPool = address(0xABC);
+        vm.prank(curator);
+        vault.submitPool(newPool, true);
+
+        vm.prank(guardian);
+        vault.revokePendingPool(newPool);
+        assertEq(vault.pendingPools(newPool).validAt, 0);
+
+        IERC4626[] memory pools = new IERC4626[](1);
+        pools[0] = IERC4626(newPool);
+
+        address[] memory orders = new address[](1);
+        orders[0] = address(res.order);
+        vm.expectRevert(abi.encodeWithSelector(VaultErrorsV2.PoolNotWhitelisted.selector, newPool));
+        vm.prank(curator);
+        vault.updateOrderPools(orders, pools);
+    }
+
+    function test_RevertSetPoolWhitelist() public {
+        address pool = address(0x789);
+
+        vm.prank(vm.randomAddress());
+        vm.expectRevert(VaultErrors.NotCuratorRole.selector);
+        vault.submitPool(pool, true);
+
+        vm.startPrank(curator);
+        vault.submitPool(pool, true);
+
+        vm.expectRevert(VaultErrors.AlreadyPending.selector);
+        vault.submitPool(pool, true);
+
+        vm.expectRevert(VaultErrors.TimelockNotElapsed.selector);
+        vault.acceptPool(pool);
+
+        vm.warp(block.timestamp + 86400 + 1);
+        vault.acceptPool(pool);
+
+        vm.expectRevert(VaultErrors.AlreadySet.selector);
+        vault.submitPool(pool, true);
+
+        vm.stopPrank();
+    }
+
     function test_RevertCreateOrder() public {
         ITermMaxMarketV2 market = ITermMaxMarketV2(address(0x123));
         address bob = lper;
