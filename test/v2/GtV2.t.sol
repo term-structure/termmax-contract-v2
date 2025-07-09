@@ -443,6 +443,24 @@ contract GtTestV2 is Test {
         vm.stopPrank();
     }
 
+    function testRepayAmtExceedsMaxRepayAmt() public {
+        uint128 debtAmt = 9000e8;
+        uint256 collateralAmt = 10e18;
+
+        vm.startPrank(sender);
+
+        (uint256 gtId,) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
+        uint128 maxRepayAmt = 10000e8;
+        res.debt.mint(sender, maxRepayAmt);
+        res.debt.approve(address(res.gt), maxRepayAmt);
+
+        uint256 debtBalanceBefore = res.debt.balanceOf(sender);
+        res.gt.repay(gtId, maxRepayAmt, true);
+        assertEq(res.debt.balanceOf(sender), debtBalanceBefore - debtAmt, "sender debt balance after repay");
+
+        vm.stopPrank();
+    }
+
     function testFlashRepay() public {
         uint128 debtAmt = 100e8;
         uint256 collateralAmt = 1e18;
@@ -1348,7 +1366,7 @@ contract GtTestV2 is Test {
         res.gt.liquidate(gtId, debtAmt, true);
     }
 
-    function testRevertByRepayAmtExceedsMaxRepayAmt() public {
+    function testLiquidateExceedsMaxRepayAmt() public {
         uint128 debtAmt = 9000e8;
         uint256 collateralAmt = 10e18;
 
@@ -1371,10 +1389,8 @@ contract GtTestV2 is Test {
         res.debt.mint(liquidator, repayAmt);
         res.debt.approve(address(res.gt), repayAmt);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(GearingTokenErrors.RepayAmtExceedsMaxRepayAmt.selector, gtId, repayAmt, maxRepayAmt)
-        );
         res.gt.liquidate(gtId, repayAmt, true);
+        assertEq(res.debt.balanceOf(liquidator), 1);
 
         vm.stopPrank();
     }
