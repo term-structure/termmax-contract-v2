@@ -445,7 +445,7 @@ abstract contract AbstractGearingTokenV2 is
         if (!config.loanConfig.liquidatable) {
             revert GtDoNotSupportLiquidation();
         }
-        (bool isLiquidable, uint128 maxRepayAmt, uint128 ltvBefore, ValueAndPrice memory valueAndPrice) =
+        (bool isLiquidable, uint128 maxRepayAmt,, ValueAndPrice memory valueAndPrice) =
             _getLiquidationInfo(loan, config);
 
         if (!isLiquidable) {
