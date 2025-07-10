@@ -478,17 +478,6 @@ abstract contract AbstractGearingTokenV2 is
         } else {
             loan.debtAmt -= repayAmt;
             loan.collateralData = remainningC;
-
-            // Check ltv after partial liquidation
-            {
-                valueAndPrice.collateralValue = _getCollateralValue(remainningC, valueAndPrice.collateralPriceData);
-                valueAndPrice.debtValueWithDecimals =
-                    (loan.debtAmt * valueAndPrice.debtPrice) / valueAndPrice.debtDenominator;
-                uint128 ltvAfter = _calculateLtv(valueAndPrice);
-                if (ltvBefore < ltvAfter) {
-                    revert LtvIncreasedAfterLiquidation(id, ltvBefore, ltvAfter);
-                }
-            }
             // update storage
             loanMapping[id] = loan;
         }
