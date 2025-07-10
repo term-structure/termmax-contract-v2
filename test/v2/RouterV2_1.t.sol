@@ -753,10 +753,10 @@ contract RouterTestV2_1 is Test {
 
         res.gt.approve(address(res.router), gtId);
         if (isV1) {
-            res.router.flashRepayFromCollForV1(sender, res.market, gtId, byDebtToken, swapPaths);
+            res.router.flashRepayFromCollForV1(sender, res.market, gtId, byDebtToken, 0, swapPaths);
         } else {
             res.router.flashRepayFromCollForV2(
-                sender, res.market, gtId, debtAmt, byDebtToken, collateralData, swapPaths
+                sender, res.market, gtId, debtAmt, byDebtToken, 0, abi.decode(collateralData, (uint256)), swapPaths
             );
         }
 
@@ -805,10 +805,10 @@ contract RouterTestV2_1 is Test {
 
         res.gt.approve(address(res.router), gtId);
         if (isV1) {
-            res.router.flashRepayFromCollForV1(sender, res.market, gtId, byDebtToken, swapPaths);
+            res.router.flashRepayFromCollForV1(sender, res.market, gtId, byDebtToken, 0, swapPaths);
         } else {
             res.router.flashRepayFromCollForV2(
-                sender, res.market, gtId, debtAmt, byDebtToken, collateralData, swapPaths
+                sender, res.market, gtId, debtAmt, byDebtToken, 0, abi.decode(collateralData, (uint256)), swapPaths
             );
         }
 
@@ -838,7 +838,7 @@ contract RouterTestV2_1 is Test {
 
         res.gt.approve(address(res.router), gtId);
         res.router.flashRepayFromCollForV2(
-            sender, res.market, gtId, debtAmt / 2, byDebtToken, collateralData, swapPaths
+            sender, res.market, gtId, debtAmt / 2, byDebtToken, 0, abi.decode(collateralData, (uint256)), swapPaths
         );
 
         assertEq(res.collateral.balanceOf(sender), 0);

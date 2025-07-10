@@ -431,6 +431,7 @@ contract TermMaxRouterV2 is
         ITermMaxMarket market,
         uint256 gtId,
         bool byDebtToken,
+        uint256 expectedOutput,
         SwapPath[] memory swapPaths
     ) external whenNotPaused returns (uint256 netTokenOut) {
         (,, IGearingToken gt,, IERC20 debtToken) = market.tokens();
@@ -439,6 +440,9 @@ contract TermMaxRouterV2 is
         callbackData = abi.encode(FlashRepayOptions.REPAY, callbackData);
         gt.flashRepay(gtId, byDebtToken, callbackData);
         netTokenOut = debtToken.balanceOf(address(this));
+        if (netTokenOut < expectedOutput) {
+            revert InsufficientTokenOut(address(debtToken), expectedOutput, netTokenOut);
+        }
         debtToken.safeTransfer(recipient, netTokenOut);
     }
 
@@ -448,19 +452,24 @@ contract TermMaxRouterV2 is
         uint256 gtId,
         uint128 repayAmt,
         bool byDebtToken,
-        bytes memory removedCollateral,
+        uint256 expectedOutput,
+        uint256 removedCollateral,
         SwapPath[] memory swapPaths
     ) external whenNotPaused returns (uint256 netTokenOut) {
         (,, IGearingToken gt,, IERC20 debtToken) = market.tokens();
         gt.safeTransferFrom(msg.sender, address(this), gtId, "");
         bytes memory callbackData = abi.encode(swapPaths);
         callbackData = abi.encode(FlashRepayOptions.REPAY, callbackData);
-        bool repayAll =
-            IGearingTokenV2(address(gt)).flashRepay(gtId, repayAmt, byDebtToken, removedCollateral, callbackData);
+        bool repayAll = IGearingTokenV2(address(gt)).flashRepay(
+            gtId, repayAmt, byDebtToken, abi.encode(removedCollateral), callbackData
+        );
         if (!repayAll) {
             gt.safeTransferFrom(address(this), msg.sender, gtId);
         }
         netTokenOut = debtToken.balanceOf(address(this));
+        if (netTokenOut < expectedOutput) {
+            revert InsufficientTokenOut(address(debtToken), expectedOutput, netTokenOut);
+        }
         debtToken.safeTransfer(recipient, netTokenOut);
     }
 

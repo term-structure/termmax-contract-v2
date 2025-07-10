@@ -188,9 +188,7 @@ contract ForkPrdFlashRepay is ForkBaseTestV2 {
             SwapPath[] memory swapPaths = new SwapPath[](1);
             swapPaths[0] =
                 SwapPath({units: swapUnits, recipient: address(router), inputAmount: 0, useBalanceOnchain: true});
-            router.flashRepayFromCollForV2(
-                borrower, market, gtId1, repayAmount, true, abi.encode(removedCollateral), swapPaths
-            );
+            router.flashRepayFromCollForV2(borrower, market, gtId1, repayAmount, true, 0, removedCollateral, swapPaths);
             console.log("usdc balance after:", IERC20(usdc).balanceOf(borrower));
 
             (address owner, uint128 currentDebt, bytes memory currentCollateral) = gt.loanInfo(gtId1);
@@ -257,7 +255,7 @@ contract ForkPrdFlashRepay is ForkBaseTestV2 {
             SwapPath[] memory swapPaths = new SwapPath[](1);
             swapPaths[0] =
                 SwapPath({units: swapUnits, recipient: address(router2), inputAmount: 0, useBalanceOnchain: true});
-            router2.flashRepayFromCollForV1(borrower, mmay_30, gt1, true, swapPaths);
+            router2.flashRepayFromCollForV1(borrower, mmay_30, gt1, true, 0, swapPaths);
             console.log("usdc balance after:", IERC20(usdc).balanceOf(borrower));
             vm.stopPrank();
         }

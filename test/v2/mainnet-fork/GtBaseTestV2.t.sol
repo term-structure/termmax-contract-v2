@@ -410,8 +410,9 @@ abstract contract GtBaseTestV2 is ForkBaseTestV2 {
         swapPaths[0] = SwapPath({units: units, recipient: address(res.router), inputAmount: 0, useBalanceOnchain: true});
 
         (, uint128 debtAmt, bytes memory collateralData) = res.gt.loanInfo(gtId);
-        uint256 netTokenOut =
-            res.router.flashRepayFromCollForV2(taker, res.market, gtId, debtAmt, byDebtToken, collateralData, swapPaths);
+        uint256 netTokenOut = res.router.flashRepayFromCollForV2(
+            taker, res.market, gtId, debtAmt, byDebtToken, 0, abi.decode(collateralData, (uint256)), swapPaths
+        );
 
         uint256 debtTokenBalanceAfterRepay = res.debtToken.balanceOf(taker);
 
@@ -457,8 +458,9 @@ abstract contract GtBaseTestV2 is ForkBaseTestV2 {
         swapPaths[0] =
             SwapPath({units: units2, recipient: address(res.router), inputAmount: 0, useBalanceOnchain: true});
 
-        uint256 netTokenOut =
-            res.router.flashRepayFromCollForV2(taker, res.market, gtId, debtAmt, byDebtToken, collateralData, swapPaths);
+        uint256 netTokenOut = res.router.flashRepayFromCollForV2(
+            taker, res.market, gtId, debtAmt, byDebtToken, 0, abi.decode(collateralData, (uint256)), swapPaths
+        );
 
         uint256 debtTokenBalanceAfterRepay = res.debtToken.balanceOf(taker);
 
