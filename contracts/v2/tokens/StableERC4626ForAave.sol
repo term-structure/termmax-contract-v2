@@ -1,7 +1,9 @@
 // SPDX-License-Identifier:  BUSL-1.1
 pragma solidity ^0.8.27;
 
-import {ERC4626Upgradeable, Math} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC4626Upgradeable.sol";
+import {
+    ERC4626Upgradeable, Math
+} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC4626Upgradeable.sol";
 import {
     OwnableUpgradeable,
     Ownable2StepUpgradeable
@@ -74,7 +76,9 @@ contract StableERC4626ForAave is
         override
         nonReentrant
     {
-        IERC20(asset()).safeTransferFrom(caller, address(this), assets);
+        IERC20 assetToken = IERC20(asset());
+        assetToken.safeTransferFrom(caller, address(this), assets);
+        _depositWithBuffer(address(assetToken));
         _mint(recipient, shares);
 
         emit Deposit(caller, recipient, assets, shares);
@@ -149,7 +153,9 @@ contract StableERC4626ForAave is
     function _updateBufferConfig(BufferConfig memory bufferConfig_) internal {
         _checkBufferConfig(bufferConfig_.minimumBuffer, bufferConfig_.maximumBuffer, bufferConfig_.buffer);
         bufferConfig = BufferConfig(bufferConfig_.minimumBuffer, bufferConfig_.maximumBuffer, bufferConfig_.buffer);
-        emit ERC4626ForAaveEvents.UpdateBufferConfig(bufferConfig_.minimumBuffer, bufferConfig_.maximumBuffer, bufferConfig_.buffer);
+        emit ERC4626ForAaveEvents.UpdateBufferConfig(
+            bufferConfig_.minimumBuffer, bufferConfig_.maximumBuffer, bufferConfig_.buffer
+        );
     }
 
     function _bufferConfig(address) internal view virtual override returns (BufferConfig memory) {

@@ -60,7 +60,9 @@ contract VariableERC4626ForAave is
         override
         nonReentrant
     {
-        IERC20(asset()).safeTransferFrom(caller, address(this), assets);
+        IERC20 assetToken = IERC20(asset());
+        assetToken.safeTransferFrom(caller, address(this), assets);
+        _depositWithBuffer(address(assetToken));
         _mint(recipient, shares);
 
         emit Deposit(caller, recipient, assets, shares);

@@ -33,7 +33,6 @@ import {
 import {VaultInitialParamsV2} from "contracts/v2/storage/TermMaxStorageV2.sol";
 import {TermMaxVaultFactoryV2} from "contracts/v2/factory/TermMaxVaultFactoryV2.sol";
 import {MockAave} from "contracts/v2/test/MockAave.sol";
-import {TermMaxToken, StakingBuffer} from "contracts/v2/tokens/TermMaxToken.sol";
 
 library DeployUtils {
     bytes32 constant GT_ERC20 = keccak256("GearingTokenWithERC20");
@@ -68,7 +67,6 @@ library DeployUtils {
         MockERC20 debt;
         SwapRange swapRange;
         MockAave aave;
-        TermMaxToken tmxToken;
     }
 
     function deployMarket(address admin, MarketConfig memory marketConfig, uint32 maxLtv, uint32 liquidationLtv)
@@ -106,68 +104,6 @@ library DeployUtils {
         MarketInitialParams memory initialParams = MarketInitialParams({
             collateral: address(res.collateral),
             debtToken: res.debt,
-            admin: admin,
-            gtImplementation: address(0),
-            marketConfig: marketConfig,
-            loanConfig: LoanConfig({
-                oracle: IOracle(address(res.oracle)),
-                liquidationLtv: liquidationLtv,
-                maxLtv: maxLtv,
-                liquidatable: true
-            }),
-            gtInitalParams: abi.encode(type(uint256).max),
-            tokenName: "DAI-ETH",
-            tokenSymbol: "DAI-ETH"
-        });
-
-        res.marketConfig = marketConfig;
-        res.market = TermMaxMarketV2(res.factory.createMarket(GT_ERC20, initialParams, 0));
-
-        (res.ft, res.xt, res.gt,,) = res.market.tokens();
-    }
-
-    function deployTermMaxTokenMarket(
-        address admin,
-        MarketConfig memory marketConfig,
-        uint32 maxLtv,
-        uint32 liquidationLtv
-    ) internal returns (Res memory res) {
-        res.factory = deployFactory(admin);
-        res.aave = new MockAave(admin);
-
-        res.collateral = new MockERC20("ETH", "ETH", 18);
-
-        MockERC20 uderlying = new MockERC20("DAI", "DAI", 8);
-        res.tmxToken = deployTermMaxToken(admin, address(res.aave), address(uderlying));
-
-        res.debt = uderlying;
-
-        res.debtOracle = new MockPriceFeed(admin);
-        res.collateralOracle = new MockPriceFeed(admin);
-        res.oracle = deployOracle(admin, 0);
-
-        res.oracle.submitPendingOracle(
-            address(res.tmxToken), IOracleV2.Oracle(res.debtOracle, res.debtOracle, 0, 0, 365 days, 0)
-        );
-        res.oracle.submitPendingOracle(
-            address(res.collateral), IOracleV2.Oracle(res.collateralOracle, res.collateralOracle, 0, 0, 365 days, 0)
-        );
-
-        res.oracle.acceptPendingOracle(address(res.tmxToken));
-        res.oracle.acceptPendingOracle(address(res.collateral));
-
-        MockPriceFeed.RoundData memory roundData = MockPriceFeed.RoundData({
-            roundId: 1,
-            answer: int256(1e1 ** res.collateralOracle.decimals()),
-            startedAt: 0,
-            updatedAt: 0,
-            answeredInRound: 0
-        });
-        res.collateralOracle.updateRoundData(roundData);
-
-        MarketInitialParams memory initialParams = MarketInitialParams({
-            collateral: address(res.collateral),
-            debtToken: res.tmxToken,
             admin: admin,
             gtImplementation: address(0),
             marketConfig: marketConfig,
@@ -375,17 +311,6 @@ library DeployUtils {
         address orderImplementation = address(new TermMaxOrderV2());
         TermMaxMarketV2 m = new TermMaxMarketV2(tokenImplementation, orderImplementation);
         factory = new TermMaxFactoryV2(admin, address(m));
-    }
-
-    function deployTermMaxToken(address admin, address aave, address underlying)
-        public
-        returns (TermMaxToken tmxToken)
-    {
-        address tokenImplementation = address(new TermMaxToken(aave, 0));
-        StakingBuffer.BufferConfig memory bufferConfig;
-        bytes memory data = abi.encodeCall(TermMaxToken.initialize, (admin, underlying, bufferConfig));
-        ERC1967Proxy proxy = new ERC1967Proxy(address(tokenImplementation), data);
-        tmxToken = TermMaxToken(address(proxy));
     }
 
     function deployFactoryWithMockOrder(address admin) public returns (TermMaxFactoryV2 factory) {
