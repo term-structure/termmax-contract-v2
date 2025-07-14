@@ -30,6 +30,7 @@ import {TransferUtils} from "../v1/lib/TransferUtils.sol";
 import {ITermMaxMarket, IMintableERC20, IERC20} from "../v1/ITermMaxMarket.sol";
 import {IMintableERC20V2} from "./tokens/IMintableERC20V2.sol";
 import {ITermMaxOrderV2} from "./ITermMaxOrderV2.sol";
+import {VersionV2} from "./VersionV2.sol";
 
 /**
  * @title TermMax Market V2
@@ -41,7 +42,8 @@ contract TermMaxMarketV2 is
     ReentrancyGuardUpgradeable,
     Ownable2StepUpgradeable,
     MarketErrors,
-    MarketEvents
+    MarketEvents,
+    VersionV2
 {
     using SafeCast for uint256;
     using SafeCast for int256;

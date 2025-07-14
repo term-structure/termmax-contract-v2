@@ -36,6 +36,7 @@ import {Constants} from "../../v1/lib/Constants.sol";
 import {ITermMaxVaultV2} from "./ITermMaxVaultV2.sol";
 import {VaultErrorsV2} from "../errors/VaultErrorsV2.sol";
 import {TransactionReentrancyGuard} from "../lib/TransactionReentrancyGuard.sol";
+import {VersionV2} from "../VersionV2.sol";
 
 contract TermMaxVaultV2 is
     VaultStorageV2,
@@ -45,7 +46,8 @@ contract TermMaxVaultV2 is
     PausableUpgradeable,
     ISwapCallback,
     ITermMaxVaultV2,
-    TransactionReentrancyGuard
+    TransactionReentrancyGuard,
+    VersionV2
 {
     using SafeCast for uint256;
     using TransferUtils for IERC20;

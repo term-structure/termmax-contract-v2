@@ -16,6 +16,7 @@ import {GearingTokenEvents} from "../../v1/events/GearingTokenEvents.sol";
 import {GtConfig, IOracle} from "../../v1/storage/TermMaxStorage.sol";
 import {IGearingTokenV2} from "./IGearingTokenV2.sol";
 import {GearingTokenEventsV2} from "../events/GearingTokenEventsV2.sol";
+import {VersionV2} from "../VersionV2.sol";
 
 /**
  * @title TermMax Gearing Token
@@ -29,7 +30,8 @@ abstract contract AbstractGearingTokenV2 is
     IGearingTokenV2,
     GearingTokenErrors,
     GearingTokenEvents,
-    GearingTokenEventsV2
+    GearingTokenEventsV2,
+    VersionV2
 {
     using SafeCast for uint256;
     using SafeCast for int256;

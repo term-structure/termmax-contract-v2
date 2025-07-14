@@ -30,6 +30,7 @@ import {IERC20SwapAdapter} from "./IERC20SwapAdapter.sol";
 import {RouterEventsV2} from "../events/RouterEventsV2.sol";
 import {IAaveV3PoolMinimal} from "../extensions/aave/IAaveV3PoolMinimal.sol";
 import {OrderInitialParams} from "../ITermMaxOrderV2.sol";
+import {VersionV2} from "../VersionV2.sol";
 
 /**
  * @title TermMax Router V2
@@ -44,7 +45,8 @@ contract TermMaxRouterV2 is
     IERC721Receiver,
     ITermMaxRouterV2,
     RouterErrors,
-    RouterEvents
+    RouterEvents,
+    VersionV2
 {
     using SafeCast for *;
     using TransferUtilsV2 for IERC20;
