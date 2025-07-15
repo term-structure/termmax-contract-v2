@@ -231,14 +231,6 @@ contract TermMaxOrderV2 is
     // =============================================================================
 
     /**
-     * @notice Get FT reserve including pool assets
-     * @return ftBalance Total FT balance
-     */
-    function _getFtReserve() internal view returns (uint256 ftBalance) {
-        ftBalance = ft.balanceOf(address(this)) + _assetsInPool();
-    }
-
-    /**
      * @notice Get assets amount in the staking pool
      * @return assets Amount of assets in pool
      */
@@ -525,28 +517,47 @@ contract TermMaxOrderV2 is
             IERC20 _ft = ft;
             IERC20 _xt = xt;
             OrderConfig memory orderConfig_ = _orderConfig;
+            int256 deltaFt;
+            int256 deltaXt;
             if (tokenIn == _ft && tokenOut == _debtToken) {
-                (netTokenOut, feeAmt) = _swapAndUpdateReserves(tokenAmtIn, minTokenOut, orderConfig_, _sellFt);
+                (netTokenOut, feeAmt, deltaFt, deltaXt) =
+                    _swapAndUpdateReserves(tokenAmtIn, minTokenOut, orderConfig_, _sellFt);
             } else if (tokenIn == _xt && tokenOut == _debtToken) {
-                (netTokenOut, feeAmt) = _swapAndUpdateReserves(tokenAmtIn, minTokenOut, orderConfig_, _sellXt);
+                (netTokenOut, feeAmt, deltaFt, deltaXt) =
+                    _swapAndUpdateReserves(tokenAmtIn, minTokenOut, orderConfig_, _sellXt);
             } else if (tokenIn == _debtToken && tokenOut == _ft) {
-                (netTokenOut, feeAmt) = _swapAndUpdateReserves(tokenAmtIn, minTokenOut, orderConfig_, _buyFt);
+                (netTokenOut, feeAmt, deltaFt, deltaXt) =
+                    _swapAndUpdateReserves(tokenAmtIn, minTokenOut, orderConfig_, _buyFt);
             } else if (tokenIn == _debtToken && tokenOut == _xt) {
-                (netTokenOut, feeAmt) = _swapAndUpdateReserves(tokenAmtIn, minTokenOut, orderConfig_, _buyXt);
+                (netTokenOut, feeAmt, deltaFt, deltaXt) =
+                    _swapAndUpdateReserves(tokenAmtIn, minTokenOut, orderConfig_, _buyXt);
             } else {
                 revert CantNotSwapToken(tokenIn, tokenOut);
+            }
+
+            uint256 ftBalance = ft.balanceOf(address(this));
+            uint256 xtBalance = xt.balanceOf(address(this));
+            if (orderConfig_.swapTrigger != ISwapCallback(address(0))) {
+                orderConfig_.swapTrigger.afterSwap(ftBalance, xtBalance, deltaFt, deltaXt);
             }
 
             // transfer token in
             tokenIn.safeTransferFrom(msg.sender, address(this), tokenAmtIn);
 
-            if (tokenOut == _debtToken) {
-                _handleDebtTokenOutput(netTokenOut, feeAmt, recipient, _ft, _xt, _debtToken);
-            } else if (tokenOut == _ft) {
-                _handleFtOutput(tokenOut, netTokenOut, feeAmt, tokenAmtIn, recipient, _debtToken, orderConfig_.gtId);
-            } else {
-                _handleXtOutput(tokenOut, netTokenOut, feeAmt, tokenAmtIn, recipient, _ft, _debtToken);
-            }
+            _rebalance(
+                _ft, _xt, tokenIn, tokenAmtIn, tokenOut, netTokenOut, feeAmt, orderConfig_.gtId, deltaFt, deltaXt
+            );
+
+            // transfer output tokens
+            tokenOut.safeTransfer(recipient, netTokenOut);
+
+            // if (tokenOut == _debtToken) {
+            //     _handleDebtTokenOutput(netTokenOut, feeAmt, recipient, _ft, _xt, _debtToken);
+            // } else if (tokenOut == _ft) {
+            //     _handleFtOutput(tokenOut, netTokenOut, feeAmt, tokenAmtIn, recipient, _debtToken, orderConfig_.gtId);
+            // } else {
+            //     _handleXtOutput(tokenOut, netTokenOut, feeAmt, tokenAmtIn, recipient, _ft, _debtToken);
+            // }
         }
 
         emit SwapExactTokenToToken(
@@ -580,35 +591,94 @@ contract TermMaxOrderV2 is
             IERC20 _debtToken = debtToken;
             IERC20 _ft = ft;
             IERC20 _xt = xt;
+            int256 deltaFt;
+            int256 deltaXt;
             OrderConfig memory orderConfig_ = _orderConfig;
             if (tokenIn == _debtToken && tokenOut == _ft) {
-                (netTokenIn, feeAmt) = _swapAndUpdateReserves(tokenAmtOut, maxTokenIn, orderConfig_, _buyExactFt);
+                (netTokenIn, feeAmt, deltaFt, deltaXt) =
+                    _swapAndUpdateReserves(tokenAmtOut, maxTokenIn, orderConfig_, _buyExactFt);
             } else if (tokenIn == _debtToken && tokenOut == _xt) {
-                (netTokenIn, feeAmt) = _swapAndUpdateReserves(tokenAmtOut, maxTokenIn, orderConfig_, _buyExactXt);
+                (netTokenIn, feeAmt, deltaFt, deltaXt) =
+                    _swapAndUpdateReserves(tokenAmtOut, maxTokenIn, orderConfig_, _buyExactXt);
             } else if (tokenIn == _ft && tokenOut == _debtToken) {
-                (netTokenIn, feeAmt) =
+                (netTokenIn, feeAmt, deltaFt, deltaXt) =
                     _swapAndUpdateReserves(tokenAmtOut, maxTokenIn, orderConfig_, _sellFtForExactToken);
             } else if (tokenIn == _xt && tokenOut == _debtToken) {
-                (netTokenIn, feeAmt) =
+                (netTokenIn, feeAmt, deltaFt, deltaXt) =
                     _swapAndUpdateReserves(tokenAmtOut, maxTokenIn, orderConfig_, _sellXtForExactToken);
             } else {
                 revert CantNotSwapToken(tokenIn, tokenOut);
             }
+            // trigger call back function
+            if (orderConfig_.swapTrigger != ISwapCallback(address(0))) {
+                orderConfig_.swapTrigger.afterSwap(
+                    ft.balanceOf(address(this)), xt.balanceOf(address(this)), deltaFt, deltaXt
+                );
+            }
+
             // transfer token in
             tokenIn.safeTransferFrom(msg.sender, address(this), netTokenIn);
+            _rebalance(
+                _ft, _xt, tokenIn, netTokenIn, tokenOut, tokenAmtOut, feeAmt, orderConfig_.gtId, deltaFt, deltaXt
+            );
 
-            if (tokenOut == _debtToken) {
-                _handleDebtTokenOutput(tokenAmtOut, feeAmt, recipient, _ft, _xt, _debtToken);
-            } else if (tokenOut == _ft) {
-                _handleFtOutput(tokenOut, tokenAmtOut, feeAmt, netTokenIn, recipient, _debtToken, orderConfig_.gtId);
-            } else {
-                _handleXtOutput(tokenOut, tokenAmtOut, feeAmt, netTokenIn, recipient, _ft, _debtToken);
-            }
+            // transfer output tokens
+            tokenOut.safeTransfer(recipient, tokenAmtOut);
+
+            // if (tokenOut == _debtToken) {
+            //     _handleDebtTokenOutput(tokenAmtOut, feeAmt, recipient, _ft, _xt, _debtToken);
+            // } else if (tokenOut == _ft) {
+            //     _handleFtOutput(tokenOut, tokenAmtOut, feeAmt, netTokenIn, recipient, _debtToken, orderConfig_.gtId);
+            // } else {
+            //     _handleXtOutput(tokenOut, tokenAmtOut, feeAmt, netTokenIn, recipient, _ft, _debtToken);
+            // }
         }
 
         emit SwapTokenToExactToken(
             tokenIn, tokenOut, msg.sender, recipient, tokenAmtOut, netTokenIn.toUint128(), feeAmt.toUint128()
         );
+    }
+
+    function _rebalance(
+        IERC20 _ft,
+        IERC20 _xt,
+        IERC20 tokenIn,
+        uint256 inputAmt,
+        IERC20 tokenOut,
+        uint256 outputAmt,
+        uint256 feeAmt,
+        uint256 gtId,
+        int256 deltaFt,
+        int256 deltaXt
+    ) internal {
+        // Rebalance the reserves after swap
+        int256 newFtReserve = _ft.balanceOf(address(this)).toInt256() + deltaFt;
+        int256 newXtReserve = _xt.balanceOf(address(this)).toInt256() + deltaXt;
+        // check if need to release liquidity from pool or gt
+        uint256 releaseAmount;
+        if (newFtReserve < 0) {
+            if (gtId != 0) {
+                _issueFtToSelf(uint256(-newFtReserve), gtId);
+            } else {
+                releaseAmount = uint256(-newFtReserve);
+            }
+        } else if (newXtReserve < 0) {
+            releaseAmount = uint256(-newXtReserve);
+        }
+        if (releaseAmount != 0) {
+            IERC4626 pool_ = pool;
+            pool_.withdraw(releaseAmount, address(this), address(this));
+        }
+        ITermMaxMarket _market = market;
+        if (tokenOut != ft && tokenOut != xt) {
+            _market.burn(address(this), outputAmt - releaseAmount);
+        } else {
+            inputAmt += releaseAmount;
+            tokenIn.safeIncreaseAllowance(address(_market), inputAmt);
+            _market.mint(address(this), inputAmt);
+        }
+        // Pay fee
+        _ft.safeTransfer(_market.config().treasurer, feeAmt);
     }
 
     // =============================================================================
@@ -735,25 +805,23 @@ contract TermMaxOrderV2 is
         uint256,
         uint256,
         OrderConfig memory) internal view returns (uint256, uint256, uint256, uint256, bool) func
-    ) private returns (uint256, uint256) {
+    ) private returns (uint256, uint256, int256, int256) {
         (uint256 netAmt, uint256 feeAmt, uint256 deltaFt, uint256 deltaXt, bool isNegetiveXt) =
             func(tokenAmtInOrOut, limitTokenAmt, orderConfig_);
 
         uint256 newXtReserve = virtualXtReserve;
-        if (!isNegetiveXt) {
+        if (isNegetiveXt) {
+            virtualXtReserve = newXtReserve - deltaXt;
+            return (netAmt, feeAmt, deltaFt.toInt256(), -deltaXt.toInt256());
+        } else {
             newXtReserve += deltaXt;
             // check xt reserve when lending to order
             if (newXtReserve > orderConfig_.maxXtReserve) {
                 revert XtReserveTooHigh();
             }
-        } else {
-            newXtReserve -= deltaXt;
+            virtualXtReserve = newXtReserve;
+            return (netAmt, feeAmt, -deltaFt.toInt256(), deltaXt.toInt256());
         }
-        virtualXtReserve = newXtReserve;
-
-        /// @dev callback the changes of ft and xt reserve to trigger
-        _triggerSwapCallback(deltaFt, deltaXt, isNegetiveXt);
-        return (netAmt, feeAmt);
     }
 
     /**
@@ -788,49 +856,6 @@ contract TermMaxOrderV2 is
         _market.burn(recipient, netTokenOut);
         _ft.safeTransfer(_market.config().treasurer, feeAmt);
     }
-
-    // /**
-    //  * @notice Handle FT/XT token output after swap
-    //  * @param tokenOut Output token
-    //  * @param netTokenOut Net tokens to output
-    //  * @param feeAmt Fee amount
-    //  * @param tokenAmtIn Input token amount
-    //  * @param recipient Recipient address
-    //  * @param _ft FT token reference
-    //  * @param _debtToken Debt token reference
-    //  */
-    // function _handleFtXtOutput(
-    //     IERC20 tokenOut,
-    //     uint256 netTokenOut,
-    //     uint256 feeAmt,
-    //     uint256 tokenAmtIn,
-    //     address recipient,
-    //     IERC20 _ft,
-    //     IERC20 _debtToken
-    // ) private {
-    //     ITermMaxMarket _market = market;
-    //     // mint input token to ft and xt
-    //     _debtToken.safeIncreaseAllowance(address(_market), tokenAmtIn);
-    //     _market.mint(address(this), tokenAmtIn);
-    //     // Pay fee
-    //     _ft.safeTransfer(_market.config().treasurer, feeAmt);
-
-    //     // check ft reserve and issue ft to self if needed
-    //     uint256 ftReserve = _getFtReserve();
-    //     if (ftReserve < deltaFt) {
-    //         _issueFtToSelf(deltaFt - ftReserve, orderConfig_);
-    //     }
-    //     // Check if we need to withdraw additional tokens
-    //     uint256 availableBalance = tokenOut.balanceOf(address(this));
-    //     if (availableBalance < netTokenOut) {
-    //         uint256 tokenToWithdraw = netTokenOut - availableBalance;
-    //         pool.withdraw(tokenToWithdraw, address(this), address(this));
-    //         _debtToken.safeIncreaseAllowance(address(_market), tokenToWithdraw);
-    //         _market.mint(address(this), tokenToWithdraw);
-    //     }
-
-    //     tokenOut.safeTransfer(recipient, netTokenOut);
-    // }
 
     function _handleXtOutput(
         IERC20 tokenOut,
@@ -920,24 +945,6 @@ contract TermMaxOrderV2 is
         uint256 mintAmount = tokenToMint - ftBalance;
         uint256 xtShortfall = netTokenOut > xtBalance ? netTokenOut - xtBalance : 0;
         return mintAmount > xtShortfall ? mintAmount : xtShortfall;
-    }
-
-    /**
-     * @notice Trigger swap callback if configured
-     * @param deltaFt Change in FT amount
-     * @param deltaXt Change in XT amount
-     * @param isNegetiveXt Whether XT change is negative
-     */
-    function _triggerSwapCallback(uint256 deltaFt, uint256 deltaXt, bool isNegetiveXt) private {
-        if (address(_orderConfig.swapTrigger) != address(0)) {
-            /// @dev The ft and xt reserves are virtual reserves, so we use 0 for the first two parameters
-            ///      Use getRealReserves() in your contract to get the real reserves if needed
-            if (isNegetiveXt) {
-                _orderConfig.swapTrigger.afterSwap(0, 0, deltaFt.toInt256(), -deltaXt.toInt256());
-            } else {
-                _orderConfig.swapTrigger.afterSwap(0, 0, -deltaFt.toInt256(), deltaXt.toInt256());
-            }
-        }
     }
 
     /**

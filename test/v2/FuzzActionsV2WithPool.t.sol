@@ -32,9 +32,10 @@ import {
 } from "contracts/v1/storage/TermMaxStorage.sol";
 import {DeployUtils} from "./utils/DeployUtils.sol";
 import {JSONLoader} from "./utils/JSONLoader.sol";
+import {MockERC4626} from "contracts/v2/test/MockERC4626.sol";
 import "forge-std/Test.sol";
 
-contract FuzzActionsTestV2 is Test {
+contract FuzzActionsTestV2WithPool is Test {
     using JSONLoader for *;
     using SafeCast for *;
     using DeployUtils for *;
@@ -63,6 +64,7 @@ contract FuzzActionsTestV2 is Test {
     address maker = vm.randomAddress();
     address taker = vm.randomAddress();
     address treasurer = vm.randomAddress();
+    MockERC4626 pool;
 
     string path = string.concat(vm.projectRoot(), "/test/testdata/fuzzSwap/v2.json");
 
@@ -89,18 +91,24 @@ contract FuzzActionsTestV2 is Test {
         uint256 ftReserve = vm.parseJsonUint(testdata, ".orderConfig.ftReserve");
         uint256 xtReserve = vm.parseJsonUint(testdata, ".orderConfig.xtReserve");
 
+        pool = new MockERC4626(res.debt);
+
         OrderInitialParams memory orderParams;
         orderParams.maker = maker;
         orderParams.orderConfig = res.orderConfig;
         orderParams.virtualXtReserve = xtReserve;
         orderParams.orderConfig.swapTrigger = ISwapCallback(address(afterSwap));
+        orderParams.pool = pool;
         res.order = TermMaxOrderV2(address(res.market.createOrder(orderParams)));
 
         res.debt.mint(admin, ftReserve + xtReserve);
-        res.debt.approve(address(res.market), ftReserve + xtReserve);
-        res.market.mint(admin, ftReserve + xtReserve);
-        res.ft.transfer(address(res.order), ftReserve);
-        res.xt.transfer(address(res.order), xtReserve);
+        res.debt.approve(address(pool), ftReserve + xtReserve);
+        uint256 maxShares = ftReserve > xtReserve ? xtReserve : ftReserve;
+        pool.deposit(maxShares, address(res.order));
+        res.debt.approve(address(res.market), ftReserve + xtReserve - maxShares);
+        res.market.mint(admin, ftReserve + xtReserve - maxShares);
+        res.ft.transfer(address(res.order), ftReserve - maxShares);
+        res.xt.transfer(address(res.order), xtReserve - maxShares);
 
         vm.stopPrank();
     }
@@ -186,9 +194,10 @@ contract FuzzActionsTestV2 is Test {
 
         vm.startPrank(taker);
 
-        uint256 netAmt;
         uint256 tokenInBalanceBefore = tokenIn.balanceOf(taker);
         uint256 tokenOutBalanceBefore = tokenOut.balanceOf(taker);
+
+        uint256 netAmt;
         if (isExact) {
             netAmt = res.order.swapTokenToExactToken(
                 tokenIn, tokenOut, taker, uint128(action.firstAmt), type(uint128).max, block.timestamp + 1 hours
@@ -208,10 +217,16 @@ contract FuzzActionsTestV2 is Test {
                 tokenOutBalanceAfter - tokenOutBalanceBefore, action.secondAmt, "token out balance not as expected"
             );
         }
-
         assertEq(netAmt, action.secondAmt, "net amt not as expected");
-        assertEq(res.ft.balanceOf(address(res.order)), action.ftReserve);
-        assertEq(res.xt.balanceOf(address(res.order)), action.xtReserve);
+        (uint256 ftReserve, uint256 xtReserve) = res.order.getRealReserves();
+        console.log("ft reserve: %s, xt reserve: %s", ftReserve, xtReserve);
+        uint256 shares = pool.balanceOf(address(res.order));
+        console.log("shares in pool: %s", shares);
+        console.log("assetsInPool", pool.convertToAssets(shares));
+        console.log("ft balance in order: %s", res.ft.balanceOf(address(res.order)));
+        console.log("xt balance in order: %s", res.xt.balanceOf(address(res.order)));
+        assertEq(ftReserve, action.ftReserve, "ft reserve not as expected");
+        assertEq(xtReserve, action.xtReserve, "xt reserve not as expected");
         vm.stopPrank();
     }
 }
@@ -237,20 +252,21 @@ contract MockSwapCallback is ISwapCallback {
     function afterSwap(uint256 ftReserve_, uint256 xtReserve_, int256 deltaFt_, int256 deltaXt_) external override {
         deltaFt = deltaFt_;
         deltaXt = deltaXt_;
+        (uint256 realFtReserve, uint256 realXtReserve) = TermMaxOrderV2(msg.sender).getRealReserves();
         if (ftReserve == 0 && xtReserve == 0) {
-            ftReserve = int256(ftReserve_) + deltaFt;
-            xtReserve = int256(xtReserve_) + deltaXt;
+            ftReserve = int256(realFtReserve) + deltaFt;
+            xtReserve = int256(realXtReserve) + deltaXt;
             return;
         } else {
             ftReserve += deltaFt;
             xtReserve += deltaXt;
             require(
-                ftReserve == int256(ftReserve_) + deltaFt,
-                InvalidReserve(ftReserve, xtReserve, int256(ftReserve_) + deltaFt, int256(xtReserve_) + deltaXt)
+                ftReserve == int256(realFtReserve) + deltaFt,
+                InvalidReserve(ftReserve, xtReserve, int256(realFtReserve) + deltaFt, int256(realXtReserve) + deltaXt)
             );
             require(
-                xtReserve == int256(xtReserve_) + deltaXt,
-                InvalidReserve(ftReserve, xtReserve, int256(ftReserve_) + deltaFt, int256(xtReserve_) + deltaXt)
+                xtReserve == int256(realXtReserve) + deltaXt,
+                InvalidReserve(ftReserve, xtReserve, int256(realFtReserve) + deltaFt, int256(realXtReserve) + deltaXt)
             );
         }
     }

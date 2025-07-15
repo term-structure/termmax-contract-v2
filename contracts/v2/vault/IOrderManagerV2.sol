@@ -59,4 +59,6 @@ interface IOrderManagerV2 {
      * @return deliveryCollateral The amount of collateral delivered
      */
     function redeemOrder(IERC20 asset, address order) external returns (uint256 badDebt, uint256 deliveryCollateral);
+
+    function afterSwap(uint256 ftReserve, uint256 xtReserve, int256 deltaFt, int256 deltaXt) external;
 }

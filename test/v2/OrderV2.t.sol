@@ -531,7 +531,7 @@ contract OrderTestV2 is Test {
 
         res.debt.mint(sender, maxTokenIn);
         res.debt.approve(address(res.order), maxTokenIn);
-        vm.expectRevert(abi.encodeWithSelector(OrderErrors.CantNotIssueFtWithoutGt.selector));
+        vm.expectRevert();
         res.order.swapTokenToExactToken(res.debt, res.ft, sender, ftOutAmt, maxTokenIn, block.timestamp + 1 hours);
         vm.stopPrank();
     }

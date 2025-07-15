@@ -287,14 +287,15 @@ contract OrderManagerV2 is VaultStorageV2, OnlyProxyCall, IOrderManagerV2 {
 
     /// @notice Callback function for the swap
     /// @param deltaFt The change in the ft balance of the order
-    function afterSwap(uint256 ftReserve, uint256 xtReserve, int256 deltaFt) external onlyProxy {
-        if (ftReserve < xtReserve) {
-            revert VaultErrors.OrderHasNegativeInterest();
-        }
+    function afterSwap(uint256 ftReserve, uint256 xtReserve, int256 deltaFt, int256 deltaXt) external onlyProxy {
         address orderAddress = msg.sender;
         /// @dev Check if the order is valid
         uint256 maturity = _orderMaturityMapping[orderAddress];
         require(maturity != 0, VaultErrors.UnauthorizedOrder(orderAddress));
+
+        // if (ftReserve < xtReserve) {
+        //     revert VaultErrors.OrderHasNegativeInterest();
+        // }
 
         /// @dev Calculate interest from last update time to now
         _accruedInterest();

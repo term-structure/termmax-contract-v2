@@ -743,13 +743,13 @@ contract TermMaxVaultV2 is
 
     /// @notice Callback function for the swap
     /// @param deltaFt The change in the ft balance of the order
-    function afterSwap(uint256 ftReserve, uint256 xtReserve, int256 deltaFt, int256)
+    function afterSwap(uint256 ftReserve, uint256 xtReserve, int256 deltaFt, int256 deltaXt)
         external
         virtual
         override
         whenNotPaused
     {
-        _delegateCall(abi.encodeCall(IOrderManager.afterSwap, (ftReserve, xtReserve, deltaFt)));
+        _delegateCall(abi.encodeCall(IOrderManagerV2.afterSwap, (ftReserve, xtReserve, deltaFt, deltaXt)));
     }
 
     function supplyQueueLength() external view virtual returns (uint256) {
