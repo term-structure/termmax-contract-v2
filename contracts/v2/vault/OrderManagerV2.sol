@@ -239,7 +239,7 @@ contract OrderManagerV2 is VaultStorageV2, OnlyProxyCall, IOrderManagerV2 {
     }
 
     function _checkLockedFt() internal view {
-        if (_accretingPrincipal + _performanceFee >= _totalFt) revert VaultErrors.LockedFtGreaterThanTotalFt();
+        if (_accretingPrincipal + _performanceFee > _totalFt) revert VaultErrors.LockedFtGreaterThanTotalFt();
     }
 
     function _checkOrder(address orderAddress) internal view {
@@ -296,7 +296,7 @@ contract OrderManagerV2 is VaultStorageV2, OnlyProxyCall, IOrderManagerV2 {
             uint256 deltaAnnualizedInterest = (ftChanges * 365 days) / (maturity - block.timestamp);
             uint256 maturityInterest = _maturityToInterest[maturity.toUint64()];
             if (maturityInterest < deltaAnnualizedInterest || _annualizedInterest < deltaAnnualizedInterest) {
-                revert VaultErrors.LockedFtGreaterThanTotalFt();
+                revert VaultErrors.OrderHasNegativeInterest();
             }
             _maturityToInterest[uint64(maturity)] = maturityInterest - deltaAnnualizedInterest;
             _annualizedInterest -= deltaAnnualizedInterest;

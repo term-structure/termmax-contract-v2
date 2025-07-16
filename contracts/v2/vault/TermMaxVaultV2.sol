@@ -526,7 +526,9 @@ contract TermMaxVaultV2 is
 
     function _setPool(address pool) internal {
         IERC4626 oldPool = _pool;
-        oldPool.redeem(oldPool.balanceOf(address(this)), address(this), address(this));
+        if (oldPool != IERC4626(address(0))) {
+            oldPool.redeem(oldPool.balanceOf(address(this)), address(this), address(this));
+        }
         if (pool != address(0)) {
             IERC4626(pool).deposit(IERC20(asset()).balanceOf(address(this)), address(this));
         }
