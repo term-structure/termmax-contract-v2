@@ -53,25 +53,6 @@ contract OrderManagerV2 is VaultStorageV2, OnlyProxyCall, IOrderManagerV2 {
         emit VaultEventsV2.UpdateOrderCurve(msg.sender, orders);
     }
 
-    function updateOrderPools(address[] memory orders, IERC4626[] memory pools) external onlyProxy {
-        require(orders.length == pools.length, VaultErrorsV2.ArrayLengthMismatch());
-        _accruedInterest();
-        for (uint256 i = 0; i < orders.length; ++i) {
-            address order = orders[i];
-            _checkOrder(order);
-            _checkPool(pools[i]);
-            ITermMaxOrderV2(order).setPool(pools[i]);
-        }
-        emit VaultEventsV2.UpdateOrderPools(msg.sender, orders);
-    }
-
-    function _checkPool(IERC4626 pool) internal view {
-        require(
-            address(pool) == address(0) || _poolWhitelist[address(pool)],
-            VaultErrorsV2.PoolNotWhitelisted(address(pool))
-        );
-    }
-
     function updateOrdersConfigAndLiquidity(
         IERC20 asset,
         address[] memory orders,
@@ -79,7 +60,6 @@ contract OrderManagerV2 is VaultStorageV2, OnlyProxyCall, IOrderManagerV2 {
     ) external onlyProxy {
         require(orders.length == params.length, VaultErrorsV2.ArrayLengthMismatch());
         _accruedInterest();
-        int256 totalChanges = 0;
         for (uint256 i = 0; i < orders.length; ++i) {
             address order = orders[i];
             OrderV2ConfigurationParams memory param = params[i];
@@ -93,11 +73,6 @@ contract OrderManagerV2 is VaultStorageV2, OnlyProxyCall, IOrderManagerV2 {
             } else if (param.liquidityChanges < 0) {
                 ITermMaxOrderV2(order).removeLiquidity(asset, uint256(-param.liquidityChanges), address(this));
             }
-            totalChanges += param.liquidityChanges;
-        }
-        /// @dev Check idle fund rate after all orders are updated if deposit funds to orders
-        if (totalChanges > 0) {
-            _checkIdleFundRate(asset);
         }
         emit VaultEventsV2.UpdateOrderCurve(msg.sender, orders);
     }
@@ -133,19 +108,16 @@ contract OrderManagerV2 is VaultStorageV2, OnlyProxyCall, IOrderManagerV2 {
     function createOrder(
         IERC20 asset,
         ITermMaxMarketV2 market,
-        IERC4626 pool,
         OrderV2ConfigurationParams memory params,
         CurveCuts memory curveCuts
     ) external onlyProxy returns (ITermMaxOrderV2 order) {
         _accruedInterest();
         require(_marketWhitelist[address(market)], VaultErrorsV2.MarketNotWhitelisted(address(market)));
 
-        _checkPool(pool);
         // (IERC20 ft, IERC20 xt,,, IERC20 debtToken) = market.tokens();
         OrderInitialParams memory initialParams;
         initialParams.virtualXtReserve = params.virtualXtReserve;
         initialParams.maker = address(this);
-        initialParams.pool = pool;
         initialParams.orderConfig.maxXtReserve = params.maxXtReserve;
         initialParams.orderConfig.swapTrigger = ISwapCallback(address(this));
         initialParams.orderConfig.curveCuts = curveCuts;
@@ -155,7 +127,6 @@ contract OrderManagerV2 is VaultStorageV2, OnlyProxyCall, IOrderManagerV2 {
             uint256 initialReserve = uint256(params.liquidityChanges);
             asset.safeIncreaseAllowance(address(order), initialReserve);
             ITermMaxOrderV2(address(order)).addLiquidity(asset, initialReserve);
-            _checkIdleFundRate(asset);
         }
         uint64 orderMaturity = ITermMaxMarket(address(market)).config().maturity;
         _orderMaturityMapping[address(order)] = orderMaturity;
@@ -163,26 +134,18 @@ contract OrderManagerV2 is VaultStorageV2, OnlyProxyCall, IOrderManagerV2 {
         emit VaultEventsV2.NewOrderCreated(msg.sender, address(market), address(order));
     }
 
-    function _checkIdleFundRate(IERC20 asset) internal view {
-        uint256 __minIdleFundRate = _minIdleFundRate;
-        if (__minIdleFundRate > 0) {
-            uint256 idleFundBalance = asset.balanceOf(address(this));
-            uint256 currentIdleFundRate = _accretingPrincipal == 0
-                ? Constants.DECIMAL_BASE
-                : (idleFundBalance * Constants.DECIMAL_BASE_SQ * Constants.DECIMAL_BASE) / _accretingPrincipal;
-
-            if (currentIdleFundRate < __minIdleFundRate) {
-                revert VaultErrorsV2.IdleFundRateTooLow(currentIdleFundRate, __minIdleFundRate);
-            }
-        }
-    }
-
-    function depositAssets(IERC20, uint256 amount) external onlyProxy {
+    function depositAssets(IERC20 asset, uint256 amount) external onlyProxy {
         _accruedInterest();
         // deposit to lpers
         uint256 amplifiedAmt = amount * Constants.DECIMAL_BASE_SQ;
         _totalFt += amplifiedAmt;
         _accretingPrincipal += amplifiedAmt;
+        IERC4626 pool = _pool;
+        if (pool != IERC4626(address(0))) {
+            // deposit to the pool
+            asset.safeIncreaseAllowance(address(pool), amount);
+            pool.deposit(amount, address(this));
+        }
     }
 
     function withdrawAssets(IERC20 asset, address recipient, uint256 amount) external onlyProxy {
@@ -190,8 +153,18 @@ contract OrderManagerV2 is VaultStorageV2, OnlyProxyCall, IOrderManagerV2 {
         uint256 amplifiedAmt = amount * Constants.DECIMAL_BASE_SQ;
         _totalFt -= amplifiedAmt;
         _accretingPrincipal -= amplifiedAmt;
+        _withdrawFromPoolOrNot(asset, recipient, amount);
+    }
 
-        asset.safeTransfer(recipient, amount);
+    function _withdrawFromPoolOrNot(IERC20 asset, address recipient, uint256 amount) internal {
+        IERC4626 pool = _pool;
+        if (pool != IERC4626(address(0))) {
+            // withdraw from the pool
+            pool.withdraw(amount, recipient, address(this));
+        } else {
+            // transfer asset to the recipient
+            asset.safeTransfer(recipient, amount);
+        }
     }
 
     function _withdrawPerformanceFee(IERC20 asset, address recipient, uint256 amount) internal {
@@ -266,7 +239,7 @@ contract OrderManagerV2 is VaultStorageV2, OnlyProxyCall, IOrderManagerV2 {
     }
 
     function _checkLockedFt() internal view {
-        if (_accretingPrincipal + _performanceFee > _totalFt) revert VaultErrors.LockedFtGreaterThanTotalFt();
+        if (_accretingPrincipal + _performanceFee >= _totalFt) revert VaultErrors.LockedFtGreaterThanTotalFt();
     }
 
     function _checkOrder(address orderAddress) internal view {
@@ -287,15 +260,14 @@ contract OrderManagerV2 is VaultStorageV2, OnlyProxyCall, IOrderManagerV2 {
 
     /// @notice Callback function for the swap
     /// @param deltaFt The change in the ft balance of the order
-    function afterSwap(uint256 ftReserve, uint256 xtReserve, int256 deltaFt, int256 deltaXt) external onlyProxy {
+    function afterSwap(IERC20 asset, uint256 ftReserve, uint256 xtReserve, int256 deltaFt, int256 deltaXt)
+        external
+        onlyProxy
+    {
         address orderAddress = msg.sender;
         /// @dev Check if the order is valid
         uint256 maturity = _orderMaturityMapping[orderAddress];
         require(maturity != 0, VaultErrors.UnauthorizedOrder(orderAddress));
-
-        // if (ftReserve < xtReserve) {
-        //     revert VaultErrors.OrderHasNegativeInterest();
-        // }
 
         /// @dev Calculate interest from last update time to now
         _accruedInterest();
@@ -312,6 +284,12 @@ contract OrderManagerV2 is VaultStorageV2, OnlyProxyCall, IOrderManagerV2 {
             _maturityToInterest[maturity.toUint64()] += deltaAnnualizedInterest;
 
             _annualizedInterest += deltaAnnualizedInterest;
+
+            // @dev release xt if needed
+            int256 finalXtReserve = xtReserve.toInt256() + deltaXt;
+            if (finalXtReserve < 0) {
+                _releaseLiquidity(ITermMaxOrder(orderAddress), asset, uint256(-finalXtReserve));
+            }
         } else {
             ftChanges = uint256(-deltaFt) * Constants.DECIMAL_BASE_SQ;
             _totalFt -= ftChanges;
@@ -323,9 +301,25 @@ contract OrderManagerV2 is VaultStorageV2, OnlyProxyCall, IOrderManagerV2 {
             _maturityToInterest[uint64(maturity)] = maturityInterest - deltaAnnualizedInterest;
             _annualizedInterest -= deltaAnnualizedInterest;
             _checkApy();
+
+            // @dev release ft if needed
+            int256 finalFtReserve = ftReserve.toInt256() + deltaFt;
+            if (finalFtReserve < 0) {
+                _releaseLiquidity(ITermMaxOrder(orderAddress), asset, uint256(-finalFtReserve));
+            }
         }
         /// @dev Ensure that the total assets after the transaction are
         /// greater than or equal to the principal and the allocated interest
         _checkLockedFt();
+    }
+
+    function _releaseLiquidity(ITermMaxOrder order, IERC20 asset, uint256 amount) internal {
+        if (_pool != IERC4626(address(0))) {
+            // release liquidity from the pool
+            _pool.withdraw(amount, address(this), address(this));
+        }
+        ITermMaxMarket market = order.market();
+        asset.safeIncreaseAllowance(address(market), amount);
+        market.mint(address(order), amount);
     }
 }

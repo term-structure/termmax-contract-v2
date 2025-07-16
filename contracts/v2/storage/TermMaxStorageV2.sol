@@ -12,6 +12,8 @@ struct VaultInitialParamsV2 {
     address guardian;
     uint256 timelock;
     IERC20 asset;
+    /// @notice The third-party pool to earn floating interest by idle funds
+    IERC4626 pool;
     uint256 maxCapacity;
     string name;
     string symbol;
@@ -19,8 +21,6 @@ struct VaultInitialParamsV2 {
     uint64 performanceFeeRate;
     /// @notice The minimum APY in base units, e.g. 2% = 0.02e8
     uint64 minApy;
-    /// @notice The minimum idle fund rate in base units, e.g. 10% = 0.1e8
-    uint64 minIdleFundRate;
 }
 
 struct OrderInitialParams {

@@ -35,6 +35,7 @@ contract MockOrderV2 is
 {
     using SafeCast for uint256;
     using SafeCast for int256;
+    using SafeCast for uint128;
     using TransferUtils for IERC20;
     using TransferUtils for IERC4626;
 
@@ -232,8 +233,28 @@ contract MockOrderV2 is
     ) external override nonReentrant isOpen returns (uint256 netTokenOut) {
         if (tokenIn == tokenOut) revert CantSwapSameToken();
         uint256 feeAmt = 0;
-        uint256 ftBlanceBefore = ft.balanceOf(address(this));
-        uint256 xtBlanceBefore = xt.balanceOf(address(this));
+
+        int256 deltaFt;
+        int256 deltaXt;
+        if (tokenIn == debtToken && tokenOut == ft) {
+            deltaFt = -(minTokenOut - tokenAmtIn).toInt256();
+            deltaXt = tokenAmtIn.toInt256();
+        } else if (tokenIn == debtToken && tokenOut == xt) {
+            deltaFt = tokenAmtIn.toInt256();
+            deltaXt = -(minTokenOut - tokenAmtIn).toInt256();
+        } else if (tokenIn == ft && tokenOut == debtToken) {
+            deltaFt = (tokenAmtIn - minTokenOut).toInt256();
+            deltaXt = -minTokenOut.toInt256();
+        } else if (tokenIn == xt && tokenOut == debtToken) {
+            deltaFt = -minTokenOut.toInt256();
+            deltaXt = (tokenAmtIn - minTokenOut).toInt256();
+        }
+
+        if (address(_orderConfig.swapTrigger) != address(0)) {
+            uint256 ftReserve = ft.balanceOf(address(this));
+            uint256 xtReserve = xt.balanceOf(address(this));
+            _orderConfig.swapTrigger.afterSwap(ftReserve, xtReserve, deltaFt, deltaXt);
+        }
 
         tokenIn.safeTransferFrom(msg.sender, address(this), tokenAmtIn);
         if (tokenIn == debtToken) {
@@ -241,20 +262,11 @@ contract MockOrderV2 is
             market.mint(address(this), tokenAmtIn);
         }
         if (tokenOut == debtToken) {
-            ITermMaxMarketV2(address(market)).burn(address(this), recipient, minTokenOut);
-        } else {
-            tokenOut.safeTransfer(recipient, minTokenOut);
+            ITermMaxMarketV2(address(market)).burn(address(this), address(this), minTokenOut);
         }
+        tokenOut.safeTransfer(recipient, minTokenOut);
 
         netTokenOut = minTokenOut;
-
-        if (address(_orderConfig.swapTrigger) != address(0)) {
-            uint256 ftReserve = ft.balanceOf(address(this));
-            uint256 xtReserve = xt.balanceOf(address(this));
-            int256 deltaFt = ftReserve.toInt256() - ftBlanceBefore.toInt256();
-            int256 deltaXt = xtReserve.toInt256() - xtBlanceBefore.toInt256();
-            _orderConfig.swapTrigger.afterSwap(ftReserve, xtReserve, deltaFt, deltaXt);
-        }
         emit SwapExactTokenToToken(
             tokenIn, tokenOut, msg.sender, recipient, tokenAmtIn, netTokenOut.toUint128(), feeAmt.toUint128()
         );
@@ -270,8 +282,28 @@ contract MockOrderV2 is
     ) external nonReentrant isOpen returns (uint256 netTokenIn) {
         if (tokenIn == tokenOut) revert CantSwapSameToken();
         uint256 feeAmt = 0;
-        uint256 ftBlanceBefore = ft.balanceOf(address(this));
-        uint256 xtBlanceBefore = xt.balanceOf(address(this));
+
+        int256 deltaFt;
+        int256 deltaXt;
+        if (tokenIn == debtToken && tokenOut == ft) {
+            deltaFt = -(tokenAmtOut - maxTokenIn).toInt256();
+            deltaXt = maxTokenIn.toInt256();
+        } else if (tokenIn == debtToken && tokenOut == xt) {
+            deltaFt = maxTokenIn.toInt256();
+            deltaXt = -(tokenAmtOut - maxTokenIn).toInt256();
+        } else if (tokenIn == ft && tokenOut == debtToken) {
+            deltaFt = (maxTokenIn - tokenAmtOut).toInt256();
+            deltaXt = -tokenAmtOut.toInt256();
+        } else if (tokenIn == xt && tokenOut == debtToken) {
+            deltaFt = -tokenAmtOut.toInt256();
+            deltaXt = (maxTokenIn - tokenAmtOut).toInt256();
+        }
+
+        if (address(_orderConfig.swapTrigger) != address(0)) {
+            uint256 ftReserve = ft.balanceOf(address(this));
+            uint256 xtReserve = xt.balanceOf(address(this));
+            _orderConfig.swapTrigger.afterSwap(ftReserve, xtReserve, deltaFt, deltaXt);
+        }
 
         tokenIn.safeTransferFrom(msg.sender, address(this), maxTokenIn);
         if (tokenIn == debtToken) {
@@ -279,19 +311,11 @@ contract MockOrderV2 is
             market.mint(address(this), maxTokenIn);
         }
         if (tokenOut == debtToken) {
-            ITermMaxMarketV2(address(market)).burn(address(this), recipient, tokenAmtOut);
-        } else {
-            tokenOut.safeTransfer(recipient, tokenAmtOut);
+            ITermMaxMarketV2(address(market)).burn(address(this), address(this), tokenAmtOut);
         }
+        tokenOut.safeTransfer(recipient, tokenAmtOut);
         netTokenIn = maxTokenIn;
 
-        if (address(_orderConfig.swapTrigger) != address(0)) {
-            uint256 ftReserve = ft.balanceOf(address(this));
-            uint256 xtReserve = xt.balanceOf(address(this));
-            int256 deltaFt = ftReserve.toInt256() - ftBlanceBefore.toInt256();
-            int256 deltaXt = xtReserve.toInt256() - xtBlanceBefore.toInt256();
-            _orderConfig.swapTrigger.afterSwap(ftReserve, xtReserve, deltaFt, deltaXt);
-        }
         emit SwapTokenToExactToken(
             tokenIn, tokenOut, msg.sender, recipient, tokenAmtOut, netTokenIn.toUint128(), feeAmt.toUint128()
         );

@@ -133,11 +133,11 @@ contract VaultTestV2 is Test {
             guardian,
             timelock,
             res.debt,
+            IERC4626(address(0)),
             maxCapacity,
             "Vault-DAI",
             "Vault-DAI",
             performanceFeeRate,
-            0,
             0
         );
 
@@ -163,15 +163,10 @@ contract VaultTestV2 is Test {
         vault.deposit(amount, deployer);
         assertEq(res.debt.balanceOf(address(vault)), amount);
 
-        OrderV2ConfigurationParams memory orderConfigParams = OrderV2ConfigurationParams({
-            maxXtReserve: maxCapacity,
-            virtualXtReserve: amount,
-            liquidityChanges: amount.toInt256()
-        });
+        OrderV2ConfigurationParams memory orderConfigParams =
+            OrderV2ConfigurationParams({maxXtReserve: maxCapacity, virtualXtReserve: amount, liquidityChanges: 0});
 
-        res.order = TermMaxOrderV2(
-            address(vault.createOrder(res.market, IERC4626(address(0)), orderConfigParams, orderConfig.curveCuts))
-        );
+        res.order = TermMaxOrderV2(address(vault.createOrder(res.market, orderConfigParams, orderConfig.curveCuts)));
         vm.label(address(res.order), "order");
         res.debt.mint(deployer, 10000e18);
         res.debt.approve(address(res.market), 10000e18);
@@ -300,78 +295,6 @@ contract VaultTestV2 is Test {
         vm.stopPrank();
     }
 
-    function testPoolWhitelist() public {
-        // check current timelock value
-        assertEq(vault.timelock(), 86400);
-
-        // submit pool
-        vm.startPrank(curator);
-        address pool = address(0x789);
-        vault.submitPool(pool, false);
-
-        assertEq(vault.poolWhitelist(pool), false);
-        vm.expectEmit();
-        emit VaultEventsV2.SubmitPoolToWhitelist(pool, uint64(block.timestamp + 86400));
-        vault.submitPool(pool, true);
-
-        assertEq(vault.poolWhitelist(pool), false);
-
-        // The validAt of the newly submitted pool is the current time + timelock
-        PendingUint192 memory pendingPool = vault.pendingPools(pool);
-        assertEq(pendingPool.validAt, block.timestamp + 86400);
-
-        vm.warp(block.timestamp + 86400 + 1);
-        vault.acceptPool(pool);
-        assertEq(vault.poolWhitelist(pool), true);
-
-        vault.submitPool(pool, false);
-        assertEq(vault.poolWhitelist(pool), false);
-        vm.stopPrank();
-
-        // Test revoke pool
-        address newPool = address(0xABC);
-        vm.prank(curator);
-        vault.submitPool(newPool, true);
-
-        vm.prank(guardian);
-        vault.revokePendingPool(newPool);
-        assertEq(vault.pendingPools(newPool).validAt, 0);
-
-        IERC4626[] memory pools = new IERC4626[](1);
-        pools[0] = IERC4626(newPool);
-
-        address[] memory orders = new address[](1);
-        orders[0] = address(res.order);
-        vm.expectRevert(abi.encodeWithSelector(VaultErrorsV2.PoolNotWhitelisted.selector, newPool));
-        vm.prank(curator);
-        vault.updateOrderPools(orders, pools);
-    }
-
-    function test_RevertSetPoolWhitelist() public {
-        address pool = address(0x789);
-
-        vm.prank(vm.randomAddress());
-        vm.expectRevert(VaultErrors.NotCuratorRole.selector);
-        vault.submitPool(pool, true);
-
-        vm.startPrank(curator);
-        vault.submitPool(pool, true);
-
-        vm.expectRevert(VaultErrors.AlreadyPending.selector);
-        vault.submitPool(pool, true);
-
-        vm.expectRevert(VaultErrors.TimelockNotElapsed.selector);
-        vault.acceptPool(pool);
-
-        vm.warp(block.timestamp + 86400 + 1);
-        vault.acceptPool(pool);
-
-        vm.expectRevert(VaultErrors.AlreadySet.selector);
-        vault.submitPool(pool, true);
-
-        vm.stopPrank();
-    }
-
     function test_RevertCreateOrder() public {
         ITermMaxMarketV2 market = ITermMaxMarketV2(address(0x123));
         address bob = lper;
@@ -381,13 +304,13 @@ contract VaultTestV2 is Test {
             OrderV2ConfigurationParams({maxXtReserve: maxCapacity, virtualXtReserve: 0, liquidityChanges: 0});
 
         vm.expectRevert(VaultErrors.NotCuratorRole.selector);
-        vault.createOrder(market, IERC4626(address(0)), orderConfigParams, orderConfig.curveCuts);
+        vault.createOrder(market, orderConfigParams, orderConfig.curveCuts);
 
         vm.stopPrank();
 
         vm.startPrank(curator);
         vm.expectRevert(abi.encodeWithSelector(VaultErrorsV2.MarketNotWhitelisted.selector, address(market)));
-        vault.createOrder(market, IERC4626(address(0)), orderConfigParams, orderConfig.curveCuts);
+        vault.createOrder(market, orderConfigParams, orderConfig.curveCuts);
         vm.stopPrank();
     }
 
@@ -921,7 +844,7 @@ contract VaultTestV2 is Test {
         OrderV2ConfigurationParams memory orderConfigParams =
             OrderV2ConfigurationParams({maxXtReserve: maxCapacity, virtualXtReserve: 0, liquidityChanges: 0});
 
-        vault.createOrder(res.market, IERC4626(address(0)), orderConfigParams, orderConfig.curveCuts);
+        vault.createOrder(res.market, orderConfigParams, orderConfig.curveCuts);
         lper = vm.randomAddress();
 
         res.debt.mint(lper, 100 ether);
@@ -1019,68 +942,6 @@ contract VaultTestV2 is Test {
         assertEq(vaultV2.pendingMinApy().validAt, 0);
     }
 
-    function testMinIdleFundRateManagement() public {
-        ITermMaxVaultV2 vaultV2 = ITermMaxVaultV2(address(vault));
-
-        // Test initial state
-        assertEq(vaultV2.minIdleFundRate(), 0);
-        assertEq(vaultV2.pendingMinIdleFundRate().value, 0);
-        assertEq(vaultV2.pendingMinIdleFundRate().validAt, 0);
-
-        // Test submitPendingMinIdleFundRate - increase (immediate)
-        uint64 newMinIdleFundRate = 0.1e8; // 10%
-        vm.prank(curator);
-        vaultV2.submitPendingMinIdleFundRate(newMinIdleFundRate);
-
-        // Should be set immediately for increases
-        assertEq(vaultV2.minIdleFundRate(), newMinIdleFundRate);
-        assertEq(vaultV2.pendingMinIdleFundRate().value, 0);
-
-        // Test submitPendingMinIdleFundRate - decrease (timelock required)
-        uint64 lowerMinIdleFundRate = 0.05e8; // 5%
-        vm.prank(curator);
-        vaultV2.submitPendingMinIdleFundRate(lowerMinIdleFundRate);
-
-        // Should not be set immediately for decreases
-        assertEq(vaultV2.minIdleFundRate(), newMinIdleFundRate);
-        assertEq(vaultV2.pendingMinIdleFundRate().value, lowerMinIdleFundRate);
-        assertEq(vaultV2.pendingMinIdleFundRate().validAt, block.timestamp + timelock);
-
-        // Test acceptPendingMinIdleFundRate before timelock
-        vm.expectRevert(VaultErrors.TimelockNotElapsed.selector);
-        vaultV2.acceptPendingMinIdleFundRate();
-
-        // Test acceptPendingMinIdleFundRate after timelock
-        vm.warp(block.timestamp + timelock + 1);
-        vaultV2.acceptPendingMinIdleFundRate();
-
-        assertEq(vaultV2.minIdleFundRate(), lowerMinIdleFundRate);
-        assertEq(vaultV2.pendingMinIdleFundRate().value, 0);
-        assertEq(vaultV2.pendingMinIdleFundRate().validAt, 0);
-    }
-
-    function testMinIdleFundRateRevoke() public {
-        ITermMaxVaultV2 vaultV2 = ITermMaxVaultV2(address(vault));
-
-        // Set initial minIdleFundRate
-        uint64 initialMinIdleFundRate = 0.1e8;
-        vm.prank(curator);
-        vaultV2.submitPendingMinIdleFundRate(initialMinIdleFundRate);
-
-        // Submit decrease
-        uint64 lowerMinIdleFundRate = 0.05e8;
-        vm.prank(curator);
-        vaultV2.submitPendingMinIdleFundRate(lowerMinIdleFundRate);
-
-        // Guardian revokes pending change
-        vm.prank(guardian);
-        vaultV2.revokePendingMinIdleFundRate();
-
-        assertEq(vaultV2.minIdleFundRate(), initialMinIdleFundRate);
-        assertEq(vaultV2.pendingMinIdleFundRate().value, 0);
-        assertEq(vaultV2.pendingMinIdleFundRate().validAt, 0);
-    }
-
     function testApyFunction() public {
         ITermMaxVaultV2 vaultV2 = ITermMaxVaultV2(address(vault));
 
@@ -1116,19 +977,6 @@ contract VaultTestV2 is Test {
         vaultV2.revokePendingMinApy();
     }
 
-    function test_RevertMinIdleFundRateAccessControl() public {
-        ITermMaxVaultV2 vaultV2 = ITermMaxVaultV2(address(vault));
-
-        // Test unauthorized access
-        vm.prank(vm.randomAddress());
-        vm.expectRevert(VaultErrors.NotCuratorRole.selector);
-        vaultV2.submitPendingMinIdleFundRate(0.1e8);
-
-        vm.prank(vm.randomAddress());
-        vm.expectRevert(VaultErrors.NotGuardianRole.selector);
-        vaultV2.revokePendingMinIdleFundRate();
-    }
-
     function test_RevertMinApyAlreadySet() public {
         ITermMaxVaultV2 vaultV2 = ITermMaxVaultV2(address(vault));
 
@@ -1139,20 +987,6 @@ contract VaultTestV2 is Test {
         // Should revert when trying to set the same value
         vm.expectRevert(VaultErrors.AlreadySet.selector);
         vaultV2.submitPendingMinApy(minApy);
-
-        vm.stopPrank();
-    }
-
-    function test_RevertMinIdleFundRateAlreadySet() public {
-        ITermMaxVaultV2 vaultV2 = ITermMaxVaultV2(address(vault));
-
-        uint64 minIdleFundRate = 0.1e8;
-        vm.startPrank(curator);
-        vaultV2.submitPendingMinIdleFundRate(minIdleFundRate);
-
-        // Should revert when trying to set the same value
-        vm.expectRevert(VaultErrors.AlreadySet.selector);
-        vaultV2.submitPendingMinIdleFundRate(minIdleFundRate);
 
         vm.stopPrank();
     }
@@ -1174,37 +1008,12 @@ contract VaultTestV2 is Test {
         vm.stopPrank();
     }
 
-    function test_RevertMinIdleFundRateAlreadyPending() public {
-        ITermMaxVaultV2 vaultV2 = ITermMaxVaultV2(address(vault));
-
-        vm.startPrank(curator);
-        // Set initial value
-        vaultV2.submitPendingMinIdleFundRate(0.1e8);
-
-        // Submit decrease (creates pending)
-        vaultV2.submitPendingMinIdleFundRate(0.05e8);
-
-        // Should revert when trying to submit another pending change
-        vm.expectRevert(VaultErrors.AlreadyPending.selector);
-        vaultV2.submitPendingMinIdleFundRate(0.03e8);
-
-        vm.stopPrank();
-    }
-
     function test_RevertAcceptMinApyNoPendingValue() public {
         ITermMaxVaultV2 vaultV2 = ITermMaxVaultV2(address(vault));
 
         // Should revert when no pending value exists
         vm.expectRevert(VaultErrors.NoPendingValue.selector);
         vaultV2.acceptPendingMinApy();
-    }
-
-    function test_RevertAcceptMinIdleFundRateNoPendingValue() public {
-        ITermMaxVaultV2 vaultV2 = ITermMaxVaultV2(address(vault));
-
-        // Should revert when no pending value exists
-        vm.expectRevert(VaultErrors.NoPendingValue.selector);
-        vaultV2.acceptPendingMinIdleFundRate();
     }
 
     function testMinApyEventEmission() public {
@@ -1234,33 +1043,6 @@ contract VaultTestV2 is Test {
         vaultV2.acceptPendingMinApy();
     }
 
-    function testMinIdleFundRateEventEmission() public {
-        ITermMaxVaultV2 vaultV2 = ITermMaxVaultV2(address(vault));
-
-        // Test SetMinIdleFundRate event for immediate increase
-        uint64 newMinIdleFundRate = 0.1e8;
-        vm.expectEmit(true, false, false, true);
-        emit VaultEventsV2.SetMinIdleFundRate(curator, newMinIdleFundRate);
-
-        vm.prank(curator);
-        vaultV2.submitPendingMinIdleFundRate(newMinIdleFundRate);
-
-        // Test SubmitMinIdleFundRate event for timelock decrease
-        uint64 lowerMinIdleFundRate = 0.05e8;
-        vm.expectEmit(false, false, false, true);
-        emit VaultEventsV2.SubmitMinIdleFundRate(lowerMinIdleFundRate, uint64(block.timestamp + timelock));
-
-        vm.prank(curator);
-        vaultV2.submitPendingMinIdleFundRate(lowerMinIdleFundRate);
-
-        // Test SetMinIdleFundRate event when accepting pending value
-        vm.warp(block.timestamp + timelock + 1);
-        vm.expectEmit(true, false, false, true);
-        emit VaultEventsV2.SetMinIdleFundRate(address(this), lowerMinIdleFundRate);
-
-        vaultV2.acceptPendingMinIdleFundRate();
-    }
-
     function testRevokeEventEmission() public {
         ITermMaxVaultV2 vaultV2 = ITermMaxVaultV2(address(vault));
 
@@ -1268,8 +1050,6 @@ contract VaultTestV2 is Test {
         vm.startPrank(curator);
         vaultV2.submitPendingMinApy(0.05e8);
         vaultV2.submitPendingMinApy(0.03e8); // Creates pending
-        vaultV2.submitPendingMinIdleFundRate(0.1e8);
-        vaultV2.submitPendingMinIdleFundRate(0.05e8); // Creates pending
         vm.stopPrank();
 
         // Test RevokePendingMinApy event
@@ -1278,34 +1058,6 @@ contract VaultTestV2 is Test {
 
         vm.prank(guardian);
         vaultV2.revokePendingMinApy();
-
-        // Test RevokePendingMinIdleFundRate event
-        vm.expectEmit(true, false, false, false);
-        emit VaultEventsV2.RevokePendingMinIdleFundRate(guardian);
-
-        vm.prank(guardian);
-        vaultV2.revokePendingMinIdleFundRate();
-    }
-
-    function testRevertWhenIdleFundTooLow() public {
-        ITermMaxVaultV2 vaultV2 = ITermMaxVaultV2(address(vault));
-        vm.startPrank(curator);
-        vaultV2.submitPendingMinIdleFundRate(0.1e8); // minIdleFundRate = 10%
-
-        // Withdraw 3000e8 from the order
-        OrderV2ConfigurationParams[] memory orderConfigParams = new OrderV2ConfigurationParams[](1);
-        orderConfigParams[0] =
-            OrderV2ConfigurationParams({maxXtReserve: maxCapacity, virtualXtReserve: 0, liquidityChanges: -3000e8});
-
-        address[] memory orders = new address[](1);
-        orders[0] = address(res.order);
-        vault.updateOrdersConfigAndLiquidity(orders, orderConfigParams);
-
-        orderConfigParams[0].liquidityChanges = 3000e8; // deposit 3000e8 from the order
-        vm.expectRevert(abi.encodeWithSelector(VaultErrorsV2.IdleFundRateTooLow.selector, 0, 0.1e8));
-        vault.updateOrdersConfigAndLiquidity(orders, orderConfigParams);
-
-        vm.stopPrank();
     }
 
     function testRevertWhenApyTooLow() public {

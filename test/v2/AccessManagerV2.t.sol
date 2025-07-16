@@ -7,6 +7,7 @@ import {DeployUtils} from "./utils/DeployUtils.sol";
 import {JSONLoader} from "./utils/JSONLoader.sol";
 import {IAccessControl} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {IERC1967} from "@openzeppelin/contracts/interfaces/IERC1967.sol";
+import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
@@ -233,12 +234,12 @@ contract AccessManagerTestV2 is Test {
             guardian: address(0), // Will be set through AccessManager
             timelock: 1 days,
             asset: IERC20(address(res.debt)),
+            pool: IERC4626(address(0)), // No pool for this test
             maxCapacity: 1000000e18,
             name: "Test Vault",
             symbol: "tVAULT",
             performanceFeeRate: 0.2e8,
-            minApy: 0,
-            minIdleFundRate: 0
+            minApy: 0
         });
 
         // Deploy vault
@@ -295,12 +296,12 @@ contract AccessManagerTestV2 is Test {
             guardian: address(0), // Will be set through AccessManager
             timelock: 1 days,
             asset: IERC20(address(res.debt)),
+            pool: IERC4626(address(0)), // No pool for this test
             maxCapacity: 1000000e18,
             name: "Test Vault",
             symbol: "tVAULT",
             performanceFeeRate: 0.2e8, // 20%
-            minApy: 0, // 5% minimum APY
-            minIdleFundRate: 0 // 1% minimum idle fund rate
+            minApy: 0 // 5% minimum APY
         });
 
         // Deploy vault
@@ -356,12 +357,12 @@ contract AccessManagerTestV2 is Test {
             guardian: address(0),
             timelock: 1 days,
             asset: IERC20(address(res.debt)),
+            pool: IERC4626(address(0)), // No pool for this test
             maxCapacity: 1000000e18,
             name: "Test Vault",
             symbol: "tVAULT",
             performanceFeeRate: 0.2e8, // 20%
-            minApy: 0,
-            minIdleFundRate: 0
+            minApy: 0
         });
 
         // Deploy vault

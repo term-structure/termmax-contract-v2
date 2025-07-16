@@ -101,10 +101,10 @@ contract TermMaxVaultV2 is
         _checkTimelockBounds(params.timelock);
         _setTimelock(params.timelock);
         _setMinApy(params.minApy);
-        _setMinIdleFundRate(params.minIdleFundRate);
         _setGuardian(params.guardian);
         _setCapacity(params.maxCapacity);
         _setCurator(params.curator);
+        _setPool(address(params.pool));
     }
 
     function initialize(VaultInitialParams memory) external virtual initializer {
@@ -143,8 +143,8 @@ contract TermMaxVaultV2 is
         return _pendingMarkets[market];
     }
 
-    function pendingPools(address pool) external view virtual returns (PendingUint192 memory) {
-        return _pendingPools[pool];
+    function pendingPools() external view virtual returns (PendingAddress memory) {
+        return _pendingPool;
     }
 
     function pendingTimelock() external view virtual returns (PendingUint192 memory) {
@@ -220,22 +220,8 @@ contract TermMaxVaultV2 is
     /**
      * @inheritdoc ITermMaxVaultV2
      */
-    function minIdleFundRate() external view virtual override returns (uint64) {
-        return _minIdleFundRate;
-    }
-
-    /**
-     * @inheritdoc ITermMaxVaultV2
-     */
     function pendingMinApy() external view virtual override returns (PendingUint192 memory) {
         return _pendingMinApy;
-    }
-
-    /**
-     * @inheritdoc ITermMaxVaultV2
-     */
-    function pendingMinIdleFundRate() external view virtual override returns (PendingUint192 memory) {
-        return _pendingMinIdleFundRate;
     }
 
     /**
@@ -256,32 +242,9 @@ contract TermMaxVaultV2 is
     /**
      * @inheritdoc ITermMaxVaultV2
      */
-    function submitPendingMinIdleFundRate(uint64 newMinIdleFundRate) external virtual override onlyCuratorRole {
-        if (newMinIdleFundRate == _minIdleFundRate) revert VaultErrors.AlreadySet();
-        if (_pendingMinIdleFundRate.validAt != 0) revert VaultErrors.AlreadyPending();
-
-        if (newMinIdleFundRate > _minIdleFundRate) {
-            _setMinIdleFundRate(newMinIdleFundRate);
-        } else {
-            _pendingMinIdleFundRate.update(uint184(newMinIdleFundRate), _timelock);
-            emit VaultEventsV2.SubmitMinIdleFundRate(newMinIdleFundRate, _pendingMinIdleFundRate.validAt);
-        }
-    }
-
-    /**
-     * @inheritdoc ITermMaxVaultV2
-     */
     function acceptPendingMinApy() external virtual override afterTimelock(_pendingMinApy.validAt) {
         _setMinApy(uint64(_pendingMinApy.value));
         delete _pendingMinApy;
-    }
-
-    /**
-     * @inheritdoc ITermMaxVaultV2
-     */
-    function acceptPendingMinIdleFundRate() external virtual override afterTimelock(_pendingMinIdleFundRate.validAt) {
-        _setMinIdleFundRate(uint64(_pendingMinIdleFundRate.value));
-        delete _pendingMinIdleFundRate;
     }
 
     /// @dev Sets `_minApy` to `newMinApy`.
@@ -290,24 +253,18 @@ contract TermMaxVaultV2 is
         emit VaultEventsV2.SetMinApy(_msgSender(), newMinApy);
     }
 
-    /// @dev Sets `_minIdleFundRate` to `newMinIdleFundRate`.
-    function _setMinIdleFundRate(uint64 newMinIdleFundRate) internal {
-        _minIdleFundRate = newMinIdleFundRate;
-        emit VaultEventsV2.SetMinIdleFundRate(_msgSender(), newMinIdleFundRate);
-    }
-
     // Ordermanager functions
 
-    function createOrder(
-        ITermMaxMarketV2 market,
-        IERC4626 pool,
-        OrderV2ConfigurationParams memory params,
-        CurveCuts memory curveCuts
-    ) external virtual nonReentrant onlyCuratorRole whenNotPaused returns (ITermMaxOrderV2 order) {
+    function createOrder(ITermMaxMarketV2 market, OrderV2ConfigurationParams memory params, CurveCuts memory curveCuts)
+        external
+        virtual
+        nonReentrant
+        onlyCuratorRole
+        whenNotPaused
+        returns (ITermMaxOrderV2 order)
+    {
         order = abi.decode(
-            _delegateCall(
-                abi.encodeCall(IOrderManagerV2.createOrder, (IERC20(asset()), market, pool, params, curveCuts))
-            ),
+            _delegateCall(abi.encodeCall(IOrderManagerV2.createOrder, (IERC20(asset()), market, params, curveCuts))),
             (ITermMaxOrderV2)
         );
     }
@@ -340,15 +297,6 @@ contract TermMaxVaultV2 is
         whenNotPaused
     {
         _delegateCall(abi.encodeCall(IOrderManagerV2.updateOrdersConfigAndLiquidity, (IERC20(asset()), orders, params)));
-    }
-
-    function updateOrderPools(address[] memory orders, IERC4626[] memory pools)
-        external
-        virtual
-        onlyCuratorRole
-        whenNotPaused
-    {
-        _delegateCall(abi.encodeCall(IOrderManagerV2.updateOrderPools, (orders, pools)));
     }
 
     function redeemOrder(ITermMaxOrderV2 order)
@@ -567,16 +515,25 @@ contract TermMaxVaultV2 is
         delete _pendingMarkets[market];
     }
 
-    function submitPool(address pool, bool isWhitelisted) external virtual onlyCuratorRole {
-        if (!_submitPendingWhitelist(_poolWhitelist, _pendingPools, _setPoolWhitelist, pool, isWhitelisted)) {
-            emit VaultEventsV2.SubmitPoolToWhitelist(pool, _pendingPools[pool].validAt);
-        }
+    function submitPendingPool(address pool) external virtual onlyCuratorRole {
+        if (pool == address(_pool)) revert VaultErrors.AlreadySet();
+        if (_pendingPool.validAt != 0) revert VaultErrors.AlreadyPending();
+
+        _pendingPool.update(pool, _timelock);
+
+        emit VaultEventsV2.SubmitPendingPool(pool, _pendingPool.validAt);
     }
 
-    function _setPoolWhitelist(address pool, bool isWhitelisted) internal {
-        _poolWhitelist[pool] = isWhitelisted;
-        emit VaultEventsV2.SetPoolWhitelist(_msgSender(), pool, isWhitelisted);
-        delete _pendingPools[pool];
+    function _setPool(address pool) internal {
+        IERC4626 oldPool = _pool;
+        oldPool.redeem(oldPool.balanceOf(address(this)), address(this), address(this));
+        if (pool != address(0)) {
+            IERC4626(pool).deposit(IERC20(asset()).balanceOf(address(this)), address(this));
+        }
+        _pool = IERC4626(pool);
+
+        emit VaultEventsV2.SetPool(_msgSender(), pool);
+        delete _pendingPool;
     }
 
     function _submitPendingWhitelist(
@@ -628,10 +585,10 @@ contract TermMaxVaultV2 is
         emit VaultEvents.RevokePendingMarket(_msgSender(), market);
     }
 
-    function revokePendingPool(address pool) external virtual onlyGuardianRole {
-        delete _pendingPools[pool];
+    function revokePendingPool() external virtual onlyGuardianRole {
+        delete _pendingPool;
 
-        emit VaultEventsV2.RevokePendingPool(_msgSender(), pool);
+        emit VaultEventsV2.RevokePendingPool(_msgSender());
     }
 
     function revokePendingPerformanceFeeRate() external virtual onlyGuardianRole {
@@ -649,15 +606,6 @@ contract TermMaxVaultV2 is
         emit VaultEventsV2.RevokePendingMinApy(_msgSender());
     }
 
-    /**
-     * @notice Revoke pending minimum idle fund rate change
-     */
-    function revokePendingMinIdleFundRate() external virtual onlyGuardianRole {
-        delete _pendingMinIdleFundRate;
-
-        emit VaultEventsV2.RevokePendingMinIdleFundRate(_msgSender());
-    }
-
     function acceptTimelock() external virtual afterTimelock(_pendingTimelock.validAt) {
         _setTimelock(_pendingTimelock.value);
     }
@@ -670,8 +618,9 @@ contract TermMaxVaultV2 is
         _setMarketWhitelist(market, true);
     }
 
-    function acceptPool(address pool) external virtual afterTimelock(_pendingPools[address(pool)].validAt) {
-        _setPoolWhitelist(pool, true);
+    function acceptPool() external virtual afterTimelock(_pendingPool.validAt) {
+        _setPool(_pendingPool.value);
+        delete _pendingPool;
     }
 
     function acceptPerformanceFeeRate() external virtual afterTimelock(_pendingPerformanceFeeRate.validAt) {
@@ -749,7 +698,9 @@ contract TermMaxVaultV2 is
         override
         whenNotPaused
     {
-        _delegateCall(abi.encodeCall(IOrderManagerV2.afterSwap, (ftReserve, xtReserve, deltaFt, deltaXt)));
+        _delegateCall(
+            abi.encodeCall(IOrderManagerV2.afterSwap, (IERC20(asset()), ftReserve, xtReserve, deltaFt, deltaXt))
+        );
     }
 
     function supplyQueueLength() external view virtual returns (uint256) {
@@ -758,5 +709,9 @@ contract TermMaxVaultV2 is
 
     function withdrawQueueLength() external view virtual returns (uint256) {
         revert VaultErrorsV2.WithdrawalQueueNoLongerSupported();
+    }
+
+    function pendingPool() external view override returns (PendingAddress memory) {
+        return _pendingPool;
     }
 }

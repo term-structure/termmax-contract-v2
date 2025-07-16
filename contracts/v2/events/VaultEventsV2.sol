@@ -19,23 +19,20 @@ interface VaultEventsV2 {
     // ============================================
 
     /**
-     * @notice Emitted when a pending pool whitelist change is revoked
-     * @dev This event is fired when governance cancels a proposed pool whitelist change
-     *      before the timelock period expires, preventing the change from taking effect.
-     * @param caller The address that initiated the revocation (typically governance)
-     * @param pool The address of the pool whose pending whitelist change was revoked
+     * @notice Emitted when a pending pool is revoked
+     * @dev This event is fired when governance or guardian cancels a proposed pool change
+     * @param caller The address that initiated the revocation
      */
-    event RevokePendingPool(address indexed caller, address indexed pool);
+    event RevokePendingPool(address indexed caller);
 
     /**
-     * @notice Emitted when a pool's whitelist status is successfully updated
-     * @dev This event is fired when a pool is added to or removed from the whitelist
-     *      after the timelock period has elapsed and the change is accepted.
-     * @param caller The address that executed the whitelist change (typically governance)
-     * @param pool The address of the pool whose whitelist status was updated
-     * @param isWhitelisted True if the pool was added to whitelist, false if removed
+     * @notice Emitted when a pool is set as the active vault pool
+     * @dev This event is fired when the vault operator sets a new pool for managing idle funds,
+     *      allowing the vault to earn floating interest on its assets.
+     * @param caller The address that called the function to set the pool
+     * @param pool The address of the newly set pool
      */
-    event SetPoolWhitelist(address indexed caller, address indexed pool, bool isWhitelisted);
+    event SetPool(address indexed caller, address indexed pool);
 
     /**
      * @notice Emitted when a pool whitelist change is submitted for timelock approval
@@ -44,7 +41,7 @@ interface VaultEventsV2 {
      * @param pool The address of the pool proposed for whitelist status change
      * @param validAt The timestamp when the whitelist change will become valid and can be executed
      */
-    event SubmitPoolToWhitelist(address indexed pool, uint64 validAt);
+    event SubmitPendingPool(address indexed pool, uint64 validAt);
 
     // ============================================
     // ORDER LIFECYCLE EVENTS
@@ -85,15 +82,6 @@ interface VaultEventsV2 {
     event UpdateOrderCurve(address indexed caller, address[] orders);
 
     /**
-     * @notice Emitted when order pool assignments are updated
-     * @dev This event tracks changes to which ERC4626 pools orders are connected to,
-     *      affecting where order collateral is deployed for yield generation.
-     * @param caller The operator who executed the pool updates (typically vault management)
-     * @param orders The addresses of all orders whose pool assignments were updated
-     */
-    event UpdateOrderPools(address indexed caller, address[] orders);
-
-    /**
      * @notice Emitted when order configurations are updated
      * @dev This event tracks batch updates to order parameters including liquidity settings,
      *      fee structures, risk parameters, and other operational configurations.
@@ -131,36 +119,6 @@ interface VaultEventsV2 {
      * @param caller The address that initiated the revocation (typically governance)
      */
     event RevokePendingMinApy(address indexed caller);
-
-    // ============================================
-    // IDLE FUND RATE MANAGEMENT EVENTS
-    // ============================================
-
-    /**
-     * @notice Emitted when a new minimum idle fund rate is proposed for timelock approval
-     * @dev This event initiates the governance process for changing the rate applied to
-     *      idle vault funds, starting the timelock period for security.
-     * @param newMinIdleFundRate The proposed minimum idle fund rate (e.g., 10% rate = 0.10e8)
-     * @param validAt The timestamp when the rate change will become valid and executable
-     */
-    event SubmitMinIdleFundRate(uint64 newMinIdleFundRate, uint64 validAt);
-
-    /**
-     * @notice Emitted when the minimum idle fund rate is successfully updated
-     * @dev This event confirms that a proposed idle fund rate change has been accepted
-     *      and applied after the timelock period elapsed.
-     * @param caller The address that executed the rate update (typically governance)
-     * @param newMinIdleFundRate The new minimum idle fund rate value that is now active
-     */
-    event SetMinIdleFundRate(address indexed caller, uint64 newMinIdleFundRate);
-
-    /**
-     * @notice Emitted when a pending minimum idle fund rate change is revoked
-     * @dev This event is fired when governance cancels a proposed idle fund rate change
-     *      before the timelock expires, preventing the change from taking effect.
-     * @param caller The address that initiated the revocation (typically governance)
-     */
-    event RevokePendingMinIdleFundRate(address indexed caller);
 
     // ============================================
     // INTEREST AND FEE EVENTS

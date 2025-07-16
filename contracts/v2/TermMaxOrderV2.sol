@@ -667,11 +667,17 @@ contract TermMaxOrderV2 is
         }
         if (releaseAmount != 0) {
             IERC4626 pool_ = pool;
+            if (pool_ == IERC4626(address(0))) {
+                revert TermMaxCurve.InsufficientLiquidity();
+            }
             pool_.withdraw(releaseAmount, address(this), address(this));
         }
         ITermMaxMarket _market = market;
         if (tokenOut != ft && tokenOut != xt) {
-            _market.burn(address(this), outputAmt - releaseAmount);
+            uint256 tokenToBurn = outputAmt - releaseAmount;
+            if (tokenToBurn > 0) {
+                _market.burn(address(this), tokenToBurn);
+            }
         } else {
             inputAmt += releaseAmount;
             tokenIn.safeIncreaseAllowance(address(_market), inputAmt);

@@ -29,13 +29,6 @@ interface IOrderManagerV2 {
     ) external;
 
     /**
-     * @notice Update the configuration for multiple orders
-     * @param orders The list of order addresses to update
-     * @param pools The new pools for each order
-     */
-    function updateOrderPools(address[] memory orders, IERC4626[] memory pools) external;
-
-    /**
      * @notice Create a new order with the specified parameters
      * @param asset The asset token address
      * @param market The market address
@@ -46,7 +39,6 @@ interface IOrderManagerV2 {
     function createOrder(
         IERC20 asset,
         ITermMaxMarketV2 market,
-        IERC4626 pool,
         OrderV2ConfigurationParams memory params,
         CurveCuts memory curveCuts
     ) external returns (ITermMaxOrderV2 order);
@@ -60,5 +52,5 @@ interface IOrderManagerV2 {
      */
     function redeemOrder(IERC20 asset, address order) external returns (uint256 badDebt, uint256 deliveryCollateral);
 
-    function afterSwap(uint256 ftReserve, uint256 xtReserve, int256 deltaFt, int256 deltaXt) external;
+    function afterSwap(IERC20 asset, uint256 ftReserve, uint256 xtReserve, int256 deltaFt, int256 deltaXt) external;
 }

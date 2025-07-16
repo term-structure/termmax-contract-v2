@@ -60,14 +60,6 @@ interface ITermMaxVaultV2 {
      */
     function minApy() external view returns (uint64);
 
-    /**
-     * @notice Returns the minimum rate for idle funds in the vault
-     * @dev This rate applies to funds that are not actively deployed in strategies.
-     *      Helps ensure idle capital still generates some yield for depositors.
-     * @return The minimum idle fund rate as a uint64 value (e.g., 10% rate = 0.10e8)
-     */
-    function minIdleFundRate() external view returns (uint64);
-
     // ============================================
     // PENDING PARAMETER QUERIES
     // ============================================
@@ -84,26 +76,14 @@ interface ITermMaxVaultV2 {
     function pendingMinApy() external view returns (PendingUint192 memory);
 
     /**
-     * @notice Returns the pending minimum idle fund rate update details
+     * @notice Returns the pending pool value
      * @dev Contains the proposed new value and timing information for the pending change.
-     *      Allows tracking of proposed rate changes during timelock period.
-     * @return PendingUint192 struct with pending minimum idle fund rate data, structure includes:
-     *         - newValue: the proposed new minimum idle fund rate
+     *      Used to track timelock status and proposed changes.
+     * @return PendingAddress struct with pending pool data, structure includes:
+     *         - newValue: the proposed new pool address
      *         - validAt: the timestamp when the change becomes valid
-     *         - isActive: whether there's an active pending change
      */
-    function pendingMinIdleFundRate() external view returns (PendingUint192 memory);
-
-    /**
-     * @notice Returns the pending pool whitelist status update details
-     * @dev Tracks proposed changes to pool whitelist status during timelock period.
-     * @param pool The address of the pool to query pending status for
-     * @return PendingUint192 struct with pending pool status data, where:
-     *         - newValue: 1 for whitelist, 0 for removal
-     *         - validAt: timestamp when change becomes valid
-     *         - isActive: whether there's an active pending change
-     */
-    function pendingPools(address pool) external view returns (PendingUint192 memory);
+    function pendingPool() external view returns (PendingAddress memory);
 
     // ============================================
     // PARAMETER SUBMISSION (TIMELOCK INITIATION)
@@ -118,21 +98,11 @@ interface ITermMaxVaultV2 {
     function submitPendingMinApy(uint64 newMinApy) external;
 
     /**
-     * @notice Submits a pool for whitelist addition or removal
-     * @dev Initiates timelock period for pool whitelist changes to ensure security.
-     *      Allows governance to propose adding or removing pools from the whitelist.
-     * @param pool The address of the pool to add/remove from whitelist
-     * @param isWhitelist True to add to whitelist, false to remove
+     * @notice Submits a new pool for pending approval
+     * @dev Initiates a timelock period before the new pool can be used for earning yield.
+     * @param pool The address of the ERC4626 pool
      */
-    function submitPool(address pool, bool isWhitelist) external;
-
-    /**
-     * @notice Submits a new minimum idle fund rate for pending approval
-     * @dev Initiates a timelock period before the new rate can be applied.
-     *      Ensures changes to idle fund rates go through proper governance process.
-     * @param newMinIdleFundRate The proposed new minimum idle fund rate (e.g., 10% rate = 0.10e8)
-     */
-    function submitPendingMinIdleFundRate(uint64 newMinIdleFundRate) external;
+    function submitPendingPool(address pool) external;
 
     // ============================================
     // PARAMETER ACCEPTANCE (TIMELOCK COMPLETION)
@@ -144,13 +114,6 @@ interface ITermMaxVaultV2 {
      *      Finalizes the APY change and updates the active minimum APY.
      */
     function acceptPendingMinApy() external;
-
-    /**
-     * @notice Accepts and applies the pending minimum idle fund rate change
-     * @dev Can only be called after the timelock period has elapsed.
-     *      Completes the rate change process and updates active rate.
-     */
-    function acceptPendingMinIdleFundRate() external;
 
     // ============================================
     // PARAMETER REVOCATION (TIMELOCK CANCELLATION)
@@ -164,19 +127,11 @@ interface ITermMaxVaultV2 {
     function revokePendingMinApy() external;
 
     /**
-     * @notice Revokes the pending minimum idle fund rate change
+     * @notice Revokes a pending pool change
      * @dev Cancels the pending change and resets the pending state.
-     *      Provides mechanism to abort rate changes during timelock period.
+     *      Allows governance to abort pool changes before they take effect.
      */
-    function revokePendingMinIdleFundRate() external;
-
-    /**
-     * @notice Revokes a pending pool whitelist change
-     * @dev Cancels the pending pool status change and resets pending state.
-     *      Allows governance to abort pool whitelist changes before they take effect.
-     * @param pool The address of the pool to revoke pending changes for
-     */
-    function revokePendingPool(address pool) external;
+    function revokePendingPool() external;
 
     // ============================================
     // ORDER MANAGEMENT
@@ -204,20 +159,10 @@ interface ITermMaxVaultV2 {
         external;
 
     /**
-     * @notice Updates the pool assignments for multiple orders
-     * @dev Changes which ERC4626 pools the orders interact with.
-     *      Pools must be whitelisted before assignment.
-     * @param orders The list of order addresses to update
-     * @param pools The new ERC4626 pools for each order
-     */
-    function updateOrderPools(address[] memory orders, IERC4626[] memory pools) external;
-
-    /**
      * @notice Creates a new order with the specified parameters
      * @dev Deploys a new TermMax order contract with the given configuration.
      *      The order will be associated with the specified market and pool.
      * @param market The TermMax market address that the order will operate in
-     * @param pool The ERC4626 pool that the order will use for yield generation
      * @param params The configuration parameters for the new order including:
      *               - Liquidity settings
      *               - Fee structures
@@ -225,10 +170,7 @@ interface ITermMaxVaultV2 {
      * @param curveCuts The curve cuts defining pricing and liquidity curves
      * @return order The address of the newly created TermMax order contract
      */
-    function createOrder(
-        ITermMaxMarketV2 market,
-        IERC4626 pool,
-        OrderV2ConfigurationParams memory params,
-        CurveCuts memory curveCuts
-    ) external returns (ITermMaxOrderV2 order);
+    function createOrder(ITermMaxMarketV2 market, OrderV2ConfigurationParams memory params, CurveCuts memory curveCuts)
+        external
+        returns (ITermMaxOrderV2 order);
 }

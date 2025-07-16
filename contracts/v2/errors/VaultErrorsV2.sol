@@ -20,10 +20,6 @@ interface VaultErrorsV2 {
     error UseApyInsteadOfApr();
     /// @notice Error thrown when the APY is too low
     error ApyTooLow(uint256 apy, uint256 minApy);
-    /// @notice Error thrown when the idle fund rate is too low
-    error IdleFundRateTooLow(uint256 idleFundRate, uint256 minIdleFundRate);
-    /// @notice Error thrown when the pool is not whitelisted
-    error PoolNotWhitelisted(address pool);
     /// @notice Error thrown when the market is not whitelisted
     error MarketNotWhitelisted(address market);
 }

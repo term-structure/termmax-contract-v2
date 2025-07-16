@@ -1,0 +1,90 @@
+@startuml swapTokenToExactToken Sequence Diagram
+
+participant User
+participant TermMaxOrderV2
+participant SwapTrigger as "ISwapCallback"
+participant Pool as "IERC4626 Pool"
+participant Market as "TermMaxMarket"
+participant TokenIn as "Input Token"
+participant TokenOut as "Output Token"
+participant DebtToken
+participant FT as "Future Token"
+participant XT as "Extension Token"
+
+User -> TermMaxOrderV2: swapTokenToExactToken(tokenIn, tokenOut, recipient, tokenAmtOut, maxTokenIn, deadline)
+
+note over TermMaxOrderV2: Input Validation
+TermMaxOrderV2 -> TermMaxOrderV2: Check deadline (block.timestamp <= deadline)
+TermMaxOrderV2 -> TermMaxOrderV2: Check tokens different (tokenIn != tokenOut)
+TermMaxOrderV2 -> TermMaxOrderV2: Check modifiers (nonReentrant, isOpen)
+
+note over TermMaxOrderV2: Determine Swap Type & Calculate
+alt tokenIn == debtToken && tokenOut == ft
+    TermMaxOrderV2 -> TermMaxOrderV2: _swapAndUpdateReserves(tokenAmtOut, maxTokenIn, config, _buyExactFt)
+    note right: Buy exact FT with debt tokens
+    TermMaxOrderV2 -> TermMaxOrderV2: Calculate netTokenIn, feeAmt, deltaFt, deltaXt
+else tokenIn == debtToken && tokenOut == xt
+    TermMaxOrderV2 -> TermMaxOrderV2: _swapAndUpdateReserves(tokenAmtOut, maxTokenIn, config, _buyExactXt)
+    note right: Buy exact XT with debt tokens
+    TermMaxOrderV2 -> TermMaxOrderV2: Calculate netTokenIn, feeAmt, deltaFt, deltaXt
+else tokenIn == ft && tokenOut == debtToken
+    TermMaxOrderV2 -> TermMaxOrderV2: _swapAndUpdateReserves(tokenAmtOut, maxTokenIn, config, _sellFtForExactToken)
+    note right: Sell FT for exact debt tokens
+    TermMaxOrderV2 -> TermMaxOrderV2: Calculate netTokenIn, feeAmt, deltaFt, deltaXt
+else tokenIn == xt && tokenOut == debtToken
+    TermMaxOrderV2 -> TermMaxOrderV2: _swapAndUpdateReserves(tokenAmtOut, maxTokenIn, config, _sellXtForExactToken)
+    note right: Sell XT for exact debt tokens
+    TermMaxOrderV2 -> TermMaxOrderV2: Calculate netTokenIn, feeAmt, deltaFt, deltaXt
+else
+    TermMaxOrderV2 -> TermMaxOrderV2: revert CantNotSwapToken(tokenIn, tokenOut)
+end
+
+note over TermMaxOrderV2: Trigger Swap Callback (if configured)
+opt swapTrigger is set
+    TermMaxOrderV2 -> SwapTrigger: afterSwap(ftReserve, xtReserve, deltaFt, deltaXt)
+    SwapTrigger --> TermMaxOrderV2: Callback completed
+end
+
+note over TermMaxOrderV2: Transfer Input Tokens
+TermMaxOrderV2 -> TokenIn: safeTransferFrom(user, this, netTokenIn)
+TokenIn --> TermMaxOrderV2: Transfer completed
+
+note over TermMaxOrderV2: Rebalance Reserves
+TermMaxOrderV2 -> TermMaxOrderV2: _rebalance(ft, xt, tokenIn, netTokenIn, tokenOut, tokenAmtOut, feeAmt, gtId, deltaFt, deltaXt)
+
+note over TermMaxOrderV2: Calculate new reserves after swap
+TermMaxOrderV2 -> TermMaxOrderV2: newFtReserve = ftBalance + deltaFt
+TermMaxOrderV2 -> TermMaxOrderV2: newXtReserve = xtBalance + deltaXt
+
+note over TermMaxOrderV2: Check if liquidity release is needed
+opt Need to release liquidity from pool or GT
+    alt Insufficient FT and pool exists
+        TermMaxOrderV2 -> Pool: withdraw(releaseAmount, this, this)
+        Pool --> TermMaxOrderV2: Debt tokens withdrawn
+        TermMaxOrderV2 -> DebtToken: safeIncreaseAllowance(market, releaseAmount)
+        TermMaxOrderV2 -> Market: mint(this, releaseAmount)
+        Market --> TermMaxOrderV2: FT and XT minted
+    else Insufficient FT and gtId exists
+        TermMaxOrderV2 -> Market: issueFtByExistedGt(this, releaseAmount, gtId)
+        Market --> TermMaxOrderV2: FT issued using existing GT
+    end
+    
+    alt Insufficient XT and pool exists
+        TermMaxOrderV2 -> Pool: withdraw(releaseAmount, this, this)
+        Pool --> TermMaxOrderV2: Debt tokens withdrawn
+        TermMaxOrderV2 -> DebtToken: safeIncreaseAllowance(market, releaseAmount)
+        TermMaxOrderV2 -> Market: mint(this, releaseAmount)
+        Market --> TermMaxOrderV2: FT and XT minted
+    end
+end
+
+note over TermMaxOrderV2: Transfer Output Tokens
+TermMaxOrderV2 -> TokenOut: safeTransfer(recipient, tokenAmtOut)
+TokenOut --> TermMaxOrderV2: Transfer completed
+
+note over TermMaxOrderV2: Emit Event
+TermMaxOrderV2 -> TermMaxOrderV2: emit SwapTokenToExactToken(tokenIn, tokenOut, user, recipient, tokenAmtOut, netTokenIn, feeAmt)
+
+TermMaxOrderV2 --> User: Return netTokenIn (actual input amount used)
+
+@enduml
