@@ -264,8 +264,7 @@ contract TermMaxVaultV2 is
         returns (ITermMaxOrderV2 order)
     {
         order = abi.decode(
-            _delegateCall(abi.encodeCall(IOrderManagerV2.createOrder, (IERC20(asset()), market, params, curveCuts))),
-            (ITermMaxOrderV2)
+            _delegateCall(abi.encodeCall(IOrderManagerV2.createOrder, (market, params, curveCuts))), (ITermMaxOrderV2)
         );
     }
 

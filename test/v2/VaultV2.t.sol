@@ -164,7 +164,7 @@ contract VaultTestV2 is Test {
         assertEq(res.debt.balanceOf(address(vault)), amount);
 
         OrderV2ConfigurationParams memory orderConfigParams =
-            OrderV2ConfigurationParams({maxXtReserve: maxCapacity, virtualXtReserve: amount, liquidityChanges: 0});
+            OrderV2ConfigurationParams({maxXtReserve: maxCapacity, virtualXtReserve: amount, removingLiquidity: 0});
 
         res.order = TermMaxOrderV2(address(vault.createOrder(res.market, orderConfigParams, orderConfig.curveCuts)));
         vm.label(address(res.order), "order");
@@ -301,7 +301,7 @@ contract VaultTestV2 is Test {
         vm.startPrank(bob);
 
         OrderV2ConfigurationParams memory orderConfigParams =
-            OrderV2ConfigurationParams({maxXtReserve: maxCapacity, virtualXtReserve: 0, liquidityChanges: 0});
+            OrderV2ConfigurationParams({maxXtReserve: maxCapacity, virtualXtReserve: 0, removingLiquidity: 0});
 
         vm.expectRevert(VaultErrors.NotCuratorRole.selector);
         vault.createOrder(market, orderConfigParams, orderConfig.curveCuts);
@@ -500,8 +500,6 @@ contract VaultTestV2 is Test {
         vault.deposit(amount2, lper2);
         vm.stopPrank();
 
-        _depositToOrder(vault, res.order, -1e10);
-
         vm.startPrank(deployer);
         uint256 totalFt = vault.totalFt();
         uint256 lockedFr = vault.totalAssets();
@@ -528,17 +526,6 @@ contract VaultTestV2 is Test {
         vm.startPrank(lper2);
         res.debt.approve(address(vault), amount2);
         vault.deposit(amount2, lper2);
-        vm.stopPrank();
-
-        vm.startPrank(curator);
-        address[] memory orders = new address[](1);
-        orders[0] = address(res.order);
-
-        OrderV2ConfigurationParams[] memory orderConfigParamsArray = new OrderV2ConfigurationParams[](1);
-        orderConfigParamsArray[0] =
-            OrderV2ConfigurationParams({maxXtReserve: maxCapacity, virtualXtReserve: 0, liquidityChanges: -1000e8});
-
-        vault.updateOrdersConfigAndLiquidity(orders, orderConfigParamsArray);
         vm.stopPrank();
 
         vm.startPrank(deployer);
@@ -572,7 +559,6 @@ contract VaultTestV2 is Test {
         res.debt.approve(address(vault), amount2);
         vault.deposit(amount2, lper2);
         vm.stopPrank();
-        _depositToOrder(vault, res.order, amount2.toInt256());
         console.log("principal after deposit:", vault.totalAssets());
         console.log("total supply:", vault.totalSupply());
         console.log("anulizedInterest:", vault.annualizedInterest());
@@ -580,11 +566,11 @@ contract VaultTestV2 is Test {
 
         console.log("----day 4----");
         vm.warp(currentTime + 4 days);
-        swapFtToXt(94.247e8, 2000e8);
+        buyXt(94.247e8, 2000e8);
         console.log("1-principal after swap:", vault.totalAssets());
         console.log("1-anulizedInterest:", vault.annualizedInterest());
         console.log("1-apy:", ITermMaxVaultV2(address(vault)).apy());
-        swapFtToXt(94.247e8, 2000e8);
+        buyXt(94.247e8, 2000e8);
         console.log("2-principal after swap:", vault.totalAssets());
         console.log("2-anulizedInterest:", vault.annualizedInterest());
         console.log("2-apy:", ITermMaxVaultV2(address(vault)).apy());
@@ -592,7 +578,6 @@ contract VaultTestV2 is Test {
         console.log("----day 6----");
         vm.warp(currentTime + 6 days);
         console.log("new principal:", vault.totalAssets());
-        _depositToOrder(vault, res.order, -(vault.previewRedeem(1000e8)).toInt256());
         vm.startPrank(lper2);
         console.log("previewRedeem: ", vault.previewRedeem(1000e8));
         assertEq(vault.previewRedeem(1000e8), vault.redeem(1000e8, lper2, lper2));
@@ -622,31 +607,13 @@ contract VaultTestV2 is Test {
     }
 
     function testAnulizedInterestLessThanZero() public {
-        uint128 tokenAmtIn = 100e8;
+        uint128 tokenAmtIn = 99e8;
         uint128 ftAmtOut = 100e8;
         address taker = vm.randomAddress();
         res.debt.mint(taker, tokenAmtIn);
         vm.startPrank(taker);
         res.debt.approve(address(res.order), tokenAmtIn);
         vm.expectRevert(VaultErrors.OrderHasNegativeInterest.selector);
-        res.order.swapExactTokenToToken(res.debt, res.ft, taker, tokenAmtIn, ftAmtOut, block.timestamp + 1 hours);
-        vm.stopPrank();
-    }
-
-    function testLockedFtGreaterThanTotalFt() public {
-        vm.warp(currentTime + 2 days);
-        buyXt(50e8, 1000e8);
-
-        vm.warp(currentTime + 4 days);
-        uint128 tokenAmtIn = 80e8;
-        uint128 ftAmtOut = 130e8;
-
-        address taker = vm.randomAddress();
-        res.debt.mint(taker, tokenAmtIn);
-        vm.startPrank(taker);
-        res.debt.approve(address(res.order), tokenAmtIn);
-
-        vm.expectRevert(VaultErrors.LockedFtGreaterThanTotalFt.selector);
         res.order.swapExactTokenToToken(res.debt, res.ft, taker, tokenAmtIn, ftAmtOut, block.timestamp + 1 hours);
         vm.stopPrank();
     }
@@ -673,13 +640,15 @@ contract VaultTestV2 is Test {
         vm.label(lper2, "lper2");
         uint256 amount2 = 10000e8;
         res.debt.mint(lper2, amount2);
-        vm.startPrank(lper2);
-        res.debt.approve(address(vault), amount2);
-        vault.deposit(amount2, lper2);
-        assertEq(res.debt.balanceOf(address(vault)), amount2);
-        vm.stopPrank();
-
-        _depositToOrder(vault, res.order, amount2.toInt256());
+        {
+            vm.startPrank(lper2);
+            uint256 vaultBalanceBefore = res.debt.balanceOf(address(vault));
+            res.debt.approve(address(vault), amount2);
+            vault.deposit(amount2, lper2);
+            uint256 vaultBalanceAfter = res.debt.balanceOf(address(vault));
+            assertEq(vaultBalanceAfter, vaultBalanceBefore + amount2);
+            vm.stopPrank();
+        }
 
         address borrower = vm.randomAddress();
         vm.startPrank(borrower);
@@ -739,8 +708,6 @@ contract VaultTestV2 is Test {
         res.debt.approve(address(vault), amount2);
         vault.deposit(amount2, lper2);
         vm.stopPrank();
-
-        _depositToOrder(vault, res.order, amount2.toInt256());
 
         address borrower = vm.randomAddress();
         vm.startPrank(borrower);
@@ -819,30 +786,10 @@ contract VaultTestV2 is Test {
         vm.stopPrank();
     }
 
-    function swapFtToXt(uint128 ftAmtIn, uint128 xtAmtOut) internal {
-        address taker = vm.randomAddress();
-        vm.prank(deployer);
-        res.ft.transfer(taker, ftAmtIn);
-        vm.startPrank(taker);
-        res.ft.approve(address(res.order), ftAmtIn);
-        res.order.swapExactTokenToToken(res.ft, res.xt, taker, ftAmtIn, xtAmtOut, block.timestamp + 1 hours);
-        vm.stopPrank();
-    }
-
-    function swapXtToFt(uint128 xtAmtIn, uint128 ftAmtOut) internal {
-        address taker = vm.randomAddress();
-        vm.prank(deployer);
-        res.xt.transfer(taker, xtAmtIn);
-        vm.startPrank(taker);
-        res.xt.approve(address(res.order), xtAmtIn);
-        res.order.swapExactTokenToToken(res.xt, res.ft, taker, xtAmtIn, ftAmtOut, block.timestamp + 1 hours);
-        vm.stopPrank();
-    }
-
     function testFixFindings101() public {
         vm.prank(curator);
         OrderV2ConfigurationParams memory orderConfigParams =
-            OrderV2ConfigurationParams({maxXtReserve: maxCapacity, virtualXtReserve: 0, liquidityChanges: 0});
+            OrderV2ConfigurationParams({maxXtReserve: maxCapacity, virtualXtReserve: 0, removingLiquidity: 0});
 
         vault.createOrder(res.market, orderConfigParams, orderConfig.curveCuts);
         lper = vm.randomAddress();
@@ -863,19 +810,6 @@ contract VaultTestV2 is Test {
 
     function _daysToMaturity(uint256 _now) internal view returns (uint256 daysToMaturity) {
         daysToMaturity = (res.market.config().maturity - _now + Constants.SECONDS_IN_DAY - 1) / Constants.SECONDS_IN_DAY;
-    }
-
-    function _depositToOrder(TermMaxVaultV2 _vault, TermMaxOrderV2 order, int256 amount) internal {
-        vm.startPrank(_vault.curator());
-
-        OrderV2ConfigurationParams[] memory orderConfigParamsArray = new OrderV2ConfigurationParams[](1);
-        orderConfigParamsArray[0] =
-            OrderV2ConfigurationParams({maxXtReserve: maxCapacity, virtualXtReserve: 0, liquidityChanges: amount});
-        address[] memory orders = new address[](1);
-        orders[0] = address(order);
-
-        _vault.updateOrdersConfigAndLiquidity(orders, orderConfigParamsArray);
-        vm.stopPrank();
     }
 
     // ========== Tests for ITermMaxVaultV2 new functions ==========
@@ -1099,8 +1033,6 @@ contract VaultTestV2 is Test {
 
     /// @dev remove --isolate to run this test
     function testMultipleWithdrawals() public {
-        _depositToOrder(vault, res.order, -10e8.toInt256());
-
         // First withdrawal
         vm.startPrank(deployer);
         uint256 sharesToWithdraw = 1e2;

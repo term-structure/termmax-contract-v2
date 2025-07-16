@@ -60,6 +60,7 @@ contract OrderManagerV2 is VaultStorageV2, OnlyProxyCall, IOrderManagerV2 {
     ) external onlyProxy {
         require(orders.length == params.length, VaultErrorsV2.ArrayLengthMismatch());
         _accruedInterest();
+        uint256 totalRemovingLiquidity;
         for (uint256 i = 0; i < orders.length; ++i) {
             address order = orders[i];
             OrderV2ConfigurationParams memory param = params[i];
@@ -67,14 +68,15 @@ contract OrderManagerV2 is VaultStorageV2, OnlyProxyCall, IOrderManagerV2 {
             ITermMaxOrderV2(order).setGeneralConfig(
                 0, param.maxXtReserve, ISwapCallback(address(this)), param.virtualXtReserve
             );
-            if (param.liquidityChanges > 0) {
-                asset.safeIncreaseAllowance(order, uint256(param.liquidityChanges));
-                ITermMaxOrderV2(order).addLiquidity(asset, uint256(param.liquidityChanges));
-            } else if (param.liquidityChanges < 0) {
-                ITermMaxOrderV2(order).removeLiquidity(asset, uint256(-param.liquidityChanges), address(this));
+            if (param.removingLiquidity != 0) {
+                ITermMaxOrderV2(order).removeLiquidity(asset, param.removingLiquidity, address(this));
+                totalRemovingLiquidity += param.removingLiquidity;
             }
         }
-        emit VaultEventsV2.UpdateOrderCurve(msg.sender, orders);
+        if (totalRemovingLiquidity != 0) {
+            _depositToPoolOrNot(asset, totalRemovingLiquidity);
+        }
+        emit VaultEventsV2.UpdateOrderConfiguration(msg.sender, orders);
     }
 
     function withdrawPerformanceFee(IERC20 asset, address recipient, uint256 amount) external onlyProxy {
@@ -94,23 +96,18 @@ contract OrderManagerV2 is VaultStorageV2, OnlyProxyCall, IOrderManagerV2 {
             ITermMaxMarket market = ITermMaxOrder(order).market();
             (,,, address collateral, IERC20 debtToken) = market.tokens();
             _badDebtMapping[collateral] += badDebt;
-            // That means the order use pool if the debt token is not the same as the asset
-            if (debtToken != asset) {
-                // transfer collateral to the vault
-                deliveryCollateral = abi.decode(deliveryData, (uint256));
-                ITermMaxOrder(order).withdrawAssets(IERC20(collateral), address(this), deliveryCollateral);
-            }
         }
+        _depositToPoolOrNot(asset, asset.balanceOf(address(this)));
+
         delete _orderMaturityMapping[order];
         emit VaultEventsV2.RedeemOrder(msg.sender, order, badDebt, deliveryCollateral);
     }
 
-    function createOrder(
-        IERC20 asset,
-        ITermMaxMarketV2 market,
-        OrderV2ConfigurationParams memory params,
-        CurveCuts memory curveCuts
-    ) external onlyProxy returns (ITermMaxOrderV2 order) {
+    function createOrder(ITermMaxMarketV2 market, OrderV2ConfigurationParams memory params, CurveCuts memory curveCuts)
+        external
+        onlyProxy
+        returns (ITermMaxOrderV2 order)
+    {
         _accruedInterest();
         require(_marketWhitelist[address(market)], VaultErrorsV2.MarketNotWhitelisted(address(market)));
 
@@ -122,12 +119,6 @@ contract OrderManagerV2 is VaultStorageV2, OnlyProxyCall, IOrderManagerV2 {
         initialParams.orderConfig.swapTrigger = ISwapCallback(address(this));
         initialParams.orderConfig.curveCuts = curveCuts;
         order = ITermMaxOrderV2(address(market.createOrder(initialParams)));
-        if (params.liquidityChanges > 0) {
-            // transfer asset to the order
-            uint256 initialReserve = uint256(params.liquidityChanges);
-            asset.safeIncreaseAllowance(address(order), initialReserve);
-            ITermMaxOrderV2(address(order)).addLiquidity(asset, initialReserve);
-        }
         uint64 orderMaturity = ITermMaxMarket(address(market)).config().maturity;
         _orderMaturityMapping[address(order)] = orderMaturity;
         _maturityMapping.insertWhenZeroAsRoot(orderMaturity);
@@ -140,12 +131,7 @@ contract OrderManagerV2 is VaultStorageV2, OnlyProxyCall, IOrderManagerV2 {
         uint256 amplifiedAmt = amount * Constants.DECIMAL_BASE_SQ;
         _totalFt += amplifiedAmt;
         _accretingPrincipal += amplifiedAmt;
-        IERC4626 pool = _pool;
-        if (pool != IERC4626(address(0))) {
-            // deposit to the pool
-            asset.safeIncreaseAllowance(address(pool), amount);
-            pool.deposit(amount, address(this));
-        }
+        _depositToPoolOrNot(asset, amount);
     }
 
     function withdrawAssets(IERC20 asset, address recipient, uint256 amount) external onlyProxy {
@@ -154,6 +140,15 @@ contract OrderManagerV2 is VaultStorageV2, OnlyProxyCall, IOrderManagerV2 {
         _totalFt -= amplifiedAmt;
         _accretingPrincipal -= amplifiedAmt;
         _withdrawFromPoolOrNot(asset, recipient, amount);
+    }
+
+    function _depositToPoolOrNot(IERC20 asset, uint256 amount) internal {
+        IERC4626 pool = _pool;
+        if (pool != IERC4626(address(0))) {
+            // deposit to the pool
+            asset.safeIncreaseAllowance(address(pool), amount);
+            pool.deposit(amount, address(this));
+        }
     }
 
     function _withdrawFromPoolOrNot(IERC20 asset, address recipient, uint256 amount) internal {
@@ -171,8 +166,7 @@ contract OrderManagerV2 is VaultStorageV2, OnlyProxyCall, IOrderManagerV2 {
         uint256 amplifiedAmt = amount * Constants.DECIMAL_BASE_SQ;
         _performanceFee -= amplifiedAmt;
         _totalFt -= amplifiedAmt;
-
-        asset.safeTransfer(recipient, amount);
+        _withdrawFromPoolOrNot(asset, recipient, amount);
         emit VaultEvents.WithdrawPerformanceFee(msg.sender, recipient, amount);
     }
 
@@ -314,10 +308,12 @@ contract OrderManagerV2 is VaultStorageV2, OnlyProxyCall, IOrderManagerV2 {
     }
 
     function _releaseLiquidity(ITermMaxOrder order, IERC20 asset, uint256 amount) internal {
-        if (_pool != IERC4626(address(0))) {
-            // release liquidity from the pool
-            _pool.withdraw(amount, address(this), address(this));
+        IERC4626 pool = _pool;
+        if (pool != IERC4626(address(0))) {
+            // withdraw from the pool
+            pool.withdraw(amount, address(this), address(this));
         }
+
         ITermMaxMarket market = order.market();
         asset.safeIncreaseAllowance(address(market), amount);
         market.mint(address(order), amount);

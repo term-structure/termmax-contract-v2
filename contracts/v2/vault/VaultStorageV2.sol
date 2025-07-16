@@ -7,7 +7,7 @@ import {PendingAddress, PendingUint192} from "../../v1/lib/PendingLib.sol";
 struct OrderV2ConfigurationParams {
     uint256 maxXtReserve;
     uint256 virtualXtReserve;
-    int256 liquidityChanges;
+    uint256 removingLiquidity;
 }
 
 contract VaultStorageV2 {

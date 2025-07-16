@@ -30,18 +30,14 @@ interface IOrderManagerV2 {
 
     /**
      * @notice Create a new order with the specified parameters
-     * @param asset The asset token address
      * @param market The market address
      * @param params The configuration parameters for the new order
      * @param curveCuts The curve cuts for the new order
      * @return order The address of the newly created order
      */
-    function createOrder(
-        IERC20 asset,
-        ITermMaxMarketV2 market,
-        OrderV2ConfigurationParams memory params,
-        CurveCuts memory curveCuts
-    ) external returns (ITermMaxOrderV2 order);
+    function createOrder(ITermMaxMarketV2 market, OrderV2ConfigurationParams memory params, CurveCuts memory curveCuts)
+        external
+        returns (ITermMaxOrderV2 order);
 
     /**
      * @notice Withdraw assets from an order after maturity
