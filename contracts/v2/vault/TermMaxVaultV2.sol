@@ -224,6 +224,10 @@ contract TermMaxVaultV2 is
         return _pendingMinApy;
     }
 
+    function pool() external view virtual override returns (IERC4626) {
+        return _pool;
+    }
+
     /**
      * @inheritdoc ITermMaxVaultV2
      */
@@ -514,26 +518,31 @@ contract TermMaxVaultV2 is
         delete _pendingMarkets[market];
     }
 
-    function submitPendingPool(address pool) external virtual onlyCuratorRole {
-        if (pool == address(_pool)) revert VaultErrors.AlreadySet();
+    function submitPendingPool(address pool_) external virtual onlyCuratorRole {
+        if (pool_ == address(_pool)) revert VaultErrors.AlreadySet();
         if (_pendingPool.validAt != 0) revert VaultErrors.AlreadyPending();
 
-        _pendingPool.update(pool, _timelock);
+        _pendingPool.update(pool_, _timelock);
 
-        emit VaultEventsV2.SubmitPendingPool(pool, _pendingPool.validAt);
+        emit VaultEventsV2.SubmitPendingPool(pool_, _pendingPool.validAt);
     }
 
-    function _setPool(address pool) internal {
+    function _setPool(address pool_) internal {
         IERC4626 oldPool = _pool;
         if (oldPool != IERC4626(address(0))) {
             oldPool.redeem(oldPool.balanceOf(address(this)), address(this), address(this));
         }
-        if (pool != address(0)) {
-            IERC4626(pool).deposit(IERC20(asset()).balanceOf(address(this)), address(this));
+        if (pool_ != address(0)) {
+            IERC20 asset_ = IERC20(asset());
+            uint256 balance = asset_.balanceOf(address(this));
+            if (balance > 0) {
+                asset_.safeIncreaseAllowance(pool_, balance);
+                IERC4626(pool_).deposit(balance, address(this));
+            }
         }
-        _pool = IERC4626(pool);
+        _pool = IERC4626(pool_);
 
-        emit VaultEventsV2.SetPool(_msgSender(), pool);
+        emit VaultEventsV2.SetPool(_msgSender(), pool_);
         delete _pendingPool;
     }
 
@@ -621,7 +630,6 @@ contract TermMaxVaultV2 is
 
     function acceptPool() external virtual afterTimelock(_pendingPool.validAt) {
         _setPool(_pendingPool.value);
-        delete _pendingPool;
     }
 
     function acceptPerformanceFeeRate() external virtual afterTimelock(_pendingPerformanceFeeRate.validAt) {

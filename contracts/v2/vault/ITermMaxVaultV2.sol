@@ -115,6 +115,16 @@ interface ITermMaxVaultV2 {
      */
     function acceptPendingMinApy() external;
 
+    /**
+     * @notice
+     */
+    function acceptPool() external;
+
+    /**
+     *
+     */
+    function pool() external view returns (IERC4626);
+
     // ============================================
     // PARAMETER REVOCATION (TIMELOCK CANCELLATION)
     // ============================================

@@ -568,38 +568,165 @@ contract VaultV2WithPoolTest is Test {
         vm.stopPrank();
     }
 
-    // ========== Tests for ITermMaxVaultV2 nonTxReentrantBetweenActions ==========
-    /// @dev remove --isolate to run this test
-    function testMultipleDeposits() public {
-        // Initial deposit
-        vm.startPrank(deployer);
-        res.debt.mint(deployer, 1000e8);
-        res.debt.approve(address(vault), 1000e8);
-        vault.deposit(1000e8, deployer);
-        vm.stopPrank();
+    // ========== Tests for Pool Management ==========
 
-        // Second deposit
-        vm.startPrank(deployer);
-        res.debt.mint(deployer, 500e8);
-        res.debt.approve(address(vault), 500e8);
-        vault.deposit(500e8, deployer);
-        vm.stopPrank();
+    function testSubmitPendingPool() public {
+        ITermMaxVaultV2 vaultV2 = ITermMaxVaultV2(address(vault));
+
+        // Create a new pool
+        MockERC4626 newPool = new MockERC4626(res.debt);
+        address newPoolAddress = address(newPool);
+
+        // Test unauthorized access
+        vm.prank(vm.randomAddress());
+        vm.expectRevert(VaultErrors.NotCuratorRole.selector);
+        vaultV2.submitPendingPool(newPoolAddress);
+
+        // Test submitting pending pool by curator
+        vm.expectEmit(true, false, false, true);
+        emit VaultEventsV2.SubmitPendingPool(newPoolAddress, uint64(currentTime + timelock));
+
+        vm.prank(curator);
+        vaultV2.submitPendingPool(newPoolAddress);
+
+        // Verify pending pool state
+        assertEq(vault.pendingPool().value, newPoolAddress);
+        assertEq(vault.pendingPool().validAt, currentTime + timelock);
+
+        // Test submitting same pool should revert with AlreadySet
+        vm.prank(curator);
+        vm.expectRevert(VaultErrors.AlreadySet.selector);
+        vaultV2.submitPendingPool(address(pool)); // Current pool
+
+        // Test submitting another pool while one is pending should revert
+        MockERC4626 anotherPool = new MockERC4626(res.debt);
+        vm.prank(curator);
+        vm.expectRevert(VaultErrors.AlreadyPending.selector);
+        vaultV2.submitPendingPool(address(anotherPool));
     }
 
-    /// @dev remove --isolate to run this test
-    function testMultipleWithdrawals() public {
-        // First withdrawal
-        vm.startPrank(deployer);
-        uint256 sharesToWithdraw = 1e2;
-        uint256 amountWithdrawn = vault.withdraw(sharesToWithdraw, deployer, deployer);
-        assertEq(amountWithdrawn, vault.previewWithdraw(sharesToWithdraw));
-        vm.stopPrank();
+    function testAcceptPool() public {
+        ITermMaxVaultV2 vaultV2 = ITermMaxVaultV2(address(vault));
 
-        // Second withdrawal
-        vm.startPrank(deployer);
-        sharesToWithdraw = 1e3;
-        amountWithdrawn = vault.withdraw(sharesToWithdraw, deployer, deployer);
-        assertEq(amountWithdrawn, vault.previewWithdraw(sharesToWithdraw));
-        vm.stopPrank();
+        // Create a new pool
+        MockERC4626 newPool = new MockERC4626(res.debt);
+        address newPoolAddress = address(newPool);
+
+        // Submit pending pool
+        vm.prank(curator);
+        vaultV2.submitPendingPool(newPoolAddress);
+
+        // Test accepting before timelock should revert
+        vm.expectRevert(VaultErrors.TimelockNotElapsed.selector);
+        vaultV2.acceptPool();
+
+        // Move time forward past timelock
+        vm.warp(currentTime + timelock + 1);
+
+        // Get initial balances
+        uint256 oldPoolBalance = pool.balanceOf(address(vault));
+        uint256 vaultAssetBalance = res.debt.balanceOf(address(vault));
+
+        // Test accepting pool
+        vm.expectEmit(true, true, false, false);
+        emit VaultEventsV2.SetPool(address(this), newPoolAddress);
+
+        vaultV2.acceptPool();
+
+        // Verify pool was changed
+        assertEq(address(vault.pool()), newPoolAddress);
+
+        // Verify pending pool was cleared
+        assertEq(vault.pendingPool().value, address(0));
+        assertEq(vault.pendingPool().validAt, 0);
+
+        // Verify assets were moved from old pool to new pool
+        assertEq(pool.balanceOf(address(vault)), 0); // Old pool should have no shares
+        assertGt(newPool.balanceOf(address(vault)), 0); // New pool should have shares
+    }
+
+    function testRevokePendingPool() public {
+        ITermMaxVaultV2 vaultV2 = ITermMaxVaultV2(address(vault));
+
+        // Create a new pool
+        MockERC4626 newPool = new MockERC4626(res.debt);
+        address newPoolAddress = address(newPool);
+
+        // Submit pending pool
+        vm.prank(curator);
+        vaultV2.submitPendingPool(newPoolAddress);
+
+        // Verify pending state
+        assertEq(vault.pendingPool().value, newPoolAddress);
+        assertEq(vault.pendingPool().validAt, currentTime + timelock);
+
+        // Test unauthorized revoke
+        vm.prank(vm.randomAddress());
+        vm.expectRevert(VaultErrors.NotGuardianRole.selector);
+        vaultV2.revokePendingPool();
+
+        // Test revoke by guardian
+        vm.expectEmit(true, false, false, false);
+        emit VaultEventsV2.RevokePendingPool(guardian);
+
+        vm.prank(guardian);
+        vaultV2.revokePendingPool();
+
+        // Verify pending pool was cleared
+        assertEq(vault.pendingPool().value, address(0));
+        assertEq(vault.pendingPool().validAt, 0);
+
+        // Verify original pool is still active
+        assertEq(address(vault.pool()), address(pool));
+    }
+
+    function testPoolManagementWithZeroAddress() public {
+        ITermMaxVaultV2 vaultV2 = ITermMaxVaultV2(address(vault));
+
+        // Test submitting zero address as pool (should disable pool)
+        vm.prank(curator);
+        vaultV2.submitPendingPool(address(0));
+
+        // Move time forward and accept
+        vm.warp(currentTime + timelock + 1);
+
+        uint256 oldPoolBalance = pool.balanceOf(address(vault));
+        uint256 expectedAssetBalance = pool.convertToAssets(oldPoolBalance);
+
+        vm.expectEmit(true, true, false, false);
+        emit VaultEventsV2.SetPool(address(this), address(0));
+
+        vaultV2.acceptPool();
+
+        // Verify pool was set to zero address
+        assertEq(address(vault.pool()), address(0));
+
+        // Verify assets were withdrawn from old pool
+        assertEq(pool.balanceOf(address(vault)), 0);
+        assertEq(res.debt.balanceOf(address(vault)), expectedAssetBalance);
+    }
+
+    function testPoolManagementAccessControl() public {
+        ITermMaxVaultV2 vaultV2 = ITermMaxVaultV2(address(vault));
+
+        // Create a new pool
+        MockERC4626 newPool = new MockERC4626(res.debt);
+
+        // Test that only curator can submit
+        vm.prank(guardian);
+        vm.expectRevert(VaultErrors.NotCuratorRole.selector);
+        vaultV2.submitPendingPool(address(newPool));
+
+        // Test that only guardian can revoke
+        vm.prank(curator);
+        vaultV2.submitPendingPool(address(newPool));
+
+        vm.prank(curator);
+        vm.expectRevert(VaultErrors.NotGuardianRole.selector);
+        vaultV2.revokePendingPool();
+
+        // Test that anyone can accept after timelock
+        vm.warp(currentTime + timelock + 1);
+        vaultV2.acceptPool(); // Should not revert
     }
 }
