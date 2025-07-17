@@ -222,6 +222,13 @@ abstract contract AbstractGearingTokenV2 is
      * @inheritdoc IGearingToken
      */
     function merge(uint256[] memory ids) external virtual nonReentrant returns (uint256 newId) {
+        if (ids.length == 0) {
+            revert GearingTokenErrorsV2.GtIdArrayIsEmpty();
+        }
+        GtConfig memory config = _config;
+        if (config.maturity <= block.timestamp) {
+            revert GtIsExpired(0);
+        }
         uint128 totalDebtAmt;
         bytes memory mergedCollateralData;
         for (uint256 i = 0; i < ids.length; ++i) {
@@ -236,7 +243,7 @@ abstract contract AbstractGearingTokenV2 is
                 i == 0 ? loan.collateralData : _mergeCollateral(mergedCollateralData, loan.collateralData);
             _burnInternal(id);
         }
-        newId = _mintInternal(msg.sender, totalDebtAmt, mergedCollateralData, _config);
+        newId = _mintInternal(msg.sender, totalDebtAmt, mergedCollateralData, config);
         emit MergeGts(msg.sender, newId, ids);
     }
 

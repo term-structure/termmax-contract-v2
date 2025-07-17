@@ -24,6 +24,7 @@ import {
     GearingTokenWithERC20V2,
     GearingTokenEvents,
     GearingTokenErrors,
+    GearingTokenErrorsV2,
     GearingTokenEventsV2,
     GtConfig
 } from "contracts/v2/tokens/GearingTokenWithERC20V2.sol";
@@ -496,41 +497,6 @@ contract GtTestV2 is Test {
         flashRepayer.flashRepay(gtId, repayAmt, true, abi.encode(collateralAmt));
     }
 
-    // function testFlashRepayThroughFt() public {
-    //     uint128 debtAmt = 100e8;
-    //     uint256 collateralAmt = 1e18;
-
-    //     vm.startPrank(sender);
-
-    //     (uint256 gtId, ) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
-    //     deal(address(res.ft), address(flashRepayer), debtAmt);
-
-    //     res.gt.approve(address(flashRepayer), gtId);
-
-    //     uint collateralBalanceBefore = res.collateral.balanceOf(sender);
-    //     uint ftBalanceBefore = res.ft.balanceOf(sender);
-    //     StateChecker.MarketState memory state = StateChecker.getMarketState(res);
-    //     bool byDebtToken = false;
-    //     vm.expectEmit();
-    //     emit GearingTokenEvents.Repay(gtId, debtAmt, byDebtToken);
-    //     flashRepayer.flashRepay(gtId, byDebtToken);
-
-    //     uint collateralBalanceAfter = res.collateral.balanceOf(sender);
-    //     uint ftBalanceAfter = res.ft.balanceOf(sender);
-    //     state.ftReserve += debtAmt;
-    //     state.collateralReserve -= collateralAmt;
-    //     StateChecker.checkMarketState(res, state);
-
-    //     assert(res.collateral.balanceOf(address(flashRepayer)) == collateralAmt);
-    //     assert(res.debt.balanceOf(address(flashRepayer)) == 0);
-    //     assert(collateralBalanceAfter == collateralBalanceBefore);
-    //     assert(ftBalanceAfter == ftBalanceBefore);
-    //     vm.expectRevert(abi.encodePacked(bytes4(keccak256("ERC721NonexistentToken(uint256)")), gtId));
-    //     res.gt.loanInfo(gtId);
-
-    //     vm.stopPrank();
-    // }
-
     function testRevertByGtIsExpiredWhenRepay() public {
         uint128 debtAmt = 100e8;
         uint256 collateralAmt = 1e18;
@@ -591,6 +557,14 @@ contract GtTestV2 is Test {
             res.gt.loanInfo(ids[i]);
         }
 
+        vm.stopPrank();
+    }
+
+    function testMergeEmptyArray() public {
+        uint256[] memory ids = new uint256[](0);
+        vm.startPrank(sender);
+        vm.expectRevert(abi.encodeWithSelector(GearingTokenErrorsV2.GtIdArrayIsEmpty.selector));
+        res.gt.merge(ids);
         vm.stopPrank();
     }
 
