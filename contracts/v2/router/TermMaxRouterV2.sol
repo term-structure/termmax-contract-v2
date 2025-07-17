@@ -409,6 +409,7 @@ contract TermMaxRouterV2 is
         ITermMaxMarket market,
         uint256 gtId,
         bool byDebtToken,
+        uint256 expectedOutput,
         SwapUnit[] memory units,
         TermMaxSwapData memory swapData
     ) external whenNotPaused noCallbackReentrant returns (uint256 netTokenOut) {
@@ -421,6 +422,9 @@ contract TermMaxRouterV2 is
         callbackData = abi.encode(FlashRepayOptions.REPAY, callbackData);
         gtToken.flashRepay(gtId, byDebtToken, callbackData);
         netTokenOut = debtToken.balanceOf(address(this));
+        if (netTokenOut < expectedOutput) {
+            revert InsufficientTokenOut(address(debtToken), expectedOutput, netTokenOut);
+        }
         debtToken.safeTransfer(recipient, netTokenOut);
     }
 
@@ -430,6 +434,7 @@ contract TermMaxRouterV2 is
         uint256 gtId,
         uint128 repayAmt,
         bool byDebtToken,
+        uint256 expectedOutput,
         bytes memory removedCollateral,
         SwapUnit[] memory units,
         TermMaxSwapData memory swapData
@@ -447,6 +452,9 @@ contract TermMaxRouterV2 is
             gtToken.safeTransferFrom(address(this), msg.sender, gtId);
         }
         netTokenOut = debtToken.balanceOf(address(this));
+        if (netTokenOut < expectedOutput) {
+            revert InsufficientTokenOut(address(debtToken), expectedOutput, netTokenOut);
+        }
         debtToken.safeTransfer(recipient, netTokenOut);
     }
 

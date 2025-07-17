@@ -332,7 +332,7 @@ abstract contract GtBaseTestV2 is ForkBaseTestV2 {
 
         (, uint128 debtAmt, bytes memory collateralData) = res.gt.loanInfo(gtId);
         uint256 netTokenOut = res.router.flashRepayFromCollV2(
-            taker, res.market, gtId, debtAmt, byDebtToken, collateralData, units, swapData
+            taker, res.market, gtId, debtAmt, byDebtToken, 0, collateralData, units, swapData
         );
 
         uint256 debtTokenBalanceAfterRepay = res.debtToken.balanceOf(taker);
@@ -365,7 +365,7 @@ abstract contract GtBaseTestV2 is ForkBaseTestV2 {
         swapData.deadline = block.timestamp + 1 hours;
 
         uint256 netTokenOut = res.router.flashRepayFromCollV2(
-            taker, res.market, gtId, debtAmt, byDebtToken, collateralData, units, swapData
+            taker, res.market, gtId, debtAmt, byDebtToken, 0, collateralData, units, swapData
         );
 
         uint256 debtTokenBalanceAfterRepay = res.debtToken.balanceOf(taker);

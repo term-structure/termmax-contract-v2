@@ -252,6 +252,7 @@ interface ITermMaxRouterV2 {
         ITermMaxMarket market,
         uint256 gtId,
         bool byDebtToken,
+        uint256 expectedOutput,
         SwapUnit[] memory units,
         TermMaxSwapData memory swapData
     ) external returns (uint256 netTokenOut);
@@ -262,6 +263,7 @@ interface ITermMaxRouterV2 {
         uint256 gtId,
         uint128 repayAmt,
         bool byDebtToken,
+        uint256 expectedOutput,
         bytes memory removedCollateral,
         SwapUnit[] memory units,
         TermMaxSwapData memory swapData
