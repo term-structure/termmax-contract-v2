@@ -543,7 +543,7 @@ contract GtTestV2 is Test {
         StateChecker.MarketState memory state = StateChecker.getMarketState(res);
 
         vm.expectEmit();
-        uint256 newId = 4;
+        uint256 newId = ids[0];
         emit GearingTokenEvents.MergeGts(sender, newId, ids);
         newId = res.gt.merge(ids);
         StateChecker.checkMarketState(res, state);
@@ -552,7 +552,7 @@ contract GtTestV2 is Test {
         assert(owner == sender);
         assert(d == debts[0] + debts[1] + debts[2]);
         assert(collaterals[0] + collaterals[1] + collaterals[2] == abi.decode(cd, (uint256)));
-        for (uint256 i = 0; i < ids.length; i++) {
+        for (uint256 i = 1; i < ids.length; i++) {
             vm.expectRevert(abi.encodePacked(bytes4(keccak256("ERC721NonexistentToken(uint256)")), ids[i]));
             res.gt.loanInfo(ids[i]);
         }

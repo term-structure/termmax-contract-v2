@@ -229,21 +229,23 @@ abstract contract AbstractGearingTokenV2 is
         if (config.maturity <= block.timestamp) {
             revert GtIsExpired(0);
         }
-        uint128 totalDebtAmt;
-        bytes memory mergedCollateralData;
+        newId = ids[0];
+        LoanInfo memory firstLoan = loanMapping[newId];
+
         for (uint256 i = 0; i < ids.length; ++i) {
             uint256 id = ids[i];
-            LoanInfo memory loan = loanMapping[id];
             address owner = ownerOf(id);
             if (msg.sender != owner) {
                 revert AuthorizationFailed(id, msg.sender);
             }
-            totalDebtAmt += loan.debtAmt;
-            mergedCollateralData =
-                i == 0 ? loan.collateralData : _mergeCollateral(mergedCollateralData, loan.collateralData);
-            _burnInternal(id);
+            LoanInfo memory loan = loanMapping[id];
+            if (i != 0) {
+                firstLoan.debtAmt += loanMapping[id].debtAmt;
+                firstLoan.collateralData = _mergeCollateral(firstLoan.collateralData, loan.collateralData);
+                _burnInternal(id);
+            }
         }
-        newId = _mintInternal(msg.sender, totalDebtAmt, mergedCollateralData, config);
+        loanMapping[newId] = firstLoan;
         emit MergeGts(msg.sender, newId, ids);
     }
 
