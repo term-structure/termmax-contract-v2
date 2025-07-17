@@ -5,6 +5,7 @@ import {ERC721EnumerableUpgradeable} from
     "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {Constants} from "../../v1/lib/Constants.sol";
 import {GearingTokenConstants} from "../../v1/lib/GearingTokenConstants.sol";
@@ -17,12 +18,11 @@ import {GtConfig, IOracle} from "../../v1/storage/TermMaxStorage.sol";
 import {IGearingTokenV2} from "./IGearingTokenV2.sol";
 import {GearingTokenEventsV2} from "../events/GearingTokenEventsV2.sol";
 import {GearingTokenErrorsV2} from "../errors/GearingTokenErrorsV2.sol";
-import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
-
 /**
  * @title TermMax Gearing Token
  * @author Term Structure Labs
  */
+
 abstract contract AbstractGearingTokenV2 is
     OwnableUpgradeable,
     ERC721EnumerableUpgradeable,
