@@ -17,6 +17,7 @@ import {GtConfig, IOracle} from "../../v1/storage/TermMaxStorage.sol";
 import {IGearingTokenV2} from "./IGearingTokenV2.sol";
 import {GearingTokenEventsV2} from "../events/GearingTokenEventsV2.sol";
 import {GearingTokenErrorsV2} from "../errors/GearingTokenErrorsV2.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /**
  * @title TermMax Gearing Token
@@ -36,6 +37,7 @@ abstract contract AbstractGearingTokenV2 is
     using SafeCast for int256;
     using TransferUtils for IERC20;
     using TransferUtils for IERC20Metadata;
+    using Math for *;
 
     struct LoanInfo {
         /// @notice Debt amount in debtToken token
@@ -440,8 +442,9 @@ abstract contract AbstractGearingTokenV2 is
             } else if (ltv >= config.loanConfig.liquidationLtv) {
                 isLiquidable = true;
                 // collateralValue(price decimals) and HALF_LIQUIDATION_THRESHOLD(base decimals 1e8)
-                maxRepayAmt = (valueAndPrice.collateralValue * Constants.DECIMAL_BASE) / valueAndPrice.priceDenominator
-                    < GearingTokenConstants.HALF_LIQUIDATION_THRESHOLD ? loan.debtAmt : loan.debtAmt / 2;
+                maxRepayAmt = valueAndPrice.collateralValue.mulDiv(
+                    Constants.DECIMAL_BASE, valueAndPrice.priceDenominator
+                ) < GearingTokenConstants.HALF_LIQUIDATION_THRESHOLD ? loan.debtAmt : loan.debtAmt / 2;
             }
         }
     }
@@ -488,17 +491,6 @@ abstract contract AbstractGearingTokenV2 is
         } else {
             loan.debtAmt -= repayAmt;
             loan.collateralData = remainningC;
-
-            // Check ltv after partial liquidation
-            {
-                valueAndPrice.collateralValue = _getCollateralValue(remainningC, valueAndPrice.collateralPriceData);
-                valueAndPrice.debtValueWithDecimals =
-                    (loan.debtAmt * valueAndPrice.debtPrice) / valueAndPrice.debtDenominator;
-                uint128 ltvAfter = _calculateLtv(valueAndPrice);
-                if (ltvBefore < ltvAfter) {
-                    revert LtvIncreasedAfterLiquidation(id, ltvBefore, ltvAfter);
-                }
-            }
             // update storage
             loanMapping[id] = loan;
         }
@@ -576,7 +568,8 @@ abstract contract AbstractGearingTokenV2 is
 
         valueAndPrice.debtDenominator = 10 ** debtDecimals;
 
-        valueAndPrice.debtValueWithDecimals = (loan.debtAmt * valueAndPrice.debtPrice) / valueAndPrice.debtDenominator;
+        valueAndPrice.debtValueWithDecimals =
+            loan.debtAmt.mulDiv(valueAndPrice.debtPrice, valueAndPrice.debtDenominator);
     }
 
     /// @notice Return the loan to value of this loan
@@ -587,9 +580,8 @@ abstract contract AbstractGearingTokenV2 is
             return type(uint128).max;
         }
         // debtValueWithDecimals(price decimals) collateralValue(base decimals)
-        ltv = (
-            (valueAndPrice.debtValueWithDecimals * Constants.DECIMAL_BASE_SQ)
-                / (valueAndPrice.collateralValue * valueAndPrice.priceDenominator)
+        ltv = valueAndPrice.debtValueWithDecimals.mulDiv(
+            Constants.DECIMAL_BASE_SQ, valueAndPrice.collateralValue * valueAndPrice.priceDenominator
         ).toUint128();
     }
 
