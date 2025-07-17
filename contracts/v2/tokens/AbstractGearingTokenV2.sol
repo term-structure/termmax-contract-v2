@@ -297,6 +297,7 @@ abstract contract AbstractGearingTokenV2 is
         if (ownerOf(id) != msg.sender) {
             revert CallerIsNotTheOwner(id);
         }
+        // All collteral will be removed in _repay function if repayAll is true
         (LoanInfo memory loan, bool repayAll) = _repay(id, repayAmt);
         // Check ltv after partial repayment
         if (!repayAll) {
