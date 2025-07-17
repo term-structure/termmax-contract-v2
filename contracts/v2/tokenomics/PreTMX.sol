@@ -54,7 +54,7 @@ contract PreTMX is ERC20, Ownable2Step {
         _mint(to, amount);
     }
 
-    function burn(uint256 amount) external {
+    function burn(uint256 amount) external onlyOwner {
         _burn(msg.sender, amount);
     }
 
