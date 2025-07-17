@@ -209,13 +209,11 @@ contract GearingTokenWithERC20V2 is AbstractGearingTokenV2 {
         if (removedCollateralAmt <= cEqualRepayAmt + rewardToLiquidator) {
             cToLiquidator = _encodeAmount(removedCollateralAmt);
             cToTreasurer = _encodeAmount(0);
-            remainningC = _encodeAmount(0);
         }
         // Case 2: removed collateral can cover repayAmt + rewardToLiquidator but not rewardToProtocol
         else if (removedCollateralAmt < cEqualRepayAmt + rewardToLiquidator + rewardToProtocol) {
             cToLiquidator = _encodeAmount(cEqualRepayAmt + rewardToLiquidator);
             cToTreasurer = _encodeAmount(removedCollateralAmt - cEqualRepayAmt - rewardToLiquidator);
-            remainningC = _encodeAmount(0);
         }
         // Case 3: removed collateral equal repayAmt + rewardToLiquidator + rewardToProtocol
         else {
