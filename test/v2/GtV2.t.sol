@@ -579,10 +579,9 @@ contract GtTestV2 is Test {
             (ids[i],) = LoanUtils.fastMintGt(res, sender, debts[i], collaterals[i]);
         }
         vm.stopPrank();
-        vm.prank(vm.randomAddress());
-        vm.expectRevert(
-            abi.encodeWithSelector(GearingTokenErrors.CanNotMergeLoanWithDiffOwner.selector, ids[0], sender)
-        );
+        address other = vm.randomAddress();
+        vm.prank(other);
+        vm.expectRevert(abi.encodeWithSignature("AuthorizationFailed(uint256,address)", ids[0], other));
         res.gt.merge(ids);
     }
 

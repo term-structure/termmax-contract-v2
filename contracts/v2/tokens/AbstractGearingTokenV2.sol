@@ -236,7 +236,7 @@ abstract contract AbstractGearingTokenV2 is
             LoanInfo memory loan = loanMapping[id];
             address owner = ownerOf(id);
             if (msg.sender != owner) {
-                revert CanNotMergeLoanWithDiffOwner(id, owner);
+                revert AuthorizationFailed(id, msg.sender);
             }
             totalDebtAmt += loan.debtAmt;
             mergedCollateralData =
