@@ -182,7 +182,7 @@ contract ForkPrdFlashRepay is ForkBaseTestV2 {
             gt.approve(address(router), gtId1);
             ITermMaxRouterV2.TermMaxSwapData memory swapData;
             router.flashRepayFromCollV2(
-                borrower, market, gtId1, repayAmount, true, abi.encode(removedCollateral), swapUnits, swapData
+                borrower, market, gtId1, repayAmount, true, 0, abi.encode(removedCollateral), swapUnits, swapData
             );
             console.log("usdc balance after:", IERC20(usdc).balanceOf(borrower));
 
@@ -247,7 +247,7 @@ contract ForkPrdFlashRepay is ForkBaseTestV2 {
             console.log("usdc balance before:", IERC20(usdc).balanceOf(borrower));
             gt.approve(address(router2), gt1);
             ITermMaxRouterV2.TermMaxSwapData memory swapData;
-            router2.flashRepayFromColl(borrower, mmay_30, gt1, true, swapUnits, swapData);
+            router2.flashRepayFromColl(borrower, mmay_30, gt1, true, 0, swapUnits, swapData);
             console.log("usdc balance after:", IERC20(usdc).balanceOf(borrower));
             vm.stopPrank();
         }

@@ -205,8 +205,10 @@ contract OracleAggregatorV2 is IOracleV2, Ownable2Step {
         {
             (, int256 answer,, uint256 updatedAt,) = oracle.aggregator.latestRoundData();
             // Check if primary oracle is fresh and has positive price
-            if ((oracle.heartbeat == 0 || oracle.heartbeat + updatedAt >= block.timestamp) && answer > 0) {
-                return (uint256(_processPriceRange(answer, oracle)), oracle.aggregator.decimals());
+            if (oracle.heartbeat == 0 || oracle.heartbeat + updatedAt >= block.timestamp) {
+                if (_checkAnswer(answer, oracle)) {
+                    return (uint256(answer), oracle.aggregator.decimals());
+                }
             }
         }
 
@@ -214,8 +216,10 @@ contract OracleAggregatorV2 is IOracleV2, Ownable2Step {
         if (address(oracle.backupAggregator) != address(0)) {
             (, int256 answer,, uint256 updatedAt,) = oracle.backupAggregator.latestRoundData();
             // Check if backup oracle is fresh and has positive price
-            if ((oracle.backupHeartbeat == 0 || oracle.backupHeartbeat + updatedAt >= block.timestamp) && answer > 0) {
-                return (uint256(_processPriceRange(answer, oracle)), oracle.backupAggregator.decimals());
+            if (oracle.backupHeartbeat == 0 || oracle.backupHeartbeat + updatedAt >= block.timestamp) {
+                if (_checkAnswer(answer, oracle)) {
+                    return (uint256(answer), oracle.backupAggregator.decimals());
+                }
             }
         }
 
@@ -223,13 +227,14 @@ contract OracleAggregatorV2 is IOracleV2, Ownable2Step {
         revert OracleIsNotWorking(asset);
     }
 
-    function _processPriceRange(int256 price, Oracle memory oracle) internal pure returns (int256) {
-        if (oracle.maxPrice != 0 && price > oracle.maxPrice) {
-            return oracle.maxPrice;
+    function _checkAnswer(int256 answer, Oracle memory oracle) internal pure returns (bool) {
+        if (answer < 0) {
+            return false; // Negative prices are invalid
+        } else if (oracle.maxPrice != 0 && answer > oracle.maxPrice) {
+            return false; // Price exceeds maximum cap
+        } else if (oracle.minPrice != 0 && answer < oracle.minPrice) {
+            return false; // Price is below minimum floor
         }
-        if (oracle.minPrice != 0 && price < oracle.minPrice) {
-            return oracle.minPrice;
-        }
-        return price;
+        return true; // Price is valid
     }
 }
