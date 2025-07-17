@@ -191,7 +191,7 @@ contract PreTMXTest is Test {
         vm.startPrank(admin);
         preTMX.enableTransfer();
         preTMX.transfer(user1, 5000);
-        
+
         // Only admin (owner) can burn tokens
         vm.expectEmit(true, true, false, true);
         emit IERC20.Transfer(admin, address(0), 2000);
@@ -206,12 +206,16 @@ contract PreTMXTest is Test {
     function test_Burn_InsufficientBalance() public {
         // Admin tries to burn more than they have
         vm.prank(admin);
-        vm.expectRevert(abi.encodeWithSelector(IERC20Errors.ERC20InsufficientBalance.selector, admin, initialSupply, initialSupply + 1));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IERC20Errors.ERC20InsufficientBalance.selector, admin, initialSupply, initialSupply + 1
+            )
+        );
         preTMX.burn(initialSupply + 1);
     }
 
     function test_Burn_NotOwner() public {
-        // Give tokens to user1 via minting 
+        // Give tokens to user1 via minting
         vm.prank(admin);
         preTMX.mint(user1, 1000);
 
