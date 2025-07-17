@@ -16,6 +16,7 @@ import {GearingTokenEvents} from "../../v1/events/GearingTokenEvents.sol";
 import {GtConfig, IOracle} from "../../v1/storage/TermMaxStorage.sol";
 import {IGearingTokenV2} from "./IGearingTokenV2.sol";
 import {GearingTokenEventsV2} from "../events/GearingTokenEventsV2.sol";
+import {GearingTokenErrorsV2} from "../errors/GearingTokenErrorsV2.sol";
 
 /**
  * @title TermMax Gearing Token
@@ -87,6 +88,9 @@ abstract contract AbstractGearingTokenV2 is
     {
         if (config_.loanConfig.liquidationLtv <= config_.loanConfig.maxLtv) {
             revert LiquidationLtvMustBeGreaterThanMaxLtv();
+        }
+        if (config_.loanConfig.liquidationLtv > Constants.DECIMAL_BASE) {
+            revert GearingTokenErrorsV2.InvalidLiquidationLtv();
         }
         __ERC721_init(name, symbol);
         __Ownable_init(msg.sender);
