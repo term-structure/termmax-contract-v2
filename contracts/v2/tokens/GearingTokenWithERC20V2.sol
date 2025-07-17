@@ -27,7 +27,7 @@ contract GearingTokenWithERC20V2 is AbstractGearingTokenV2 {
     /// @notice The max capacity of collateral token
     uint256 public collateralCapacity;
 
-    uint8 collateralDecimals;
+    uint256 collateralDenominator;
 
     constructor() {
         _disableInitializers();
@@ -35,7 +35,7 @@ contract GearingTokenWithERC20V2 is AbstractGearingTokenV2 {
 
     function __GearingToken_Implement_init(bytes memory initalParams) internal override onlyInitializing {
         _updateConfig(initalParams);
-        collateralDecimals = IERC20Metadata(_config.collateral).decimals();
+        collateralDenominator = 10 ** IERC20Metadata(_config.collateral).decimals();
     }
 
     function _updateConfig(bytes memory configData) internal virtual override {
@@ -113,8 +113,7 @@ contract GearingTokenWithERC20V2 is AbstractGearingTokenV2 {
         (uint256 price, uint8 decimals) = config.loanConfig.oracle.getPrice(config.collateral);
         uint256 priceDenominator = 10 ** decimals;
 
-        uint256 cTokenDenominator = 10 ** collateralDecimals;
-        priceData = abi.encode(price, priceDenominator, cTokenDenominator);
+        priceData = abi.encode(price, priceDenominator, collateralDenominator);
     }
 
     /// @notice Encode amount to collateral data

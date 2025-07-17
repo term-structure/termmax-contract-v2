@@ -65,10 +65,10 @@ abstract contract AbstractGearingTokenV2 is
     GtConfig _config;
     /// @notice Total supply of Gearing Token
     uint256 total;
+    /// @notice Denominator of debt token
+    uint256 debtDenominator;
     /// @notice Mapping relationship between Gearing Token id and loan
     mapping(uint256 => LoanInfo) loanMapping;
-
-    uint8 debtDecimals;
 
     /**
      * @inheritdoc IGearingToken
@@ -97,7 +97,7 @@ abstract contract AbstractGearingTokenV2 is
         __ERC721_init(name, symbol);
         __Ownable_init(msg.sender);
         _config = config_;
-        debtDecimals = _config.debtToken.decimals();
+        debtDenominator = 10 ** _config.debtToken.decimals();
     }
 
     function __GearingToken_Implement_init(bytes memory initalParams) internal virtual;
@@ -458,7 +458,7 @@ abstract contract AbstractGearingTokenV2 is
         if (!config.loanConfig.liquidatable) {
             revert GtDoNotSupportLiquidation();
         }
-        (bool isLiquidable, uint128 maxRepayAmt, uint128 ltvBefore, ValueAndPrice memory valueAndPrice) =
+        (bool isLiquidable, uint128 maxRepayAmt,, ValueAndPrice memory valueAndPrice) =
             _getLiquidationInfo(loan, config);
 
         if (!isLiquidable) {
@@ -564,9 +564,10 @@ abstract contract AbstractGearingTokenV2 is
 
         uint8 priceDecimals;
         (valueAndPrice.debtPrice, priceDecimals) = config.loanConfig.oracle.getPrice(address(config.debtToken));
+        // Price decimals may change, so we need to calculate the price denominator
         valueAndPrice.priceDenominator = 10 ** priceDecimals;
 
-        valueAndPrice.debtDenominator = 10 ** debtDecimals;
+        valueAndPrice.debtDenominator = debtDenominator;
 
         valueAndPrice.debtValueWithDecimals =
             loan.debtAmt.mulDiv(valueAndPrice.debtPrice, valueAndPrice.debtDenominator);
