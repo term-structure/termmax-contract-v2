@@ -94,26 +94,19 @@ contract TermMaxRouterV2 is
     function _authorizeUpgrade(address newImplementation) internal virtual override onlyOwner {}
 
     function initialize(address admin) public initializer {
-        __UUPSUpgradeable_init();
-        __Pausable_init();
-        __Ownable_init(admin);
+        __UUPSUpgradeable_init_unchained();
+        __Pausable_init_unchained();
+        __Ownable_init_unchained(admin);
     }
 
-    /**
-     * @inheritdoc ITermMaxRouterV2
-     */
     function setAdapterWhitelist(address adapter, bool isWhitelist) external onlyOwner {
         adapterWhitelist[adapter] = isWhitelist;
         emit UpdateSwapAdapterWhiteList(adapter, isWhitelist);
     }
 
-    /**
-     * @inheritdoc ITermMaxRouterV2
-     */
     function assetsWithERC20Collateral(ITermMaxMarket market, address owner)
         external
         view
-        override
         returns (IERC20[4] memory tokens, uint256[4] memory balances, address gtAddr, uint256[] memory gtIds)
     {
         (IERC20 ft, IERC20 xt, IGearingToken gt, address collateral, IERC20 underlying) = market.tokens();
@@ -258,9 +251,6 @@ contract TermMaxRouterV2 is
         emit IssueGt(market, gtId, msg.sender, recipient, tokenToSwap, netXtOut.toUint128(), ltv, collateralData);
     }
 
-    /**
-     * @inheritdoc ITermMaxRouterV2
-     */
     function leverageFromXt(
         address recipient,
         ITermMaxMarket market,
@@ -288,9 +278,6 @@ contract TermMaxRouterV2 is
         emit IssueGt(market, gtId, msg.sender, recipient, tokenInAmt, xtInAmt, ltv, collateralData);
     }
 
-    /**
-     * @inheritdoc ITermMaxRouterV2
-     */
     function leverageFromXtAndCollateral(
         address recipient,
         ITermMaxMarket market,
@@ -322,9 +309,6 @@ contract TermMaxRouterV2 is
         emit IssueGt(market, gtId, msg.sender, recipient, 0, xtInAmt, ltv, collateralData);
     }
 
-    /**
-     * @inheritdoc ITermMaxRouterV2
-     */
     function borrowTokenFromCollateral(
         address recipient,
         ITermMaxMarket market,
@@ -458,9 +442,6 @@ contract TermMaxRouterV2 is
         debtToken.safeTransfer(recipient, netTokenOut);
     }
 
-    /**
-     * @inheritdoc ITermMaxRouterV2
-     */
     function repayByTokenThroughFt(
         address recipient,
         ITermMaxMarket market,
@@ -515,9 +496,6 @@ contract TermMaxRouterV2 is
         gt.repay(gtId, repayAmt, byDebtToken);
     }
 
-    /**
-     * @inheritdoc ITermMaxRouterV2
-     */
     function redeemAndSwap(
         address recipient,
         ITermMaxMarket market,

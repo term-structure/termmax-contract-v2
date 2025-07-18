@@ -84,7 +84,7 @@ abstract contract GtBaseTestV2 is ForkBaseTestV2 {
         MockPriceFeed collateralPriceFeed;
         MockPriceFeed debtPriceFeed;
         ITermMaxOrder order;
-        ITermMaxRouterV2 router;
+        TermMaxRouterV2 router;
         uint256 maxXtReserve;
         address maker;
         SwapData swapData;
