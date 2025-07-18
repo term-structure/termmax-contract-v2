@@ -38,16 +38,6 @@ contract OracleAggregatorV2 is IOracleV2, Ownable2Step {
     error InvalidAssetOrOracle();
 
     /**
-     * @notice Error thrown when attempting to set a value that's already set
-     */
-    error AlreadySet();
-
-    /**
-     * @notice Error thrown when attempting to submit a change that's already pending
-     */
-    error AlreadyPending();
-
-    /**
      * @notice Error thrown when trying to accept a change that has no pending value
      */
     error NoPendingValue();
@@ -200,6 +190,10 @@ contract OracleAggregatorV2 is IOracleV2, Ownable2Step {
      */
     function getPrice(address asset) external view override returns (uint256, uint8) {
         Oracle memory oracle = oracles[asset];
+
+        if (oracle.aggregator == AggregatorV3Interface(address(0))) {
+            revert InvalidAssetOrOracle();
+        }
 
         // Try primary oracle first
         {
