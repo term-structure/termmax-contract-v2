@@ -11,6 +11,7 @@ import {
     OwnableUpgradeable
 } from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {ITermMaxMarket} from "../../v1/ITermMaxMarket.sol";
 import {ITermMaxMarketV2} from "../../v2/ITermMaxMarketV2.sol";
 import {ITermMaxOrder} from "../../v1/ITermMaxOrder.sol";
@@ -24,11 +25,11 @@ import {IGearingToken} from "../../v1/tokens/IGearingToken.sol";
 import {IGearingTokenV2} from "../tokens/IGearingTokenV2.sol";
 import {CurveCuts, OrderConfig} from "../../v1/storage/TermMaxStorage.sol";
 import {Constants} from "../../v1/lib/Constants.sol";
-import {MathLib} from "../../v1/lib/MathLib.sol";
 import {IERC20SwapAdapter} from "./IERC20SwapAdapter.sol";
 import {RouterEventsV2} from "../events/RouterEventsV2.sol";
 import {RouterErrorsV2} from "../errors/RouterErrorsV2.sol";
 import {TransferUtilsV2} from "../lib/TransferUtilsV2.sol";
+import {ArrayUtilsV2} from "../lib/ArrayUtilsV2.sol";
 
 /**
  * @title TermMax Router V2
@@ -47,7 +48,8 @@ contract TermMaxRouterV2 is
 {
     using SafeCast for *;
     using TransferUtilsV2 for IERC20;
-    using MathLib for uint256;
+    using Math for *;
+    using ArrayUtilsV2 for *;
 
     enum FlashLoanType {
         COLLATERAL,
@@ -134,7 +136,7 @@ contract TermMaxRouterV2 is
         uint128 minTokenOut,
         uint256 deadline
     ) external whenNotPaused returns (uint256 netTokenOut) {
-        uint256 totalAmtIn = sum(tradingAmts);
+        uint256 totalAmtIn = tradingAmts.sum();
         tokenIn.safeTransferFrom(msg.sender, address(this), totalAmtIn);
         netTokenOut = _swapExactTokenToToken(tokenIn, tokenOut, recipient, orders, tradingAmts, minTokenOut, deadline);
         emit SwapExactTokenToToken(tokenIn, tokenOut, msg.sender, recipient, orders, tradingAmts, netTokenOut);
@@ -192,12 +194,6 @@ contract TermMaxRouterV2 is
         if (netTokenIn > maxTokenIn) revert InsufficientTokenIn(address(tokenIn), netTokenIn, maxTokenIn);
     }
 
-    function sum(uint128[] memory values) internal pure returns (uint256 total) {
-        for (uint256 i = 0; i < values.length; ++i) {
-            total += values[i];
-        }
-    }
-
     function sellTokens(
         address recipient,
         ITermMaxMarket market,
@@ -237,7 +233,7 @@ contract TermMaxRouterV2 is
             tstore(T_CALLBACK_ADDRESS_STORE, market) // set callback address
         }
         (, IERC20 xt, IGearingToken gt,, IERC20 debtToken) = market.tokens();
-        uint256 totalAmtToBuyXt = sum(amtsToBuyXt);
+        uint256 totalAmtToBuyXt = amtsToBuyXt.sum();
         debtToken.safeTransferFrom(msg.sender, address(this), tokenToSwap + totalAmtToBuyXt);
         netXtOut = _swapExactTokenToToken(debtToken, xt, address(this), orders, amtsToBuyXt, minXtOut, deadline);
         xt.safeIncreaseAllowance(address(market), netXtOut);
@@ -456,7 +452,7 @@ contract TermMaxRouterV2 is
         debtToken.safeTransferFrom(msg.sender, address(this), maxTokenIn);
         uint256 netCost =
             _swapTokenToExactToken(debtToken, ft, address(this), orders, ftAmtsWantBuy, maxTokenIn, deadline);
-        uint256 totalFtAmt = sum(ftAmtsWantBuy);
+        uint256 totalFtAmt = ftAmtsWantBuy.sum();
         (, uint128 repayAmt,) = gt.loanInfo(gtId);
 
         if (totalFtAmt < repayAmt) {
@@ -781,7 +777,7 @@ contract TermMaxRouterV2 is
                 gt.repay(gtId, repaidFtAmt.toUint128(), false);
             }
             // check remaining debt token amount
-            uint256 totalDebtTokenAmt = sum(swapData.tradingAmts) + additionalAssets;
+            uint256 totalDebtTokenAmt = swapData.tradingAmts.sum() + additionalAssets;
             if (totalDebtTokenAmt > debtAmt) {
                 uint256 repaidDebtAmt = totalDebtTokenAmt - debtAmt;
                 debtToken.safeIncreaseAllowance(address(gt), repaidDebtAmt);
