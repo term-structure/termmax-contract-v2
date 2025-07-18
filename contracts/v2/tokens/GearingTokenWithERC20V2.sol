@@ -161,7 +161,7 @@ contract GearingTokenWithERC20V2 is AbstractGearingTokenV2 {
         internal
         virtual
         override
-        returns (bytes memory cToLiquidator, bytes memory cToTreasurer, bytes memory remainningC)
+        returns (bytes memory, bytes memory, bytes memory)
     {
         uint256 collateralAmt = _decodeAmount(loan.collateralData);
 
@@ -194,23 +194,11 @@ contract GearingTokenWithERC20V2 is AbstractGearingTokenV2 {
             removedCollateralAmt = cEqualRepayAmt + rewardToLiquidator + rewardToProtocol;
             removedCollateralAmt = removedCollateralAmt.min(collateralAmt.mulDiv(repayAmt, loan.debtAmt));
         }
-
-        // Case 1: removed collateral can not cover repayAmt + rewardToLiquidator
-        if (removedCollateralAmt <= cEqualRepayAmt + rewardToLiquidator) {
-            cToLiquidator = _encodeAmount(removedCollateralAmt);
-            cToTreasurer = _encodeAmount(0);
-        }
-        // Case 2: removed collateral can cover repayAmt + rewardToLiquidator but not rewardToProtocol
-        else if (removedCollateralAmt < cEqualRepayAmt + rewardToLiquidator + rewardToProtocol) {
-            cToLiquidator = _encodeAmount(cEqualRepayAmt + rewardToLiquidator);
-            cToTreasurer = _encodeAmount(removedCollateralAmt - cEqualRepayAmt - rewardToLiquidator);
-        }
-        // Case 3: removed collateral equal repayAmt + rewardToLiquidator + rewardToProtocol
-        else {
-            cToLiquidator = _encodeAmount(cEqualRepayAmt + rewardToLiquidator);
-            cToTreasurer = _encodeAmount(rewardToProtocol);
-        }
-        // Calculate remaining collateral
-        remainningC = _encodeAmount(collateralAmt - removedCollateralAmt);
+        // Send all collateral to liquidator if 
+        uint256 cToLiquidatorAmount = removedCollateralAmt.min(cEqualRepayAmt + rewardToLiquidator);
+        removedCollateralAmt -= cToLiquidatorAmount;
+        uint256 cToTreasurerAmount = removedCollateralAmt.min(rewardToProtocol);
+        uint256 remainingCollateralAmt = collateralAmt - cToLiquidatorAmount - cToTreasurerAmount;
+        return (abi.encode(cToLiquidatorAmount), abi.encode(cToTreasurerAmount), abi.encode(remainingCollateralAmt));
     }
 }
