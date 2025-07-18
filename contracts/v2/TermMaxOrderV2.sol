@@ -144,9 +144,9 @@ contract TermMaxOrderV2 is
         OrderConfig memory orderConfig_,
         MarketConfig memory marketConfig
     ) external virtual override initializer {
-        __Ownable_init(maker_);
-        __ReentrancyGuard_init();
-        __Pausable_init();
+        __Ownable_init_unchained(maker_);
+        __ReentrancyGuard_init_unchained();
+        __Pausable_init_unchained();
         market = ITermMaxMarket(_msgSender());
         _updateCurve(orderConfig_.curveCuts);
 
