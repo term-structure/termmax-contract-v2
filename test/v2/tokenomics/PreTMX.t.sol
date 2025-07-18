@@ -33,7 +33,6 @@ contract PreTMXTest is Test {
         assertTrue(preTMX.transferRestricted());
         assertEq(preTMX.owner(), admin);
         assertTrue(preTMX.isTransferredFromWhitelisted(admin));
-        assertTrue(preTMX.isTransferredToWhitelisted(admin));
     }
 
     function test_EnableTransfer() public {
@@ -71,12 +70,6 @@ contract PreTMXTest is Test {
         preTMX.disableTransfer();
     }
 
-    function test_Transfer_WhenRestricted_NotWhitelisted() public {
-        vm.prank(admin);
-        vm.expectRevert(abi.encodeWithSelector(PreTMX.TransferToNotWhitelisted.selector, user1));
-        preTMX.transfer(user1, 1000);
-    }
-
     function test_Transfer_WhenRestricted_AdminWhitelisted() public {
         // Admin can transfer to another admin (both whitelisted)
         vm.prank(admin);
@@ -101,15 +94,6 @@ contract PreTMXTest is Test {
         assertEq(preTMX.balanceOf(user1), 1000);
         assertEq(preTMX.balanceOf(admin), initialSupply - 1000);
         vm.stopPrank();
-    }
-
-    function test_TransferFrom_WhenRestricted_NotWhitelisted() public {
-        vm.prank(admin);
-        preTMX.approve(user1, 1000);
-
-        vm.prank(user1);
-        vm.expectRevert(abi.encodeWithSelector(PreTMX.TransferToNotWhitelisted.selector, user2));
-        preTMX.transferFrom(admin, user2, 1000);
     }
 
     function test_TransferFrom_WhenNotRestricted() public {
@@ -255,11 +239,9 @@ contract PreTMXTest is Test {
     function test_WhitelistingState() public {
         // Admin should be whitelisted by default
         assertTrue(preTMX.isTransferredFromWhitelisted(admin));
-        assertTrue(preTMX.isTransferredToWhitelisted(admin));
 
         // Other users should not be whitelisted
         assertFalse(preTMX.isTransferredFromWhitelisted(user1));
-        assertFalse(preTMX.isTransferredToWhitelisted(user1));
     }
 
     function test_WhitelistTransferFrom() public {
@@ -298,61 +280,6 @@ contract PreTMXTest is Test {
         preTMX.whitelistTransferFrom(user2, true);
     }
 
-    function test_WhitelistTransferTo() public {
-        // Initially user1 is not whitelisted
-        assertFalse(preTMX.isTransferredToWhitelisted(user1));
-
-        // Admin whitelists user1 for receiving
-        vm.prank(admin);
-
-        vm.expectEmit(true, true, true, true);
-        emit PreTMX.TransferToWhitelisted(user1, true);
-
-        preTMX.whitelistTransferTo(user1, true);
-
-        assertTrue(preTMX.isTransferredToWhitelisted(user1));
-    }
-
-    function test_WhitelistTransferTo_Unwhitelist() public {
-        // First whitelist user1
-        vm.startPrank(admin);
-        preTMX.whitelistTransferTo(user1, true);
-        assertTrue(preTMX.isTransferredToWhitelisted(user1));
-
-        // Then unwhitelist user1
-        vm.expectEmit(true, true, true, true);
-        emit PreTMX.TransferToWhitelisted(user1, false);
-
-        preTMX.whitelistTransferTo(user1, false);
-        assertFalse(preTMX.isTransferredToWhitelisted(user1));
-        vm.stopPrank();
-    }
-
-    function test_WhitelistTransferTo_NotAdmin() public {
-        vm.prank(user1);
-        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, user1));
-        preTMX.whitelistTransferTo(user2, true);
-    }
-
-    function test_WhitelistTransferTo_EnablesTransfer() public {
-        // Whitelist user1 to receive tokens
-        vm.startPrank(admin);
-
-        vm.expectEmit(true, true, true, true);
-        emit PreTMX.TransferToWhitelisted(user1, true);
-
-        preTMX.whitelistTransferTo(user1, true);
-
-        // Now admin can transfer to user1 even when restricted
-        vm.expectEmit(true, true, false, true);
-        emit IERC20.Transfer(admin, user1, 1000);
-
-        bool success = preTMX.transfer(user1, 1000);
-        assertTrue(success);
-        assertEq(preTMX.balanceOf(user1), 1000);
-        vm.stopPrank();
-    }
-
     function test_WhitelistTransferFrom_EnablesTransfer() public {
         // Give tokens to user1 via minting and whitelist user1 to send
         vm.startPrank(admin);
@@ -362,7 +289,6 @@ contract PreTMXTest is Test {
         emit PreTMX.TransferFromWhitelisted(user1, true);
 
         preTMX.whitelistTransferFrom(user1, true);
-        preTMX.whitelistTransferTo(admin, true); // admin already whitelisted but being explicit
         vm.stopPrank();
 
         // Now user1 can transfer to admin
@@ -382,11 +308,6 @@ contract PreTMXTest is Test {
         emit PreTMX.TransferFromWhitelisted(user1, true);
 
         preTMX.whitelistTransferFrom(user1, true);
-
-        vm.expectEmit(true, true, true, true);
-        emit PreTMX.TransferToWhitelisted(user2, true);
-
-        preTMX.whitelistTransferTo(user2, true);
         vm.stopPrank();
 
         // Now user1 can transfer to user2
@@ -395,24 +316,6 @@ contract PreTMXTest is Test {
         assertTrue(success);
         assertEq(preTMX.balanceOf(user1), 700);
         assertEq(preTMX.balanceOf(user2), 300);
-    }
-
-    function test_PartialWhitelisting_StillRestricted() public {
-        // Only whitelist user1 to send, but not user2 to receive
-        vm.startPrank(admin);
-        preTMX.mint(user1, 1000);
-
-        vm.expectEmit(true, true, true, true);
-        emit PreTMX.TransferFromWhitelisted(user1, true);
-
-        preTMX.whitelistTransferFrom(user1, true);
-        // user2 is not whitelisted to receive
-        vm.stopPrank();
-
-        // Transfer should still fail because user2 is not whitelisted to receive
-        vm.prank(user1);
-        vm.expectRevert(abi.encodeWithSelector(PreTMX.TransferToNotWhitelisted.selector, user2));
-        preTMX.transfer(user2, 500);
     }
 
     function test_WhitelistTransferFrom_WithTransferFrom() public {
@@ -424,11 +327,6 @@ contract PreTMXTest is Test {
         emit PreTMX.TransferFromWhitelisted(user1, true);
 
         preTMX.whitelistTransferFrom(user1, true);
-
-        vm.expectEmit(true, true, true, true);
-        emit PreTMX.TransferToWhitelisted(user2, true);
-
-        preTMX.whitelistTransferTo(user2, true);
         vm.stopPrank();
 
         // user1 approves admin to spend tokens
@@ -448,7 +346,6 @@ contract PreTMXTest is Test {
         vm.startPrank(admin);
         preTMX.mint(user1, 1000);
         preTMX.whitelistTransferFrom(user1, true);
-        preTMX.whitelistTransferTo(user2, true);
         vm.stopPrank();
 
         // Verify transfer works
@@ -479,13 +376,6 @@ contract PreTMXTest is Test {
         vm.prank(user1);
         vm.expectRevert(abi.encodeWithSelector(PreTMX.TransferFromNotWhitelisted.selector, user1));
         preTMX.transfer(admin, 500);
-    }
-
-    function test_RestrictedTransfer_ToNotWhitelisted() public {
-        // Admin tries to transfer to non-whitelisted user1 - should fail
-        vm.prank(admin);
-        vm.expectRevert(abi.encodeWithSelector(PreTMX.TransferToNotWhitelisted.selector, user1));
-        preTMX.transfer(user1, 1000);
     }
 
     function test_RestrictedTransferFrom_FromNotWhitelisted() public {
@@ -523,11 +413,9 @@ contract PreTMXTest is Test {
 
         vm.startPrank(admin);
         preTMX.whitelistTransferFrom(user, fromWhitelisted);
-        preTMX.whitelistTransferTo(user, toWhitelisted);
         vm.stopPrank();
 
         assertEq(preTMX.isTransferredFromWhitelisted(user), fromWhitelisted);
-        assertEq(preTMX.isTransferredToWhitelisted(user), toWhitelisted);
     }
 
     function test_WhitelistSelf() public {
@@ -539,13 +427,7 @@ contract PreTMXTest is Test {
 
         preTMX.whitelistTransferFrom(admin, false);
 
-        vm.expectEmit(true, true, true, true);
-        emit PreTMX.TransferToWhitelisted(admin, false);
-
-        preTMX.whitelistTransferTo(admin, false);
-
         assertFalse(preTMX.isTransferredFromWhitelisted(admin));
-        assertFalse(preTMX.isTransferredToWhitelisted(admin));
 
         // Re-whitelist admin
         vm.expectEmit(true, true, true, true);
@@ -553,47 +435,8 @@ contract PreTMXTest is Test {
 
         preTMX.whitelistTransferFrom(admin, true);
 
-        vm.expectEmit(true, true, true, true);
-        emit PreTMX.TransferToWhitelisted(admin, true);
-
-        preTMX.whitelistTransferTo(admin, true);
-
         assertTrue(preTMX.isTransferredFromWhitelisted(admin));
-        assertTrue(preTMX.isTransferredToWhitelisted(admin));
         vm.stopPrank();
-    }
-
-    function test_RestrictedTransferFrom_ToNotWhitelisted() public {
-        // Test transferFrom with non-whitelisted recipient
-        vm.startPrank(admin);
-        preTMX.mint(user1, 1000);
-        preTMX.whitelistTransferFrom(user1, true); // whitelist sender but not recipient
-        vm.stopPrank();
-
-        vm.prank(user1);
-        preTMX.approve(admin, 500);
-
-        vm.prank(admin);
-        vm.expectRevert(abi.encodeWithSelector(PreTMX.TransferToNotWhitelisted.selector, user2));
-        preTMX.transferFrom(user1, user2, 500);
-    }
-
-    function test_BothErrorTypes() public {
-        // Test that we get from error when sender not whitelisted
-        vm.prank(admin);
-        preTMX.mint(user1, 1000);
-
-        vm.prank(user1);
-        vm.expectRevert(abi.encodeWithSelector(PreTMX.TransferFromNotWhitelisted.selector, user1));
-        preTMX.transfer(user2, 500);
-
-        // Test that we get to error when recipient not whitelisted (sender is whitelisted)
-        vm.prank(admin);
-        preTMX.whitelistTransferFrom(user1, true);
-
-        vm.prank(user1);
-        vm.expectRevert(abi.encodeWithSelector(PreTMX.TransferToNotWhitelisted.selector, user2));
-        preTMX.transfer(user2, 500);
     }
 
     // ============ Ownership Transfer Tests ============
