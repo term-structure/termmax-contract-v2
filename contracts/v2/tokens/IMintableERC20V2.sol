@@ -8,7 +8,7 @@ import "../../v1/tokens/IMintableERC20.sol";
  * @author Term Structure Labs
  */
 interface IMintableERC20V2 {
-    /// @notice Burn tokens from sender
+    /// @notice Burn tokens from owner, allowing spender to burn the tokens
     /// @param owner The address of the token holder
     /// @param spender The address of the token spender
     /// @param amount The number of tokens to be burned

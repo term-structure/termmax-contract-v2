@@ -194,7 +194,6 @@ contract GearingTokenWithERC20V2 is AbstractGearingTokenV2 {
             removedCollateralAmt = cEqualRepayAmt + rewardToLiquidator + rewardToProtocol;
             removedCollateralAmt = removedCollateralAmt.min(collateralAmt.mulDiv(repayAmt, loan.debtAmt));
         }
-        // Send all collateral to liquidator if 
         uint256 cToLiquidatorAmount = removedCollateralAmt.min(cEqualRepayAmt + rewardToLiquidator);
         removedCollateralAmt -= cToLiquidatorAmount;
         uint256 cToTreasurerAmount = removedCollateralAmt.min(rewardToProtocol);
