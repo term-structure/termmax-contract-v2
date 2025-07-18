@@ -15,6 +15,7 @@ import {IFlashLoanReceiver} from "../v1/IFlashLoanReceiver.sol";
 import {ITermMaxOrder} from "../v1/ITermMaxOrder.sol";
 import {Constants} from "../v1/lib/Constants.sol";
 import {MarketConstantsV2} from "./lib/MarketConstantsV2.sol";
+import {StringUtil} from "../v1/lib/StringUtil.sol";
 import {MarketErrors} from "../v1/errors/MarketErrors.sol";
 import {MarketEvents} from "../v1/events/MarketEvents.sol";
 import {StringUtil} from "../v1/lib/StringUtil.sol";
@@ -99,7 +100,7 @@ contract TermMaxMarketV2 is
         _config = config_;
 
         (ft, xt, gt) = _deployTokens(params);
-        name = _contactString(MarketConstantsV2.PREFIX_MARKET, params.tokenName);
+        name = StringUtil.contact(MarketConstantsV2.PREFIX_MARKET, params.tokenName);
         emit MarketInitialized(params.collateral, params.debtToken, _config.maturity, ft, xt, gt);
     }
 
@@ -134,10 +135,6 @@ contract TermMaxMarketV2 is
             ),
             params.gtInitalParams
         );
-    }
-
-    function _contactString(string memory a, string memory b) internal pure returns (string memory) {
-        return string(abi.encodePacked(a, b));
     }
 
     /**
