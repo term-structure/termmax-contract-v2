@@ -8,6 +8,7 @@ import {
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {ITermMaxMarketV2} from "./ITermMaxMarketV2.sol";
 import {IGearingToken} from "../v1/tokens/IGearingToken.sol";
 import {IFlashLoanReceiver} from "../v1/IFlashLoanReceiver.sol";
@@ -26,7 +27,7 @@ import {
     OrderConfig
 } from "../v1/storage/TermMaxStorage.sol";
 import {ISwapCallback} from "../v1/ISwapCallback.sol";
-import {TransferUtils} from "../v1/lib/TransferUtils.sol";
+import {TransferUtilsV2} from "./lib/TransferUtilsV2.sol";
 import {ITermMaxMarket, IMintableERC20, IERC20} from "../v1/ITermMaxMarket.sol";
 import {IMintableERC20V2} from "./tokens/IMintableERC20V2.sol";
 import {ITermMaxOrderV2} from "./ITermMaxOrderV2.sol";
@@ -45,9 +46,10 @@ contract TermMaxMarketV2 is
 {
     using SafeCast for uint256;
     using SafeCast for int256;
-    using TransferUtils for IERC20;
-    using TransferUtils for IMintableERC20;
+    using TransferUtilsV2 for IERC20;
+    using TransferUtilsV2 for IMintableERC20;
     using StringUtil for string;
+    using Math for *;
 
     address immutable MINTABLE_ERC20_IMPLEMENT;
     address immutable TERMMAX_ORDER_IMPLEMENT;
@@ -85,8 +87,8 @@ contract TermMaxMarketV2 is
      * @inheritdoc ITermMaxMarket
      */
     function initialize(MarketInitialParams memory params) external virtual override initializer {
-        __Ownable_init(params.admin);
-        __ReentrancyGuard_init();
+        __Ownable_init_unchained(params.admin);
+        __ReentrancyGuard_init_unchained();
         if (params.collateral == address(params.debtToken)) revert CollateralCanNotEqualUnderlyinng();
         MarketConfig memory config_ = params.marketConfig;
         if (config_.maturity <= block.timestamp) revert InvalidMaturity();
@@ -305,7 +307,7 @@ contract TermMaxMarketV2 is
         gtId = gt.mint(caller, recipient, debt, collateralData);
 
         MarketConfig memory mConfig = _config;
-        uint128 issueFee = ((debt * mintGtFeeRatio()) / Constants.DECIMAL_BASE).toUint128();
+        uint128 issueFee = debt.mulDiv(mintGtFeeRatio(), Constants.DECIMAL_BASE).toUint128();
         // Mint ft amount = debt amount, send issueFee to treasurer and other to caller
         ft.mint(mConfig.treasurer, issueFee);
         ftOutAmt = debt - issueFee;
@@ -335,7 +337,7 @@ contract TermMaxMarketV2 is
         gt.augmentDebt(caller, gtId, debt);
 
         MarketConfig memory mConfig = _config;
-        uint128 issueFee = ((debt * mintGtFeeRatio()) / Constants.DECIMAL_BASE).toUint128();
+        uint128 issueFee = debt.mulDiv(mintGtFeeRatio(), Constants.DECIMAL_BASE).toUint128();
         // Mint ft amount = debt amount, send issueFee to treasurer and other to caller
         ft.mint(mConfig.treasurer, issueFee);
         ftOutAmt = debt - issueFee;
@@ -364,11 +366,12 @@ contract TermMaxMarketV2 is
         }
 
         // The proportion that user will get how many debtToken and collateral should be deliveried
-        uint256 proportion = (ftAmount * Constants.DECIMAL_BASE_SQ) / (ft.totalSupply() - ft.balanceOf(address(this)));
+        uint256 proportion =
+            ftAmount.mulDiv(Constants.DECIMAL_BASE_SQ, (ft.totalSupply() - ft.balanceOf(address(this))));
 
         deliveryData = gt.previewDelivery(proportion);
 
-        debtTokenAmt = ((debtToken.balanceOf(address(this))) * proportion) / Constants.DECIMAL_BASE_SQ;
+        debtTokenAmt = debtToken.balanceOf(address(this)).mulDiv(proportion, Constants.DECIMAL_BASE_SQ);
     }
 
     /**
@@ -416,14 +419,14 @@ contract TermMaxMarketV2 is
         }
 
         // The proportion that user will get how many debtToken and collateral should be deliveried
-        uint256 proportion = (ftAmount * Constants.DECIMAL_BASE_SQ) / ft.totalSupply();
+        uint256 proportion = ftAmount.mulDiv(Constants.DECIMAL_BASE_SQ, ft.totalSupply());
 
         // Burn ft
         IMintableERC20V2(address(ft)).burn(ftOwner, caller, ftAmount);
 
         deliveryData = gt.delivery(proportion, recipient);
         // Transfer debtToken output
-        debtTokenAmt += ((debtToken.balanceOf(address(this))) * proportion) / Constants.DECIMAL_BASE_SQ;
+        debtTokenAmt += debtToken.balanceOf(address(this)).mulDiv(proportion, Constants.DECIMAL_BASE_SQ);
         debtToken.safeTransfer(recipient, debtTokenAmt);
         emit Redeem(caller, recipient, proportion.toUint128(), debtTokenAmt.toUint128(), deliveryData);
     }
