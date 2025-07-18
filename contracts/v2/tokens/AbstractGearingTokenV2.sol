@@ -64,13 +64,13 @@ abstract contract AbstractGearingTokenV2 is
     }
 
     /// @notice Configuration of Gearing Token
-    GtConfig _config;
+    GtConfig internal _config;
     /// @notice Total supply of Gearing Token
-    uint256 total;
+    uint256 internal total;
     /// @notice Denominator of debt token
-    uint256 debtDenominator;
+    uint256 internal debtDenominator;
     /// @notice Mapping relationship between Gearing Token id and loan
-    mapping(uint256 => LoanInfo) loanMapping;
+    mapping(uint256 => LoanInfo) internal loanMapping;
 
     /**
      * @inheritdoc IGearingToken
