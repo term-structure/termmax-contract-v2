@@ -17,7 +17,6 @@ import {ITermMaxOrder} from "../../v1/ITermMaxOrder.sol";
 import {SwapUnit} from "../../v1/router/ISwapAdapter.sol";
 import {RouterErrors} from "../../v1/errors/RouterErrors.sol";
 import {RouterEvents} from "../../v1/events/RouterEvents.sol";
-import {TransferUtils} from "../../v1/lib/TransferUtils.sol";
 import {IFlashLoanReceiver} from "../../v1/IFlashLoanReceiver.sol";
 import {IFlashRepayer} from "../../v1/tokens/IFlashRepayer.sol";
 import {ITermMaxRouterV2} from "./ITermMaxRouterV2.sol";
@@ -29,6 +28,7 @@ import {MathLib} from "../../v1/lib/MathLib.sol";
 import {IERC20SwapAdapter} from "./IERC20SwapAdapter.sol";
 import {RouterEventsV2} from "../events/RouterEventsV2.sol";
 import {RouterErrorsV2} from "../errors/RouterErrorsV2.sol";
+import {TransferUtilsV2} from "../lib/TransferUtilsV2.sol";
 
 /**
  * @title TermMax Router V2
@@ -46,7 +46,7 @@ contract TermMaxRouterV2 is
     RouterEvents
 {
     using SafeCast for *;
-    using TransferUtils for IERC20;
+    using TransferUtilsV2 for IERC20;
     using MathLib for uint256;
 
     enum FlashLoanType {
@@ -185,7 +185,7 @@ contract TermMaxRouterV2 is
         if (orders.length != tradingAmts.length) revert OrdersAndAmtsLengthNotMatch();
         for (uint256 i = 0; i < orders.length; ++i) {
             ITermMaxOrder order = orders[i];
-            tokenIn.safeIncreaseAllowance(address(order), maxTokenIn);
+            tokenIn.forceApprove(address(order), maxTokenIn);
             netTokenIn +=
                 order.swapTokenToExactToken(tokenIn, tokenOut, recipient, tradingAmts[i], maxTokenIn, deadline);
         }
