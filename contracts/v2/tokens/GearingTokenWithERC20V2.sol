@@ -165,41 +165,33 @@ contract GearingTokenWithERC20V2 is AbstractGearingTokenV2 {
     {
         uint256 collateralAmt = _decodeAmount(loan.collateralData);
 
-        (uint256 collateralPrice, uint256 cPriceDenominator, uint256 cTokenDenominator) =
-            abi.decode(valueAndPrice.collateralPriceData, (uint256, uint256, uint256));
+        uint256 removedCollateralAmt;
+        uint256 cEqualRepayAmt;
+        uint256 rewardToLiquidator;
+        uint256 rewardToProtocol;
 
-        /* DP := debt token price (valueAndPrice.debtPrice)
-         * DPD := debt token price decimal (valueAndPrice.priceDenominator)
-         * CP := collateral token price (collateralPrice)
-         * CPD := collateral token price decimal (cPriceDenominator)
-         * SD := scaling decimal = DPD * CPD * 10
-         * The value of 1(decimal) debt token / The value of 1(decimal) collateral token
-         *     ddPriceToCdPrice = roundUp((DP/DPD) / (CP/CPD) = (DP*CPD*SD) / (CP*DPD))
-         *                       = roundUp((DP*CPD*CPD*10) / CP)
-         */
-        uint256 ddPriceToCdPrice = valueAndPrice.debtPrice.mulDiv(
-            cPriceDenominator * cPriceDenominator * 10, collateralPrice, Math.Rounding.Ceil
-        );
+        if (loan.debtAmt != 0) {
+            (uint256 collateralPrice, uint256 cPriceDenominator, uint256 cTokenDenominator) =
+                abi.decode(valueAndPrice.collateralPriceData, (uint256, uint256, uint256));
 
-        // calculate the amount of collateral that is equivalent to repayAmt
-        // with debt to collateral price
-        uint256 cEqualRepayAmt = repayAmt.mulDiv(
-            ddPriceToCdPrice * cTokenDenominator,
-            valueAndPrice.debtDenominator * cPriceDenominator * valueAndPrice.priceDenominator * 10
-        );
-        // uint256 cEqualRepayAmt = (repayAmt * ddPriceToCdPrice * cTokenDenominator)
-        //     / (valueAndPrice.debtDenominator * cPriceDenominator * valueAndPrice.priceDenominator * 10);
+            /* DP := debt token price (valueAndPrice.debtPrice)
+            * DPD := debt token price decimal (valueAndPrice.priceDenominator)
+            * CP := collateral token price (collateralPrice)
+            * CPD := collateral token price decimal (cPriceDenominator)
+            * liquidate value = repayAmt * DP / debt token decimals
+            * collateral amount to remove = liquidate value * collateral decimals * cpd / (CP * DPD)
+            */
+            uint256 liquidateValueInPriceScale = repayAmt.mulDiv(valueAndPrice.debtPrice, valueAndPrice.debtDenominator);
 
-        uint256 rewardToLiquidator =
-            cEqualRepayAmt.mulDiv(GearingTokenConstants.REWARD_TO_LIQUIDATOR, Constants.DECIMAL_BASE);
-        uint256 rewardToProtocol =
-            cEqualRepayAmt.mulDiv(GearingTokenConstants.REWARD_TO_PROTOCOL, Constants.DECIMAL_BASE);
+            cEqualRepayAmt = liquidateValueInPriceScale.mulDiv(
+                cPriceDenominator * cTokenDenominator, collateralPrice * valueAndPrice.priceDenominator
+            );
 
-        uint256 removedCollateralAmt = cEqualRepayAmt + rewardToLiquidator + rewardToProtocol;
+            rewardToLiquidator =
+                cEqualRepayAmt.mulDiv(GearingTokenConstants.REWARD_TO_LIQUIDATOR, Constants.DECIMAL_BASE);
+            rewardToProtocol = cEqualRepayAmt.mulDiv(GearingTokenConstants.REWARD_TO_PROTOCOL, Constants.DECIMAL_BASE);
 
-        if (loan.debtAmt == 0) {
-            removedCollateralAmt = 0;
-        } else {
+            removedCollateralAmt = cEqualRepayAmt + rewardToLiquidator + rewardToProtocol;
             removedCollateralAmt = removedCollateralAmt.min(collateralAmt.mulDiv(repayAmt, loan.debtAmt));
         }
 
@@ -218,7 +210,7 @@ contract GearingTokenWithERC20V2 is AbstractGearingTokenV2 {
             cToLiquidator = _encodeAmount(cEqualRepayAmt + rewardToLiquidator);
             cToTreasurer = _encodeAmount(rewardToProtocol);
         }
-        // Calculate remainning collateral
+        // Calculate remaining collateral
         remainningC = _encodeAmount(collateralAmt - removedCollateralAmt);
     }
 }
