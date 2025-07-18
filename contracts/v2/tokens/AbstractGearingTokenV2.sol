@@ -49,7 +49,7 @@ abstract contract AbstractGearingTokenV2 is
     struct ValueAndPrice {
         /// @notice USD value of collateral
         uint256 collateralValue;
-        /// @notice USD value of debt with price and token decimals
+        /// @notice USD value of debt contains price and token decimals
         uint256 debtValueWithDecimals;
         /// @notice USD price of debt token
         uint256 debtPrice;
