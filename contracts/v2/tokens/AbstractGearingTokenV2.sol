@@ -53,15 +53,17 @@ abstract contract AbstractGearingTokenV2 is
         uint256 debtValueWithDecimals;
         /// @notice USD price of debt token
         uint256 debtPrice;
-        /// @notice Denominator of USD price
+        /// @notice Denominator of USD price, e.g. 10**priceDecimals
         uint256 priceDenominator;
-        /// @notice Denominator of debt token
+        /// @notice Denominator of debt token, e.g. 10**debtToken.decimals()
         uint256 debtDenominator;
-        /// @notice Encoded USD price of collateral token
+        /// @notice Encoded USD price of collateral token, e.g. priceData is
+        ///         abi.encode(price, priceDenominator, collateralDenominator)
+        ///         where gt is GearingTokenWithERC20
         bytes collateralPriceData;
     }
 
-    /// @notice Configuturation of Gearing Token
+    /// @notice Configuration of Gearing Token
     GtConfig _config;
     /// @notice Total supply of Gearing Token
     uint256 total;
