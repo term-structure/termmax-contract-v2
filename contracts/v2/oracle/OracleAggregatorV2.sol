@@ -14,7 +14,6 @@ pragma solidity ^0.8.27;
  * - Independent heartbeat configuration for backup oracles
  * - Price capping mechanism with maxPrice parameter
  * - Oracle revocation capability for enhanced security
- * - Separate backup heartbeat for more flexible oracle management
  */
 import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {AggregatorV3Interface, IOracleV2} from "./IOracleV2.sol";
