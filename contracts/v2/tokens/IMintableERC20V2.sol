@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import "../../v1/tokens/IMintableERC20.sol";
-
 /**
  * @title TermMax ERC20 token interface
  * @author Term Structure Labs
