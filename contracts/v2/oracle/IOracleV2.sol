@@ -38,7 +38,7 @@ interface IOracleV2 {
     error OracleIsNotWorking(address asset);
 
     /**
-     * @notice Retrieves the current price of an asset from the oracle system
+     * @notice Retrieves the current price of an asset in USD from the oracle system
      * @dev Uses primary oracle first, falls back to backup if primary is stale or invalid
      * Applies maxPrice cap if configured. Returns price with the aggregator's native decimals
      * @param asset The address of the asset to get the price for
