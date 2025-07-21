@@ -17,6 +17,7 @@ interface IOracleV2 {
      * @param aggregator Primary price feed aggregator (required)
      * @param backupAggregator Secondary price feed aggregator for fallback (optional)
      * @param maxPrice Maximum allowed price value for this asset (0 = no limit)
+     * @param minPrice Minimum allowed price value for this asset (0 = no limit)
      * @param heartbeat Maximum allowed staleness for primary aggregator in seconds (0 = no staleness check)
      * @param backupHeartbeat Maximum allowed staleness for backup aggregator in seconds (0 = no staleness check)
      */
