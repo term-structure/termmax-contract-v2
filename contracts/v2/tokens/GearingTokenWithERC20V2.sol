@@ -26,7 +26,7 @@ contract GearingTokenWithERC20V2 is AbstractGearingTokenV2 {
     /// @notice The max capacity of collateral token
     uint256 public collateralCapacity;
 
-    uint256 collateralDenominator;
+    uint256 private collateralDenominator;
 
     constructor() {
         _disableInitializers();
