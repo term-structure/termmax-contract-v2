@@ -96,8 +96,8 @@ abstract contract AbstractGearingTokenV2 is
         if (config_.loanConfig.liquidationLtv > Constants.DECIMAL_BASE) {
             revert GearingTokenErrorsV2.InvalidLiquidationLtv();
         }
-        __ERC721_init(name, symbol);
-        __Ownable_init(msg.sender);
+        __ERC721_init_unchained(name, symbol);
+        __Ownable_init_unchained(msg.sender);
         _config = config_;
         debtDenominator = 10 ** _config.debtToken.decimals();
     }
