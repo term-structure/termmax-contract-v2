@@ -13,7 +13,7 @@ import {
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {ITermMaxMarket} from "../../v1/ITermMaxMarket.sol";
-import {ITermMaxMarketV2} from "../../v2/ITermMaxMarketV2.sol";
+import {ITermMaxMarketV2} from "../ITermMaxMarketV2.sol";
 import {ITermMaxOrder} from "../../v1/ITermMaxOrder.sol";
 import {SwapUnit} from "../../v1/router/ISwapAdapter.sol";
 import {RouterErrors} from "../../v1/errors/RouterErrors.sol";
@@ -324,6 +324,7 @@ contract TermMaxRouterV2 is
         uint256 repayAmt = ftOutAmt - netTokenIn;
         if (repayAmt > 0) {
             ft.safeIncreaseAllowance(address(gt), repayAmt);
+            // repay in ft, bool false means not using debt token
             gt.repay(gtId, repayAmt.toUint128(), false);
         }
 
@@ -459,6 +460,7 @@ contract TermMaxRouterV2 is
             repayAmt = totalFtAmt.toUint128();
         }
         ft.safeIncreaseAllowance(address(gt), repayAmt);
+        // repay in ft, bool false means not using debt token
         gt.repay(gtId, repayAmt, false);
 
         returnAmt = maxTokenIn - netCost;
@@ -774,6 +776,7 @@ contract TermMaxRouterV2 is
             if (swapData.netTokenAmt > netFtIn) {
                 uint256 repaidFtAmt = swapData.netTokenAmt - netFtIn;
                 ft.safeIncreaseAllowance(address(gt), repaidFtAmt);
+                // repay in ft, bool false means not using debt token
                 gt.repay(gtId, repaidFtAmt.toUint128(), false);
             }
             // check remaining debt token amount
@@ -781,6 +784,7 @@ contract TermMaxRouterV2 is
             if (totalDebtTokenAmt > debtAmt) {
                 uint256 repaidDebtAmt = totalDebtTokenAmt - debtAmt;
                 debtToken.safeIncreaseAllowance(address(gt), repaidDebtAmt);
+                // repay in debt token, bool true means using debt token
                 gt.repay(gtId, repaidDebtAmt.toUint128(), true);
             }
             (, uint128 ltv,) = gt.getLiquidationInfo(gtId);
