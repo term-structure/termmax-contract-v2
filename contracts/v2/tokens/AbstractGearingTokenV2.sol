@@ -66,7 +66,7 @@ abstract contract AbstractGearingTokenV2 is
     /// @notice Configuration of Gearing Token
     GtConfig internal _config;
     /// @notice Total supply of Gearing Token
-    uint256 internal total;
+    uint256 internal totalIds;
     /// @notice Denominator of debt token
     uint256 internal debtDenominator;
     /// @notice Mapping relationship between Gearing Token id and loan
@@ -171,7 +171,7 @@ abstract contract AbstractGearingTokenV2 is
         if (ltv > config.loanConfig.maxLtv) {
             revert GtIsNotHealthy(0, to, ltv);
         }
-        id = ++total;
+        id = ++totalIds;
         loanMapping[id] = loan;
         _safeMint(to, id);
     }
