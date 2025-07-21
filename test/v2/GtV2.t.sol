@@ -509,7 +509,7 @@ contract GtTestV2 is Test {
 
         res.debt.approve(address(res.gt), debtAmt);
 
-        vm.expectRevert(abi.encodeWithSelector(GearingTokenErrors.GtIsExpired.selector, gtId));
+        vm.expectRevert(abi.encodeWithSelector(GearingTokenErrorsV2.GtIsExpired.selector));
         res.gt.repay(gtId, debtAmt, true);
 
         vm.stopPrank();
@@ -526,7 +526,7 @@ contract GtTestV2 is Test {
         res.debt.mint(address(flashRepayer), debtAmt);
         res.gt.approve(address(flashRepayer), gtId);
 
-        vm.expectRevert(abi.encodeWithSelector(GearingTokenErrors.GtIsExpired.selector, gtId));
+        vm.expectRevert(abi.encodeWithSelector(GearingTokenErrorsV2.GtIsExpired.selector));
         flashRepayer.flashRepay(gtId, debtAmt, true, abi.encode(collateralAmt));
     }
 
@@ -645,7 +645,7 @@ contract GtTestV2 is Test {
         vm.startPrank(thirdPeople);
         res.collateral.approve(address(res.gt), addedCollateral);
 
-        vm.expectRevert(abi.encodeWithSelector(GearingTokenErrors.GtIsExpired.selector, gtId));
+        vm.expectRevert(abi.encodeWithSelector(GearingTokenErrorsV2.GtIsExpired.selector));
 
         res.gt.addCollateral(gtId, abi.encode(addedCollateral));
         vm.stopPrank();
@@ -766,7 +766,7 @@ contract GtTestV2 is Test {
 
         vm.warp(marketConfig.maturity);
 
-        vm.expectRevert(abi.encodeWithSelector(GearingTokenErrors.GtIsExpired.selector, gtId));
+        vm.expectRevert(abi.encodeWithSelector(GearingTokenErrorsV2.GtIsExpired.selector));
         vm.prank(sender);
         res.gt.removeCollateral(gtId, abi.encode(removedCollateral));
     }

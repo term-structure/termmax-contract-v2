@@ -30,8 +30,7 @@ abstract contract AbstractGearingTokenV2 is
     IGearingToken,
     IGearingTokenV2,
     GearingTokenErrors,
-    GearingTokenEvents,
-    GearingTokenEventsV2
+    GearingTokenEvents
 {
     using SafeCast for uint256;
     using SafeCast for int256;
@@ -83,7 +82,7 @@ abstract contract AbstractGearingTokenV2 is
     {
         __AbstractGearingToken_init(name, symbol, config_);
         __GearingToken_Implement_init(initalParams);
-        emit GearingTokenInitialized(msg.sender, name, symbol, initalParams);
+        emit GearingTokenEventsV2.GearingTokenInitialized(msg.sender, name, symbol, initalParams);
     }
 
     function __AbstractGearingToken_init(string memory name, string memory symbol, GtConfig memory config_)
@@ -185,7 +184,7 @@ abstract contract AbstractGearingTokenV2 is
         }
         GtConfig memory config = _config;
         if (config.maturity <= block.timestamp) {
-            revert GtIsExpired(id);
+            revert GearingTokenErrorsV2.GtIsExpired();
         }
 
         LoanInfo memory loan = loanMapping[id];
@@ -231,7 +230,7 @@ abstract contract AbstractGearingTokenV2 is
         }
         GtConfig memory config = _config;
         if (config.maturity <= block.timestamp) {
-            revert GtIsExpired(0);
+            revert GearingTokenErrorsV2.GtIsExpired();
         }
         newId = ids[0];
         LoanInfo memory firstLoan = loanMapping[newId];
@@ -259,7 +258,7 @@ abstract contract AbstractGearingTokenV2 is
     function repay(uint256 id, uint128 repayAmt, bool byDebtToken) external virtual override nonReentrant {
         GtConfig memory config = _config;
         if (config.maturity <= block.timestamp) {
-            revert GtIsExpired(id);
+            revert GearingTokenErrorsV2.GtIsExpired();
         }
 
         if (byDebtToken) {
@@ -269,7 +268,7 @@ abstract contract AbstractGearingTokenV2 is
             config.ft.safeTransferFrom(msg.sender, marketAddr(), repayAmt);
         }
         (, bool repayAll) = _repay(id, repayAmt);
-        emit Repay(id, repayAmt, byDebtToken, repayAll);
+        emit GearingTokenEventsV2.Repay(id, repayAmt, byDebtToken, repayAll);
     }
 
     /// @inheritdoc IGearingToken
@@ -309,7 +308,7 @@ abstract contract AbstractGearingTokenV2 is
     ) internal returns (bool) {
         GtConfig memory config = _config;
         if (config.maturity <= block.timestamp) {
-            revert GtIsExpired(id);
+            revert GearingTokenErrorsV2.GtIsExpired();
         }
         if (ownerOf(id) != msg.sender) {
             revert CallerIsNotTheOwner(id);
@@ -333,7 +332,7 @@ abstract contract AbstractGearingTokenV2 is
             repayToken, repayAmt, config.collateral, removedCollateral, callbackData
         );
         repayToken.safeTransferFrom(msg.sender, owner(), repayAmt);
-        emit FlashRepay(id, msg.sender, repayAmt, byDebtToken, repayAll, removedCollateral);
+        emit GearingTokenEventsV2.FlashRepay(id, msg.sender, repayAmt, byDebtToken, repayAll, removedCollateral);
         return repayAll;
     }
 
@@ -364,7 +363,7 @@ abstract contract AbstractGearingTokenV2 is
 
         GtConfig memory config = _config;
         if (config.maturity <= block.timestamp) {
-            revert GtIsExpired(id);
+            revert GearingTokenErrorsV2.GtIsExpired();
         }
 
         LoanInfo memory loan = loanMapping[id];
@@ -393,7 +392,7 @@ abstract contract AbstractGearingTokenV2 is
      */
     function addCollateral(uint256 id, bytes memory collateralData) external virtual override nonReentrant {
         if (_config.maturity <= block.timestamp) {
-            revert GtIsExpired(id);
+            revert GearingTokenErrorsV2.GtIsExpired();
         }
         LoanInfo memory loan = loanMapping[id];
 

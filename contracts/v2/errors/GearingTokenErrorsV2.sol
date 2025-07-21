@@ -6,4 +6,6 @@ interface GearingTokenErrorsV2 {
     error InvalidLiquidationLtv();
     /// @notice Error for merge empty Gearing Token id array
     error GtIdArrayIsEmpty();
+    /// @notice Error for Gearing Token is expired
+    error GtIsExpired();
 }
