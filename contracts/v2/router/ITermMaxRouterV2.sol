@@ -42,49 +42,6 @@ interface ITermMaxRouterV2 {
     }
 
     /**
-     * @notice Pauses all protocol operations
-     * @dev Can only be called by authorized addresses
-     */
-    function pause() external;
-
-    /**
-     * @notice Unpauses protocol operations
-     * @dev Can only be called by authorized addresses
-     */
-    function unpause() external;
-
-    /**
-     * @notice View the adapter whitelist status
-     * @dev Used for controlling which swap adapters can be used
-     * @param adapter The adapter's address to check whitelist status for
-     * @return True if whitelisted, false otherwise
-     */
-    function adapterWhitelist(address adapter) external view returns (bool);
-
-    /**
-     * @notice Set the adapter whitelist status
-     * @dev Used for controlling which swap adapters can be used
-     * @param adapter The adapter's address to set whitelist status for
-     * @param isWhitelist True to whitelist, false to remove from whitelist
-     */
-    function setAdapterWhitelist(address adapter, bool isWhitelist) external;
-
-    /**
-     * @notice Retrieves all assets owned by an address in a specific market
-     * @dev Returns both ERC20 tokens and GT (Governance Token) positions
-     * @param market The market to query assets from
-     * @param owner The address to check assets for
-     * @return tokens Array of ERC20 token addresses
-     * @return balances Corresponding balances for each token
-     * @return gt The GT token contract address
-     * @return gtIds Array of GT token IDs owned by the address
-     */
-    function assetsWithERC20Collateral(ITermMaxMarket market, address owner)
-        external
-        view
-        returns (IERC20[4] memory tokens, uint256[4] memory balances, address gt, uint256[] memory gtIds);
-
-    /**
      * @notice Swaps tokens using a predefined path
      * @dev Uses the SwapPath struct to define the swap path
      * @param paths Array of SwapPath structs defining the swap operations

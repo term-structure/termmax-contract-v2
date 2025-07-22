@@ -94,7 +94,7 @@ contract OrderManagerV2 is VaultStorageV2, OnlyProxyCall, IOrderManagerV2 {
         if (badDebt != 0) {
             // store bad debt
             ITermMaxMarket market = ITermMaxOrder(order).market();
-            (,,, address collateral, IERC20 debtToken) = market.tokens();
+            (,,, address collateral,) = market.tokens();
             _badDebtMapping[collateral] += badDebt;
         }
         _depositToPoolOrNot(asset, asset.balanceOf(address(this)));

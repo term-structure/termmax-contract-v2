@@ -8,20 +8,16 @@ contract PreTMX is ERC20, Ownable2Step {
     bool public transferRestricted;
 
     mapping(address => bool) public isTransferredFromWhitelisted;
-    mapping(address => bool) public isTransferredToWhitelisted;
 
     error TransferFromNotWhitelisted(address from);
-    error TransferToNotWhitelisted(address to);
 
     event TransferRestricted(bool restricted);
     event TransferFromWhitelisted(address from, bool isWhitelisted);
-    event TransferToWhitelisted(address to, bool isWhitelisted);
 
     constructor(address admin) ERC20("Pre TermMax Token", "pTMX") Ownable(admin) {
         _mint(admin, 1e9 ether);
         _setTransferRestricted(true);
         _setTransferFromWhitelisted(admin, true);
-        _setTransferToWhitelisted(admin, true);
     }
 
     function enableTransfer() external onlyOwner {
@@ -34,10 +30,6 @@ contract PreTMX is ERC20, Ownable2Step {
 
     function whitelistTransferFrom(address from, bool isWhitelisted) external onlyOwner {
         _setTransferFromWhitelisted(from, isWhitelisted);
-    }
-
-    function whitelistTransferTo(address to, bool isWhitelisted) external onlyOwner {
-        _setTransferToWhitelisted(to, isWhitelisted);
     }
 
     function transfer(address to, uint256 amount) public override returns (bool) {
@@ -54,16 +46,13 @@ contract PreTMX is ERC20, Ownable2Step {
         _mint(to, amount);
     }
 
-    function burn(uint256 amount) external {
+    function burn(uint256 amount) external onlyOwner {
         _burn(msg.sender, amount);
     }
 
-    function _beforeTokenTransfer(address from, address to) internal view {
+    function _beforeTokenTransfer(address from, address) internal view {
         if (transferRestricted && !isTransferredFromWhitelisted[from]) {
             revert TransferFromNotWhitelisted(from);
-        }
-        if (transferRestricted && !isTransferredToWhitelisted[to]) {
-            revert TransferToNotWhitelisted(to);
         }
     }
 
@@ -75,10 +64,5 @@ contract PreTMX is ERC20, Ownable2Step {
     function _setTransferFromWhitelisted(address from, bool isWhitelisted) internal {
         isTransferredFromWhitelisted[from] = isWhitelisted;
         emit TransferFromWhitelisted(from, isWhitelisted);
-    }
-
-    function _setTransferToWhitelisted(address to, bool isWhitelisted) internal {
-        isTransferredToWhitelisted[to] = isWhitelisted;
-        emit TransferToWhitelisted(to, isWhitelisted);
     }
 }

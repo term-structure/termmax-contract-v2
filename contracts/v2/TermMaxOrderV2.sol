@@ -69,7 +69,7 @@ contract TermMaxOrderV2 is
     // =============================================================================
 
     /// @notice Check if the market is borrowing allowed
-    modifier isBorrowingAllowed(OrderConfig memory config) {
+    modifier onlyBorrowingIsAllowed(OrderConfig memory config) {
         if (config.curveCuts.lendCurveCuts.length == 0) {
             revert BorrowIsNotAllowed();
         }
@@ -77,7 +77,7 @@ contract TermMaxOrderV2 is
     }
 
     /// @notice Check if the market is lending allowed
-    modifier isLendingAllowed(OrderConfig memory config) {
+    modifier onlyLendingIsAllowed(OrderConfig memory config) {
         if (config.curveCuts.borrowCurveCuts.length == 0) {
             revert LendIsNotAllowed();
         }
@@ -352,6 +352,31 @@ contract TermMaxOrderV2 is
     }
 
     /**
+     * @notice Internal function to update general configuration
+     * @param gtId Gearing token ID
+     * @param maxXtReserve Maximum XT reserve
+     * @param swapTrigger Swap callback trigger
+     * @param virtualXtReserve_ Virtual XT reserve
+     */
+    function _updateGeneralConfig(
+        uint256 gtId,
+        uint256 maxXtReserve,
+        ISwapCallback swapTrigger,
+        uint256 virtualXtReserve_
+    ) internal {
+        _orderConfig.gtId = gtId;
+        _orderConfig.maxXtReserve = maxXtReserve;
+        _orderConfig.swapTrigger = swapTrigger;
+        virtualXtReserve = virtualXtReserve_;
+        emit OrderEventsV2.GeneralConfigUpdated(gtId, maxXtReserve, swapTrigger, virtualXtReserve_);
+    }
+
+    function _updateFeeConfig(FeeConfig memory newFeeConfig) internal {
+        _orderConfig.feeConfig = newFeeConfig;
+        emit UpdateFeeConfig(newFeeConfig);
+    }
+
+    /**
      * @notice Pause the order
      * @inheritdoc ITermMaxOrder
      */
@@ -550,14 +575,6 @@ contract TermMaxOrderV2 is
 
             // transfer output tokens
             tokenOut.safeTransfer(recipient, netTokenOut);
-
-            // if (tokenOut == _debtToken) {
-            //     _handleDebtTokenOutput(netTokenOut, feeAmt, recipient, _ft, _xt, _debtToken);
-            // } else if (tokenOut == _ft) {
-            //     _handleFtOutput(tokenOut, netTokenOut, feeAmt, tokenAmtIn, recipient, _debtToken, orderConfig_.gtId);
-            // } else {
-            //     _handleXtOutput(tokenOut, netTokenOut, feeAmt, tokenAmtIn, recipient, _ft, _debtToken);
-            // }
         }
 
         emit SwapExactTokenToToken(
@@ -624,14 +641,6 @@ contract TermMaxOrderV2 is
 
             // transfer output tokens
             tokenOut.safeTransfer(recipient, tokenAmtOut);
-
-            // if (tokenOut == _debtToken) {
-            //     _handleDebtTokenOutput(tokenAmtOut, feeAmt, recipient, _ft, _xt, _debtToken);
-            // } else if (tokenOut == _ft) {
-            //     _handleFtOutput(tokenOut, tokenAmtOut, feeAmt, netTokenIn, recipient, _debtToken, orderConfig_.gtId);
-            // } else {
-            //     _handleXtOutput(tokenOut, tokenAmtOut, feeAmt, netTokenIn, recipient, _ft, _debtToken);
-            // }
         }
 
         emit SwapTokenToExactToken(
@@ -717,14 +726,10 @@ contract TermMaxOrderV2 is
                     != (
                         newCurveCuts.lendCurveCuts[i - 1].liqSquare
                             * (
-                                (
-                                    (newCurveCuts.lendCurveCuts[i].xtReserve.plusInt256(newCurveCuts.lendCurveCuts[i].offset))
-                                        ** 2 * Constants.DECIMAL_BASE
-                                )
-                                    / (
-                                        newCurveCuts.lendCurveCuts[i].xtReserve.plusInt256(newCurveCuts.lendCurveCuts[i - 1].offset)
-                                            ** 2
-                                    )
+                                newCurveCuts.lendCurveCuts[i].xtReserve.plusInt256(newCurveCuts.lendCurveCuts[i].offset) ** 2
+                                    * Constants.DECIMAL_BASE
+                                    / newCurveCuts.lendCurveCuts[i].xtReserve.plusInt256(newCurveCuts.lendCurveCuts[i - 1].offset)
+                                        ** 2
                             )
                     ) / Constants.DECIMAL_BASE
             ) revert InvalidCurveCuts();
@@ -746,49 +751,16 @@ contract TermMaxOrderV2 is
                     != (
                         newCurveCuts.borrowCurveCuts[i - 1].liqSquare
                             * (
-                                (
-                                    (
-                                        newCurveCuts.borrowCurveCuts[i].xtReserve.plusInt256(
-                                            newCurveCuts.borrowCurveCuts[i].offset
-                                        )
-                                    ) ** 2 * Constants.DECIMAL_BASE
-                                )
-                                    / (
-                                        newCurveCuts.borrowCurveCuts[i].xtReserve.plusInt256(
-                                            newCurveCuts.borrowCurveCuts[i - 1].offset
-                                        ) ** 2
-                                    )
+                                newCurveCuts.borrowCurveCuts[i].xtReserve.plusInt256(newCurveCuts.borrowCurveCuts[i].offset)
+                                    ** 2 * Constants.DECIMAL_BASE
+                                    / newCurveCuts.borrowCurveCuts[i].xtReserve.plusInt256(
+                                        newCurveCuts.borrowCurveCuts[i - 1].offset
+                                    ) ** 2
                             )
                     ) / Constants.DECIMAL_BASE
             ) revert InvalidCurveCuts();
         }
         _orderConfig.curveCuts = newCurveCuts;
-        emit OrderEventsV2.CurveUpdated(newCurveCuts);
-    }
-
-    /**
-     * @notice Internal function to update general configuration
-     * @param gtId Gearing token ID
-     * @param maxXtReserve Maximum XT reserve
-     * @param swapTrigger Swap callback trigger
-     * @param virtualXtReserve_ Virtual XT reserve
-     */
-    function _updateGeneralConfig(
-        uint256 gtId,
-        uint256 maxXtReserve,
-        ISwapCallback swapTrigger,
-        uint256 virtualXtReserve_
-    ) internal {
-        _orderConfig.gtId = gtId;
-        _orderConfig.maxXtReserve = maxXtReserve;
-        _orderConfig.swapTrigger = swapTrigger;
-        virtualXtReserve = virtualXtReserve_;
-        emit OrderEventsV2.GeneralConfigUpdated(gtId, maxXtReserve, swapTrigger, virtualXtReserve_);
-    }
-
-    function _updateFeeConfig(FeeConfig memory newFeeConfig) internal {
-        _orderConfig.feeConfig = newFeeConfig;
-        emit UpdateFeeConfig(newFeeConfig);
     }
 
     // =============================================================================
@@ -828,111 +800,6 @@ contract TermMaxOrderV2 is
             virtualXtReserve = newXtReserve;
             return (netAmt, feeAmt, -deltaFt.toInt256(), deltaXt.toInt256());
         }
-    }
-
-    /**
-     * @notice Handle debt token output after swap
-     * @param netTokenOut Net debt tokens to output
-     * @param feeAmt Fee amount
-     * @param recipient Recipient address
-     * @param _ft FT token reference
-     * @param _xt XT token reference
-     * @param _debtToken Debt token reference
-     */
-    function _handleDebtTokenOutput(
-        uint256 netTokenOut,
-        uint256 feeAmt,
-        address recipient,
-        IERC20 _ft,
-        IERC20 _xt,
-        IERC20 _debtToken
-    ) private {
-        uint256 ftBalance = _ft.balanceOf(address(this));
-        uint256 xtBalance = _xt.balanceOf(address(this));
-        uint256 tokenToMint = netTokenOut + feeAmt;
-        ITermMaxMarket _market = market;
-
-        if (tokenToMint > ftBalance || netTokenOut > xtBalance) {
-            uint256 mintAmount = _calculateMintAmount(tokenToMint, netTokenOut, ftBalance, xtBalance);
-            pool.withdraw(mintAmount, address(this), address(this));
-            _debtToken.safeIncreaseAllowance(address(_market), mintAmount);
-            _market.mint(address(this), mintAmount);
-        }
-
-        _market.burn(recipient, netTokenOut);
-        _ft.safeTransfer(_market.config().treasurer, feeAmt);
-    }
-
-    function _handleXtOutput(
-        IERC20 tokenOut,
-        uint256 netTokenOut,
-        uint256 feeAmt,
-        uint256 tokenAmtIn,
-        address recipient,
-        IERC20 _ft,
-        IERC20 _debtToken
-    ) internal {
-        uint256 ftBalance = _ft.balanceOf(address(this));
-        uint256 xtBalance = tokenOut.balanceOf(address(this));
-
-        // withdraw debt token from pool if needed
-        if (xtBalance + tokenAmtIn < netTokenOut) {
-            uint256 debtToWithdraw = netTokenOut - xtBalance - tokenAmtIn;
-            // we dont need to check pool balance here because it means insufficient liquidity if reverted
-            try pool.withdraw(debtToWithdraw, address(this), address(this)) {}
-            catch {
-                revert TermMaxCurve.InsufficientLiquidity();
-            }
-            tokenAmtIn += debtToWithdraw;
-        }
-        ITermMaxMarket _market = market;
-        _debtToken.safeIncreaseAllowance(address(_market), tokenAmtIn);
-        _market.mint(address(this), tokenAmtIn);
-
-        // Pay fee
-        _ft.safeTransfer(market.config().treasurer, feeAmt);
-        // transfer output tokens
-        tokenOut.safeTransfer(recipient, netTokenOut);
-    }
-
-    function _handleFtOutput(
-        IERC20 tokenOut,
-        uint256 netTokenOut,
-        uint256 feeAmt,
-        uint256 tokenAmtIn,
-        address recipient,
-        IERC20 _debtToken,
-        uint256 gtId
-    ) internal {
-        uint256 ftBalance = tokenOut.balanceOf(address(this)) + tokenAmtIn;
-        uint256 requiredFtBalance = netTokenOut + feeAmt;
-        if (ftBalance < requiredFtBalance) {
-            // check ft reserves
-            IERC4626 _pool = pool;
-            if (address(_pool) != address(0)) {
-                uint256 assetsInPool = _pool.convertToAssets(_pool.balanceOf(address(this)));
-                uint256 withdrawAmount = requiredFtBalance - ftBalance;
-                if (withdrawAmount > assetsInPool) {
-                    _pool.withdraw(assetsInPool, address(this), address(this));
-                    tokenAmtIn += assetsInPool;
-                    _issueFtToSelf(withdrawAmount - assetsInPool, gtId);
-                } else {
-                    _pool.withdraw(withdrawAmount, address(this), address(this));
-                    tokenAmtIn += withdrawAmount;
-                }
-            } else {
-                _issueFtToSelf(requiredFtBalance - ftBalance, gtId);
-            }
-        }
-        ITermMaxMarket _market = market;
-        // mint ft and xt
-        _debtToken.safeIncreaseAllowance(address(_market), tokenAmtIn);
-        _market.mint(address(this), tokenAmtIn);
-
-        // Pay fee
-        tokenOut.safeTransfer(_market.config().treasurer, feeAmt);
-        // transfer output tokens
-        tokenOut.safeTransfer(recipient, netTokenOut);
     }
 
     /**
@@ -982,7 +849,7 @@ contract TermMaxOrderV2 is
     function _buyFt(uint256 debtTokenAmtIn, uint256 minTokenOut, OrderConfig memory config)
         internal
         view
-        isLendingAllowed(config)
+        onlyLendingIsAllowed(config)
         returns (uint256 netOut, uint256 feeAmt, uint256 deltaFt, uint256 deltaXt, bool isNegetiveXt)
     {
         (netOut, feeAmt, deltaFt, deltaXt, isNegetiveXt) = _buyToken(debtTokenAmtIn, minTokenOut, config, _buyFtStep);
@@ -1002,7 +869,7 @@ contract TermMaxOrderV2 is
     function _buyXt(uint256 debtTokenAmtIn, uint256 minTokenOut, OrderConfig memory config)
         internal
         view
-        isBorrowingAllowed(config)
+        onlyBorrowingIsAllowed(config)
         returns (uint256 netOut, uint256 feeAmt, uint256 deltaFt, uint256 deltaXt, bool isNegetiveXt)
     {
         (netOut, feeAmt, deltaFt, deltaXt, isNegetiveXt) = _buyToken(debtTokenAmtIn, minTokenOut, config, _buyXtStep);
@@ -1022,7 +889,7 @@ contract TermMaxOrderV2 is
     function _buyExactFt(uint256 tokenAmtOut, uint256 maxTokenIn, OrderConfig memory config)
         internal
         view
-        isLendingAllowed(config)
+        onlyLendingIsAllowed(config)
         returns (uint256 netTokenIn, uint256 feeAmt, uint256 deltaFt, uint256 deltaXt, bool isNegetiveXt)
     {
         (netTokenIn, feeAmt, deltaFt, deltaXt, isNegetiveXt) =
@@ -1043,7 +910,7 @@ contract TermMaxOrderV2 is
     function _buyExactXt(uint256 tokenAmtOut, uint256 maxTokenIn, OrderConfig memory config)
         internal
         view
-        isBorrowingAllowed(config)
+        onlyBorrowingIsAllowed(config)
         returns (uint256 netTokenIn, uint256 feeAmt, uint256 deltaFt, uint256 deltaXt, bool isNegetiveXt)
     {
         (netTokenIn, feeAmt, deltaFt, deltaXt, isNegetiveXt) =
@@ -1068,7 +935,7 @@ contract TermMaxOrderV2 is
     function _sellFt(uint256 ftAmtIn, uint256 minDebtTokenOut, OrderConfig memory config)
         internal
         view
-        isBorrowingAllowed(config)
+        onlyBorrowingIsAllowed(config)
         returns (uint256 netOut, uint256 feeAmt, uint256 deltaFt, uint256 deltaXt, bool isNegetiveXt)
     {
         (netOut, feeAmt, deltaFt, deltaXt, isNegetiveXt) = _sellToken(ftAmtIn, minDebtTokenOut, config, _sellFtStep);
@@ -1088,7 +955,7 @@ contract TermMaxOrderV2 is
     function _sellXt(uint256 xtAmtIn, uint256 minDebtTokenOut, OrderConfig memory config)
         internal
         view
-        isLendingAllowed(config)
+        onlyLendingIsAllowed(config)
         returns (uint256 netOut, uint256 feeAmt, uint256 deltaFt, uint256 deltaXt, bool isNegetiveXt)
     {
         (netOut, feeAmt, deltaFt, deltaXt, isNegetiveXt) = _sellToken(xtAmtIn, minDebtTokenOut, config, _sellXtStep);
@@ -1108,7 +975,7 @@ contract TermMaxOrderV2 is
     function _sellFtForExactToken(uint256 debtTokenAmtOut, uint256 maxFtIn, OrderConfig memory config)
         internal
         view
-        isBorrowingAllowed(config)
+        onlyBorrowingIsAllowed(config)
         returns (uint256 netIn, uint256 feeAmt, uint256 deltaFt, uint256 deltaXt, bool isNegetiveXt)
     {
         (netIn, feeAmt, deltaFt, deltaXt, isNegetiveXt) =
@@ -1129,7 +996,7 @@ contract TermMaxOrderV2 is
     function _sellXtForExactToken(uint256 debtTokenAmtOut, uint256 maxXtIn, OrderConfig memory config)
         internal
         view
-        isLendingAllowed(config)
+        onlyLendingIsAllowed(config)
         returns (uint256 netIn, uint256 feeAmt, uint256 deltaFt, uint256 deltaXt, bool isNegetiveXt)
     {
         (netIn, feeAmt, deltaFt, deltaXt, isNegetiveXt) =

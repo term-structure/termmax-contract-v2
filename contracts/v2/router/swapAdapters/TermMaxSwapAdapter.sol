@@ -54,6 +54,7 @@ contract TermMaxSwapAdapter is ERC20SwapAdapterV2 {
             /// @dev Token inputs may not be costed totally in this case.
             for (uint256 i = 0; i < data.orders.length; ++i) {
                 address order = data.orders[i];
+                // Use maximum allowance for the swap because the final input amount is unknown
                 tokenIn.forceApprove(order, data.netTokenAmt);
                 netTokenOutOrIn += ITermMaxOrder(order).swapTokenToExactToken(
                     tokenIn, tokenOut, recipient, data.tradingAmts[i], data.netTokenAmt, data.deadline

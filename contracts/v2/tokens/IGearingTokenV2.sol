@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.27;
+pragma solidity ^0.8.0;
 
 /**
  * @title TermMax Gearing token interface V2
@@ -7,7 +7,7 @@ pragma solidity ^0.8.27;
  */
 interface IGearingTokenV2 {
     /// @notice Repay the debt of Gearing Token,
-    ///         the collateral will send by flashloan first.
+    ///         The borrower can repay the debt after receiving the collateral
     /// @param id The id of Gearing Token
     /// @param byDebtToken Repay using debtToken token or bonds token
     /// @param repayAmt The amount of debt you want to repay

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.27;
+pragma solidity ^0.8.0;
 
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 
@@ -17,6 +17,7 @@ interface IOracleV2 {
      * @param aggregator Primary price feed aggregator (required)
      * @param backupAggregator Secondary price feed aggregator for fallback (optional)
      * @param maxPrice Maximum allowed price value for this asset (0 = no limit)
+     * @param minPrice Minimum allowed price value for this asset (0 = no limit)
      * @param heartbeat Maximum allowed staleness for primary aggregator in seconds (0 = no staleness check)
      * @param backupHeartbeat Maximum allowed staleness for backup aggregator in seconds (0 = no staleness check)
      */
@@ -37,7 +38,7 @@ interface IOracleV2 {
     error OracleIsNotWorking(address asset);
 
     /**
-     * @notice Retrieves the current price of an asset from the oracle system
+     * @notice Retrieves the current price of an asset in USD from the oracle system
      * @dev Uses primary oracle first, falls back to backup if primary is stale or invalid
      * Applies maxPrice cap if configured. Returns price with the aggregator's native decimals
      * @param asset The address of the asset to get the price for

@@ -5,6 +5,7 @@ import {ERC721EnumerableUpgradeable} from
     "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {Constants} from "../../v1/lib/Constants.sol";
 import {GearingTokenConstants} from "../../v1/lib/GearingTokenConstants.sol";
@@ -16,6 +17,7 @@ import {GearingTokenEvents} from "../../v1/events/GearingTokenEvents.sol";
 import {GtConfig, IOracle} from "../../v1/storage/TermMaxStorage.sol";
 import {IGearingTokenV2} from "./IGearingTokenV2.sol";
 import {GearingTokenEventsV2} from "../events/GearingTokenEventsV2.sol";
+import {GearingTokenErrorsV2} from "../errors/GearingTokenErrorsV2.sol";
 import {VersionV2} from "../VersionV2.sol";
 
 /**
@@ -30,13 +32,13 @@ abstract contract AbstractGearingTokenV2 is
     IGearingTokenV2,
     GearingTokenErrors,
     GearingTokenEvents,
-    GearingTokenEventsV2,
     VersionV2
 {
     using SafeCast for uint256;
     using SafeCast for int256;
     using TransferUtils for IERC20;
     using TransferUtils for IERC20Metadata;
+    using Math for *;
 
     struct LoanInfo {
         /// @notice Debt amount in debtToken token
@@ -48,26 +50,28 @@ abstract contract AbstractGearingTokenV2 is
     struct ValueAndPrice {
         /// @notice USD value of collateral
         uint256 collateralValue;
-        /// @notice USD value of debt with price and token decimals
+        /// @notice USD value of debt contains price and token decimals
         uint256 debtValueWithDecimals;
         /// @notice USD price of debt token
         uint256 debtPrice;
-        /// @notice Denominator of USD price
+        /// @notice Denominator of USD price, e.g. 10**priceDecimals
         uint256 priceDenominator;
-        /// @notice Denominator of debt token
+        /// @notice Denominator of debt token, e.g. 10**debtToken.decimals()
         uint256 debtDenominator;
-        /// @notice Encoded USD price of collateral token
+        /// @notice Encoded USD price of collateral token, e.g. priceData is
+        ///         abi.encode(price, priceDenominator, collateralDenominator)
+        ///         where gt is GearingTokenWithERC20
         bytes collateralPriceData;
     }
 
-    /// @notice Configuturation of Gearing Token
-    GtConfig _config;
+    /// @notice Configuration of Gearing Token
+    GtConfig internal _config;
     /// @notice Total supply of Gearing Token
-    uint256 total;
+    uint256 internal totalIds;
+    /// @notice Denominator of debt token
+    uint256 internal debtDenominator;
     /// @notice Mapping relationship between Gearing Token id and loan
-    mapping(uint256 => LoanInfo) loanMapping;
-
-    uint8 debtDecimals;
+    mapping(uint256 => LoanInfo) internal loanMapping;
 
     /**
      * @inheritdoc IGearingToken
@@ -80,7 +84,7 @@ abstract contract AbstractGearingTokenV2 is
     {
         __AbstractGearingToken_init(name, symbol, config_);
         __GearingToken_Implement_init(initalParams);
-        emit GearingTokenInitialized(msg.sender, name, symbol, initalParams);
+        emit GearingTokenEventsV2.GearingTokenInitialized(msg.sender, name, symbol, initalParams);
     }
 
     function __AbstractGearingToken_init(string memory name, string memory symbol, GtConfig memory config_)
@@ -90,10 +94,13 @@ abstract contract AbstractGearingTokenV2 is
         if (config_.loanConfig.liquidationLtv <= config_.loanConfig.maxLtv) {
             revert LiquidationLtvMustBeGreaterThanMaxLtv();
         }
-        __ERC721_init(name, symbol);
-        __Ownable_init(msg.sender);
+        if (config_.loanConfig.liquidationLtv > Constants.DECIMAL_BASE) {
+            revert GearingTokenErrorsV2.InvalidLiquidationLtv();
+        }
+        __ERC721_init_unchained(name, symbol);
+        __Ownable_init_unchained(msg.sender);
         _config = config_;
-        debtDecimals = _config.debtToken.decimals();
+        debtDenominator = 10 ** _config.debtToken.decimals();
     }
 
     function __GearingToken_Implement_init(bytes memory initalParams) internal virtual;
@@ -165,7 +172,7 @@ abstract contract AbstractGearingTokenV2 is
         if (ltv > config.loanConfig.maxLtv) {
             revert GtIsNotHealthy(0, to, ltv);
         }
-        id = ++total;
+        id = ++totalIds;
         loanMapping[id] = loan;
         _safeMint(to, id);
     }
@@ -179,7 +186,7 @@ abstract contract AbstractGearingTokenV2 is
         }
         GtConfig memory config = _config;
         if (config.maturity <= block.timestamp) {
-            revert GtIsExpired(id);
+            revert GearingTokenErrorsV2.GtIsExpired();
         }
 
         LoanInfo memory loan = loanMapping[id];
@@ -220,21 +227,30 @@ abstract contract AbstractGearingTokenV2 is
      * @inheritdoc IGearingToken
      */
     function merge(uint256[] memory ids) external virtual nonReentrant returns (uint256 newId) {
-        uint128 totalDebtAmt;
-        bytes memory mergedCollateralData;
+        if (ids.length == 0) {
+            revert GearingTokenErrorsV2.GtIdArrayIsEmpty();
+        }
+        GtConfig memory config = _config;
+        if (config.maturity <= block.timestamp) {
+            revert GearingTokenErrorsV2.GtIsExpired();
+        }
+        newId = ids[0];
+        LoanInfo memory firstLoan = loanMapping[newId];
+
         for (uint256 i = 0; i < ids.length; ++i) {
             uint256 id = ids[i];
-            LoanInfo memory loan = loanMapping[id];
             address owner = ownerOf(id);
             if (msg.sender != owner) {
-                revert CanNotMergeLoanWithDiffOwner(id, owner);
+                revert AuthorizationFailed(id, msg.sender);
             }
-            totalDebtAmt += loan.debtAmt;
-            mergedCollateralData =
-                i == 0 ? loan.collateralData : _mergeCollateral(mergedCollateralData, loan.collateralData);
-            _burnInternal(id);
+            LoanInfo memory loan = loanMapping[id];
+            if (i != 0) {
+                firstLoan.debtAmt += loanMapping[id].debtAmt;
+                firstLoan.collateralData = _mergeCollateral(firstLoan.collateralData, loan.collateralData);
+                _burnInternal(id);
+            }
         }
-        newId = _mintInternal(msg.sender, totalDebtAmt, mergedCollateralData, _config);
+        loanMapping[newId] = firstLoan;
         emit MergeGts(msg.sender, newId, ids);
     }
 
@@ -244,7 +260,7 @@ abstract contract AbstractGearingTokenV2 is
     function repay(uint256 id, uint128 repayAmt, bool byDebtToken) external virtual override nonReentrant {
         GtConfig memory config = _config;
         if (config.maturity <= block.timestamp) {
-            revert GtIsExpired(id);
+            revert GearingTokenErrorsV2.GtIsExpired();
         }
         (, bool repayAll, uint128 finalRepayAmt) = _repay(id, repayAmt);
         if (byDebtToken) {
@@ -253,8 +269,7 @@ abstract contract AbstractGearingTokenV2 is
             // Those ft tokens have been approved to market and will be burn after maturity
             config.ft.safeTransferFrom(msg.sender, marketAddr(), finalRepayAmt);
         }
-
-        emit Repay(id, finalRepayAmt, byDebtToken, repayAll);
+        emit GearingTokenEventsV2.Repay(id, finalRepayAmt, byDebtToken, repayAll);
     }
 
     /// @inheritdoc IGearingToken
@@ -294,11 +309,12 @@ abstract contract AbstractGearingTokenV2 is
     ) internal returns (bool) {
         GtConfig memory config = _config;
         if (config.maturity <= block.timestamp) {
-            revert GtIsExpired(id);
+            revert GearingTokenErrorsV2.GtIsExpired();
         }
         if (ownerOf(id) != msg.sender) {
             revert CallerIsNotTheOwner(id);
         }
+        // All collteral will be removed in _repay function if repayAll is true
         (LoanInfo memory loan, bool repayAll, uint128 finalRepayAmt) = _repay(id, repayAmt);
         // Check ltv after partial repayment
         if (!repayAll) {
@@ -317,7 +333,7 @@ abstract contract AbstractGearingTokenV2 is
             repayToken, finalRepayAmt, config.collateral, removedCollateral, callbackData
         );
         repayToken.safeTransferFrom(msg.sender, owner(), finalRepayAmt);
-        emit FlashRepay(id, msg.sender, finalRepayAmt, byDebtToken, repayAll, removedCollateral);
+        emit GearingTokenEventsV2.FlashRepay(id, msg.sender, finalRepayAmt, byDebtToken, repayAll, removedCollateral);
         return repayAll;
     }
 
@@ -352,7 +368,7 @@ abstract contract AbstractGearingTokenV2 is
 
         GtConfig memory config = _config;
         if (config.maturity <= block.timestamp) {
-            revert GtIsExpired(id);
+            revert GearingTokenErrorsV2.GtIsExpired();
         }
 
         LoanInfo memory loan = loanMapping[id];
@@ -381,7 +397,7 @@ abstract contract AbstractGearingTokenV2 is
      */
     function addCollateral(uint256 id, bytes memory collateralData) external virtual override nonReentrant {
         if (_config.maturity <= block.timestamp) {
-            revert GtIsExpired(id);
+            revert GearingTokenErrorsV2.GtIsExpired();
         }
         LoanInfo memory loan = loanMapping[id];
 
@@ -432,8 +448,9 @@ abstract contract AbstractGearingTokenV2 is
             } else if (ltv >= config.loanConfig.liquidationLtv) {
                 isLiquidable = true;
                 // collateralValue(price decimals) and HALF_LIQUIDATION_THRESHOLD(base decimals 1e8)
-                maxRepayAmt = (valueAndPrice.collateralValue * Constants.DECIMAL_BASE) / valueAndPrice.priceDenominator
-                    < GearingTokenConstants.HALF_LIQUIDATION_THRESHOLD ? loan.debtAmt : loan.debtAmt / 2;
+                maxRepayAmt = valueAndPrice.collateralValue.mulDiv(
+                    Constants.DECIMAL_BASE, valueAndPrice.priceDenominator
+                ) < GearingTokenConstants.HALF_LIQUIDATION_THRESHOLD ? loan.debtAmt : loan.debtAmt / 2;
             }
         }
     }
@@ -553,11 +570,13 @@ abstract contract AbstractGearingTokenV2 is
 
         uint8 priceDecimals;
         (valueAndPrice.debtPrice, priceDecimals) = config.loanConfig.oracle.getPrice(address(config.debtToken));
+        // Price decimals may change, so we need to calculate the price denominator
         valueAndPrice.priceDenominator = 10 ** priceDecimals;
 
-        valueAndPrice.debtDenominator = 10 ** debtDecimals;
+        valueAndPrice.debtDenominator = debtDenominator;
 
-        valueAndPrice.debtValueWithDecimals = (loan.debtAmt * valueAndPrice.debtPrice) / valueAndPrice.debtDenominator;
+        valueAndPrice.debtValueWithDecimals =
+            loan.debtAmt.mulDiv(valueAndPrice.debtPrice, valueAndPrice.debtDenominator);
     }
 
     /// @notice Return the loan to value of this loan
@@ -568,9 +587,8 @@ abstract contract AbstractGearingTokenV2 is
             return type(uint128).max;
         }
         // debtValueWithDecimals(price decimals) collateralValue(base decimals)
-        ltv = (
-            (valueAndPrice.debtValueWithDecimals * Constants.DECIMAL_BASE_SQ)
-                / (valueAndPrice.collateralValue * valueAndPrice.priceDenominator)
+        ltv = valueAndPrice.debtValueWithDecimals.mulDiv(
+            Constants.DECIMAL_BASE_SQ, valueAndPrice.collateralValue * valueAndPrice.priceDenominator
         ).toUint128();
     }
 

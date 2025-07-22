@@ -342,10 +342,9 @@ contract OracleAggregatorTestV2 is Test {
         vm.prank(OWNER);
         primaryFeed.updateRoundData(roundData);
 
-        // Get price - should return maxPrice instead of actual price
-        (uint256 price, uint8 decimals) = oracleAggregator.getPrice(ASSET);
-        assertEq(price, uint256(MAX_PRICE));
-        assertEq(decimals, DECIMALS);
+        // Should revert since primary exceeds maxPrice and no backup exists
+        vm.expectRevert(abi.encodeWithSignature("OracleIsNotWorking(address)", ASSET));
+        oracleAggregator.getPrice(ASSET);
     }
 
     function test_GetPrice_PrimaryExceedsMaxPrice_WithBackup() public {
@@ -376,7 +375,7 @@ contract OracleAggregatorTestV2 is Test {
             answeredInRound: 2
         });
 
-        // Set backup price below maxPrice
+        // Set backup price below maxPrice (valid)
         int256 backupPrice = MAX_PRICE - 1000e8;
         MockPriceFeedV2.RoundData memory backupRoundData = MockPriceFeedV2.RoundData({
             roundId: 2,
@@ -391,13 +390,13 @@ contract OracleAggregatorTestV2 is Test {
         backupFeed.updateRoundData(backupRoundData);
         vm.stopPrank();
 
-        // Get price - should fallback to backup oracle
+        // Get price - should fallback to backup oracle since primary exceeds maxPrice
         (uint256 price, uint8 decimals) = oracleAggregator.getPrice(ASSET);
-        assertEq(price, uint256(MAX_PRICE));
+        assertEq(price, uint256(backupPrice));
         assertEq(decimals, DECIMALS);
     }
 
-    function test_GetPrice_BothExceedMaxPrice() public {
+    function test_RevertGetPrice_BothExceedMaxPrice() public {
         // Create an oracle with maxPrice
         IOracleV2.Oracle memory oracle = IOracleV2.Oracle({
             aggregator: primaryFeed,
@@ -439,10 +438,9 @@ contract OracleAggregatorTestV2 is Test {
         backupFeed.updateRoundData(backupRoundData);
         vm.stopPrank();
 
-        // Get price - should use backup capped at maxPrice
-        (uint256 price, uint8 decimals) = oracleAggregator.getPrice(ASSET);
-        assertEq(price, uint256(MAX_PRICE));
-        assertEq(decimals, DECIMALS);
+        // Should revert since both oracles exceed maxPrice
+        vm.expectRevert(abi.encodeWithSignature("OracleIsNotWorking(address)", ASSET));
+        oracleAggregator.getPrice(ASSET);
     }
 
     function test_GetPrice_WithMaxPriceZero_PrimaryOracle() public {
@@ -606,7 +604,7 @@ contract OracleAggregatorTestV2 is Test {
         assertEq(decimals, DECIMALS);
     }
 
-    function test_GetPrice_CombinedMaxMinPriceConstraints() public {
+    function test_RevertGetPrice_CombinedMaxMinPriceConstraints() public {
         // Create an oracle with both maxPrice and minPrice
         IOracleV2.Oracle memory oracle = IOracleV2.Oracle({
             aggregator: primaryFeed,
@@ -624,7 +622,7 @@ contract OracleAggregatorTestV2 is Test {
 
         oracleAggregator.acceptPendingOracle(ASSET);
 
-        // Test price below minPrice gets floored
+        // Test price below minPrice should revert when no valid backup
         int256 lowPrice = MIN_PRICE - 100e8;
         MockPriceFeedV2.RoundData memory roundData = MockPriceFeedV2.RoundData({
             roundId: 2,
@@ -633,14 +631,18 @@ contract OracleAggregatorTestV2 is Test {
             updatedAt: block.timestamp,
             answeredInRound: 2
         });
-        vm.prank(OWNER);
+
+        // Set both primary and backup to invalid prices
+        vm.startPrank(OWNER);
         primaryFeed.updateRoundData(roundData);
+        backupFeed.updateRoundData(roundData);
+        vm.stopPrank();
 
-        (uint256 price, uint8 decimals) = oracleAggregator.getPrice(ASSET);
-        assertEq(price, uint256(MIN_PRICE));
-        assertEq(decimals, DECIMALS);
+        // Should revert since both oracles are below minPrice
+        vm.expectRevert(abi.encodeWithSignature("OracleIsNotWorking(address)", ASSET));
+        oracleAggregator.getPrice(ASSET);
 
-        // Test price above maxPrice gets capped
+        // Test price above maxPrice should revert when no valid backup
         int256 highPrice = MAX_PRICE + 1000e8;
         roundData = MockPriceFeedV2.RoundData({
             roundId: 3,
@@ -649,12 +651,15 @@ contract OracleAggregatorTestV2 is Test {
             updatedAt: block.timestamp,
             answeredInRound: 3
         });
-        vm.prank(OWNER);
-        primaryFeed.updateRoundData(roundData);
 
-        (price, decimals) = oracleAggregator.getPrice(ASSET);
-        assertEq(price, uint256(MAX_PRICE));
-        assertEq(decimals, DECIMALS);
+        vm.startPrank(OWNER);
+        primaryFeed.updateRoundData(roundData);
+        backupFeed.updateRoundData(roundData);
+        vm.stopPrank();
+
+        // Should revert since both oracles exceed maxPrice
+        vm.expectRevert(abi.encodeWithSignature("OracleIsNotWorking(address)", ASSET));
+        oracleAggregator.getPrice(ASSET);
 
         // Test price within range is unchanged
         int256 validPrice = (MIN_PRICE + MAX_PRICE) / 2; // Middle value
@@ -668,7 +673,7 @@ contract OracleAggregatorTestV2 is Test {
         vm.prank(OWNER);
         primaryFeed.updateRoundData(roundData);
 
-        (price, decimals) = oracleAggregator.getPrice(ASSET);
+        (uint256 price, uint8 decimals) = oracleAggregator.getPrice(ASSET);
         assertEq(price, uint256(validPrice));
         assertEq(decimals, DECIMALS);
     }
@@ -856,10 +861,9 @@ contract OracleAggregatorTestV2 is Test {
         vm.prank(OWNER);
         primaryFeed.updateRoundData(roundData);
 
-        // Get price - should return minPrice instead of actual price
-        (uint256 price, uint8 decimals) = oracleAggregator.getPrice(ASSET);
-        assertEq(price, uint256(MIN_PRICE));
-        assertEq(decimals, DECIMALS);
+        // Should revert since primary is below minPrice and no backup exists
+        vm.expectRevert(abi.encodeWithSignature("OracleIsNotWorking(address)", ASSET));
+        oracleAggregator.getPrice(ASSET);
     }
 
     function test_GetPrice_BothBelowMinPrice() public {
@@ -904,10 +908,9 @@ contract OracleAggregatorTestV2 is Test {
         backupFeed.updateRoundData(backupRoundData);
         vm.stopPrank();
 
-        // Get price - should use backup capped at minPrice
-        (uint256 price, uint8 decimals) = oracleAggregator.getPrice(ASSET);
-        assertEq(price, uint256(MIN_PRICE));
-        assertEq(decimals, DECIMALS);
+        // Should revert since both oracles are below minPrice
+        vm.expectRevert(abi.encodeWithSignature("OracleIsNotWorking(address)", ASSET));
+        oracleAggregator.getPrice(ASSET);
     }
 
     function test_GetPrice_WithMinPriceZero_PrimaryOracle() public {
