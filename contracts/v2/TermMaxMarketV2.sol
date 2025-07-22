@@ -269,7 +269,7 @@ contract TermMaxMarketV2 is
         bytes memory collateralData =
             IFlashLoanReceiver(loanReceiver).executeOperation(gtReceiver, debtToken, xtAmt, callbackData);
 
-        uint128 debt = ((xtAmt * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - mintGtFeeRatio())).toUint128();
+        uint128 debt = xtAmt.mulDiv(Constants.DECIMAL_BASE, (Constants.DECIMAL_BASE - mintGtFeeRatio())).toUint128();
 
         MarketConfig memory mConfig = _config;
         uint128 leverageFee = debt - xtAmt;
@@ -353,14 +353,7 @@ contract TermMaxMarketV2 is
         override
         returns (uint256 debtTokenAmt, bytes memory deliveryData)
     {
-        MarketConfig memory mConfig = _config;
-        {
-            uint256 liquidationDeadline =
-                gt.liquidatable() ? mConfig.maturity + Constants.LIQUIDATION_WINDOW : mConfig.maturity;
-            if (block.timestamp < liquidationDeadline) {
-                revert CanNotRedeemBeforeFinalLiquidationDeadline(liquidationDeadline);
-            }
-        }
+        _checkDeadline();
 
         // The proportion that user will get how many debtToken and collateral should be deliveried
         uint256 proportion =
@@ -401,14 +394,7 @@ contract TermMaxMarketV2 is
         internal
         returns (uint256 debtTokenAmt, bytes memory deliveryData)
     {
-        MarketConfig memory mConfig = _config;
-        {
-            uint256 liquidationDeadline =
-                gt.liquidatable() ? mConfig.maturity + Constants.LIQUIDATION_WINDOW : mConfig.maturity;
-            if (block.timestamp < liquidationDeadline) {
-                revert CanNotRedeemBeforeFinalLiquidationDeadline(liquidationDeadline);
-            }
-        }
+        _checkDeadline();
         // burn ft reserves(from repayment or liquidation)
         uint256 ftReserve = ft.balanceOf(address(this));
         if (ftReserve > 0) {
@@ -426,6 +412,16 @@ contract TermMaxMarketV2 is
         debtTokenAmt += debtToken.balanceOf(address(this)).mulDiv(proportion, Constants.DECIMAL_BASE_SQ);
         debtToken.safeTransfer(recipient, debtTokenAmt);
         emit Redeem(caller, recipient, proportion.toUint128(), debtTokenAmt.toUint128(), deliveryData);
+    }
+
+    function _checkDeadline() internal view {
+        MarketConfig memory mConfig = _config;
+
+        uint256 liquidationDeadline =
+            gt.liquidatable() ? mConfig.maturity + Constants.LIQUIDATION_WINDOW : mConfig.maturity;
+        if (block.timestamp < liquidationDeadline) {
+            revert CanNotRedeemBeforeFinalLiquidationDeadline(liquidationDeadline);
+        }
     }
 
     /**
