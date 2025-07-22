@@ -1,14 +1,12 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.27;
-
-import "../../v1/tokens/IMintableERC20.sol";
+pragma solidity ^0.8.0;
 
 /**
  * @title TermMax ERC20 token interface
  * @author Term Structure Labs
  */
 interface IMintableERC20V2 {
-    /// @notice Burn tokens from sender
+    /// @notice Burn tokens from owner, allowing spender to burn the tokens
     /// @param owner The address of the token holder
     /// @param spender The address of the token spender
     /// @param amount The number of tokens to be burned

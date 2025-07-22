@@ -82,7 +82,7 @@ contract TermMaxOrderV2 is
     }
 
     /// @notice Check if the market is borrowing allowed
-    modifier isBorrowingAllowed(OrderConfig memory config) {
+    modifier onlyBorrowingIsAllowed(OrderConfig memory config) {
         if (config.curveCuts.lendCurveCuts.length == 0) {
             revert BorrowIsNotAllowed();
         }
@@ -90,7 +90,7 @@ contract TermMaxOrderV2 is
     }
 
     /// @notice Check if the market is lending allowed
-    modifier isLendingAllowed(OrderConfig memory config) {
+    modifier onlyLendingIsAllowed(OrderConfig memory config) {
         if (config.curveCuts.borrowCurveCuts.length == 0) {
             revert LendIsNotAllowed();
         }
@@ -144,9 +144,9 @@ contract TermMaxOrderV2 is
         OrderConfig memory orderConfig_,
         MarketConfig memory marketConfig
     ) external virtual override initializer {
-        __Ownable_init(maker_);
-        __ReentrancyGuard_init();
-        __Pausable_init();
+        __Ownable_init_unchained(maker_);
+        __ReentrancyGuard_init_unchained();
+        __Pausable_init_unchained();
         market = ITermMaxMarket(_msgSender());
         _updateCurve(orderConfig_.curveCuts);
 
@@ -268,18 +268,11 @@ contract TermMaxOrderV2 is
                         != (
                             newCurveCuts.lendCurveCuts[i - 1].liqSquare
                                 * (
-                                    (
-                                        (
-                                            newCurveCuts.lendCurveCuts[i].xtReserve.plusInt256(
-                                                newCurveCuts.lendCurveCuts[i].offset
-                                            )
-                                        ) ** 2 * Constants.DECIMAL_BASE
-                                    )
-                                        / (
-                                            newCurveCuts.lendCurveCuts[i].xtReserve.plusInt256(
-                                                newCurveCuts.lendCurveCuts[i - 1].offset
-                                            ) ** 2
-                                        )
+                                    newCurveCuts.lendCurveCuts[i].xtReserve.plusInt256(newCurveCuts.lendCurveCuts[i].offset)
+                                        ** 2 * Constants.DECIMAL_BASE
+                                        / newCurveCuts.lendCurveCuts[i].xtReserve.plusInt256(
+                                            newCurveCuts.lendCurveCuts[i - 1].offset
+                                        ) ** 2
                                 )
                         ) / Constants.DECIMAL_BASE
                 ) revert InvalidCurveCuts();
@@ -301,18 +294,11 @@ contract TermMaxOrderV2 is
                         != (
                             newCurveCuts.borrowCurveCuts[i - 1].liqSquare
                                 * (
-                                    (
-                                        (
-                                            newCurveCuts.borrowCurveCuts[i].xtReserve.plusInt256(
-                                                newCurveCuts.borrowCurveCuts[i].offset
-                                            )
-                                        ) ** 2 * Constants.DECIMAL_BASE
-                                    )
-                                        / (
-                                            newCurveCuts.borrowCurveCuts[i].xtReserve.plusInt256(
-                                                newCurveCuts.borrowCurveCuts[i - 1].offset
-                                            ) ** 2
-                                        )
+                                    newCurveCuts.borrowCurveCuts[i].xtReserve.plusInt256(newCurveCuts.borrowCurveCuts[i].offset)
+                                        ** 2 * Constants.DECIMAL_BASE
+                                        / newCurveCuts.borrowCurveCuts[i].xtReserve.plusInt256(
+                                            newCurveCuts.borrowCurveCuts[i - 1].offset
+                                        ) ** 2
                                 )
                         ) / Constants.DECIMAL_BASE
                 ) revert InvalidCurveCuts();
@@ -390,7 +376,7 @@ contract TermMaxOrderV2 is
         address caller,
         address recipient,
         OrderConfig memory config
-    ) internal isLendingAllowed(config) returns (uint256 netOut, uint256 feeAmt) {
+    ) internal onlyLendingIsAllowed(config) returns (uint256 netOut, uint256 feeAmt) {
         (netOut, feeAmt) = _buyToken(caller, recipient, debtTokenAmtIn, minTokenOut, config, _buyFtStep);
         if (xt.balanceOf(address(this)) > config.maxXtReserve) {
             revert XtReserveTooHigh();
@@ -403,7 +389,7 @@ contract TermMaxOrderV2 is
         address caller,
         address recipient,
         OrderConfig memory config
-    ) internal isBorrowingAllowed(config) returns (uint256 netOut, uint256 feeAmt) {
+    ) internal onlyBorrowingIsAllowed(config) returns (uint256 netOut, uint256 feeAmt) {
         (netOut, feeAmt) = _buyToken(caller, recipient, debtTokenAmtIn, minTokenOut, config, _buyXtStep);
     }
 
@@ -413,7 +399,7 @@ contract TermMaxOrderV2 is
         address caller,
         address recipient,
         OrderConfig memory config
-    ) internal isBorrowingAllowed(config) returns (uint256 netOut, uint256 feeAmt) {
+    ) internal onlyBorrowingIsAllowed(config) returns (uint256 netOut, uint256 feeAmt) {
         (netOut, feeAmt) = _sellToken(caller, recipient, ftAmtIn, minDebtTokenOut, config, _sellFtStep);
     }
 
@@ -423,7 +409,7 @@ contract TermMaxOrderV2 is
         address caller,
         address recipient,
         OrderConfig memory config
-    ) internal isLendingAllowed(config) returns (uint256 netOut, uint256 feeAmt) {
+    ) internal onlyLendingIsAllowed(config) returns (uint256 netOut, uint256 feeAmt) {
         (netOut, feeAmt) = _sellToken(caller, recipient, xtAmtIn, minDebtTokenOut, config, _sellXtStep);
         if (xt.balanceOf(address(this)) > config.maxXtReserve) {
             revert XtReserveTooHigh();
@@ -600,7 +586,7 @@ contract TermMaxOrderV2 is
         address caller,
         address recipient,
         OrderConfig memory config
-    ) internal isLendingAllowed(config) returns (uint256 netTokenIn, uint256 feeAmt) {
+    ) internal onlyLendingIsAllowed(config) returns (uint256 netTokenIn, uint256 feeAmt) {
         (netTokenIn, feeAmt) = _buyExactToken(caller, recipient, tokenAmtOut, maxTokenIn, config, _buyExactFtStep);
         if (xt.balanceOf(address(this)) > config.maxXtReserve) {
             revert XtReserveTooHigh();
@@ -613,7 +599,7 @@ contract TermMaxOrderV2 is
         address caller,
         address recipient,
         OrderConfig memory config
-    ) internal isBorrowingAllowed(config) returns (uint256 netTokenIn, uint256 feeAmt) {
+    ) internal onlyBorrowingIsAllowed(config) returns (uint256 netTokenIn, uint256 feeAmt) {
         (netTokenIn, feeAmt) = _buyExactToken(caller, recipient, tokenAmtOut, maxTokenIn, config, _buyExactXtStep);
     }
 
@@ -681,7 +667,7 @@ contract TermMaxOrderV2 is
         address caller,
         address recipient,
         OrderConfig memory config
-    ) internal isBorrowingAllowed(config) returns (uint256 netIn, uint256 feeAmt) {
+    ) internal onlyBorrowingIsAllowed(config) returns (uint256 netIn, uint256 feeAmt) {
         (netIn, feeAmt) =
             _sellTokenForExactToken(caller, recipient, debtTokenAmtOut, maxFtIn, config, _sellFtForExactTokenStep);
     }
@@ -692,7 +678,7 @@ contract TermMaxOrderV2 is
         address caller,
         address recipient,
         OrderConfig memory config
-    ) internal isLendingAllowed(config) returns (uint256 netIn, uint256 feeAmt) {
+    ) internal onlyLendingIsAllowed(config) returns (uint256 netIn, uint256 feeAmt) {
         (netIn, feeAmt) =
             _sellTokenForExactToken(caller, recipient, debtTokenAmtOut, maxXtIn, config, _sellXtForExactTokenStep);
         if (xt.balanceOf(address(this)) > config.maxXtReserve) {

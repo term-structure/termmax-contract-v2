@@ -162,30 +162,39 @@ contract PreTMXTest is Test {
 
         // Only admin (owner) can burn tokens, not user1
         vm.prank(admin);
+        // Only admin (owner) can burn tokens, not user1
+        vm.prank(admin);
 
         vm.expectEmit(true, true, false, true);
+        emit IERC20.Transfer(admin, address(0), 2000);
         emit IERC20.Transfer(admin, address(0), 2000);
 
         preTMX.burn(2000);
 
+        assertEq(preTMX.balanceOf(admin), initialSupply - 2000);
         assertEq(preTMX.balanceOf(admin), initialSupply - 2000);
         assertEq(preTMX.totalSupply(), initialSupply + 5000 - 2000);
     }
 
     function test_Burn_WhenNotRestricted() public {
         // First transfer some tokens to user1
+        // First transfer some tokens to user1
         vm.startPrank(admin);
         preTMX.enableTransfer();
         preTMX.transfer(user1, 5000);
 
         // Only admin (owner) can burn tokens
+        // Only admin (owner) can burn tokens
         vm.expectEmit(true, true, false, true);
+        emit IERC20.Transfer(admin, address(0), 2000);
         emit IERC20.Transfer(admin, address(0), 2000);
 
         preTMX.burn(2000);
 
         assertEq(preTMX.balanceOf(admin), initialSupply - 5000 - 2000);
+        assertEq(preTMX.balanceOf(admin), initialSupply - 5000 - 2000);
         assertEq(preTMX.totalSupply(), initialSupply - 2000);
+        vm.stopPrank();
         vm.stopPrank();
     }
 
@@ -206,7 +215,25 @@ contract PreTMXTest is Test {
         preTMX.mint(user1, 1000);
 
         // user1 tries to burn but should fail because only owner can burn
+        // Admin tries to burn more than they have
+        vm.prank(admin);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IERC20Errors.ERC20InsufficientBalance.selector, admin, initialSupply, initialSupply + 1
+            )
+        );
+        preTMX.burn(initialSupply + 1);
+    }
+
+    function test_Burn_NotOwner() public {
+        // Give tokens to user1 via minting
+        vm.prank(admin);
+        preTMX.mint(user1, 1000);
+
+        // user1 tries to burn but should fail because only owner can burn
         vm.prank(user1);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, user1));
+        preTMX.burn(500);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, user1));
         preTMX.burn(500);
     }
@@ -442,7 +469,11 @@ contract PreTMXTest is Test {
 
         // Only owner can burn tokens (admin in this case)
         vm.prank(admin);
+        // Only owner can burn tokens (admin in this case)
+        vm.prank(admin);
         preTMX.burn(500);
+        assertEq(preTMX.balanceOf(admin), initialSupply - 500);
+        assertEq(preTMX.totalSupply(), initialSupply + 1000 - 500);
         assertEq(preTMX.balanceOf(admin), initialSupply - 500);
         assertEq(preTMX.totalSupply(), initialSupply + 1000 - 500);
     }

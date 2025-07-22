@@ -20,10 +20,12 @@ contract AccessManagerV2 is AccessManager {
      * @custom:gas-optimization Uses a simple loop for batch operations
      */
     function batchSetSwitch(IPausable[] calldata entities, bool state) external onlyRole(PAUSER_ROLE) {
-        for (uint256 i = 0; i < entities.length; i++) {
-            if (state) {
+        if (state) {
+            for (uint256 i = 0; i < entities.length; ++i) {
                 entities[i].unpause();
-            } else {
+            }
+        } else {
+            for (uint256 i = 0; i < entities.length; ++i) {
                 entities[i].pause();
             }
         }

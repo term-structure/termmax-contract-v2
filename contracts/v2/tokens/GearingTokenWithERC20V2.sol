@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.27;
 
-import {MathLib} from "../../v1/lib/MathLib.sol";
 import "./AbstractGearingTokenV2.sol";
 
 /**
@@ -13,7 +12,7 @@ contract GearingTokenWithERC20V2 is AbstractGearingTokenV2 {
     using SafeCast for int256;
     using TransferUtils for IERC20;
     using TransferUtils for IERC20Metadata;
-    using MathLib for *;
+    using Math for *;
 
     /// @notice The operation failed because the collateral capacity is exceeded
     error CollateralCapacityExceeded();
@@ -27,7 +26,7 @@ contract GearingTokenWithERC20V2 is AbstractGearingTokenV2 {
     /// @notice The max capacity of collateral token
     uint256 public collateralCapacity;
 
-    uint8 collateralDecimals;
+    uint256 private collateralDenominator;
 
     constructor() {
         _disableInitializers();
@@ -35,7 +34,7 @@ contract GearingTokenWithERC20V2 is AbstractGearingTokenV2 {
 
     function __GearingToken_Implement_init(bytes memory initalParams) internal override onlyInitializing {
         _updateConfig(initalParams);
-        collateralDecimals = IERC20Metadata(_config.collateral).decimals();
+        collateralDenominator = 10 ** IERC20Metadata(_config.collateral).decimals();
     }
 
     function _updateConfig(bytes memory configData) internal virtual override {
@@ -51,7 +50,7 @@ contract GearingTokenWithERC20V2 is AbstractGearingTokenV2 {
 
     function _delivery(uint256 proportion) internal view virtual override returns (bytes memory deliveryData) {
         uint256 collateralReserve = IERC20(_config.collateral).balanceOf(address(this));
-        uint256 amount = (collateralReserve * proportion) / Constants.DECIMAL_BASE_SQ;
+        uint256 amount = collateralReserve.mulDiv(proportion, Constants.DECIMAL_BASE_SQ);
         deliveryData = abi.encode(amount);
     }
 
@@ -97,7 +96,7 @@ contract GearingTokenWithERC20V2 is AbstractGearingTokenV2 {
         uint256 collateralAmt = _decodeAmount(collateralData);
         (uint256 price, uint256 priceDenominator, uint256 collateralDemonimator) =
             abi.decode(priceData, (uint256, uint256, uint256));
-        return (collateralAmt * price * Constants.DECIMAL_BASE) / (priceDenominator * collateralDemonimator);
+        return collateralAmt.mulDiv(price * Constants.DECIMAL_BASE, priceDenominator * collateralDemonimator);
     }
 
     /**
@@ -113,8 +112,7 @@ contract GearingTokenWithERC20V2 is AbstractGearingTokenV2 {
         (uint256 price, uint8 decimals) = config.loanConfig.oracle.getPrice(config.collateral);
         uint256 priceDenominator = 10 ** decimals;
 
-        uint256 cTokenDenominator = 10 ** collateralDecimals;
-        priceData = abi.encode(price, priceDenominator, cTokenDenominator);
+        priceData = abi.encode(price, priceDenominator, collateralDenominator);
     }
 
     /// @notice Encode amount to collateral data
@@ -163,66 +161,43 @@ contract GearingTokenWithERC20V2 is AbstractGearingTokenV2 {
         internal
         virtual
         override
-        returns (bytes memory cToLiquidator, bytes memory cToTreasurer, bytes memory remainningC)
+        returns (bytes memory, bytes memory, bytes memory)
     {
         uint256 collateralAmt = _decodeAmount(loan.collateralData);
 
-        (uint256 collateralPrice, uint256 cPriceDenominator, uint256 cTokenDenominator) =
-            abi.decode(valueAndPrice.collateralPriceData, (uint256, uint256, uint256));
+        uint256 removedCollateralAmt;
+        uint256 cEqualRepayAmt;
+        uint256 rewardToLiquidator;
+        uint256 rewardToProtocol;
 
-        // maxRomvedCollateral = min(
-        // (repayAmt * (1 + REWARD_TO_LIQUIDATOR + REWARD_TO_PROTOCOL)) * debtTokenPrice / collateralTokenPrice ,
-        // collateralAmt *(repayAmt / debtAmt)
-        // )
+        if (loan.debtAmt != 0) {
+            (uint256 collateralPrice, uint256 cPriceDenominator, uint256 cTokenDenominator) =
+                abi.decode(valueAndPrice.collateralPriceData, (uint256, uint256, uint256));
 
-        /* DP := debt token price (valueAndPrice.debtPrice)
-         * DPD := debt token price decimal (valueAndPrice.priceDenominator)
-         * CP := collateral token price (collateralPrice)
-         * CPD := collateral token price decimal (cPriceDenominator)
-         * SD := scaling decimal = DPD * CPD * 10
-         * The value of 1(decimal) debt token / The value of 1(decimal) collateral token
-         *     ddPriceToCdPrice = roundUp((DP/DPD) / (CP/CPD) = (DP*CPD*SD) / (CP*DPD))
-         *                       = roundUp((DP*CPD*CPD*10) / CP)
-         */
-        uint256 ddPriceToCdPrice = (
-            valueAndPrice.debtPrice * cPriceDenominator * cPriceDenominator * 10 + collateralPrice - 1
-        ) / collateralPrice;
+            /* DP := debt token price (valueAndPrice.debtPrice)
+            * DPD := debt token price decimal (valueAndPrice.priceDenominator)
+            * CP := collateral token price (collateralPrice)
+            * CPD := collateral token price decimal (cPriceDenominator)
+            * liquidate value = repayAmt * DP / debt token decimals
+            * collateral amount to remove = liquidate value * collateral decimals * cpd / (CP * DPD)
+            */
+            uint256 liquidateValueInPriceScale = repayAmt.mulDiv(valueAndPrice.debtPrice, valueAndPrice.debtDenominator);
 
-        // calculate the amount of collateral that is equivalent to repayAmt
-        // with debt to collateral price
-        uint256 cEqualRepayAmt = (repayAmt * ddPriceToCdPrice * cTokenDenominator)
-            / (valueAndPrice.debtDenominator * cPriceDenominator * valueAndPrice.priceDenominator * 10);
+            cEqualRepayAmt = liquidateValueInPriceScale.mulDiv(
+                cPriceDenominator * cTokenDenominator, collateralPrice * valueAndPrice.priceDenominator
+            );
 
-        uint256 rewardToLiquidator =
-            (cEqualRepayAmt * GearingTokenConstants.REWARD_TO_LIQUIDATOR) / Constants.DECIMAL_BASE;
-        uint256 rewardToProtocol = (cEqualRepayAmt * GearingTokenConstants.REWARD_TO_PROTOCOL) / Constants.DECIMAL_BASE;
+            rewardToLiquidator =
+                cEqualRepayAmt.mulDiv(GearingTokenConstants.REWARD_TO_LIQUIDATOR, Constants.DECIMAL_BASE);
+            rewardToProtocol = cEqualRepayAmt.mulDiv(GearingTokenConstants.REWARD_TO_PROTOCOL, Constants.DECIMAL_BASE);
 
-        uint256 removedCollateralAmt = cEqualRepayAmt + rewardToLiquidator + rewardToProtocol;
-
-        if (loan.debtAmt == 0) {
-            removedCollateralAmt = 0;
-        } else {
-            removedCollateralAmt = removedCollateralAmt.min((collateralAmt * repayAmt) / loan.debtAmt);
+            removedCollateralAmt = cEqualRepayAmt + rewardToLiquidator + rewardToProtocol;
+            removedCollateralAmt = removedCollateralAmt.min(collateralAmt.mulDiv(repayAmt, loan.debtAmt));
         }
-
-        // Case 1: removed collateral can not cover repayAmt + rewardToLiquidator
-        if (removedCollateralAmt <= cEqualRepayAmt + rewardToLiquidator) {
-            cToLiquidator = _encodeAmount(removedCollateralAmt);
-            cToTreasurer = _encodeAmount(0);
-            remainningC = _encodeAmount(0);
-        }
-        // Case 2: removed collateral can cover repayAmt + rewardToLiquidator but not rewardToProtocol
-        else if (removedCollateralAmt < cEqualRepayAmt + rewardToLiquidator + rewardToProtocol) {
-            cToLiquidator = _encodeAmount(cEqualRepayAmt + rewardToLiquidator);
-            cToTreasurer = _encodeAmount(removedCollateralAmt - cEqualRepayAmt - rewardToLiquidator);
-            remainningC = _encodeAmount(0);
-        }
-        // Case 3: removed collateral equal repayAmt + rewardToLiquidator + rewardToProtocol
-        else {
-            cToLiquidator = _encodeAmount(cEqualRepayAmt + rewardToLiquidator);
-            cToTreasurer = _encodeAmount(rewardToProtocol);
-        }
-        // Calculate remainning collateral
-        remainningC = _encodeAmount(collateralAmt - removedCollateralAmt);
+        uint256 cToLiquidatorAmount = removedCollateralAmt.min(cEqualRepayAmt + rewardToLiquidator);
+        removedCollateralAmt -= cToLiquidatorAmount;
+        uint256 cToTreasurerAmount = removedCollateralAmt.min(rewardToProtocol);
+        uint256 remainingCollateralAmt = collateralAmt - cToLiquidatorAmount - cToTreasurerAmount;
+        return (abi.encode(cToLiquidatorAmount), abi.encode(cToTreasurerAmount), abi.encode(remainingCollateralAmt));
     }
 }

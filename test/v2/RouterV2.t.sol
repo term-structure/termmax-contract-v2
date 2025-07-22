@@ -492,7 +492,7 @@ contract RouterTestV2 is Test {
 
         res.gt.approve(address(res.router), gtId);
         ITermMaxRouterV2.TermMaxSwapData memory swapData;
-        res.router.flashRepayFromColl(sender, res.market, gtId, byDebtToken, units, swapData);
+        res.router.flashRepayFromColl(sender, res.market, gtId, byDebtToken, 0, units, swapData);
 
         assertEq(res.collateral.balanceOf(sender), 0);
         assertEq(res.debt.balanceOf(sender), mintTokenOut - debtAmt);
@@ -528,7 +528,7 @@ contract RouterTestV2 is Test {
         swapData.deadline = block.timestamp + 1 hours;
 
         res.gt.approve(address(res.router), gtId);
-        res.router.flashRepayFromColl(sender, res.market, gtId, byDebtToken, units, swapData);
+        res.router.flashRepayFromColl(sender, res.market, gtId, byDebtToken, 0, units, swapData);
 
         assertEq(res.collateral.balanceOf(sender), 0);
         assert(res.debt.balanceOf(sender) > mintTokenOut - debtAmt);
