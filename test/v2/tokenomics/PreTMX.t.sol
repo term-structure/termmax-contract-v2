@@ -162,8 +162,6 @@ contract PreTMXTest is Test {
 
         // Only admin (owner) can burn tokens, not user1
         vm.prank(admin);
-        // Only admin (owner) can burn tokens, not user1
-        vm.prank(admin);
 
         vm.expectEmit(true, true, false, true);
         emit IERC20.Transfer(admin, address(0), 2000);
@@ -218,6 +216,8 @@ contract PreTMXTest is Test {
         vm.prank(user1);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, user1));
         preTMX.burn(500);
+
+        vm.prank(user1);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, user1));
         preTMX.burn(500);
     }
@@ -451,8 +451,6 @@ contract PreTMXTest is Test {
         preTMX.mint(user1, 1000);
         assertEq(preTMX.balanceOf(user1), 1000);
 
-        // Only owner can burn tokens (admin in this case)
-        vm.prank(admin);
         // Only owner can burn tokens (admin in this case)
         vm.prank(admin);
         preTMX.burn(500);
