@@ -12,7 +12,7 @@ import {OrderConfig, MarketConfig} from "../v1/storage/TermMaxStorage.sol";
 interface ITermMaxOrderV2 {
     /// @notice Initialize the token and configuration of the order
     /// @param maker The maker
-    /// @param tokens The tokens
+    /// @param tokens The tokens, [0] = FT, [1] = XT, [2] = debtToken
     /// @param gt The Gearing Token
     /// @param orderConfig The order configuration
     function initialize(
