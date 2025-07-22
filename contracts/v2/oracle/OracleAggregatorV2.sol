@@ -130,9 +130,8 @@ contract OracleAggregatorV2 is IOracleV2, Ownable2Step {
         }
 
         // Store pending oracle with timelock
-        pendingOracles[asset].oracle = oracle;
         uint64 validAt = uint64(block.timestamp + _timeLock);
-        pendingOracles[asset].validAt = validAt;
+        pendingOracles[asset] = PendingOracle({oracle: oracle, validAt: validAt});
 
         emit SubmitPendingOracle(
             asset,
