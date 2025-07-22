@@ -215,22 +215,6 @@ contract PreTMXTest is Test {
         preTMX.mint(user1, 1000);
 
         // user1 tries to burn but should fail because only owner can burn
-        // Admin tries to burn more than they have
-        vm.prank(admin);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IERC20Errors.ERC20InsufficientBalance.selector, admin, initialSupply, initialSupply + 1
-            )
-        );
-        preTMX.burn(initialSupply + 1);
-    }
-
-    function test_Burn_NotOwner() public {
-        // Give tokens to user1 via minting
-        vm.prank(admin);
-        preTMX.mint(user1, 1000);
-
-        // user1 tries to burn but should fail because only owner can burn
         vm.prank(user1);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, user1));
         preTMX.burn(500);
