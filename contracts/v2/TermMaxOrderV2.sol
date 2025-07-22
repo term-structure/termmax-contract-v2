@@ -268,18 +268,11 @@ contract TermMaxOrderV2 is
                         != (
                             newCurveCuts.lendCurveCuts[i - 1].liqSquare
                                 * (
-                                    (
-                                        (
-                                            newCurveCuts.lendCurveCuts[i].xtReserve.plusInt256(
-                                                newCurveCuts.lendCurveCuts[i].offset
-                                            )
-                                        ) ** 2 * Constants.DECIMAL_BASE
-                                    )
-                                        / (
-                                            newCurveCuts.lendCurveCuts[i].xtReserve.plusInt256(
-                                                newCurveCuts.lendCurveCuts[i - 1].offset
-                                            ) ** 2
-                                        )
+                                    newCurveCuts.lendCurveCuts[i].xtReserve.plusInt256(newCurveCuts.lendCurveCuts[i].offset)
+                                        ** 2 * Constants.DECIMAL_BASE
+                                        / newCurveCuts.lendCurveCuts[i].xtReserve.plusInt256(
+                                            newCurveCuts.lendCurveCuts[i - 1].offset
+                                        ) ** 2
                                 )
                         ) / Constants.DECIMAL_BASE
                 ) revert InvalidCurveCuts();
@@ -301,18 +294,11 @@ contract TermMaxOrderV2 is
                         != (
                             newCurveCuts.borrowCurveCuts[i - 1].liqSquare
                                 * (
-                                    (
-                                        (
-                                            newCurveCuts.borrowCurveCuts[i].xtReserve.plusInt256(
-                                                newCurveCuts.borrowCurveCuts[i].offset
-                                            )
-                                        ) ** 2 * Constants.DECIMAL_BASE
-                                    )
-                                        / (
-                                            newCurveCuts.borrowCurveCuts[i].xtReserve.plusInt256(
-                                                newCurveCuts.borrowCurveCuts[i - 1].offset
-                                            ) ** 2
-                                        )
+                                    newCurveCuts.borrowCurveCuts[i].xtReserve.plusInt256(newCurveCuts.borrowCurveCuts[i].offset)
+                                        ** 2 * Constants.DECIMAL_BASE
+                                        / newCurveCuts.borrowCurveCuts[i].xtReserve.plusInt256(
+                                            newCurveCuts.borrowCurveCuts[i - 1].offset
+                                        ) ** 2
                                 )
                         ) / Constants.DECIMAL_BASE
                 ) revert InvalidCurveCuts();
