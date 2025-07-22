@@ -161,12 +161,12 @@ contract TermMaxMarketV2 is
      * @inheritdoc ITermMaxMarket
      */
     function updateMarketConfig(MarketConfig calldata newConfig) external virtual override onlyOwner {
+        _checkFee(newConfig.feeConfig);
         MarketConfig memory mConfig = _config;
         if (newConfig.treasurer != mConfig.treasurer) {
             mConfig.treasurer = newConfig.treasurer;
             gt.setTreasurer(newConfig.treasurer);
         }
-        _checkFee(newConfig.feeConfig);
         mConfig.feeConfig = newConfig.feeConfig;
 
         _config = mConfig;
