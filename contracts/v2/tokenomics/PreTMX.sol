@@ -5,19 +5,24 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 
 contract PreTMX is ERC20, Ownable2Step {
+    struct WhitelistInfo {
+        bool isTransferFromWhitelisted;
+        bool isTransferToWhitelisted;
+    }
+
     bool public transferRestricted;
 
-    mapping(address => bool) public isTransferredFromWhitelisted;
+    mapping(address => WhitelistInfo) public whitelistMapping;
 
-    error TransferFromNotWhitelisted(address from);
+    error TransferNotWhitelisted(address from, address to);
 
     event TransferRestricted(bool restricted);
-    event TransferFromWhitelisted(address from, bool isWhitelisted);
+    event TransferWhitelisted(address indexed user, bool isTransferFromWhitelisted, bool isTransferToWhitelisted);
 
     constructor(address admin) ERC20("Pre TermMax Token", "pTMX") Ownable(admin) {
         _mint(admin, 1e9 ether);
         _setTransferRestricted(true);
-        _setTransferFromWhitelisted(admin, true);
+        _setTransferWhitelisted(admin, true, true);
     }
 
     function enableTransfer() external onlyOwner {
@@ -28,8 +33,11 @@ contract PreTMX is ERC20, Ownable2Step {
         _setTransferRestricted(true);
     }
 
-    function whitelistTransferFrom(address from, bool isWhitelisted) external onlyOwner {
-        _setTransferFromWhitelisted(from, isWhitelisted);
+    function whitelistTransfer(address user, bool isTransferFromWhitelisted, bool isTransferToWhitelisted)
+        external
+        onlyOwner
+    {
+        _setTransferWhitelisted(user, isTransferFromWhitelisted, isTransferToWhitelisted);
     }
 
     function transfer(address to, uint256 amount) public override returns (bool) {
@@ -50,9 +58,12 @@ contract PreTMX is ERC20, Ownable2Step {
         _burn(msg.sender, amount);
     }
 
-    function _beforeTokenTransfer(address from, address) internal view {
-        if (transferRestricted && !isTransferredFromWhitelisted[from]) {
-            revert TransferFromNotWhitelisted(from);
+    function _beforeTokenTransfer(address from, address to) internal view {
+        if (
+            transferRestricted && !whitelistMapping[from].isTransferFromWhitelisted
+                && !whitelistMapping[to].isTransferToWhitelisted
+        ) {
+            revert TransferNotWhitelisted(from, to);
         }
     }
 
@@ -61,8 +72,11 @@ contract PreTMX is ERC20, Ownable2Step {
         emit TransferRestricted(restricted);
     }
 
-    function _setTransferFromWhitelisted(address from, bool isWhitelisted) internal {
-        isTransferredFromWhitelisted[from] = isWhitelisted;
-        emit TransferFromWhitelisted(from, isWhitelisted);
+    function _setTransferWhitelisted(address user, bool isTransferFromWhitelisted, bool isTransferToWhitelisted)
+        internal
+    {
+        whitelistMapping[user].isTransferFromWhitelisted = isTransferFromWhitelisted;
+        whitelistMapping[user].isTransferToWhitelisted = isTransferToWhitelisted;
+        emit TransferWhitelisted(user, isTransferFromWhitelisted, isTransferToWhitelisted);
     }
 }
