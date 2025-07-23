@@ -636,7 +636,6 @@ contract TermMaxRouterV2 is
         SwapPath memory collateralPath,
         SwapPath memory debtTokenPath
     ) external whenNotPaused noCallbackReentrant returns (uint256 newGtId) {
-        // clear ts stograge
         assembly {
             // set callback address
             tstore(T_CALLBACK_ADDRESS_STORE, gtToken)
@@ -682,7 +681,13 @@ contract TermMaxRouterV2 is
         uint16 referralCode,
         SwapPath memory collateralPath
     ) external whenNotPaused noCallbackReentrant {
-        (,, IGearingToken gt, address collateral, IERC20 debt) = market.tokens();
+        (,, IGearingToken gtToken, address collateral, IERC20 debt) = market.tokens();
+        assembly {
+            // set callback address
+            tstore(T_CALLBACK_ADDRESS_STORE, gtToken)
+            // clear ts stograge
+            tstore(T_ROLLOVER_GT_RESERVE_STORE, 0)
+        }
         // additional debt token to reduce the ltv
         if (additionalDebt != 0) {
             debt.safeTransferFrom(msg.sender, address(this), additionalDebt);
@@ -691,11 +696,11 @@ contract TermMaxRouterV2 is
         if (additionalCollateral != 0) {
             IERC20(collateral).safeTransferFrom(msg.sender, address(this), additionalCollateral);
         }
-        gt.safeTransferFrom(msg.sender, address(this), gtId, "");
+        gtToken.safeTransferFrom(msg.sender, address(this), gtId, "");
         bytes memory callbackData =
             abi.encode(recipient, collateral, aave, interestRateMode, referralCode, collateralPath);
         callbackData = abi.encode(FlashRepayOptions.ROLLOVER_AAVE, callbackData);
-        gt.flashRepay(gtId, true, callbackData);
+        gtToken.flashRepay(gtId, true, callbackData);
     }
 
     function rollToAaveForV2(
@@ -710,8 +715,14 @@ contract TermMaxRouterV2 is
         uint256 interestRateMode,
         uint16 referralCode,
         SwapPath memory collateralPath
-    ) external whenNotPaused {
-        (,, IGearingToken gt, address collateral, IERC20 debt) = market.tokens();
+    ) external whenNotPaused noCallbackReentrant {
+        (,, IGearingToken gtToken, address collateral, IERC20 debt) = market.tokens();
+        assembly {
+            // set callback address
+            tstore(T_CALLBACK_ADDRESS_STORE, gtToken)
+            // clear ts stograge
+            tstore(T_ROLLOVER_GT_RESERVE_STORE, 0)
+        }
         // additional debt token to reduce the ltv
         if (additionalDebt != 0) {
             debt.safeTransferFrom(msg.sender, address(this), additionalDebt);
@@ -720,13 +731,55 @@ contract TermMaxRouterV2 is
         if (additionalCollateral != 0) {
             IERC20(collateral).safeTransferFrom(msg.sender, address(this), additionalCollateral);
         }
-        gt.safeTransferFrom(msg.sender, address(this), gtId, "");
+        gtToken.safeTransferFrom(msg.sender, address(this), gtId, "");
         bytes memory callbackData =
             abi.encode(recipient, collateral, aave, interestRateMode, referralCode, collateralPath);
         callbackData = abi.encode(FlashRepayOptions.ROLLOVER_AAVE, callbackData);
-        if (!IGearingTokenV2(address(gt)).flashRepay(gtId, repayAmt, true, abi.encode(removedCollateral), callbackData))
-        {
-            gt.safeTransferFrom(address(this), recipient, gtId);
+        if (
+            !IGearingTokenV2(address(gtToken)).flashRepay(
+                gtId, repayAmt, true, abi.encode(removedCollateral), callbackData
+            )
+        ) {
+            gtToken.safeTransferFrom(address(this), recipient, gtId);
+        }
+    }
+
+    function rollToMorphoForV2(
+        address recipient,
+        ITermMaxMarket market,
+        uint256 gtId,
+        uint128 repayAmt,
+        uint256 removedCollateral,
+        uint256 additionalCollateral,
+        uint256 additionalDebt,
+        IMorpho morpho,
+        Id morphoMarketId,
+        SwapPath memory collateralPath
+    ) external whenNotPaused noCallbackReentrant {
+        (,, IGearingToken gtToken, address collateral, IERC20 debt) = market.tokens();
+        assembly {
+            // set callback address
+            tstore(T_CALLBACK_ADDRESS_STORE, gtToken)
+            // clear ts stograge
+            tstore(T_ROLLOVER_GT_RESERVE_STORE, 0)
+        }
+        // additional debt token to reduce the ltv
+        if (additionalDebt != 0) {
+            debt.safeTransferFrom(msg.sender, address(this), additionalDebt);
+        }
+        // additional collateral to reduce the ltv
+        if (additionalCollateral != 0) {
+            IERC20(collateral).safeTransferFrom(msg.sender, address(this), additionalCollateral);
+        }
+        gtToken.safeTransferFrom(msg.sender, address(this), gtId, "");
+        bytes memory callbackData = abi.encode(recipient, collateral, morpho, morphoMarketId, collateralPath);
+        callbackData = abi.encode(FlashRepayOptions.ROLLOVER_MORPHO, callbackData);
+        if (
+            !IGearingTokenV2(address(gtToken)).flashRepay(
+                gtId, repayAmt, true, abi.encode(removedCollateral), callbackData
+            )
+        ) {
+            gtToken.safeTransferFrom(address(this), recipient, gtId);
         }
     }
 
