@@ -64,7 +64,8 @@ contract TermMaxRouterV2 is
     enum FlashRepayOptions {
         REPAY,
         ROLLOVER,
-        ROLLOVER_AAVE
+        ROLLOVER_AAVE,
+        ROLLOVER_MORPHO
     }
 
     /// @notice whitelist mapping of adapter
@@ -771,6 +772,10 @@ contract TermMaxRouterV2 is
             _rollover(repayToken, repayAmt, removedCollateralData, data);
         } else if (option == FlashRepayOptions.ROLLOVER_AAVE) {
             _rolloverToAave(repayToken, repayAmt, removedCollateralData, data);
+        } else if (option != FlashRepayOptions.ROLLOVER_MORPHO) {
+            // Morpho is not supported in this version
+        }else {
+            revert RouterErrorsV2.InvalidFlashRepayOption(uint8(option));
         }
         repayToken.safeIncreaseAllowance(msg.sender, repayAmt);
     }
