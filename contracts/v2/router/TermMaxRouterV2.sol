@@ -30,6 +30,7 @@ import {Constants} from "../../v1/lib/Constants.sol";
 import {IERC20SwapAdapter} from "./IERC20SwapAdapter.sol";
 import {RouterEventsV2} from "../events/RouterEventsV2.sol";
 import {IAaveV3PoolMinimal} from "../extensions/aave/IAaveV3PoolMinimal.sol";
+import {IMorpho, MarketParams, Id} from "../extensions/morpho/IMorpho.sol";
 import {OrderInitialParams} from "../ITermMaxOrderV2.sol";
 import {RouterErrorsV2} from "../errors/RouterErrorsV2.sol";
 import {ArrayUtilsV2} from "../lib/ArrayUtilsV2.sol";
@@ -773,9 +774,7 @@ contract TermMaxRouterV2 is
         } else if (option == FlashRepayOptions.ROLLOVER_AAVE) {
             _rolloverToAave(repayToken, repayAmt, removedCollateralData, data);
         } else if (option != FlashRepayOptions.ROLLOVER_MORPHO) {
-            // Morpho is not supported in this version
-        }else {
-            revert RouterErrorsV2.InvalidFlashRepayOption(uint8(option));
+            _rolloverToMorpho(repayToken, repayAmt, removedCollateralData, data);
         }
         repayToken.safeIncreaseAllowance(msg.sender, repayAmt);
     }
@@ -864,6 +863,31 @@ contract TermMaxRouterV2 is
         }
         repayAmt = repayAmt - debtToken.balanceOf(address(this));
         aave.borrow(address(debtToken), repayAmt, interestRateMode, referralCode, recipient);
+    }
+
+    function _rolloverToMorpho(IERC20 debtToken, uint256 repayAmt, bytes memory, bytes memory callbackData) internal {
+        (address recipient, IERC20 collateral, IMorpho morpho, Id marketId, SwapPath memory collateralPath) =
+            abi.decode(callbackData, (address, IERC20, IMorpho, Id, SwapPath));
+        MarketParams memory marketParams = morpho.idToMarketParams(marketId);
+        if (collateralPath.units.length > 0) {
+            // do swap to get the new collateral
+            uint256 newCollateralAmt = _doSwap(collateral.balanceOf(address(this)), collateralPath.units);
+            IERC20 newCollateral = IERC20(collateralPath.units[collateralPath.units.length - 1].tokenOut);
+            newCollateral.safeIncreaseAllowance(address(morpho), newCollateralAmt);
+            morpho.supplyCollateral(marketParams, newCollateralAmt, recipient, "");
+        } else {
+            uint256 collateralAmt = collateral.balanceOf(address(this));
+            collateral.safeIncreaseAllowance(address(morpho), collateralAmt);
+            morpho.supplyCollateral(marketParams, collateralAmt, recipient, "");
+        }
+        repayAmt = repayAmt - debtToken.balanceOf(address(this));
+        morpho.borrow(
+            marketParams,
+            repayAmt,
+            0, // needn't borrow shares from morpho
+            recipient,
+            address(this)
+        );
     }
 
     function _doSwap(uint256 inputAmt, SwapUnit[] memory units) internal returns (uint256 outputAmt) {
