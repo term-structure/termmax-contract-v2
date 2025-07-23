@@ -29,6 +29,7 @@ import {console} from "forge-std/console.sol";
 import {IAaveV3PoolMinimal} from "contracts/v2/extensions/aave/IAaveV3PoolMinimal.sol";
 import {IAaveV3Minimal} from "contracts/v2/extensions/aave/IAaveV3Minimal.sol";
 import {ICreditDelegationToken} from "contracts/v2/extensions/aave/ICreditDelegationToken.sol";
+import {IMorpho, Id, MarketParams, Authorization, Signature} from "contracts/v2/extensions/morpho/IMorpho.sol";
 
 interface TestOracle is IOracle {
     function acceptPendingOracle(address asset) external;
@@ -41,6 +42,7 @@ contract ForkPrdRollOverToThird is ForkBaseTestV2 {
 
     uint64 may_30 = 1748534400; // 2025-05-30 00:00:00
     address pt_susde_may_29 = 0xb7de5dFCb74d25c2f21841fbd6230355C50d9308;
+    address pt_susde_jul_31 = 0x3b3fB9C57858EF816833dC91565EFcd85D96f634;
     address usdc = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
     address usde = 0x4c9EDD5852cd905f086C759E8383e09bff1E68B3;
     address susde = 0x9D39A5DE30e57443BfF2A8307A4256c8797A3497;
@@ -48,6 +50,10 @@ contract ForkPrdRollOverToThird is ForkBaseTestV2 {
     TestOracle oracle = TestOracle(0xE3a31690392E8E18DC3d862651C079339E2c1ADE);
 
     ITermMaxMarket mmay_30 = ITermMaxMarket(0xe867255dC0c3a27c90f756ECC566a5292ce19492);
+
+    ITermMaxMarket mjul_31 = ITermMaxMarket(0xdBB2D44c238c459cCB820De886ABF721EF6E6941);
+
+    Id morpho_market_id = Id.wrap(0xbc552f0b14dd6f8e60b760a534ac1d8613d3539153b4d9675d697e048f2edc7e);
 
     address pendleAdapter;
     address odosAdapter;
@@ -268,6 +274,77 @@ contract ForkPrdRollOverToThird is ForkBaseTestV2 {
         vm.warp(may_30 - 0.5 days);
         // roll gt
         {
+            address pm1 = 0xB162B764044697cf03617C2EFbcB1f42e31E4766;
+
+            SwapUnit[] memory swapUnits = new SwapUnit[](1);
+            swapUnits[0] = SwapUnit({
+                adapter: pendleAdapter,
+                tokenIn: pt_susde_may_29,
+                tokenOut: susde,
+                swapData: abi.encode(pm1, collateralAmount, 0)
+            });
+            SwapPath memory collateralPath =
+                SwapPath({units: swapUnits, recipient: address(router), inputAmount: 0, useBalanceOnchain: true});
+
+            uint256 additionalAssets = debt / 3;
+            uint256 additionalCollateral = 0;
+
+            (IERC20 ft,, IGearingToken gt, address collateral,) = mmay_30.tokens();
+
+            deal(usdc, borrower, additionalAssets);
+            IERC20(usdc).approve(address(router), additionalAssets);
+            aaveDebtToken.approveDelegation(address(router), debt - additionalAssets);
+            gt.approve(address(router), gt1);
+            // 1-stable 2-variable
+            uint256 interestRateMode = 2;
+            uint16 referralCode = 0;
+            router.rollToAaveForV2(
+                borrower,
+                mmay_30,
+                gt1,
+                debt,
+                collateralAmount,
+                additionalCollateral,
+                additionalAssets,
+                aave,
+                interestRateMode,
+                referralCode,
+                collateralPath
+            );
+        }
+
+        vm.stopPrank();
+    }
+
+    function testRolloverPtToMorphoForV2() public {
+        uint128 debt;
+        uint256 collateralAmount;
+        // deal(pt_susde_may_29, borrower, collateralAmount);
+        uint256 gt1 = 5;
+        address borrower;
+        {
+            (,, IGearingToken gt,,) = mmay_30.tokens();
+            (address owner, uint128 debtAmt, bytes memory collateralData) = gt.loanInfo(gt1);
+            borrower = owner;
+            debt = debtAmt;
+            collateralAmount = abi.decode(collateralData, (uint256));
+            console.log("collateralAmount:", collateralAmount);
+            console.log("debt:", debt);
+        }
+        {
+            (,, IGearingToken gt,,) = mmay_30.tokens();
+            (address owner, uint128 debtAmt, bytes memory collateralData) = gt.loanInfo(gt1);
+            borrower = owner;
+            debt = debtAmt;
+            collateralAmount = abi.decode(collateralData, (uint256));
+            console.log("collateralAmount:", collateralAmount);
+            console.log("debt:", debt);
+        }
+        vm.startPrank(borrower);
+        vm.warp(may_30 - 0.5 days);
+        // roll gt
+        {
+            Id marketId = 0x0;
             address pm1 = 0xB162B764044697cf03617C2EFbcB1f42e31E4766;
 
             SwapUnit[] memory swapUnits = new SwapUnit[](1);
