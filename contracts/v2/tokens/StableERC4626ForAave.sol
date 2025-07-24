@@ -8,13 +8,11 @@ import {
     OwnableUpgradeable,
     Ownable2StepUpgradeable
 } from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
-import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {IERC20Metadata, IERC20} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {IAaveV3Minimal} from "../extensions/aave/IAaveV3Minimal.sol";
 import {TransferUtilsV2} from "../lib/TransferUtilsV2.sol";
 import {StakingBuffer} from "./StakingBuffer.sol";
-import {PendingLib, PendingAddress} from "../../v1/lib/PendingLib.sol";
 import {ERC4626ForAaveEvents} from "../events/ERC4626ForAaveEvents.sol";
 import {ERC4626ForAaveErrors} from "../errors/ERC4626ForAaveErrors.sol";
 
@@ -22,11 +20,9 @@ contract StableERC4626ForAave is
     StakingBuffer,
     ERC4626Upgradeable,
     Ownable2StepUpgradeable,
-    UUPSUpgradeable,
     ReentrancyGuardUpgradeable
 {
     using TransferUtilsV2 for IERC20;
-    using PendingLib for PendingAddress;
 
     IAaveV3Minimal public immutable aavePool;
     uint16 public immutable referralCode;
@@ -37,12 +33,6 @@ contract StableERC4626ForAave is
     /// @notice The token's decimals
     uint8 _decimals;
     uint256 internal withdawedIncomeAssets;
-
-    /// @notice The timelock period for upgrade operations (in seconds)
-    uint256 public constant UPGRADE_TIMELOCK = 1 days;
-
-    /// @notice Pending upgrade implementation address with timelock
-    PendingAddress internal _pendingImplementation;
 
     constructor(address aavePool_, uint16 referralCode_) {
         aavePool = IAaveV3Minimal(aavePool_);
@@ -56,9 +46,9 @@ contract StableERC4626ForAave is
         string memory symbol = string(abi.encodePacked("tmsa", IERC20Metadata(underlying_).symbol()));
         _decimals = IERC20Metadata(underlying_).decimals();
         __ERC20_init_unchained(name, symbol);
-        __ERC4626_init_unchained(IERC20(underlying_));
         __Ownable_init_unchained(admin);
-        __ReentrancyGuard_init();
+        __ERC4626_init_unchained(IERC20(underlying_));
+        __ReentrancyGuard_init_unchained();
         _updateBufferConfig(bufferConfig_);
         aToken = IERC20(aavePool.getReserveData(underlying_).aTokenAddress);
 
@@ -175,42 +165,5 @@ contract StableERC4626ForAave is
 
     function _assetInPool(address) internal view virtual override returns (uint256 amount) {
         amount = aToken.balanceOf(address(this));
-    }
-
-    /// @notice Submit a new implementation for upgrade with timelock
-    /// @param newImplementation The address of the new implementation contract
-    function submitPendingUpgrade(address newImplementation) external onlyOwner {
-        if (newImplementation == address(0)) revert ERC4626ForAaveErrors.InvalidImplementation();
-        if (_pendingImplementation.validAt != 0) revert ERC4626ForAaveErrors.AlreadyPending();
-
-        _pendingImplementation.update(newImplementation, UPGRADE_TIMELOCK);
-
-        emit ERC4626ForAaveEvents.SubmitUpgrade(newImplementation, _pendingImplementation.validAt);
-    }
-
-    /// @notice Revoke the pending implementation upgrade
-    function revokeUpgrade() external onlyOwner {
-        if (_pendingImplementation.validAt == 0) revert ERC4626ForAaveErrors.NoPendingValue();
-
-        delete _pendingImplementation;
-
-        emit ERC4626ForAaveEvents.RevokeUpgrade(msg.sender);
-    }
-
-    /// @notice Get the pending implementation upgrade details
-    /// @return implementation The pending implementation address
-    /// @return validAt The timestamp when the upgrade becomes valid
-    function pendingImplementation() external view returns (address implementation, uint64 validAt) {
-        return (_pendingImplementation.value, _pendingImplementation.validAt);
-    }
-
-    /// @notice Override _authorizeUpgrade to prevent direct upgrades without timelock
-    /// @dev This function should never allow upgrades as they must go through the timelock process
-    function _authorizeUpgrade(address newImplementation) internal virtual override onlyOwner {
-        if (_pendingImplementation.validAt == 0) revert ERC4626ForAaveErrors.NoPendingValue();
-        if (newImplementation != _pendingImplementation.value) revert ERC4626ForAaveErrors.InvalidImplementation();
-        if (block.timestamp < _pendingImplementation.validAt) revert ERC4626ForAaveErrors.TimelockNotElapsed();
-        delete _pendingImplementation;
-        emit ERC4626ForAaveEvents.AcceptUpgrade(msg.sender, newImplementation);
     }
 }

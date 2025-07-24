@@ -24,16 +24,4 @@ interface ERC4626ForAaveErrors {
      * @param recieivedAmount The actual amount received from the withdrawal (likely misspelled 'received')
      */
     error AaveWithdrawFailed(uint256 aTokenAmount, uint256 recieivedAmount);
-
-    /// @notice Error thrown when trying to accept a change that has no pending value
-    error NoPendingValue();
-
-    /// @notice Error thrown when trying to accept a change before the timelock period has elapsed
-    error TimelockNotElapsed();
-
-    /// @notice Error thrown when attempting to submit a change that's already pending
-    error AlreadyPending();
-
-    /// @notice Error thrown when the implementation address is invalid
-    error InvalidImplementation();
 }
