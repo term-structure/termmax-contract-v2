@@ -25,6 +25,18 @@ struct SwapPath {
     SwapUnit[] units;
 }
 
+enum FlashLoanType {
+    COLLATERAL,
+    DEBT
+}
+
+enum FlashRepayOptions {
+    REPAY,
+    ROLLOVER,
+    ROLLOVER_AAVE,
+    ROLLOVER_MORPHO
+}
+
 /**
  * @title TermMax RouterV2 interface
  * @author Term Structure Labs
@@ -261,65 +273,57 @@ interface ITermMaxRouterV2 {
     ) external returns (uint256 netTokenOut);
 
     /**
-     * @notice Rollover GT position to a new market with additional assets(dont support partial rollover)
-     * @dev This function allows users to rollover their GT position to a new market
-     *      input/output: =>, swap: ->
-     *      collateralPaths: old collateral -> new collateral => router
-     *      debtTokenPaths: ft -> debt token => router
+     * @notice Rollover GT position
+     * @dev This function allows users to rollover their GT position to a new market or third-protocol
      * @param recipient The address that will receive the new GT token
-     * @param gt The GearingToken contract instance
+     * @param gtToken The GearingToken contract instance
      * @param gtId The ID of the GT token being rolled over
-     * @param nextMarket The next market to rollover into
-     * @param maxLtv Maximum loan-to-value ratio for the next position
-     * @param additionalCollateral Amount of collateral to add to the new position
-     * @param additionalDebt Amount of debt to add to the new position
-     * @param collateralPath SwapPath to swap old collateral to new collateral
-     * @param debtTokenPath SwapPath to swap ft to exact debt token
-     * @return newGtId The ID of the newly created GT token in the next market
+     * @param additionalAsset The additional asset(debt or new collateral token) to reduce the LTV
+     * @param additionalAmt Amount of the additional asset
+     * @param rolloverData Additional data for the rollover operation
+     * rollover to TermMax: abi.encode(FlashRepayOptions.ROLLOVER, abi.encode(recipient, nextMarket, maxLtv, collateralPath, debtTokenPath))
+     *  - collateralPaths: old collateral -> new collateral => router
+     *  - debtTokenPaths: ft -> debt token => router
+     * rollover to Aave: abi.encode(FlashRepayOptions.ROLLOVER_AAVE, abi.encode(recipient, aave, interestRateMode, referralCode, collateralPath))
+     * rollover to Morpho: abi.encode(FlashRepayOptions.ROLLOVER_MORPHO, abi.encode(recipient, morpho, marketId, collateralPath))
+     * @return newGtId The ID of the newly created GT token in the next market, newGtId is zero if rollover to Aave or Morpho
      */
     function rolloverGtForV1(
         address recipient,
-        IGearingToken gt,
+        IGearingToken gtToken,
         uint256 gtId,
-        ITermMaxMarket nextMarket,
-        uint128 maxLtv,
-        uint256 additionalCollateral,
-        uint256 additionalDebt,
-        SwapPath memory collateralPath,
-        SwapPath memory debtTokenPath
+        IERC20 additionalAsset,
+        uint256 additionalAmt,
+        bytes memory rolloverData
     ) external returns (uint256 newGtId);
 
     /**
-     * @notice Rollover GT position to a new market with additional assets(dont support partial rollover)
-     * @dev This function allows users to rollover their GT position to a new market
-     *      input/output: =>, swap: ->
-     *      collateralPaths: old collateral -> new collateral => router
-     *      debtTokenPaths: ft -> debt token => router
+     * @notice Rollover GT position
+     * @dev This function allows users to rollover their GT position to a new market or third-protocol
      * @param recipient The address that will receive the new GT token
-     * @param gt The GearingToken contract instance
+     * @param gtToken The GearingToken contract instance
      * @param gtId The ID of the GT token being rolled over
-     * @param nextMarket The next market to rollover into
-     * @param maxLtv Maximum loan-to-value ratio for the next position
      * @param repayAmt Amount of debt to repay the old GT position
      * @param removedCollateral Amount of collateral to remove from the old position
-     * @param additionalCollateral Amount of collateral to add to the new position
-     * @param additionalDebt Amount of debt to add to the new position
-     * @param collateralPath SwapPath to swap old collateral to new collateral
-     * @param debtTokenPath SwapPath to swap ft to exact debt token
-     * @return newGtId The ID of the newly created GT token in the next market
+     * @param additionalAsset The additional asset(debt or new collateral token) to reduce the LTV
+     * @param additionalAmt Amount of the additional asset
+     * @param rolloverData Additional data for the rollover operation
+     * rollover to TermMax: abi.encode(FlashRepayOptions.ROLLOVER, abi.encode(recipient, nextMarket, maxLtv, collateralPath, debtTokenPath))
+     *  - collateralPaths: old collateral -> new collateral => router
+     *  - debtTokenPaths: ft -> debt token => router
+     * rollover to Aave: abi.encode(FlashRepayOptions.ROLLOVER_AAVE, abi.encode(recipient, aave, interestRateMode, referralCode, collateralPath))
+     * rollover to Morpho: abi.encode(FlashRepayOptions.ROLLOVER_MORPHO, abi.encode(recipient, morpho, marketId, collateralPath))
+     * @return newGtId The ID of the newly created GT token in the next market, newGtId is zero if rollover to Aave or Morpho
      */
     function rolloverGtForV2(
         address recipient,
-        IGearingToken gt,
+        IGearingToken gtToken,
         uint256 gtId,
-        ITermMaxMarket nextMarket,
-        uint128 maxLtv,
-        uint128 repayAmt,
+        uint256 repayAmt,
         uint256 removedCollateral,
-        uint256 additionalCollateral,
-        uint256 additionalDebt,
-        SwapPath memory collateralPath,
-        SwapPath memory debtTokenPath
+        IERC20 additionalAsset,
+        uint256 additionalAmt,
+        bytes memory rolloverData
     ) external returns (uint256 newGtId);
 
     /**
@@ -463,30 +467,4 @@ interface ITermMaxRouterV2 {
     function redeemFromVaultAndSwap(address recipient, IERC4626 vault, uint256 shareAmt, SwapPath memory swapPath)
         external
         returns (uint256 netOut);
-
-    function rollToAaveForV1(
-        address recipient,
-        ITermMaxMarket market,
-        uint256 gtId,
-        uint256 additionalCollateral,
-        uint256 additionalDebt,
-        IAaveV3PoolMinimal aave,
-        uint256 interestRateMode,
-        uint16 referralCode,
-        SwapPath memory collateralPath
-    ) external;
-
-    function rollToAaveForV2(
-        address recipient,
-        ITermMaxMarket market,
-        uint256 gtId,
-        uint128 repayAmt,
-        uint256 removedCollateral,
-        uint256 additionalCollateral,
-        uint256 additionalDebt,
-        IAaveV3PoolMinimal aave,
-        uint256 interestRateMode,
-        uint16 referralCode,
-        SwapPath memory collateralPath
-    ) external;
 }

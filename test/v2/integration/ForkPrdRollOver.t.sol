@@ -5,7 +5,13 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {ITermMaxMarket} from "contracts/v1/ITermMaxMarket.sol";
 import {ITermMaxOrder} from "contracts/v1/ITermMaxOrder.sol";
-import {SwapPath, SwapUnit, ITermMaxRouterV2, TermMaxRouterV2} from "contracts/v2/router/TermMaxRouterV2.sol";
+import {
+    SwapPath,
+    SwapUnit,
+    ITermMaxRouterV2,
+    TermMaxRouterV2,
+    FlashRepayOptions
+} from "contracts/v2/router/TermMaxRouterV2.sol";
 import {
     IGearingToken,
     GearingTokenEvents,
@@ -136,15 +142,6 @@ contract ForkPrdRollover is ForkBaseTestV2 {
             console.log("collateralAmount:", collateralAmount);
             console.log("debt:", debt);
         }
-        {
-            (,, IGearingToken gt,,) = mmay_30.tokens();
-            (address owner, uint128 debtAmt, bytes memory collateralData) = gt.loanInfo(gt1);
-            borrower = owner;
-            debt = debtAmt;
-            collateralAmount = abi.decode(collateralData, (uint256));
-            console.log("collateralAmount:", collateralAmount);
-            console.log("debt:", debt);
-        }
         vm.startPrank(borrower);
         vm.warp(may_30 - 0.5 days);
         // roll gt
@@ -202,9 +199,11 @@ contract ForkPrdRollover is ForkBaseTestV2 {
                 SwapPath({units: swapUnits2, recipient: address(router), inputAmount: debt, useBalanceOnchain: true});
 
             uint128 maxLtv = 0.9e8;
-            uint256 gtId2 = router.rolloverGtForV1(
-                borrower, gt, gt1, maug_1, maxLtv, 0, additionalAssets, collateralPath, debtPaths
-            );
+            bytes memory rolloverData =
+                abi.encode(FlashRepayOptions.ROLLOVER, abi.encode(borrower, maug_1, maxLtv, collateralPath, debtPaths));
+            uint256 additionalAmt = additionalAssets;
+            IERC20 additionalAsset = IERC20(usdc);
+            uint256 gtId2 = router.rolloverGtForV1(borrower, gt, gt1, additionalAsset, additionalAmt, rolloverData);
             console.log("new gtId:", gtId2);
         }
 
@@ -217,15 +216,6 @@ contract ForkPrdRollover is ForkBaseTestV2 {
         // deal(pt_susde_may_29, borrower, collateralAmount);
         uint256 gt1 = 5;
         address borrower;
-        {
-            (,, IGearingToken gt,,) = mmay_30.tokens();
-            (address owner, uint128 debtAmt, bytes memory collateralData) = gt.loanInfo(gt1);
-            borrower = owner;
-            debt = debtAmt;
-            collateralAmount = abi.decode(collateralData, (uint256));
-            console.log("collateralAmount:", collateralAmount);
-            console.log("debt:", debt);
-        }
         {
             (,, IGearingToken gt,,) = mmay_30.tokens();
             (address owner, uint128 debtAmt, bytes memory collateralData) = gt.loanInfo(gt1);
@@ -298,9 +288,12 @@ contract ForkPrdRollover is ForkBaseTestV2 {
             });
 
             uint128 maxLtv = 0.9e8;
-            uint256 gtId2 = router.rolloverGtForV1(
-                borrower, gt, gt1, maug_1, maxLtv, additionalCollateral, additionalAssets, collateralPath, debtPaths
-            );
+            bytes memory rolloverData =
+                abi.encode(FlashRepayOptions.ROLLOVER, abi.encode(borrower, maug_1, maxLtv, collateralPath, debtPaths));
+
+            uint256 additionalAmt = additionalCollateral;
+            IERC20 additionalAsset = IERC20(pt_susde_jun_31);
+            uint256 gtId2 = router.rolloverGtForV1(borrower, gt, gt1, additionalAsset, additionalAmt, rolloverData);
             console.log("new gtId:", gtId2);
         }
 
@@ -412,18 +405,12 @@ contract ForkPrdRollover is ForkBaseTestV2 {
                 SwapPath({units: swapUnits2, recipient: address(router), inputAmount: debt, useBalanceOnchain: true});
 
             uint128 maxLtv = 0.9e8;
+            bytes memory rolloverData =
+                abi.encode(FlashRepayOptions.ROLLOVER, abi.encode(borrower, maug_1, maxLtv, collateralPath, debtPaths));
+            uint256 additionalAmt = additionalAssets;
+            IERC20 additionalAsset = IERC20(usdc);
             uint256 gtId2 = router.rolloverGtForV2(
-                borrower,
-                gt,
-                gtId1,
-                maug_1,
-                maxLtv,
-                debt,
-                collateralAmount,
-                0,
-                additionalAssets,
-                collateralPath,
-                debtPaths
+                borrower, gt, gtId1, debt, collateralAmount, additionalAsset, additionalAmt, rolloverData
             );
 
             (address owner, uint128 currentDebt, bytes memory currentCollateral) = gt.loanInfo(gtId1);
@@ -556,18 +543,12 @@ contract ForkPrdRollover is ForkBaseTestV2 {
             });
 
             uint128 maxLtv = 0.9e8;
+            bytes memory rolloverData =
+                abi.encode(FlashRepayOptions.ROLLOVER, abi.encode(borrower, maug_1, maxLtv, collateralPath, debtPaths));
+            uint256 additionalAmt = additionalCollateral;
+            IERC20 additionalAsset = IERC20(pt_susde_jun_31);
             uint256 gtId2 = router.rolloverGtForV2(
-                borrower,
-                gt,
-                gtId1,
-                maug_1,
-                maxLtv,
-                debt,
-                collateralAmount,
-                additionalCollateral,
-                additionalAssets,
-                collateralPath,
-                debtPaths
+                borrower, gt, gtId1, debt, collateralAmount, additionalAsset, additionalAmt, rolloverData
             );
             (address owner, uint128 currentDebt, bytes memory currentCollateral) = gt.loanInfo(gtId1);
             assertEq(owner, borrower, "borrower should be the same");
