@@ -2,7 +2,9 @@
 pragma solidity ^0.8.27;
 
 import {
-    ERC4626Upgradeable, Math
+    ERC4626Upgradeable,
+    Math,
+    IERC4626
 } from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC4626Upgradeable.sol";
 import {
     OwnableUpgradeable,
@@ -10,46 +12,41 @@ import {
 } from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {IERC20Metadata, IERC20} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
-import {IAaveV3Minimal} from "../extensions/aave/IAaveV3Minimal.sol";
 import {TransferUtilsV2} from "../lib/TransferUtilsV2.sol";
 import {StakingBuffer} from "./StakingBuffer.sol";
 import {ERC4626TokenEvents} from "../events/ERC4626TokenEvents.sol";
 import {ERC4626TokenErrors} from "../errors/ERC4626TokenErrors.sol";
 
-contract StableERC4626ForAave is
+contract StableERC4626For4626 is
     StakingBuffer,
     ERC4626Upgradeable,
     Ownable2StepUpgradeable,
     ReentrancyGuardUpgradeable
 {
-    using TransferUtilsV2 for IERC20;
+    using TransferUtilsV2 for *;
 
-    IAaveV3Minimal public immutable aavePool;
-    uint16 public immutable referralCode;
-
-    IERC20 public aToken;
+    IERC4626 public thirdPool;
     IERC20 public underlying;
     BufferConfig public bufferConfig;
     uint256 internal withdawedIncomeAssets;
 
-    constructor(address aavePool_, uint16 referralCode_) {
-        aavePool = IAaveV3Minimal(aavePool_);
-        referralCode = referralCode_;
+    constructor() {
         _disableInitializers();
     }
 
-    function initialize(address admin, address underlying_, BufferConfig memory bufferConfig_) public initializer {
+    function initialize(address admin, address thirdPool_, BufferConfig memory bufferConfig_) public initializer {
+        thirdPool = IERC4626(thirdPool_);
+        address underlying_ = thirdPool.asset();
         underlying = IERC20(underlying_);
-        string memory name = string(abi.encodePacked("TermMax Stable AaveERC4626 ", IERC20Metadata(underlying_).name()));
-        string memory symbol = string(abi.encodePacked("tmsa", IERC20Metadata(underlying_).symbol()));
+        string memory name = string(abi.encodePacked("TermMax Stable ERC4626 ", IERC20Metadata(underlying_).name()));
+        string memory symbol = string(abi.encodePacked("tmse", IERC20Metadata(underlying_).symbol()));
         __ERC20_init_unchained(name, symbol);
         __Ownable_init_unchained(admin);
         __ERC4626_init_unchained(IERC20(underlying_));
         __ReentrancyGuard_init_unchained();
         _updateBufferConfig(bufferConfig_);
-        aToken = IERC20(aavePool.getReserveData(underlying_).aTokenAddress);
 
-        emit ERC4626TokenEvents.ERC4626ForAaveInitialized(admin, underlying_, true);
+        emit ERC4626TokenEvents.ERC4626For4626Initialized(admin, underlying_, thirdPool_);
     }
 
     function totalAssets() public view virtual override returns (uint256) {
@@ -100,27 +97,23 @@ contract StableERC4626ForAave is
         emit Withdraw(caller, recipient, owner, assets, shares);
     }
 
-    function burnToAToken(address to, uint256 amount) external nonReentrant {
-        _burn(msg.sender, amount);
-        aToken.safeTransfer(to, amount);
-    }
-
     function totalIncomeAssets() external view returns (uint256) {
-        uint256 aTokenBalance = aToken.balanceOf(address(this));
+        uint256 assetInPool = _assetInPool(address(0));
         uint256 underlyingBalance = underlying.balanceOf(address(this));
-        return aTokenBalance + underlyingBalance - totalSupply() + withdawedIncomeAssets;
+        return assetInPool + underlyingBalance - totalSupply() + withdawedIncomeAssets;
     }
 
     function withdrawIncomeAssets(address asset, address to, uint256 amount) external nonReentrant onlyOwner {
-        uint256 aTokenBalance = aToken.balanceOf(address(this));
+        uint256 assetInPool = _assetInPool(address(0));
         uint256 underlyingBalance = underlying.balanceOf(address(this));
-        uint256 avaliableAmount = aTokenBalance + underlyingBalance - totalSupply();
+        uint256 avaliableAmount = assetInPool + underlyingBalance - totalSupply();
         require(avaliableAmount >= amount, ERC4626TokenErrors.InsufficientIncomeAmount(avaliableAmount, amount));
         withdawedIncomeAssets += amount;
         if (asset == address(underlying)) {
             _withdrawWithBuffer(address(underlying), to, amount);
-        } else if (asset == address(aToken)) {
-            aToken.safeTransfer(to, amount);
+        } else if (asset == address(thirdPool)) {
+            uint256 shares = thirdPool.previewWithdraw(amount);
+            thirdPool.safeTransfer(to, shares);
         } else {
             revert ERC4626TokenErrors.InvalidToken();
         }
@@ -150,17 +143,15 @@ contract StableERC4626ForAave is
     }
 
     function _depositToPool(address assetAddr, uint256 amount) internal virtual override {
-        IERC20(assetAddr).safeIncreaseAllowance(address(aavePool), amount);
-        aavePool.supply(assetAddr, amount, address(this), referralCode);
+        IERC20(assetAddr).safeIncreaseAllowance(address(thirdPool), amount);
+        thirdPool.deposit(amount, address(this));
     }
 
-    function _withdrawFromPool(address assetAddr, address to, uint256 amount) internal virtual override {
-        aToken.safeIncreaseAllowance(address(aavePool), amount);
-        uint256 receivedAmount = aavePool.withdraw(assetAddr, amount, to);
-        require(receivedAmount == amount, ERC4626TokenErrors.AaveWithdrawFailed(amount, receivedAmount));
+    function _withdrawFromPool(address, address to, uint256 amount) internal virtual override {
+        thirdPool.withdraw(amount, to, address(this));
     }
 
     function _assetInPool(address) internal view virtual override returns (uint256 amount) {
-        amount = aToken.balanceOf(address(this));
+        amount = thirdPool.previewRedeem(thirdPool.balanceOf(address(this)));
     }
 }

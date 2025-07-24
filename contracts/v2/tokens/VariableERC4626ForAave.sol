@@ -11,8 +11,8 @@ import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/ut
 import {IAaveV3Minimal} from "../extensions/aave/IAaveV3Minimal.sol";
 import {TransferUtilsV2} from "../lib/TransferUtilsV2.sol";
 import {StakingBuffer} from "./StakingBuffer.sol";
-import {ERC4626ForAaveEvents} from "../events/ERC4626ForAaveEvents.sol";
-import {ERC4626ForAaveErrors} from "../errors/ERC4626ForAaveErrors.sol";
+import {ERC4626TokenEvents} from "../events/ERC4626TokenEvents.sol";
+import {ERC4626TokenErrors} from "../errors/ERC4626TokenErrors.sol";
 
 contract VariableERC4626ForAave is
     StakingBuffer,
@@ -47,7 +47,7 @@ contract VariableERC4626ForAave is
         _updateBufferConfig(bufferConfig_);
         aToken = IERC20(aavePool.getReserveData(underlying_).aTokenAddress);
 
-        emit ERC4626ForAaveEvents.ERC4626ForAaveInitialized(admin, underlying_, false);
+        emit ERC4626TokenEvents.ERC4626ForAaveInitialized(admin, underlying_, false);
     }
 
     function totalAssets() public view override returns (uint256) {
@@ -90,7 +90,7 @@ contract VariableERC4626ForAave is
     function _updateBufferConfig(BufferConfig memory bufferConfig_) internal {
         _checkBufferConfig(bufferConfig_.minimumBuffer, bufferConfig_.maximumBuffer, bufferConfig_.buffer);
         bufferConfig = BufferConfig(bufferConfig_.minimumBuffer, bufferConfig_.maximumBuffer, bufferConfig_.buffer);
-        emit ERC4626ForAaveEvents.UpdateBufferConfig(
+        emit ERC4626TokenEvents.UpdateBufferConfig(
             bufferConfig_.minimumBuffer, bufferConfig_.maximumBuffer, bufferConfig_.buffer
         );
     }
@@ -107,7 +107,7 @@ contract VariableERC4626ForAave is
     function _withdrawFromPool(address assetAddr, address to, uint256 amount) internal virtual override {
         aToken.safeIncreaseAllowance(address(aavePool), amount);
         uint256 receivedAmount = aavePool.withdraw(assetAddr, amount, to);
-        require(receivedAmount == amount, ERC4626ForAaveErrors.AaveWithdrawFailed(amount, receivedAmount));
+        require(receivedAmount == amount, ERC4626TokenErrors.AaveWithdrawFailed(amount, receivedAmount));
     }
 
     function _assetInPool(address) internal view virtual override returns (uint256 amount) {

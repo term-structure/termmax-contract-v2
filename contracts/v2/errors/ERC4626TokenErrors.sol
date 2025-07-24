@@ -2,10 +2,11 @@
 pragma solidity ^0.8.0;
 
 /**
- * @title ERC4626ForAaveErrors
+ * @title ERC4626TokenErrors
  * @author Term Structure Labs
+ * @notice Contains error definitions for the ERC4626 token contract
  */
-interface ERC4626ForAaveErrors {
+interface ERC4626TokenErrors {
     /// @notice Error thrown when an invalid or unsupported token is used
     error InvalidToken();
 
