@@ -2,26 +2,27 @@
 pragma solidity ^0.8.0;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts/interfaces/IERC721Receiver.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {
     Ownable2StepUpgradeable,
     OwnableUpgradeable
 } from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
-import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {ITermMaxMarket} from "../../v1/ITermMaxMarket.sol";
-import {ITermMaxMarketV2} from "../ITermMaxMarketV2.sol";
 import {ITermMaxMarketV2} from "../ITermMaxMarketV2.sol";
 import {ITermMaxOrder} from "../../v1/ITermMaxOrder.sol";
 import {TransferUtilsV2} from "../lib/TransferUtilsV2.sol";
-import {ITermMaxRouterV2, SwapPath, IERC4626, FlashLoanType, FlashRepayOptions} from "./ITermMaxRouterV2.sol";
 import {IGearingToken} from "../../v1/tokens/IGearingToken.sol";
 import {CurveCuts, OrderConfig} from "../../v1/storage/TermMaxStorage.sol";
 import {OrderInitialParams} from "../ITermMaxOrderV2.sol";
 import {VersionV2} from "../VersionV2.sol";
 
+/**
+ * @title MakerHelper
+ * @notice Helper contract for placing orders and other operations for the maker in the TermMax protocol
+ */
 contract MakerHelper is UUPSUpgradeable, Ownable2StepUpgradeable, IERC721Receiver, VersionV2 {
-    using SafeCast for uint256;
     using TransferUtilsV2 for IERC20;
 
     function _authorizeUpgrade(address newImplementation) internal virtual override onlyOwner {}
