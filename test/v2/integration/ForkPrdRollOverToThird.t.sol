@@ -119,19 +119,21 @@ contract ForkPrdRollOverToThird is ForkBaseTestV2 {
         _initResourcesWithBlockNumber(22486319); // 2025-05-15
         uint128 debt;
         uint256 collateralAmount;
-        // deal(pt_susde_may_29, borrower, collateralAmount);
-        uint256 gt1 = 5;
-        address borrower;
+        uint256 gt1;
+        address borrower = vm.randomAddress();
+        vm.startPrank(borrower);
         {
             (,, IGearingToken gt,,) = mmay_30.tokens();
-            (address owner, uint128 debtAmt, bytes memory collateralData) = gt.loanInfo(gt1);
-            borrower = owner;
-            debt = debtAmt;
-            collateralAmount = abi.decode(collateralData, (uint256));
+            // create a new debt position
+            debt = 2012814397;
+            collateralAmount = 2501271245527830095803;
+            deal(pt_susde_may_29, borrower, collateralAmount);
+            IERC20(pt_susde_may_29).approve(address(gt), collateralAmount);
+            (gt1,) = mmay_30.issueFt(borrower, debt, abi.encode(collateralAmount));
             console.log("collateralAmount:", collateralAmount);
             console.log("debt:", debt);
         }
-        vm.startPrank(borrower);
+
         vm.warp(may_30 - 0.5 days);
         // roll gt
         {
@@ -243,18 +245,20 @@ contract ForkPrdRollOverToThird is ForkBaseTestV2 {
         _initResourcesWithBlockNumber(22985670); // 2025-07-24
         uint128 debt;
         uint256 collateralAmount;
-        uint256 gt1 = 1;
-        address borrower;
+        uint256 gt1;
+        address borrower = vm.randomAddress();
+        vm.startPrank(borrower);
         {
             (,, IGearingToken gt,,) = mjul_31.tokens();
-            (address owner, uint128 debtAmt, bytes memory collateralData) = gt.loanInfo(gt1);
-            borrower = owner;
-            debt = debtAmt;
-            collateralAmount = abi.decode(collateralData, (uint256));
+            // create a new debt position
+            debt = 2448639688;
+            collateralAmount = 2869261070978839154575;
+            deal(pt_susde_jul_31, borrower, collateralAmount);
+            IERC20(pt_susde_jul_31).approve(address(gt), collateralAmount);
+            (gt1,) = mjul_31.issueFt(borrower, debt, abi.encode(collateralAmount));
             console.log("collateralAmount:", collateralAmount);
             console.log("debt:", debt);
         }
-        vm.startPrank(borrower);
         // roll gt
         {
             Id marketId = morpho_market_id;
