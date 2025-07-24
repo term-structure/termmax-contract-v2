@@ -165,81 +165,11 @@ contract ForkPrdRollOverToThird is ForkBaseTestV2 {
                 abi.encode(borrower, collateral, aave, interestRateMode, referralCode, collateralPath)
             );
 
-            router.rolloverGtForV1(borrower, gt, gt1, additionalAsset, additionalAmt, rolloverData);
+            router.rolloverGtForV1(gt, gt1, additionalAsset, additionalAmt, rolloverData);
         }
 
         vm.stopPrank();
     }
-
-    // function testRolloverPtToAaveForV2() public {
-    //     uint128 debt;
-    //     uint256 collateralAmount;
-    //     // deal(pt_susde_may_29, borrower, collateralAmount);
-    //     uint256 gt1 = 5;
-    //     address borrower;
-    //     {
-    //         (,, IGearingToken gt,,) = mmay_30.tokens();
-    //         (address owner, uint128 debtAmt, bytes memory collateralData) = gt.loanInfo(gt1);
-    //         borrower = owner;
-    //         debt = debtAmt;
-    //         collateralAmount = abi.decode(collateralData, (uint256));
-    //         console.log("collateralAmount:", collateralAmount);
-    //         console.log("debt:", debt);
-    //     }
-    //     {
-    //         (,, IGearingToken gt,,) = mmay_30.tokens();
-    //         (address owner, uint128 debtAmt, bytes memory collateralData) = gt.loanInfo(gt1);
-    //         borrower = owner;
-    //         debt = debtAmt;
-    //         collateralAmount = abi.decode(collateralData, (uint256));
-    //         console.log("collateralAmount:", collateralAmount);
-    //         console.log("debt:", debt);
-    //     }
-    //     vm.startPrank(borrower);
-    //     vm.warp(may_30 - 0.5 days);
-    //     // roll gt
-    //     {
-    //         address pm1 = 0xB162B764044697cf03617C2EFbcB1f42e31E4766;
-
-    //         SwapUnit[] memory swapUnits = new SwapUnit[](1);
-    //         swapUnits[0] = SwapUnit({
-    //             adapter: pendleAdapter,
-    //             tokenIn: pt_susde_may_29,
-    //             tokenOut: susde,
-    //             swapData: abi.encode(pm1, collateralAmount, 0)
-    //         });
-    //         SwapPath memory collateralPath =
-    //             SwapPath({units: swapUnits, recipient: address(router), inputAmount: 0, useBalanceOnchain: true});
-
-    //         uint256 additionalAssets = debt / 3;
-    //         uint256 additionalCollateral = 0;
-
-    //         (IERC20 ft,, IGearingToken gt, address collateral,) = mmay_30.tokens();
-
-    //         deal(usdc, borrower, additionalAssets);
-    //         IERC20(usdc).approve(address(router), additionalAssets);
-    //         aaveDebtToken.approveDelegation(address(router), debt - additionalAssets);
-    //         gt.approve(address(router), gt1);
-    //         // 1-stable 2-variable
-    //         uint256 interestRateMode = 2;
-    //         uint16 referralCode = 0;
-    //         router.rollToAaveForV2(
-    //             borrower,
-    //             mmay_30,
-    //             gt1,
-    //             debt,
-    //             collateralAmount,
-    //             additionalCollateral,
-    //             additionalAssets,
-    //             aave,
-    //             interestRateMode,
-    //             referralCode,
-    //             collateralPath
-    //         );
-    //     }
-
-    //     vm.stopPrank();
-    // }
 
     function testRolloverPtToMorphoForV1() public {
         _initResourcesWithBlockNumber(22985670); // 2025-07-24
@@ -280,7 +210,7 @@ contract ForkPrdRollOverToThird is ForkBaseTestV2 {
             bytes memory rolloverData = abi.encode(
                 FlashRepayOptions.ROLLOVER_MORPHO, abi.encode(borrower, collateral, morpho, marketId, collateralPath)
             );
-            router.rolloverGtForV1(borrower, gt, gt1, additionalAsset, additionalAmt, rolloverData);
+            router.rolloverGtForV1(gt, gt1, additionalAsset, additionalAmt, rolloverData);
         }
 
         vm.stopPrank();

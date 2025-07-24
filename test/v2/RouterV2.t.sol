@@ -276,62 +276,62 @@ contract RouterTestV2 is Test {
         vm.stopPrank();
     }
 
-    function testSellXtAndFt(bool isV1, uint128 ftAmount, uint128 xtAmount) public {
-        vm.assume(ftAmount <= 150e8 && xtAmount <= 150e8);
-        vm.startPrank(sender);
-        deal(address(res.ft), sender, ftAmount);
-        deal(address(res.xt), sender, xtAmount);
+    // function testSellXtAndFt(bool isV1, uint128 ftAmount, uint128 xtAmount) public {
+    //     vm.assume(ftAmount <= 150e8 && xtAmount <= 150e8);
+    //     vm.startPrank(sender);
+    //     deal(address(res.ft), sender, ftAmount);
+    //     deal(address(res.xt), sender, xtAmount);
 
-        address[] memory orders = new address[](2);
-        orders[0] = address(res.order);
-        orders[1] = address(res.order);
+    //     address[] memory orders = new address[](2);
+    //     orders[0] = address(res.order);
+    //     orders[1] = address(res.order);
 
-        (uint128 maxBurn, uint128 sellAmt) =
-            ftAmount > xtAmount ? (xtAmount, ftAmount - xtAmount) : (ftAmount, xtAmount - ftAmount);
-        IERC20 tokenToSell = ftAmount > xtAmount ? res.ft : res.xt;
-        uint128[] memory tradingAmts = new uint128[](2);
-        tradingAmts[0] = sellAmt / 2;
-        tradingAmts[1] = sellAmt / 2;
-        uint128 mintTokenOut = 0;
+    //     (uint128 maxBurn, uint128 sellAmt) =
+    //         ftAmount > xtAmount ? (xtAmount, ftAmount - xtAmount) : (ftAmount, xtAmount - ftAmount);
+    //     IERC20 tokenToSell = ftAmount > xtAmount ? res.ft : res.xt;
+    //     uint128[] memory tradingAmts = new uint128[](2);
+    //     tradingAmts[0] = sellAmt / 2;
+    //     tradingAmts[1] = sellAmt / 2;
+    //     uint128 mintTokenOut = 0;
 
-        res.ft.approve(address(res.router), ftAmount);
-        res.xt.approve(address(res.router), xtAmount);
+    //     res.ft.approve(address(res.router), ftAmount);
+    //     res.xt.approve(address(res.router), xtAmount);
 
-        TermMaxSwapData memory swapData = TermMaxSwapData({
-            swapExactTokenForToken: true,
-            scalingFactor: 0,
-            orders: orders,
-            tradingAmts: tradingAmts,
-            netTokenAmt: mintTokenOut,
-            deadline: block.timestamp + 1 hours
-        });
+    //     TermMaxSwapData memory swapData = TermMaxSwapData({
+    //         swapExactTokenForToken: true,
+    //         scalingFactor: 0,
+    //         orders: orders,
+    //         tradingAmts: tradingAmts,
+    //         netTokenAmt: mintTokenOut,
+    //         deadline: block.timestamp + 1 hours
+    //     });
 
-        SwapUnit[] memory swapUnits = new SwapUnit[](1);
-        swapUnits[0] = SwapUnit({
-            adapter: address(termMaxSwapAdapter),
-            tokenIn: address(tokenToSell),
-            tokenOut: address(res.debt),
-            swapData: abi.encode(swapData)
-        });
+    //     SwapUnit[] memory swapUnits = new SwapUnit[](1);
+    //     swapUnits[0] = SwapUnit({
+    //         adapter: address(termMaxSwapAdapter),
+    //         tokenIn: address(tokenToSell),
+    //         tokenOut: address(res.debt),
+    //         swapData: abi.encode(swapData)
+    //     });
 
-        SwapPath[] memory swapPaths = new SwapPath[](1);
-        uint256 netOut;
-        if (isV1) {
-            swapPaths[0] =
-                SwapPath({units: swapUnits, recipient: sender, inputAmount: sellAmt, useBalanceOnchain: true});
-            netOut = res.router.sellFtAndXtForV1(sender, res.market, ftAmount, xtAmount, swapPaths);
-        } else {
-            swapPaths[0] =
-                SwapPath({units: swapUnits, recipient: sender, inputAmount: sellAmt, useBalanceOnchain: false});
-            netOut = res.router.sellFtAndXtForV2(sender, res.market, ftAmount, xtAmount, swapPaths);
-        }
-        assertEq(netOut, res.debt.balanceOf(sender));
-        assertEq(res.ft.balanceOf(sender), 0);
-        assertEq(res.xt.balanceOf(sender), 0);
-        assert(maxBurn <= netOut);
+    //     SwapPath[] memory swapPaths = new SwapPath[](1);
+    //     uint256 netOut;
+    //     if (isV1) {
+    //         swapPaths[0] =
+    //             SwapPath({units: swapUnits, recipient: sender, inputAmount: sellAmt, useBalanceOnchain: true});
+    //         netOut = res.router.sellFtAndXtForV1(sender, res.market, ftAmount, xtAmount, swapPaths);
+    //     } else {
+    //         swapPaths[0] =
+    //             SwapPath({units: swapUnits, recipient: sender, inputAmount: sellAmt, useBalanceOnchain: false});
+    //         netOut = res.router.sellFtAndXtForV2(sender, res.market, ftAmount, xtAmount, swapPaths);
+    //     }
+    //     assertEq(netOut, res.debt.balanceOf(sender));
+    //     assertEq(res.ft.balanceOf(sender), 0);
+    //     assertEq(res.xt.balanceOf(sender), 0);
+    //     assert(maxBurn <= netOut);
 
-        vm.stopPrank();
-    }
+    //     vm.stopPrank();
+    // }
 
     function testLeverageFromToken(bool isV1) public {
         vm.startPrank(sender);
@@ -399,13 +399,8 @@ contract RouterTestV2 is Test {
         });
 
         res.debt.approve(address(res.router), tokenToSwap + 2e8 * 2);
-        uint256 gtId;
-        uint256 netXtOut;
-        if (isV1) {
-            (gtId, netXtOut) = res.router.leverageForV1(sender, res.market, maxLtv, inputPaths, collateralPath);
-        } else {
-            (gtId, netXtOut) = res.router.leverageForV2(sender, res.market, maxLtv, inputPaths, collateralPath);
-        }
+        (uint256 gtId, uint256 netXtOut) =
+            res.router.leverage(sender, res.market, maxLtv, isV1, inputPaths, collateralPath);
         (address owner, uint128 debtAmt, bytes memory collateralData) = res.gt.loanInfo(gtId);
         assertEq(owner, sender);
         assertEq(minCollAmt, abi.decode(collateralData, (uint256)));
@@ -458,9 +453,8 @@ contract RouterTestV2 is Test {
         });
 
         res.debt.approve(address(res.router), tokenToSwap + 2e8 * 2);
-        (uint256 gtId, uint256 netXtOut) = isV1
-            ? res.router.leverageForV1(sender, res.market, maxLtv, inputPaths, collateralPath)
-            : res.router.leverageForV2(sender, res.market, maxLtv, inputPaths, collateralPath);
+        (uint256 gtId, uint256 netXtOut) =
+            res.router.leverage(sender, res.market, maxLtv, isV1, inputPaths, collateralPath);
         (address owner, uint128 debtAmt, bytes memory collateralData) = res.gt.loanInfo(gtId);
         assertEq(owner, sender);
         assertEq(minCollAmt, abi.decode(collateralData, (uint256)));
@@ -513,9 +507,7 @@ contract RouterTestV2 is Test {
         res.collateral.mint(sender, collateralAmt);
         res.collateral.approve(address(res.router), collateralAmt);
 
-        (uint256 gtId,) = isV1
-            ? res.router.leverageForV1(sender, res.market, maxLtv, inputPaths, collateralPath)
-            : res.router.leverageForV2(sender, res.market, maxLtv, inputPaths, collateralPath);
+        (uint256 gtId,) = res.router.leverage(sender, res.market, maxLtv, isV1, inputPaths, collateralPath);
         (address owner, uint128 debtAmt, bytes memory collateralData) = res.gt.loanInfo(gtId);
         assertEq(owner, sender);
         assertEq(minCollAmt + collateralAmt, abi.decode(collateralData, (uint256)));
@@ -577,11 +569,7 @@ contract RouterTestV2 is Test {
         vm.expectRevert(
             abi.encodeWithSelector(RouterErrors.LtvBiggerThanExpected.selector, uint128(maxLtv), uint128(ltv))
         );
-        if (isV1) {
-            res.router.leverageForV1(sender, res.market, maxLtv, inputPaths, collateralPath);
-        } else {
-            res.router.leverageForV2(sender, res.market, maxLtv, inputPaths, collateralPath);
-        }
+        res.router.leverage(sender, res.market, maxLtv, isV1, inputPaths, collateralPath);
 
         vm.stopPrank();
     }
@@ -653,10 +641,7 @@ contract RouterTestV2 is Test {
         vm.expectEmit();
         emit RouterEvents.Borrow(res.market, 1, sender, sender, collInAmt, previewDebtAmt, borrowAmt);
 
-        SwapPath[] memory swapPaths = new SwapPath[](0);
-        uint256 gtId = isV1
-            ? res.router.borrowTokenFromCollateralAndXtForV1(sender, res.market, collInAmt, borrowAmt, swapPaths)
-            : res.router.borrowTokenFromCollateralAndXtForV2(sender, res.market, collInAmt, borrowAmt, swapPaths);
+        uint256 gtId = res.router.borrowTokenFromCollateralAndXt(sender, res.market, collInAmt, borrowAmt, isV1);
         (address owner, uint128 debtAmt, bytes memory collateralData) = res.gt.loanInfo(gtId);
         assertEq(owner, sender);
         assertEq(collInAmt, abi.decode(collateralData, (uint256)));
@@ -687,13 +672,7 @@ contract RouterTestV2 is Test {
 
         vm.expectEmit();
         emit RouterEvents.Borrow(res.market, 1, sender, sender, 0, previewDebtAmt, borrowAmt);
-        SwapPath[] memory swapPaths = new SwapPath[](0);
-        if (isV1) {
-            res.router.borrowTokenFromGtAndXtForV1(sender, res.market, gtId, borrowAmt, swapPaths);
-        } else {
-            res.router.borrowTokenFromGtAndXtForV2(sender, res.market, gtId, borrowAmt, swapPaths);
-        }
-
+        res.router.borrowTokenFromGtAndXt(sender, res.market, gtId, borrowAmt, isV1);
         (, uint128 dAmt,) = res.gt.loanInfo(gtId);
         assert(dAmt == 100e8 + previewDebtAmt);
         assertEq(res.debt.balanceOf(sender), borrowAmt);
@@ -722,12 +701,7 @@ contract RouterTestV2 is Test {
 
         vm.expectRevert(abi.encodeWithSelector(RouterErrors.GtNotOwnedBySender.selector));
         vm.prank(deployer);
-        SwapPath[] memory swapPaths = new SwapPath[](0);
-        if (isV1) {
-            res.router.borrowTokenFromGtAndXtForV1(sender, res.market, gtId, borrowAmt, swapPaths);
-        } else {
-            res.router.borrowTokenFromGtAndXtForV2(sender, res.market, gtId, borrowAmt, swapPaths);
-        }
+        res.router.borrowTokenFromGtAndXt(sender, res.market, gtId, borrowAmt, isV1);
 
         vm.stopPrank();
     }
@@ -992,66 +966,6 @@ contract RouterTestV2 is Test {
 
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, address(sender)));
         res.router.pause();
-
-        vm.stopPrank();
-    }
-
-    function testPlaceOrderForV1() public {
-        vm.startPrank(sender);
-
-        uint256 debtTokenToDeposit = 1e8;
-        uint128 ftToDeposit = 2e8;
-        uint128 xtToDeposit = 0;
-
-        res.debt.mint(sender, debtTokenToDeposit);
-        deal(address(res.ft), sender, ftToDeposit);
-        res.debt.approve(address(res.router), debtTokenToDeposit);
-        res.ft.approve(address(res.router), ftToDeposit);
-        res.xt.approve(address(res.router), xtToDeposit);
-        uint256 collateralToMintGt = 1e18;
-        res.collateral.mint(sender, collateralToMintGt);
-        res.collateral.approve(address(res.router), collateralToMintGt);
-
-        (ITermMaxOrder order, uint256 gtId) = res.router.placeOrderForV1(
-            res.market, sender, collateralToMintGt, debtTokenToDeposit, ftToDeposit, xtToDeposit, orderConfig
-        );
-
-        assertEq(gtId, 1);
-        assertEq(order.maker(), sender);
-        assertEq(res.ft.balanceOf(address(order)), ftToDeposit + debtTokenToDeposit);
-        assertEq(res.xt.balanceOf(address(order)), xtToDeposit + debtTokenToDeposit);
-
-        vm.stopPrank();
-    }
-
-    function testPlaceOrderForV2() public {
-        vm.startPrank(sender);
-
-        uint256 debtTokenToDeposit = 1e8;
-        uint128 ftToDeposit = 2e8;
-        uint128 xtToDeposit = 0;
-
-        res.debt.mint(sender, debtTokenToDeposit);
-        deal(address(res.ft), sender, ftToDeposit);
-        res.debt.approve(address(res.router), debtTokenToDeposit);
-        res.ft.approve(address(res.router), ftToDeposit);
-        res.xt.approve(address(res.router), xtToDeposit);
-        uint256 collateralToMintGt = 1e18;
-        res.collateral.mint(sender, collateralToMintGt);
-        res.collateral.approve(address(res.router), collateralToMintGt);
-
-        OrderInitialParams memory initialParams;
-        initialParams.maker = sender;
-        initialParams.orderConfig = orderConfig;
-        initialParams.virtualXtReserve = 1e8;
-        (ITermMaxOrder order, uint256 gtId) = res.router.placeOrderForV2(
-            res.market, collateralToMintGt, debtTokenToDeposit, ftToDeposit, xtToDeposit, initialParams
-        );
-
-        assertEq(gtId, order.orderConfig().gtId);
-        assertEq(order.maker(), sender);
-        assertEq(res.ft.balanceOf(address(order)), ftToDeposit + debtTokenToDeposit);
-        assertEq(res.xt.balanceOf(address(order)), xtToDeposit + debtTokenToDeposit);
 
         vm.stopPrank();
     }

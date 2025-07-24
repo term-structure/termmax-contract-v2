@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.27;
+pragma solidity ^0.8.0;
 
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -62,48 +62,6 @@ interface ITermMaxRouterV2 {
     function swapTokens(SwapPath[] memory paths) external returns (uint256[] memory netAmounts);
 
     /**
-     * @notice Swaps ft and xt tokens for a specific marketV1
-     * @dev This function allows users to swap FT and XT tokens for a specific market
-     * @dev input/output: =>, swap: ->
-     *      path0: => xt/ft -> debt token => router/recipient
-     *      path1(optional): debt token -> unwrap => recipient
-     * @param recipient Address to receive the output tokens
-     * @param market The market to burn FT and XT tokens
-     * @param ftInAmt Amount of FT tokens to swap
-     * @param xtInAmt Amount of XT tokens to swap
-     * @param swapPaths Array of SwapPath structs defining the swap paths
-     * @return netTokenOut Actual amount of tokens received after the swap
-     */
-    function sellFtAndXtForV1(
-        address recipient,
-        ITermMaxMarket market,
-        uint128 ftInAmt,
-        uint128 xtInAmt,
-        SwapPath[] memory swapPaths
-    ) external returns (uint256 netTokenOut);
-
-    /**
-     * @notice Swaps ft and xt tokens for a specific marketV2
-     * @dev This function allows users to swap FT and XT tokens for a specific market
-     * @dev input/output: =>, swap: ->
-     *      path0: => xt/ft -> debt token => router/recipient
-     *      path1(optional): debt token -> unwrap => recipient
-     * @param recipient Address to receive the output tokens
-     * @param market The market to burn FT and XT tokens
-     * @param ftInAmt Amount of FT tokens to swap
-     * @param xtInAmt Amount of XT tokens to swap
-     * @param swapPaths Array of SwapPath structs defining the swap paths
-     * @return netTokenOut Actual amount of tokens received after the swap
-     */
-    function sellFtAndXtForV2(
-        address recipient,
-        ITermMaxMarket market,
-        uint128 ftInAmt,
-        uint128 xtInAmt,
-        SwapPath[] memory swapPaths
-    ) external returns (uint256 netTokenOut);
-
-    /**
      * @notice Leverages a position
      * @dev Creates a leveraged position in the specified market
      *      input/output: =>, swap: ->
@@ -114,39 +72,17 @@ interface ITermMaxRouterV2 {
      * @param recipient Address to receive the leveraged position
      * @param market The market to leverage in
      * @param maxLtv Maximum loan-to-value ratio for the leverage
+     * @param isV1 Indicates if the leverage is for market V1 or V2
      * @param inputPaths Array of SwapPath structs defining the input token paths
      * @param swapCollateralPath SwapPath for collateral token
      * @return gtId ID of the generated GT token
      * @return netXtOut Actual amount of XT tokens input after swapping
      */
-    function leverageForV1(
+    function leverage(
         address recipient,
         ITermMaxMarket market,
         uint128 maxLtv,
-        SwapPath[] memory inputPaths,
-        SwapPath memory swapCollateralPath
-    ) external returns (uint256 gtId, uint256 netXtOut);
-
-    /**
-     * @notice Leverages a position
-     * @dev Creates a leveraged position in the specified market
-     *      input/output: =>, swap: ->
-     *      path0 (=> xt or => token -> xt) => router
-     *      case1 by debt token: path1 (=> debt token or => token -> debt token) => router
-     *      case2 by collateral token: path1 (=> collateral token or => token -> collateral token) => router
-     *      swapCollateralPath debt token -> collateral token => router
-     * @param recipient Address to receive the leveraged position
-     * @param market The market to leverage in
-     * @param maxLtv Maximum loan-to-value ratio for the leverage
-     * @param inputPaths Array of SwapPath structs defining the input token paths
-     * @param swapCollateralPath SwapPath for collateral token
-     * @return gtId ID of the generated GT token
-     * @return netXtOut Actual amount of XT tokens input after swapping
-     */
-    function leverageForV2(
-        address recipient,
-        ITermMaxMarket market,
-        uint128 maxLtv,
+        bool isV1,
         SwapPath[] memory inputPaths,
         SwapPath memory swapCollateralPath
     ) external returns (uint256 gtId, uint256 netXtOut);
@@ -178,33 +114,15 @@ interface ITermMaxRouterV2 {
      * @param market The market to borrow from
      * @param collInAmt Amount of collateral to deposit
      * @param borrowAmt Amount of tokens to borrow
-     * @param pathsAfterBorrow Array of SwapPath structs defining the swap paths after borrowing
+     * @param isV1 Indicates if the borrow is for market V1 or V2
      * @return gtId ID of the generated GT token
      */
-    function borrowTokenFromCollateralAndXtForV1(
+    function borrowTokenFromCollateralAndXt(
         address recipient,
         ITermMaxMarket market,
         uint256 collInAmt,
         uint256 borrowAmt,
-        SwapPath[] memory pathsAfterBorrow
-    ) external returns (uint256 gtId);
-
-    /**
-     * @notice Borrows tokens using collateral and XT
-     * @dev Creates a collateralized debt position
-     * @param recipient Address to receive the borrowed tokens
-     * @param market The market to borrow from
-     * @param collInAmt Amount of collateral to deposit
-     * @param borrowAmt Amount of tokens to borrow
-     * @param pathsAfterBorrow Array of SwapPath structs defining the swap paths after borrowing
-     * @return gtId ID of the generated GT token
-     */
-    function borrowTokenFromCollateralAndXtForV2(
-        address recipient,
-        ITermMaxMarket market,
-        uint256 collInAmt,
-        uint256 borrowAmt,
-        SwapPath[] memory pathsAfterBorrow
+        bool isV1
     ) external returns (uint256 gtId);
 
     /**
@@ -214,30 +132,14 @@ interface ITermMaxRouterV2 {
      * @param market The market to borrow from
      * @param gtId ID of the GT token to borrow from
      * @param borrowAmt Amount of tokens to borrow
-     * @param pathsAfterBorrow Array of SwapPath structs defining the swap paths after borrowing
+     * @param isV1 Indicates if the borrow is for market V1 or V2
      */
-    function borrowTokenFromGtAndXtForV1(
+    function borrowTokenFromGtAndXt(
         address recipient,
         ITermMaxMarket market,
         uint256 gtId,
         uint256 borrowAmt,
-        SwapPath[] memory pathsAfterBorrow
-    ) external;
-
-    /**
-     * @notice Borrows tokens from an existing GT position and XT
-     * @dev Increases the debt of an existing position
-     * @param recipient Address to receive the borrowed tokens
-     * @param market The market to borrow from
-     * @param gtId ID of the GT token to borrow from
-     * @param borrowAmt Amount of tokens to borrow
-     */
-    function borrowTokenFromGtAndXtForV2(
-        address recipient,
-        ITermMaxMarket market,
-        uint256 gtId,
-        uint256 borrowAmt,
-        SwapPath[] memory pathsAfterBorrow
+        bool isV1
     ) external;
 
     /**
@@ -275,7 +177,6 @@ interface ITermMaxRouterV2 {
     /**
      * @notice Rollover GT position
      * @dev This function allows users to rollover their GT position to a new market or third-protocol
-     * @param recipient The address that will receive the new GT token
      * @param gtToken The GearingToken contract instance
      * @param gtId The ID of the GT token being rolled over
      * @param additionalAsset The additional asset(debt or new collateral token) to reduce the LTV
@@ -289,7 +190,6 @@ interface ITermMaxRouterV2 {
      * @return newGtId The ID of the newly created GT token in the next market, newGtId is zero if rollover to Aave or Morpho
      */
     function rolloverGtForV1(
-        address recipient,
         IGearingToken gtToken,
         uint256 gtId,
         IERC20 additionalAsset,
@@ -300,7 +200,6 @@ interface ITermMaxRouterV2 {
     /**
      * @notice Rollover GT position
      * @dev This function allows users to rollover their GT position to a new market or third-protocol
-     * @param recipient The address that will receive the new GT token
      * @param gtToken The GearingToken contract instance
      * @param gtId The ID of the GT token being rolled over
      * @param repayAmt Amount of debt to repay the old GT position
@@ -316,7 +215,6 @@ interface ITermMaxRouterV2 {
      * @return newGtId The ID of the newly created GT token in the next market, newGtId is zero if rollover to Aave or Morpho
      */
     function rolloverGtForV2(
-        address recipient,
         IGearingToken gtToken,
         uint256 gtId,
         uint256 repayAmt,
@@ -325,103 +223,6 @@ interface ITermMaxRouterV2 {
         uint256 additionalAmt,
         bytes memory rolloverData
     ) external returns (uint256 newGtId);
-
-    /**
-     * @notice Places an order and mints a GT token(The gt token will not be linked to the order)
-     * @dev This function is used to create a new order in the TermMax protocol
-     * @param market The market to place the order in
-     * @param maker The address of the maker placing the order
-     * @param collateralToMintGt Amount of collateral to mint GT tokens
-     * @param debtTokenToDeposit Amount of debt tokens to deposit
-     * @param ftToDeposit Amount of FT tokens to deposit
-     * @param xtToDeposit Amount of XT tokens to deposit
-     * @param orderConfig Configuration parameters for the order
-     * @return order The created ITermMaxOrder instance
-     * @return gtId The ID of the minted GT token
-     */
-    function placeOrderForV1(
-        ITermMaxMarket market,
-        address maker,
-        uint256 collateralToMintGt,
-        uint256 debtTokenToDeposit,
-        uint128 ftToDeposit,
-        uint128 xtToDeposit,
-        OrderConfig memory orderConfig
-    ) external returns (ITermMaxOrder order, uint256 gtId);
-
-    /**
-     * @notice Places an order and mints a GT token(the gt token will be linked to the order)
-     * @dev This function is used to create a new order in the TermMax protocol
-     * @param market The market to place the order in
-     * @param collateralToMintGt Amount of collateral to mint GT tokens
-     * @param debtTokenToDeposit Amount of debt tokens to deposit
-     * @param ftToDeposit Amount of FT tokens to deposit
-     * @param xtToDeposit Amount of XT tokens to deposit
-     * @param initialParams Configuration parameters for the order
-     * @return order The created ITermMaxOrder instance
-     * @return gtId The ID of the minted GT token
-     */
-    function placeOrderForV2(
-        ITermMaxMarket market,
-        uint256 collateralToMintGt,
-        uint256 debtTokenToDeposit,
-        uint128 ftToDeposit,
-        uint128 xtToDeposit,
-        OrderInitialParams memory initialParams
-    ) external returns (ITermMaxOrder order, uint256 gtId);
-
-    /**
-     * @notice Swaps tokens and mints ft and xt tokens in the TermMax protocol
-     * @dev This function allows users to swap tokens and mint ft and xt tokens in the TermMax protocol
-     * @dev input/output: =>, swap: ->
-     *      path 0: => any token -> debt token => router
-     * @param market The market to mint the tokens in
-     * @param paths The SwapPath struct defining the swap operations
-     * @return netOut The net amount of ft and xt tokens received after the swap
-     */
-    function swapAndMint(address recipient, ITermMaxMarket market, SwapPath[] memory paths)
-        external
-        returns (uint256 netOut);
-
-    /**
-     * @notice Redeems FT tokens from a market and swaps output tokens
-     * @dev This function allows users to redeem FT tokens from a market and swap output tokens
-     * @dev input/output: =>, swap: ->
-     *      path0: => debt token -> output token => recipient
-     *      path1(optional): collateral token -> output token => recipient
-     * @param recipient Address to receive the output tokens
-     * @param market The market to redeem from
-     * @param ftAmt Amount of FT tokens to redeem
-     * @param paths Array of SwapPath structs defining the swap paths
-     * @return netOut The net amount of debt tokens received from market
-     * @return deliveryData data of the delivery of collateral tokens
-     */
-    function redeemFromMarketAndSwapForV1(
-        address recipient,
-        ITermMaxMarket market,
-        uint256 ftAmt,
-        SwapPath[] memory paths
-    ) external returns (uint256 netOut, bytes memory deliveryData);
-
-    /**
-     * @notice Redeems FT tokens from a market and swaps output tokens
-     * @dev This function allows users to redeem FT tokens from a market and swap output tokens
-     * @dev input/output: =>, swap: ->
-     *      path0: => debt token -> output token => recipient
-     *      path1(optional): collateral token -> output token => recipient
-     * @param recipient Address to receive the output tokens
-     * @param market The market to redeem from
-     * @param ftAmt Amount of FT tokens to redeem
-     * @param paths Array of SwapPath structs defining the swap paths
-     * @return debtTokenOutAmt The net amount of tokens received from market
-     * @return deliveryData data of the delivery of collateral tokens
-     */
-    function redeemFromMarketAndSwapForV2(
-        address recipient,
-        ITermMaxMarketV2 market,
-        uint256 ftAmt,
-        SwapPath[] memory paths
-    ) external returns (uint256 debtTokenOutAmt, bytes memory deliveryData);
 
     /**
      * @notice Swaps tokens and repays debt in a GearingToken position
@@ -439,32 +240,4 @@ interface ITermMaxRouterV2 {
     function swapAndRepay(IGearingToken gt, uint256 gtId, uint128 repayAmt, bool byDebtToken, SwapPath[] memory paths)
         external
         returns (uint256[] memory netOutOrIns);
-
-    /**
-     * @notice Swaps tokens and deposits into a vault
-     * @dev This function allows users to swap tokens and deposit into an IERC4626 vault
-     * @dev input/output: =>, swap: ->
-     *      path0: => any token -> vault underlying => router
-     * @param recipient Address to receive the share tokens
-     * @param vault The IERC4626 vault to deposit into
-     * @param paths The SwapPath struct defining the swap operations
-     * @return shareAmt The ERC4626 share amount received after the swap and deposit
-     */
-    function swapAndDeposit(address recipient, IERC4626 vault, SwapPath[] memory paths)
-        external
-        returns (uint256 shareAmt);
-    /**
-     * @notice Redeems shares from a vault and swaps the output tokens
-     * @dev This function allows users to redeem shares from an IERC4626 vault and swap the output tokens
-     * @dev input/output: =>, swap: ->
-     *      swapPath: vault underlying -> output token => recipient
-     * @param recipient Address to receive the output tokens
-     * @param vault The IERC4626 vault to redeem shares from
-     * @param shareAmt Amount of shares to redeem from the vault
-     * @param swapPath The SwapPath struct defining the swap operations
-     * @return netOut The net amount of tokens received after redeeming and swapping
-     */
-    function redeemFromVaultAndSwap(address recipient, IERC4626 vault, uint256 shareAmt, SwapPath memory swapPath)
-        external
-        returns (uint256 netOut);
 }

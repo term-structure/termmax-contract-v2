@@ -299,7 +299,7 @@ abstract contract GtBaseTestV2 is ForkBaseTestV2 {
         SwapPath memory collateralPath =
             SwapPath({units: units, recipient: address(res.router), inputAmount: 0, useBalanceOnchain: true});
 
-        (gtId,) = res.router.leverageForV2(taker, res.market, uint128(maxLtv), inputPaths, collateralPath);
+        (gtId,) = res.router.leverage(taker, res.market, uint128(maxLtv), false, inputPaths, collateralPath);
 
         uint256 debtTokenBalanceAfterSwap = res.debtToken.balanceOf(taker);
         uint256 xtAmtAfterSwap = res.xt.balanceOf(taker);
@@ -380,7 +380,7 @@ abstract contract GtBaseTestV2 is ForkBaseTestV2 {
         SwapPath memory collateralPath =
             SwapPath({units: units, recipient: address(res.router), inputAmount: 0, useBalanceOnchain: true});
 
-        (gtId,) = res.router.leverageForV2(taker, res.market, uint128(maxLtv), inputPaths, collateralPath);
+        (gtId,) = res.router.leverage(taker, res.market, uint128(maxLtv), false, inputPaths, collateralPath);
 
         uint256 debtTokenBalanceAfterSwap = res.debtToken.balanceOf(taker);
 
