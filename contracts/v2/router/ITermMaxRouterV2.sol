@@ -284,8 +284,8 @@ interface ITermMaxRouterV2 {
      * rollover to TermMax: abi.encode(FlashRepayOptions.ROLLOVER, abi.encode(recipient, nextMarket, maxLtv, collateralPath, debtTokenPath))
      *  - collateralPaths: old collateral -> new collateral => router
      *  - debtTokenPaths: ft -> debt token => router
-     * rollover to Aave: abi.encode(FlashRepayOptions.ROLLOVER_AAVE, abi.encode(recipient, aave, interestRateMode, referralCode, collateralPath))
-     * rollover to Morpho: abi.encode(FlashRepayOptions.ROLLOVER_MORPHO, abi.encode(recipient, morpho, marketId, collateralPath))
+     * rollover to Aave: abi.encode(FlashRepayOptions.ROLLOVER_AAVE, abi.encode(recipient, oldCollateral, aave, interestRateMode, referralCode, collateralPath))
+     * rollover to Morpho: abi.encode(FlashRepayOptions.ROLLOVER_MORPHO, abi.encode(recipient, oldCollateral, morpho, marketId, collateralPath))
      * @return newGtId The ID of the newly created GT token in the next market, newGtId is zero if rollover to Aave or Morpho
      */
     function rolloverGtForV1(
