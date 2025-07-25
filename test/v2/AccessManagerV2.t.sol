@@ -30,6 +30,7 @@ import {IOracleV2} from "contracts/v2/oracle/IOracleV2.sol";
 import {VaultInitialParamsV2} from "contracts/v2/storage/TermMaxStorageV2.sol";
 import {TermMaxOrderV2} from "contracts/v2/TermMaxOrderV2.sol";
 import {ITermMaxVaultV2, OrderV2ConfigurationParams, CurveCuts} from "contracts/v2/vault/ITermMaxVaultV2.sol";
+import {VaultEventsV2} from "contracts/v2/events/VaultEventsV2.sol";
 
 contract AccessManagerTestV2 is Test {
     using JSONLoader for *;
@@ -665,4 +666,185 @@ contract AccessManagerTestV2 is Test {
         MarketConfig memory updatedConfig = res.market.config();
         assertEq(updatedConfig.treasurer, newMarketConfig.treasurer);
     }
+
+    function testRevokePendingMinApy() public {
+        ITermMaxVaultV2 vaultV2 = ITermMaxVaultV2(address(res.vault));
+        address vaultManager = vm.randomAddress();
+        uint64 newMinApy = 0.05e8; // 5% APY
+
+        // Grant VAULT_ROLE to the vault manager
+        vm.startPrank(deployer);
+        manager.grantRole(manager.VAULT_ROLE(), vaultManager);
+        manager.setCuratorForVault(ITermMaxVault(address(res.vault)), vaultManager);
+        vm.stopPrank();
+
+        // Setup: Submit a pending minimum APY that requires timelock
+        vm.startPrank(vaultManager);
+        // First set a higher APY
+        vaultV2.submitPendingMinApy(0.1e8); // 10% APY (immediate)
+        // Then submit a lower APY (requires timelock)
+        vaultV2.submitPendingMinApy(newMinApy); // 5% APY (pending)
+        vm.stopPrank();
+
+        // Verify pending state exists
+        assertEq(vaultV2.pendingMinApy().value, newMinApy);
+        assertGt(vaultV2.pendingMinApy().validAt, 0);
+
+        // Test that vault manager with VAULT_ROLE can revoke pending min APY
+        vm.startPrank(vaultManager);
+        
+        // Should emit the revoke event from the vault
+        vm.expectEmit(true, false, false, false);
+        emit VaultEventsV2.RevokePendingMinApy(address(manager));
+        
+        manager.revokePendingMinApy(vaultV2);
+        vm.stopPrank();
+
+        // Verify pending min APY was cleared
+        assertEq(vaultV2.pendingMinApy().value, 0);
+        assertEq(vaultV2.pendingMinApy().validAt, 0);
+
+        // Test without VAULT_ROLE
+        address nonVaultManager = vm.randomAddress();
+        
+        // Setup another pending change to test unauthorized access
+        vm.startPrank(vaultManager);
+        vaultV2.submitPendingMinApy(newMinApy);
+        vm.stopPrank();
+
+        vm.startPrank(nonVaultManager);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector, nonVaultManager, manager.VAULT_ROLE()
+            )
+        );
+        manager.revokePendingMinApy(vaultV2);
+        vm.stopPrank();
+
+        // Verify pending state is still there after failed revoke
+        assertEq(vaultV2.pendingMinApy().value, newMinApy);
+        assertGt(vaultV2.pendingMinApy().validAt, 0);
+    }
+
+    function testRevokePendingPool() public {
+        // Create a vault with pool functionality for testing
+        VaultInitialParamsV2 memory poolParams = VaultInitialParamsV2({
+            admin: address(manager),
+            curator: curator,
+            guardian: address(0),
+            timelock: 1 days,
+            asset: IERC20(address(res.debt)),
+            pool: IERC4626(address(0)), // Start with no pool
+            maxCapacity: 1000000e18,
+            name: "Test Pool Vault",
+            symbol: "tPVAULT",
+            performanceFeeRate: 0.2e8,
+            minApy: 0
+        });
+
+        TermMaxVaultV2 poolVault = DeployUtils.deployVault(poolParams);
+        ITermMaxVaultV2 poolVaultV2 = ITermMaxVaultV2(address(poolVault));
+        
+        address vaultManager = vm.randomAddress();
+        address newPoolAddress = vm.randomAddress(); // Mock pool address
+
+        // Grant VAULT_ROLE to the vault manager
+        vm.startPrank(deployer);
+        manager.grantRole(manager.VAULT_ROLE(), vaultManager);
+        vm.stopPrank();
+
+        // Setup: Submit a pending pool change
+        vm.startPrank(curator);
+        poolVaultV2.submitPendingPool(newPoolAddress);
+        vm.stopPrank();
+
+        // Verify pending state exists
+        assertEq(poolVaultV2.pendingPool().value, newPoolAddress);
+        assertGt(poolVaultV2.pendingPool().validAt, 0);
+
+        // Test that vault manager with VAULT_ROLE can revoke pending pool
+        vm.startPrank(vaultManager);
+        
+        // Should emit the revoke event from the vault
+        vm.expectEmit(true, false, false, false);
+        emit VaultEventsV2.RevokePendingPool(address(manager));
+        
+        manager.revokePendingPool(poolVaultV2);
+        vm.stopPrank();
+
+        // Verify pending pool was cleared
+        assertEq(poolVaultV2.pendingPool().value, address(0));
+        assertEq(poolVaultV2.pendingPool().validAt, 0);
+
+        // Test without VAULT_ROLE
+        address nonVaultManager = vm.randomAddress();
+        
+        // Setup another pending change to test unauthorized access
+        vm.startPrank(curator);
+        poolVaultV2.submitPendingPool(newPoolAddress);
+        vm.stopPrank();
+
+        vm.startPrank(nonVaultManager);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector, nonVaultManager, manager.VAULT_ROLE()
+            )
+        );
+        manager.revokePendingPool(poolVaultV2);
+        vm.stopPrank();
+
+        // Verify pending state is still there after failed revoke
+        assertEq(poolVaultV2.pendingPool().value, newPoolAddress);
+        assertGt(poolVaultV2.pendingPool().validAt, 0);
+    }
+
+    function testRevokePendingMinApyWithNoExistingPending() public {
+        ITermMaxVaultV2 vaultV2 = ITermMaxVaultV2(address(res.vault));
+        address vaultManager = vm.randomAddress();
+
+        // Grant VAULT_ROLE to the vault manager
+        vm.startPrank(deployer);
+        manager.grantRole(manager.VAULT_ROLE(), vaultManager);
+        vm.stopPrank();
+
+        // Verify no pending min APY exists
+        assertEq(vaultV2.pendingMinApy().value, 0);
+        assertEq(vaultV2.pendingMinApy().validAt, 0);
+
+        // Test revoking when there's no pending value - should not revert
+        vm.startPrank(vaultManager);
+        manager.revokePendingMinApy(vaultV2);
+        vm.stopPrank();
+
+        // State should remain unchanged
+        assertEq(vaultV2.pendingMinApy().value, 0);
+        assertEq(vaultV2.pendingMinApy().validAt, 0);
+    }
+
+    function testRevokePendingPoolWithNoExistingPending() public {
+        ITermMaxVaultV2 vaultV2 = ITermMaxVaultV2(address(res.vault));
+        address vaultManager = vm.randomAddress();
+
+        // Grant VAULT_ROLE to the vault manager
+        vm.startPrank(deployer);
+        manager.grantRole(manager.VAULT_ROLE(), vaultManager);
+        vm.stopPrank();
+
+        // Verify no pending pool exists
+        assertEq(vaultV2.pendingPool().value, address(0));
+        assertEq(vaultV2.pendingPool().validAt, 0);
+
+        // Test revoking when there's no pending value - should not revert
+        vm.startPrank(vaultManager);
+        manager.revokePendingPool(vaultV2);
+        vm.stopPrank();
+
+        // State should remain unchanged
+        assertEq(vaultV2.pendingPool().value, address(0));
+        assertEq(vaultV2.pendingPool().validAt, 0);
+    }
+
+    // Import the events for testing
+    event RevokePendingMinApy(address indexed caller);
+    event RevokePendingPool(address indexed caller);
 }
