@@ -29,6 +29,7 @@ import "contracts/v1/storage/TermMaxStorage.sol";
 import {IOracleV2} from "contracts/v2/oracle/IOracleV2.sol";
 import {VaultInitialParamsV2} from "contracts/v2/storage/TermMaxStorageV2.sol";
 import {TermMaxOrderV2} from "contracts/v2/TermMaxOrderV2.sol";
+import {ITermMaxVaultV2, OrderV2ConfigurationParams, CurveCuts} from "contracts/v2/vault/ITermMaxVaultV2.sol";
 
 contract AccessManagerTestV2 is Test {
     using JSONLoader for *;
@@ -44,6 +45,8 @@ contract AccessManagerTestV2 is Test {
     address treasurer = vm.randomAddress();
     string testdata;
     AccessManagerV2 manager;
+    address curator = vm.randomAddress();
+    TermMaxOrderV2 vaultOrder;
 
     function setUp() public {
         vm.startPrank(deployer);
@@ -105,6 +108,34 @@ contract AccessManagerTestV2 is Test {
         manager.grantRole(manager.MARKET_ROLE(), deployer);
         manager.grantRole(manager.ORACLE_ROLE(), deployer);
 
+        // Create vault initialization parameters
+        VaultInitialParamsV2 memory params = VaultInitialParamsV2({
+            admin: address(manager),
+            curator: curator,
+            guardian: address(0), // Will be set through AccessManager
+            timelock: 1 days,
+            asset: IERC20(address(res.debt)),
+            pool: IERC4626(address(0)), // No pool for this test
+            maxCapacity: 1000000e18,
+            name: "Test Vault",
+            symbol: "tVAULT",
+            performanceFeeRate: 0.2e8,
+            minApy: 0
+        });
+
+        // Deploy vault
+        res.vault = DeployUtils.deployVault(params);
+        vm.stopPrank();
+
+        vm.startPrank(curator);
+        res.vault.submitMarket(address(res.market), true);
+        vm.warp(block.timestamp + 1 days);
+        res.vault.acceptMarket(address(res.market));
+
+        OrderV2ConfigurationParams memory configParams =
+            OrderV2ConfigurationParams({maxXtReserve: 1000e18, virtualXtReserve: 100e18, removingLiquidity: 0});
+
+        vaultOrder = TermMaxOrderV2(address(res.vault.createOrder(res.market, configParams, orderConfig.curveCuts)));
         vm.stopPrank();
     }
 
@@ -227,24 +258,6 @@ contract AccessManagerTestV2 is Test {
     }
 
     function testBatchSetSwitch() public {
-        // Create vault initialization parameters
-        VaultInitialParamsV2 memory params = VaultInitialParamsV2({
-            admin: address(manager),
-            curator: address(0), // Will be set through AccessManager
-            guardian: address(0), // Will be set through AccessManager
-            timelock: 1 days,
-            asset: IERC20(address(res.debt)),
-            pool: IERC4626(address(0)), // No pool for this test
-            maxCapacity: 1000000e18,
-            name: "Test Vault",
-            symbol: "tVAULT",
-            performanceFeeRate: 0.2e8,
-            minApy: 0
-        });
-
-        // Deploy vault
-        res.vault = DeployUtils.deployVault(params);
-
         address pauser = vm.randomAddress();
         bytes32 pauserRole = manager.PAUSER_ROLE();
 
@@ -315,8 +328,8 @@ contract AccessManagerTestV2 is Test {
         vm.startPrank(vaultManager);
 
         // Test setting curator
-        manager.setCuratorForVault(ITermMaxVault(address(vault)), newCurator);
-        assertEq(ITermMaxVault(address(vault)).curator(), newCurator);
+        manager.setCuratorForVault(ITermMaxVault(address(res.vault)), newCurator);
+        assertEq(res.vault.curator(), newCurator);
 
         vm.stopPrank();
 
@@ -328,7 +341,7 @@ contract AccessManagerTestV2 is Test {
                 IAccessControl.AccessControlUnauthorizedAccount.selector, nonVaultManager, manager.VAULT_ROLE()
             )
         );
-        manager.setCuratorForVault(ITermMaxVault(address(vault)), newCurator);
+        manager.setCuratorForVault(ITermMaxVault(address(res.vault)), newCurator);
         vm.stopPrank();
 
         // Test that non-vault role cannot set allocator
@@ -339,34 +352,14 @@ contract AccessManagerTestV2 is Test {
                 IAccessControl.AccessControlUnauthorizedAccount.selector, allocator, manager.VAULT_ROLE()
             )
         );
-        manager.setIsAllocatorForVault(ITermMaxVault(address(vault)), allocator, true);
+        manager.setIsAllocatorForVault(ITermMaxVault(address(res.vault)), allocator, true);
         vm.stopPrank();
     }
 
     function testRevokeVaultPendingValues() public {
-        address vaultManager = vm.randomAddress();
         address newMarket = vm.randomAddress();
         address newGuardian = vm.randomAddress();
-        address curator = vm.randomAddress();
-
-        // Create vault initialization parameters
-
-        VaultInitialParamsV2 memory params = VaultInitialParamsV2({
-            admin: address(manager),
-            curator: curator,
-            guardian: address(0),
-            timelock: 1 days,
-            asset: IERC20(address(res.debt)),
-            pool: IERC4626(address(0)), // No pool for this test
-            maxCapacity: 1000000e18,
-            name: "Test Vault",
-            symbol: "tVAULT",
-            performanceFeeRate: 0.2e8, // 20%
-            minApy: 0
-        });
-
-        // Deploy vault
-        TermMaxVaultV2 vault = DeployUtils.deployVault(params);
+        address vaultManager = vm.randomAddress();
 
         // Grant VAULT_ROLE to the vault manager and set curator
         vm.startPrank(deployer);
@@ -374,27 +367,27 @@ contract AccessManagerTestV2 is Test {
         vm.stopPrank();
 
         vm.startPrank(curator);
-        vault.submitTimelock(2 days);
-        vault.submitTimelock(1 days);
-        vault.submitMarket(newMarket, true);
+        res.vault.submitTimelock(2 days);
+        res.vault.submitTimelock(1 days);
+        res.vault.submitMarket(newMarket, true);
         vm.stopPrank();
 
         vm.startPrank(vaultManager);
-        manager.setCuratorForVault(ITermMaxVault(address(vault)), vaultManager);
+        manager.setCuratorForVault(ITermMaxVault(address(res.vault)), vaultManager);
 
         // Test revoking pending timelock
-        manager.revokeVaultPendingTimelock(ITermMaxVault(address(vault)));
-        assertEq(vault.timelock(), 2 days); // Original timelock
+        manager.revokeVaultPendingTimelock(ITermMaxVault(address(res.vault)));
+        assertEq(res.vault.timelock(), 2 days); // Original timelock
 
         // Test revoking pending market
-        manager.revokeVaultPendingMarket(ITermMaxVault(address(vault)), newMarket);
-        assertTrue(!vault.marketWhitelist(newMarket)); // Market not whitelisted
+        manager.revokeVaultPendingMarket(ITermMaxVault(address(res.vault)), newMarket);
+        assertTrue(!res.vault.marketWhitelist(newMarket)); // Market not whitelisted
 
         // Test revoking pending guardian
-        manager.submitVaultGuardian(ITermMaxVault(address(vault)), curator);
-        manager.submitVaultGuardian(ITermMaxVault(address(vault)), newGuardian);
-        manager.revokeVaultPendingGuardian(ITermMaxVault(address(vault)));
-        assertEq(vault.guardian(), curator); // Original guardian
+        manager.submitVaultGuardian(ITermMaxVault(address(res.vault)), curator);
+        manager.submitVaultGuardian(ITermMaxVault(address(res.vault)), newGuardian);
+        manager.revokeVaultPendingGuardian(ITermMaxVault(address(res.vault)));
+        assertEq(res.vault.guardian(), curator); // Original guardian
 
         vm.stopPrank();
 
@@ -407,21 +400,21 @@ contract AccessManagerTestV2 is Test {
                 IAccessControl.AccessControlUnauthorizedAccount.selector, nonVaultManager, manager.VAULT_ROLE()
             )
         );
-        manager.revokeVaultPendingTimelock(ITermMaxVault(address(vault)));
+        manager.revokeVaultPendingTimelock(ITermMaxVault(address(res.vault)));
 
         vm.expectRevert(
             abi.encodeWithSelector(
                 IAccessControl.AccessControlUnauthorizedAccount.selector, nonVaultManager, manager.VAULT_ROLE()
             )
         );
-        manager.revokeVaultPendingMarket(ITermMaxVault(address(vault)), newMarket);
+        manager.revokeVaultPendingMarket(ITermMaxVault(address(res.vault)), newMarket);
 
         vm.expectRevert(
             abi.encodeWithSelector(
                 IAccessControl.AccessControlUnauthorizedAccount.selector, nonVaultManager, manager.VAULT_ROLE()
             )
         );
-        manager.revokeVaultPendingGuardian(ITermMaxVault(address(vault)));
+        manager.revokeVaultPendingGuardian(ITermMaxVault(address(res.vault)));
 
         vm.stopPrank();
     }

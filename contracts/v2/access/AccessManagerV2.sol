@@ -3,6 +3,7 @@ pragma solidity ^0.8.27;
 
 import "../../v1/access/AccessManager.sol";
 import {IOracleV2} from "../oracle/IOracleV2.sol";
+import {ITermMaxVaultV2, OrderV2ConfigurationParams, CurveCuts} from "../vault/ITermMaxVaultV2.sol";
 
 /**
  * @title TermMax Access Manager V2
@@ -57,5 +58,25 @@ contract AccessManagerV2 is AccessManager {
      */
     function revokePendingOracle(IOracleV2 aggregator, address asset) external onlyRole(ORACLE_ROLE) {
         aggregator.revokePendingOracle(asset);
+    }
+
+    /**
+     * @notice Revoke a pending minimum APY change for the vault
+     * @param vault The TermMax vault contract to update
+     * @custom:access Requires VAULT_ROLE
+     * @custom:security Allows governance to cancel proposed changes before they take effect
+     */
+    function revokePendingMinApy(ITermMaxVaultV2 vault) external onlyRole(VAULT_ROLE) {
+        vault.revokePendingMinApy();
+    }
+
+    /**
+     * @notice Revoke a pending pool change for the vault
+     * @param vault The TermMax vault contract to update
+     * @custom:access Requires VAULT_ROLE
+     * @custom:security Allows governance to abort pool changes before they take effect
+     */
+    function revokePendingPool(ITermMaxVaultV2 vault) external onlyRole(VAULT_ROLE) {
+        vault.revokePendingPool();
     }
 }
