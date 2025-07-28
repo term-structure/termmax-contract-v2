@@ -175,18 +175,18 @@ contract ForkPrdRollOverToThird is ForkBaseTestV2 {
             // 1-stable 2-variable
             uint256 interestRateMode = 2;
             uint16 referralCode = 0;
-            bytes memory rolloverData = abi.encode(
-                FlashRepayOptions.ROLLOVER_AAVE,
-                abi.encode(borrower, collateral, aave, interestRateMode, referralCode, params, collateralPath)
-            );
+            bytes memory rolloverData =
+                abi.encode(collateral, aave, interestRateMode, referralCode, params, collateralPath);
 
-            router.rolloverGtForV1(gt, gt1, additionalAsset, additionalAmt, rolloverData);
+            router.rolloverGtForV1(
+                gt, FlashRepayOptions.ROLLOVER_AAVE, gt1, additionalAsset, additionalAmt, rolloverData
+            );
         }
 
         vm.stopPrank();
     }
 
-    function testRolloverPtToMorphoForV1() public {
+    function testRolloverPtToMorpho() public {
         _initResourcesWithBlockNumber(22985670); // 2025-07-24
         uint128 debt;
         uint256 collateralAmount;
@@ -235,11 +235,10 @@ contract ForkPrdRollOverToThird is ForkBaseTestV2 {
 
             gt.approve(address(router), gt1);
 
-            bytes memory rolloverData = abi.encode(
-                FlashRepayOptions.ROLLOVER_MORPHO,
-                abi.encode(borrower, collateral, morpho, marketId, authorization, sig, collateralPath)
+            bytes memory rolloverData = abi.encode(collateral, morpho, marketId, authorization, sig, collateralPath);
+            router.rolloverGtForV1(
+                gt, FlashRepayOptions.ROLLOVER_MORPHO, gt1, additionalAsset, additionalAmt, rolloverData
             );
-            router.rolloverGtForV1(gt, gt1, additionalAsset, additionalAmt, rolloverData);
         }
 
         vm.stopPrank();

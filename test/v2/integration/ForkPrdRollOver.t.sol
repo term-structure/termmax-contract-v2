@@ -199,11 +199,12 @@ contract ForkPrdRollover is ForkBaseTestV2 {
                 SwapPath({units: swapUnits2, recipient: address(router), inputAmount: debt, useBalanceOnchain: true});
 
             uint128 maxLtv = 0.9e8;
-            bytes memory rolloverData =
-                abi.encode(FlashRepayOptions.ROLLOVER, abi.encode(borrower, maug_1, maxLtv, collateralPath, debtPaths));
+            bytes memory rolloverData = abi.encode(borrower, maug_1, maxLtv, collateralPath, debtPaths);
             uint256 additionalAmt = additionalAssets;
             IERC20 additionalAsset = IERC20(usdc);
-            uint256 gtId2 = router.rolloverGtForV1(gt, gt1, additionalAsset, additionalAmt, rolloverData);
+            uint256 gtId2 = router.rolloverGtForV1(
+                gt, FlashRepayOptions.ROLLOVER, gt1, additionalAsset, additionalAmt, rolloverData
+            );
             console.log("new gtId:", gtId2);
         }
 
@@ -288,12 +289,13 @@ contract ForkPrdRollover is ForkBaseTestV2 {
             });
 
             uint128 maxLtv = 0.9e8;
-            bytes memory rolloverData =
-                abi.encode(FlashRepayOptions.ROLLOVER, abi.encode(borrower, maug_1, maxLtv, collateralPath, debtPaths));
+            bytes memory rolloverData = abi.encode(borrower, maug_1, maxLtv, collateralPath, debtPaths);
 
             uint256 additionalAmt = additionalCollateral;
             IERC20 additionalAsset = IERC20(pt_susde_jun_31);
-            uint256 gtId2 = router.rolloverGtForV1(gt, gt1, additionalAsset, additionalAmt, rolloverData);
+            uint256 gtId2 = router.rolloverGtForV1(
+                gt, FlashRepayOptions.ROLLOVER, gt1, additionalAsset, additionalAmt, rolloverData
+            );
             console.log("new gtId:", gtId2);
         }
 
@@ -405,12 +407,19 @@ contract ForkPrdRollover is ForkBaseTestV2 {
                 SwapPath({units: swapUnits2, recipient: address(router), inputAmount: debt, useBalanceOnchain: true});
 
             uint128 maxLtv = 0.9e8;
-            bytes memory rolloverData =
-                abi.encode(FlashRepayOptions.ROLLOVER, abi.encode(borrower, maug_1, maxLtv, collateralPath, debtPaths));
+            bytes memory rolloverData = abi.encode(borrower, maug_1, maxLtv, collateralPath, debtPaths);
             uint256 additionalAmt = additionalAssets;
             IERC20 additionalAsset = IERC20(usdc);
-            uint256 gtId2 =
-                router.rolloverGtForV2(gt, gtId1, debt, collateralAmount, additionalAsset, additionalAmt, rolloverData);
+            uint256 gtId2 = router.rolloverGtForV2(
+                gt,
+                FlashRepayOptions.ROLLOVER,
+                gtId1,
+                debt,
+                collateralAmount,
+                additionalAsset,
+                additionalAmt,
+                rolloverData
+            );
 
             (address owner, uint128 currentDebt, bytes memory currentCollateral) = gt.loanInfo(gtId1);
             assertEq(owner, borrower, "borrower should be the same");
@@ -542,12 +551,19 @@ contract ForkPrdRollover is ForkBaseTestV2 {
             });
 
             uint128 maxLtv = 0.9e8;
-            bytes memory rolloverData =
-                abi.encode(FlashRepayOptions.ROLLOVER, abi.encode(borrower, maug_1, maxLtv, collateralPath, debtPaths));
+            bytes memory rolloverData = abi.encode(borrower, maug_1, maxLtv, collateralPath, debtPaths);
             uint256 additionalAmt = additionalCollateral;
             IERC20 additionalAsset = IERC20(pt_susde_jun_31);
-            uint256 gtId2 =
-                router.rolloverGtForV2(gt, gtId1, debt, collateralAmount, additionalAsset, additionalAmt, rolloverData);
+            uint256 gtId2 = router.rolloverGtForV2(
+                gt,
+                FlashRepayOptions.ROLLOVER,
+                gtId1,
+                debt,
+                collateralAmount,
+                additionalAsset,
+                additionalAmt,
+                rolloverData
+            );
             (address owner, uint128 currentDebt, bytes memory currentCollateral) = gt.loanInfo(gtId1);
             assertEq(owner, borrower, "borrower should be the same");
             assertEq(currentDebt + debt, oldDebt, "debt should be the same");

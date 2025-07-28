@@ -334,7 +334,7 @@ contract TermMaxRouterV2 is
         }
         gtToken.safeTransferFrom(msg.sender, address(this), gtId, "");
         bytes memory callbackData = abi.encode(swapPaths);
-        callbackData = abi.encode(FlashRepayOptions.REPAY, callbackData);
+        callbackData = abi.encode(FlashRepayOptions.REPAY, msg.sender, callbackData);
         bool repayAll = IGearingTokenV2(address(gtToken)).flashRepay(
             gtId, repayAmt, byDebtToken, abi.encode(removedCollateral), callbackData
         );
@@ -350,16 +350,18 @@ contract TermMaxRouterV2 is
 
     function rolloverGtForV1(
         IGearingToken gtToken,
+        FlashRepayOptions option,
         uint256 gtId,
         IERC20 additionalAsset,
         uint256 additionalAmt,
         bytes memory rolloverData
     ) external whenNotPaused noCallbackReentrant returns (uint256 newGtId) {
-        return _rolloverGt(true, gtToken, gtId, 0, 0, additionalAsset, additionalAmt, rolloverData);
+        return _rolloverGt(true, gtToken, option, gtId, 0, 0, additionalAsset, additionalAmt, rolloverData);
     }
 
     function rolloverGtForV2(
         IGearingToken gtToken,
+        FlashRepayOptions option,
         uint256 gtId,
         uint256 repayAmt,
         uint256 removedCollateral,
@@ -367,13 +369,15 @@ contract TermMaxRouterV2 is
         uint256 additionalAmt,
         bytes memory rolloverData
     ) external whenNotPaused noCallbackReentrant returns (uint256 newGtId) {
-        return
-            _rolloverGt(false, gtToken, gtId, repayAmt, removedCollateral, additionalAsset, additionalAmt, rolloverData);
+        return _rolloverGt(
+            false, gtToken, option, gtId, repayAmt, removedCollateral, additionalAsset, additionalAmt, rolloverData
+        );
     }
 
     function _rolloverGt(
         bool isV1,
         IGearingToken gtToken,
+        FlashRepayOptions option,
         uint256 gtId,
         uint256 repayAmt,
         uint256 removedCollateral,
@@ -392,6 +396,7 @@ contract TermMaxRouterV2 is
             additionalAsset.safeTransferFrom(msg.sender, address(this), additionalAmt);
         }
         gtToken.safeTransferFrom(msg.sender, address(this), gtId, "");
+        rolloverData = abi.encode(option, msg.sender, rolloverData);
         if (isV1) {
             gtToken.flashRepay(gtId, true, rolloverData);
         } else if (
@@ -451,15 +456,16 @@ contract TermMaxRouterV2 is
         bytes memory removedCollateralData,
         bytes memory callbackData
     ) external override onlyCallbackAddress {
-        (FlashRepayOptions option, bytes memory data) = abi.decode(callbackData, (FlashRepayOptions, bytes));
+        (FlashRepayOptions option, address caller, bytes memory data) =
+            abi.decode(callbackData, (FlashRepayOptions, address, bytes));
         if (option == FlashRepayOptions.REPAY) {
             _flashRepay(data);
         } else if (option == FlashRepayOptions.ROLLOVER) {
             _rollover(repayToken, repayAmt, removedCollateralData, data);
         } else if (option == FlashRepayOptions.ROLLOVER_AAVE) {
-            _rolloverToAave(repayToken, repayAmt, removedCollateralData, data);
+            _rolloverToAave(caller, repayToken, repayAmt, removedCollateralData, data);
         } else if (option == FlashRepayOptions.ROLLOVER_MORPHO) {
-            _rolloverToMorpho(repayToken, repayAmt, removedCollateralData, data);
+            _rolloverToMorpho(caller, repayToken, repayAmt, removedCollateralData, data);
         }
         repayToken.safeIncreaseAllowance(msg.sender, repayAmt);
     }
@@ -526,9 +532,14 @@ contract TermMaxRouterV2 is
         }
     }
 
-    function _rolloverToAave(IERC20 debtToken, uint256 repayAmt, bytes memory, bytes memory callbackData) internal {
+    function _rolloverToAave(
+        address caller,
+        IERC20 debtToken,
+        uint256 repayAmt,
+        bytes memory,
+        bytes memory callbackData
+    ) internal {
         (
-            address recipient,
             IERC20 collateral,
             IAaveV3Pool aave,
             uint256 interestRateMode,
@@ -536,8 +547,7 @@ contract TermMaxRouterV2 is
             ICreditDelegationToken.AaveDelegationParams memory delegationParams,
             SwapPath memory collateralPath
         ) = abi.decode(
-            callbackData,
-            (address, IERC20, IAaveV3Pool, uint256, uint16, ICreditDelegationToken.AaveDelegationParams, SwapPath)
+            callbackData, (IERC20, IAaveV3Pool, uint256, uint16, ICreditDelegationToken.AaveDelegationParams, SwapPath)
         );
         if (delegationParams.delegator != address(0)) {
             // delegate with sig
@@ -556,26 +566,31 @@ contract TermMaxRouterV2 is
             uint256 newCollateralAmt = _doSwap(collateral.balanceOf(address(this)), collateralPath.units);
             IERC20 newCollateral = IERC20(collateralPath.units[collateralPath.units.length - 1].tokenOut);
             newCollateral.safeIncreaseAllowance(address(aave), newCollateralAmt);
-            aave.supply(address(newCollateral), newCollateralAmt, recipient, referralCode);
+            aave.supply(address(newCollateral), newCollateralAmt, caller, referralCode);
         } else {
             uint256 collateralAmt = collateral.balanceOf(address(this));
             collateral.safeIncreaseAllowance(address(aave), collateralAmt);
-            aave.supply(address(collateral), collateralAmt, recipient, referralCode);
+            aave.supply(address(collateral), collateralAmt, caller, referralCode);
         }
         repayAmt = repayAmt - debtToken.balanceOf(address(this));
-        aave.borrow(address(debtToken), repayAmt, interestRateMode, referralCode, recipient);
+        aave.borrow(address(debtToken), repayAmt, interestRateMode, referralCode, caller);
     }
 
-    function _rolloverToMorpho(IERC20 debtToken, uint256 repayAmt, bytes memory, bytes memory callbackData) internal {
+    function _rolloverToMorpho(
+        address caller,
+        IERC20 debtToken,
+        uint256 repayAmt,
+        bytes memory,
+        bytes memory callbackData
+    ) internal {
         (
-            address recipient,
             IERC20 collateral,
             IMorpho morpho,
             Id marketId,
             Authorization memory auth,
             Signature memory sig,
             SwapPath memory collateralPath
-        ) = abi.decode(callbackData, (address, IERC20, IMorpho, Id, Authorization, Signature, SwapPath));
+        ) = abi.decode(callbackData, (IERC20, IMorpho, Id, Authorization, Signature, SwapPath));
         MarketParams memory marketParams = morpho.idToMarketParams(marketId);
         if (auth.authorized != address(0)) {
             // auth with sig
@@ -586,15 +601,15 @@ contract TermMaxRouterV2 is
             uint256 newCollateralAmt = _doSwap(collateral.balanceOf(address(this)), collateralPath.units);
             IERC20 newCollateral = IERC20(collateralPath.units[collateralPath.units.length - 1].tokenOut);
             newCollateral.safeIncreaseAllowance(address(morpho), newCollateralAmt);
-            morpho.supplyCollateral(marketParams, newCollateralAmt, recipient, "");
+            morpho.supplyCollateral(marketParams, newCollateralAmt, caller, "");
         } else {
             uint256 collateralAmt = collateral.balanceOf(address(this));
             collateral.safeIncreaseAllowance(address(morpho), collateralAmt);
-            morpho.supplyCollateral(marketParams, collateralAmt, recipient, "");
+            morpho.supplyCollateral(marketParams, collateralAmt, caller, "");
         }
         repayAmt = repayAmt - debtToken.balanceOf(address(this));
         /// @dev Borrow the repay amount from morpho, share amount is 0 and receiver is the router itself
-        morpho.borrow(marketParams, repayAmt, 0, recipient, address(this));
+        morpho.borrow(marketParams, repayAmt, 0, caller, address(this));
     }
 
     function _doSwap(uint256 inputAmt, SwapUnit[] memory units) internal returns (uint256 outputAmt) {
