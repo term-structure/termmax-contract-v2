@@ -3,6 +3,7 @@ pragma solidity ^0.8.27;
 
 import {ERC721EnumerableUpgradeable} from
     "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
+import {EIP712Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
@@ -19,6 +20,7 @@ import {IGearingTokenV2} from "./IGearingTokenV2.sol";
 import {GearingTokenEventsV2} from "../events/GearingTokenEventsV2.sol";
 import {GearingTokenErrorsV2} from "../errors/GearingTokenErrorsV2.sol";
 import {VersionV2} from "../VersionV2.sol";
+import {DelegateAble} from "../lib/DelegateAble.sol";
 
 /**
  * @title TermMax Gearing Token
@@ -27,12 +29,14 @@ import {VersionV2} from "../VersionV2.sol";
 abstract contract AbstractGearingTokenV2 is
     OwnableUpgradeable,
     ERC721EnumerableUpgradeable,
+    EIP712Upgradeable,
     ReentrancyGuardUpgradeable,
     IGearingToken,
     IGearingTokenV2,
     GearingTokenErrors,
     GearingTokenEvents,
-    VersionV2
+    VersionV2,
+    DelegateAble
 {
     using SafeCast for uint256;
     using SafeCast for int256;
@@ -73,6 +77,18 @@ abstract contract AbstractGearingTokenV2 is
     /// @notice Mapping relationship between Gearing Token id and loan
     mapping(uint256 => LoanInfo) internal loanMapping;
 
+    modifier isOwnerOrDelegate(uint256 id, address msgSender) {
+        _checkIsOwnerOrDelegate(id, msgSender);
+        _;
+    }
+
+    function _checkIsOwnerOrDelegate(uint256 id, address msgSender) internal view {
+        address owner = ownerOf(id);
+        if (msgSender != owner && !isDelegate(owner, msgSender)) {
+            revert GearingTokenErrors.AuthorizationFailed(id, msgSender);
+        }
+    }
+
     /**
      * @inheritdoc IGearingToken
      */
@@ -98,6 +114,7 @@ abstract contract AbstractGearingTokenV2 is
             revert GearingTokenErrorsV2.InvalidLiquidationLtv();
         }
         __ERC721_init_unchained(name, symbol);
+        __EIP712_init_unchained(name, getVersion());
         __Ownable_init_unchained(msg.sender);
         _config = config_;
         debtDenominator = 10 ** _config.debtToken.decimals();
@@ -180,10 +197,14 @@ abstract contract AbstractGearingTokenV2 is
     /**
      * @inheritdoc IGearingToken
      */
-    function augmentDebt(address caller, uint256 id, uint256 ftAmt) external virtual override nonReentrant onlyOwner {
-        if (caller != ownerOf(id) && caller != getApproved(id)) {
-            revert AuthorizationFailed(id, caller);
-        }
+    function augmentDebt(address caller, uint256 id, uint256 ftAmt)
+        external
+        virtual
+        override
+        nonReentrant
+        onlyOwner
+        isOwnerOrDelegate(id, caller)
+    {
         GtConfig memory config = _config;
         if (config.maturity <= block.timestamp) {
             revert GearingTokenErrorsV2.GtIsExpired();
@@ -239,10 +260,7 @@ abstract contract AbstractGearingTokenV2 is
 
         for (uint256 i = 0; i < ids.length; ++i) {
             uint256 id = ids[i];
-            address owner = ownerOf(id);
-            if (msg.sender != owner) {
-                revert AuthorizationFailed(id, msg.sender);
-            }
+            _checkIsOwnerOrDelegate(id, msg.sender);
             LoanInfo memory loan = loanMapping[id];
             if (i != 0) {
                 firstLoan.debtAmt += loanMapping[id].debtAmt;
@@ -285,6 +303,7 @@ abstract contract AbstractGearingTokenV2 is
         virtual
         override
         nonReentrant
+        isOwnerOrDelegate(id, msg.sender)
     {
         LoanInfo memory loan = loanMapping[id];
         _flashRepay(id, loan.debtAmt, byDebtToken, loan.collateralData, callbackData);
@@ -296,7 +315,7 @@ abstract contract AbstractGearingTokenV2 is
         bool byDebtToken,
         bytes memory removedCollateral,
         bytes calldata callbackData
-    ) external virtual override nonReentrant returns (bool) {
+    ) external virtual override nonReentrant isOwnerOrDelegate(id, msg.sender) returns (bool) {
         return _flashRepay(id, repayAmt, byDebtToken, removedCollateral, callbackData);
     }
 
@@ -310,9 +329,6 @@ abstract contract AbstractGearingTokenV2 is
         GtConfig memory config = _config;
         if (config.maturity <= block.timestamp) {
             revert GearingTokenErrorsV2.GtIsExpired();
-        }
-        if (ownerOf(id) != msg.sender) {
-            revert CallerIsNotTheOwner(id);
         }
         // All collteral will be removed in _repay function if repayAll is true
         (LoanInfo memory loan, bool repayAll, uint128 finalRepayAmt) = _repay(id, repayAmt);
@@ -361,11 +377,13 @@ abstract contract AbstractGearingTokenV2 is
     /**
      * @inheritdoc IGearingToken
      */
-    function removeCollateral(uint256 id, bytes memory collateralData) external virtual override nonReentrant {
-        if (msg.sender != ownerOf(id)) {
-            revert CallerIsNotTheOwner(id);
-        }
-
+    function removeCollateral(uint256 id, bytes memory collateralData)
+        external
+        virtual
+        override
+        nonReentrant
+        isOwnerOrDelegate(id, msg.sender)
+    {
         GtConfig memory config = _config;
         if (config.maturity <= block.timestamp) {
             revert GearingTokenErrorsV2.GtIsExpired();
@@ -616,4 +634,12 @@ abstract contract AbstractGearingTokenV2 is
 
     /// @notice Return the encoded price of collateral in USD
     function _getCollateralPriceData(GtConfig memory config) internal view virtual returns (bytes memory priceData);
+
+    /**
+     * @notice Get the domain separator for the token
+     * @return The domain separator of the token at current chain
+     */
+    function DOMAIN_SEPARATOR() public view virtual override returns (bytes32) {
+        return _domainSeparatorV4();
+    }
 }

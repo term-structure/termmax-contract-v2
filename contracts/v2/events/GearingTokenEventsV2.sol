@@ -45,4 +45,12 @@ interface GearingTokenEventsV2 {
         bool repayAll,
         bytes removedCollateral
     );
+
+    /**
+     * @notice Emitted when the delegate of a Gearing Token is changed
+     * @param delegator The address of the delegator
+     * @param delegatee The address of the delegatee
+     * @param isDelegate True if the delegatee is now a delegate, false if they are removed as a delegate
+     */
+    event DelegateChanged(address indexed delegator, address indexed delegatee, bool isDelegate);
 }

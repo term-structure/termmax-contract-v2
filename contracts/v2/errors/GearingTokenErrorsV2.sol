@@ -8,4 +8,6 @@ interface GearingTokenErrorsV2 {
     error GtIdArrayIsEmpty();
     /// @notice Error for Gearing Token is expired
     error GtIsExpired();
+    /// @notice Error for self-delegation
+    error CannotDelegateToSelf();
 }
