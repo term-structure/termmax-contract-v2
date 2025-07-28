@@ -2,10 +2,10 @@
 pragma solidity ^0.8.27;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {IAaveV3Minimal} from "../extensions/aave/IAaveV3Minimal.sol";
+import {IAaveV3Pool} from "../extensions/aave/IAaveV3Pool.sol";
 import {IMintableERC20, IERC20} from "../../v1/tokens/IMintableERC20.sol";
 
-contract MockAave is ERC20, IAaveV3Minimal {
+contract MockAave is ERC20, IAaveV3Pool {
     IERC20 public immutable underlying;
 
     constructor(address underlying_) ERC20("MockAave", "mAAVE") {
@@ -54,5 +54,12 @@ contract MockAave is ERC20, IAaveV3Minimal {
     function simulateInterestAccrual(address to, uint256 amount) external {
         // Simulate interest accrual by minting aTokens
         _mint(to, amount);
+    }
+
+    function borrow(address asset, uint256 amount, uint256 interestRateMode, uint16 referralCode, address onBehalfOf)
+        external
+        override
+    {
+        revert("MockAave: Borrow not implemented");
     }
 }

@@ -7,6 +7,17 @@ pragma solidity ^0.8.0;
  * @notice Defines the basic interface for a token supporting credit delegation.
  */
 interface ICreditDelegationToken {
+    struct AaveDelegationParams {
+        ICreditDelegationToken aaveDebtToken;
+        address delegator;
+        address delegatee;
+        uint256 value;
+        uint256 deadline;
+        uint8 v;
+        bytes32 r;
+        bytes32 s;
+    }
+
     /**
      * @dev Emitted on `approveDelegation` and `borrowAllowance
      * @param fromUser The address of the delegator
@@ -54,4 +65,18 @@ interface ICreditDelegationToken {
         bytes32 r,
         bytes32 s
     ) external;
+
+    /**
+     * @notice Get the domain separator for the token
+     * @dev Return cached value if chainId matches cache, otherwise recomputes separator
+     * @return The domain separator of the token at current chain
+     */
+    function DOMAIN_SEPARATOR() external view returns (bytes32);
+
+    /**
+     * @notice Returns the nonce value for address specified as parameter
+     * @param owner The address for which the nonce is being returned
+     * @return The nonce value for the input address`
+     */
+    function nonces(address owner) external view returns (uint256);
 }

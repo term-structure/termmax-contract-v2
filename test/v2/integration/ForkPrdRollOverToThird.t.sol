@@ -32,8 +32,7 @@ import {
 } from "test/v2/mainnet-fork/ForkBaseTestV2.sol";
 import {TermMaxSwapData, TermMaxSwapAdapter} from "contracts/v2/router/swapAdapters/TermMaxSwapAdapter.sol";
 import {console} from "forge-std/console.sol";
-import {IAaveV3PoolMinimal} from "contracts/v2/extensions/aave/IAaveV3PoolMinimal.sol";
-import {IAaveV3Minimal} from "contracts/v2/extensions/aave/IAaveV3Minimal.sol";
+import {IAaveV3Pool} from "contracts/v2/extensions/aave/IAaveV3Pool.sol";
 import {ICreditDelegationToken} from "contracts/v2/extensions/aave/ICreditDelegationToken.sol";
 import {IMorpho, Id, MarketParams, Authorization, Signature} from "contracts/v2/extensions/morpho/IMorpho.sol";
 
@@ -64,7 +63,7 @@ contract ForkPrdRollOverToThird is ForkBaseTestV2 {
     address tmxAdapter;
     address vaultAdapter;
     TermMaxRouterV2 router;
-    IAaveV3PoolMinimal aave = IAaveV3PoolMinimal(0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2);
+    IAaveV3Pool aave = IAaveV3Pool(0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2);
     ICreditDelegationToken aaveDebtToken;
 
     IMorpho morpho = IMorpho(0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb);
@@ -111,7 +110,7 @@ contract ForkPrdRollOverToThird is ForkBaseTestV2 {
         router.setAdapterWhitelist(vaultAdapter, true);
         vm.stopPrank();
 
-        IAaveV3Minimal.ReserveData memory rd = IAaveV3Minimal(address(aave)).getReserveData(usdc);
+        IAaveV3Pool.ReserveData memory rd = IAaveV3Pool(address(aave)).getReserveData(usdc);
         aaveDebtToken = ICreditDelegationToken(rd.variableDebtTokenAddress);
     }
 
@@ -120,7 +119,8 @@ contract ForkPrdRollOverToThird is ForkBaseTestV2 {
         uint128 debt;
         uint256 collateralAmount;
         uint256 gt1;
-        address borrower = vm.randomAddress();
+        uint256 privateKey = 0x1234567890123456789012345678901234567890123456789012345678901234; // Replace with actual private key
+        address borrower = vm.addr(privateKey);
         vm.startPrank(borrower);
         {
             (,, IGearingToken gt,,) = mmay_30.tokens();
@@ -132,6 +132,21 @@ contract ForkPrdRollOverToThird is ForkBaseTestV2 {
             (gt1,) = mmay_30.issueFt(borrower, debt, abi.encode(collateralAmount));
             console.log("collateralAmount:", collateralAmount);
             console.log("debt:", debt);
+        }
+        ICreditDelegationToken.AaveDelegationParams memory params = ICreditDelegationToken.AaveDelegationParams({
+            aaveDebtToken: aaveDebtToken,
+            delegator: borrower,
+            delegatee: address(router),
+            value: debt,
+            deadline: type(uint256).max,
+            v: 0,
+            r: bytes32(0),
+            s: bytes32(0)
+        });
+        {
+            bytes32 digest =
+                AaveSigUtils.getTypedDataHash(aaveDebtToken.DOMAIN_SEPARATOR(), aaveDebtToken.nonces(borrower), params);
+            (params.v, params.r, params.s) = vm.sign(privateKey, digest);
         }
 
         vm.warp(may_30 - 0.5 days);
@@ -155,14 +170,14 @@ contract ForkPrdRollOverToThird is ForkBaseTestV2 {
 
             deal(address(additionalAsset), borrower, additionalAmt);
             additionalAsset.approve(address(router), additionalAmt);
-            aaveDebtToken.approveDelegation(address(router), debt - additionalAmt);
+            // aaveDebtToken.approveDelegation(address(router), debt - additionalAmt);
             gt.approve(address(router), gt1);
             // 1-stable 2-variable
             uint256 interestRateMode = 2;
             uint16 referralCode = 0;
             bytes memory rolloverData = abi.encode(
                 FlashRepayOptions.ROLLOVER_AAVE,
-                abi.encode(borrower, collateral, aave, interestRateMode, referralCode, collateralPath)
+                abi.encode(borrower, collateral, aave, interestRateMode, referralCode, params, collateralPath)
             );
 
             router.rolloverGtForV1(gt, gt1, additionalAsset, additionalAmt, rolloverData);
@@ -176,7 +191,8 @@ contract ForkPrdRollOverToThird is ForkBaseTestV2 {
         uint128 debt;
         uint256 collateralAmount;
         uint256 gt1;
-        address borrower = vm.randomAddress();
+        uint256 privateKey = 0x1234567890123456789012345678901234567890123456789012345678901234; // Replace with actual private key
+        address borrower = vm.addr(privateKey);
         vm.startPrank(borrower);
         {
             (,, IGearingToken gt,,) = mjul_31.tokens();
@@ -189,6 +205,20 @@ contract ForkPrdRollOverToThird is ForkBaseTestV2 {
             console.log("collateralAmount:", collateralAmount);
             console.log("debt:", debt);
         }
+        Authorization memory authorization;
+        Signature memory sig;
+        {
+            authorization = Authorization({
+                authorizer: borrower,
+                authorized: address(router),
+                isAuthorized: true,
+                nonce: morpho.nonce(borrower),
+                deadline: type(uint256).max
+            });
+
+            bytes32 digest = MorphoSigUtils.getTypedDataHash(morpho.DOMAIN_SEPARATOR(), authorization);
+            (sig.v, sig.r, sig.s) = vm.sign(privateKey, digest);
+        }
         // roll gt
         {
             Id marketId = morpho_market_id;
@@ -198,21 +228,71 @@ contract ForkPrdRollOverToThird is ForkBaseTestV2 {
             uint256 additionalAmt = debt / 3;
             IERC20 additionalAsset = IERC20(usdc);
 
-            (IERC20 ft,, IGearingToken gt, address collateral,) = mjul_31.tokens();
+            (,, IGearingToken gt, address collateral,) = mjul_31.tokens();
 
             deal(usdc, borrower, additionalAmt);
             IERC20(usdc).approve(address(router), additionalAmt);
-            // Approve delegation for Morphos
-            morpho.setAuthorization(address(router), true);
 
             gt.approve(address(router), gt1);
 
             bytes memory rolloverData = abi.encode(
-                FlashRepayOptions.ROLLOVER_MORPHO, abi.encode(borrower, collateral, morpho, marketId, collateralPath)
+                FlashRepayOptions.ROLLOVER_MORPHO,
+                abi.encode(borrower, collateral, morpho, marketId, authorization, sig, collateralPath)
             );
             router.rolloverGtForV1(gt, gt1, additionalAsset, additionalAmt, rolloverData);
         }
 
         vm.stopPrank();
+    }
+}
+
+library MorphoSigUtils {
+    bytes32 constant AUTHORIZATION_TYPEHASH = keccak256(
+        "Authorization(address authorizer,address authorized,bool isAuthorized,uint256 nonce,uint256 deadline)"
+    );
+
+    /// @dev Computes the hash of the EIP-712 encoded data.
+    function getTypedDataHash(bytes32 domainSeparator, Authorization memory authorization)
+        public
+        pure
+        returns (bytes32)
+    {
+        return keccak256(bytes.concat("\x19\x01", domainSeparator, hashStruct(authorization)));
+    }
+
+    function hashStruct(Authorization memory authorization) internal pure returns (bytes32) {
+        return keccak256(
+            abi.encode(
+                AUTHORIZATION_TYPEHASH,
+                authorization.authorizer,
+                authorization.authorized,
+                authorization.isAuthorized,
+                authorization.nonce,
+                authorization.deadline
+            )
+        );
+    }
+}
+
+library AaveSigUtils {
+    bytes32 public constant DELEGATION_WITH_SIG_TYPEHASH =
+        keccak256("DelegationWithSig(address delegatee,uint256 value,uint256 nonce,uint256 deadline)");
+
+    /// @dev Computes the hash of the EIP-712 encoded data.
+    function getTypedDataHash(
+        bytes32 domainSeparator,
+        uint256 nonce,
+        ICreditDelegationToken.AaveDelegationParams memory params
+    ) public pure returns (bytes32) {
+        return keccak256(bytes.concat("\x19\x01", domainSeparator, hashStruct(nonce, params)));
+    }
+
+    function hashStruct(uint256 nonce, ICreditDelegationToken.AaveDelegationParams memory params)
+        internal
+        pure
+        returns (bytes32)
+    {
+        return
+            keccak256(abi.encode(DELEGATION_WITH_SIG_TYPEHASH, params.delegatee, params.value, nonce, params.deadline));
     }
 }

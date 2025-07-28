@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-interface IAaveV3Minimal {
+interface IAaveV3Pool {
     struct ReserveData {
         //stores the reserve configuration
         ReserveConfigurationMap configuration;
@@ -91,4 +91,7 @@ interface IAaveV3Minimal {
      * @return The final amount withdrawn
      */
     function withdraw(address asset, uint256 amount, address to) external returns (uint256);
+
+    function borrow(address asset, uint256 amount, uint256 interestRateMode, uint16 referralCode, address onBehalfOf)
+        external;
 }

@@ -10,7 +10,7 @@ import {
 } from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {IERC20Metadata, IERC20} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
-import {IAaveV3Minimal} from "../extensions/aave/IAaveV3Minimal.sol";
+import {IAaveV3Pool} from "../extensions/aave/IAaveV3Pool.sol";
 import {TransferUtilsV2} from "../lib/TransferUtilsV2.sol";
 import {StakingBuffer} from "./StakingBuffer.sol";
 import {ERC4626TokenEvents} from "../events/ERC4626TokenEvents.sol";
@@ -24,7 +24,7 @@ contract StableERC4626ForAave is
 {
     using TransferUtilsV2 for IERC20;
 
-    IAaveV3Minimal public immutable aavePool;
+    IAaveV3Pool public immutable aavePool;
     uint16 public immutable referralCode;
 
     IERC20 public aToken;
@@ -33,7 +33,7 @@ contract StableERC4626ForAave is
     uint256 internal withdawedIncomeAssets;
 
     constructor(address aavePool_, uint16 referralCode_) {
-        aavePool = IAaveV3Minimal(aavePool_);
+        aavePool = IAaveV3Pool(aavePool_);
         referralCode = referralCode_;
         _disableInitializers();
     }

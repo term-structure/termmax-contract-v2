@@ -1,15 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ITermMaxMarket, IGearingToken} from "../../v1/ITermMaxMarket.sol";
 import {ITermMaxOrder} from "../../v1/ITermMaxOrder.sol";
 import {SwapUnit} from "../../v1/router/ISwapAdapter.sol";
-import {OrderConfig} from "../../v1/storage/TermMaxStorage.sol";
-import {ITermMaxMarketV2} from "../ITermMaxMarketV2.sol";
-import {IAaveV3PoolMinimal} from "../extensions/aave/IAaveV3PoolMinimal.sol";
-import {OrderInitialParams} from "../ITermMaxOrderV2.sol";
 
 /// @title TermMaxSwapPath
 /// @notice Represents a path for swapping tokens in the TermMax protocol and third-party adapters

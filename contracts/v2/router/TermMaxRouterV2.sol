@@ -19,18 +19,17 @@ import {RouterEvents} from "../../v1/events/RouterEvents.sol";
 import {TransferUtilsV2} from "../lib/TransferUtilsV2.sol";
 import {IFlashLoanReceiver} from "../../v1/IFlashLoanReceiver.sol";
 import {IFlashRepayer} from "../../v1/tokens/IFlashRepayer.sol";
-import {ITermMaxRouterV2, SwapPath, IERC4626, FlashLoanType, FlashRepayOptions} from "./ITermMaxRouterV2.sol";
+import {ITermMaxRouterV2, SwapPath, FlashLoanType, FlashRepayOptions} from "./ITermMaxRouterV2.sol";
 import {IGearingToken} from "../../v1/tokens/IGearingToken.sol";
 import {IGearingTokenV2} from "../tokens/IGearingTokenV2.sol";
 import {Constants} from "../../v1/lib/Constants.sol";
 import {IERC20SwapAdapter} from "./IERC20SwapAdapter.sol";
-import {IAaveV3PoolMinimal} from "../extensions/aave/IAaveV3PoolMinimal.sol";
-import {IMorpho, MarketParams, Id} from "../extensions/morpho/IMorpho.sol";
+import {IAaveV3Pool} from "../extensions/aave/IAaveV3Pool.sol";
+import {ICreditDelegationToken} from "../extensions/aave/ICreditDelegationToken.sol";
+import {IMorpho, Id, MarketParams, Authorization, Signature} from "../extensions/morpho/IMorpho.sol";
 import {RouterErrorsV2} from "../errors/RouterErrorsV2.sol";
 import {ArrayUtilsV2} from "../lib/ArrayUtilsV2.sol";
 import {VersionV2} from "../VersionV2.sol";
-import {CurveCuts, OrderConfig} from "../../v1/storage/TermMaxStorage.sol";
-import {OrderInitialParams} from "../ITermMaxOrderV2.sol";
 
 /**
  * @title TermMax Router V2
@@ -531,30 +530,57 @@ contract TermMaxRouterV2 is
         (
             address recipient,
             IERC20 collateral,
-            IAaveV3PoolMinimal aave,
+            IAaveV3Pool aave,
             uint256 interestRateMode,
             uint16 referralCode,
+            ICreditDelegationToken.AaveDelegationParams memory delegationParams,
             SwapPath memory collateralPath
-        ) = abi.decode(callbackData, (address, IERC20, IAaveV3PoolMinimal, uint256, uint16, SwapPath));
+        ) = abi.decode(
+            callbackData,
+            (address, IERC20, IAaveV3Pool, uint256, uint16, ICreditDelegationToken.AaveDelegationParams, SwapPath)
+        );
+        if (delegationParams.delegator != address(0)) {
+            // delegate with sig
+            delegationParams.aaveDebtToken.delegationWithSig(
+                delegationParams.delegator,
+                delegationParams.delegatee,
+                delegationParams.value,
+                delegationParams.deadline,
+                delegationParams.v,
+                delegationParams.r,
+                delegationParams.s
+            );
+        }
         if (collateralPath.units.length > 0) {
             // do swap to get the new collateral
             uint256 newCollateralAmt = _doSwap(collateral.balanceOf(address(this)), collateralPath.units);
             IERC20 newCollateral = IERC20(collateralPath.units[collateralPath.units.length - 1].tokenOut);
             newCollateral.safeIncreaseAllowance(address(aave), newCollateralAmt);
-            aave.deposit(address(newCollateral), newCollateralAmt, recipient, referralCode);
+            aave.supply(address(newCollateral), newCollateralAmt, recipient, referralCode);
         } else {
             uint256 collateralAmt = collateral.balanceOf(address(this));
             collateral.safeIncreaseAllowance(address(aave), collateralAmt);
-            aave.deposit(address(collateral), collateralAmt, recipient, referralCode);
+            aave.supply(address(collateral), collateralAmt, recipient, referralCode);
         }
         repayAmt = repayAmt - debtToken.balanceOf(address(this));
         aave.borrow(address(debtToken), repayAmt, interestRateMode, referralCode, recipient);
     }
 
     function _rolloverToMorpho(IERC20 debtToken, uint256 repayAmt, bytes memory, bytes memory callbackData) internal {
-        (address recipient, IERC20 collateral, IMorpho morpho, Id marketId, SwapPath memory collateralPath) =
-            abi.decode(callbackData, (address, IERC20, IMorpho, Id, SwapPath));
+        (
+            address recipient,
+            IERC20 collateral,
+            IMorpho morpho,
+            Id marketId,
+            Authorization memory auth,
+            Signature memory sig,
+            SwapPath memory collateralPath
+        ) = abi.decode(callbackData, (address, IERC20, IMorpho, Id, Authorization, Signature, SwapPath));
         MarketParams memory marketParams = morpho.idToMarketParams(marketId);
+        if (auth.authorized != address(0)) {
+            // auth with sig
+            morpho.setAuthorizationWithSig(auth, sig);
+        }
         if (collateralPath.units.length > 0) {
             // do swap to get the new collateral
             uint256 newCollateralAmt = _doSwap(collateral.balanceOf(address(this)), collateralPath.units);

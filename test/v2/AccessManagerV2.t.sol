@@ -692,11 +692,11 @@ contract AccessManagerTestV2 is Test {
 
         // Test that vault manager with VAULT_ROLE can revoke pending min APY
         vm.startPrank(vaultManager);
-        
+
         // Should emit the revoke event from the vault
         vm.expectEmit(true, false, false, false);
         emit VaultEventsV2.RevokePendingMinApy(address(manager));
-        
+
         manager.revokePendingMinApy(vaultV2);
         vm.stopPrank();
 
@@ -706,7 +706,7 @@ contract AccessManagerTestV2 is Test {
 
         // Test without VAULT_ROLE
         address nonVaultManager = vm.randomAddress();
-        
+
         // Setup another pending change to test unauthorized access
         vm.startPrank(vaultManager);
         vaultV2.submitPendingMinApy(newMinApy);
@@ -744,7 +744,7 @@ contract AccessManagerTestV2 is Test {
 
         TermMaxVaultV2 poolVault = DeployUtils.deployVault(poolParams);
         ITermMaxVaultV2 poolVaultV2 = ITermMaxVaultV2(address(poolVault));
-        
+
         address vaultManager = vm.randomAddress();
         address newPoolAddress = vm.randomAddress(); // Mock pool address
 
@@ -764,11 +764,11 @@ contract AccessManagerTestV2 is Test {
 
         // Test that vault manager with VAULT_ROLE can revoke pending pool
         vm.startPrank(vaultManager);
-        
+
         // Should emit the revoke event from the vault
         vm.expectEmit(true, false, false, false);
         emit VaultEventsV2.RevokePendingPool(address(manager));
-        
+
         manager.revokePendingPool(poolVaultV2);
         vm.stopPrank();
 
@@ -778,7 +778,7 @@ contract AccessManagerTestV2 is Test {
 
         // Test without VAULT_ROLE
         address nonVaultManager = vm.randomAddress();
-        
+
         // Setup another pending change to test unauthorized access
         vm.startPrank(curator);
         poolVaultV2.submitPendingPool(newPoolAddress);
