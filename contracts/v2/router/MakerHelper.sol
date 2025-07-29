@@ -17,6 +17,7 @@ import {IGearingToken} from "../../v1/tokens/IGearingToken.sol";
 import {CurveCuts, OrderConfig} from "../../v1/storage/TermMaxStorage.sol";
 import {OrderInitialParams} from "../ITermMaxOrderV2.sol";
 import {VersionV2} from "../VersionV2.sol";
+import {DelegateAble} from "../lib/DelegateAble.sol";
 
 /**
  * @title MakerHelper
@@ -80,6 +81,8 @@ contract MakerHelper is UUPSUpgradeable, Ownable2StepUpgradeable, IERC721Receive
      * @param ftToDeposit Amount of FT tokens to deposit
      * @param xtToDeposit Amount of XT tokens to deposit
      * @param initialParams Configuration parameters for the order
+     * @param delegateParams Parameters for delegation
+     * @param delegateSignature Signature for delegation
      * @return order The created ITermMaxOrder instance
      * @return gtId The ID of the minted GT token
      */
@@ -89,7 +92,9 @@ contract MakerHelper is UUPSUpgradeable, Ownable2StepUpgradeable, IERC721Receive
         uint256 debtTokenToDeposit,
         uint128 ftToDeposit,
         uint128 xtToDeposit,
-        OrderInitialParams memory initialParams
+        OrderInitialParams memory initialParams,
+        DelegateAble.DelegateParameters memory delegateParams,
+        DelegateAble.Signature memory delegateSignature
     ) external returns (ITermMaxOrder, uint256) {
         (IERC20 ft, IERC20 xt, IGearingToken gt, address collateral, IERC20 debtToken) = market.tokens();
         if (collateralToMintGt > 0) {
@@ -98,6 +103,9 @@ contract MakerHelper is UUPSUpgradeable, Ownable2StepUpgradeable, IERC721Receive
             (initialParams.orderConfig.gtId,) = market.issueFt(initialParams.maker, 0, abi.encode(collateralToMintGt));
         }
         ITermMaxOrder order = ITermMaxMarketV2(address(market)).createOrder(initialParams);
+        if (delegateParams.delegator != address(0)) {
+            DelegateAble(address(gt)).setDelegateWithSignature(delegateParams, delegateSignature);
+        }
 
         if (debtTokenToDeposit > 0) {
             debtToken.safeTransferFrom(msg.sender, address(this), debtTokenToDeposit);

@@ -60,6 +60,7 @@ import {MockSwapAdapterV2} from "contracts/v2/test/MockSwapAdapterV2.sol";
 import {ITermMaxOrder} from "contracts/v1/ITermMaxOrder.sol";
 import {TermMaxSwapData, TermMaxSwapAdapter} from "contracts/v2/router/swapAdapters/TermMaxSwapAdapter.sol";
 import {TermMaxOrderV2, OrderInitialParams} from "contracts/v2/TermMaxOrderV2.sol";
+import {DelegateAble} from "contracts/v2/lib/DelegateAble.sol";
 
 contract RouterTestV2 is Test {
     using JSONLoader for *;
@@ -665,6 +666,7 @@ contract RouterTestV2 is Test {
 
         res.xt.approve(address(res.router), borrowAmt);
         res.gt.approve(address(res.router), gtId);
+        DelegateAble(address(res.gt)).setDelegate(address(res.router), true);
 
         uint256 mintGtFeeRatio = res.market.mintGtFeeRatio();
         uint128 previewDebtAmt =
@@ -719,7 +721,6 @@ contract RouterTestV2 is Test {
 
         SwapPath[] memory swapPaths = new SwapPath[](1);
         swapPaths[0] = SwapPath({units: units, recipient: address(res.router), inputAmount: 0, useBalanceOnchain: true});
-
         res.gt.approve(address(res.router), gtId);
         if (isV1) {
             res.router.flashRepayFromCollForV1(sender, res.market, gtId, byDebtToken, 0, swapPaths);
@@ -776,6 +777,7 @@ contract RouterTestV2 is Test {
         if (isV1) {
             res.router.flashRepayFromCollForV1(sender, res.market, gtId, byDebtToken, 0, swapPaths);
         } else {
+            // DelegateAble(address(res.gt)).setDelegate(address(res.router), true);
             res.router.flashRepayFromCollForV2(
                 sender, res.market, gtId, debtAmt, byDebtToken, 0, abi.decode(collateralData, (uint256)), swapPaths
             );

@@ -31,8 +31,6 @@ abstract contract DelegateAble {
 
     /// @notice Error thrown when a delegatee tries to delegate to themselves
     error CannotDelegateToSelf();
-    /// @notice Error thrown when a caller is not the delegatee
-    error CallerIsNotDelegatee(address delegatee, address caller);
     /// @notice Error thrown when a signature is invalid
     error InvalidSignature();
     /// @notice Event emitted when a delegate relationship is established or removed
@@ -73,9 +71,6 @@ abstract contract DelegateAble {
     }
 
     function setDelegateWithSignature(DelegateParameters memory params, Signature memory signature) external virtual {
-        if (msg.sender != params.delegatee) {
-            revert CallerIsNotDelegatee(params.delegatee, msg.sender);
-        }
         _checkSignature(params, signature);
         _setDelegate(params.delegator, params.delegatee, params.isDelegate);
     }

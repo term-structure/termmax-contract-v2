@@ -212,47 +212,6 @@ contract DelegateAbleGtTest is Test {
         vm.stopPrank();
     }
 
-    function test_SetDelegateWithSignature_RevertIfNotDelegatee() public {
-        uint256 nonce = delegateableGt.nonces(delegator);
-        uint256 deadline = block.timestamp + 1 hours;
-
-        DelegateAble.DelegateParameters memory params = DelegateAble.DelegateParameters({
-            delegator: delegator,
-            delegatee: delegatee,
-            isDelegate: true,
-            nonce: nonce,
-            deadline: deadline
-        });
-
-        // Create valid signature
-        bytes32 domainSeparator = delegateableGt.DOMAIN_SEPARATOR();
-        bytes32 structHash = keccak256(
-            abi.encode(
-                keccak256(
-                    "DelegationWithSig(address delegator,address delegatee,bool isDelegate,uint256 nonce,uint256 deadline)"
-                ),
-                params.delegator,
-                params.delegatee,
-                params.isDelegate,
-                params.nonce,
-                params.deadline
-            )
-        );
-        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
-
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(delegatorPrivateKey, digest);
-        DelegateAble.Signature memory signature = DelegateAble.Signature({v: v, r: r, s: s});
-
-        // Try to call from wrong address
-        address wrongCaller = vm.randomAddress();
-        vm.startPrank(wrongCaller);
-
-        vm.expectRevert(abi.encodeWithSignature("CallerIsNotDelegatee(address,address)", delegatee, wrongCaller));
-        delegateableGt.setDelegateWithSignature(params, signature);
-
-        vm.stopPrank();
-    }
-
     function test_SetDelegateWithSignature_RevertInvalidSignature() public {
         uint256 nonce = delegateableGt.nonces(delegator);
         uint256 deadline = block.timestamp + 1 hours;

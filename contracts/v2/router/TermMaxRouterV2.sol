@@ -309,7 +309,7 @@ contract TermMaxRouterV2 is
         }
         gtToken.safeTransferFrom(msg.sender, address(this), gtId, "");
         bytes memory callbackData = abi.encode(swapPaths);
-        callbackData = abi.encode(FlashRepayOptions.REPAY, callbackData);
+        callbackData = abi.encode(FlashRepayOptions.REPAY, msg.sender, callbackData);
         gtToken.flashRepay(gtId, byDebtToken, callbackData);
         netTokenOut = debtToken.balanceOf(address(this));
         if (netTokenOut < expectedOutput) {

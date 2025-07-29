@@ -62,6 +62,7 @@ import {ITermMaxOrder} from "contracts/v1/ITermMaxOrder.sol";
 import {TermMaxSwapData, TermMaxSwapAdapter} from "contracts/v2/router/swapAdapters/TermMaxSwapAdapter.sol";
 import {TermMaxOrderV2, OrderInitialParams} from "contracts/v2/TermMaxOrderV2.sol";
 import {MakerHelper} from "contracts/v2/router/MakerHelper.sol";
+import {DelegateAble} from "contracts/v2/lib/DelegateAble.sol";
 
 contract MakerHelperTest is Test {
     using JSONLoader for *;
@@ -182,14 +183,117 @@ contract MakerHelperTest is Test {
         initialParams.maker = sender;
         initialParams.orderConfig = orderConfig;
         initialParams.virtualXtReserve = 1e8;
+
+        DelegateAble.DelegateParameters memory delegateParams;
+        DelegateAble.Signature memory delegateSignature;
+
         (ITermMaxOrder order, uint256 gtId) = makerHelper.placeOrderForV2(
-            res.market, collateralToMintGt, debtTokenToDeposit, ftToDeposit, xtToDeposit, initialParams
+            res.market,
+            collateralToMintGt,
+            debtTokenToDeposit,
+            ftToDeposit,
+            xtToDeposit,
+            initialParams,
+            delegateParams,
+            delegateSignature
         );
 
         assertEq(gtId, order.orderConfig().gtId);
         assertEq(order.maker(), sender);
         assertEq(res.ft.balanceOf(address(order)), ftToDeposit + debtTokenToDeposit);
         assertEq(res.xt.balanceOf(address(order)), xtToDeposit + debtTokenToDeposit);
+
+        vm.stopPrank();
+    }
+
+    function testPlaceOrderForV2AndDelegateWithSignature() public {
+        // Set up delegator and delegatee
+        uint256 delegatorPrivateKey = 0x1234567890123456789012345678901234567890123456789012345678901234;
+        address delegator = vm.addr(delegatorPrivateKey);
+        address delegatee = vm.randomAddress();
+
+        vm.startPrank(delegator);
+
+        uint256 debtTokenToDeposit = 1e8;
+        uint128 ftToDeposit = 2e8;
+        uint128 xtToDeposit = 0;
+
+        res.debt.mint(delegator, debtTokenToDeposit);
+        deal(address(res.ft), delegator, ftToDeposit);
+        res.debt.approve(address(makerHelper), debtTokenToDeposit);
+        res.ft.approve(address(makerHelper), ftToDeposit);
+        res.xt.approve(address(makerHelper), xtToDeposit);
+        uint256 collateralToMintGt = 1e18;
+        res.collateral.mint(delegator, collateralToMintGt);
+        res.collateral.approve(address(makerHelper), collateralToMintGt);
+
+        OrderInitialParams memory initialParams;
+        initialParams.maker = delegator;
+        initialParams.orderConfig = orderConfig;
+        initialParams.virtualXtReserve = 1e8;
+
+        // Set up proper delegation parameters
+        uint256 nonce = DelegateAble(address(res.gt)).nonces(delegator);
+        uint256 deadline = block.timestamp + 1 hours;
+
+        DelegateAble.DelegateParameters memory delegateParams = DelegateAble.DelegateParameters({
+            delegator: delegator,
+            delegatee: delegatee,
+            isDelegate: true,
+            nonce: nonce,
+            deadline: deadline
+        });
+
+        // Create valid signature
+        bytes32 domainSeparator = DelegateAble(address(res.gt)).DOMAIN_SEPARATOR();
+        bytes32 structHash = keccak256(
+            abi.encode(
+                keccak256(
+                    "DelegationWithSig(address delegator,address delegatee,bool isDelegate,uint256 nonce,uint256 deadline)"
+                ),
+                delegateParams.delegator,
+                delegateParams.delegatee,
+                delegateParams.isDelegate,
+                delegateParams.nonce,
+                delegateParams.deadline
+            )
+        );
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(delegatorPrivateKey, digest);
+        DelegateAble.Signature memory delegateSignature = DelegateAble.Signature({v: v, r: r, s: s});
+
+        // Switch to delegatee to call the function (as required by setDelegateWithSignature)
+        vm.stopPrank();
+        vm.startPrank(delegatee);
+
+        // Also need to approve tokens for delegatee
+        res.debt.mint(delegatee, debtTokenToDeposit);
+        deal(address(res.ft), delegatee, ftToDeposit);
+        res.debt.approve(address(makerHelper), debtTokenToDeposit);
+        res.ft.approve(address(makerHelper), ftToDeposit);
+        res.xt.approve(address(makerHelper), xtToDeposit);
+        res.collateral.mint(delegatee, collateralToMintGt);
+        res.collateral.approve(address(makerHelper), collateralToMintGt);
+
+        (ITermMaxOrder order, uint256 gtId) = makerHelper.placeOrderForV2(
+            res.market,
+            collateralToMintGt,
+            debtTokenToDeposit,
+            ftToDeposit,
+            xtToDeposit,
+            initialParams,
+            delegateParams,
+            delegateSignature
+        );
+
+        assertEq(gtId, order.orderConfig().gtId);
+        assertEq(order.maker(), delegator);
+        assertEq(res.ft.balanceOf(address(order)), ftToDeposit + debtTokenToDeposit);
+        assertEq(res.xt.balanceOf(address(order)), xtToDeposit + debtTokenToDeposit);
+
+        // Verify delegation was set up correctly
+        assertTrue(DelegateAble(address(res.gt)).isDelegate(delegator, delegatee));
 
         vm.stopPrank();
     }
