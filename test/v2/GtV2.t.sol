@@ -781,7 +781,7 @@ contract GtTestV2 is Test {
         vm.stopPrank();
 
         address thirdPeople = vm.randomAddress();
-        vm.expectRevert(abi.encodeWithSelector(GearingTokenErrors.CallerIsNotTheOwner.selector, gtId));
+        vm.expectRevert(abi.encodeWithSelector(GearingTokenErrors.AuthorizationFailed.selector, gtId, thirdPeople));
         vm.prank(thirdPeople);
         res.gt.removeCollateral(gtId, abi.encode(removedCollateral));
     }

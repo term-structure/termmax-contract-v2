@@ -24,6 +24,11 @@ abstract contract DelegateAble {
         bytes32 s;
     }
 
+    struct Delegation {
+        mapping(address => bool) isDelegate;
+        uint256 nonce;
+    }
+
     /// @notice Error thrown when a delegatee tries to delegate to themselves
     error CannotDelegateToSelf();
     /// @notice Error thrown when a caller is not the delegatee
@@ -42,11 +47,13 @@ abstract contract DelegateAble {
     );
 
     /// @notice Mapping relationship between delegator and delegatee
-    mapping(address => mapping(address => bool)) internal _delegateMapping;
+    mapping(address => Delegation) internal _delegateMapping;
 
     function DOMAIN_SEPARATOR() public view virtual returns (bytes32);
 
-    function isDelegate(address delegator, address delegatee) public view virtual returns (bool);
+    function isDelegate(address delegator, address delegatee) public view virtual returns (bool) {
+        return _delegateMapping[delegator].isDelegate[delegatee];
+    }
 
     function setDelegate(address delegatee, bool isDelegate_) external virtual {
         if (msg.sender == delegatee) {
@@ -56,10 +63,11 @@ abstract contract DelegateAble {
     }
 
     function _setDelegate(address delegator, address delegatee, bool isDelegate_) internal virtual {
+        _delegateMapping[delegator].nonce++;
         if (!isDelegate_) {
-            delete _delegateMapping[delegator][delegatee];
+            delete _delegateMapping[delegator].isDelegate[delegatee];
         } else {
-            _delegateMapping[delegator][delegatee] = isDelegate_;
+            _delegateMapping[delegator].isDelegate[delegatee] = isDelegate_;
         }
         emit DelegateChanged(delegator, delegatee, isDelegate_);
     }
@@ -73,27 +81,34 @@ abstract contract DelegateAble {
     }
 
     function _checkSignature(DelegateParameters memory params, Signature memory signature) internal view {
+        if (params.deadline < block.timestamp) {
+            revert InvalidSignature();
+        }
         bytes32 digest = getTypedDataHash(params);
         address recoveredAddress = ecrecover(digest, signature.v, signature.r, signature.s);
         require(recoveredAddress == params.delegator, InvalidSignature());
     }
 
     function getTypedDataHash(DelegateParameters memory params) internal view returns (bytes32) {
-        return keccak256(bytes.concat("\x19\x01", DOMAIN_SEPARATOR(), hashStruct(params)));
-    }
-
-    function hashStruct(DelegateParameters memory params) internal pure returns (bytes32) {
         return keccak256(
-            abi.encode(
-                DELEGATION_WITH_SIG_TYPEHASH,
-                params.delegator,
-                params.delegatee,
-                params.isDelegate,
-                params.nonce,
-                params.deadline
+            bytes.concat(
+                "\x19\x01",
+                DOMAIN_SEPARATOR(),
+                keccak256(
+                    abi.encode(
+                        DELEGATION_WITH_SIG_TYPEHASH,
+                        params.delegator,
+                        params.delegatee,
+                        params.isDelegate,
+                        params.nonce,
+                        params.deadline
+                    )
+                )
             )
         );
     }
 
-    function updateNonce(address delegator) internal virtual;
+    function nonces(address delegator) public view virtual returns (uint256) {
+        return _delegateMapping[delegator].nonce;
+    }
 }

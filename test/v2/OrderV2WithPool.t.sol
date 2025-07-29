@@ -38,6 +38,7 @@ import {
     FeeConfig
 } from "contracts/v1/storage/TermMaxStorage.sol";
 import {MockERC4626} from "contracts/v2/test/MockERC4626.sol";
+import {DelegateAble} from "contracts/v2/lib/DelegateAble.sol";
 
 contract OrderTestV2WithPool is Test {
     using JSONLoader for *;
@@ -432,7 +433,7 @@ contract OrderTestV2WithPool is Test {
         vm.startPrank(maker);
         // Mint a GT
         (uint256 gtId,) = LoanUtils.fastMintGt(res, maker, 100e8, 1e18);
-        res.gt.approve(address(res.order), gtId);
+        DelegateAble(address(res.gt)).setDelegate(address(res.order), true);
         orderConfig.gtId = gtId;
         res.order.setGeneralConfig(
             orderConfig.gtId, orderConfig.maxXtReserve, orderConfig.swapTrigger, res.order.virtualXtReserve()

@@ -179,12 +179,12 @@ contract GearingTokenWithERC20V2 is AbstractGearingTokenV2 {
                 abi.decode(valueAndPrice.collateralPriceData, (uint256, uint256, uint256));
 
             /* DP := debt token price (valueAndPrice.debtPrice)
-            * DPD := debt token price decimal (valueAndPrice.priceDenominator)
-            * CP := collateral token price (collateralPrice)
-            * CPD := collateral token price decimal (cPriceDenominator)
-            * liquidate value = repayAmt * DP / debt token decimals
-            * collateral amount to remove = liquidate value * collateral decimals * cpd / (CP * DPD)
-            */
+             * DPD := debt token price decimal (valueAndPrice.priceDenominator)
+             * CP := collateral token price (collateralPrice)
+             * CPD := collateral token price decimal (cPriceDenominator)
+             * liquidate value = repayAmt * DP / debt token decimals
+             * collateral amount to remove = liquidate value * collateral decimals * cpd / (CP * DPD)
+             */
             uint256 liquidateValueInPriceScale = repayAmt.mulDiv(valueAndPrice.debtPrice, valueAndPrice.debtDenominator);
 
             cEqualRepayAmt = liquidateValueInPriceScale.mulDiv(
