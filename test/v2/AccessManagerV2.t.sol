@@ -206,26 +206,11 @@ contract AccessManagerTestV2 is Test {
         manager.revokeRole(pauserRole, deployer);
     }
 
-    function testRenounceRole() public {
-        bytes32 pauserRole = manager.PAUSER_ROLE();
-        address user = vm.randomAddress();
-
-        // Grant role first
-        vm.prank(deployer);
-        manager.grantRole(pauserRole, user);
-
-        // Renounce role
-        vm.prank(user);
-        manager.renounceRole(pauserRole, user);
-
-        assertFalse(manager.hasRole(pauserRole, user));
-    }
-
-    function testCannotRenounceDefaultAdminRole() public {
+    function testCannotRenounceRole() public {
         bytes32 defaultAdminRole = 0x00;
 
         vm.prank(deployer);
-        vm.expectRevert(AccessManager.CannotRevokeDefaultAdminRole.selector);
+        vm.expectRevert(AccessManagerV2.CannotRenounceRole.selector);
         manager.renounceRole(defaultAdminRole, deployer);
     }
 

@@ -12,6 +12,7 @@ import {ITermMaxVaultV2, OrderV2ConfigurationParams, CurveCuts} from "../vault/I
  * @dev Inherits from AccessManager V1 and adds V2-specific functionality for managing oracles and batch operations
  */
 contract AccessManagerV2 is AccessManager {
+    error CannotRenounceRole();
     /**
      * @notice Batch pause/unpause multiple entities in a single transaction
      * @dev Allows efficient management of multiple pausable contracts simultaneously
@@ -20,6 +21,7 @@ contract AccessManagerV2 is AccessManager {
      * @custom:access Requires PAUSER_ROLE
      * @custom:gas-optimization Uses a simple loop for batch operations
      */
+
     function batchSetSwitch(IPausable[] calldata entities, bool state) external onlyRole(PAUSER_ROLE) {
         if (state) {
             for (uint256 i = 0; i < entities.length; ++i) {
@@ -78,5 +80,10 @@ contract AccessManagerV2 is AccessManager {
      */
     function revokePendingPool(ITermMaxVaultV2 vault) external onlyRole(VAULT_ROLE) {
         vault.revokePendingPool();
+    }
+
+    /// @notice Forbid renouncing roles
+    function renounceRole(bytes32 role, address callerConfirmation) public override {
+        revert CannotRenounceRole();
     }
 }

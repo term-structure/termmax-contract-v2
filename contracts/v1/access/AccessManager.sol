@@ -175,7 +175,7 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
 
     /// @notice Revoke role
     /// @dev Can't revoke default admin role
-    function renounceRole(bytes32 role, address callerConfirmation) public override {
+    function renounceRole(bytes32 role, address callerConfirmation) public virtual override {
         if (role == DEFAULT_ADMIN_ROLE) {
             revert CannotRevokeDefaultAdminRole();
         }
