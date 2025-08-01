@@ -618,6 +618,29 @@ contract GtTestV2 is Test {
         res.gt.merge(ids);
     }
 
+    function testMergeDuplicateId() public {
+        uint40[2] memory debts = [100e8, 30e8];
+        uint64[2] memory collaterals = [1e18, 0.5e18];
+
+        vm.startPrank(sender);
+
+        uint256[] memory ids = new uint256[](2);
+        for (uint256 i = 0; i < ids.length; ++i) {
+            (ids[i],) = LoanUtils.fastMintGt(res, sender, debts[i], collaterals[i]);
+        }
+
+        // Create array with duplicate IDs
+        uint256[] memory duplicateIds = new uint256[](3);
+        duplicateIds[0] = ids[0];
+        duplicateIds[1] = ids[1];
+        duplicateIds[2] = ids[0]; // Duplicate of first ID
+
+        vm.expectRevert(abi.encodeWithSelector(GearingTokenErrorsV2.DuplicateIdInMerge.selector, ids[0]));
+        res.gt.merge(duplicateIds);
+
+        vm.stopPrank();
+    }
+
     function testAddCollateral() public {
         uint128 debtAmt = 1700e8;
         uint256 collateralAmt = 1e18;

@@ -263,6 +263,9 @@ abstract contract AbstractGearingTokenV2 is
             _checkIsOwnerOrDelegate(id, msg.sender);
             LoanInfo memory loan = loanMapping[id];
             if (i != 0) {
+                if (id == newId) {
+                    revert GearingTokenErrorsV2.DuplicateIdInMerge(id);
+                }
                 firstLoan.debtAmt += loanMapping[id].debtAmt;
                 firstLoan.collateralData = _mergeCollateral(firstLoan.collateralData, loan.collateralData);
                 _burnInternal(id);

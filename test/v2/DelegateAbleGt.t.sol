@@ -567,7 +567,7 @@ contract DelegateAbleGtTest is Test {
 
         vm.startPrank(delegatee);
         delegateableGt.setDelegateWithSignature(params1, signature1);
-        
+
         uint256 nonceAfterFirstSig = delegateableGt.nonces(delegator);
         assertEq(nonceAfterFirstSig, initialNonce + 1);
 
@@ -601,7 +601,7 @@ contract DelegateAbleGtTest is Test {
 
         vm.startPrank(delegatee);
         delegateableGt.setDelegateWithSignature(params2, signature2);
-        
+
         uint256 finalNonce = delegateableGt.nonces(delegator);
         assertEq(finalNonce, nonceAfterFirstSig + 1);
 
@@ -766,7 +766,7 @@ contract DelegateAbleGtTest is Test {
 
     function test_NonceIndependentPerDelegator() public {
         address delegator2 = vm.randomAddress();
-        
+
         // Both delegators should start with nonce 0
         assertEq(delegateableGt.nonces(delegator), 0);
         assertEq(delegateableGt.nonces(delegator2), 0);
