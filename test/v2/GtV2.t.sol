@@ -1310,7 +1310,7 @@ contract GtTestV2 is Test {
     function testRevertByCanNotLiquidationAfterFinalDeadline() public {
         uint256 liquidateTime = marketConfig.maturity + Constants.LIQUIDATION_WINDOW;
         uint128 debtAmt = 1000e8;
-        uint256 collateralAmt = 1e18;
+        uint256 collateralAmt = 10e18;
 
         vm.startPrank(sender);
 
@@ -1464,6 +1464,359 @@ contract GtTestV2 is Test {
 
         res.gt.repay(gtId, 0, true);
         assertEq(res.collateral.balanceOf(sender), collateralAmt);
+        vm.stopPrank();
+    }
+
+    function testRepayAndRemoveCollateral() public {
+        uint128 debtAmt = 100e8;
+        uint256 collateralAmt = 1e18;
+        uint128 repayAmt = 50e8;
+        uint256 removedCollateral = 0.1e18;
+
+        vm.startPrank(sender);
+
+        (uint256 gtId,) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
+
+        res.debt.mint(sender, repayAmt);
+        res.debt.approve(address(res.gt), repayAmt);
+
+        uint256 collateralBalanceBefore = res.collateral.balanceOf(sender);
+        uint256 debtBalanceBefore = res.debt.balanceOf(sender);
+        StateChecker.MarketState memory state = StateChecker.getMarketState(res);
+
+        bool byDebtToken = true;
+        vm.expectEmit();
+        emit GearingTokenEvents.RemoveCollateral(gtId, abi.encode(removedCollateral));
+        vm.expectEmit();
+        emit GearingTokenEventsV2.Repay(gtId, repayAmt, byDebtToken, false);
+        (bool repayAll, uint128 finalRepayAmt) = GearingTokenWithERC20V2(address(res.gt)).repayAndRemoveCollateral(
+            gtId, repayAmt, byDebtToken, sender, abi.encode(removedCollateral)
+        );
+
+        assertFalse(repayAll, "should not repay all");
+        assertEq(finalRepayAmt, repayAmt, "final repay amount should match");
+
+        uint256 collateralBalanceAfter = res.collateral.balanceOf(sender);
+        uint256 debtBalanceAfter = res.debt.balanceOf(sender);
+        state.debtReserve += repayAmt;
+        state.collateralReserve -= removedCollateral;
+        StateChecker.checkMarketState(res, state);
+
+        assertEq(
+            collateralBalanceAfter - collateralBalanceBefore,
+            removedCollateral,
+            "sender should receive removed collateral"
+        );
+        assertEq(debtBalanceAfter + repayAmt, debtBalanceBefore, "sender debt balance should decrease by debt amount");
+        (address owner, uint128 d, bytes memory cd) = res.gt.loanInfo(gtId);
+        assertEq(owner, sender, "owner should remain sender");
+        assertEq(d, debtAmt - repayAmt, "debt should be reduced by repay amount");
+        assertEq(
+            collateralAmt - removedCollateral,
+            abi.decode(cd, (uint256)),
+            "collateral should be reduced by removed amount"
+        );
+
+        vm.stopPrank();
+    }
+
+    function testRepayAndRemoveCollateralFullRepay() public {
+        uint128 debtAmt = 100e8;
+        uint256 collateralAmt = 1e18;
+
+        vm.startPrank(sender);
+
+        (uint256 gtId,) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
+
+        res.debt.mint(sender, debtAmt);
+        res.debt.approve(address(res.gt), debtAmt);
+
+        uint256 collateralBalanceBefore = res.collateral.balanceOf(sender);
+        uint256 debtBalanceBefore = res.debt.balanceOf(sender);
+        StateChecker.MarketState memory state = StateChecker.getMarketState(res);
+
+        bool byDebtToken = true;
+        vm.expectEmit();
+        emit GearingTokenEventsV2.Repay(gtId, debtAmt, byDebtToken, true);
+        (bool repayAll, uint128 finalRepayAmt) = GearingTokenWithERC20V2(address(res.gt)).repayAndRemoveCollateral(
+            gtId, debtAmt, byDebtToken, sender, abi.encode(0)
+        );
+
+        assertTrue(repayAll, "should repay all");
+        assertEq(finalRepayAmt, debtAmt, "final repay amount should match debt amount");
+
+        uint256 collateralBalanceAfter = res.collateral.balanceOf(sender);
+        uint256 debtBalanceAfter = res.debt.balanceOf(sender);
+        state.debtReserve += debtAmt;
+        state.collateralReserve -= collateralAmt;
+        StateChecker.checkMarketState(res, state);
+
+        assertEq(
+            collateralBalanceAfter - collateralBalanceBefore, collateralAmt, "sender should receive all collateral"
+        );
+        assertEq(debtBalanceAfter + debtAmt, debtBalanceBefore, "sender debt balance should decrease by debt amount");
+
+        vm.expectRevert(abi.encodePacked(bytes4(keccak256("ERC721NonexistentToken(uint256)")), gtId));
+        res.gt.loanInfo(gtId);
+
+        vm.stopPrank();
+    }
+
+    function testRepayAndRemoveCollateralByFt() public {
+        uint128 debtAmt = 100e8;
+        uint256 collateralAmt = 1e18;
+        uint128 repayAmt = 50e8;
+        uint256 removedCollateral = 0.1e18;
+
+        vm.startPrank(sender);
+
+        (uint256 gtId,) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
+
+        // get FT token
+        uint128 debtAmtInForBuyFt = 100e8;
+        uint128 minFTOut = 0e8;
+        res.debt.mint(sender, debtAmtInForBuyFt);
+        res.debt.approve(address(res.order), debtAmtInForBuyFt);
+        res.order.swapExactTokenToToken(
+            res.debt, res.ft, sender, debtAmtInForBuyFt, minFTOut, block.timestamp + 1 hours
+        );
+
+        res.ft.approve(address(res.gt), repayAmt);
+
+        uint256 collateralBalanceBefore = res.collateral.balanceOf(sender);
+        uint256 ftBalanceBefore = res.ft.balanceOf(sender);
+        uint256 ftInMarketBefore = res.ft.balanceOf(address(res.market));
+        StateChecker.MarketState memory state = StateChecker.getMarketState(res);
+
+        bool byDebtToken = false;
+        vm.expectEmit();
+        emit GearingTokenEvents.RemoveCollateral(gtId, abi.encode(removedCollateral));
+        vm.expectEmit();
+        emit GearingTokenEventsV2.Repay(gtId, repayAmt, byDebtToken, false);
+        (bool repayAll, uint128 finalRepayAmt) = GearingTokenWithERC20V2(address(res.gt)).repayAndRemoveCollateral(
+            gtId, repayAmt, byDebtToken, sender, abi.encode(removedCollateral)
+        );
+
+        assertFalse(repayAll, "should not repay all");
+        assertEq(finalRepayAmt, repayAmt, "final repay amount should match");
+
+        uint256 collateralBalanceAfter = res.collateral.balanceOf(sender);
+        uint256 ftBalanceAfter = res.ft.balanceOf(sender);
+        uint256 ftInMarketAfter = res.ft.balanceOf(address(res.market));
+        state.collateralReserve -= removedCollateral;
+        StateChecker.checkMarketState(res, state);
+
+        assertEq(ftInMarketAfter - repayAmt, ftInMarketBefore, "FT should be transferred to market");
+        assertEq(
+            collateralBalanceAfter - collateralBalanceBefore,
+            removedCollateral,
+            "sender should receive removed collateral"
+        );
+        assertEq(ftBalanceAfter + repayAmt, ftBalanceBefore, "sender FT balance should decrease by repay amount");
+
+        vm.stopPrank();
+    }
+
+    function testRepayAndRemoveCollateralWithThirdPartyRecipient() public {
+        uint128 debtAmt = 100e8;
+        uint256 collateralAmt = 1e18;
+        uint128 repayAmt = 50e8;
+        uint256 removedCollateral = 0.1e18;
+        address collateralRecipient = vm.randomAddress();
+
+        vm.startPrank(sender);
+
+        (uint256 gtId,) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
+
+        res.debt.mint(sender, repayAmt);
+        res.debt.approve(address(res.gt), repayAmt);
+
+        uint256 senderCollateralBalanceBefore = res.collateral.balanceOf(sender);
+        uint256 recipientCollateralBalanceBefore = res.collateral.balanceOf(collateralRecipient);
+        StateChecker.MarketState memory state = StateChecker.getMarketState(res);
+
+        bool byDebtToken = true;
+        (bool repayAll, uint128 finalRepayAmt) = GearingTokenWithERC20V2(address(res.gt)).repayAndRemoveCollateral(
+            gtId, repayAmt, byDebtToken, collateralRecipient, abi.encode(removedCollateral)
+        );
+
+        assertFalse(repayAll, "should not repay all");
+        assertEq(finalRepayAmt, repayAmt, "final repay amount should match");
+
+        uint256 senderCollateralBalanceAfter = res.collateral.balanceOf(sender);
+        uint256 recipientCollateralBalanceAfter = res.collateral.balanceOf(collateralRecipient);
+        state.debtReserve += repayAmt;
+        state.collateralReserve -= removedCollateral;
+        StateChecker.checkMarketState(res, state);
+
+        assertEq(
+            senderCollateralBalanceAfter, senderCollateralBalanceBefore, "sender collateral balance should not change"
+        );
+        assertEq(
+            recipientCollateralBalanceAfter - recipientCollateralBalanceBefore,
+            removedCollateral,
+            "recipient should receive removed collateral"
+        );
+
+        vm.stopPrank();
+    }
+
+    function testRepayAndRemoveCollateralExceedsMaxRepayAmt() public {
+        uint128 debtAmt = 100e8;
+        uint256 collateralAmt = 1e18;
+        uint128 repayAmt = 150e8; // More than debt amount
+        uint256 removedCollateral = 0.1e18;
+
+        vm.startPrank(sender);
+
+        (uint256 gtId,) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
+
+        res.debt.mint(sender, repayAmt);
+        res.debt.approve(address(res.gt), repayAmt);
+
+        uint256 debtBalanceBefore = res.debt.balanceOf(sender);
+
+        bool byDebtToken = true;
+        (bool repayAll, uint128 finalRepayAmt) = GearingTokenWithERC20V2(address(res.gt)).repayAndRemoveCollateral(
+            gtId, repayAmt, byDebtToken, sender, abi.encode(removedCollateral)
+        );
+
+        assertTrue(repayAll, "should repay all when repay amount exceeds debt");
+        assertEq(finalRepayAmt, debtAmt, "final repay amount should be capped at debt amount");
+        assertEq(
+            res.debt.balanceOf(sender),
+            debtBalanceBefore - debtAmt,
+            "sender debt balance should decrease by actual debt amount"
+        );
+
+        vm.stopPrank();
+    }
+
+    function testRevertByGtIsNotHealthyWhenRepayAndRemoveCollateral() public {
+        uint128 debtAmt = 1790e8;
+        uint256 collateralAmt = 1.1e18;
+        uint128 repayAmt = 50e8;
+        uint256 removedCollateral = 0.5e18; // Too much collateral removal
+
+        vm.startPrank(sender);
+
+        (uint256 gtId,) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
+
+        res.debt.mint(sender, repayAmt);
+        res.debt.approve(address(res.gt), repayAmt);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                GearingTokenErrors.GtIsNotHealthy.selector,
+                gtId,
+                sender,
+                LoanUtils.calcLtv(res, debtAmt - repayAmt, collateralAmt - removedCollateral)
+            )
+        );
+        GearingTokenWithERC20V2(address(res.gt)).repayAndRemoveCollateral(
+            gtId, repayAmt, true, sender, abi.encode(removedCollateral)
+        );
+
+        vm.stopPrank();
+    }
+
+    function testRevertByCallerIsNotTheOwnerWhenRepayAndRemoveCollateral() public {
+        uint128 debtAmt = 100e8;
+        uint256 collateralAmt = 1e18;
+        uint128 repayAmt = 50e8;
+        uint256 removedCollateral = 0.1e18;
+
+        vm.startPrank(sender);
+        (uint256 gtId,) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
+        vm.stopPrank();
+
+        address thirdPeople = vm.randomAddress();
+        res.debt.mint(thirdPeople, repayAmt);
+
+        vm.startPrank(thirdPeople);
+        res.debt.approve(address(res.gt), repayAmt);
+
+        vm.expectRevert(abi.encodeWithSelector(GearingTokenErrors.AuthorizationFailed.selector, gtId, thirdPeople));
+        GearingTokenWithERC20V2(address(res.gt)).repayAndRemoveCollateral(
+            gtId, repayAmt, true, thirdPeople, abi.encode(removedCollateral)
+        );
+
+        vm.stopPrank();
+    }
+
+    function testRepayAndRemoveCollateralZeroRemoval() public {
+        uint128 debtAmt = 100e8;
+        uint256 collateralAmt = 1e18;
+        uint128 repayAmt = 50e8;
+
+        vm.startPrank(sender);
+
+        (uint256 gtId,) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
+
+        res.debt.mint(sender, repayAmt);
+        res.debt.approve(address(res.gt), repayAmt);
+
+        uint256 collateralBalanceBefore = res.collateral.balanceOf(sender);
+        StateChecker.MarketState memory state = StateChecker.getMarketState(res);
+
+        bool byDebtToken = true;
+        (bool repayAll, uint128 finalRepayAmt) = GearingTokenWithERC20V2(address(res.gt)).repayAndRemoveCollateral(
+            gtId, repayAmt, byDebtToken, sender, abi.encode(0)
+        );
+
+        assertFalse(repayAll, "should not repay all");
+        assertEq(finalRepayAmt, repayAmt, "final repay amount should match");
+
+        uint256 collateralBalanceAfter = res.collateral.balanceOf(sender);
+        state.debtReserve += repayAmt;
+        StateChecker.checkMarketState(res, state);
+
+        assertEq(
+            collateralBalanceAfter,
+            collateralBalanceBefore,
+            "sender collateral balance should not change when removing zero"
+        );
+
+        (address owner, uint128 d, bytes memory cd) = res.gt.loanInfo(gtId);
+        assertEq(owner, sender, "owner should remain sender");
+        assertEq(d, debtAmt - repayAmt, "debt should be reduced by repay amount");
+        assertEq(collateralAmt, abi.decode(cd, (uint256)), "collateral should remain unchanged");
+
+        vm.stopPrank();
+    }
+
+    function testRepayAndRemoveCollateralZeroDebt() public {
+        uint256 collateralAmt = 1e18;
+        uint128 debtAmt = 0;
+        uint256 removedCollateral = 0.1e18;
+
+        vm.startPrank(sender);
+        res.collateral.mint(sender, collateralAmt);
+        bytes memory collateralData = abi.encode(collateralAmt);
+        res.collateral.approve(address(res.gt), collateralAmt);
+        (uint256 gtId,) = res.market.issueFt(sender, debtAmt, collateralData);
+
+        uint256 collateralBalanceBefore = res.collateral.balanceOf(sender);
+        StateChecker.MarketState memory state = StateChecker.getMarketState(res);
+
+        (bool repayAll, uint128 finalRepayAmt) = GearingTokenWithERC20V2(address(res.gt)).repayAndRemoveCollateral(
+            gtId, 0, true, sender, abi.encode(removedCollateral)
+        );
+
+        assertTrue(repayAll, "should repay all when debt is zero");
+        assertEq(finalRepayAmt, 0, "final repay amount should be zero");
+
+        uint256 collateralBalanceAfter = res.collateral.balanceOf(sender);
+        state.collateralReserve -= collateralAmt;
+        StateChecker.checkMarketState(res, state);
+
+        assertEq(
+            collateralBalanceAfter - collateralBalanceBefore, collateralAmt, "sender should receive all collateral"
+        );
+
+        vm.expectRevert(abi.encodePacked(bytes4(keccak256("ERC721NonexistentToken(uint256)")), gtId));
+        res.gt.loanInfo(gtId);
+
         vm.stopPrank();
     }
 }

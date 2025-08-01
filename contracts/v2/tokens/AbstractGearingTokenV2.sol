@@ -280,7 +280,13 @@ abstract contract AbstractGearingTokenV2 is
         if (config.maturity <= block.timestamp) {
             revert GearingTokenErrorsV2.GtIsExpired();
         }
-        (, bool repayAll, uint128 finalRepayAmt) = _repay(id, repayAmt);
+        (LoanInfo memory loan, bool repayAll, uint128 finalRepayAmt) = _repay(id, repayAmt);
+        if (repayAll) {
+            _transferCollateral(ownerOf(id), loan.collateralData);
+            _burnInternal(id);
+        } else {
+            loanMapping[id] = loan;
+        }
         if (byDebtToken) {
             config.debtToken.safeTransferFrom(msg.sender, marketAddr(), finalRepayAmt);
         } else {
@@ -332,16 +338,18 @@ abstract contract AbstractGearingTokenV2 is
         }
         // All collteral will be removed in _repay function if repayAll is true
         (LoanInfo memory loan, bool repayAll, uint128 finalRepayAmt) = _repay(id, repayAmt);
-        // Check ltv after partial repayment
-        if (!repayAll) {
+        if (repayAll) {
+            _burnInternal(id);
+            removedCollateral = loan.collateralData;
+        } else {
             loan.collateralData = _removeCollateral(loan, removedCollateral);
             ValueAndPrice memory valueAndPrice = _getValueAndPrice(config, loan);
             uint128 ltv = _calculateLtv(valueAndPrice);
-            require(ltv <= config.loanConfig.maxLtv, GtIsNotHealthy(id, msg.sender, ltv));
+            require(ltv <= config.loanConfig.maxLtv, GtIsNotHealthy(id, ownerOf(id), ltv));
             loanMapping[id] = loan;
-            // Transfer collateral to the owner
-            _transferCollateral(msg.sender, removedCollateral);
         }
+        // Transfer collateral to the caller
+        _transferCollateral(msg.sender, removedCollateral);
 
         IERC20 repayToken = byDebtToken ? config.debtToken : config.ft;
 
@@ -355,6 +363,7 @@ abstract contract AbstractGearingTokenV2 is
 
     function _repay(uint256 id, uint128 repayAmt)
         internal
+        view
         returns (LoanInfo memory loan, bool repayAll, uint128 finalRepayAmt)
     {
         loan = loanMapping[id];
@@ -364,14 +373,46 @@ abstract contract AbstractGearingTokenV2 is
         loan.debtAmt = loan.debtAmt - repayAmt;
         finalRepayAmt = repayAmt;
         if (loan.debtAmt == 0) {
-            address gtOwner = ownerOf(id);
-            // Burn this nft
-            _burnInternal(id);
-            _transferCollateral(gtOwner, loan.collateralData);
             repayAll = true;
-        } else {
-            loanMapping[id].debtAmt = loan.debtAmt;
         }
+    }
+
+    /// @notice Repay the debt of Gearing Token and remove collateral
+    /// @param id The id of Gearing Token
+    /// @param repayAmt The amount of debt you want to repay
+    /// @param byDebtToken Repay using debtToken token or bonds token
+    /// @param removedCollateral The collateral data to be removed
+    /// @return repayAll Whether the repayment is complete
+    /// @return finalRepayAmt The final amount repaid
+    function repayAndRemoveCollateral(
+        uint256 id,
+        uint128 repayAmt,
+        bool byDebtToken,
+        address collateralRecipient,
+        bytes memory removedCollateral
+    ) external virtual nonReentrant isOwnerOrDelegate(id, msg.sender) returns (bool repayAll, uint128 finalRepayAmt) {
+        LoanInfo memory loan;
+        (loan, repayAll, finalRepayAmt) = _repay(id, repayAmt);
+        if (repayAll) {
+            _transferCollateral(collateralRecipient, loan.collateralData);
+            _burnInternal(id);
+        } else {
+            loan.collateralData = _removeCollateral(loan, removedCollateral);
+            ValueAndPrice memory valueAndPrice = _getValueAndPrice(_config, loan);
+            uint128 ltv = _calculateLtv(valueAndPrice);
+            require(ltv <= _config.loanConfig.maxLtv, GtIsNotHealthy(id, ownerOf(id), ltv));
+            loanMapping[id] = loan;
+            // Transfer collateral to the recipient
+            _transferCollateral(collateralRecipient, removedCollateral);
+            emit RemoveCollateral(id, removedCollateral);
+        }
+        // Transfer debt/ft tokens from caller to market
+        if (byDebtToken) {
+            _config.debtToken.safeTransferFrom(msg.sender, marketAddr(), finalRepayAmt);
+        } else {
+            _config.ft.safeTransferFrom(msg.sender, marketAddr(), finalRepayAmt);
+        }
+        emit GearingTokenEventsV2.Repay(id, finalRepayAmt, byDebtToken, repayAll);
     }
 
     /**

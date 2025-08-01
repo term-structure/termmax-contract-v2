@@ -21,4 +21,20 @@ interface IGearingTokenV2 {
         bytes memory removedCollateral,
         bytes calldata callbackData
     ) external returns (bool repayAll);
+
+    /// @notice Repay the debt of Gearing Token and remove collateral
+    /// @param id The id of Gearing Token
+    /// @param repayAmt The amount of debt you want to repay
+    /// @param byDebtToken Repay using debtToken token or bonds token
+    /// @param collateralRecipient The address to receive the removed collateral
+    /// @param removedCollateral The collateral data to be removed
+    /// @return repayAll Whether the repayment is complete
+    /// @return finalRepayAmt The final amount repaid
+    function repayAndRemoveCollateral(
+        uint256 id,
+        uint128 repayAmt,
+        bool byDebtToken,
+        address collateralRecipient,
+        bytes memory removedCollateral
+    ) external returns (bool repayAll, uint128 finalRepayAmt);
 }
