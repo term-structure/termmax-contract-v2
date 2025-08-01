@@ -359,7 +359,7 @@ abstract contract AbstractGearingTokenV2 is
         IFlashRepayer(msg.sender).executeOperation(
             repayToken, finalRepayAmt, config.collateral, removedCollateral, callbackData
         );
-        repayToken.safeTransferFrom(msg.sender, owner(), finalRepayAmt);
+        repayToken.safeTransferFrom(msg.sender, marketAddr(), finalRepayAmt);
         emit GearingTokenEventsV2.FlashRepay(id, msg.sender, finalRepayAmt, byDebtToken, repayAll, removedCollateral);
         return repayAll;
     }
