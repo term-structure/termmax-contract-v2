@@ -507,4 +507,338 @@ contract DelegateAbleGtTest is Test {
 
         vm.stopPrank();
     }
+
+    function test_NonceIncrementsOnDelegateChange() public {
+        uint256 initialNonce = delegateableGt.nonces(delegator);
+        assertEq(initialNonce, 0); // Initial nonce should be 0
+
+        vm.startPrank(delegator);
+
+        // Set delegate - should NOT increment nonce (only signature-based delegation increments nonce)
+        delegateableGt.setDelegate(delegatee, true);
+        uint256 nonceAfterSet = delegateableGt.nonces(delegator);
+        assertEq(nonceAfterSet, initialNonce); // Nonce should remain the same
+
+        // Remove delegate - should NOT increment nonce again
+        delegateableGt.setDelegate(delegatee, false);
+        uint256 nonceAfterRemove = delegateableGt.nonces(delegator);
+        assertEq(nonceAfterRemove, initialNonce); // Nonce should still be the same
+
+        // Set delegate again - should NOT increment nonce
+        delegateableGt.setDelegate(delegatee, true);
+        uint256 finalNonce = delegateableGt.nonces(delegator);
+        assertEq(finalNonce, initialNonce); // Nonce should still be the same
+
+        vm.stopPrank();
+    }
+
+    function test_NonceIncrementsOnSignatureDelegateChange() public {
+        uint256 initialNonce = delegateableGt.nonces(delegator);
+        assertEq(initialNonce, 0);
+
+        uint256 deadline = block.timestamp + 1 hours;
+
+        // First signature-based delegation
+        DelegateAble.DelegateParameters memory params1 = DelegateAble.DelegateParameters({
+            delegator: delegator,
+            delegatee: delegatee,
+            isDelegate: true,
+            nonce: initialNonce,
+            deadline: deadline
+        });
+
+        bytes32 domainSeparator = delegateableGt.DOMAIN_SEPARATOR();
+        bytes32 structHash1 = keccak256(
+            abi.encode(
+                keccak256(
+                    "DelegationWithSig(address delegator,address delegatee,bool isDelegate,uint256 nonce,uint256 deadline)"
+                ),
+                params1.delegator,
+                params1.delegatee,
+                params1.isDelegate,
+                params1.nonce,
+                params1.deadline
+            )
+        );
+        bytes32 digest1 = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash1));
+
+        (uint8 v1, bytes32 r1, bytes32 s1) = vm.sign(delegatorPrivateKey, digest1);
+        DelegateAble.Signature memory signature1 = DelegateAble.Signature({v: v1, r: r1, s: s1});
+
+        vm.startPrank(delegatee);
+        delegateableGt.setDelegateWithSignature(params1, signature1);
+        
+        uint256 nonceAfterFirstSig = delegateableGt.nonces(delegator);
+        assertEq(nonceAfterFirstSig, initialNonce + 1);
+
+        vm.stopPrank();
+
+        // Second signature-based delegation with updated nonce
+        DelegateAble.DelegateParameters memory params2 = DelegateAble.DelegateParameters({
+            delegator: delegator,
+            delegatee: delegatee,
+            isDelegate: false,
+            nonce: nonceAfterFirstSig, // Use updated nonce
+            deadline: deadline
+        });
+
+        bytes32 structHash2 = keccak256(
+            abi.encode(
+                keccak256(
+                    "DelegationWithSig(address delegator,address delegatee,bool isDelegate,uint256 nonce,uint256 deadline)"
+                ),
+                params2.delegator,
+                params2.delegatee,
+                params2.isDelegate,
+                params2.nonce,
+                params2.deadline
+            )
+        );
+        bytes32 digest2 = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash2));
+
+        (uint8 v2, bytes32 r2, bytes32 s2) = vm.sign(delegatorPrivateKey, digest2);
+        DelegateAble.Signature memory signature2 = DelegateAble.Signature({v: v2, r: r2, s: s2});
+
+        vm.startPrank(delegatee);
+        delegateableGt.setDelegateWithSignature(params2, signature2);
+        
+        uint256 finalNonce = delegateableGt.nonces(delegator);
+        assertEq(finalNonce, nonceAfterFirstSig + 1);
+
+        vm.stopPrank();
+    }
+
+    function test_RevertOnInvalidNonce() public {
+        uint256 currentNonce = delegateableGt.nonces(delegator);
+        uint256 deadline = block.timestamp + 1 hours;
+
+        // Try to use wrong nonce (current + 1)
+        DelegateAble.DelegateParameters memory params = DelegateAble.DelegateParameters({
+            delegator: delegator,
+            delegatee: delegatee,
+            isDelegate: true,
+            nonce: currentNonce + 1, // Wrong nonce
+            deadline: deadline
+        });
+
+        bytes32 domainSeparator = delegateableGt.DOMAIN_SEPARATOR();
+        bytes32 structHash = keccak256(
+            abi.encode(
+                keccak256(
+                    "DelegationWithSig(address delegator,address delegatee,bool isDelegate,uint256 nonce,uint256 deadline)"
+                ),
+                params.delegator,
+                params.delegatee,
+                params.isDelegate,
+                params.nonce,
+                params.deadline
+            )
+        );
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(delegatorPrivateKey, digest);
+        DelegateAble.Signature memory signature = DelegateAble.Signature({v: v, r: r, s: s});
+
+        vm.startPrank(delegatee);
+
+        // Should revert due to invalid nonce
+        vm.expectRevert();
+        delegateableGt.setDelegateWithSignature(params, signature);
+
+        vm.stopPrank();
+    }
+
+    function test_RevertOnOldNonce() public {
+        // First, make a signature-based delegation to increment nonce
+        uint256 initialNonce = delegateableGt.nonces(delegator);
+        uint256 deadline = block.timestamp + 1 hours;
+
+        DelegateAble.DelegateParameters memory params1 = DelegateAble.DelegateParameters({
+            delegator: delegator,
+            delegatee: delegatee,
+            isDelegate: true,
+            nonce: initialNonce,
+            deadline: deadline
+        });
+
+        bytes32 domainSeparator = delegateableGt.DOMAIN_SEPARATOR();
+        bytes32 structHash1 = keccak256(
+            abi.encode(
+                keccak256(
+                    "DelegationWithSig(address delegator,address delegatee,bool isDelegate,uint256 nonce,uint256 deadline)"
+                ),
+                params1.delegator,
+                params1.delegatee,
+                params1.isDelegate,
+                params1.nonce,
+                params1.deadline
+            )
+        );
+        bytes32 digest1 = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash1));
+
+        (uint8 v1, bytes32 r1, bytes32 s1) = vm.sign(delegatorPrivateKey, digest1);
+        DelegateAble.Signature memory signature1 = DelegateAble.Signature({v: v1, r: r1, s: s1});
+
+        vm.startPrank(delegatee);
+        delegateableGt.setDelegateWithSignature(params1, signature1);
+        vm.stopPrank();
+
+        uint256 currentNonce = delegateableGt.nonces(delegator);
+        assertTrue(currentNonce > 0); // Nonce should have incremented
+
+        // Try to use old nonce (0)
+        DelegateAble.DelegateParameters memory params2 = DelegateAble.DelegateParameters({
+            delegator: delegator,
+            delegatee: delegatee,
+            isDelegate: false,
+            nonce: 0, // Old nonce
+            deadline: deadline
+        });
+
+        bytes32 structHash2 = keccak256(
+            abi.encode(
+                keccak256(
+                    "DelegationWithSig(address delegator,address delegatee,bool isDelegate,uint256 nonce,uint256 deadline)"
+                ),
+                params2.delegator,
+                params2.delegatee,
+                params2.isDelegate,
+                params2.nonce,
+                params2.deadline
+            )
+        );
+        bytes32 digest2 = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash2));
+
+        (uint8 v2, bytes32 r2, bytes32 s2) = vm.sign(delegatorPrivateKey, digest2);
+        DelegateAble.Signature memory signature2 = DelegateAble.Signature({v: v2, r: r2, s: s2});
+
+        vm.startPrank(delegatee);
+
+        // Should revert due to old/invalid nonce
+        vm.expectRevert();
+        delegateableGt.setDelegateWithSignature(params2, signature2);
+
+        vm.stopPrank();
+    }
+
+    function test_PreventReplayAttack() public {
+        uint256 nonce = delegateableGt.nonces(delegator);
+        uint256 deadline = block.timestamp + 1 hours;
+
+        DelegateAble.DelegateParameters memory params = DelegateAble.DelegateParameters({
+            delegator: delegator,
+            delegatee: delegatee,
+            isDelegate: true,
+            nonce: nonce,
+            deadline: deadline
+        });
+
+        bytes32 domainSeparator = delegateableGt.DOMAIN_SEPARATOR();
+        bytes32 structHash = keccak256(
+            abi.encode(
+                keccak256(
+                    "DelegationWithSig(address delegator,address delegatee,bool isDelegate,uint256 nonce,uint256 deadline)"
+                ),
+                params.delegator,
+                params.delegatee,
+                params.isDelegate,
+                params.nonce,
+                params.deadline
+            )
+        );
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(delegatorPrivateKey, digest);
+        DelegateAble.Signature memory signature = DelegateAble.Signature({v: v, r: r, s: s});
+
+        vm.startPrank(delegatee);
+
+        // First call should succeed
+        delegateableGt.setDelegateWithSignature(params, signature);
+        assertTrue(delegateableGt.isDelegate(delegator, delegatee));
+
+        // Second call with same signature should fail (replay attack)
+        vm.expectRevert();
+        delegateableGt.setDelegateWithSignature(params, signature);
+
+        vm.stopPrank();
+    }
+
+    function test_NonceIndependentPerDelegator() public {
+        address delegator2 = vm.randomAddress();
+        
+        // Both delegators should start with nonce 0
+        assertEq(delegateableGt.nonces(delegator), 0);
+        assertEq(delegateableGt.nonces(delegator2), 0);
+
+        // Regular setDelegate doesn't increment nonce
+        vm.startPrank(delegator);
+        delegateableGt.setDelegate(delegatee, true);
+        vm.stopPrank();
+
+        // Both should still be 0 since regular setDelegate doesn't increment nonce
+        assertEq(delegateableGt.nonces(delegator), 0);
+        assertEq(delegateableGt.nonces(delegator2), 0);
+
+        // Use signature-based delegation to increment nonce for first delegator
+        uint256 deadline = block.timestamp + 1 hours;
+        DelegateAble.DelegateParameters memory params = DelegateAble.DelegateParameters({
+            delegator: delegator,
+            delegatee: delegatee,
+            isDelegate: false, // Remove the delegation set above
+            nonce: 0,
+            deadline: deadline
+        });
+
+        bytes32 domainSeparator = delegateableGt.DOMAIN_SEPARATOR();
+        bytes32 structHash = keccak256(
+            abi.encode(
+                keccak256(
+                    "DelegationWithSig(address delegator,address delegatee,bool isDelegate,uint256 nonce,uint256 deadline)"
+                ),
+                params.delegator,
+                params.delegatee,
+                params.isDelegate,
+                params.nonce,
+                params.deadline
+            )
+        );
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(delegatorPrivateKey, digest);
+        DelegateAble.Signature memory signature = DelegateAble.Signature({v: v, r: r, s: s});
+
+        vm.startPrank(delegatee);
+        delegateableGt.setDelegateWithSignature(params, signature);
+        vm.stopPrank();
+
+        // First delegator's nonce should increment, second should remain 0
+        assertEq(delegateableGt.nonces(delegator), 1);
+        assertEq(delegateableGt.nonces(delegator2), 0);
+
+        // Regular setDelegate for second delegator should not increment nonce
+        vm.startPrank(delegator2);
+        delegateableGt.setDelegate(delegatee, true);
+        vm.stopPrank();
+
+        // Nonces should remain the same since regular setDelegate doesn't increment
+        assertEq(delegateableGt.nonces(delegator), 1);
+        assertEq(delegateableGt.nonces(delegator2), 0);
+    }
+
+    function test_NonceQueryFunction() public {
+        // Test nonces() function directly
+        assertEq(delegateableGt.nonces(delegator), 0);
+        assertEq(delegateableGt.nonces(delegatee), 0);
+        assertEq(delegateableGt.nonces(vm.randomAddress()), 0);
+
+        // Regular setDelegate should NOT change nonce
+        vm.startPrank(delegator);
+        delegateableGt.setDelegate(delegatee, true);
+        vm.stopPrank();
+
+        // Nonces should remain 0 since regular setDelegate doesn't increment nonce
+        assertEq(delegateableGt.nonces(delegator), 0);
+        assertEq(delegateableGt.nonces(delegatee), 0);
+    }
 }

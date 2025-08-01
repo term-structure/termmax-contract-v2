@@ -61,7 +61,6 @@ abstract contract DelegateAble {
     }
 
     function _setDelegate(address delegator, address delegatee, bool isDelegate_) internal virtual {
-        _delegateMapping[delegator].nonce++;
         if (!isDelegate_) {
             delete _delegateMapping[delegator].isDelegate[delegatee];
         } else {
@@ -72,13 +71,14 @@ abstract contract DelegateAble {
 
     function setDelegateWithSignature(DelegateParameters memory params, Signature memory signature) external virtual {
         _checkSignature(params, signature);
+        // update the nonce to prevent replay attacks
+        _delegateMapping[params.delegator].nonce++;
         _setDelegate(params.delegator, params.delegatee, params.isDelegate);
     }
 
     function _checkSignature(DelegateParameters memory params, Signature memory signature) internal view {
-        if (params.deadline < block.timestamp) {
-            revert InvalidSignature();
-        }
+        require(params.deadline >= block.timestamp, InvalidSignature());
+        require(params.nonce == nonces(params.delegator), InvalidSignature());
         bytes32 digest = getTypedDataHash(params);
         address recoveredAddress = ecrecover(digest, signature.v, signature.r, signature.s);
         if (recoveredAddress == address(0) || recoveredAddress != params.delegator) {
