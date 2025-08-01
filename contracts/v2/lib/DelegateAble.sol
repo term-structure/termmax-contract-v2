@@ -81,7 +81,9 @@ abstract contract DelegateAble {
         }
         bytes32 digest = getTypedDataHash(params);
         address recoveredAddress = ecrecover(digest, signature.v, signature.r, signature.s);
-        require(recoveredAddress == params.delegator, InvalidSignature());
+        if (recoveredAddress == address(0) || recoveredAddress != params.delegator) {
+            revert InvalidSignature();
+        }
     }
 
     function getTypedDataHash(DelegateParameters memory params) internal view returns (bytes32) {
