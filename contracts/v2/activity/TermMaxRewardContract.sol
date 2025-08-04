@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.27;
 
 import {
     Ownable2StepUpgradeable,
@@ -19,7 +19,6 @@ contract TermMaxRewardContract is
     using SafeERC20 for IERC20;
 
     error UserNotActive(address user);
-    error InvalidUserAddress();
     error ArrayLengthMismatch();
 
     event RewardAdded(address indexed user, IERC20[] tokens, uint256[] amounts);
@@ -89,7 +88,6 @@ contract TermMaxRewardContract is
         for (uint256 i = 0; i < rewards.length; ++i) {
             Reward memory reward = rewards[i];
             require(reward.tokens.length == reward.amounts.length, ArrayLengthMismatch());
-            require(reward.user != address(0), InvalidUserAddress());
 
             for (uint256 j = 0; j < reward.tokens.length; ++j) {
                 userProfiles[reward.user].rewards[reward.tokens[j]] += reward.amounts[j];
@@ -102,14 +100,14 @@ contract TermMaxRewardContract is
         for (uint256 i = 0; i < rewards.length; ++i) {
             Reward memory reward = rewards[i];
             require(reward.tokens.length == reward.amounts.length, ArrayLengthMismatch());
-            require(reward.user != address(0), InvalidUserAddress());
 
             for (uint256 j = 0; j < reward.tokens.length; ++j) {
-                uint256 currentReward = userProfiles[reward.user].rewards[reward.tokens[j]];
+                mapping(IERC20 => uint256) storage userRewards = userProfiles[reward.user].rewards;
+                uint256 currentReward = userRewards[reward.tokens[j]];
                 if (currentReward <= reward.amounts[j]) {
-                    delete userProfiles[reward.user].rewards[reward.tokens[j]];
+                    delete userRewards[reward.tokens[j]];
                 } else {
-                    userProfiles[reward.user].rewards[reward.tokens[j]] = currentReward - reward.amounts[j];
+                    userRewards[reward.tokens[j]] = currentReward - reward.amounts[j];
                 }
             }
             emit RewardRemoved(reward.user, reward.tokens, reward.amounts);
