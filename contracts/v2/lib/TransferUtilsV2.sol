@@ -10,18 +10,10 @@ library TransferUtilsV2 {
     error CanNotTransferUintMax();
 
     function safeTransferFrom(IERC20 token, address from, address to, uint256 value) internal {
-        // Prevent transferring the maximum uint256 value, which could be a mistake for aave aToken.
-        if (value == type(uint256).max) {
-            revert CanNotTransferUintMax();
-        }
         token.safeTransferFrom(from, to, value);
     }
 
     function safeTransfer(IERC20 token, address to, uint256 value) internal {
-        // Prevent transferring the maximum uint256 value, which could be a mistake for aave aToken.
-        if (value == type(uint256).max) {
-            revert CanNotTransferUintMax();
-        }
         token.safeTransfer(to, value);
     }
 
@@ -41,10 +33,6 @@ library TransferUtilsV2 {
     }
 
     function safeTransferFromWithCheck(IERC20 token, address from, address to, uint256 value) internal {
-        // Prevent transferring the maximum uint256 value, which could be a mistake for aave aToken.
-        if (value == type(uint256).max) {
-            revert CanNotTransferUintMax();
-        }
         if (from == to || value == 0) {
             return;
         }
@@ -52,10 +40,6 @@ library TransferUtilsV2 {
     }
 
     function safeTransferWithCheck(IERC20 token, address to, uint256 value) internal {
-        // Prevent transferring the maximum uint256 value, which could be a mistake for aave aToken.
-        if (value == type(uint256).max) {
-            revert CanNotTransferUintMax();
-        }
         if (to == address(this) || value == 0) {
             return;
         }
