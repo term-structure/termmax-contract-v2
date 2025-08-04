@@ -146,7 +146,8 @@ interface ITermMaxRouterV2 {
      * @param market The market to repay debt in
      * @param gtId ID of the GT token to repay debt from
      * @param byDebtToken True if repaying with debt token, false if using FT token
-     * @param swapPaths Array of SwapPath structs defining the swap paths
+     * @param expectedOutput The expect debt token ouput amount after flashrepay
+     * @param callbackData The data for callback, abi.encode(FlashRepayOptions.FLASH_REPAY, abi.encode(swapPaths))
      * @return netTokenOut Actual amount of tokens received
      */
     function flashRepayFromCollForV1(
@@ -155,7 +156,7 @@ interface ITermMaxRouterV2 {
         uint256 gtId,
         bool byDebtToken,
         uint256 expectedOutput,
-        SwapPath[] memory swapPaths
+        bytes memory callbackData
     ) external returns (uint256 netTokenOut);
 
     function flashRepayFromCollForV2(
@@ -166,14 +167,13 @@ interface ITermMaxRouterV2 {
         bool byDebtToken,
         uint256 expectedOutput,
         uint256 removedCollateral,
-        SwapPath[] memory swapPaths
+        bytes memory callbackData
     ) external returns (uint256 netTokenOut);
 
     /**
      * @notice Rollover GT position
      * @dev This function allows users to rollover their GT position to a new market or third-protocol
      * @param gtToken The GearingToken contract instance
-     * @param option The FlashRepayOptions enum indicating the type of rollover, rollover to TermMax, Aave, or Morpho
      * @param gtId The ID of the GT token being rolled over
      * @param additionalAsset The additional asset(debt or new collateral token) to reduce the LTV
      * @param additionalAmt Amount of the additional asset
@@ -187,7 +187,6 @@ interface ITermMaxRouterV2 {
      */
     function rolloverGtForV1(
         IGearingToken gtToken,
-        FlashRepayOptions option,
         uint256 gtId,
         IERC20 additionalAsset,
         uint256 additionalAmt,
@@ -198,7 +197,6 @@ interface ITermMaxRouterV2 {
      * @notice Rollover GT position
      * @dev This function allows users to rollover their GT position to a new market or third-protocol
      * @param gtToken The GearingToken contract instance
-     * @param option The FlashRepayOptions enum indicating the type of rollover, rollover to TermMax, Aave, or Morpho
      * @param gtId The ID of the GT token being rolled over
      * @param repayAmt Amount of debt to repay the old GT position
      * @param removedCollateral Amount of collateral to remove from the old position
@@ -214,7 +212,6 @@ interface ITermMaxRouterV2 {
      */
     function rolloverGtForV2(
         IGearingToken gtToken,
-        FlashRepayOptions option,
         uint256 gtId,
         uint256 repayAmt,
         uint256 removedCollateral,

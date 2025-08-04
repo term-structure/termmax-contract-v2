@@ -50,6 +50,7 @@ import {ISwapCallback} from "contracts/v1/ISwapCallback.sol";
 import {
     TermMaxRouterV2,
     ITermMaxRouterV2,
+    FlashRepayOptions,
     SwapUnit,
     RouterErrors,
     RouterEvents,
@@ -721,12 +722,13 @@ contract RouterTestV2 is Test {
 
         SwapPath[] memory swapPaths = new SwapPath[](1);
         swapPaths[0] = SwapPath({units: units, recipient: address(res.router), inputAmount: 0, useBalanceOnchain: true});
+        bytes memory callbackData = abi.encode(FlashRepayOptions.REPAY, abi.encode(swapPaths));
         res.gt.approve(address(res.router), gtId);
         if (isV1) {
-            res.router.flashRepayFromCollForV1(sender, res.market, gtId, byDebtToken, 0, swapPaths);
+            res.router.flashRepayFromCollForV1(sender, res.market, gtId, byDebtToken, 0, callbackData);
         } else {
             res.router.flashRepayFromCollForV2(
-                sender, res.market, gtId, debtAmt, byDebtToken, 0, abi.decode(collateralData, (uint256)), swapPaths
+                sender, res.market, gtId, debtAmt, byDebtToken, 0, abi.decode(collateralData, (uint256)), callbackData
             );
         }
 
@@ -772,14 +774,15 @@ contract RouterTestV2 is Test {
 
         SwapPath[] memory swapPaths = new SwapPath[](1);
         swapPaths[0] = SwapPath({units: units, recipient: address(res.router), inputAmount: 0, useBalanceOnchain: true});
+        bytes memory callbackData = abi.encode(FlashRepayOptions.REPAY, abi.encode(swapPaths));
 
         res.gt.approve(address(res.router), gtId);
         if (isV1) {
-            res.router.flashRepayFromCollForV1(sender, res.market, gtId, byDebtToken, 0, swapPaths);
+            res.router.flashRepayFromCollForV1(sender, res.market, gtId, byDebtToken, 0, callbackData);
         } else {
             // DelegateAble(address(res.gt)).setDelegate(address(res.router), true);
             res.router.flashRepayFromCollForV2(
-                sender, res.market, gtId, debtAmt, byDebtToken, 0, abi.decode(collateralData, (uint256)), swapPaths
+                sender, res.market, gtId, debtAmt, byDebtToken, 0, abi.decode(collateralData, (uint256)), callbackData
             );
         }
 
@@ -806,10 +809,11 @@ contract RouterTestV2 is Test {
 
         SwapPath[] memory swapPaths = new SwapPath[](1);
         swapPaths[0] = SwapPath({units: units, recipient: address(res.router), inputAmount: 0, useBalanceOnchain: true});
+        bytes memory callbackData = abi.encode(FlashRepayOptions.REPAY, abi.encode(swapPaths));
 
         res.gt.approve(address(res.router), gtId);
         res.router.flashRepayFromCollForV2(
-            sender, res.market, gtId, debtAmt / 2, byDebtToken, 0, abi.decode(collateralData, (uint256)), swapPaths
+            sender, res.market, gtId, debtAmt / 2, byDebtToken, 0, abi.decode(collateralData, (uint256)), callbackData
         );
 
         assertEq(res.collateral.balanceOf(sender), 0);

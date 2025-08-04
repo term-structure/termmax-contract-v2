@@ -11,7 +11,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {TermMaxFactoryV2, ITermMaxFactory} from "contracts/v2/factory/TermMaxFactoryV2.sol";
-import {ITermMaxRouterV2, TermMaxRouterV2, SwapPath} from "contracts/v2/router/TermMaxRouterV2.sol";
+import {ITermMaxRouterV2, TermMaxRouterV2, SwapPath, FlashRepayOptions} from "contracts/v2/router/TermMaxRouterV2.sol";
 import {TermMaxMarketV2, Constants, SafeCast} from "contracts/v2/TermMaxMarketV2.sol";
 import {TermMaxOrderV2, OrderConfig} from "contracts/v2/TermMaxOrderV2.sol";
 import {MockERC20} from "contracts/v1/test/MockERC20.sol";
@@ -410,8 +410,10 @@ abstract contract GtBaseTestV2 is ForkBaseTestV2 {
         swapPaths[0] = SwapPath({units: units, recipient: address(res.router), inputAmount: 0, useBalanceOnchain: true});
 
         (, uint128 debtAmt, bytes memory collateralData) = res.gt.loanInfo(gtId);
+        bytes memory callbackData = abi.encode(FlashRepayOptions.REPAY, abi.encode(swapPaths));
+
         uint256 netTokenOut = res.router.flashRepayFromCollForV2(
-            taker, res.market, gtId, debtAmt, byDebtToken, 0, abi.decode(collateralData, (uint256)), swapPaths
+            taker, res.market, gtId, debtAmt, byDebtToken, 0, abi.decode(collateralData, (uint256)), callbackData
         );
 
         uint256 debtTokenBalanceAfterRepay = res.debtToken.balanceOf(taker);
@@ -457,9 +459,10 @@ abstract contract GtBaseTestV2 is ForkBaseTestV2 {
         SwapPath[] memory swapPaths = new SwapPath[](1);
         swapPaths[0] =
             SwapPath({units: units2, recipient: address(res.router), inputAmount: 0, useBalanceOnchain: true});
+        bytes memory callbackData = abi.encode(FlashRepayOptions.REPAY, abi.encode(swapPaths));
 
         uint256 netTokenOut = res.router.flashRepayFromCollForV2(
-            taker, res.market, gtId, debtAmt, byDebtToken, 0, abi.decode(collateralData, (uint256)), swapPaths
+            taker, res.market, gtId, debtAmt, byDebtToken, 0, abi.decode(collateralData, (uint256)), callbackData
         );
 
         uint256 debtTokenBalanceAfterRepay = res.debtToken.balanceOf(taker);
