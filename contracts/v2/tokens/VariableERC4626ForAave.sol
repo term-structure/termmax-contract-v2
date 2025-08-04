@@ -105,7 +105,6 @@ contract VariableERC4626ForAave is
     }
 
     function _withdrawFromPool(address assetAddr, address to, uint256 amount) internal virtual override {
-        aToken.safeIncreaseAllowance(address(aavePool), amount);
         uint256 receivedAmount = aavePool.withdraw(assetAddr, amount, to);
         require(receivedAmount == amount, ERC4626TokenErrors.AaveWithdrawFailed(amount, receivedAmount));
     }

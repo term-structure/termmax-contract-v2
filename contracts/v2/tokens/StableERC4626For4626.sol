@@ -105,7 +105,7 @@ contract StableERC4626For4626 is
         if (assetsWithIncome < totalSupply_) {
             // If total assets with income is less than total supply, return 0
             return 0;
-        }else {
+        } else {
             return assetsWithIncome - totalSupply_;
         }
     }
