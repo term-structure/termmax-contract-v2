@@ -167,7 +167,10 @@ contract StableERC4626For4626Handler is Test {
         vm.stopPrank();
     }
 
-    function updateBufferConfig(uint256 minBuffer, uint256 maxBuffer, uint256 buffer) external countCall("updateBufferConfig") {
+    function updateBufferConfig(uint256 minBuffer, uint256 maxBuffer, uint256 buffer)
+        external
+        countCall("updateBufferConfig")
+    {
         vm.startPrank(admin);
 
         minBuffer = bound(minBuffer, 100e6, 5000e6);
@@ -266,7 +269,7 @@ contract StableERC4626For4626InvariantTest is StdInvariant, Test {
     // INVARIANT 4: Buffer configuration should always be valid
     function invariant_bufferConfigValid() public view {
         (uint256 minBuffer, uint256 maxBuffer, uint256 buffer) = stable4626.bufferConfig();
-        
+
         assertTrue(minBuffer <= maxBuffer, "Minimum buffer should be <= maximum buffer");
         assertTrue(buffer >= minBuffer, "Buffer should be >= minimum buffer");
         assertTrue(buffer <= maxBuffer, "Buffer should be <= maximum buffer");
@@ -280,13 +283,10 @@ contract StableERC4626For4626InvariantTest is StdInvariant, Test {
         uint256 thirdPoolShares = thirdPool.balanceOf(address(stable4626));
         uint256 thirdPoolAssets = thirdPool.previewRedeem(thirdPoolShares);
         uint256 totalSupply = stable4626.totalSupply();
-        
+
         // Income assets should never exceed actual available assets
         uint256 totalAvailableAssets = underlyingBalance + thirdPoolAssets + handler.ghost_totalIncomeWithdrawn();
-        assertTrue(
-            totalIncomeAssets <= totalAvailableAssets,
-            "Income assets should not exceed available assets"
-        );
+        assertTrue(totalIncomeAssets <= totalAvailableAssets, "Income assets should not exceed available assets");
     }
 
     // INVARIANT 6: Only owner can perform administrative functions
@@ -340,7 +340,7 @@ contract StableERC4626For4626InvariantTest is StdInvariant, Test {
     function invariant_thirdPoolInteractionConsistency() public view {
         uint256 thirdPoolShares = thirdPool.balanceOf(address(stable4626));
         uint256 expectedAssets = thirdPool.previewRedeem(thirdPoolShares);
-        
+
         // The assets we can get from third pool should be reasonable
         if (thirdPoolShares > 0) {
             assertTrue(expectedAssets > 0, "Third pool should provide assets for shares");
