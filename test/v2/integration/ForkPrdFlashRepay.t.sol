@@ -24,7 +24,7 @@ import {
     IERC20Metadata
 } from "../mainnet-fork/ForkBaseTestV2.sol";
 import {ITermMaxMarketV2} from "contracts/v2/ITermMaxMarketV2.sol";
-import {ITermMaxRouterV2, TermMaxRouterV2, SwapPath} from "contracts/v2/router/TermMaxRouterV2.sol";
+import {ITermMaxRouterV2, TermMaxRouterV2, SwapPath, FlashRepayOptions} from "contracts/v2/router/TermMaxRouterV2.sol";
 import {console} from "forge-std/console.sol";
 
 interface TestOracle is IOracle {
@@ -188,7 +188,8 @@ contract ForkPrdFlashRepay is ForkBaseTestV2 {
             SwapPath[] memory swapPaths = new SwapPath[](1);
             swapPaths[0] =
                 SwapPath({units: swapUnits, recipient: address(router), inputAmount: 0, useBalanceOnchain: true});
-            router.flashRepayFromCollForV2(borrower, market, gtId1, repayAmount, true, 0, removedCollateral, swapPaths);
+            bytes memory data = abi.encode(FlashRepayOptions.REPAY, abi.encode(swapPaths));
+            router.flashRepayFromCollForV2(borrower, market, gtId1, repayAmount, true, 0, removedCollateral, data);
             console.log("usdc balance after:", IERC20(usdc).balanceOf(borrower));
 
             (address owner, uint128 currentDebt, bytes memory currentCollateral) = gt.loanInfo(gtId1);
@@ -255,7 +256,8 @@ contract ForkPrdFlashRepay is ForkBaseTestV2 {
             SwapPath[] memory swapPaths = new SwapPath[](1);
             swapPaths[0] =
                 SwapPath({units: swapUnits, recipient: address(router2), inputAmount: 0, useBalanceOnchain: true});
-            router2.flashRepayFromCollForV1(borrower, mmay_30, gt1, true, 0, swapPaths);
+            bytes memory data = abi.encode(FlashRepayOptions.REPAY, abi.encode(swapPaths));
+            router2.flashRepayFromCollForV1(borrower, mmay_30, gt1, true, 0, data);
             console.log("usdc balance after:", IERC20(usdc).balanceOf(borrower));
             vm.stopPrank();
         }
