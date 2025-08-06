@@ -20,13 +20,7 @@ import {MockERC4626} from "contracts/v2/test/MockERC4626.sol";
 import {ISwapCallback} from "contracts/v1/ISwapCallback.sol";
 import {DeployUtils} from "../utils/DeployUtils.sol";
 import {JSONLoader} from "../utils/JSONLoader.sol";
-import {
-    MarketConfig,
-    OrderConfig,
-    CurveCuts,
-    CurveCut,
-    FeeConfig
-} from "contracts/v1/storage/TermMaxStorage.sol";
+import {MarketConfig, OrderConfig, CurveCuts, CurveCut, FeeConfig} from "contracts/v1/storage/TermMaxStorage.sol";
 
 contract MockSwapCallback is ISwapCallback {
     function afterSwap(uint256, uint256, int256, int256) external pure {}
@@ -49,10 +43,10 @@ contract TermMaxOrderV2Handler is Test {
     // Test actors
     address[] public actors;
     address public orderMaker;
-    
+
     // Call tracking
     mapping(bytes32 => uint256) public calls;
-    
+
     // Ghost variables for tracking state
     uint256 public ghost_totalFtSwapped;
     uint256 public ghost_totalXtSwapped;
@@ -61,12 +55,12 @@ contract TermMaxOrderV2Handler is Test {
     uint256 public ghost_liquidityAdded;
     uint256 public ghost_liquidityRemoved;
     uint256 public ghost_virtualXtReserveChanges;
-    
+
     // Reserve tracking
     uint256 public ghost_initialVirtualXtReserve;
     uint256 public ghost_maxVirtualXtReserveReached;
     uint256 public ghost_minVirtualXtReserveReached;
-    
+
     // Pool interaction tracking
     uint256 public ghost_poolDeposits;
     uint256 public ghost_poolWithdrawals;
@@ -131,11 +125,16 @@ contract TermMaxOrderV2Handler is Test {
 
     // ========== SWAP FUNCTIONS ==========
 
-    function swapDebtTokenToFt(uint256 debtTokenAmount) external createActor countCall("swapDebtTokenToFt") onlyBeforeMaturity {
+    function swapDebtTokenToFt(uint256 debtTokenAmount)
+        external
+        createActor
+        countCall("swapDebtTokenToFt")
+        onlyBeforeMaturity
+    {
         debtTokenAmount = bound(debtTokenAmount, 1e6, 1_000_000e18);
-        
+
         address currentActor = _getCurrentActor();
-        
+
         // Ensure actor has debt tokens
         debtToken.mint(currentActor, debtTokenAmount);
         debtToken.approve(address(order), debtTokenAmount);
@@ -156,11 +155,16 @@ contract TermMaxOrderV2Handler is Test {
         }
     }
 
-    function swapDebtTokenToXt(uint256 debtTokenAmount) external createActor countCall("swapDebtTokenToXt") onlyBeforeMaturity {
+    function swapDebtTokenToXt(uint256 debtTokenAmount)
+        external
+        createActor
+        countCall("swapDebtTokenToXt")
+        onlyBeforeMaturity
+    {
         debtTokenAmount = bound(debtTokenAmount, 1e6, 1_000_000e18);
-        
+
         address currentActor = _getCurrentActor();
-        
+
         // Ensure actor has debt tokens
         debtToken.mint(currentActor, debtTokenAmount);
         debtToken.approve(address(order), debtTokenAmount);
@@ -181,9 +185,14 @@ contract TermMaxOrderV2Handler is Test {
         }
     }
 
-    function swapFtToDebtToken(uint256 ftAmount) external createActor countCall("swapFtToDebtToken") onlyBeforeMaturity {
+    function swapFtToDebtToken(uint256 ftAmount)
+        external
+        createActor
+        countCall("swapFtToDebtToken")
+        onlyBeforeMaturity
+    {
         address currentActor = _getCurrentActor();
-        
+
         uint256 ftBalance = ft.balanceOf(currentActor);
         if (ftBalance == 0) {
             // Mint some FT for testing
@@ -192,7 +201,7 @@ contract TermMaxOrderV2Handler is Test {
             market.mint(currentActor, 100e18);
             ftBalance = ft.balanceOf(currentActor);
         }
-        
+
         ftAmount = bound(ftAmount, 1, ftBalance);
         ft.approve(address(order), ftAmount);
 
@@ -212,9 +221,14 @@ contract TermMaxOrderV2Handler is Test {
         }
     }
 
-    function swapXtToDebtToken(uint256 xtAmount) external createActor countCall("swapXtToDebtToken") onlyBeforeMaturity {
+    function swapXtToDebtToken(uint256 xtAmount)
+        external
+        createActor
+        countCall("swapXtToDebtToken")
+        onlyBeforeMaturity
+    {
         address currentActor = _getCurrentActor();
-        
+
         uint256 xtBalance = xt.balanceOf(currentActor);
         if (xtBalance == 0) {
             // Mint some XT for testing
@@ -223,7 +237,7 @@ contract TermMaxOrderV2Handler is Test {
             market.mint(currentActor, 100e18);
             xtBalance = xt.balanceOf(currentActor);
         }
-        
+
         xtAmount = bound(xtAmount, 1, xtBalance);
         xt.approve(address(order), xtAmount);
 
@@ -247,7 +261,7 @@ contract TermMaxOrderV2Handler is Test {
 
     function addLiquidityDebtToken(uint256 amount) external countCall("addLiquidityDebtToken") onlyOrderMaker {
         amount = bound(amount, 1e6, 1_000_000e18);
-        
+
         debtToken.mint(orderMaker, amount);
         debtToken.approve(address(order), amount);
 
@@ -263,15 +277,15 @@ contract TermMaxOrderV2Handler is Test {
         if (ghost_liquidityAdded == 0) {
             return;
         }
-        
+
         // Get current debt token balance of the order to determine available liquidity
         uint256 orderDebtBalance = debtToken.balanceOf(address(order));
         if (orderDebtBalance == 0) {
             return;
         }
-        
+
         amount = bound(amount, 1e6, Math.min(100_000e18, orderDebtBalance));
-        
+
         try order.removeLiquidity(IERC20(address(debtToken)), amount, orderMaker) {
             ghost_liquidityRemoved += amount;
         } catch {
@@ -303,22 +317,18 @@ contract TermMaxOrderV2Handler is Test {
 
     // ========== CONFIGURATION UPDATES ==========
 
-    function updateGeneralConfig(uint256 newMaxXtReserve, uint256 newVirtualXtReserve) 
-        external 
-        countCall("updateGeneralConfig") 
-        onlyOrderMaker 
+    function updateGeneralConfig(uint256 newMaxXtReserve, uint256 newVirtualXtReserve)
+        external
+        countCall("updateGeneralConfig")
+        onlyOrderMaker
     {
         OrderConfig memory currentConfig = order.orderConfig();
-        
+
         newMaxXtReserve = bound(newMaxXtReserve, 1e18, type(uint128).max);
         newVirtualXtReserve = bound(newVirtualXtReserve, 1e6, newMaxXtReserve);
 
-        try order.setGeneralConfig(
-            currentConfig.gtId,
-            newMaxXtReserve,
-            currentConfig.swapTrigger,
-            newVirtualXtReserve
-        ) {
+        try order.setGeneralConfig(currentConfig.gtId, newMaxXtReserve, currentConfig.swapTrigger, newVirtualXtReserve)
+        {
             ghost_virtualXtReserveChanges++;
             _updateVirtualXtReserveTracking();
         } catch {
@@ -412,9 +422,7 @@ contract TermMaxOrderV2InvariantTest is StdInvariant, Test {
         vm.stopPrank();
 
         // Setup handler
-        handler = new TermMaxOrderV2Handler(
-            order, market, ft, xt, gt, collateral, debtToken, pool, orderMaker
-        );
+        handler = new TermMaxOrderV2Handler(order, market, ft, xt, gt, collateral, debtToken, pool, orderMaker);
 
         // Configure invariant testing
         targetContract(address(handler));
@@ -440,14 +448,14 @@ contract TermMaxOrderV2InvariantTest is StdInvariant, Test {
     function invariant_virtualXtReserveWithinBounds() public view {
         uint256 virtualXtReserve = order.virtualXtReserve();
         uint256 maxXtReserve = order.orderConfig().maxXtReserve;
-        
+
         assertLe(virtualXtReserve, maxXtReserve, "Virtual XT reserve should not exceed max XT reserve");
     }
 
     // INVARIANT 2: Token reserves should always be non-negative
     function invariant_tokenReservesNonNegative() public view {
         (uint256 ftReserve, uint256 xtReserve) = order.tokenReserves();
-        
+
         assertTrue(ftReserve >= 0, "FT reserve should be non-negative");
         assertTrue(xtReserve >= 0, "XT reserve should be non-negative");
     }
@@ -456,7 +464,7 @@ contract TermMaxOrderV2InvariantTest is StdInvariant, Test {
     function invariant_realReservesConsistency() public view {
         (uint256 ftReserve, uint256 xtReserve) = order.tokenReserves();
         (uint256 realFtReserve, uint256 realXtReserve) = order.getRealReserves();
-        
+
         assertGe(realFtReserve, ftReserve, "Real FT reserve should be >= token FT reserve");
         assertGe(realXtReserve, xtReserve, "Real XT reserve should be >= token XT reserve");
     }
@@ -467,7 +475,7 @@ contract TermMaxOrderV2InvariantTest is StdInvariant, Test {
         if (address(orderPool) != address(0)) {
             uint256 poolShares = orderPool.balanceOf(address(order));
             uint256 poolAssets = orderPool.convertToAssets(poolShares);
-            
+
             // Pool assets should be reasonable (not exceeding total supply)
             uint256 totalPoolAssets = orderPool.totalAssets();
             assertLe(poolAssets, totalPoolAssets, "Order pool assets should not exceed total pool assets");
@@ -477,9 +485,9 @@ contract TermMaxOrderV2InvariantTest is StdInvariant, Test {
     // INVARIANT 5: Order configuration validity
     function invariant_orderConfigurationValid() public view {
         OrderConfig memory config = order.orderConfig();
-        
+
         assertTrue(config.maxXtReserve > 0, "Max XT reserve should be positive");
-        
+
         // Fee configuration validity
         FeeConfig memory feeConfig = config.feeConfig;
         assertTrue(feeConfig.borrowTakerFeeRatio < Constants.MAX_FEE_RATIO, "Borrow taker fee should be valid");
@@ -492,17 +500,19 @@ contract TermMaxOrderV2InvariantTest is StdInvariant, Test {
     function invariant_curveCutsValid() public view {
         OrderConfig memory config = order.orderConfig();
         CurveCuts memory curveCuts = config.curveCuts;
-        
+
         // Lend curve cuts validation
         if (curveCuts.lendCurveCuts.length > 0) {
             assertTrue(curveCuts.lendCurveCuts[0].xtReserve == 0, "First lend curve cut should start at 0");
             assertTrue(curveCuts.lendCurveCuts[0].liqSquare > 0, "First lend curve cut should have positive liquidity");
         }
-        
+
         // Borrow curve cuts validation
         if (curveCuts.borrowCurveCuts.length > 0) {
             assertTrue(curveCuts.borrowCurveCuts[0].xtReserve == 0, "First borrow curve cut should start at 0");
-            assertTrue(curveCuts.borrowCurveCuts[0].liqSquare > 0, "First borrow curve cut should have positive liquidity");
+            assertTrue(
+                curveCuts.borrowCurveCuts[0].liqSquare > 0, "First borrow curve cut should have positive liquidity"
+            );
         }
     }
 
@@ -511,7 +521,7 @@ contract TermMaxOrderV2InvariantTest is StdInvariant, Test {
         uint256 currentVirtual = order.virtualXtReserve();
         uint256 maxReached = handler.ghost_maxVirtualXtReserveReached();
         uint256 minReached = handler.ghost_minVirtualXtReserveReached();
-        
+
         assertLe(minReached, currentVirtual, "Current virtual XT should be >= minimum reached");
         assertGe(maxReached, currentVirtual, "Current virtual XT should be <= maximum reached");
     }
@@ -522,13 +532,13 @@ contract TermMaxOrderV2InvariantTest is StdInvariant, Test {
             // APR should be reasonable (not cause overflow)
             assertTrue(lendApr <= type(uint256).max, "Lend APR should not overflow");
             assertTrue(borrowApr <= type(uint256).max, "Borrow APR should not overflow");
-            
+
             // If lending is not allowed, lend APR should be 0
             OrderConfig memory config = order.orderConfig();
             if (config.curveCuts.borrowCurveCuts.length == 0) {
                 assertEq(lendApr, 0, "Lend APR should be 0 when lending not allowed");
             }
-            
+
             // If borrowing is not allowed, borrow APR should be max
             if (config.curveCuts.lendCurveCuts.length == 0) {
                 assertEq(borrowApr, type(uint256).max, "Borrow APR should be max when borrowing not allowed");
@@ -542,7 +552,7 @@ contract TermMaxOrderV2InvariantTest is StdInvariant, Test {
     function invariant_orderOwnershipConsistent() public view {
         address currentOwner = order.owner();
         address maker = order.maker();
-        
+
         assertEq(currentOwner, maker, "Order owner should equal maker");
         assertEq(maker, orderMaker, "Maker should remain consistent");
     }
@@ -550,7 +560,7 @@ contract TermMaxOrderV2InvariantTest is StdInvariant, Test {
     // INVARIANT 10: Market reference should remain consistent
     function invariant_marketReferenceConsistent() public view {
         ITermMaxMarket orderMarket = order.market();
-        
+
         assertEq(address(orderMarket), address(market), "Order market reference should remain consistent");
     }
 
@@ -558,7 +568,7 @@ contract TermMaxOrderV2InvariantTest is StdInvariant, Test {
     function invariant_liquidityOperationsBalanced() public view {
         uint256 added = handler.ghost_liquidityAdded();
         uint256 removed = handler.ghost_liquidityRemoved();
-        
+
         // Total removed should not exceed total added by a significant margin
         if (removed > 0) {
             assertTrue(added > 0, "Should have added liquidity before removing");
@@ -569,7 +579,7 @@ contract TermMaxOrderV2InvariantTest is StdInvariant, Test {
     function invariant_poolInteractionsConsistent() public view {
         IERC4626 orderPool = order.pool();
         bool poolSet = handler.ghost_poolEverSet();
-        
+
         if (poolSet && address(orderPool) != address(0)) {
             // If pool was ever set and is currently set, pool should be valid
             assertTrue(address(orderPool) != address(0), "Pool should be valid when set");
@@ -583,7 +593,7 @@ contract TermMaxOrderV2InvariantTest is StdInvariant, Test {
         uint256 totalFtSwapped = handler.ghost_totalFtSwapped();
         uint256 totalXtSwapped = handler.ghost_totalXtSwapped();
         uint256 totalDebtSwapped = handler.ghost_totalDebtTokenSwapped();
-        
+
         // Swapped amounts should not be unreasonably large
         if (totalFtSwapped > 0) {
             assertLt(totalFtSwapped, type(uint128).max, "Total FT swapped should be reasonable");
