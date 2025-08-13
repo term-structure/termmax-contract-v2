@@ -1319,7 +1319,6 @@ contract TermMaxOrderV2 is
 
         // ft reserve increase, xt reserve decrease
         deltaFt -= feeAmt;
-        deltaXt = debtTokenOut;
         isNegetiveXt = true;
     }
 
@@ -1351,7 +1350,6 @@ contract TermMaxOrderV2 is
 
         // ft reserve decrease, xt reserve increase
         deltaFt += feeAmt;
-        deltaXt = debtTokenOut;
         isNegetiveXt = false;
     }
 }
