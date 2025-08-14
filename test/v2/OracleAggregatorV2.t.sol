@@ -5,6 +5,9 @@ import {Test} from "forge-std/Test.sol";
 import {console} from "forge-std/console.sol";
 import {OracleAggregatorV2, IOracleV2, AggregatorV3Interface} from "contracts/v2/oracle/OracleAggregatorV2.sol";
 import {MockPriceFeedV2} from "contracts/v2/test/MockPriceFeedV2.sol";
+import {TermMaxERC4626PriceFeed} from "contracts/v2/oracle/priceFeeds/TermMaxERC4626PriceFeed.sol";
+import {MockERC4626} from "contracts/v2/test/MockERC4626.sol";
+import {MockERC20} from "contracts/v1/test/MockERC20.sol";
 
 contract OracleAggregatorTestV2 is Test {
     OracleAggregatorV2 public oracleAggregator;
@@ -1022,5 +1025,58 @@ contract OracleAggregatorTestV2 is Test {
         (uint256 price, uint8 decimals) = oracleAggregator.getPrice(ASSET);
         assertEq(price, uint256(priceAboveMin));
         assertEq(decimals, DECIMALS);
+    }
+
+    function test_preview_redeem_is_zero_get_price() public {
+        // Create a mock asset (underlying token)
+        MockPriceFeedV2 assetPriceFeed = new MockPriceFeedV2(OWNER);
+
+        // Set initial asset price data
+        MockPriceFeedV2.RoundData memory assetRoundData = MockPriceFeedV2.RoundData({
+            roundId: 1,
+            answer: 1000e8, // $1000 per asset
+            startedAt: block.timestamp,
+            updatedAt: block.timestamp,
+            answeredInRound: 1
+        });
+
+        vm.prank(OWNER);
+        assetPriceFeed.updateRoundData(assetRoundData);
+
+        // Create a mock ERC4626 vault with the asset
+        MockERC20 mockAsset = new MockERC20("T", "T", 18); // Mock asset address
+        MockERC4626 mockERC4626 = new MockERC4626(mockAsset);
+
+        // Create a TermMaxERC4626PriceFeed with the asset price feed and vault
+        TermMaxERC4626PriceFeed priceFeed = new TermMaxERC4626PriceFeed(address(assetPriceFeed), address(mockERC4626));
+
+        // Create oracle configuration using the TermMaxERC4626PriceFeed
+        IOracleV2.Oracle memory oracle = IOracleV2.Oracle({
+            aggregator: priceFeed,
+            backupAggregator: AggregatorV3Interface(address(0)), // No backup for this test
+            heartbeat: 0,
+            backupHeartbeat: 0,
+            maxPrice: 0, // No price cap
+            minPrice: 1 // No price floor
+        });
+
+        // Submit and accept the oracle
+        vm.startPrank(OWNER);
+        mockAsset.mint(OWNER, 1000e18); // Mint some assets to the owner
+        mockAsset.approve(address(mockERC4626), 1000e18); // Approve the vault
+        mockERC4626.deposit(1000e18, OWNER); // Deposit into the vault
+
+        oracleAggregator.submitPendingOracle(ASSET, oracle);
+        vm.warp(block.timestamp + TIMELOCK + 1);
+        vm.stopPrank();
+
+        oracleAggregator.acceptPendingOracle(ASSET);
+        (uint256 price,) = oracleAggregator.getPrice(ASSET);
+        assertGt(price, 0, "Initial price should be greater than 0");
+
+        mockERC4626.pause();
+
+        vm.expectRevert(abi.encodeWithSignature("OracleIsNotWorking(address)", ASSET));
+        oracleAggregator.getPrice(ASSET);
     }
 }
