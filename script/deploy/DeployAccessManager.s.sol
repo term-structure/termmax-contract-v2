@@ -3,16 +3,17 @@ pragma solidity ^0.8.27;
 
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
-import {AccessManager} from "contracts/v1/access/AccessManager.sol";
+import {AccessManagerV2, AccessManager} from "contracts/v2/access/AccessManagerV2.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {DeployBase} from "./DeployBase.s.sol";
+import {DeployBaseV2} from "./DeployBaseV2.s.sol";
 
-contract DeployAccessManager is DeployBase {
+contract DeployAccessManagerV2 is DeployBaseV2 {
     // Network-specific config loaded from environment variables
     string network;
     uint256 deployerPrivateKey;
     address deployerAddr;
     address adminAddr;
+    address accessManagerAddr;
 
     function setUp() public {
         // Load network from environment variable
@@ -26,6 +27,12 @@ contract DeployAccessManager is DeployBase {
         deployerPrivateKey = vm.envUint(privateKeyVar);
         deployerAddr = vm.addr(deployerPrivateKey);
         adminAddr = vm.envAddress(adminVar);
+        string memory deploymentPath =
+            string.concat(vm.projectRoot(), "/deployments/", network, "/", network, "-access-manager.json");
+        if (vm.exists(deploymentPath)) {
+            string memory json = vm.readFile(deploymentPath);
+            accessManagerAddr = vm.parseJsonAddress(json, ".contracts.accessManager");
+        }
     }
 
     function run() public {
@@ -36,9 +43,14 @@ contract DeployAccessManager is DeployBase {
 
         uint256 currentBlock = block.number;
         uint256 currentTimestamp = block.timestamp;
-
+        AccessManagerV2 accessManager;
         vm.startBroadcast(deployerPrivateKey);
-        AccessManager accessManager = deployAccessManager(adminAddr);
+        if (accessManagerAddr != address(0)) {
+            console.log("AccessManager v1:", accessManagerAddr);
+            upgradeAccessManager(accessManagerAddr);
+        } else {
+            accessManager = deployAccessManager(adminAddr);
+        }
         vm.stopBroadcast();
 
         console.log("===== Git Info =====");
@@ -52,8 +64,8 @@ contract DeployAccessManager is DeployBase {
         console.log("Block timestamp:", currentTimestamp);
         console.log();
 
-        console.log("===== AccessManager Info =====");
-        console.log("AccessManager deployed at:", address(accessManager));
+        console.log("===== AccessManagerV2 Info =====");
+        console.log("AccessManagerV2 deployed at:", address(accessManager));
         console.log();
 
         // Write deployment results to a JSON file
@@ -87,7 +99,7 @@ contract DeployAccessManager is DeployBase {
                 vm.toString(adminAddr),
                 '",\n',
                 '  "contracts": {\n',
-                '    "accessManager": "',
+                '    "accessManagerV2": "',
                 vm.toString(address(accessManager)),
                 '"\n',
                 "  }\n",
