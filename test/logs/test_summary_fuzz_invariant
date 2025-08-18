@@ -1,0 +1,11 @@
+Fuzz/Invariant Test Report
+- Fuzz suites:
+    - FuzzActionsV2: 1/1 passed (μ gas ~20.9M)
+    - FuzzActionsV2WithPool: 1/1 passed (μ gas ~22.1M)
+    - FuzzSwapV2: 8/8 passed (each runs: 256; μ gas ~19.2M)
+- Invariant suites:
+    - StableERC4626ForAaveInvariant: 11/11 passed (256 runs each)
+    - VariableERC4626ForAaveInvariant: 12/12 passed (256 runs each)
+    - TermMaxVaultV2Invariant: 7/7 passed (256 runs each)
+    - TermMaxMarketV2Invariant: 10/10 passed (256 runs each)
+    - TermMaxOrderV2Invariant: 14/14 passed (256 runs each)

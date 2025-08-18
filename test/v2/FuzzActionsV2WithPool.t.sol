@@ -110,6 +110,17 @@ contract FuzzActionsTestV2WithPool is Test {
         res.ft.transfer(address(res.order), ftReserve - maxShares);
         res.xt.transfer(address(res.order), xtReserve - maxShares);
 
+        vm.label(address(res.order), "OrderV2");
+        vm.label(address(res.market), "MarketV2");
+        vm.label(address(res.debt), "DebtToken");
+        vm.label(address(res.ft), "FTToken");
+        vm.label(address(res.xt), "XTToken");
+        vm.label(address(pool), "Pool");
+        vm.label(maker, "Maker");
+        vm.label(taker, "Taker");
+        vm.label(treasurer, "Treasurer");
+        vm.label(admin, "Admin");
+
         vm.stopPrank();
     }
 

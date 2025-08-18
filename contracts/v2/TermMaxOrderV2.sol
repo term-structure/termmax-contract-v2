@@ -570,7 +570,7 @@ contract TermMaxOrderV2 is
             tokenIn.safeTransferFrom(msg.sender, address(this), tokenAmtIn);
 
             _rebalance(
-                _ft, _xt, tokenIn, tokenAmtIn, tokenOut, netTokenOut, feeAmt, orderConfig_.gtId, deltaFt, deltaXt
+                _ft, _xt, _debtToken, tokenAmtIn, tokenOut, netTokenOut, feeAmt, orderConfig_.gtId, deltaFt, deltaXt
             );
 
             // transfer output tokens
@@ -636,7 +636,7 @@ contract TermMaxOrderV2 is
             // transfer token in
             tokenIn.safeTransferFrom(msg.sender, address(this), netTokenIn);
             _rebalance(
-                _ft, _xt, tokenIn, netTokenIn, tokenOut, tokenAmtOut, feeAmt, orderConfig_.gtId, deltaFt, deltaXt
+                _ft, _xt, _debtToken, netTokenIn, tokenOut, tokenAmtOut, feeAmt, orderConfig_.gtId, deltaFt, deltaXt
             );
 
             // transfer output tokens
@@ -651,7 +651,7 @@ contract TermMaxOrderV2 is
     function _rebalance(
         IERC20 _ft,
         IERC20 _xt,
-        IERC20 tokenIn,
+        IERC20 _debtToken,
         uint256 inputAmt,
         IERC20 tokenOut,
         uint256 outputAmt,
@@ -682,16 +682,23 @@ contract TermMaxOrderV2 is
             pool_.withdraw(releaseAmount, address(this), address(this));
         }
         ITermMaxMarket _market = market;
-        if (tokenOut != ft && tokenOut != xt) {
-            uint256 tokenToBurn = outputAmt - releaseAmount;
-            if (tokenToBurn > 0) {
+        uint256 tokenToMint;
+        if (tokenOut == _debtToken) {
+            if (outputAmt > releaseAmount) {
+                uint256 tokenToBurn = outputAmt - releaseAmount;
                 _market.burn(address(this), tokenToBurn);
+            } else {
+                // If output token is debt token, we need to mint it
+                tokenToMint = releaseAmount - outputAmt;
             }
         } else {
-            inputAmt += releaseAmount;
-            tokenIn.safeIncreaseAllowance(address(_market), inputAmt);
-            _market.mint(address(this), inputAmt);
+            tokenToMint = releaseAmount + inputAmt;
         }
+        if (tokenToMint != 0) {
+            _debtToken.safeIncreaseAllowance(address(_market), tokenToMint);
+            _market.mint(address(this), tokenToMint);
+        }
+
         // Pay fee
         _ft.safeTransfer(_market.config().treasurer, feeAmt);
     }
@@ -1319,7 +1326,6 @@ contract TermMaxOrderV2 is
 
         // ft reserve increase, xt reserve decrease
         deltaFt -= feeAmt;
-        deltaXt = debtTokenOut;
         isNegetiveXt = true;
     }
 
@@ -1351,7 +1357,6 @@ contract TermMaxOrderV2 is
 
         // ft reserve decrease, xt reserve increase
         deltaFt += feeAmt;
-        deltaXt = debtTokenOut;
         isNegetiveXt = false;
     }
 }
