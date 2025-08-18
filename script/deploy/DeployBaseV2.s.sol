@@ -19,7 +19,7 @@ import {MockERC20} from "contracts/v1/test/MockERC20.sol";
 import {MockPriceFeed} from "contracts/v1/test/MockPriceFeed.sol";
 import {MockPriceFeed} from "contracts/v1/test/MockPriceFeed.sol";
 import {IMintableERC20V2, MintableERC20V2} from "contracts/v2/tokens/MintableERC20V2.sol";
-import {SwapAdapter} from "contracts/v1/test/testnet/SwapAdapter.sol";
+import {SwapAdapterV2} from "contracts/v2/test/testnet/SwapAdapterV2.sol";
 import {Faucet} from "contracts/v1/test/testnet/Faucet.sol";
 import {JsonLoader} from "../utils/JsonLoader.sol";
 import {FaucetERC20} from "contracts/v1/test/testnet/FaucetERC20.sol";
@@ -113,7 +113,7 @@ contract DeployBaseV2 is Script {
             TermMaxVaultFactoryV2 vaultFactory,
             OracleAggregatorV2 oracleAggregator,
             TermMaxRouterV2 router,
-            SwapAdapter swapAdapter,
+            SwapAdapterV2 swapAdapter,
             Faucet faucet,
             MarketViewer marketViewer,
             MakerHelper makerHelper
@@ -135,17 +135,52 @@ contract DeployBaseV2 is Script {
         router = deployRouter(address(accessManager));
 
         // deploy swap adapter
-        swapAdapter = new SwapAdapter(deployerAddr);
+        swapAdapter = new SwapAdapterV2(deployerAddr);
         accessManager.setAdapterWhitelist(ITermMaxRouter(address(router)), address(swapAdapter), true);
-        if (faucetAddr != address(0)) {
-            faucet = Faucet(faucetAddr);
-        } else {
-            // deploy faucet
-            faucet = new Faucet(deployerAddr);
-        }
+        faucet = Faucet(faucetAddr);
 
         // deploy market viewer
         marketViewer = deployMarketViewer();
+
+        // deploy maker helper
+        makerHelper = deployMakerHelper(address(accessManager));
+    }
+
+    function deployAndUpgadeCore(
+        address deployerAddr,
+        address accessManagerAddr,
+        address routerAddr,
+        address faucetAddr,
+        uint256 oracleTimelock
+    )
+        public
+        returns (
+            TermMaxFactoryV2 factory,
+            TermMaxVaultFactoryV2 vaultFactory,
+            OracleAggregatorV2 oracleAggregator,
+            TermMaxRouterV2 router,
+            SwapAdapterV2 swapAdapter,
+            MakerHelper makerHelper
+        )
+    {
+        // deploy access manager
+        AccessManagerV2 accessManager = AccessManagerV2(accessManagerAddr);
+
+        // deploy factory
+        factory = deployFactory(address(accessManager));
+
+        // deploy vault factory
+        vaultFactory = deployVaultFactory();
+
+        // deploy oracle aggregator
+        oracleAggregator = deployOracleAggregator(address(accessManager), oracleTimelock);
+
+        // deploy and upgrade router
+        router = upgradeRouter(accessManager, routerAddr);
+
+        // deploy swap adapter
+        swapAdapter = new SwapAdapterV2(deployerAddr);
+        accessManager.setAdapterWhitelist(ITermMaxRouter(address(router)), address(swapAdapter), true);
 
         // deploy maker helper
         makerHelper = deployMakerHelper(address(accessManager));
@@ -168,7 +203,8 @@ contract DeployBaseV2 is Script {
             UniswapV3AdapterV2 uniswapV3Adapter,
             OdosV2AdapterV2 odosV2Adapter,
             PendleSwapV3AdapterV2 pendleSwapV3Adapter,
-            ERC4626VaultAdapterV2 vaultAdapter
+            ERC4626VaultAdapterV2 vaultAdapter,
+            TermMaxSwapAdapter termMaxSwapAdapterV2
         )
     {
         // deploy access manager
@@ -194,6 +230,7 @@ contract DeployBaseV2 is Script {
         odosV2Adapter = new OdosV2AdapterV2(odosV2Router);
         pendleSwapV3Adapter = new PendleSwapV3AdapterV2(address(pendleSwapV3Router));
         vaultAdapter = new ERC4626VaultAdapterV2();
+        termMaxSwapAdapterV2 = new TermMaxSwapAdapter();
 
         ITermMaxRouter irouter = ITermMaxRouter(address(router));
 
@@ -201,6 +238,43 @@ contract DeployBaseV2 is Script {
         accessManager.setAdapterWhitelist(irouter, address(odosV2Adapter), true);
         accessManager.setAdapterWhitelist(irouter, address(pendleSwapV3Adapter), true);
         accessManager.setAdapterWhitelist(irouter, address(vaultAdapter), true);
+        accessManager.setAdapterWhitelist(irouter, address(termMaxSwapAdapterV2), true);
+    }
+
+    function deployAndUpgradeMainnet(
+        address accessManagerAddr,
+        address routerAddr,
+        address uniswapV3Router,
+        address odosV2Router,
+        address pendleSwapV3Router,
+        uint256 oracleTimelock
+    )
+        public
+        returns (
+            TermMaxFactoryV2 factory,
+            TermMaxVaultFactoryV2 vaultFactory,
+            OracleAggregatorV2 oracleAggregator,
+            TermMaxRouterV2 router,
+            MakerHelper makerHelper,
+            UniswapV3AdapterV2 uniswapV3Adapter,
+            OdosV2AdapterV2 odosV2Adapter,
+            PendleSwapV3AdapterV2 pendleSwapV3Adapter,
+            ERC4626VaultAdapterV2 vaultAdapter,
+            TermMaxSwapAdapter termMaxSwapAdapterV2
+        )
+    {
+        (uniswapV3Adapter, odosV2Adapter, pendleSwapV3Adapter, vaultAdapter, termMaxSwapAdapterV2) =
+            deployAdapters(accessManagerAddr, routerAddr, uniswapV3Router, odosV2Router, pendleSwapV3Router);
+        // upgrade router
+        router = upgradeRouter(AccessManagerV2(accessManagerAddr), routerAddr);
+        // deploy factory
+        factory = deployFactory(address(AccessManagerV2(accessManagerAddr)));
+        // deploy vault factory
+        vaultFactory = deployVaultFactory();
+        // deploy oracle aggregator
+        oracleAggregator = deployOracleAggregator(address(AccessManagerV2(accessManagerAddr)), oracleTimelock);
+        // deploy maker helper
+        makerHelper = deployMakerHelper(address(AccessManagerV2(accessManagerAddr)));
     }
 
     function deployAdapters(
@@ -216,7 +290,7 @@ contract DeployBaseV2 is Script {
             OdosV2AdapterV2 odosV2Adapter,
             PendleSwapV3AdapterV2 pendleSwapV3Adapter,
             ERC4626VaultAdapterV2 vaultAdapter,
-            TermMaxSwapAdapter termMaxSwapAdapter
+            TermMaxSwapAdapter termMaxSwapAdapterV2
         )
     {
         // deploy access manager
@@ -230,7 +304,7 @@ contract DeployBaseV2 is Script {
         odosV2Adapter = new OdosV2AdapterV2(odosV2Router);
         pendleSwapV3Adapter = new PendleSwapV3AdapterV2(address(pendleSwapV3Router));
         vaultAdapter = new ERC4626VaultAdapterV2();
-        termMaxSwapAdapter = new TermMaxSwapAdapter();
+        termMaxSwapAdapterV2 = new TermMaxSwapAdapter();
 
         ITermMaxRouter irouter = ITermMaxRouter(address(router));
 
@@ -238,7 +312,7 @@ contract DeployBaseV2 is Script {
         accessManager.setAdapterWhitelist(irouter, address(odosV2Adapter), true);
         accessManager.setAdapterWhitelist(irouter, address(pendleSwapV3Adapter), true);
         accessManager.setAdapterWhitelist(irouter, address(vaultAdapter), true);
-        accessManager.setAdapterWhitelist(irouter, address(termMaxSwapAdapter), true);
+        accessManager.setAdapterWhitelist(irouter, address(termMaxSwapAdapterV2), true);
     }
 
     function deployMarkets(
