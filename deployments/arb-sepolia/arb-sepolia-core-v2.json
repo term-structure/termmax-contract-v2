@@ -1,0 +1,21 @@
+{
+  "network": "arb-sepolia",
+  "deployedAt": "1755592901",
+  "gitBranch": "v2/deployment",
+  "gitCommitHash": "0x0xb04b688eef41880a52ca57406521e56961b8022c",
+  "blockInfo": {
+    "number": "9017114",
+    "timestamp": "1755592901"
+  },
+  "deployer": "0xE355d5D8aa52EF0FbbD037C4a3C5E6Fd659cf46B",
+  "admin": "0x81f314f70702Bbe89FEd0F2cFe6841950275E0b7",
+  "contracts": {
+    "factoryV2": "0x7546411b77Ac242474102d134c67883d74085FFa",
+    "vaultFactoryV2": "0x3BC15BC2BbAD675f23f679a22E1d376005992068",
+    "oracleAggregatorV2": "0x4603965E17fbD6F05187374097F511286891f1bB",
+    "routerV2": "0x0933552A5b7490ce385F7c7FdE192F0b189Ca65f",
+    "swapAdapterV2": "0x20BC3277AF56c4FE525b8a89508c5697B646EC91",
+    "faucet": "0x89C2a25Af50F043499fdBD4AaF6D238d93049403",
+    "marketViewer": "0x0Fcd522756a2020f7886162661873208356706F8"
+  }
+}

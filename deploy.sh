@@ -4,7 +4,7 @@
 if [ "$#" -lt 2 ]; then
     echo "Usage: $0 <network> <type> [options]"
     echo "Supported networks: eth-sepolia, arb-sepolia, eth-mainnet, arb-mainnet"
-    echo "Deployment types: access-manager, core, market, order, vault"
+    echo "Deployment types: access-manager, core, market, order, vault, access-manager-v2, core-v2"
     echo "Options:"
     echo "  --broadcast     Broadcast transactions (default: dry run)"
     echo "  --verify       Enable contract verification"
@@ -51,12 +51,12 @@ esac
 
 # Validate deployment type
 case $TYPE in
-    "access-manager"|"core"|"market"|"order"|"vault")
+    "access-manager"|"core"|"market"|"order"|"vault"|"access-manager-v2"|"core-v2")
         echo "Deployment type: $TYPE"
         ;;
     *)
         echo "Unsupported deployment type: $TYPE"
-        echo "Supported types: access-manager, core, market, order, vault"
+        echo "Supported types: access-manager, core, market, order, vault, access-manager-v2, core-v2"
         exit 1
         ;;
 esac
@@ -128,6 +128,10 @@ fi
 # Capitalize first letter of type for script name
 if [ "$TYPE" = "access-manager" ]; then
     SCRIPT_NAME="DeployAccessManager"
+elif [ "$TYPE" = "access-manager-v2" ]; then
+    SCRIPT_NAME="DeployAccessManagerV2"
+elif [ "$TYPE" = "core-v2" ]; then
+    SCRIPT_NAME="DeployCoreV2"
 else
     TYPE_CAPITALIZED="$(tr '[:lower:]' '[:upper:]' <<< ${TYPE:0:1})${TYPE:1}"
     SCRIPT_NAME="Deploy${TYPE_CAPITALIZED}"

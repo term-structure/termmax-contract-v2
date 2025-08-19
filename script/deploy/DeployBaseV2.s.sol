@@ -100,23 +100,17 @@ contract DeployBaseV2 is Script {
         return existingAccessManager;
     }
 
-    function deployCore(
-        address deployerAddr,
-        address accessManagerAddr,
-        address routerAddr,
-        address faucetAddr,
-        uint256 oracleTimelock
-    )
+    function deployCore(address deployerAddr, address accessManagerAddr, uint256 oracleTimelock)
         public
         returns (
             TermMaxFactoryV2 factory,
             TermMaxVaultFactoryV2 vaultFactory,
             OracleAggregatorV2 oracleAggregator,
             TermMaxRouterV2 router,
+            MakerHelper makerHelper,
             SwapAdapterV2 swapAdapter,
             Faucet faucet,
-            MarketViewer marketViewer,
-            MakerHelper makerHelper
+            MarketViewer marketViewer
         )
     {
         // deploy access manager
@@ -137,7 +131,8 @@ contract DeployBaseV2 is Script {
         // deploy swap adapter
         swapAdapter = new SwapAdapterV2(deployerAddr);
         accessManager.setAdapterWhitelist(ITermMaxRouter(address(router)), address(swapAdapter), true);
-        faucet = Faucet(faucetAddr);
+
+        faucet = new Faucet(deployerAddr);
 
         // deploy market viewer
         marketViewer = deployMarketViewer();
@@ -146,11 +141,10 @@ contract DeployBaseV2 is Script {
         makerHelper = deployMakerHelper(address(accessManager));
     }
 
-    function deployAndUpgadeCore(
+    function deployAndUpgradeCore(
         address deployerAddr,
         address accessManagerAddr,
         address routerAddr,
-        address faucetAddr,
         uint256 oracleTimelock
     )
         public
@@ -159,8 +153,8 @@ contract DeployBaseV2 is Script {
             TermMaxVaultFactoryV2 vaultFactory,
             OracleAggregatorV2 oracleAggregator,
             TermMaxRouterV2 router,
-            SwapAdapterV2 swapAdapter,
-            MakerHelper makerHelper
+            MakerHelper makerHelper,
+            SwapAdapterV2 swapAdapter
         )
     {
         // deploy access manager
@@ -241,7 +235,7 @@ contract DeployBaseV2 is Script {
         accessManager.setAdapterWhitelist(irouter, address(termMaxSwapAdapterV2), true);
     }
 
-    function deployAndUpgradeMainnet(
+    function deployAndUpgradeCoreMainnet(
         address accessManagerAddr,
         address routerAddr,
         address uniswapV3Router,

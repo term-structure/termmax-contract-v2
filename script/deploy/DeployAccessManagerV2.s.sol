@@ -48,6 +48,7 @@ contract DeployAccessManagerV2 is DeployBaseV2 {
         if (accessManagerAddr != address(0)) {
             console.log("AccessManager v1:", accessManagerAddr);
             upgradeAccessManager(accessManagerAddr);
+            accessManager = AccessManagerV2(accessManagerAddr);
         } else {
             accessManager = deployAccessManager(adminAddr);
         }
