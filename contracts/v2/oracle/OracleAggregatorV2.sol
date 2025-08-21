@@ -122,6 +122,13 @@ contract OracleAggregatorV2 is IOracleV2, Ownable2Step {
             revert InvalidAssetOrOracle();
         }
 
+        // Update immediately if the aggregator and backupAggregator are not changed
+        Oracle memory oldOracle = oracles[asset];
+        if (oldOracle.aggregator == oracle.aggregator && oldOracle.backupAggregator == oracle.backupAggregator) {
+            _updateOracle(asset, oracle);
+            return;
+        }
+
         // Ensure backup aggregator has same decimals as primary if both are present
         if (address(oracle.backupAggregator) != address(0)) {
             if (oracle.aggregator.decimals() != oracle.backupAggregator.decimals()) {
@@ -157,10 +164,12 @@ contract OracleAggregatorV2 is IOracleV2, Ownable2Step {
         }
 
         // Activate the pending oracle
-        Oracle memory oracle = pendingOracles[asset].oracle;
-        oracles[asset] = oracle;
+        _updateOracle(asset, pendingOracles[asset].oracle);
         delete pendingOracles[asset];
+    }
 
+    function _updateOracle(address asset, Oracle memory oracle) internal {
+        oracles[asset] = oracle;
         emit UpdateOracle(
             asset,
             oracle.aggregator,
@@ -186,7 +195,7 @@ contract OracleAggregatorV2 is IOracleV2, Ownable2Step {
     /**
      * @inheritdoc IOracleV2
      */
-    function getPrice(address asset) external view override returns (uint256, uint8) {
+    function getPrice(address asset) external view virtual override returns (uint256, uint8) {
         Oracle memory oracle = oracles[asset];
 
         if (oracle.aggregator == AggregatorV3Interface(address(0))) {
