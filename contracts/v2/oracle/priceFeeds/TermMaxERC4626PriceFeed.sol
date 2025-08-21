@@ -19,12 +19,12 @@ contract TermMaxERC4626PriceFeed is ITermMaxPriceFeed {
     uint256 private immutable vaultDenominator;
     uint256 private constant PRICE_DECIMALS = 10 ** 8;
 
-    constructor(address _underlyingPriceFeed, address _asset) {
+    constructor(address _underlyingPriceFeed, address _vault) {
         assetPriceFeed = AggregatorV3Interface(_underlyingPriceFeed);
-        asset = _asset;
-        uint8 vaultDecimals = IERC20Metadata(_asset).decimals();
+        asset = _vault;
+        uint8 vaultDecimals = IERC20Metadata(_vault).decimals();
         vaultDenominator = 10 ** vaultDecimals;
-        uint8 underlyingDecimals = IERC20Metadata(IERC4626(_underlyingPriceFeed).asset()).decimals();
+        uint8 underlyingDecimals = IERC20Metadata(IERC4626(_vault).asset()).decimals();
         priceDenominator = 10 ** (assetPriceFeed.decimals() + underlyingDecimals);
     }
 
