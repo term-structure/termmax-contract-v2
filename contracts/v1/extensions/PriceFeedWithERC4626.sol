@@ -13,15 +13,15 @@ contract PriceFeedWithERC4626 is AggregatorV3Interface {
 
     AggregatorV3Interface public immutable assetPriceFeed;
     IERC4626 public immutable vault;
-    int256 immutable priceDemonitor;
-    uint256 immutable vaultDemonitor;
+    int256 immutable priceDenominator;
+    uint256 immutable vaultDenominator;
 
     constructor(address _assetPriceFeed, address _vault) {
         assetPriceFeed = AggregatorV3Interface(_assetPriceFeed);
         vault = IERC4626(_vault);
-        vaultDemonitor = 10 ** vault.decimals();
-        uint256 assetDemonitor = 10 ** IERC20Metadata(vault.asset()).decimals();
-        priceDemonitor = int256(10 ** assetPriceFeed.decimals()) * int256(assetDemonitor);
+        vaultDenominator = 10 ** vault.decimals();
+        uint256 assetDenominator = 10 ** IERC20Metadata(vault.asset()).decimals();
+        priceDenominator = int256(10 ** assetPriceFeed.decimals()) * int256(assetDenominator);
     }
 
     function decimals() public view returns (uint8) {
@@ -54,8 +54,8 @@ contract PriceFeedWithERC4626 is AggregatorV3Interface {
     function latestRoundData() external view returns (uint80, int256, uint256, uint256, uint80) {
         (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound) =
             assetPriceFeed.latestRoundData();
-        uint256 vaultAnswer = vault.previewRedeem(vaultDemonitor).min(vault.convertToAssets(vaultDemonitor));
-        answer = answer * int256(vaultAnswer) * int256((10 ** decimals())) / priceDemonitor;
+        uint256 vaultAnswer = vault.previewRedeem(vaultDenominator).min(vault.convertToAssets(vaultDenominator));
+        answer = answer * int256(vaultAnswer) * int256((10 ** decimals())) / priceDenominator;
         return (roundId, answer, startedAt, updatedAt, answeredInRound);
     }
 }
