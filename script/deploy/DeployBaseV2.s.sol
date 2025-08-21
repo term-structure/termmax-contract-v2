@@ -193,6 +193,7 @@ contract DeployBaseV2 is Script {
             TermMaxVaultFactoryV2 vaultFactory,
             OracleAggregatorV2 oracleAggregator,
             TermMaxRouterV2 router,
+            MakerHelper makerHelper,
             MarketViewer marketViewer,
             UniswapV3AdapterV2 uniswapV3Adapter,
             OdosV2AdapterV2 odosV2Adapter,
@@ -215,6 +216,9 @@ contract DeployBaseV2 is Script {
 
         // deploy router
         router = deployRouter(address(accessManager));
+
+        // deploy maker helper
+        makerHelper = deployMakerHelper(address(accessManager));
 
         // deploy market viewer
         marketViewer = deployMarketViewer();
