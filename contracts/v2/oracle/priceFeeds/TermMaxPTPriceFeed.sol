@@ -9,13 +9,14 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {ITermMaxPriceFeed, AggregatorV3Interface} from "./ITermMaxPriceFeed.sol";
+import {VersionV2} from "../../VersionV2.sol";
 
 /**
  * @title The customized Pendle PT price feed contract mutated from Chainlink AggregatorV3Interface
  * @author Term Structure Labs
  * @notice Use the customized price feed contract to normalized price feed interface for TermMax Protocol
  */
-contract TermMaxPTPriceFeed is ITermMaxPriceFeed {
+contract TermMaxPTPriceFeed is ITermMaxPriceFeed, VersionV2 {
     using Math for uint256;
     using SafeCast for *;
     using PendlePYOracleLib for IPMarket;
