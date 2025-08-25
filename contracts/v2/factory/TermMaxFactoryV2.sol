@@ -10,6 +10,7 @@ import {FactoryEvents} from "../../v1/events/FactoryEvents.sol";
 import {ITermMaxMarket} from "../../v1/ITermMaxMarket.sol";
 import {ITermMaxFactory} from "../../v1/factory/ITermMaxFactory.sol";
 import {FactoryEventsV2} from "../events/FactoryEventsV2.sol";
+import {VersionV2} from "../VersionV2.sol";
 
 /**
  * @title TermMax Factory V2
@@ -18,7 +19,7 @@ import {FactoryEventsV2} from "../events/FactoryEventsV2.sol";
  * @dev Manages market deployment, gearing token implementations, and market configuration validation
  * Inherits from V1 factory interface while adding V2-specific features for improved market creation
  */
-contract TermMaxFactoryV2 is Ownable2Step, ITermMaxFactory, FactoryEventsV2 {
+contract TermMaxFactoryV2 is Ownable2Step, ITermMaxFactory, FactoryEventsV2, VersionV2 {
     /// @notice Constant key for the default ERC20 gearing token implementation
     bytes32 constant GT_ERC20 = keccak256("GearingTokenWithERC20");
 

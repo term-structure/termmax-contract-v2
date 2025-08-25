@@ -6,8 +6,9 @@ import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IER
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {ITermMaxPriceFeed, AggregatorV3Interface} from "./ITermMaxPriceFeed.sol";
+import {VersionV2} from "../../VersionV2.sol";
 
-contract TermMaxERC4626PriceFeed is ITermMaxPriceFeed {
+contract TermMaxERC4626PriceFeed is ITermMaxPriceFeed, VersionV2 {
     using Math for *;
     using SafeCast for *;
 
@@ -15,17 +16,17 @@ contract TermMaxERC4626PriceFeed is ITermMaxPriceFeed {
 
     AggregatorV3Interface public immutable assetPriceFeed;
     address public immutable asset;
-    uint256 private immutable priceDemonitor;
-    uint256 private immutable vaultDemonitor;
+    uint256 private immutable priceDenominator;
+    uint256 private immutable vaultDenominator;
     uint256 private constant PRICE_DECIMALS = 10 ** 8;
 
-    constructor(address _assetPriceFeed, address _asset) {
-        (, int256 answer,,,) = AggregatorV3Interface(_assetPriceFeed).latestRoundData();
-        assetPriceFeed = AggregatorV3Interface(_assetPriceFeed);
-        asset = _asset;
-        uint8 assetDecimals = IERC20Metadata(_asset).decimals();
-        vaultDemonitor = 10 ** assetDecimals;
-        priceDemonitor = 10 ** (assetPriceFeed.decimals() + assetDecimals);
+    constructor(address _underlyingPriceFeed, address _vault) {
+        assetPriceFeed = AggregatorV3Interface(_underlyingPriceFeed);
+        asset = _vault;
+        uint8 vaultDecimals = IERC20Metadata(_vault).decimals();
+        vaultDenominator = 10 ** vaultDecimals;
+        uint8 underlyingDecimals = IERC20Metadata(IERC4626(_vault).asset()).decimals();
+        priceDenominator = 10 ** (assetPriceFeed.decimals() + underlyingDecimals);
     }
 
     function decimals() public view returns (uint8) {
@@ -59,9 +60,8 @@ contract TermMaxERC4626PriceFeed is ITermMaxPriceFeed {
     function latestRoundData() external view returns (uint80, int256, uint256, uint256, uint80) {
         (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound) =
             assetPriceFeed.latestRoundData();
-        uint256 vaultAnswer =
-            IERC4626(asset).previewRedeem(vaultDemonitor).min(IERC4626(asset).convertToAssets(vaultDemonitor));
-        answer = answer.toUint256().mulDiv(vaultAnswer * PRICE_DECIMALS, priceDemonitor).toInt256();
+        uint256 vaultAnswer = IERC4626(asset).convertToAssets(vaultDenominator);
+        answer = answer.toUint256().mulDiv(vaultAnswer * PRICE_DECIMALS, priceDenominator).toInt256();
         return (roundId, answer, startedAt, updatedAt, answeredInRound);
     }
 }

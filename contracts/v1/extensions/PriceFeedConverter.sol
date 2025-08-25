@@ -12,12 +12,12 @@ contract PriceFeedConverter is AggregatorV3Interface {
     AggregatorV3Interface public immutable aTokenToBTokenPriceFeed;
     AggregatorV3Interface public immutable bTokenToCTokenPriceFeed;
 
-    int256 immutable priceDemonitor;
+    int256 immutable priceDenominator;
 
     constructor(address _aTokenToBTokenPriceFeed, address _bTokenToCTokenPriceFeed) {
         aTokenToBTokenPriceFeed = AggregatorV3Interface(_aTokenToBTokenPriceFeed);
         bTokenToCTokenPriceFeed = AggregatorV3Interface(_bTokenToCTokenPriceFeed);
-        priceDemonitor =
+        priceDenominator =
             int256(10 ** aTokenToBTokenPriceFeed.decimals()) * int256(10 ** bTokenToCTokenPriceFeed.decimals());
     }
 
@@ -55,7 +55,7 @@ contract PriceFeedConverter is AggregatorV3Interface {
             aTokenToBTokenPriceFeed.latestRoundData();
         (, int256 answer2, uint256 startedAt2, uint256 updatedAt2,) = bTokenToCTokenPriceFeed.latestRoundData();
         // tokenPrice = answer * answer2
-        answer = answer * answer2 * int256((10 ** decimals())) / priceDemonitor;
+        answer = answer * answer2 * int256((10 ** decimals())) / priceDenominator;
         return (roundId, answer, startedAt.min(startedAt2), updatedAt.min(updatedAt2), answeredInRound);
     }
 }

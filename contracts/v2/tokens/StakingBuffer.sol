@@ -2,8 +2,9 @@
 pragma solidity ^0.8.27;
 
 import {TransferUtilsV2, IERC20} from "../lib/TransferUtilsV2.sol";
+import {VersionV2} from "../VersionV2.sol";
 
-abstract contract StakingBuffer {
+abstract contract StakingBuffer is VersionV2 {
     using TransferUtilsV2 for IERC20;
 
     error InvalidBuffer(uint256 minimumBuffer, uint256 maximumBuffer, uint256 buffer);
