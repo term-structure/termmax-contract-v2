@@ -31,6 +31,8 @@ contract TermMaxSwapAdapter is ERC20SwapAdapterV2 {
 
     /// @notice Emitted when the orders and trading amounts length do not match.
     error OrdersAndAmtsLengthNotMatch();
+    /// @notice Emitted when the actual token cost is not as expected.
+    error ActualTokenInNotMatch(uint256 actualTokenIn, uint256 expectedTokenIn);
 
     function _swap(address recipient, IERC20 tokenIn, IERC20 tokenOut, uint256 tokenInAmt, bytes memory swapData)
         internal
@@ -52,6 +54,8 @@ contract TermMaxSwapAdapter is ERC20SwapAdapterV2 {
             if (netTokenOutOrIn < data.netTokenAmt) revert LessThanMinTokenOut(netTokenOutOrIn, data.netTokenAmt);
         } else {
             /// @dev Token inputs may not be costed totally in this case.
+            /// @notice Check input cost for verifying slippage.
+            uint256 inoutTokenBalanceBefore = tokenIn.balanceOf(address(this));
             for (uint256 i = 0; i < data.orders.length; ++i) {
                 address order = data.orders[i];
                 // Use maximum allowance for the swap because the final input amount is unknown
@@ -59,6 +63,10 @@ contract TermMaxSwapAdapter is ERC20SwapAdapterV2 {
                 netTokenOutOrIn += ITermMaxOrder(order).swapTokenToExactToken(
                     tokenIn, tokenOut, recipient, data.tradingAmts[i], data.netTokenAmt, data.deadline
                 );
+            }
+            uint256 inoutTokenBalanceAfter = tokenIn.balanceOf(address(this));
+            if (inoutTokenBalanceBefore - inoutTokenBalanceAfter != netTokenOutOrIn) {
+                revert ActualTokenInNotMatch(netTokenOutOrIn, inoutTokenBalanceBefore - inoutTokenBalanceAfter);
             }
             if (netTokenOutOrIn > data.netTokenAmt) revert LessThanMinTokenOut(netTokenOutOrIn, data.netTokenAmt);
         }

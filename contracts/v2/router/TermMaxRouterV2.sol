@@ -475,6 +475,8 @@ contract TermMaxRouterV2 is
     }
 
     function _flashRepay(bytes memory callbackData) internal {
+        // By debt token: collateral-> debt token
+        // By ft token: collateral-> debt token -> exact ft token
         SwapPath[] memory swapPaths = abi.decode(callbackData, (SwapPath[]));
         _executeSwapPaths(swapPaths);
     }
