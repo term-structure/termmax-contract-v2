@@ -32,6 +32,10 @@ contract DeployCoreV2 is DeployBaseV2 {
     TermMaxSwapAdapter termMaxSwapAdapter;
     SwapAdapterV2 swapAdapter;
     Faucet faucet;
+    TermMaxPriceFeedFactoryV2 priceFeedFactory;
+
+    address l2SequencerUptimeFeed;
+    uint256 l2SequencerGracePeriod;
 
     function setUp() public {
         // Load network from environment variable
@@ -59,42 +63,52 @@ contract DeployCoreV2 is DeployBaseV2 {
             odosV2RouterAddr = vm.envAddress(odosV2RouterVar);
             pendleSwapV3RouterAddr = vm.envAddress(pendleSwapV3RouterVar);
             oracleTimelock = vm.envUint(oracleTimelockVar);
+
+            if (keccak256(abi.encodePacked(network)) == keccak256(abi.encodePacked("arb-mainnet"))) {
+                string memory l2SequencerUptimeFeedVar = string.concat(networkUpper, "_L2_SEQUENCER_UPTIME_FEED");
+                l2SequencerUptimeFeed = vm.envAddress(l2SequencerUptimeFeedVar);
+                string memory l2SequencerGracePeriodVar = string.concat(networkUpper, "_L2_SEQUENCER_GRACE_PERIOD");
+                l2SequencerGracePeriod = vm.envUint(l2SequencerGracePeriodVar);
+            }
+        }
+        {
+            // Create deployments directory if it doesn't exist
+            string memory deploymentsDir = string.concat(vm.projectRoot(), "/deployments/", network);
+            if (!vm.exists(deploymentsDir)) {
+                // Directory doesn't exist, create it
+                vm.createDir(deploymentsDir, true);
+            }
         }
 
         string memory deploymentPath =
             string.concat(vm.projectRoot(), "/deployments/", network, "/", network, "-access-manager.json");
         string memory json = vm.readFile(deploymentPath);
         accessManagerAddr = vm.parseJsonAddress(json, ".contracts.accessManagerV2");
+
+        deploymentPath = string.concat(vm.projectRoot(), "/deployments/", network, "/", network, "-core.json");
+        if (vm.exists(deploymentPath)) {
+            json = vm.readFile(deploymentPath);
+            if (vm.keyExistsJson(json, ".contracts.router")) {
+                address routerAddr = vm.parseJsonAddress(json, ".contracts.router");
+                console.log("Router already deployed at:", routerAddr);
+                router = TermMaxRouterV2(routerAddr);
+            }
+            if (vm.keyExistsJson(json, ".contracts.faucet")) {
+                address faucetAddr = vm.parseJsonAddress(json, ".contracts.faucet");
+                console.log("Faucet already deployed at:", faucetAddr);
+                faucet = Faucet(faucetAddr);
+            }
+            if (vm.keyExistsJson(json, ".contracts.marketViewer")) {
+                address marketViewerAddr = vm.parseJsonAddress(json, ".contracts.marketViewer");
+                console.log("MarketViewer already deployed at:", marketViewerAddr);
+                marketViewer = MarketViewer(marketViewerAddr);
+            }
+        }
     }
 
     function run() public {
         console.log("Network:", network);
         console.log("Deployer balance:", deployerAddr.balance);
-
-        uint256 currentBlock = block.number;
-        uint256 currentTimestamp = block.timestamp;
-
-        address routerAddr;
-        address faucetAddr;
-        address marketViewerAddr;
-
-        string memory deploymentPath =
-            string.concat(vm.projectRoot(), "/deployments/", network, "/", network, "-core.json");
-        if (vm.exists(deploymentPath)) {
-            string memory json = vm.readFile(deploymentPath);
-            if (vm.keyExistsJson(json, ".contracts.router")) {
-                routerAddr = vm.parseJsonAddress(json, ".contracts.router");
-                console.log("Router already deployed at:", routerAddr);
-            }
-            if (vm.keyExistsJson(json, ".contracts.faucet")) {
-                faucetAddr = vm.parseJsonAddress(json, ".contracts.faucet");
-                console.log("Faucet already deployed at:", faucetAddr);
-            }
-            if (vm.keyExistsJson(json, ".contracts.marketViewer")) {
-                marketViewerAddr = vm.parseJsonAddress(json, ".contracts.marketViewer");
-                console.log("MarketViewer already deployed at:", marketViewerAddr);
-            }
-        }
 
         vm.startBroadcast(deployerPrivateKey);
 
@@ -103,11 +117,11 @@ contract DeployCoreV2 is DeployBaseV2 {
                 || keccak256(abi.encodePacked(network)) == keccak256(abi.encodePacked("arb-mainnet"))
                 || keccak256(abi.encodePacked(network)) == keccak256(abi.encodePacked("bnb-mainnet"))
         ) {
-            if (routerAddr == address(0)) {
+            if (address(router) == address(0)) {
                 (
                     factory,
                     vaultFactory,
-                    oracleAggregator,
+                    priceFeedFactory,
                     router,
                     makerHelper,
                     marketViewer,
@@ -116,15 +130,12 @@ contract DeployCoreV2 is DeployBaseV2 {
                     pendleSwapV3Adapter,
                     vaultAdapter,
                     termMaxSwapAdapter
-                ) = deployCoreMainnet(
-                    accessManagerAddr, uniswapV3RouterAddr, odosV2RouterAddr, pendleSwapV3RouterAddr, oracleTimelock
-                );
+                ) = deployCoreMainnet(accessManagerAddr, uniswapV3RouterAddr, odosV2RouterAddr, pendleSwapV3RouterAddr);
             } else {
-                marketViewer = MarketViewer(marketViewerAddr);
                 (
                     factory,
                     vaultFactory,
-                    oracleAggregator,
+                    priceFeedFactory,
                     router,
                     makerHelper,
                     uniswapV3Adapter,
@@ -133,24 +144,26 @@ contract DeployCoreV2 is DeployBaseV2 {
                     vaultAdapter,
                     termMaxSwapAdapter
                 ) = deployAndUpgradeCoreMainnet(
-                    accessManagerAddr,
-                    routerAddr,
-                    uniswapV3RouterAddr,
-                    odosV2RouterAddr,
-                    pendleSwapV3RouterAddr,
-                    oracleTimelock
+                    accessManagerAddr, address(router), uniswapV3RouterAddr, odosV2RouterAddr, pendleSwapV3RouterAddr
                 );
             }
         } else {
-            if (routerAddr == address(0)) {
-                (factory, vaultFactory, oracleAggregator, router, makerHelper, swapAdapter, faucet, marketViewer) =
-                    deployCore(deployerAddr, accessManagerAddr, 0);
+            if (address(router) == address(0)) {
+                (factory, vaultFactory, priceFeedFactory, router, makerHelper, swapAdapter, faucet, marketViewer) =
+                    deployCore(deployerAddr, accessManagerAddr);
             } else {
-                marketViewer = MarketViewer(marketViewerAddr);
-                faucet = Faucet(faucetAddr);
-                (factory, vaultFactory, oracleAggregator, router, makerHelper, swapAdapter) =
-                    deployAndUpgradeCore(deployerAddr, accessManagerAddr, routerAddr, 0);
+                (factory, vaultFactory, priceFeedFactory, router, makerHelper, swapAdapter) =
+                    deployAndUpgradeCore(deployerAddr, accessManagerAddr, address(router));
             }
+        }
+        if (keccak256(abi.encodePacked(network)) == keccak256(abi.encodePacked("arb-mainnet"))) {
+            // Deploy OracleAggregator with L2 sequencer feed
+            oracleAggregator = deployOracleAggregatorWithSequencer(
+                accessManagerAddr, oracleTimelock, l2SequencerUptimeFeed, l2SequencerGracePeriod
+            );
+        } else {
+            // Deploy default OracleAggregator without L2 sequencer feed
+            oracleAggregator = deployOracleAggregator(accessManagerAddr, oracleTimelock);
         }
         vm.stopBroadcast();
 
@@ -159,6 +172,9 @@ contract DeployCoreV2 is DeployBaseV2 {
         console.log("Git commit hash:");
         console.logBytes(getGitCommitHash());
         console.log();
+
+        uint256 currentBlock = block.number;
+        uint256 currentTimestamp = block.timestamp;
 
         console.log("===== Block Info =====");
         console.log("Block number:", currentBlock);
@@ -170,6 +186,7 @@ contract DeployCoreV2 is DeployBaseV2 {
         console.log("Admin:", adminAddr);
         console.log("FactoryV2 deployed at:", address(factory));
         console.log("VaultFactoryV2 deployed at:", address(vaultFactory));
+        console.log("PriceFeedFactoryV2 deployed at:", address(priceFeedFactory));
         console.log("Oracle AggregatorV2 deployed at:", address(oracleAggregator));
         console.log("RouterV2 deployed at:", address(router));
         if (
@@ -219,6 +236,9 @@ contract DeployCoreV2 is DeployBaseV2 {
                 '    "vaultFactoryV2": "',
                 vm.toString(address(vaultFactory)),
                 '",\n',
+                '    "priceFeedFactoryV2": "',
+                vm.toString(address(priceFeedFactory)),
+                '",\n',
                 '    "oracleAggregatorV2": "',
                 vm.toString(address(oracleAggregator)),
                 '",\n',
@@ -265,14 +285,9 @@ contract DeployCoreV2 is DeployBaseV2 {
             )
         );
 
-        // Create deployments directory if it doesn't exist
-        string memory deploymentsDir = string.concat(vm.projectRoot(), "/deployments/", network);
-        if (!vm.exists(deploymentsDir)) {
-            // Directory doesn't exist, create it
-            vm.createDir(deploymentsDir, true);
-        }
+        string memory deploymentPath =
+            string.concat(vm.projectRoot(), "/deployments/", network, "/", network, "-core-v2.json");
 
-        deploymentPath = string.concat(deploymentsDir, "/", network, "-core-v2.json");
         vm.writeFile(deploymentPath, deploymentJson);
         console.log("Deployment info written to:", deploymentPath);
     }

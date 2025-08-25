@@ -1,22 +1,23 @@
 {
   "network": "arb-sepolia",
-  "deployedAt": "1755592901",
+  "deployedAt": "1756117131",
   "gitBranch": "v2/deployment",
-  "gitCommitHash": "0x0xb04b688eef41880a52ca57406521e56961b8022c",
+  "gitCommitHash": "0x0xcd9dc5360d8a42414b892087f8f56fcca67e3181",
   "blockInfo": {
-    "number": "9017114",
-    "timestamp": "1755592901"
+    "number": "9060048",
+    "timestamp": "1756117131"
   },
   "deployer": "0xE355d5D8aa52EF0FbbD037C4a3C5E6Fd659cf46B",
   "admin": "0x81f314f70702Bbe89FEd0F2cFe6841950275E0b7",
   "contracts": {
-    "factoryV2": "0x7546411b77Ac242474102d134c67883d74085FFa",
-    "vaultFactoryV2": "0x3BC15BC2BbAD675f23f679a22E1d376005992068",
-    "oracleAggregatorV2": "0x4603965E17fbD6F05187374097F511286891f1bB",
-    "routerV2": "0x0933552A5b7490ce385F7c7FdE192F0b189Ca65f",
-    "makerHelper": "0xa75dd90d94f715d80759de27a8d204b60a25e76a",
-    "swapAdapterV2": "0x20BC3277AF56c4FE525b8a89508c5697B646EC91",
-    "faucet": "0xE877cB4bD6f5F10b3C207f7B691E4275A2A398bc",
-    "marketViewer": "0xf8c19ab9150b2b93afc4d797a4c4Ef3A50BB3610"
+    "factoryV2": "0x4E27A0dcA9442BaE8a785e48965030D6f7Da8645",
+    "vaultFactoryV2": "0x769c2ffFB29C16D2bA9816A878af048AcebFd571",
+    "oracleAggregatorV2": "0xB26935a4b720Bca5BD3696a757bC6cDc4B0E205d",
+    "priceFeedFactoryV2": "0xCe1357F65De5EB89306bEd0429971E96f971660e",
+    "routerV2": "0x10E32c9d915A2F1aa4B40A60a2e6d5dc3515D4C6",
+    "makerHelper": "0xA34C0cf73727A8e6f9EABB0420fa4FD566139EFF",
+    "swapAdapterV2": "0xA46e82094d14C5A1BFd52Dd9D539F9AA1F4B31f9",
+    "faucet": "0xca840D6EB20A6E9C569656a33835DdC584A4a5be",
+    "marketViewer": "0x6a50Fade9601Dac484961650787858878Eb1EF7f"
   }
 }

@@ -43,6 +43,8 @@ import {UniswapV3AdapterV2} from "contracts/v2/router/swapAdapters/UniswapV3Adap
 import {TermMaxSwapAdapter} from "contracts/v2/router/swapAdapters/TermMaxSwapAdapter.sol";
 import {AccessManagerV2, AccessManager} from "contracts/v2/access/AccessManagerV2.sol";
 import {StringHelper} from "../utils/StringHelper.sol";
+import {TermMaxPriceFeedFactoryV2} from "contracts/v2/factory/TermMaxPriceFeedFactoryV2.sol";
+import {OracleAggregatorWithSequencerV2} from "contracts/v2/oracle/OracleAggregatorWithSequencerV2.sol";
 
 contract DeployBaseV2 is Script {
     bytes32 constant GT_ERC20 = keccak256("GearingTokenWithERC20");
@@ -62,6 +64,15 @@ contract DeployBaseV2 is Script {
 
     function deployOracleAggregator(address admin, uint256 timelock) public returns (OracleAggregatorV2 oracle) {
         oracle = new OracleAggregatorV2(admin, timelock);
+    }
+
+    function deployOracleAggregatorWithSequencer(
+        address admin,
+        uint256 timelock,
+        address sequencerUpPriceFeed,
+        uint256 gracePeriod
+    ) public returns (OracleAggregatorWithSequencerV2 oracle) {
+        oracle = new OracleAggregatorWithSequencerV2(admin, timelock, sequencerUpPriceFeed, gracePeriod);
     }
 
     function deployRouter(address admin) public returns (TermMaxRouterV2 router) {
@@ -100,12 +111,12 @@ contract DeployBaseV2 is Script {
         return existingAccessManager;
     }
 
-    function deployCore(address deployerAddr, address accessManagerAddr, uint256 oracleTimelock)
+    function deployCore(address deployerAddr, address accessManagerAddr)
         public
         returns (
             TermMaxFactoryV2 factory,
             TermMaxVaultFactoryV2 vaultFactory,
-            OracleAggregatorV2 oracleAggregator,
+            TermMaxPriceFeedFactoryV2 priceFeedFactory,
             TermMaxRouterV2 router,
             MakerHelper makerHelper,
             SwapAdapterV2 swapAdapter,
@@ -122,8 +133,8 @@ contract DeployBaseV2 is Script {
         // deploy vault factory
         vaultFactory = deployVaultFactory();
 
-        // deploy oracle aggregator
-        oracleAggregator = deployOracleAggregator(address(accessManager), oracleTimelock);
+        // deploy price feed factory
+        priceFeedFactory = new TermMaxPriceFeedFactoryV2();
 
         // deploy router
         router = deployRouter(address(accessManager));
@@ -141,17 +152,12 @@ contract DeployBaseV2 is Script {
         makerHelper = deployMakerHelper(address(accessManager));
     }
 
-    function deployAndUpgradeCore(
-        address deployerAddr,
-        address accessManagerAddr,
-        address routerAddr,
-        uint256 oracleTimelock
-    )
+    function deployAndUpgradeCore(address deployerAddr, address accessManagerAddr, address routerAddr)
         public
         returns (
             TermMaxFactoryV2 factory,
             TermMaxVaultFactoryV2 vaultFactory,
-            OracleAggregatorV2 oracleAggregator,
+            TermMaxPriceFeedFactoryV2 priceFeedFactory,
             TermMaxRouterV2 router,
             MakerHelper makerHelper,
             SwapAdapterV2 swapAdapter
@@ -166,8 +172,8 @@ contract DeployBaseV2 is Script {
         // deploy vault factory
         vaultFactory = deployVaultFactory();
 
-        // deploy oracle aggregator
-        oracleAggregator = deployOracleAggregator(address(accessManager), oracleTimelock);
+        // deploy price feed factory
+        priceFeedFactory = new TermMaxPriceFeedFactoryV2();
 
         // deploy and upgrade router
         router = upgradeRouter(accessManager, routerAddr);
@@ -184,14 +190,13 @@ contract DeployBaseV2 is Script {
         address accessManagerAddr,
         address uniswapV3Router,
         address odosV2Router,
-        address pendleSwapV3Router,
-        uint256 oracleTimelock
+        address pendleSwapV3Router
     )
         public
         returns (
             TermMaxFactoryV2 factory,
             TermMaxVaultFactoryV2 vaultFactory,
-            OracleAggregatorV2 oracleAggregator,
+            TermMaxPriceFeedFactoryV2 priceFeedFactory,
             TermMaxRouterV2 router,
             MakerHelper makerHelper,
             MarketViewer marketViewer,
@@ -211,8 +216,8 @@ contract DeployBaseV2 is Script {
         // deploy vault factory
         vaultFactory = deployVaultFactory();
 
-        // deploy oracle aggregator
-        oracleAggregator = deployOracleAggregator(address(accessManager), oracleTimelock);
+        // deploy price feed factory
+        priceFeedFactory = new TermMaxPriceFeedFactoryV2();
 
         // deploy router
         router = deployRouter(address(accessManager));
@@ -244,14 +249,13 @@ contract DeployBaseV2 is Script {
         address routerAddr,
         address uniswapV3Router,
         address odosV2Router,
-        address pendleSwapV3Router,
-        uint256 oracleTimelock
+        address pendleSwapV3Router
     )
         public
         returns (
             TermMaxFactoryV2 factory,
             TermMaxVaultFactoryV2 vaultFactory,
-            OracleAggregatorV2 oracleAggregator,
+            TermMaxPriceFeedFactoryV2 priceFeedFactory,
             TermMaxRouterV2 router,
             MakerHelper makerHelper,
             UniswapV3AdapterV2 uniswapV3Adapter,
@@ -269,8 +273,8 @@ contract DeployBaseV2 is Script {
         factory = deployFactory(address(AccessManagerV2(accessManagerAddr)));
         // deploy vault factory
         vaultFactory = deployVaultFactory();
-        // deploy oracle aggregator
-        oracleAggregator = deployOracleAggregator(address(AccessManagerV2(accessManagerAddr)), oracleTimelock);
+        // deploy price feed factory
+        priceFeedFactory = new TermMaxPriceFeedFactoryV2();
         // deploy maker helper
         makerHelper = deployMakerHelper(address(AccessManagerV2(accessManagerAddr)));
     }
