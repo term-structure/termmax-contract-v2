@@ -3,7 +3,6 @@ pragma solidity ^0.8.0;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ITermMaxMarket, IGearingToken} from "../../v1/ITermMaxMarket.sol";
-import {ITermMaxOrder} from "../../v1/ITermMaxOrder.sol";
 import {SwapUnit} from "../../v1/router/ISwapAdapter.sol";
 
 /// @title TermMaxSwapPath
@@ -39,15 +38,6 @@ enum FlashRepayOptions {
  * @dev This interface defines all external functions for swapping, leveraging, and managing positions
  */
 interface ITermMaxRouterV2 {
-    struct TermMaxSwapData {
-        address tokenIn;
-        address tokenOut;
-        ITermMaxOrder[] orders;
-        uint128[] tradingAmts;
-        uint128 netTokenAmt;
-        uint256 deadline;
-    }
-
     /**
      * @notice Swaps tokens using a predefined path
      * @dev Uses the SwapPath struct to define the swap path

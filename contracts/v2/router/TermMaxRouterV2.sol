@@ -477,13 +477,11 @@ contract TermMaxRouterV2 is
     function _flashRepay(bytes memory callbackData) internal {
         // By debt token: collateral-> debt token
         // By ft token: collateral-> debt token -> exact ft token
-        SwapPath[] memory swapPaths = abi.decode(callbackData, (SwapPath[]));
-        _executeSwapPaths(swapPaths);
+        SwapPath memory repayTokenPath = abi.decode(callbackData, (SwapPath));
+        _executeSwapUnits(address(this), repayTokenPath.inputAmount, repayTokenPath.units);
     }
 
-    function _rollover(IERC20 debtToken, uint256 repayAmt, bytes memory collateralData, bytes memory callbackData)
-        internal
-    {
+    function _rollover(IERC20 debtToken, uint256 repayAmt, bytes memory, bytes memory callbackData) internal {
         (
             address recipient,
             ITermMaxMarket market,
@@ -492,14 +490,13 @@ contract TermMaxRouterV2 is
             SwapPath memory debtTokenPath
         ) = abi.decode(callbackData, (address, ITermMaxMarket, uint128, SwapPath, SwapPath));
 
-        // do swap to get the new collateral
-        uint256 newCollateralAmt = collateralPath.units.length == 0
-            ? 0
-            : _executeSwapUnits(address(this), abi.decode(collateralData, (uint256)), collateralPath.units);
-        collateralData = abi.encode(newCollateralAmt);
-
+        // Do swap to get the new collateral,(the inpput amount may contains additional old collateral)
+        _executeSwapUnits(address(this), collateralPath.inputAmount, collateralPath.units);
         (IERC20 ft,, IGearingToken gt, address collateral,) = market.tokens();
+        // Get balances, may contain additional new collateral
+        uint256 newCollateralAmt = IERC20(collateral).balanceOf(address(this));
         uint256 gtId;
+        // issue new gt to get new ft token
         {
             // issue new gt
             uint256 mintGtFeeRatio = market.mintGtFeeRatio();
@@ -507,8 +504,9 @@ contract TermMaxRouterV2 is
                 (debtTokenPath.inputAmount * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - mintGtFeeRatio)
             ).toUint128();
             IERC20(collateral).safeIncreaseAllowance(address(gt), newCollateralAmt);
-            (gtId,) = market.issueFt(address(this), newDebtAmt, collateralData);
+            (gtId,) = market.issueFt(address(this), newDebtAmt, abi.encode(newCollateralAmt));
         }
+        // Swap ft to debt token to repay(swap amount + additional debt token amount should equal repay amt)
         {
             uint256 netFtCost = _executeSwapUnits(address(this), debtTokenPath.inputAmount, debtTokenPath.units);
             // check remaining ft amount
@@ -518,19 +516,14 @@ contract TermMaxRouterV2 is
                 // repay in ft, bool false means not using debt token
                 gt.repay(gtId, repaidFtAmt.toUint128(), false);
             }
-            // check remaining debt token amount
-            uint256 totalDebtTokenAmt = debtToken.balanceOf(address(this));
-            if (totalDebtTokenAmt > repayAmt) {
-                uint256 repaidDebtAmt = totalDebtTokenAmt - repayAmt;
-                debtToken.safeIncreaseAllowance(address(gt), repaidDebtAmt);
-                // repay in debt token, bool true means using debt token
-                gt.repay(gtId, repaidDebtAmt.toUint128(), true);
-            }
             (, uint128 ltv,) = gt.getLiquidationInfo(gtId);
             if (ltv > maxLtv) {
                 revert LtvBiggerThanExpected(maxLtv, ltv);
             }
         }
+        // check remaining debt token amount should equal to repay amt
+        uint256 debtTokenBalance = debtToken.balanceOf(address(this));
+        require(debtTokenBalance == repayAmt, RouterErrorsV2.RolloverFailed(repayAmt, debtTokenBalance));
         // transfer new gt to recipient
         gt.safeTransferFrom(address(this), recipient, gtId);
         assembly {
