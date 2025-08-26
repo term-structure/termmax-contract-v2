@@ -423,6 +423,10 @@ contract TermMaxRouterV2 is
         IERC20 repayToken = IERC20(paths[0].units[paths[0].units.length - 1].tokenOut);
         repayToken.safeIncreaseAllowance(address(gt), repayAmt);
         gt.repay(gtId, repayAmt, byDebtToken);
+        uint256 remainingRepayToken = repayToken.balanceOf(address(this));
+        if (remainingRepayToken != 0) {
+            repayToken.safeTransfer(_msgSender(), remainingRepayToken);
+        }
     }
 
     /// @dev Market flash leverage flashloan callback
@@ -491,7 +495,10 @@ contract TermMaxRouterV2 is
         ) = abi.decode(callbackData, (address, ITermMaxMarket, uint128, SwapPath, SwapPath));
 
         // Do swap to get the new collateral,(the inpput amount may contains additional old collateral)
-        _executeSwapUnits(address(this), collateralPath.inputAmount, collateralPath.units);
+        if (collateralPath.units.length != 0) {
+            _executeSwapUnits(address(this), collateralPath.inputAmount, collateralPath.units);
+        }
+
         (IERC20 ft,, IGearingToken gt, address collateral,) = market.tokens();
         // Get balances, may contain additional new collateral
         uint256 newCollateralAmt = IERC20(collateral).balanceOf(address(this));
@@ -521,9 +528,6 @@ contract TermMaxRouterV2 is
                 revert LtvBiggerThanExpected(maxLtv, ltv);
             }
         }
-        // check remaining debt token amount should equal to repay amt
-        uint256 debtTokenBalance = debtToken.balanceOf(address(this));
-        require(debtTokenBalance == repayAmt, RouterErrorsV2.RolloverFailed(repayAmt, debtTokenBalance));
         // transfer new gt to recipient
         gt.safeTransferFrom(address(this), recipient, gtId);
         assembly {
