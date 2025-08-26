@@ -560,6 +560,7 @@ contract TermMaxRouterV2 is
                 delegationParams.s
             );
         }
+        repayAmt = repayAmt - debtToken.balanceOf(address(this));
         if (collateralPath.units.length > 0) {
             // do swap to get the new collateral
             uint256 newCollateralAmt = _doSwap(collateral.balanceOf(address(this)), collateralPath.units);
@@ -571,7 +572,6 @@ contract TermMaxRouterV2 is
             collateral.safeIncreaseAllowance(address(aave), collateralAmt);
             aave.supply(address(collateral), collateralAmt, caller, referralCode);
         }
-        repayAmt = repayAmt - debtToken.balanceOf(address(this));
         aave.borrow(address(debtToken), repayAmt, interestRateMode, referralCode, caller);
     }
 
@@ -595,6 +595,7 @@ contract TermMaxRouterV2 is
             // auth with sig
             morpho.setAuthorizationWithSig(auth, sig);
         }
+        repayAmt = repayAmt - debtToken.balanceOf(address(this));
         if (collateralPath.units.length > 0) {
             // do swap to get the new collateral
             uint256 newCollateralAmt = _doSwap(collateral.balanceOf(address(this)), collateralPath.units);
@@ -606,7 +607,6 @@ contract TermMaxRouterV2 is
             collateral.safeIncreaseAllowance(address(morpho), collateralAmt);
             morpho.supplyCollateral(marketParams, collateralAmt, caller, "");
         }
-        repayAmt = repayAmt - debtToken.balanceOf(address(this));
         /// @dev Borrow the repay amount from morpho, share amount is 0 and receiver is the router itself
         morpho.borrow(marketParams, repayAmt, 0, caller, address(this));
     }
