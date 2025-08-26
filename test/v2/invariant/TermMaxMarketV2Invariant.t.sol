@@ -396,11 +396,9 @@ contract TermMaxMarketV2InvariantTest is StdInvariant, Test {
     function invariant_ftXtSupplyEquality() public view {
         uint256 ftSupply = ft.totalSupply();
         uint256 xtSupply = xt.totalSupply();
-        uint256 treasurerFtBalance = ft.balanceOf(marketConfig.treasurer);
-
-        // FT supply might be higher due to fees paid to treasurer
-        assertTrue(ftSupply >= xtSupply, "FT supply should be >= XT supply due to fees");
-        assertTrue(ftSupply - treasurerFtBalance <= xtSupply + 1, "FT supply minus fees should equal XT supply");
+        uint256 debtTokenBalance = debtToken.balanceOf(address(market));
+        assertTrue(ftSupply >= xtSupply, "FT supply should be >= XT supply due to lending");
+        assertTrue(xtSupply == debtTokenBalance, "XT supply should equal debt tokens");
     }
 
     // INVARIANT 2: Market should maintain debt token balance consistency
