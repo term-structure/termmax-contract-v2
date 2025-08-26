@@ -485,7 +485,7 @@ contract TermMaxRouterV2 is
         _executeSwapUnits(address(this), repayTokenPath.inputAmount, repayTokenPath.units);
     }
 
-    function _rollover(IERC20 debtToken, uint256 repayAmt, bytes memory, bytes memory callbackData) internal {
+    function _rollover(IERC20, uint256, bytes memory, bytes memory callbackData) internal {
         (
             address recipient,
             ITermMaxMarket market,

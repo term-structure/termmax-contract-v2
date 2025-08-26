@@ -185,10 +185,13 @@ contract ForkPrdFlashRepay is ForkBaseTestV2 {
             console.log("usdc balance before:", IERC20(usdc).balanceOf(borrower));
             gt.approve(address(router), gtId1);
 
-            SwapPath[] memory swapPaths = new SwapPath[](1);
-            swapPaths[0] =
-                SwapPath({units: swapUnits, recipient: address(router), inputAmount: 0, useBalanceOnchain: true});
-            bytes memory data = abi.encode(FlashRepayOptions.REPAY, abi.encode(swapPaths));
+            SwapPath memory swapPath = SwapPath({
+                units: swapUnits,
+                recipient: address(router),
+                inputAmount: removedCollateral,
+                useBalanceOnchain: true
+            });
+            bytes memory data = abi.encode(FlashRepayOptions.REPAY, abi.encode(swapPath));
             router.flashRepayFromCollForV2(borrower, market, gtId1, repayAmount, true, 0, removedCollateral, data);
             console.log("usdc balance after:", IERC20(usdc).balanceOf(borrower));
 
@@ -253,10 +256,13 @@ contract ForkPrdFlashRepay is ForkBaseTestV2 {
             console.log("usdc balance before:", IERC20(usdc).balanceOf(borrower));
             gt.approve(address(router2), gt1);
 
-            SwapPath[] memory swapPaths = new SwapPath[](1);
-            swapPaths[0] =
-                SwapPath({units: swapUnits, recipient: address(router2), inputAmount: 0, useBalanceOnchain: true});
-            bytes memory data = abi.encode(FlashRepayOptions.REPAY, abi.encode(swapPaths));
+            SwapPath memory swapPath = SwapPath({
+                units: swapUnits,
+                recipient: address(router2),
+                inputAmount: collateralAmount,
+                useBalanceOnchain: true
+            });
+            bytes memory data = abi.encode(FlashRepayOptions.REPAY, abi.encode(swapPath));
             router2.flashRepayFromCollForV1(borrower, mmay_30, gt1, true, 0, data);
             console.log("usdc balance after:", IERC20(usdc).balanceOf(borrower));
             vm.stopPrank();
