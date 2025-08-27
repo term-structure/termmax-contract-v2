@@ -74,4 +74,13 @@ interface ITermMaxOrderV2 {
     /// @dev You have to withdraw the delivery collateral manually if the asset is a pool share.
     /// @dev This function will close the order and transfer all assets to the recipient.
     function redeemAll(IERC20 asset, address recipient) external returns (uint256 badDebt, bytes memory deliveryData);
+
+    /// @notice Redeem all assets before maturity, only callable by the owner
+    /// @param recipient The address to receive the redeemed assets
+    /// @return shares The amount of pool shares redeemed, 0 if no pool is set
+    /// @return ftAmount The amount of FT tokens redeemed
+    /// @return xtAmount The amount of XT tokens redeemed
+    function redeeAllBeforeMaturity(address recipient)
+        external
+        returns (uint256 shares, uint256 ftAmount, uint256 xtAmount);
 }

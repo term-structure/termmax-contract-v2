@@ -18,6 +18,7 @@ import {CurveCuts, OrderConfig} from "../../v1/storage/TermMaxStorage.sol";
 import {OrderInitialParams} from "../ITermMaxOrderV2.sol";
 import {VersionV2} from "../VersionV2.sol";
 import {DelegateAble} from "../lib/DelegateAble.sol";
+import {MakerHelperEvents} from "../events/MakerHelperEvents.sol";
 
 /**
  * @title MakerHelper
@@ -70,6 +71,9 @@ contract MakerHelper is UUPSUpgradeable, Ownable2StepUpgradeable, IERC721Receive
         }
         ft.safeTransferFrom(msg.sender, address(order), ftToDeposit);
         xt.safeTransferFrom(msg.sender, address(order), xtToDeposit);
+        emit MakerHelperEvents.OrderPlaced(
+            maker, address(market), address(order), gtId, debtTokenToDeposit, ftToDeposit, xtToDeposit
+        );
     }
 
     /**
@@ -121,7 +125,34 @@ contract MakerHelper is UUPSUpgradeable, Ownable2StepUpgradeable, IERC721Receive
         }
         ft.safeTransferFrom(msg.sender, address(order), ftToDeposit);
         xt.safeTransferFrom(msg.sender, address(order), xtToDeposit);
+        emit MakerHelperEvents.OrderPlaced(
+            initialParams.maker,
+            address(market),
+            address(order),
+            initialParams.orderConfig.gtId,
+            debtTokenToDeposit,
+            ftToDeposit,
+            xtToDeposit
+        );
         return (order, initialParams.orderConfig.gtId);
+    }
+
+    function mint(ITermMaxMarket market, address recipient, uint256 debtTokenToDeposit) external {
+        (,,,, IERC20 debtToken) = market.tokens();
+        debtToken.safeTransferFrom(msg.sender, address(this), debtTokenToDeposit);
+        debtToken.safeIncreaseAllowance(address(market), debtTokenToDeposit);
+        market.mint(recipient, debtTokenToDeposit);
+        emit MakerHelperEvents.MintTokens(address(market), recipient, debtTokenToDeposit);
+    }
+
+    function burn(ITermMaxMarket market, address recipient, uint256 amount) external {
+        (IERC20 ft, IERC20 xt,,,) = market.tokens();
+        ft.safeTransferFrom(msg.sender, address(this), amount);
+        ft.safeIncreaseAllowance(address(market), amount);
+        xt.safeTransferFrom(msg.sender, address(this), amount);
+        xt.safeIncreaseAllowance(address(market), amount);
+        market.burn(recipient, amount);
+        emit MakerHelperEvents.BurnTokens(address(market), recipient, amount);
     }
 
     function onERC721Received(address, address, uint256, bytes memory) external pure override returns (bytes4) {

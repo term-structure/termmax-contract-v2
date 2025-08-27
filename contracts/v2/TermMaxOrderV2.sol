@@ -486,11 +486,13 @@ contract TermMaxOrderV2 is
         IERC20 _debtToken = debtToken;
         uint256 ftBalance = ft.balanceOf(address(this));
         uint256 received;
+        uint256 receivedFromPool;
+        uint256 totalShares;
         if (asset == _debtToken) {
             (received, deliveryData) = market.redeem(ftBalance, recipient);
             // if pool is set, redeem all shares
             if (address(_pool) != address(0)) {
-                uint256 receivedFromPool = _pool.redeem(_pool.balanceOf(address(this)), recipient, address(this));
+                receivedFromPool = _pool.redeem(_pool.balanceOf(address(this)), recipient, address(this));
                 emit OrderEventsV2.LiquidityRemoved(asset, receivedFromPool);
             } else {
                 emit OrderEventsV2.LiquidityRemoved(asset, received);
@@ -501,7 +503,7 @@ contract TermMaxOrderV2 is
             // if pool is set, withdraw all shares
             _debtToken.safeIncreaseAllowance(address(_pool), received);
             _pool.deposit(received, address(this));
-            uint256 totalShares = _pool.balanceOf(address(this));
+            totalShares = _pool.balanceOf(address(this));
             _pool.safeTransfer(recipient, totalShares);
             emit OrderEventsV2.LiquidityRemoved(asset, totalShares);
         }
@@ -509,6 +511,34 @@ contract TermMaxOrderV2 is
         badDebt = ftBalance - received;
         // Clear order configuration
         delete _orderConfig;
+        emit OrderEventsV2.Redeemed(recipient, receivedFromPool, totalShares, badDebt, deliveryData);
+    }
+
+    function redeeAllBeforeMaturity(address recipient)
+        external
+        virtual
+        nonReentrant
+        onlyOwner
+        returns (uint256 shares, uint256 ftAmount, uint256 xtAmount)
+    {
+        IERC4626 _pool = pool;
+        IERC20 _ft = ft;
+        IERC20 _xt = xt;
+        if (_pool != IERC4626(address(0))) {
+            shares = _pool.balanceOf(address(this));
+            if (shares != 0) {
+                _pool.redeem(shares, recipient, address(this));
+            }
+        }
+        ftAmount = _ft.balanceOf(address(this));
+        if (ftAmount != 0) {
+            _ft.safeTransfer(recipient, ftAmount);
+        }
+        xtAmount = _xt.balanceOf(address(this));
+        if (xtAmount != 0) {
+            _xt.safeTransfer(recipient, xtAmount);
+        }
+        emit OrderEventsV2.RedeemedAllBeforeMaturity(recipient, shares, ftAmount, xtAmount);
     }
 
     // =============================================================================

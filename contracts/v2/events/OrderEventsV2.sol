@@ -36,4 +36,10 @@ interface OrderEventsV2 {
     /// @param asset The asset that was removed as liquidity, either debt token or pool shares
     /// @param amount The amount of the asset that was removed
     event LiquidityRemoved(IERC20 indexed asset, uint256 amount);
+
+    event Redeemed(
+        address indexed recipient, uint256 shares, uint256 debtTokenAmount, uint256 badDebt, bytes deliveryData
+    );
+
+    event RedeemedAllBeforeMaturity(address indexed recipient, uint256 shares, uint256 ftAmount, uint256 xtAmount);
 }

@@ -1059,6 +1059,86 @@ contract OrderTestV2 is Test {
         assertEq(res.debt.balanceOf(address(maker)), removedAmt + 100e8, "Maker should receive removed debt");
         vm.stopPrank();
     }
+
+    function testRedeeAllBeforeMaturityFuzz(address recipient, bool usePool) public {
+        // recipient must be non-zero
+        vm.assume(recipient != address(0));
+
+        // Ensure we're before maturity (setUp already places block time before maturity)
+
+        if (usePool) {
+            // set pool as maker so order has shares instead of raw ft/xt
+            vm.startPrank(maker);
+            MockERC4626 pool = new MockERC4626(res.debt);
+            res.order.setPool(pool);
+            vm.stopPrank();
+
+            uint256 sharesBefore = pool.balanceOf(address(res.order));
+            // sanity: there should be some shares when pool was set in setUp
+            assertGt(sharesBefore, 0);
+
+            // record recipient debt balance before redeem
+            uint256 debtBefore = res.debt.balanceOf(recipient);
+            uint256 ftBefore = res.ft.balanceOf(recipient);
+            uint256 xtBefore = res.xt.balanceOf(recipient);
+
+            // only maker can call
+            vm.prank(maker);
+            (uint256 shares, uint256 ftAmount, uint256 xtAmount) = res.order.redeeAllBeforeMaturity(recipient);
+
+            // returned shares should equal previous shares
+            assertEq(shares, sharesBefore);
+
+            // After redeem, order should no longer have pool shares
+            assertEq(pool.balanceOf(address(res.order)), 0);
+
+            // recipient should receive underlying assets from pool.redeem (1:1 in Mock)
+            assertEq(res.debt.balanceOf(recipient), debtBefore + shares);
+
+            // ft and xt amounts returned should equal transferred amounts
+            assertEq(ftAmount, res.ft.balanceOf(recipient) - ftBefore);
+            assertEq(xtAmount, res.xt.balanceOf(recipient) - xtBefore);
+
+            // shares and amounts should be non-negative
+            assertGe(shares, 0);
+            assertGe(ftAmount, 0);
+            assertGe(xtAmount, 0);
+        } else {
+            // when no pool is set, the order should transfer its ft and xt to recipient
+            uint256 ftBeforeOrder = res.ft.balanceOf(address(res.order));
+            uint256 xtBeforeOrder = res.xt.balanceOf(address(res.order));
+            uint256 ftBeforeRecip = res.ft.balanceOf(recipient);
+            uint256 xtBeforeRecip = res.xt.balanceOf(recipient);
+
+            vm.prank(maker);
+            (uint256 shares, uint256 ftAmount, uint256 xtAmount) = res.order.redeeAllBeforeMaturity(recipient);
+
+            // shares should be zero when no pool
+            assertEq(shares, 0);
+
+            // order balances should be zeroed
+            assertEq(res.ft.balanceOf(address(res.order)), 0);
+            assertEq(res.xt.balanceOf(address(res.order)), 0);
+
+            // recipient should receive the amounts
+            assertEq(res.ft.balanceOf(recipient), ftBeforeRecip + ftBeforeOrder);
+            assertEq(res.xt.balanceOf(recipient), xtBeforeRecip + xtBeforeOrder);
+
+            // returned amounts should match transferred amounts
+            assertEq(ftAmount, ftBeforeOrder);
+            assertEq(xtAmount, xtBeforeOrder);
+
+            // shares and amounts non-negative
+            assertGe(shares, 0);
+            assertGe(ftAmount, 0);
+            assertGe(xtAmount, 0);
+        }
+
+        // verify only owner (maker) can call the function
+        vm.prank(sender);
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", sender));
+        res.order.redeeAllBeforeMaturity(recipient);
+    }
 }
 
 // Mock contracts for testing
