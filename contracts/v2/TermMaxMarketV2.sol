@@ -459,7 +459,6 @@ contract TermMaxMarketV2 is
 
     function _createOrder(OrderInitialParams memory params) internal returns (ITermMaxOrder) {
         address order = Clones.clone(TERMMAX_ORDER_IMPLEMENT);
-        params.orderConfig.feeConfig = _config.feeConfig;
         params.maturity = _config.maturity;
         params.ft = ft;
         params.xt = xt;

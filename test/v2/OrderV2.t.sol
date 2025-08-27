@@ -21,6 +21,7 @@ import {
     ISwapCallback,
     OrderEvents,
     OrderErrors,
+    OrderErrorsV2,
     OrderInitialParams
 } from "contracts/v2/TermMaxOrderV2.sol";
 import {MockERC20, ERC20} from "contracts/v1/test/MockERC20.sol";
@@ -714,15 +715,8 @@ contract OrderTestV2 is Test {
 
         // Test that owner can update fee rate
         vm.startPrank(deployer);
+        vm.expectRevert(abi.encodeWithSelector(OrderErrorsV2.FeeConfigCanNotBeUpdated.selector));
         res.market.updateOrderFeeRate(res.order, newFeeConfig);
-        assertEq(res.order.orderConfig().feeConfig.lendTakerFeeRatio, newFeeConfig.lendTakerFeeRatio);
-        assertEq(res.order.orderConfig().feeConfig.borrowTakerFeeRatio, newFeeConfig.borrowTakerFeeRatio);
-
-        // Test invalid fee rates (over 100%)
-        FeeConfig memory invalidFeeConfig = marketConfig.feeConfig;
-        invalidFeeConfig.lendTakerFeeRatio = Constants.MAX_FEE_RATIO;
-        vm.expectRevert(abi.encodeWithSelector(MarketErrors.FeeTooHigh.selector));
-        res.market.updateOrderFeeRate(res.order, invalidFeeConfig);
         vm.stopPrank();
     }
 
@@ -1084,7 +1078,7 @@ contract OrderTestV2 is Test {
 
             // only maker can call
             vm.prank(maker);
-            (uint256 shares, uint256 ftAmount, uint256 xtAmount) = res.order.redeeAllBeforeMaturity(recipient);
+            (uint256 shares, uint256 ftAmount, uint256 xtAmount) = res.order.withdrawAllAssetsBeforeMaturity(recipient);
 
             // returned shares should equal previous shares
             assertEq(shares, sharesBefore);
@@ -1111,7 +1105,7 @@ contract OrderTestV2 is Test {
             uint256 xtBeforeRecip = res.xt.balanceOf(recipient);
 
             vm.prank(maker);
-            (uint256 shares, uint256 ftAmount, uint256 xtAmount) = res.order.redeeAllBeforeMaturity(recipient);
+            (uint256 shares, uint256 ftAmount, uint256 xtAmount) = res.order.withdrawAllAssetsBeforeMaturity(recipient);
 
             // shares should be zero when no pool
             assertEq(shares, 0);
@@ -1137,7 +1131,7 @@ contract OrderTestV2 is Test {
         // verify only owner (maker) can call the function
         vm.prank(sender);
         vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", sender));
-        res.order.redeeAllBeforeMaturity(recipient);
+        res.order.withdrawAllAssetsBeforeMaturity(recipient);
     }
 }
 

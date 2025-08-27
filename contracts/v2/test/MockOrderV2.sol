@@ -421,6 +421,33 @@ contract MockOrderV2 is
         delete _orderConfig;
     }
 
+    function withdrawAllAssetsBeforeMaturity(address recipient)
+        external
+        virtual
+        nonReentrant
+        onlyOwner
+        returns (uint256 shares, uint256 ftAmount, uint256 xtAmount)
+    {
+        IERC4626 _pool = pool();
+        IERC20 _ft = ft;
+        IERC20 _xt = xt;
+        if (_pool != IERC4626(address(0))) {
+            shares = _pool.balanceOf(address(this));
+            if (shares != 0) {
+                _pool.redeem(shares, recipient, address(this));
+            }
+        }
+        ftAmount = _ft.balanceOf(address(this));
+        if (ftAmount != 0) {
+            _ft.safeTransfer(recipient, ftAmount);
+        }
+        xtAmount = _xt.balanceOf(address(this));
+        if (xtAmount != 0) {
+            _xt.safeTransfer(recipient, xtAmount);
+        }
+        emit OrderEventsV2.RedeemedAllBeforeMaturity(recipient, shares, ftAmount, xtAmount);
+    }
+
     function pool() public view override returns (IERC4626) {}
 
     function virtualXtReserve() external view override returns (uint256) {}
