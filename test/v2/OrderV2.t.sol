@@ -1133,7 +1133,9 @@ contract OrderTestV2 is Test {
 
         // Expect event
         vm.expectEmit();
-        emit OrderEventsV2.RedeemedAllBeforeMaturity(recipient, expectedDebtTokenEvent, expectedFtEvent, expectedXtEvent);
+        emit OrderEventsV2.RedeemedAllBeforeMaturity(
+            recipient, expectedDebtTokenEvent, expectedFtEvent, expectedXtEvent
+        );
 
         // Execute withdrawal as owner
         vm.startPrank(maker);
