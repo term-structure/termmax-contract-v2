@@ -67,20 +67,24 @@ interface ITermMaxOrderV2 {
     function removeLiquidity(IERC20 asset, uint256 amount, address recipient) external;
 
     /// @notice Redeem all assets and close the order, must be called after the maturity + liquidation period
-    /// @param asset The asset to be redeemed, debt token or pool shares
     /// @param recipient The address to receive the redeemed assets
     /// @return badDebt The amount of bad debt incurred during the redemption
     /// @return deliveryData Additional data returned from the redemption process
     /// @dev You have to withdraw the delivery collateral manually if the asset is a pool share.
     /// @dev This function will close the order and transfer all assets to the recipient.
-    function redeemAll(IERC20 asset, address recipient) external returns (uint256 badDebt, bytes memory deliveryData);
+    function redeemAll(address recipient) external returns (uint256 badDebt, bytes memory deliveryData);
 
     /// @notice Withdraw all assets before maturity, only callable by the owner
     /// @param recipient The address to receive the withdrawn assets
-    /// @return shares The amount of pool shares withdrawn, 0 if no pool is set
+    /// @return debtTokenAmount The amount of debt tokens withdrawn
     /// @return ftAmount The amount of FT tokens withdrawn
     /// @return xtAmount The amount of XT tokens withdrawn
     function withdrawAllAssetsBeforeMaturity(address recipient)
         external
-        returns (uint256 shares, uint256 ftAmount, uint256 xtAmount);
+        returns (uint256 debtTokenAmount, uint256 ftAmount, uint256 xtAmount);
+
+    /// @notice Borrow tokens from the order
+    /// @param recipient The address to receive the borrowed tokens
+    /// @param amount The amount of tokens to be borrowed
+    function borrowToken(address recipient, uint256 amount) external;
 }

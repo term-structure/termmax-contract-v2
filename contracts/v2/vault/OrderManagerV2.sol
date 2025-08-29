@@ -90,7 +90,7 @@ contract OrderManagerV2 is VaultStorageV2, OnlyProxyCall, IOrderManagerV2 {
         returns (uint256 badDebt, uint256 deliveryCollateral)
     {
         bytes memory deliveryData;
-        (badDebt, deliveryData) = ITermMaxOrderV2(order).redeemAll(asset, address(this));
+        (badDebt, deliveryData) = ITermMaxOrderV2(order).redeemAll(address(this));
         deliveryCollateral = abi.decode(deliveryData, (uint256));
         if (badDebt != 0) {
             // store bad debt

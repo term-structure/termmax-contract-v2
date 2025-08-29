@@ -269,6 +269,7 @@ contract TermMaxRouterV2 is
         return gtId;
     }
 
+    // order integrate the funtion internally
     function borrowTokenFromGtAndXt(
         address recipient,
         ITermMaxMarket market,
