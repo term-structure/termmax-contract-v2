@@ -318,6 +318,7 @@ contract TermMaxRouterV2 is
             revert InsufficientTokenOut(address(debtToken), expectedOutput, netTokenOut);
         }
         debtToken.safeTransfer(recipient, netTokenOut);
+        emit RouterEventsV2.FlashRepay(address(gtToken), gtId, netTokenOut);
     }
 
     function flashRepayFromCollForV2(
@@ -347,6 +348,7 @@ contract TermMaxRouterV2 is
             revert InsufficientTokenOut(address(debtToken), expectedOutput, netTokenOut);
         }
         debtToken.safeTransfer(recipient, netTokenOut);
+        emit RouterEventsV2.FlashRepay(address(gtToken), gtId, netTokenOut);
     }
 
     function rolloverGtForV1(
