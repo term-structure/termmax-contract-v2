@@ -28,6 +28,7 @@ import {IAaveV3Pool} from "../extensions/aave/IAaveV3Pool.sol";
 import {ICreditDelegationToken} from "../extensions/aave/ICreditDelegationToken.sol";
 import {IMorpho, Id, MarketParams, Authorization, Signature} from "../extensions/morpho/IMorpho.sol";
 import {RouterErrorsV2} from "../errors/RouterErrorsV2.sol";
+import {RouterEventsV2} from "../events/RouterEventsV2.sol";
 import {ArrayUtilsV2} from "../lib/ArrayUtilsV2.sol";
 import {VersionV2} from "../VersionV2.sol";
 
@@ -408,6 +409,7 @@ contract TermMaxRouterV2 is
         assembly {
             newGtId := tload(T_ROLLOVER_GT_RESERVE_STORE)
         }
+        emit RouterEventsV2.RolloverGt(address(gtToken), gtId, newGtId, address(additionalAsset), additionalAmt);
     }
 
     /**
@@ -428,6 +430,7 @@ contract TermMaxRouterV2 is
         if (remainingRepayToken != 0) {
             repayToken.safeTransfer(_msgSender(), remainingRepayToken);
         }
+        emit RouterEventsV2.SwapAndRepay(address(gt), gtId, repayAmt, remainingRepayToken);
     }
 
     /// @dev Market flash leverage flashloan callback
