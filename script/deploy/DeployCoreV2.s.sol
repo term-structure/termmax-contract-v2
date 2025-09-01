@@ -173,12 +173,9 @@ contract DeployCoreV2 is DeployBaseV2 {
         console.logBytes(getGitCommitHash());
         console.log();
 
-        uint256 currentBlock = block.number;
-        uint256 currentTimestamp = block.timestamp;
-
         console.log("===== Block Info =====");
-        console.log("Block number:", currentBlock);
-        console.log("Block timestamp:", currentTimestamp);
+        console.log("Block number:", block.number);
+        console.log("Block timestamp:", block.timestamp);
         console.log();
 
         console.log("===== Core Info =====");
@@ -189,6 +186,7 @@ contract DeployCoreV2 is DeployBaseV2 {
         console.log("PriceFeedFactoryV2 deployed at:", address(priceFeedFactory));
         console.log("Oracle AggregatorV2 deployed at:", address(oracleAggregator));
         console.log("RouterV2 deployed at:", address(router));
+        console.log("Maker helper deployed at:", address(makerHelper));
         if (
             keccak256(abi.encodePacked(network)) != keccak256(abi.encodePacked("eth-mainnet"))
                 && keccak256(abi.encodePacked(network)) != keccak256(abi.encodePacked("arb-mainnet"))
@@ -199,91 +197,114 @@ contract DeployCoreV2 is DeployBaseV2 {
         console.log("MarketViewer deployed at:", address(marketViewer));
         console.log();
 
+        writeAsJson();
+    }
+
+    function writeAsJson() internal {
         // Write deployment results to a JSON file with timestamp
-        string memory deploymentJson = string(
-            abi.encodePacked(
-                "{\n",
-                '  "network": "',
-                network,
-                '",\n',
-                '  "deployedAt": "',
-                vm.toString(block.timestamp),
-                '",\n',
-                '  "gitBranch": "',
-                getGitBranch(),
-                '",\n',
-                '  "gitCommitHash": "0x',
-                vm.toString(getGitCommitHash()),
-                '",\n',
-                '  "blockInfo": {\n',
-                '    "number": "',
-                vm.toString(currentBlock),
-                '",\n',
-                '    "timestamp": "',
-                vm.toString(currentTimestamp),
-                '"\n',
-                "  },\n",
-                '  "deployer": "',
-                vm.toString(deployerAddr),
-                '",\n',
-                '  "admin": "',
-                vm.toString(adminAddr),
-                '",\n',
-                '  "contracts": {\n',
-                '    "factoryV2": "',
-                vm.toString(address(factory)),
-                '",\n',
-                '    "vaultFactoryV2": "',
-                vm.toString(address(vaultFactory)),
-                '",\n',
-                '    "priceFeedFactoryV2": "',
-                vm.toString(address(priceFeedFactory)),
-                '",\n',
-                '    "oracleAggregatorV2": "',
-                vm.toString(address(oracleAggregator)),
-                '",\n',
-                '    "routerV2": "',
-                vm.toString(address(router)),
-                '",\n',
-                '    "makerHelper": "',
-                vm.toString(address(makerHelper)),
-                '",\n',
-                '    "swapAdapterV2": ',
-                keccak256(abi.encodePacked(network)) == keccak256(abi.encodePacked("eth-mainnet"))
-                    || keccak256(abi.encodePacked(network)) == keccak256(abi.encodePacked("arb-mainnet"))
-                    || keccak256(abi.encodePacked(network)) == keccak256(abi.encodePacked("bnb-mainnet"))
-                    ? string.concat(
-                        "{\n",
-                        '      "uniswapV3AdapterV2": "',
-                        vm.toString(address(uniswapV3Adapter)),
-                        '",\n',
-                        '      "odosV2AdapterV2": "',
-                        vm.toString(address(odosV2Adapter)),
-                        '",\n',
-                        '      "pendleSwapV3AdapterV2": "',
-                        vm.toString(address(pendleSwapV3Adapter)),
-                        '",\n',
-                        '      "ERC4626VaultAdapterV2": "',
-                        vm.toString(address(vaultAdapter)),
-                        '",\n',
-                        '      "TermMaxSwapAdapter": "',
-                        vm.toString(address(termMaxSwapAdapter)),
-                        '"\n',
-                        "    },\n"
-                    )
-                    : string.concat('"', vm.toString(address(swapAdapter)), '",\n'),
-                keccak256(abi.encodePacked(network)) != keccak256(abi.encodePacked("eth-mainnet"))
-                    && keccak256(abi.encodePacked(network)) != keccak256(abi.encodePacked("arb-mainnet"))
-                    && keccak256(abi.encodePacked(network)) != keccak256(abi.encodePacked("bnb-mainnet"))
-                    ? string.concat('    "faucet": "', vm.toString(address(faucet)), '",\n')
-                    : "",
-                '    "marketViewer": "',
-                vm.toString(address(marketViewer)),
-                '"\n',
-                "  }\n",
-                "}"
-            )
-        );
+        string memory deploymentJson;
+
+        {
+            deploymentJson = string(
+                abi.encodePacked(
+                    "{\n",
+                    '  "network": "',
+                    network,
+                    '",\n',
+                    '  "deployedAt": "',
+                    vm.toString(block.timestamp),
+                    '",\n',
+                    '  "gitBranch": "',
+                    getGitBranch(),
+                    '",\n',
+                    '  "gitCommitHash": "0x',
+                    vm.toString(getGitCommitHash()),
+                    '",\n',
+                    '  "blockInfo": {\n',
+                    '    "number": "',
+                    vm.toString(block.number),
+                    '",\n',
+                    '    "timestamp": "',
+                    vm.toString(block.timestamp),
+                    '"\n',
+                    "  },\n"
+                )
+            );
+        }
+        {
+            deploymentJson = string(
+                abi.encodePacked(
+                    deploymentJson,
+                    '  "deployer": "',
+                    vm.toString(deployerAddr),
+                    '",\n',
+                    '  "admin": "',
+                    vm.toString(adminAddr),
+                    '",\n',
+                    '  "contracts": {\n',
+                    '    "factoryV2": "',
+                    vm.toString(address(factory)),
+                    '",\n',
+                    '    "vaultFactoryV2": "',
+                    vm.toString(address(vaultFactory)),
+                    '",\n',
+                    '    "priceFeedFactoryV2": "',
+                    vm.toString(address(priceFeedFactory)),
+                    '",\n',
+                    '    "oracleAggregatorV2": "',
+                    vm.toString(address(oracleAggregator)),
+                    '",\n',
+                    '    "routerV2": "',
+                    vm.toString(address(router)),
+                    '",\n',
+                    '    "makerHelper": "',
+                    vm.toString(address(makerHelper)),
+                    '",\n',
+                    '    "swapAdapterV2": '
+                )
+            );
+        }
+
+        {
+            deploymentJson = string(
+                abi.encodePacked(
+                    deploymentJson,
+                    keccak256(abi.encodePacked(network)) == keccak256(abi.encodePacked("eth-mainnet"))
+                        || keccak256(abi.encodePacked(network)) == keccak256(abi.encodePacked("arb-mainnet"))
+                        || keccak256(abi.encodePacked(network)) == keccak256(abi.encodePacked("bnb-mainnet"))
+                        ? string.concat(
+                            "{\n",
+                            '      "uniswapV3AdapterV2": "',
+                            vm.toString(address(uniswapV3Adapter)),
+                            '",\n',
+                            '      "odosV2AdapterV2": "',
+                            vm.toString(address(odosV2Adapter)),
+                            '",\n',
+                            '      "pendleSwapV3AdapterV2": "',
+                            vm.toString(address(pendleSwapV3Adapter)),
+                            '",\n',
+                            '      "ERC4626VaultAdapterV2": "',
+                            vm.toString(address(vaultAdapter)),
+                            '",\n',
+                            '      "TermMaxSwapAdapter": "',
+                            vm.toString(address(termMaxSwapAdapter)),
+                            '"\n',
+                            "    },\n"
+                        )
+                        : string.concat('"', vm.toString(address(swapAdapter)), '",\n'),
+                    keccak256(abi.encodePacked(network)) != keccak256(abi.encodePacked("eth-mainnet"))
+                        && keccak256(abi.encodePacked(network)) != keccak256(abi.encodePacked("arb-mainnet"))
+                        && keccak256(abi.encodePacked(network)) != keccak256(abi.encodePacked("bnb-mainnet"))
+                        ? string.concat('    "faucet": "', vm.toString(address(faucet)), '",\n')
+                        : "",
+                    '    "marketViewer": "',
+                    vm.toString(address(marketViewer)),
+                    '"\n',
+                    "  }\n",
+                    "}"
+                )
+            );
+        }
 
         string memory deploymentPath =
             string.concat(vm.projectRoot(), "/deployments/", network, "/", network, "-core-v2.json");

@@ -1,23 +1,23 @@
 {
   "network": "arb-sepolia",
-  "deployedAt": "1756117131",
+  "deployedAt": "1756719686",
   "gitBranch": "v2/deployment",
-  "gitCommitHash": "0x0xcd9dc5360d8a42414b892087f8f56fcca67e3181",
+  "gitCommitHash": "0x6b81ebee6cccb0768489f9c823fd43887c160a62",
   "blockInfo": {
-    "number": "9060048",
-    "timestamp": "1756117131"
+    "number": "9109805",
+    "timestamp": "1756719686"
   },
   "deployer": "0xE355d5D8aa52EF0FbbD037C4a3C5E6Fd659cf46B",
   "admin": "0x81f314f70702Bbe89FEd0F2cFe6841950275E0b7",
   "contracts": {
-    "factoryV2": "0x4E27A0dcA9442BaE8a785e48965030D6f7Da8645",
-    "vaultFactoryV2": "0x769c2ffFB29C16D2bA9816A878af048AcebFd571",
-    "oracleAggregatorV2": "0xB26935a4b720Bca5BD3696a757bC6cDc4B0E205d",
-    "priceFeedFactoryV2": "0xCe1357F65De5EB89306bEd0429971E96f971660e",
-    "routerV2": "0x10E32c9d915A2F1aa4B40A60a2e6d5dc3515D4C6",
-    "makerHelper": "0xA34C0cf73727A8e6f9EABB0420fa4FD566139EFF",
-    "swapAdapterV2": "0xA46e82094d14C5A1BFd52Dd9D539F9AA1F4B31f9",
-    "faucet": "0xca840D6EB20A6E9C569656a33835DdC584A4a5be",
-    "marketViewer": "0x6a50Fade9601Dac484961650787858878Eb1EF7f"
+    "factoryV2": "0xC82648C655dA404Db4AE2752d6E4a100241967E3",
+    "vaultFactoryV2": "0x9dde00cb80A7Ded2874EC96aa270312e719a5510",
+    "oracleAggregatorV2": "0x69951EdA8b917b2107e533495C90820461BE63eb",
+    "priceFeedFactoryV2": "0x051777C7B541379190D2e9037e8333Ea51307449",
+    "routerV2": "0x87461fABE6D2B876e303ffd384C6E6870C923cd8",
+    "makerHelper": "0x6B9FE6B7dEfdD7353880990002A5D250066E2b8d",
+    "swapAdapterV2": "0x59fc09Aca5152f2E40164536c153632869348D3b",
+    "faucet": "0xE877cB4bD6f5F10b3C207f7B691E4275A2A398bc",
+    "marketViewer": "0x8C3e4f89740F701ADe9591ED54ff2b65985D5cc3"
   }
 }
