@@ -8,4 +8,6 @@ interface RouterErrorsV2 {
     error CallbackReentrant();
     /// @notice Error when the swap path is empty
     error SwapPathsIsEmpty();
+    /// @notice Error when rollover fails
+    error RolloverFailed(uint256 expectedRepayAmt, uint256 actualRepayAmt);
 }

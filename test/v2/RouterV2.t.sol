@@ -56,6 +56,7 @@ import {
     RouterEvents,
     SwapPath
 } from "contracts/v2/router/TermMaxRouterV2.sol";
+import {RouterEventsV2} from "contracts/v2/events/RouterEventsV2.sol";
 import {ITermMaxRouter} from "contracts/v1/router/ITermMaxRouter.sol";
 import {MockSwapAdapterV2} from "contracts/v2/test/MockSwapAdapterV2.sol";
 import {ITermMaxOrder} from "contracts/v1/ITermMaxOrder.sol";
@@ -278,63 +279,6 @@ contract RouterTestV2 is Test {
         vm.stopPrank();
     }
 
-    // function testSellXtAndFt(bool isV1, uint128 ftAmount, uint128 xtAmount) public {
-    //     vm.assume(ftAmount <= 150e8 && xtAmount <= 150e8);
-    //     vm.startPrank(sender);
-    //     deal(address(res.ft), sender, ftAmount);
-    //     deal(address(res.xt), sender, xtAmount);
-
-    //     address[] memory orders = new address[](2);
-    //     orders[0] = address(res.order);
-    //     orders[1] = address(res.order);
-
-    //     (uint128 maxBurn, uint128 sellAmt) =
-    //         ftAmount > xtAmount ? (xtAmount, ftAmount - xtAmount) : (ftAmount, xtAmount - ftAmount);
-    //     IERC20 tokenToSell = ftAmount > xtAmount ? res.ft : res.xt;
-    //     uint128[] memory tradingAmts = new uint128[](2);
-    //     tradingAmts[0] = sellAmt / 2;
-    //     tradingAmts[1] = sellAmt / 2;
-    //     uint128 mintTokenOut = 0;
-
-    //     res.ft.approve(address(res.router), ftAmount);
-    //     res.xt.approve(address(res.router), xtAmount);
-
-    //     TermMaxSwapData memory swapData = TermMaxSwapData({
-    //         swapExactTokenForToken: true,
-    //         scalingFactor: 0,
-    //         orders: orders,
-    //         tradingAmts: tradingAmts,
-    //         netTokenAmt: mintTokenOut,
-    //         deadline: block.timestamp + 1 hours
-    //     });
-
-    //     SwapUnit[] memory swapUnits = new SwapUnit[](1);
-    //     swapUnits[0] = SwapUnit({
-    //         adapter: address(termMaxSwapAdapter),
-    //         tokenIn: address(tokenToSell),
-    //         tokenOut: address(res.debt),
-    //         swapData: abi.encode(swapData)
-    //     });
-
-    //     SwapPath[] memory swapPaths = new SwapPath[](1);
-    //     uint256 netOut;
-    //     if (isV1) {
-    //         swapPaths[0] =
-    //             SwapPath({units: swapUnits, recipient: sender, inputAmount: sellAmt, useBalanceOnchain: true});
-    //         netOut = res.router.sellFtAndXtForV1(sender, res.market, ftAmount, xtAmount, swapPaths);
-    //     } else {
-    //         swapPaths[0] =
-    //             SwapPath({units: swapUnits, recipient: sender, inputAmount: sellAmt, useBalanceOnchain: false});
-    //         netOut = res.router.sellFtAndXtForV2(sender, res.market, ftAmount, xtAmount, swapPaths);
-    //     }
-    //     assertEq(netOut, res.debt.balanceOf(sender));
-    //     assertEq(res.ft.balanceOf(sender), 0);
-    //     assertEq(res.xt.balanceOf(sender), 0);
-    //     assert(maxBurn <= netOut);
-
-    //     vm.stopPrank();
-    // }
-
     function testLeverageFromToken(bool isV1) public {
         vm.startPrank(sender);
 
@@ -401,6 +345,12 @@ contract RouterTestV2 is Test {
         });
 
         res.debt.approve(address(res.router), tokenToSwap + 2e8 * 2);
+
+        // Check for IssueGt event
+        // Only check indexed topics (market, gtId). Skip non-indexed data (caller, recipient, amounts, ltv, collData)
+        vm.expectEmit(true, true, false, false);
+        emit RouterEvents.IssueGt(res.market, 1, address(0), address(0), 0, 0, 0, "");
+
         (uint256 gtId, uint256 netXtOut) =
             res.router.leverage(sender, res.market, maxLtv, isV1, inputPaths, collateralPath);
         (address owner, uint128 debtAmt, bytes memory collateralData) = res.gt.loanInfo(gtId);
@@ -715,20 +665,30 @@ contract RouterTestV2 is Test {
         (uint256 gtId,) = LoanUtils.fastMintGt(res, sender, debtAmt, 1e18);
         (,, bytes memory collateralData) = res.gt.loanInfo(gtId);
         bool byDebtToken = true;
+        uint256 collateralAmt = abi.decode(collateralData, (uint256));
 
         uint256 mintTokenOut = 2000e8;
         SwapUnit[] memory units = new SwapUnit[](1);
         units[0] = SwapUnit(address(adapter), address(res.collateral), address(res.debt), abi.encode(mintTokenOut));
 
-        SwapPath[] memory swapPaths = new SwapPath[](1);
-        swapPaths[0] = SwapPath({units: units, recipient: address(res.router), inputAmount: 0, useBalanceOnchain: true});
+        SwapPath memory swapPaths = SwapPath({
+            units: units,
+            recipient: address(res.router),
+            inputAmount: collateralAmt,
+            useBalanceOnchain: false
+        });
         bytes memory callbackData = abi.encode(FlashRepayOptions.REPAY, abi.encode(swapPaths));
         res.gt.approve(address(res.router), gtId);
+
+        // Check for FlashRepay event
+        vm.expectEmit(true, true, true, true);
+        emit RouterEventsV2.FlashRepay(address(res.gt), gtId, mintTokenOut - debtAmt);
+
         if (isV1) {
             res.router.flashRepayFromCollForV1(sender, res.market, gtId, byDebtToken, 0, callbackData);
         } else {
             res.router.flashRepayFromCollForV2(
-                sender, res.market, gtId, debtAmt, byDebtToken, 0, abi.decode(collateralData, (uint256)), callbackData
+                sender, res.market, gtId, debtAmt, byDebtToken, 0, collateralAmt, callbackData
             );
         }
 
@@ -752,6 +712,7 @@ contract RouterTestV2 is Test {
         amtsToBuyFt[0] = debtAmt;
 
         bool byDebtToken = false;
+        uint256 collateralAmt = abi.decode(collateralData, (uint256));
 
         uint256 mintTokenOut = 2000e8;
         SwapUnit[] memory units = new SwapUnit[](2);
@@ -772,9 +733,13 @@ contract RouterTestV2 is Test {
             swapData: abi.encode(swapData)
         });
 
-        SwapPath[] memory swapPaths = new SwapPath[](1);
-        swapPaths[0] = SwapPath({units: units, recipient: address(res.router), inputAmount: 0, useBalanceOnchain: true});
-        bytes memory callbackData = abi.encode(FlashRepayOptions.REPAY, abi.encode(swapPaths));
+        SwapPath memory swapPath = SwapPath({
+            units: units,
+            recipient: address(res.router),
+            inputAmount: collateralAmt,
+            useBalanceOnchain: false
+        });
+        bytes memory callbackData = abi.encode(FlashRepayOptions.REPAY, abi.encode(swapPath));
 
         res.gt.approve(address(res.router), gtId);
         if (isV1) {
@@ -782,7 +747,7 @@ contract RouterTestV2 is Test {
         } else {
             // DelegateAble(address(res.gt)).setDelegate(address(res.router), true);
             res.router.flashRepayFromCollForV2(
-                sender, res.market, gtId, debtAmt, byDebtToken, 0, abi.decode(collateralData, (uint256)), callbackData
+                sender, res.market, gtId, debtAmt, byDebtToken, 0, collateralAmt, callbackData
             );
         }
 
@@ -807,9 +772,13 @@ contract RouterTestV2 is Test {
         SwapUnit[] memory units = new SwapUnit[](1);
         units[0] = SwapUnit(address(adapter), address(res.collateral), address(res.debt), abi.encode(mintTokenOut));
 
-        SwapPath[] memory swapPaths = new SwapPath[](1);
-        swapPaths[0] = SwapPath({units: units, recipient: address(res.router), inputAmount: 0, useBalanceOnchain: true});
-        bytes memory callbackData = abi.encode(FlashRepayOptions.REPAY, abi.encode(swapPaths));
+        SwapPath memory swapPath = SwapPath({
+            units: units,
+            recipient: address(res.router),
+            inputAmount: collateralAmt / 2,
+            useBalanceOnchain: true
+        });
+        bytes memory callbackData = abi.encode(FlashRepayOptions.REPAY, abi.encode(swapPath));
 
         res.gt.approve(address(res.router), gtId);
         res.router.flashRepayFromCollForV2(
@@ -867,6 +836,10 @@ contract RouterTestV2 is Test {
 
         res.debt.mint(sender, maxTokenIn);
         res.debt.approve(address(res.router), maxTokenIn);
+
+        // Check for SwapAndRepay event
+        vm.expectEmit(true, true, true, true);
+        emit RouterEventsV2.SwapAndRepay(address(res.gt), gtId, debtAmt, 0);
 
         uint256 netCost = res.router.swapAndRepay(res.gt, gtId, debtAmt, false, inputPaths)[0];
         assertEq(res.debt.balanceOf(sender), maxTokenIn - netCost);
@@ -936,9 +909,16 @@ contract RouterTestV2 is Test {
         vm.startPrank(deployer);
 
         address randomAdapter = vm.randomAddress();
+
+        // Test adding to whitelist with event check
+        vm.expectEmit(true, true, true, true);
+        emit RouterEvents.UpdateSwapAdapterWhiteList(randomAdapter, true);
         res.router.setAdapterWhitelist(randomAdapter, true);
         assertTrue(res.router.adapterWhitelist(randomAdapter));
 
+        // Test removing from whitelist with event check
+        vm.expectEmit(true, true, true, true);
+        emit RouterEvents.UpdateSwapAdapterWhiteList(randomAdapter, false);
         res.router.setAdapterWhitelist(randomAdapter, false);
         assertFalse(res.router.adapterWhitelist(randomAdapter));
 

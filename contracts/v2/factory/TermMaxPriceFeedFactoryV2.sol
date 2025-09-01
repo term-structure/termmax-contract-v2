@@ -4,6 +4,7 @@ pragma solidity ^0.8.27;
 import {TermMaxERC4626PriceFeed} from "../oracle/priceFeeds/TermMaxERC4626PriceFeed.sol";
 import {TermMaxPriceFeedConverter} from "../oracle/priceFeeds/TermMaxPriceFeedConverter.sol";
 import {TermMaxPTPriceFeed} from "../oracle/priceFeeds/TermMaxPTPriceFeed.sol";
+import {TermMaxConstantPriceFeed} from "../oracle/priceFeeds/TermMaxConstantPriceFeed.sol";
 import {FactoryEventsV2} from "../events/FactoryEventsV2.sol";
 import {VersionV2} from "../VersionV2.sol";
 
@@ -67,6 +68,19 @@ contract TermMaxPriceFeedFactoryV2 is VersionV2 {
         returns (address)
     {
         address priceFeed = address(new TermMaxPTPriceFeed(_pendlePYLpOracle, _market, _duration, _priceFeed));
+        emit FactoryEventsV2.PriceFeedCreated(priceFeed);
+        return priceFeed;
+    }
+
+    /**
+     * @notice Creates a constant price feed that always returns the same price
+     * @dev Deploys a TermMaxConstantPriceFeed useful for stable assets or testing scenarios
+     * @param _constantPrice The constant price value to be returned by the feed (with 8 decimals of precision)
+     * @return The address of the newly deployed constant price feed
+     * @custom:usage Ideal for stablecoins like USDC, USDT, or for mock testing environments
+     */
+    function createConstantPriceFeed(int256 _constantPrice) external returns (address) {
+        address priceFeed = address(new TermMaxConstantPriceFeed(_constantPrice));
         emit FactoryEventsV2.PriceFeedCreated(priceFeed);
         return priceFeed;
     }

@@ -215,7 +215,6 @@ contract GtTestV2 is Test {
         res.oracle.submitPendingOracle(
             address(res.collateral), IOracleV2.Oracle(res.collateralOracle, res.collateralOracle, 0, 0, 3600, 3600)
         );
-        res.oracle.acceptPendingOracle(address(res.collateral));
         vm.warp(block.timestamp + 3600);
 
         vm.startPrank(sender);
@@ -231,7 +230,6 @@ contract GtTestV2 is Test {
         res.oracle.submitPendingOracle(
             address(res.collateral), IOracleV2.Oracle(res.collateralOracle, res.collateralOracle, 0, 0, 365 days, 0)
         );
-        res.oracle.acceptPendingOracle(address(res.collateral));
         vm.stopPrank();
 
         vm.startPrank(sender);
@@ -752,8 +750,6 @@ contract GtTestV2 is Test {
         res.oracle.submitPendingOracle(
             address(res.collateral), IOracleV2.Oracle(res.collateralOracle, res.collateralOracle, 0, 0, 3500, 3500)
         );
-        vm.prank(deployer);
-        res.oracle.acceptPendingOracle(address(res.collateral));
         vm.warp(block.timestamp + 3600);
 
         vm.expectRevert(abi.encodeWithSelector(IOracleV2.OracleIsNotWorking.selector, address(res.collateral)));
@@ -764,9 +760,6 @@ contract GtTestV2 is Test {
         res.oracle.submitPendingOracle(
             address(res.collateral), IOracleV2.Oracle(res.collateralOracle, res.collateralOracle, 0, 0, 0, 0)
         );
-        vm.prank(deployer);
-        res.oracle.acceptPendingOracle(address(res.collateral));
-
         vm.prank(sender);
         res.gt.removeCollateral(gtId, abi.encode(removedCollateral));
     }
@@ -1291,7 +1284,6 @@ contract GtTestV2 is Test {
         res.oracle.submitPendingOracle(
             address(res.collateral), IOracleV2.Oracle(res.collateralOracle, res.collateralOracle, 0, 0, 3600, 3600)
         );
-        res.oracle.acceptPendingOracle(address(res.collateral));
 
         vm.warp(block.timestamp + 3600);
         address liquidator = vm.randomAddress();

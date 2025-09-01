@@ -28,6 +28,7 @@ import {IAaveV3Pool} from "../extensions/aave/IAaveV3Pool.sol";
 import {ICreditDelegationToken} from "../extensions/aave/ICreditDelegationToken.sol";
 import {IMorpho, Id, MarketParams, Authorization, Signature} from "../extensions/morpho/IMorpho.sol";
 import {RouterErrorsV2} from "../errors/RouterErrorsV2.sol";
+import {RouterEventsV2} from "../events/RouterEventsV2.sol";
 import {ArrayUtilsV2} from "../lib/ArrayUtilsV2.sol";
 import {VersionV2} from "../VersionV2.sol";
 
@@ -269,6 +270,7 @@ contract TermMaxRouterV2 is
         return gtId;
     }
 
+    // order integrate the funtion internally
     function borrowTokenFromGtAndXt(
         address recipient,
         ITermMaxMarket market,
@@ -316,6 +318,7 @@ contract TermMaxRouterV2 is
             revert InsufficientTokenOut(address(debtToken), expectedOutput, netTokenOut);
         }
         debtToken.safeTransfer(recipient, netTokenOut);
+        emit RouterEventsV2.FlashRepay(address(gtToken), gtId, netTokenOut);
     }
 
     function flashRepayFromCollForV2(
@@ -345,6 +348,7 @@ contract TermMaxRouterV2 is
             revert InsufficientTokenOut(address(debtToken), expectedOutput, netTokenOut);
         }
         debtToken.safeTransfer(recipient, netTokenOut);
+        emit RouterEventsV2.FlashRepay(address(gtToken), gtId, netTokenOut);
     }
 
     function rolloverGtForV1(
@@ -407,6 +411,7 @@ contract TermMaxRouterV2 is
         assembly {
             newGtId := tload(T_ROLLOVER_GT_RESERVE_STORE)
         }
+        emit RouterEventsV2.RolloverGt(address(gtToken), gtId, newGtId, address(additionalAsset), additionalAmt);
     }
 
     /**
@@ -423,6 +428,11 @@ contract TermMaxRouterV2 is
         IERC20 repayToken = IERC20(paths[0].units[paths[0].units.length - 1].tokenOut);
         repayToken.safeIncreaseAllowance(address(gt), repayAmt);
         gt.repay(gtId, repayAmt, byDebtToken);
+        uint256 remainingRepayToken = repayToken.balanceOf(address(this));
+        if (remainingRepayToken != 0) {
+            repayToken.safeTransfer(_msgSender(), remainingRepayToken);
+        }
+        emit RouterEventsV2.SwapAndRepay(address(gt), gtId, repayAmt, remainingRepayToken);
     }
 
     /// @dev Market flash leverage flashloan callback
@@ -475,13 +485,13 @@ contract TermMaxRouterV2 is
     }
 
     function _flashRepay(bytes memory callbackData) internal {
-        SwapPath[] memory swapPaths = abi.decode(callbackData, (SwapPath[]));
-        _executeSwapPaths(swapPaths);
+        // By debt token: collateral-> debt token
+        // By ft token: collateral-> debt token -> exact ft token
+        SwapPath memory repayTokenPath = abi.decode(callbackData, (SwapPath));
+        _executeSwapUnits(address(this), repayTokenPath.inputAmount, repayTokenPath.units);
     }
 
-    function _rollover(IERC20 debtToken, uint256 repayAmt, bytes memory collateralData, bytes memory callbackData)
-        internal
-    {
+    function _rollover(IERC20, uint256, bytes memory, bytes memory callbackData) internal {
         (
             address recipient,
             ITermMaxMarket market,
@@ -490,14 +500,16 @@ contract TermMaxRouterV2 is
             SwapPath memory debtTokenPath
         ) = abi.decode(callbackData, (address, ITermMaxMarket, uint128, SwapPath, SwapPath));
 
-        // do swap to get the new collateral
-        uint256 newCollateralAmt = collateralPath.units.length == 0
-            ? 0
-            : _executeSwapUnits(address(this), abi.decode(collateralData, (uint256)), collateralPath.units);
-        collateralData = abi.encode(newCollateralAmt);
+        // Do swap to get the new collateral,(the inpput amount may contains additional old collateral)
+        if (collateralPath.units.length != 0) {
+            _executeSwapUnits(address(this), collateralPath.inputAmount, collateralPath.units);
+        }
 
         (IERC20 ft,, IGearingToken gt, address collateral,) = market.tokens();
+        // Get balances, may contain additional new collateral
+        uint256 newCollateralAmt = IERC20(collateral).balanceOf(address(this));
         uint256 gtId;
+        // issue new gt to get new ft token
         {
             // issue new gt
             uint256 mintGtFeeRatio = market.mintGtFeeRatio();
@@ -505,8 +517,9 @@ contract TermMaxRouterV2 is
                 (debtTokenPath.inputAmount * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - mintGtFeeRatio)
             ).toUint128();
             IERC20(collateral).safeIncreaseAllowance(address(gt), newCollateralAmt);
-            (gtId,) = market.issueFt(address(this), newDebtAmt, collateralData);
+            (gtId,) = market.issueFt(address(this), newDebtAmt, abi.encode(newCollateralAmt));
         }
+        // Swap ft to debt token to repay(swap amount + additional debt token amount should equal repay amt)
         {
             uint256 netFtCost = _executeSwapUnits(address(this), debtTokenPath.inputAmount, debtTokenPath.units);
             // check remaining ft amount
@@ -515,14 +528,6 @@ contract TermMaxRouterV2 is
                 ft.safeIncreaseAllowance(address(gt), repaidFtAmt);
                 // repay in ft, bool false means not using debt token
                 gt.repay(gtId, repaidFtAmt.toUint128(), false);
-            }
-            // check remaining debt token amount
-            uint256 totalDebtTokenAmt = debtToken.balanceOf(address(this));
-            if (totalDebtTokenAmt > repayAmt) {
-                uint256 repaidDebtAmt = totalDebtTokenAmt - repayAmt;
-                debtToken.safeIncreaseAllowance(address(gt), repaidDebtAmt);
-                // repay in debt token, bool true means using debt token
-                gt.repay(gtId, repaidDebtAmt.toUint128(), true);
             }
             (, uint128 ltv,) = gt.getLiquidationInfo(gtId);
             if (ltv > maxLtv) {
@@ -565,6 +570,7 @@ contract TermMaxRouterV2 is
                 delegationParams.s
             );
         }
+        repayAmt = repayAmt - debtToken.balanceOf(address(this));
         if (collateralPath.units.length > 0) {
             // do swap to get the new collateral
             uint256 newCollateralAmt = _doSwap(collateral.balanceOf(address(this)), collateralPath.units);
@@ -576,7 +582,6 @@ contract TermMaxRouterV2 is
             collateral.safeIncreaseAllowance(address(aave), collateralAmt);
             aave.supply(address(collateral), collateralAmt, caller, referralCode);
         }
-        repayAmt = repayAmt - debtToken.balanceOf(address(this));
         aave.borrow(address(debtToken), repayAmt, interestRateMode, referralCode, caller);
     }
 
@@ -600,6 +605,7 @@ contract TermMaxRouterV2 is
             // auth with sig
             morpho.setAuthorizationWithSig(auth, sig);
         }
+        repayAmt = repayAmt - debtToken.balanceOf(address(this));
         if (collateralPath.units.length > 0) {
             // do swap to get the new collateral
             uint256 newCollateralAmt = _doSwap(collateral.balanceOf(address(this)), collateralPath.units);
@@ -611,7 +617,6 @@ contract TermMaxRouterV2 is
             collateral.safeIncreaseAllowance(address(morpho), collateralAmt);
             morpho.supplyCollateral(marketParams, collateralAmt, caller, "");
         }
-        repayAmt = repayAmt - debtToken.balanceOf(address(this));
         /// @dev Borrow the repay amount from morpho, share amount is 0 and receiver is the router itself
         morpho.borrow(marketParams, repayAmt, 0, caller, address(this));
     }

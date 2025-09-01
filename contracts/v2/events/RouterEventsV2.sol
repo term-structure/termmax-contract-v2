@@ -9,4 +9,16 @@ import {OrderInitialParams} from "../storage/TermMaxStorageV2.sol";
  * @author Term Structure Labs
  * @notice Interface defining events for the TermMax V2 protocol's router operations
  */
-interface RouterEventsV2 {}
+interface RouterEventsV2 {
+    event SwapAndRepay(address indexed gt, uint256 indexed gtId, uint256 repayAmt, uint256 remainingRepayToken);
+
+    event FlashRepay(address indexed gt, uint256 indexed gtId, uint256 netTokenOut);
+
+    event RolloverGt(
+        address indexed gt,
+        uint256 indexed gtId,
+        uint256 indexed newGtId,
+        address additionalAsset,
+        uint256 additionalAmt
+    );
+}

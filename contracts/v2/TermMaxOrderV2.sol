@@ -138,7 +138,6 @@ contract TermMaxOrderV2 is
         debtToken = params.debtToken;
         gt = params.gt;
         _setPool(params.pool);
-        _updateFeeConfig(params.orderConfig.feeConfig);
         _updateCurve(params.orderConfig.curveCuts);
         _updateGeneralConfig(
             params.orderConfig.gtId,
@@ -348,7 +347,7 @@ contract TermMaxOrderV2 is
      * @param newFeeConfig New fee configuration
      */
     function updateFeeConfig(FeeConfig memory newFeeConfig) external virtual override onlyMarket {
-        _updateFeeConfig(newFeeConfig);
+        revert OrderErrorsV2.FeeConfigCanNotBeUpdated();
     }
 
     /**
@@ -369,11 +368,6 @@ contract TermMaxOrderV2 is
         _orderConfig.swapTrigger = swapTrigger;
         virtualXtReserve = virtualXtReserve_;
         emit OrderEventsV2.GeneralConfigUpdated(gtId, maxXtReserve, swapTrigger, virtualXtReserve_);
-    }
-
-    function _updateFeeConfig(FeeConfig memory newFeeConfig) internal {
-        _orderConfig.feeConfig = newFeeConfig;
-        emit UpdateFeeConfig(newFeeConfig);
     }
 
     /**
@@ -475,7 +469,7 @@ contract TermMaxOrderV2 is
      * @param recipient Recipient address for redeemed assets
      * @return badDebt Amount of bad debt if any
      */
-    function redeemAll(IERC20 asset, address recipient)
+    function redeemAll(address recipient)
         external
         virtual
         nonReentrant
@@ -483,32 +477,67 @@ contract TermMaxOrderV2 is
         returns (uint256 badDebt, bytes memory deliveryData)
     {
         IERC4626 _pool = pool;
-        IERC20 _debtToken = debtToken;
         uint256 ftBalance = ft.balanceOf(address(this));
         uint256 received;
-        if (asset == _debtToken) {
-            (received, deliveryData) = market.redeem(ftBalance, recipient);
-            // if pool is set, redeem all shares
-            if (address(_pool) != address(0)) {
-                uint256 receivedFromPool = _pool.redeem(_pool.balanceOf(address(this)), recipient, address(this));
-                emit OrderEventsV2.LiquidityRemoved(asset, receivedFromPool);
-            } else {
-                emit OrderEventsV2.LiquidityRemoved(asset, received);
-            }
-        } else {
-            /// @dev You have to deal with the delivery data by yourself if you want to redeem to shares
-            (received, deliveryData) = market.redeem(ftBalance, address(this));
-            // if pool is set, withdraw all shares
-            _debtToken.safeIncreaseAllowance(address(_pool), received);
-            _pool.deposit(received, address(this));
-            uint256 totalShares = _pool.balanceOf(address(this));
-            _pool.safeTransfer(recipient, totalShares);
-            emit OrderEventsV2.LiquidityRemoved(asset, totalShares);
+        uint256 receivedFromPool;
+
+        (received, deliveryData) = market.redeem(ftBalance, recipient);
+        // if pool is set, redeem all shares
+        if (address(_pool) != address(0)) {
+            receivedFromPool = _pool.redeem(_pool.balanceOf(address(this)), recipient, address(this));
         }
         // Calculate bad debt
         badDebt = ftBalance - received;
         // Clear order configuration
         delete _orderConfig;
+        emit OrderEventsV2.Redeemed(recipient, received + receivedFromPool, badDebt, deliveryData);
+    }
+
+    function withdrawAllAssetsBeforeMaturity(address recipient)
+        external
+        virtual
+        nonReentrant
+        onlyOwner
+        returns (uint256 debtTokenAmount, uint256 ftAmount, uint256 xtAmount)
+    {
+        IERC4626 _pool = pool;
+        IERC20 _ft = ft;
+        IERC20 _xt = xt;
+        if (_pool != IERC4626(address(0))) {
+            uint256 shares = _pool.balanceOf(address(this));
+            if (shares != 0) {
+                debtTokenAmount += _pool.redeem(shares, recipient, address(this));
+            }
+        }
+        ftAmount = _ft.balanceOf(address(this));
+        xtAmount = _xt.balanceOf(address(this));
+        uint256 maxBurned = ftAmount.min(xtAmount);
+        if (maxBurned != 0) {
+            market.burn(address(this), maxBurned);
+            ftAmount -= maxBurned;
+            xtAmount -= maxBurned;
+        }
+        if (ftAmount != 0) {
+            _ft.safeTransfer(recipient, ftAmount);
+        }
+        if (xtAmount != 0) {
+            _xt.safeTransfer(recipient, xtAmount);
+        }
+
+        emit OrderEventsV2.RedeemedAllBeforeMaturity(recipient, debtTokenAmount + maxBurned, ftAmount, xtAmount);
+    }
+
+    function borrowToken(address recipient, uint256 amount) external virtual nonReentrant onlyOwner {
+        uint256 ftAmount = ft.balanceOf(address(this));
+        uint256 xtAmount = xt.balanceOf(address(this));
+        uint256 maxBurned = ftAmount.min(xtAmount);
+        if (maxBurned < amount) {
+            uint256 remainingAmount = amount - maxBurned;
+            // issue ft from existing gt
+            _issueFtToSelf(remainingAmount, _orderConfig.gtId);
+        }
+        market.burn(recipient, amount);
+        emit OrderEventsV2.Borrowed(recipient, amount);
     }
 
     // =============================================================================
@@ -542,6 +571,7 @@ contract TermMaxOrderV2 is
             IERC20 _ft = ft;
             IERC20 _xt = xt;
             OrderConfig memory orderConfig_ = _orderConfig;
+            orderConfig_.feeConfig = market.config().feeConfig;
             int256 deltaFt;
             int256 deltaXt;
             if (tokenIn == _ft && tokenOut == _debtToken) {
@@ -611,6 +641,7 @@ contract TermMaxOrderV2 is
             int256 deltaFt;
             int256 deltaXt;
             OrderConfig memory orderConfig_ = _orderConfig;
+            orderConfig_.feeConfig = market.config().feeConfig;
             if (tokenIn == _debtToken && tokenOut == _ft) {
                 (netTokenIn, feeAmt, deltaFt, deltaXt) =
                     _swapAndUpdateReserves(tokenAmtOut, maxTokenIn, orderConfig_, _buyExactFt);

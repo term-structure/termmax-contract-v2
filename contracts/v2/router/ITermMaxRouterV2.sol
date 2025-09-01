@@ -3,7 +3,6 @@ pragma solidity ^0.8.0;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ITermMaxMarket, IGearingToken} from "../../v1/ITermMaxMarket.sol";
-import {ITermMaxOrder} from "../../v1/ITermMaxOrder.sol";
 import {SwapUnit} from "../../v1/router/ISwapAdapter.sol";
 
 /// @title TermMaxSwapPath
@@ -39,15 +38,6 @@ enum FlashRepayOptions {
  * @dev This interface defines all external functions for swapping, leveraging, and managing positions
  */
 interface ITermMaxRouterV2 {
-    struct TermMaxSwapData {
-        address tokenIn;
-        address tokenOut;
-        ITermMaxOrder[] orders;
-        uint128[] tradingAmts;
-        uint128 netTokenAmt;
-        uint256 deadline;
-    }
-
     /**
      * @notice Swaps tokens using a predefined path
      * @dev Uses the SwapPath struct to define the swap path
@@ -141,13 +131,13 @@ interface ITermMaxRouterV2 {
      * @notice Repays debt from collateral
      * @dev Repays debt and closes a position
      *      input/output: =>, swap: ->
-     *      path0: collateral -> debt token (-> exact ft token. optional) => router
+     *      swapPath: collateral -> debt token (-> exact ft token. optional) => router
      * @param recipient Address to receive any remaining collateral
      * @param market The market to repay debt in
      * @param gtId ID of the GT token to repay debt from
      * @param byDebtToken True if repaying with debt token, false if using FT token
      * @param expectedOutput The expect debt token ouput amount after flashrepay
-     * @param callbackData The data for callback, abi.encode(FlashRepayOptions.FLASH_REPAY, abi.encode(swapPaths))
+     * @param callbackData The data for callback, abi.encode(FlashRepayOptions.FLASH_REPAY, abi.encode(swapPath))
      * @return netTokenOut Actual amount of tokens received
      */
     function flashRepayFromCollForV1(
@@ -175,7 +165,7 @@ interface ITermMaxRouterV2 {
      * @dev This function allows users to rollover their GT position to a new market or third-protocol
      * @param gtToken The GearingToken contract instance
      * @param gtId The ID of the GT token being rolled over
-     * @param additionalAsset The additional asset(debt or new collateral token) to reduce the LTV
+     * @param additionalAsset The additional asset(debt token, old collateral token, new collateral token) to reduce the LTV
      * @param additionalAmt Amount of the additional asset
      * @param rolloverData Additional data for the rollover operation
      * rollover to TermMax: abi.encode(FlashRepayOptions.ROLLOVER, abi.encode(recipient, nextMarket, maxLtv, collateralPath, debtTokenPath))

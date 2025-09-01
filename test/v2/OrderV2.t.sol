@@ -21,6 +21,7 @@ import {
     ISwapCallback,
     OrderEvents,
     OrderErrors,
+    OrderErrorsV2,
     OrderInitialParams
 } from "contracts/v2/TermMaxOrderV2.sol";
 import {MockERC20, ERC20} from "contracts/v1/test/MockERC20.sol";
@@ -39,6 +40,7 @@ import {
 } from "contracts/v1/storage/TermMaxStorage.sol";
 import {MockERC4626} from "contracts/v2/test/MockERC4626.sol";
 import {DelegateAble} from "contracts/v2/lib/DelegateAble.sol";
+import {OrderEventsV2} from "contracts/v2/events/OrderEventsV2.sol";
 
 contract OrderTestV2 is Test {
     using JSONLoader for *;
@@ -549,15 +551,16 @@ contract OrderTestV2 is Test {
         deal(address(res.ft), maker, ftChangeAmt.toUint256());
         res.ft.approve(address(res.order), ftChangeAmt.toUint256());
 
-        // vm.expectEmit();
-        // emit OrderEvents.UpdateOrder(
-        //     newOrderConfig.curveCuts,
-        //     ftChangeAmt,
-        //     xtChangeAmt,
-        //     orderConfig.gtId,
-        //     orderConfig.maxXtReserve,
-        //     ISwapCallback(address(0))
-        // );
+        // Expect UpdateOrder event
+        vm.expectEmit();
+        emit OrderEvents.UpdateOrder(
+            newOrderConfig.curveCuts,
+            ftChangeAmt,
+            xtChangeAmt,
+            newOrderConfig.gtId,
+            newOrderConfig.maxXtReserve,
+            newOrderConfig.swapTrigger
+        );
         res.order.updateOrder(newOrderConfig, ftChangeAmt, xtChangeAmt);
 
         // Verify curve was updated
@@ -714,15 +717,8 @@ contract OrderTestV2 is Test {
 
         // Test that owner can update fee rate
         vm.startPrank(deployer);
+        vm.expectRevert(abi.encodeWithSelector(OrderErrorsV2.FeeConfigCanNotBeUpdated.selector));
         res.market.updateOrderFeeRate(res.order, newFeeConfig);
-        assertEq(res.order.orderConfig().feeConfig.lendTakerFeeRatio, newFeeConfig.lendTakerFeeRatio);
-        assertEq(res.order.orderConfig().feeConfig.borrowTakerFeeRatio, newFeeConfig.borrowTakerFeeRatio);
-
-        // Test invalid fee rates (over 100%)
-        FeeConfig memory invalidFeeConfig = marketConfig.feeConfig;
-        invalidFeeConfig.lendTakerFeeRatio = Constants.MAX_FEE_RATIO;
-        vm.expectRevert(abi.encodeWithSelector(MarketErrors.FeeTooHigh.selector));
-        res.market.updateOrderFeeRate(res.order, invalidFeeConfig);
         vm.stopPrank();
     }
 
@@ -869,6 +865,9 @@ contract OrderTestV2 is Test {
     ) public {
         vm.startPrank(maker);
 
+        // Expect GeneralConfigUpdated event
+        vm.expectEmit();
+        emit OrderEventsV2.GeneralConfigUpdated(newGtId, newMaxXtReserve, newTrigger, newVirtualXtReserve);
         res.order.setGeneralConfig(newGtId, newMaxXtReserve, newTrigger, newVirtualXtReserve);
 
         // Verify the configuration was updated
@@ -901,6 +900,8 @@ contract OrderTestV2 is Test {
 
         uint256 amount = res.ft.balanceOf(address(res.order));
         MockERC4626 pool = new MockERC4626(res.debt);
+        vm.expectEmit();
+        emit OrderEventsV2.PoolUpdated(address(pool));
         res.order.setPool(pool);
         assertEq(address(res.order.pool()), address(pool), "Pool should match");
         assertEq(res.debt.balanceOf(address(res.order)), 0, "Order should have no debt balance");
@@ -910,6 +911,8 @@ contract OrderTestV2 is Test {
         assertEq(res.debt.balanceOf(address(pool)), amount, "Pool should have debt balance");
 
         MockERC4626 newPool = new MockERC4626(res.debt);
+        vm.expectEmit();
+        emit OrderEventsV2.PoolUpdated(address(newPool));
         res.order.setPool(newPool);
         assertEq(address(res.order.pool()), address(newPool), "New Pool should match");
         assertEq(res.debt.balanceOf(address(res.order)), 0, "Order should have no debt balance");
@@ -918,6 +921,8 @@ contract OrderTestV2 is Test {
         assertEq(newPool.balanceOf(address(res.order)), amount, "Order should have new pool shares");
         assertEq(res.debt.balanceOf(address(newPool)), amount, "Pool should have debt balance");
 
+        vm.expectEmit();
+        emit OrderEventsV2.PoolUpdated(address(0));
         res.order.setPool(MockERC4626(address(0)));
         // Verify the pool was set to zero address
         assertEq(address(res.order.pool()), address(0), "Pool should be zero address");
@@ -1058,6 +1063,187 @@ contract OrderTestV2 is Test {
         assertEq(pool.balanceOf(address(maker)), removedAmt, "Maker should receive no shares");
         assertEq(res.debt.balanceOf(address(maker)), removedAmt + 100e8, "Maker should receive removed debt");
         vm.stopPrank();
+    }
+
+    function testFuzz_withdrawAllAssetsBeforeMaturity(
+        bool withPool,
+        uint128 addDebtToPool,
+        uint128 addFt,
+        uint128 addXt,
+        address recipient
+    ) public {
+        // recipient cannot be zero or the order itself (would re-credit FT/XT back to order)
+        vm.assume(recipient != address(0) && recipient != address(res.order));
+
+        // Bound fuzzed amounts to reasonable ranges
+        addDebtToPool = uint128(bound(addDebtToPool, 0, 1_000e8));
+        addFt = uint128(bound(addFt, 0, 1_000e8));
+        addXt = uint128(bound(addXt, 0, 1_000e8));
+
+        // Optionally set pool and pre-load additional debt liquidity
+        MockERC4626 pool;
+        vm.startPrank(maker);
+        if (withPool) {
+            pool = new MockERC4626(res.debt);
+            res.order.setPool(pool);
+
+            if (addDebtToPool > 0) {
+                // Fund maker with debt and deposit via order into pool
+                res.debt.mint(maker, addDebtToPool);
+                res.debt.approve(address(res.order), addDebtToPool);
+                res.order.addLiquidity(res.debt, addDebtToPool);
+            }
+        }
+
+        // Optionally leave residual FT on order
+        if (addFt > 0) {
+            // Mint FT/XT to maker, then transfer only FT to the order
+            res.debt.mint(maker, addFt);
+            res.debt.approve(address(res.market), addFt);
+            res.market.mint(maker, addFt);
+            res.ft.transfer(address(res.order), addFt);
+        }
+
+        // Optionally leave residual XT on order
+        if (addXt > 0) {
+            res.debt.mint(maker, addXt);
+            res.debt.approve(address(res.market), addXt);
+            res.market.mint(maker, addXt);
+            res.xt.transfer(address(res.order), addXt);
+        }
+        vm.stopPrank();
+
+        // Snapshot pre-state
+        uint256 debtBefore = res.debt.balanceOf(recipient);
+        uint256 ftBefore = res.ft.balanceOf(recipient);
+        uint256 xtBefore = res.xt.balanceOf(recipient);
+
+        uint256 poolSharesBefore = 0;
+        if (withPool) {
+            poolSharesBefore = pool.balanceOf(address(res.order));
+        }
+
+        // Compute expected event values
+        uint256 orderFtBefore = res.ft.balanceOf(address(res.order));
+        uint256 orderXtBefore = res.xt.balanceOf(address(res.order));
+        uint256 maxBurned = orderFtBefore < orderXtBefore ? orderFtBefore : orderXtBefore;
+        uint256 expectedDebtTokenEvent = (withPool ? poolSharesBefore : 0) + maxBurned;
+        uint256 expectedFtEvent = orderFtBefore - maxBurned;
+        uint256 expectedXtEvent = orderXtBefore - maxBurned;
+
+        // Expect event
+        vm.expectEmit();
+        emit OrderEventsV2.RedeemedAllBeforeMaturity(
+            recipient, expectedDebtTokenEvent, expectedFtEvent, expectedXtEvent
+        );
+
+        // Execute withdrawal as owner
+        vm.startPrank(maker);
+        (uint256 debtTokenAmount, uint256 ftAmount, uint256 xtAmount) =
+            res.order.withdrawAllAssetsBeforeMaturity(recipient);
+        vm.stopPrank();
+
+        // Validate recipient received exactly the returned amounts
+        assertEq(res.debt.balanceOf(recipient) - debtBefore, debtTokenAmount, "Debt received mismatch");
+        assertEq(res.ft.balanceOf(recipient) - ftBefore, ftAmount, "FT received mismatch");
+        assertEq(res.xt.balanceOf(recipient) - xtBefore, xtAmount, "XT received mismatch");
+
+        // Order should hold no FT/XT after operation
+        assertEq(res.ft.balanceOf(address(res.order)), 0, "Order FT should be zero");
+        assertEq(res.xt.balanceOf(address(res.order)), 0, "Order XT should be zero");
+
+        // If pool was set, all shares should be redeemed
+        if (withPool) {
+            assertEq(pool.balanceOf(address(res.order)), 0, "Order pool shares should be zero");
+            // Redeem should align with returned debt token amount (MockERC4626 is 1:1)
+            uint256 expectedFromPool = poolSharesBefore; // 1:1 shares->assets in MockERC4626
+            assertEq(debtTokenAmount, expectedFromPool, "Debt from pool mismatch");
+        } else {
+            assertEq(debtTokenAmount, 0, "Debt from pool should be zero when pool unset");
+        }
+    }
+
+    function testBorrowToken_SufficientBalances() public {
+        address recipient = vm.randomAddress();
+        uint256 amount = 10e8;
+
+        // Pre-state
+        uint256 orderFtBefore = res.ft.balanceOf(address(res.order));
+        uint256 orderXtBefore = res.xt.balanceOf(address(res.order));
+        uint256 recipientDebtBefore = res.debt.balanceOf(recipient);
+
+        vm.startPrank(maker);
+        vm.expectEmit();
+        emit OrderEventsV2.Borrowed(recipient, amount);
+        res.order.borrowToken(recipient, amount);
+        vm.stopPrank();
+
+        // Recipient should receive debt tokens
+        assertEq(res.debt.balanceOf(recipient), recipientDebtBefore + amount, "recipient debt incorrect");
+        // Order FT/XT should decrease by amount (no issuance path here)
+        assertEq(res.ft.balanceOf(address(res.order)), orderFtBefore - amount, "order FT decreased");
+        assertEq(res.xt.balanceOf(address(res.order)), orderXtBefore - amount, "order XT decreased");
+    }
+
+    function testBorrowToken_IssueFtFromGt() public {
+        address recipient = vm.randomAddress();
+
+        // Prepare GT and delegate to order so it can issue FT
+        vm.startPrank(maker);
+        (uint256 gtId,) = LoanUtils.fastMintGt(res, maker, 100e8, 1e18);
+        DelegateAble(address(res.gt)).setDelegate(address(res.order), true);
+
+        // Update order to use this gtId and reduce FT so FT < amount while XT >= amount
+        OrderConfig memory cfg = orderConfig;
+        cfg.gtId = gtId;
+        // Reduce FT by 70e8 so FT becomes 80e8 (given initial 150e8), keep XT unchanged (150e8)
+        res.order.updateOrder(cfg, -70e8, 0);
+
+        // Track GT debt before
+        (, uint128 debtBefore,) = res.gt.loanInfo(gtId);
+
+        uint256 amount = 120e8; // requires issuing 40e8 FT
+        uint256 recipientDebtBefore = res.debt.balanceOf(recipient);
+        uint256 xtBefore = res.xt.balanceOf(address(res.order));
+
+        vm.expectEmit();
+        emit OrderEventsV2.Borrowed(recipient, amount);
+        res.order.borrowToken(recipient, amount);
+        vm.stopPrank();
+
+        // Recipient debt increased by amount
+        assertEq(res.debt.balanceOf(recipient), recipientDebtBefore + amount, "recipient debt incorrect");
+        // XT decreased by amount
+        assertEq(res.xt.balanceOf(address(res.order)), xtBefore - amount, "XT should decrease by amount");
+        // GT debt increased due to issuing FT
+        (, uint128 debtAfter,) = res.gt.loanInfo(gtId);
+        assertGt(debtAfter, debtBefore, "GT debt should increase");
+    }
+
+    function testBorrowToken_RevertWhenInsufficientXT() public {
+        address recipient = vm.randomAddress();
+
+        // Prepare GT so issuance path is available (but XT will be limiting)
+        vm.startPrank(maker);
+        (uint256 gtId,) = LoanUtils.fastMintGt(res, maker, 100e8, 1e18);
+        DelegateAble(address(res.gt)).setDelegate(address(res.order), true);
+        OrderConfig memory cfg = orderConfig;
+        cfg.gtId = gtId;
+        // Reduce XT aggressively so xt < amount while FT remains high
+        // XT goes from 150e8 to 30e8
+        res.order.updateOrder(cfg, 0, -120e8);
+
+        uint256 amount = 60e8; // > xt, should revert when burning
+        vm.expectRevert();
+        res.order.borrowToken(recipient, amount);
+        vm.stopPrank();
+    }
+
+    function testBorrowToken_OnlyOwner() public {
+        address recipient = vm.randomAddress();
+        vm.prank(sender);
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", sender));
+        res.order.borrowToken(recipient, 1e8);
     }
 }
 
