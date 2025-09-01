@@ -261,12 +261,12 @@ abstract contract AbstractGearingTokenV2 is
         for (uint256 i = 0; i < ids.length; ++i) {
             uint256 id = ids[i];
             _checkIsOwnerOrDelegate(id, msg.sender);
-            LoanInfo memory loan = loanMapping[id];
             if (i != 0) {
                 if (id == newId) {
                     revert GearingTokenErrorsV2.DuplicateIdInMerge(id);
                 }
-                firstLoan.debtAmt += loanMapping[id].debtAmt;
+                LoanInfo memory loan = loanMapping[id];
+                firstLoan.debtAmt += loan.debtAmt;
                 firstLoan.collateralData = _mergeCollateral(firstLoan.collateralData, loan.collateralData);
                 _burnInternal(id);
             }
