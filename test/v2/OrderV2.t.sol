@@ -1157,9 +1157,9 @@ contract OrderTestV2 is Test {
             assertEq(pool.balanceOf(address(res.order)), 0, "Order pool shares should be zero");
             // Redeem should align with returned debt token amount (MockERC4626 is 1:1)
             uint256 expectedFromPool = poolSharesBefore; // 1:1 shares->assets in MockERC4626
-            assertEq(debtTokenAmount, expectedFromPool, "Debt from pool mismatch");
+            assertEq(debtTokenAmount - maxBurned, expectedFromPool, "Debt from pool mismatch");
         } else {
-            assertEq(debtTokenAmount, 0, "Debt from pool should be zero when pool unset");
+            assertEq(debtTokenAmount, maxBurned, "Debt from pool should be maxBurned when pool unset");
         }
     }
 

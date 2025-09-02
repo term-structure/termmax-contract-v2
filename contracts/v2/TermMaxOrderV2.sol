@@ -445,9 +445,8 @@ contract TermMaxOrderV2 is
                 }
             } else {
                 // transform ft and xt to debt token and deposit to pool
-                _market.burn(recipient, maxBurned);
-                _pool.deposit(maxBurned, address(this));
-                // transfer shares to recipient
+                _market.burn(address(this), maxBurned);
+                _pool.deposit(maxBurned, recipient);
                 _pool.safeTransfer(recipient, amount);
             }
         }
@@ -513,9 +512,10 @@ contract TermMaxOrderV2 is
         xtAmount = _xt.balanceOf(address(this));
         uint256 maxBurned = ftAmount.min(xtAmount);
         if (maxBurned != 0) {
-            market.burn(address(this), maxBurned);
+            market.burn(recipient, maxBurned);
             ftAmount -= maxBurned;
             xtAmount -= maxBurned;
+            debtTokenAmount += maxBurned;
         }
         if (ftAmount != 0) {
             _ft.safeTransfer(recipient, ftAmount);
@@ -524,12 +524,13 @@ contract TermMaxOrderV2 is
             _xt.safeTransfer(recipient, xtAmount);
         }
 
-        emit OrderEventsV2.RedeemedAllBeforeMaturity(recipient, debtTokenAmount + maxBurned, ftAmount, xtAmount);
+        emit OrderEventsV2.RedeemedAllBeforeMaturity(recipient, debtTokenAmount, ftAmount, xtAmount);
     }
 
     function borrowToken(address recipient, uint256 amount) external virtual nonReentrant onlyOwner {
         uint256 ftAmount = ft.balanceOf(address(this));
         uint256 xtAmount = xt.balanceOf(address(this));
+        require(amount <= xtAmount, NotEnoughFtOrXtToWithdraw());
         uint256 maxBurned = ftAmount.min(xtAmount);
         if (maxBurned < amount) {
             uint256 remainingAmount = amount - maxBurned;
