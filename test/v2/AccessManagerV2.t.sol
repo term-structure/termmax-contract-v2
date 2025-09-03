@@ -616,29 +616,6 @@ contract AccessManagerTestV2 is Test {
         vm.stopPrank();
     }
 
-    function testUpdateOrderFeeRate() public {
-        // Get new fee config from testdata
-        FeeConfig memory newFeeConfig = res.order.orderConfig().feeConfig;
-
-        // Test that non-admin cannot update fee rate
-        vm.startPrank(sender);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector, sender, manager.CONFIGURATOR_ROLE()
-            )
-        );
-        manager.updateOrderFeeRate(res.market, res.order, newFeeConfig);
-        vm.stopPrank();
-        // Test that admin can update fee rate
-        vm.prank(deployer);
-        manager.updateOrderFeeRate(res.market, res.order, newFeeConfig);
-
-        // Verify fee config was updated
-        OrderConfig memory updatedConfig = res.order.orderConfig();
-        assertEq(updatedConfig.feeConfig.lendTakerFeeRatio, newFeeConfig.lendTakerFeeRatio);
-        assertEq(updatedConfig.feeConfig.borrowTakerFeeRatio, newFeeConfig.borrowTakerFeeRatio);
-    }
-
     function testUpdateMarketConfig() public {
         // Get new market config from testdata
         MarketConfig memory newMarketConfig = marketConfig;

@@ -272,17 +272,6 @@ contract TermMaxVaultV2 is
         );
     }
 
-    function updateOrders(
-        ITermMaxOrder[] memory orders,
-        int256[] memory changes,
-        uint256[] memory maxSupplies,
-        CurveCuts[] memory curveCuts
-    ) external virtual nonReentrant onlyCuratorRole whenNotPaused {
-        _delegateCall(
-            abi.encodeCall(IOrderManager.updateOrders, (IERC20(asset()), orders, changes, maxSupplies, curveCuts))
-        );
-    }
-
     function updateOrderCurves(address[] memory orders, CurveCuts[] memory newCurveCuts)
         external
         virtual

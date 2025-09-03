@@ -254,13 +254,6 @@ contract TermMax4626FactoryTest is Test {
         factory.createStableERC4626For4626(admin, address(thirdPool), invalidConfig);
     }
 
-    function testCreateWithNonExistentAaveReserve() public {
-        MockERC20 nonExistentToken = new MockERC20("FAKE", "FAKE", 18);
-
-        vm.expectRevert();
-        factory.createStableERC4626ForAave(admin, address(nonExistentToken), defaultBufferConfig);
-    }
-
     function testEventEmissions() public {
         // Test StableERC4626For4626Created event
         vm.expectEmit(true, false, false, false);

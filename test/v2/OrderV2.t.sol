@@ -1228,13 +1228,12 @@ contract OrderTestV2 is Test {
         (uint256 gtId,) = LoanUtils.fastMintGt(res, maker, 100e8, 1e18);
         DelegateAble(address(res.gt)).setDelegate(address(res.order), true);
         OrderConfig memory cfg = orderConfig;
-        cfg.gtId = gtId;
-        // Reduce XT aggressively so xt < amount while FT remains high
-        // XT goes from 150e8 to 30e8
-        res.order.updateOrder(cfg, 0, -120e8);
+        res.order.setGeneralConfig(gtId, orderConfig.maxXtReserve, ISwapCallback(address(0)), 60e8);
 
-        uint256 amount = 60e8; // > xt, should revert when burning
-        vm.expectRevert();
+        uint256 maxBurn = res.xt.balanceOf(address(res.order));
+
+        uint256 amount = maxBurn + 1;
+        vm.expectRevert(abi.encodeWithSelector(OrderErrors.NotEnoughFtOrXtToWithdraw.selector));
         res.order.borrowToken(recipient, amount);
         vm.stopPrank();
     }
