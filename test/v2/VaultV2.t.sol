@@ -1047,4 +1047,94 @@ contract VaultTestV2 is Test {
         assertEq(amountWithdrawn, vault.previewWithdraw(sharesToWithdraw));
         vm.stopPrank();
     }
+
+    function testWithdrawFts() public {
+        // Setup: Create trading activity to generate FT tokens
+        vm.warp(currentTime + 2 days);
+        buyXt(48.219178e8, 1000e8);
+
+        // Add another depositor for more realistic scenario
+        address lper2 = vm.randomAddress();
+        uint256 amount2 = 10000e8;
+        res.debt.mint(lper2, amount2);
+        vm.startPrank(lper2);
+        res.debt.approve(address(vault), amount2);
+        vault.deposit(amount2, lper2);
+        vm.stopPrank();
+
+        // Get initial state
+        uint256 initialFtBalance = res.ft.balanceOf(address(res.order));
+        uint256 initialShares = vault.balanceOf(deployer);
+        uint256 withdrawAmount = 500e8; // Amount of FT tokens to withdraw
+
+        // Calculate expected shares to burn
+        uint256 expectedShares = vault.previewWithdraw(withdrawAmount);
+
+        // Ensure we have enough FT tokens in the order
+        assertGt(initialFtBalance, withdrawAmount, "Not enough FT tokens in order");
+        assertGt(initialShares, expectedShares, "Not enough shares for withdrawal");
+
+        // Test withdrawFts function
+        vm.startPrank(deployer);
+
+        address receiver = vm.randomAddress();
+
+        // Check that the event is emitted
+        vm.expectEmit(true, true, true, true);
+        emit VaultEventsV2.WithdrawFts(deployer, receiver, address(res.order), withdrawAmount, expectedShares);
+
+        uint256 sharesReturned = vault.withdrawFts(address(res.order), withdrawAmount, receiver, deployer);
+
+        vm.stopPrank();
+
+        // Verify the results
+        assertEq(sharesReturned, expectedShares, "Returned shares should match expected");
+        assertEq(vault.balanceOf(deployer), initialShares - expectedShares, "User shares should be reduced");
+        assertEq(res.ft.balanceOf(receiver), withdrawAmount, "User should receive FT tokens");
+        assertEq(
+            res.ft.balanceOf(address(res.order)),
+            initialFtBalance - withdrawAmount,
+            "Order FT balance should be reduced"
+        );
+    }
+
+    function testWithdrawFtsAccessControl() public {
+        // Setup: Create trading activity
+        vm.warp(currentTime + 2 days);
+        buyXt(48.219178e8, 1000e8);
+
+        uint256 withdrawAmount = 100e8;
+        address alice = vm.randomAddress();
+
+        // Test unauthorized withdrawal (alice trying to withdraw deployer's shares)
+        vm.startPrank(alice);
+        vm.expectRevert(); // Should revert due to insufficient allowance
+        vault.withdrawFts(address(res.order), withdrawAmount, alice, deployer);
+        vm.stopPrank();
+
+        // Test authorized withdrawal with allowance
+        vm.startPrank(deployer);
+        vault.approve(alice, withdrawAmount);
+        vm.stopPrank();
+
+        vm.startPrank(alice);
+        uint256 shares = vault.withdrawFts(address(res.order), withdrawAmount, alice, deployer);
+        assertGt(shares, 0, "Should successfully withdraw with allowance");
+        vm.stopPrank();
+    }
+
+    function testWithdrawFtsInsufficientShares() public {
+        // Setup: Create minimal trading activity
+        vm.warp(currentTime + 2 days);
+        buyXt(48.219178e8, 100e8);
+
+        // Try to withdraw more than available
+        uint256 userShares = vault.balanceOf(deployer);
+        uint256 excessiveAmount = vault.previewRedeem(userShares) + 1000e8;
+
+        vm.startPrank(deployer);
+        vm.expectRevert(); // Should revert due to insufficient shares
+        vault.withdrawFts(address(res.order), excessiveAmount, deployer, deployer);
+        vm.stopPrank();
+    }
 }

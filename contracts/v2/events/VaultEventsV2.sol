@@ -15,6 +15,13 @@ pragma solidity ^0.8.0;
  */
 interface VaultEventsV2 {
     // ============================================
+    // LIQUIDITY EVENTS
+    // ============================================
+    event WithdrawFts(
+        address indexed caller, address indexed recipient, address indexed order, uint256 amount, uint256 shares
+    );
+
+    // ============================================
     // POOL WHITELIST MANAGEMENT EVENTS
     // ============================================
 

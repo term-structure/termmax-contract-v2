@@ -377,6 +377,29 @@ contract TermMaxVaultV2 is
         emit Withdraw(caller, receiver, owner, assets, shares);
     }
 
+    function withdrawFts(address order, uint256 amount, address recipient, address owner)
+        external
+        virtual
+        nonReentrant
+        returns (uint256 shares)
+    {
+        address caller = msg.sender;
+        shares = previewWithdraw(amount);
+        uint256 maxShares = maxRedeem(owner);
+        if (shares > maxShares) {
+            revert ERC4626ExceededMaxRedeem(owner, shares, maxShares);
+        }
+
+        if (caller != owner) {
+            _spendAllowance(owner, caller, shares);
+        }
+
+        _delegateCall(abi.encodeCall(IOrderManagerV2.withdrawFts, (order, amount, recipient)));
+        _burn(owner, shares);
+
+        emit VaultEventsV2.WithdrawFts(msg.sender, recipient, order, amount, shares);
+    }
+
     function _delegateCall(bytes memory data) internal returns (bytes memory) {
         (bool success, bytes memory returnData) = ORDER_MANAGER_SINGLETON.delegatecall(data);
         if (!success) {

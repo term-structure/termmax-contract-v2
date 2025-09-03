@@ -48,5 +48,13 @@ interface IOrderManagerV2 {
      */
     function redeemOrder(IERC20 asset, address order) external returns (uint256 badDebt, uint256 deliveryCollateral);
 
+    /**
+     * @notice Withdraw ft token instead of underlying token
+     * @param order The address of the order to withdraw from
+     * @param amount The amount of ft tokens
+     * @param recipient The recipient
+     */
+    function withdrawFts(address order, uint256 amount, address recipient) external;
+
     function afterSwap(IERC20 asset, uint256 ftReserve, uint256 xtReserve, int256 deltaFt, int256 deltaXt) external;
 }

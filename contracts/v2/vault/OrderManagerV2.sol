@@ -136,11 +136,24 @@ contract OrderManagerV2 is VaultStorageV2, OnlyProxyCall, IOrderManagerV2 {
     }
 
     function withdrawAssets(IERC20 asset, address recipient, uint256 amount) external onlyProxy {
+        _reduceAssets(amount);
+        _withdrawFromPoolOrNot(asset, recipient, amount);
+    }
+
+    function withdrawFts(address order, uint256 amount, address recipient) external onlyProxy {
+        _checkOrder(order);
+        _reduceAssets(amount);
+
+        ITermMaxMarket market = ITermMaxOrder(order).market();
+        (IERC20 ft,,,,) = market.tokens();
+        ITermMaxOrder(order).withdrawAssets(ft, recipient, amount);
+    }
+
+    function _reduceAssets(uint256 amount) internal {
         _accruedInterest();
         uint256 amplifiedAmt = amount * Constants.DECIMAL_BASE_SQ;
         _totalFt -= amplifiedAmt;
         _accretingPrincipal -= amplifiedAmt;
-        _withdrawFromPoolOrNot(asset, recipient, amount);
     }
 
     function _depositToPoolOrNot(IERC20 asset, uint256 amount) internal {
