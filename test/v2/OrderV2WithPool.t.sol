@@ -603,7 +603,103 @@ contract OrderTestV2WithPool is Test {
 
         vm.stopPrank();
     }
-}
+
+    // New tests for addLiquidity / removeLiquidity
+    function testAddLiquidityDepositsDebtToPool() public {
+        vm.startPrank(maker);
+
+        uint256 depositAmt = 50e8;
+        // give maker some debt and approve order
+        res.debt.mint(maker, depositAmt);
+        res.debt.approve(address(res.order), depositAmt);
+
+        // capture balances before
+        uint256 ftBefore = res.ft.balanceOf(address(res.order));
+        uint256 xtBefore = res.xt.balanceOf(address(res.order));
+        uint256 orderDebtBefore = res.debt.balanceOf(address(res.order));
+        uint256 poolSharesBefore = pool.balanceOf(address(res.order));
+        uint256 makerBefore = res.debt.balanceOf(maker);
+
+        // compute expected burn amount from FT/XT
+        uint256 maxBurned = ftBefore < xtBefore ? ftBefore : xtBefore;
+
+        // call addLiquidity as owner
+        res.order.addLiquidity(IERC20(address(res.debt)), depositAmt);
+
+        vm.stopPrank();
+
+        // capture balances after
+        uint256 ftAfter = res.ft.balanceOf(address(res.order));
+        uint256 xtAfter = res.xt.balanceOf(address(res.order));
+        uint256 orderDebtAfter = res.debt.balanceOf(address(res.order));
+        uint256 poolSharesAfter = pool.balanceOf(address(res.order));
+        uint256 makerAfter = res.debt.balanceOf(maker);
+
+        // expected shares minted for (depositAmt + maxBurned)
+        uint256 expectedShares = pool.previewDeposit(depositAmt + maxBurned);
+
+        // Assertions
+        assertEq(makerAfter, makerBefore - depositAmt, "maker debt should decrease by deposit amount");
+        assertEq(ftAfter, ftBefore - maxBurned, "ft should decrease by burned amount");
+        assertEq(xtAfter, xtBefore - maxBurned, "xt should decrease by burned amount");
+        assertEq(
+            orderDebtAfter,
+            orderDebtBefore,
+            "order debt token balance should return to previous state (deposited to pool)"
+        );
+        assertEq(poolSharesAfter, poolSharesBefore + expectedShares, "pool shares should increase by expected amount");
+    }
+
+    function testRemoveLiquidityWithdrawsDebtToRecipient() public {
+        vm.startPrank(maker);
+
+        uint256 withdrawAmt = 20e8;
+        address recipient = sender;
+
+        // ensure order has some pool assets (setUp deposited some)
+        uint256 orderSharesBefore = pool.balanceOf(address(res.order));
+        vm.assume(orderSharesBefore > 0);
+
+        // capture balances before
+        uint256 ftBefore = res.ft.balanceOf(address(res.order));
+        uint256 xtBefore = res.xt.balanceOf(address(res.order));
+        uint256 recipientBefore = res.debt.balanceOf(recipient);
+
+        uint256 maxBurned = ftBefore < xtBefore ? ftBefore : xtBefore;
+
+        // call removeLiquidity as owner
+        res.order.removeLiquidity(IERC20(address(res.debt)), withdrawAmt, recipient);
+
+        vm.stopPrank();
+
+        // capture balances after
+        uint256 ftAfter = res.ft.balanceOf(address(res.order));
+        uint256 xtAfter = res.xt.balanceOf(address(res.order));
+        uint256 recipientAfter = res.debt.balanceOf(recipient);
+        uint256 orderSharesAfter = pool.balanceOf(address(res.order));
+
+        // recipient should receive total `withdrawAmt`
+        assertEq(recipientAfter - recipientBefore, withdrawAmt, "recipient should receive full withdraw amount");
+
+        if (maxBurned >= withdrawAmt) {
+            // all provided by burning ft/xt
+            assertEq(ftAfter, ftBefore - withdrawAmt, "ft should decrease by withdraw amount when covered by ft/xt");
+            assertEq(xtAfter, xtBefore - withdrawAmt, "xt should decrease by withdraw amount when covered by ft/xt");
+            assertEq(orderSharesAfter, orderSharesBefore, "no pool shares should be withdrawn when ft/xt cover amount");
+        } else {
+            // partially from burning and partially from pool withdraw
+            assertEq(ftAfter, ftBefore - maxBurned, "ft should decrease by maxBurned when partially covered");
+            assertEq(xtAfter, xtBefore - maxBurned, "xt should decrease by maxBurned when partially covered");
+            uint256 assetsFromPool = withdrawAmt - maxBurned;
+            uint256 expectedSharesBurned = pool.previewWithdraw(assetsFromPool);
+            assertEq(
+                orderSharesBefore - orderSharesAfter,
+                expectedSharesBurned,
+                "pool shares burned should match previewWithdraw"
+            );
+        }
+    }
+} // end OrderTestV2WithPool
 
 // Mock contracts for testing
 contract MockSwapCallback is ISwapCallback {
