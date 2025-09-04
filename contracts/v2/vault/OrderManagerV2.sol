@@ -293,7 +293,7 @@ contract OrderManagerV2 is VaultStorageV2, OnlyProxyCall, IOrderManagerV2 {
 
             _annualizedInterest += deltaAnnualizedInterest;
 
-            // @dev release xt if needed
+            /// @dev release xt if needed
             int256 finalXtReserve = xtReserve.toInt256() + deltaXt;
             if (finalXtReserve < 0) {
                 _releaseLiquidity(ITermMaxOrder(orderAddress), asset, uint256(-finalXtReserve));
@@ -310,10 +310,11 @@ contract OrderManagerV2 is VaultStorageV2, OnlyProxyCall, IOrderManagerV2 {
             _annualizedInterest -= deltaAnnualizedInterest;
             _checkApy();
 
-            // @dev release ft if needed
+            /// @dev Make sure that the interest of order does not go negative
             int256 finalFtReserve = ftReserve.toInt256() + deltaFt;
-            if (finalFtReserve < 0) {
-                _releaseLiquidity(ITermMaxOrder(orderAddress), asset, uint256(-finalFtReserve));
+            int256 finalXtReserve = xtReserve.toInt256() + deltaXt;
+            if (finalFtReserve < finalXtReserve) {
+                revert VaultErrors.OrderHasNegativeInterest();
             }
         }
         /// @dev Ensure that the total assets after the transaction are
