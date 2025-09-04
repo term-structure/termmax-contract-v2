@@ -119,11 +119,12 @@ contract TermMaxRouterV2 is
         for (uint256 i = 0; i < paths.length; ++i) {
             SwapPath memory path = paths[i];
             if (path.useBalanceOnchain) {
-                path.inputAmount = IERC20(path.units[0].tokenIn).balanceOf(address(this));
+                uint256 balanceOnChain = IERC20(path.units[0].tokenIn).balanceOf(address(this));
+                netTokenOuts[i] = _executeSwapUnits(path.recipient, balanceOnChain, path.units);
             } else {
                 IERC20(path.units[0].tokenIn).safeTransferFrom(_msgSender(), address(this), path.inputAmount);
+                netTokenOuts[i] = _executeSwapUnits(path.recipient, path.inputAmount, path.units);
             }
-            netTokenOuts[i] = _executeSwapUnits(path.recipient, path.inputAmount, path.units);
         }
         return netTokenOuts;
     }
