@@ -64,15 +64,13 @@ contract TermMaxRouterV2 is
         address callbackAddress;
         assembly {
             callbackAddress := tload(T_CALLBACK_ADDRESS_STORE)
+            // clear callback address after use
+            tstore(T_CALLBACK_ADDRESS_STORE, 0)
         }
         if (_msgSender() != callbackAddress) {
             revert RouterErrorsV2.CallbackAddressNotMatch();
         }
         _;
-        assembly {
-            // clear callback address after use
-            tstore(T_CALLBACK_ADDRESS_STORE, 0)
-        }
     }
 
     modifier checkSwapPaths(SwapPath[] memory paths) {
