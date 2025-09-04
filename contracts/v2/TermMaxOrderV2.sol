@@ -813,6 +813,8 @@ contract TermMaxOrderV2 is
      * @param func Function pointer for specific swap calculation
      * @return netAmt Net amount after swap
      * @return feeAmt Fee amount charged
+     * @return deltaFt Change in FT reserve
+     * @return deltaXt Change in XT reserve
      */
     function _swapAndUpdateReserves(
         uint256 tokenAmtInOrOut,
