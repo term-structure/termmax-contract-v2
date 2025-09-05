@@ -148,20 +148,14 @@ contract TermMaxRouterV2 is
             if (!adapterWhitelist[units[i].adapter]) {
                 revert AdapterNotWhitelisted(units[i].adapter);
             }
-            bytes memory dataToSwap;
-            if (i == units.length - 1) {
-                // if it's the last unit and recipient is not this contract, we need to transfer the output token to recipient
-                dataToSwap = abi.encodeCall(
-                    IERC20SwapAdapter.swap,
-                    (recipient, units[i].tokenIn, units[i].tokenOut, inputAmt, units[i].swapData)
-                );
-            } else {
-                dataToSwap = abi.encodeCall(
+            bytes memory dataToSwap = i == units.length - 1
+                ? abi.encodeCall(
+                    IERC20SwapAdapter.swap, (recipient, units[i].tokenIn, units[i].tokenOut, inputAmt, units[i].swapData)
+                )
+                : abi.encodeCall(
                     IERC20SwapAdapter.swap,
                     (address(this), units[i].tokenIn, units[i].tokenOut, inputAmt, units[i].swapData)
                 );
-            }
-
             (bool success, bytes memory returnData) = units[i].adapter.delegatecall(dataToSwap);
             if (!success) {
                 revert SwapFailed(units[i].adapter, returnData);
