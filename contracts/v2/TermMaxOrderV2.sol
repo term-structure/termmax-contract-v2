@@ -170,12 +170,13 @@ contract TermMaxOrderV2 is
     }
 
     /**
-     * @notice Get the token reserves (FT and XT balances)
-     * @inheritdoc ITermMaxOrder
-     * @return FT balance, XT balance
+     * @notice Get the token reserves in the order
+     * @return ftReserve FT reserve
+     * @return xtReserve XT reserve
      */
-    function tokenReserves() public view override returns (uint256, uint256) {
-        return (ft.balanceOf(address(this)), xt.balanceOf(address(this)));
+    function tokenReserves() public view override returns (uint256 ftReserve, uint256 xtReserve) {
+        ftReserve = ft.balanceOf(address(this));
+        xtReserve = xt.balanceOf(address(this));
     }
 
     /**
