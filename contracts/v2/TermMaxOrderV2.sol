@@ -85,7 +85,7 @@ contract TermMaxOrderV2 is
     }
 
     /// @notice Check if the order is tradable
-    modifier isOpen() {
+    modifier onlyOpen() {
         _requireNotPaused();
         if (block.timestamp >= maturity) {
             revert TermIsNotOpen();
@@ -563,7 +563,7 @@ contract TermMaxOrderV2 is
         uint128 tokenAmtIn,
         uint128 minTokenOut,
         uint256 deadline
-    ) external virtual override nonReentrant isOpen returns (uint256 netTokenOut) {
+    ) external virtual override nonReentrant onlyOpen returns (uint256 netTokenOut) {
         if (block.timestamp > deadline) revert DeadlineExpired();
         if (tokenIn == tokenOut) revert CantSwapSameToken();
         uint256 feeAmt;
@@ -631,7 +631,7 @@ contract TermMaxOrderV2 is
         uint128 tokenAmtOut,
         uint128 maxTokenIn,
         uint256 deadline
-    ) external virtual override nonReentrant isOpen returns (uint256 netTokenIn) {
+    ) external virtual override nonReentrant onlyOpen returns (uint256 netTokenIn) {
         if (block.timestamp > deadline) revert DeadlineExpired();
         if (tokenIn == tokenOut) revert CantSwapSameToken();
         uint256 feeAmt;
