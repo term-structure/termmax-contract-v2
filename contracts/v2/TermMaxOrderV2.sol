@@ -404,22 +404,25 @@ contract TermMaxOrderV2 is
         IERC4626 _pool = pool;
         ITermMaxMarket _market = market;
         IERC20 _debtToken = debtToken;
-        if (address(_pool) == address(0) && asset == _debtToken) {
-            // mint debt toke to ft and xt if pool is not set
-            _debtToken.safeIncreaseAllowance(address(_market), amount);
-            _market.mint(address(this), amount);
-        } else if (address(_pool) != address(0) && asset == _debtToken) {
-            // burn ft and xt to debt token and deposit to pool
-            uint256 ftBalance = ft.balanceOf(address(this));
-            uint256 xtBalance = xt.balanceOf(address(this));
-            uint256 maxBurned = ftBalance > xtBalance ? xtBalance : ftBalance;
-            if (maxBurned != 0) {
-                _market.burn(address(this), maxBurned);
+        // If asset is debt token, either mint or deposit to pool
+        if (asset == _debtToken) {
+            if (address(_pool) == address(0)) {
+                // mint debt toke to ft and xt if pool is not set
+                _debtToken.safeIncreaseAllowance(address(_market), amount);
+                _market.mint(address(this), amount);
+            } else {
+                // burn ft and xt to debt token and deposit to pool
+                uint256 ftBalance = ft.balanceOf(address(this));
+                uint256 xtBalance = xt.balanceOf(address(this));
+                uint256 maxBurned = ftBalance > xtBalance ? xtBalance : ftBalance;
+                if (maxBurned != 0) {
+                    _market.burn(address(this), maxBurned);
+                }
+                // if pool is set and asset is debt token, deposit to get shares
+                amount += maxBurned;
+                asset.safeIncreaseAllowance(address(_pool), amount);
+                _pool.deposit(amount, address(this));
             }
-            // if pool is set and asset is debt token, deposit to get shares
-            amount += maxBurned;
-            asset.safeIncreaseAllowance(address(_pool), amount);
-            _pool.deposit(amount, address(this));
         }
     }
 
@@ -427,6 +430,7 @@ contract TermMaxOrderV2 is
         IERC4626 _pool = pool;
         ITermMaxMarket _market = market;
         IERC20 _debtToken = debtToken;
+        
         if (address(_pool) == address(0) && asset == _debtToken) {
             // if pool is not set, always burn ft and xt to recipient
             _market.burn(recipient, amount);
