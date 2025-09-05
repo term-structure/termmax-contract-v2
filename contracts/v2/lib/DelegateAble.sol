@@ -33,11 +33,11 @@ abstract contract DelegateAble {
     error CannotDelegateToSelf();
     /// @notice Error thrown when a signature is invalid
     error InvalidSignature();
+
     /// @notice Event emitted when a delegate relationship is established or removed
     /// @param delegator The address of the delegator
     /// @param delegatee The address of the delegatee
-    /// @param isDelegate Indicates whether the delegate relationship is being established (true) or removed
-
+    /// @param isDelegate True if the delegate relationship is being established, false if removed
     event DelegateChanged(address indexed delegator, address indexed delegatee, bool isDelegate);
 
     bytes32 public constant DELEGATION_WITH_SIG_TYPEHASH = keccak256(

@@ -131,7 +131,7 @@ contract DelegateAbleGtTest is Test {
 
         // Set delegate
         vm.expectEmit(true, true, false, true);
-        emit GearingTokenEventsV2.DelegateChanged(delegator, delegatee, true);
+        emit DelegateAble.DelegateChanged(delegator, delegatee, true);
         delegateableGt.setDelegate(delegatee, true);
 
         // Verify delegation
@@ -149,7 +149,7 @@ contract DelegateAbleGtTest is Test {
 
         // Remove delegate
         vm.expectEmit(true, true, false, true);
-        emit GearingTokenEventsV2.DelegateChanged(delegator, delegatee, false);
+        emit DelegateAble.DelegateChanged(delegator, delegatee, false);
         delegateableGt.setDelegate(delegatee, false);
 
         // Verify delegation removed
@@ -203,7 +203,7 @@ contract DelegateAbleGtTest is Test {
         vm.startPrank(delegatee);
 
         vm.expectEmit(true, true, false, true);
-        emit GearingTokenEventsV2.DelegateChanged(delegator, delegatee, true);
+        emit DelegateAble.DelegateChanged(delegator, delegatee, true);
         delegateableGt.setDelegateWithSignature(params, signature);
 
         // Verify delegation
@@ -451,7 +451,7 @@ contract DelegateAbleGtTest is Test {
 
         // Setting the same value again should still emit event (based on the implementation)
         vm.expectEmit(true, true, false, true);
-        emit GearingTokenEventsV2.DelegateChanged(delegator, delegatee, true);
+        emit DelegateAble.DelegateChanged(delegator, delegatee, true);
         delegateableGt.setDelegate(delegatee, true);
 
         vm.stopPrank();
@@ -499,7 +499,7 @@ contract DelegateAbleGtTest is Test {
         vm.startPrank(delegatee);
 
         vm.expectEmit(true, true, false, true);
-        emit GearingTokenEventsV2.DelegateChanged(delegator, delegatee, false);
+        emit DelegateAble.DelegateChanged(delegator, delegatee, false);
         delegateableGt.setDelegateWithSignature(params, signature);
 
         // Verify delegation removed
