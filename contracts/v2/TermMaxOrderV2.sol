@@ -430,11 +430,11 @@ contract TermMaxOrderV2 is
         IERC4626 _pool = pool;
         ITermMaxMarket _market = market;
         IERC20 _debtToken = debtToken;
-        
-        if (address(_pool) == address(0) && asset == _debtToken) {
+
+        if (address(_pool) == address(0)) {
             // if pool is not set, always burn ft and xt to recipient
             _market.burn(recipient, amount);
-        } else if (address(_pool) != address(0)) {
+        } else {
             uint256 ftBalance = ft.balanceOf(address(this));
             uint256 xtBalance = xt.balanceOf(address(this));
             uint256 maxBurned = ftBalance > xtBalance ? xtBalance : ftBalance;
