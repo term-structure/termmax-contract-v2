@@ -8,8 +8,6 @@ interface GearingTokenErrorsV2 {
     error GtIdArrayIsEmpty();
     /// @notice Error for Gearing Token is expired
     error GtIsExpired();
-    /// @notice Error for self-delegation
-    error CannotDelegateToSelf();
     /// @notice Error for Gearing Token id is duplicate when merging
     error DuplicateIdInMerge(uint256 id);
 }
