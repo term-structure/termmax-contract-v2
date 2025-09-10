@@ -640,7 +640,7 @@ contract TermMaxVaultV2 is
         _setMarketWhitelist(market, true);
     }
 
-    function acceptPool() external virtual afterTimelock(_pendingPool.validAt) {
+    function acceptPool() external virtual nonReentrant afterTimelock(_pendingPool.validAt) whenNotPaused {
         _setPool(_pendingPool.value);
     }
 

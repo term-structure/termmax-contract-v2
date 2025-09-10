@@ -28,6 +28,16 @@ interface GearingTokenEventsV2 {
     event Repay(uint256 indexed id, uint256 repayAmt, bool byDebtToken, bool repayAll);
 
     /**
+     * @notice Emitted when repaying debt and removing collateral from a Gearing Token
+     * @dev Tracks debt repayment and collateral removal operations for accounting and monitoring purposes
+     * @param id The unique identifier of the Gearing Token position
+     * @param repayAmt The amount of debt being repaid (uint128 for gas optimization)
+     * @param byDebtToken True if repaying using debt tokens, false if using FT tokens
+     * @param removedCollateral Encoded data about collateral that was removed
+     */
+    event RepayAndRemoveCollateral(uint256 indexed id, uint256 repayAmt, bool byDebtToken, bytes removedCollateral);
+
+    /**
      * @notice Emitted when executing a flash repayment operation
      * @dev Flash repay allows atomic debt repayment with collateral removal in a single transaction
      * @param id The unique identifier of the Gearing Token position being repaid
@@ -45,12 +55,4 @@ interface GearingTokenEventsV2 {
         bool repayAll,
         bytes removedCollateral
     );
-
-    /**
-     * @notice Emitted when the delegate of a Gearing Token is changed
-     * @param delegator The address of the delegator
-     * @param delegatee The address of the delegatee
-     * @param isDelegate True if the delegatee is now a delegate, false if they are removed as a delegate
-     */
-    event DelegateChanged(address indexed delegator, address indexed delegatee, bool isDelegate);
 }

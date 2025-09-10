@@ -64,15 +64,13 @@ contract TermMaxRouterV2 is
         address callbackAddress;
         assembly {
             callbackAddress := tload(T_CALLBACK_ADDRESS_STORE)
+            // clear callback address after use
+            tstore(T_CALLBACK_ADDRESS_STORE, 0)
         }
         if (_msgSender() != callbackAddress) {
             revert RouterErrorsV2.CallbackAddressNotMatch();
         }
         _;
-        assembly {
-            // clear callback address after use
-            tstore(T_CALLBACK_ADDRESS_STORE, 0)
-        }
     }
 
     modifier checkSwapPaths(SwapPath[] memory paths) {
@@ -121,11 +119,12 @@ contract TermMaxRouterV2 is
         for (uint256 i = 0; i < paths.length; ++i) {
             SwapPath memory path = paths[i];
             if (path.useBalanceOnchain) {
-                path.inputAmount = IERC20(path.units[0].tokenIn).balanceOf(address(this));
+                uint256 balanceOnChain = IERC20(path.units[0].tokenIn).balanceOf(address(this));
+                netTokenOuts[i] = _executeSwapUnits(path.recipient, balanceOnChain, path.units);
             } else {
                 IERC20(path.units[0].tokenIn).safeTransferFrom(_msgSender(), address(this), path.inputAmount);
+                netTokenOuts[i] = _executeSwapUnits(path.recipient, path.inputAmount, path.units);
             }
-            netTokenOuts[i] = _executeSwapUnits(path.recipient, path.inputAmount, path.units);
         }
         return netTokenOuts;
     }
@@ -149,20 +148,14 @@ contract TermMaxRouterV2 is
             if (!adapterWhitelist[units[i].adapter]) {
                 revert AdapterNotWhitelisted(units[i].adapter);
             }
-            bytes memory dataToSwap;
-            if (i == units.length - 1) {
-                // if it's the last unit and recipient is not this contract, we need to transfer the output token to recipient
-                dataToSwap = abi.encodeCall(
-                    IERC20SwapAdapter.swap,
-                    (recipient, units[i].tokenIn, units[i].tokenOut, inputAmt, units[i].swapData)
-                );
-            } else {
-                dataToSwap = abi.encodeCall(
+            bytes memory dataToSwap = i == units.length - 1
+                ? abi.encodeCall(
+                    IERC20SwapAdapter.swap, (recipient, units[i].tokenIn, units[i].tokenOut, inputAmt, units[i].swapData)
+                )
+                : abi.encodeCall(
                     IERC20SwapAdapter.swap,
                     (address(this), units[i].tokenIn, units[i].tokenOut, inputAmt, units[i].swapData)
                 );
-            }
-
             (bool success, bytes memory returnData) = units[i].adapter.delegatecall(dataToSwap);
             if (!success) {
                 revert SwapFailed(units[i].adapter, returnData);

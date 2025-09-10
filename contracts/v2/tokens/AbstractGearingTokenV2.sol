@@ -396,26 +396,22 @@ abstract contract AbstractGearingTokenV2 is
     ) external virtual nonReentrant isOwnerOrDelegate(id, msg.sender) returns (bool repayAll, uint128 finalRepayAmt) {
         LoanInfo memory loan;
         (loan, repayAll, finalRepayAmt) = _repay(id, repayAmt);
-        if (repayAll) {
-            _transferCollateral(collateralRecipient, loan.collateralData);
-            _burnInternal(id);
-        } else {
-            loan.collateralData = _removeCollateral(loan, removedCollateral);
+        loan.collateralData = _removeCollateral(loan, removedCollateral);
+        if (!repayAll) {
             ValueAndPrice memory valueAndPrice = _getValueAndPrice(_config, loan);
             uint128 ltv = _calculateLtv(valueAndPrice);
             require(ltv <= _config.loanConfig.maxLtv, GtIsNotHealthy(id, ownerOf(id), ltv));
-            loanMapping[id] = loan;
-            // Transfer collateral to the recipient
-            _transferCollateral(collateralRecipient, removedCollateral);
-            emit RemoveCollateral(id, removedCollateral);
         }
+        loanMapping[id] = loan;
+        // Transfer collateral to the recipient
+        _transferCollateral(collateralRecipient, removedCollateral);
         // Transfer debt/ft tokens from caller to market
         if (byDebtToken) {
             _config.debtToken.safeTransferFrom(msg.sender, marketAddr(), finalRepayAmt);
         } else {
             _config.ft.safeTransferFrom(msg.sender, marketAddr(), finalRepayAmt);
         }
-        emit GearingTokenEventsV2.Repay(id, finalRepayAmt, byDebtToken, repayAll);
+        emit GearingTokenEventsV2.RepayAndRemoveCollateral(id, finalRepayAmt, byDebtToken, removedCollateral);
     }
 
     /**
