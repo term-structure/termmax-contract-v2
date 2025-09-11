@@ -936,7 +936,11 @@ contract OrderTestV2 is Test {
         if (virtualXtReserve % 2 == 0) {
             originalVirtualXtReserve += 1; // make it odd to avoid price change error
             vm.expectRevert(abi.encodeWithSelector(OrderErrorsV2.PriceChangedBeforeSet.selector));
+        } else {
+            vm.expectEmit();
+            emit OrderEventsV2.CurveAndPriceUpdated(virtualXtReserve, maxXtReserve, newCurveCuts);
         }
+        // Set new curve cuts
         res.order.setCurveAndPrice(originalVirtualXtReserve, virtualXtReserve, maxXtReserve, newCurveCuts);
         if (virtualXtReserve % 2 != 0) {
             // Verify the curve was updated

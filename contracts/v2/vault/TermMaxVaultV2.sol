@@ -274,8 +274,8 @@ contract TermMaxVaultV2 is
     function updateOrdersConfiguration(address[] memory orders, OrderV2ConfigurationParams[] memory orderConfigs)
         external
         virtual
+        nonReentrant
         onlyCuratorRole
-        whenNotPaused
     {
         _delegateCall(abi.encodeCall(IOrderManagerV2.updateOrdersConfiguration, (orders, orderConfigs)));
     }
@@ -285,7 +285,6 @@ contract TermMaxVaultV2 is
         virtual
         nonReentrant
         onlyCuratorRole
-        whenNotPaused
     {
         _delegateCall(
             abi.encodeCall(IOrderManagerV2.removeLiquidityFromOrders, (IERC20(asset()), orders, removedLiquidities))
@@ -654,14 +653,14 @@ contract TermMaxVaultV2 is
     /**
      * @notice Pauses the contract
      */
-    function pause() external virtual onlyOwner {
+    function pause() external virtual onlyCuratorRole {
         _pause();
     }
 
     /**
      * @notice Unpauses the contract
      */
-    function unpause() external virtual onlyOwner {
+    function unpause() external virtual onlyCuratorRole {
         _unpause();
     }
 
