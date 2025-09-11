@@ -10,6 +10,6 @@
   "deployer": "0x81f314f70702Bbe89FEd0F2cFe6841950275E0b7",
   "admin": "0x81f314f70702Bbe89FEd0F2cFe6841950275E0b7",
   "contracts": {
-    "accessManagerV2": "0x0709F8B7BdEA284C7352A5b12505f3d70BF9C21b"
+    "accessManager": "0x0709F8B7BdEA284C7352A5b12505f3d70BF9C21b"
   }
 }
