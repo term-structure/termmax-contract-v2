@@ -368,12 +368,14 @@ contract MockOrderV2 is
 
     function getRealReserves() external view override returns (uint256 ftReserve, uint256 xtReserve) {}
 
-    function setCurve(CurveCuts memory newCurveCuts) external override {}
+    function setCurveAndPrice(
+        uint256 originalVirtualXtReserve,
+        uint256 virtualXtReserve_,
+        uint256 maxXtReserve_,
+        CurveCuts memory newCurveCuts
+    ) external override {}
 
-    function setGeneralConfig(uint256 gtId, uint256 maxXtReserve, ISwapCallback swapTrigger, uint256 virtualXtReserve)
-        external
-        override
-    {}
+    function setGeneralConfig(uint256 gtId, ISwapCallback swapTrigger) external override {}
 
     function setPool(IERC4626 newPool) external override {}
 

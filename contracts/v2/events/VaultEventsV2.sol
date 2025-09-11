@@ -80,22 +80,23 @@ interface VaultEventsV2 {
     // ============================================
 
     /**
-     * @notice Emitted when order curve configurations are updated
-     * @dev This event tracks batch updates to order pricing curves, which affect
-     *      how orders price trades and distribute liquidity across different price levels.
-     * @param caller The operator who executed the curve updates (typically vault management)
-     * @param orders The addresses of all orders whose curves were updated in this transaction
-     */
-    event UpdateOrderCurve(address indexed caller, address[] orders);
-
-    /**
      * @notice Emitted when order configurations are updated
      * @dev This event tracks batch updates to order parameters including liquidity settings,
      *      fee structures, risk parameters, and other operational configurations.
      * @param caller The operator who executed the configuration updates (typically vault management)
      * @param orders The addresses of all orders whose configurations were updated
      */
-    event UpdateOrderConfiguration(address indexed caller, address[] orders);
+    event OrdersConfigurationUpdated(address indexed caller, address[] orders);
+
+    /**
+     * @notice Emitted when liquidity is removed from multiple orders
+     * @dev This event tracks batch liquidity removals from orders, indicating the amounts
+     *      withdrawn and the orders affected.
+     * @param caller The operator who executed the liquidity removals (typically vault management)
+     * @param orders The addresses of all orders from which liquidity was removed
+     * @param removedLiquidities The amounts of liquidity removed from each corresponding order
+     */
+    event OrdersLiquidityRemoved(address indexed caller, address[] orders, uint256[] removedLiquidities);
 
     // ============================================
     // APY MANAGEMENT EVENTS

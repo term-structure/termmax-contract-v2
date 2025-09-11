@@ -133,10 +133,14 @@ contract AccessManagerTestV2 is Test {
         vm.warp(block.timestamp + 1 days);
         res.vault.acceptMarket(address(res.market));
 
-        OrderV2ConfigurationParams memory configParams =
-            OrderV2ConfigurationParams({maxXtReserve: 1000e18, virtualXtReserve: 100e18, removingLiquidity: 0});
+        OrderV2ConfigurationParams memory configParams = OrderV2ConfigurationParams({
+            maxXtReserve: 1000e18,
+            originalVirtualXtReserve: 0,
+            virtualXtReserve: 100e18,
+            curveCuts: orderConfig.curveCuts
+        });
 
-        vaultOrder = TermMaxOrderV2(address(res.vault.createOrder(res.market, configParams, orderConfig.curveCuts)));
+        vaultOrder = TermMaxOrderV2(address(res.vault.createOrder(res.market, configParams)));
         vm.stopPrank();
     }
 

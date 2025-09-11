@@ -14,23 +14,23 @@ interface OrderEventsV2 {
     /// @param market The address of the market associated with the order
     event OrderInitialized(address indexed maker, address indexed market);
 
-    /// @notice Emitted when the order curve is updated
-    /// @dev CurveCuts contains the fractions and breakpoints that define the piecewise linear pricing
-    /// @param curveCuts The updated curve definition used to compute prices and reserves
-    event CurveUpdated(CurveCuts curveCuts);
-
     /// @notice Emitted when the staking or reward pool associated with the order is changed
     /// @param pool The address of the new staking/reward pool contract
     event PoolUpdated(address indexed pool);
 
     /// @notice Emitted when the general configuration of the order is updated
-    /// @dev These parameters control borrowing (gtId), sizing (maxXtReserve), swap callbacks (swapTrigger),
-    ///      and the virtual reserve used to reflect the current price (virtualXtReserve)
+    /// @dev These parameters control borrowing (gtId), swap callbacks (swapTrigger)
     /// @param gtId The ID of the Gearing Token, which is used to borrow tokens
-    /// @param maxXtReserve The maximum reserve of XT token
     /// @param swapTrigger The callback contract to trigger after swaps
+    event GeneralConfigUpdated(uint256 gtId, ISwapCallback swapTrigger);
+
+    /// @notice Emitted when the curve configuration and price parameters are updated
+    /// @dev Curve cuts define the pricing curve for lending/borrowing; virtualXtReserve
+    ///      sets the current price level; maxXtReserve limits exposure
     /// @param virtualXtReserve The virtual reserve of XT token, which presents the current price
-    event GeneralConfigUpdated(uint256 gtId, uint256 maxXtReserve, ISwapCallback swapTrigger, uint256 virtualXtReserve);
+    /// @param maxXtReserve The maximum reserve of XT token
+    /// @param curveCuts The new curve configuration parameters
+    event CurveAndPriceUpdated(uint256 virtualXtReserve, uint256 maxXtReserve, CurveCuts curveCuts);
 
     /// @notice Emitted when liquidity is added to the order
     /// @dev The asset can be either a debt token (FT) or pool share token (LP/token representing liquidity)

@@ -163,10 +163,14 @@ contract VaultTestV2 is Test {
         vault.deposit(amount, deployer);
         assertEq(res.debt.balanceOf(address(vault)), amount);
 
-        OrderV2ConfigurationParams memory orderConfigParams =
-            OrderV2ConfigurationParams({maxXtReserve: maxCapacity, virtualXtReserve: amount, removingLiquidity: 0});
+        OrderV2ConfigurationParams memory orderConfigParams = OrderV2ConfigurationParams({
+            maxXtReserve: maxCapacity,
+            virtualXtReserve: amount,
+            originalVirtualXtReserve: 0,
+            curveCuts: orderConfig.curveCuts
+        });
 
-        res.order = TermMaxOrderV2(address(vault.createOrder(res.market, orderConfigParams, orderConfig.curveCuts)));
+        res.order = TermMaxOrderV2(address(vault.createOrder(res.market, orderConfigParams)));
         vm.label(address(res.order), "order");
         res.debt.mint(deployer, 10000e18);
         res.debt.approve(address(res.market), 10000e18);
@@ -300,17 +304,21 @@ contract VaultTestV2 is Test {
         address bob = lper;
         vm.startPrank(bob);
 
-        OrderV2ConfigurationParams memory orderConfigParams =
-            OrderV2ConfigurationParams({maxXtReserve: maxCapacity, virtualXtReserve: 0, removingLiquidity: 0});
+        OrderV2ConfigurationParams memory orderConfigParams = OrderV2ConfigurationParams({
+            maxXtReserve: maxCapacity,
+            virtualXtReserve: 0,
+            originalVirtualXtReserve: 0,
+            curveCuts: orderConfig.curveCuts
+        });
 
         vm.expectRevert(VaultErrors.NotCuratorRole.selector);
-        vault.createOrder(market, orderConfigParams, orderConfig.curveCuts);
+        vault.createOrder(market, orderConfigParams);
 
         vm.stopPrank();
 
         vm.startPrank(curator);
         vm.expectRevert(abi.encodeWithSelector(VaultErrorsV2.MarketNotWhitelisted.selector, address(market)));
-        vault.createOrder(market, orderConfigParams, orderConfig.curveCuts);
+        vault.createOrder(market, orderConfigParams);
         vm.stopPrank();
     }
 
@@ -788,10 +796,14 @@ contract VaultTestV2 is Test {
 
     function testFixFindings101() public {
         vm.prank(curator);
-        OrderV2ConfigurationParams memory orderConfigParams =
-            OrderV2ConfigurationParams({maxXtReserve: maxCapacity, virtualXtReserve: 0, removingLiquidity: 0});
+        OrderV2ConfigurationParams memory orderConfigParams = OrderV2ConfigurationParams({
+            maxXtReserve: maxCapacity,
+            virtualXtReserve: 0,
+            originalVirtualXtReserve: 0,
+            curveCuts: orderConfig.curveCuts
+        });
 
-        vault.createOrder(res.market, orderConfigParams, orderConfig.curveCuts);
+        vault.createOrder(res.market, orderConfigParams);
         lper = vm.randomAddress();
 
         res.debt.mint(lper, 100 ether);

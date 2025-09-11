@@ -10,32 +10,33 @@ import {ITermMaxOrderV2} from "../ITermMaxOrderV2.sol";
 
 interface IOrderManagerV2 {
     /**
-     * @notice Update the curve configuration for multiple orders
+     * @notice Update the configuration for multiple orders
      * @param orders The list of order addresses to update
-     * @param newCurveCuts The new curve configuration parameters
+     * @param orderConfigs The new configuration parameters for each order, containing:
+     *                    - virtualXtReserve: The new virtual XT reserve for the order
+     *                    - maxXtReserve: The new maximum XT reserve for the order
+     *                    - removingLiquidity: The amount of liquidity to remove from the order
+     *                    - curveCuts: The new curve cuts for the order
      */
-    function updateOrderCurves(address[] memory orders, CurveCuts[] memory newCurveCuts) external;
+    function updateOrdersConfiguration(address[] memory orders, OrderV2ConfigurationParams[] memory orderConfigs)
+        external;
 
     /**
-     * @notice Update the general configuration and liquidity for multiple orders
+     * @notice Remove the liquidity from multiple orders
      * @param asset The asset to be added as liquidity, debt token or pool shares
      * @param orders The list of order addresses to update
-     * @param params The new configuration parameters for each order
+     * @param removedLiquidities The amount of liquidity to remove from each order
      */
-    function updateOrdersConfigAndLiquidity(
-        IERC20 asset,
-        address[] memory orders,
-        OrderV2ConfigurationParams[] memory params
-    ) external;
+    function removeLiquidityFromOrders(IERC20 asset, address[] memory orders, uint256[] memory removedLiquidities)
+        external;
 
     /**
      * @notice Create a new order with the specified parameters
      * @param market The market address
      * @param params The configuration parameters for the new order
-     * @param curveCuts The curve cuts for the new order
      * @return order The address of the newly created order
      */
-    function createOrder(ITermMaxMarketV2 market, OrderV2ConfigurationParams memory params, CurveCuts memory curveCuts)
+    function createOrder(ITermMaxMarketV2 market, OrderV2ConfigurationParams memory params)
         external
         returns (ITermMaxOrderV2 order);
 

@@ -148,39 +148,33 @@ interface ITermMaxVaultV2 {
     // ============================================
 
     /**
-     * @notice Updates the curve configuration for multiple orders
-     * @dev Allows batch updating of order curve parameters for gas efficiency.
-     *      Curve cuts define the pricing and liquidity distribution curves.
+     * @notice Update the configuration for multiple orders
      * @param orders The list of order addresses to update
-     * @param newCurveCuts The new curve configuration parameters for each order
+     * @param orderConfigs The new configuration parameters for each order, containing:
+     *                    - virtualXtReserve: The new virtual XT reserve for the order
+     *                    - maxXtReserve: The new maximum XT reserve for the order
+     *                    - removingLiquidity: The amount of liquidity to remove from the order
+     *                    - curveCuts: The new curve cuts for the order
      */
-    function updateOrderCurves(address[] memory orders, CurveCuts[] memory newCurveCuts) external;
+    function updateOrdersConfiguration(address[] memory orders, OrderV2ConfigurationParams[] memory orderConfigs)
+        external;
 
     /**
-     * @notice Updates the general configuration and liquidity for multiple orders
-     * @dev Batch operation to update order configurations including:
-     *      - Liquidity parameters
-     *      - Fee structures
-     *      - Risk parameters
+     * @notice Remove the liquidity from multiple orders
      * @param orders The list of order addresses to update
-     * @param params The new configuration parameters for each order
+     * @param removedLiquidities The amount of liquidity to remove from each order
      */
-    function updateOrdersConfigAndLiquidity(address[] memory orders, OrderV2ConfigurationParams[] memory params)
-        external;
+    function removeLiquidityFromOrders(address[] memory orders, uint256[] memory removedLiquidities) external;
 
     /**
      * @notice Creates a new order with the specified parameters
      * @dev Deploys a new TermMax order contract with the given configuration.
      *      The order will be associated with the specified market and pool.
      * @param market The TermMax market address that the order will operate in
-     * @param params The configuration parameters for the new order including:
-     *               - Liquidity settings
-     *               - Fee structures
-     *               - Risk parameters
-     * @param curveCuts The curve cuts defining pricing and liquidity curves
+     * @param params The configuration parameters for the new order
      * @return order The address of the newly created TermMax order contract
      */
-    function createOrder(ITermMaxMarketV2 market, OrderV2ConfigurationParams memory params, CurveCuts memory curveCuts)
+    function createOrder(ITermMaxMarketV2 market, OrderV2ConfigurationParams memory params)
         external
         returns (ITermMaxOrderV2 order);
 }

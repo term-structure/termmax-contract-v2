@@ -138,13 +138,8 @@ contract TermMaxOrderV2 is
         debtToken = params.debtToken;
         gt = params.gt;
         _setPool(params.pool);
-        _updateCurve(params.orderConfig.curveCuts);
-        _updateGeneralConfig(
-            params.orderConfig.gtId,
-            params.orderConfig.maxXtReserve,
-            params.orderConfig.swapTrigger,
-            params.virtualXtReserve
-        );
+        _setCurveAndPrice(params.virtualXtReserve, params.orderConfig.maxXtReserve, params.orderConfig.curveCuts);
+        _updateGeneralConfig(params.orderConfig.gtId, params.orderConfig.swapTrigger);
         emit OrderEventsV2.OrderInitialized(params.maker, _market);
     }
 
@@ -265,7 +260,7 @@ contract TermMaxOrderV2 is
         override
         onlyOwner
     {
-        _updateCurve(newOrderConfig.curveCuts);
+        _setCurveAndPrice(virtualXtReserve, newOrderConfig.maxXtReserve, newOrderConfig.curveCuts);
         if (ftChangeAmt > 0) {
             ft.safeTransferFrom(msg.sender, address(this), ftChangeAmt.toUint256());
         } else if (ftChangeAmt < 0) {
@@ -276,7 +271,6 @@ contract TermMaxOrderV2 is
         } else if (xtChangeAmt < 0) {
             xt.safeTransfer(msg.sender, (-xtChangeAmt).toUint256());
         }
-        _orderConfig.maxXtReserve = newOrderConfig.maxXtReserve;
         _orderConfig.gtId = newOrderConfig.gtId;
         _orderConfig.swapTrigger = newOrderConfig.swapTrigger;
         emit UpdateOrder(
@@ -289,20 +283,86 @@ contract TermMaxOrderV2 is
         );
     }
 
-    /**
-     * @notice Set curve configuration
-     * @param newCurveCuts New curve cuts configuration
-     */
-    function setCurve(CurveCuts memory newCurveCuts) external virtual onlyOwner {
-        _updateCurve(newCurveCuts);
+    function setCurveAndPrice(
+        uint256 originalVirtualXtReserve,
+        uint256 virtualXtReserve_,
+        uint256 maxXtReserve_,
+        CurveCuts memory newCurveCuts
+    ) external virtual onlyOwner {
+        require(originalVirtualXtReserve == virtualXtReserve, OrderErrorsV2.PriceChangedBeforeSet());
+        _setCurveAndPrice(virtualXtReserve_, maxXtReserve_, newCurveCuts);
     }
 
-    function setGeneralConfig(uint256 gtId, uint256 maxXtReserve, ISwapCallback swapTrigger, uint256 virtualXtReserve_)
-        external
-        virtual
-        onlyOwner
+    /**
+     * @notice Internal function to update curve cuts
+     * @param newCurveCuts New curve cuts to validate and set
+     */
+    function _setCurveAndPrice(uint256 virtualXtReserve_, uint256 maxXtReserve_, CurveCuts memory newCurveCuts)
+        internal
     {
-        _updateGeneralConfig(gtId, maxXtReserve, swapTrigger, virtualXtReserve_);
+        if (newCurveCuts.lendCurveCuts.length > 0) {
+            if (newCurveCuts.lendCurveCuts[0].liqSquare == 0 || newCurveCuts.lendCurveCuts[0].xtReserve != 0) {
+                revert InvalidCurveCuts();
+            }
+        }
+        for (uint256 i = 1; i < newCurveCuts.lendCurveCuts.length; i++) {
+            if (
+                newCurveCuts.lendCurveCuts[i].liqSquare == 0
+                    || newCurveCuts.lendCurveCuts[i].xtReserve <= newCurveCuts.lendCurveCuts[i - 1].xtReserve
+            ) {
+                revert InvalidCurveCuts();
+            }
+            /*
+                    R := (x' + beta') ^ 2 * DECIMAL_BASE / (x' + beta) ^ 2
+                    L' ^ 2 := L ^ 2 * R / DECIMAL_BASE
+                */
+            if (
+                newCurveCuts.lendCurveCuts[i].liqSquare
+                    != (
+                        newCurveCuts.lendCurveCuts[i - 1].liqSquare
+                            * (
+                                newCurveCuts.lendCurveCuts[i].xtReserve.plusInt256(newCurveCuts.lendCurveCuts[i].offset) ** 2
+                                    * Constants.DECIMAL_BASE
+                                    / newCurveCuts.lendCurveCuts[i].xtReserve.plusInt256(newCurveCuts.lendCurveCuts[i - 1].offset)
+                                        ** 2
+                            )
+                    ) / Constants.DECIMAL_BASE
+            ) revert InvalidCurveCuts();
+        }
+        if (newCurveCuts.borrowCurveCuts.length > 0) {
+            if (newCurveCuts.borrowCurveCuts[0].liqSquare == 0 || newCurveCuts.borrowCurveCuts[0].xtReserve != 0) {
+                revert InvalidCurveCuts();
+            }
+        }
+        for (uint256 i = 1; i < newCurveCuts.borrowCurveCuts.length; i++) {
+            if (
+                newCurveCuts.borrowCurveCuts[i].liqSquare == 0
+                    || newCurveCuts.borrowCurveCuts[i].xtReserve <= newCurveCuts.borrowCurveCuts[i - 1].xtReserve
+            ) {
+                revert InvalidCurveCuts();
+            }
+            if (
+                newCurveCuts.borrowCurveCuts[i].liqSquare
+                    != (
+                        newCurveCuts.borrowCurveCuts[i - 1].liqSquare
+                            * (
+                                newCurveCuts.borrowCurveCuts[i].xtReserve.plusInt256(newCurveCuts.borrowCurveCuts[i].offset)
+                                    ** 2 * Constants.DECIMAL_BASE
+                                    / newCurveCuts.borrowCurveCuts[i].xtReserve.plusInt256(
+                                        newCurveCuts.borrowCurveCuts[i - 1].offset
+                                    ) ** 2
+                            )
+                    ) / Constants.DECIMAL_BASE
+            ) revert InvalidCurveCuts();
+        }
+        _orderConfig.curveCuts = newCurveCuts;
+        _orderConfig.maxXtReserve = maxXtReserve_;
+        virtualXtReserve = virtualXtReserve_;
+        emit OrderEventsV2.CurveAndPriceUpdated(virtualXtReserve_, maxXtReserve_, newCurveCuts);
+    }
+
+    function setGeneralConfig(uint256 gtId, ISwapCallback swapTrigger) external virtual onlyOwner {
+        _updateGeneralConfig(gtId, swapTrigger);
     }
 
     function setPool(IERC4626 newPool) external virtual onlyOwner {
@@ -354,21 +414,12 @@ contract TermMaxOrderV2 is
     /**
      * @notice Internal function to update general configuration
      * @param gtId Gearing token ID
-     * @param maxXtReserve Maximum XT reserve
      * @param swapTrigger Swap callback trigger
-     * @param virtualXtReserve_ Virtual XT reserve
      */
-    function _updateGeneralConfig(
-        uint256 gtId,
-        uint256 maxXtReserve,
-        ISwapCallback swapTrigger,
-        uint256 virtualXtReserve_
-    ) internal {
+    function _updateGeneralConfig(uint256 gtId, ISwapCallback swapTrigger) internal {
         _orderConfig.gtId = gtId;
-        _orderConfig.maxXtReserve = maxXtReserve;
         _orderConfig.swapTrigger = swapTrigger;
-        virtualXtReserve = virtualXtReserve_;
-        emit OrderEventsV2.GeneralConfigUpdated(gtId, maxXtReserve, swapTrigger, virtualXtReserve_);
+        emit OrderEventsV2.GeneralConfigUpdated(gtId, swapTrigger);
     }
 
     /**
@@ -738,73 +789,6 @@ contract TermMaxOrderV2 is
 
         // Pay fee
         _ft.safeTransfer(_market.config().treasurer, feeAmt);
-    }
-
-    // =============================================================================
-    // INTERNAL FUNCTIONS - CONFIGURATION UPDATES
-    // =============================================================================
-
-    /**
-     * @notice Internal function to update curve cuts
-     * @param newCurveCuts New curve cuts to validate and set
-     */
-    function _updateCurve(CurveCuts memory newCurveCuts) internal {
-        if (newCurveCuts.lendCurveCuts.length > 0) {
-            if (newCurveCuts.lendCurveCuts[0].liqSquare == 0 || newCurveCuts.lendCurveCuts[0].xtReserve != 0) {
-                revert InvalidCurveCuts();
-            }
-        }
-        for (uint256 i = 1; i < newCurveCuts.lendCurveCuts.length; i++) {
-            if (
-                newCurveCuts.lendCurveCuts[i].liqSquare == 0
-                    || newCurveCuts.lendCurveCuts[i].xtReserve <= newCurveCuts.lendCurveCuts[i - 1].xtReserve
-            ) {
-                revert InvalidCurveCuts();
-            }
-            /*
-                    R := (x' + beta') ^ 2 * DECIMAL_BASE / (x' + beta) ^ 2
-                    L' ^ 2 := L ^ 2 * R / DECIMAL_BASE
-                */
-            if (
-                newCurveCuts.lendCurveCuts[i].liqSquare
-                    != (
-                        newCurveCuts.lendCurveCuts[i - 1].liqSquare
-                            * (
-                                newCurveCuts.lendCurveCuts[i].xtReserve.plusInt256(newCurveCuts.lendCurveCuts[i].offset) ** 2
-                                    * Constants.DECIMAL_BASE
-                                    / newCurveCuts.lendCurveCuts[i].xtReserve.plusInt256(newCurveCuts.lendCurveCuts[i - 1].offset)
-                                        ** 2
-                            )
-                    ) / Constants.DECIMAL_BASE
-            ) revert InvalidCurveCuts();
-        }
-        if (newCurveCuts.borrowCurveCuts.length > 0) {
-            if (newCurveCuts.borrowCurveCuts[0].liqSquare == 0 || newCurveCuts.borrowCurveCuts[0].xtReserve != 0) {
-                revert InvalidCurveCuts();
-            }
-        }
-        for (uint256 i = 1; i < newCurveCuts.borrowCurveCuts.length; i++) {
-            if (
-                newCurveCuts.borrowCurveCuts[i].liqSquare == 0
-                    || newCurveCuts.borrowCurveCuts[i].xtReserve <= newCurveCuts.borrowCurveCuts[i - 1].xtReserve
-            ) {
-                revert InvalidCurveCuts();
-            }
-            if (
-                newCurveCuts.borrowCurveCuts[i].liqSquare
-                    != (
-                        newCurveCuts.borrowCurveCuts[i - 1].liqSquare
-                            * (
-                                newCurveCuts.borrowCurveCuts[i].xtReserve.plusInt256(newCurveCuts.borrowCurveCuts[i].offset)
-                                    ** 2 * Constants.DECIMAL_BASE
-                                    / newCurveCuts.borrowCurveCuts[i].xtReserve.plusInt256(
-                                        newCurveCuts.borrowCurveCuts[i - 1].offset
-                                    ) ** 2
-                            )
-                    ) / Constants.DECIMAL_BASE
-            ) revert InvalidCurveCuts();
-        }
-        _orderConfig.curveCuts = newCurveCuts;
     }
 
     // =============================================================================
