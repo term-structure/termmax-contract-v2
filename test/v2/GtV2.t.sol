@@ -1819,13 +1819,17 @@ contract GtTestV2 is Test {
         StateChecker.checkMarketState(res, state);
 
         assertEq(
-            collateralBalanceAfter - collateralBalanceBefore, removedCollateral, "sender should receive removed collateral"
+            collateralBalanceAfter - collateralBalanceBefore,
+            removedCollateral,
+            "sender should receive removed collateral"
         );
 
         (address ownner, uint128 currentDebt, bytes memory currentCollateral) = res.gt.loanInfo(gtId);
         assertEq(ownner, sender, "owner should remain sender");
         assertEq(currentDebt, 0, "debt should remain zero");
-        assertEq(abi.decode(currentCollateral, (uint256)), collateralAmt - removedCollateral, "collateral should be reduced");
+        assertEq(
+            abi.decode(currentCollateral, (uint256)), collateralAmt - removedCollateral, "collateral should be reduced"
+        );
         vm.stopPrank();
     }
 }

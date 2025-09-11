@@ -51,6 +51,7 @@ import {VaultErrorsV2} from "contracts/v2/errors/VaultErrorsV2.sol";
 import {IPausable} from "contracts/v1/access/AccessManager.sol";
 import {VaultEventsV2} from "contracts/v2/events/VaultEventsV2.sol";
 import {VaultInitialParamsV2} from "contracts/v2/storage/TermMaxStorageV2.sol";
+import {TermMaxFactoryV2} from "contracts/v2/factory/TermMaxFactoryV2.sol";
 
 /// @dev use --isolate to run this tests
 contract VaultTestV2 is Test {
@@ -96,9 +97,9 @@ contract VaultTestV2 is Test {
         vm.label(address(res.market), "market");
         MarketConfig memory marketConfig2 = JSONLoader.getMarketConfigFromJson(treasurer, testdata, ".marketConfig");
         marketConfig2.maturity = uint64(currentTime + 180 days);
-
-        market2 = ITermMaxMarket(
-            res.factory.createMarket(
+        TermMaxFactoryV2 factory = DeployUtils.deployFactory(deployer);
+        market2 = TermMaxMarketV2(
+            factory.createMarket(
                 DeployUtils.GT_ERC20,
                 MarketInitialParams({
                     collateral: address(res.collateral),
@@ -163,10 +164,14 @@ contract VaultTestV2 is Test {
         vault.deposit(amount, deployer);
         assertEq(res.debt.balanceOf(address(vault)), amount);
 
-        OrderV2ConfigurationParams memory orderConfigParams =
-            OrderV2ConfigurationParams({maxXtReserve: maxCapacity, virtualXtReserve: amount, removingLiquidity: 0});
+        OrderV2ConfigurationParams memory orderConfigParams = OrderV2ConfigurationParams({
+            maxXtReserve: maxCapacity,
+            virtualXtReserve: amount,
+            originalVirtualXtReserve: 0,
+            curveCuts: orderConfig.curveCuts
+        });
 
-        res.order = TermMaxOrderV2(address(vault.createOrder(res.market, orderConfigParams, orderConfig.curveCuts)));
+        res.order = TermMaxOrderV2(address(vault.createOrder(res.market, orderConfigParams)));
         vm.label(address(res.order), "order");
         res.debt.mint(deployer, 10000e18);
         res.debt.approve(address(res.market), 10000e18);
@@ -300,17 +305,21 @@ contract VaultTestV2 is Test {
         address bob = lper;
         vm.startPrank(bob);
 
-        OrderV2ConfigurationParams memory orderConfigParams =
-            OrderV2ConfigurationParams({maxXtReserve: maxCapacity, virtualXtReserve: 0, removingLiquidity: 0});
+        OrderV2ConfigurationParams memory orderConfigParams = OrderV2ConfigurationParams({
+            maxXtReserve: maxCapacity,
+            virtualXtReserve: 0,
+            originalVirtualXtReserve: 0,
+            curveCuts: orderConfig.curveCuts
+        });
 
         vm.expectRevert(VaultErrors.NotCuratorRole.selector);
-        vault.createOrder(market, orderConfigParams, orderConfig.curveCuts);
+        vault.createOrder(market, orderConfigParams);
 
         vm.stopPrank();
 
         vm.startPrank(curator);
         vm.expectRevert(abi.encodeWithSelector(VaultErrorsV2.MarketNotWhitelisted.selector, address(market)));
-        vault.createOrder(market, orderConfigParams, orderConfig.curveCuts);
+        vault.createOrder(market, orderConfigParams);
         vm.stopPrank();
     }
 
@@ -788,10 +797,14 @@ contract VaultTestV2 is Test {
 
     function testFixFindings101() public {
         vm.prank(curator);
-        OrderV2ConfigurationParams memory orderConfigParams =
-            OrderV2ConfigurationParams({maxXtReserve: maxCapacity, virtualXtReserve: 0, removingLiquidity: 0});
+        OrderV2ConfigurationParams memory orderConfigParams = OrderV2ConfigurationParams({
+            maxXtReserve: maxCapacity,
+            virtualXtReserve: 0,
+            originalVirtualXtReserve: 0,
+            curveCuts: orderConfig.curveCuts
+        });
 
-        vault.createOrder(res.market, orderConfigParams, orderConfig.curveCuts);
+        vault.createOrder(res.market, orderConfigParams);
         lper = vm.randomAddress();
 
         res.debt.mint(lper, 100 ether);
@@ -1135,6 +1148,116 @@ contract VaultTestV2 is Test {
         vm.startPrank(deployer);
         vm.expectRevert(); // Should revert due to insufficient shares
         vault.withdrawFts(address(res.order), excessiveAmount, deployer, deployer);
+        vm.stopPrank();
+    }
+
+    function testUpdateOrder() public {
+        vm.startPrank(curator);
+
+        uint256 originalVirtualXtReserve = 10000e8;
+
+        OrderV2ConfigurationParams memory orderConfigParams = OrderV2ConfigurationParams({
+            maxXtReserve: maxCapacity,
+            virtualXtReserve: 10000e8,
+            originalVirtualXtReserve: 0,
+            curveCuts: orderConfig.curveCuts
+        });
+
+        address[] memory orders = new address[](2);
+        orders[0] = address(vault.createOrder(ITermMaxMarketV2(address(market2)), orderConfigParams));
+        orders[1] = address(vault.createOrder(ITermMaxMarketV2(address(market2)), orderConfigParams));
+
+        CurveCuts[] memory curveCuts = new CurveCuts[](2);
+        {
+            CurveCuts memory newCurveCuts = orderConfig.curveCuts;
+            newCurveCuts.lendCurveCuts[0].liqSquare++;
+            curveCuts[0] = newCurveCuts;
+            newCurveCuts.lendCurveCuts[0].liqSquare++;
+            curveCuts[1] = newCurveCuts;
+        }
+
+        OrderV2ConfigurationParams[] memory configs = new OrderV2ConfigurationParams[](2);
+        {
+            configs[0].curveCuts = curveCuts[0]; // Update to use curveCuts[0]
+            configs[0].maxXtReserve = maxCapacity + 1000e8;
+            configs[0].virtualXtReserve = originalVirtualXtReserve + 1000e8;
+            configs[0].originalVirtualXtReserve = originalVirtualXtReserve;
+            configs[1].curveCuts = curveCuts[1]; // Update to use curveCuts[1]
+            configs[1].maxXtReserve = maxCapacity - 50e8;
+            configs[1].virtualXtReserve = originalVirtualXtReserve - 500e8;
+            configs[1].originalVirtualXtReserve = originalVirtualXtReserve;
+        }
+
+        uint256 record = vm.snapshot();
+        vm.expectEmit();
+        emit VaultEventsV2.OrdersConfigurationUpdated(curator, orders);
+        vault.updateOrdersConfiguration(orders, configs);
+
+        for (uint256 i = 0; i < orders.length; i++) {
+            TermMaxOrderV2 order = TermMaxOrderV2(orders[i]);
+            OrderConfig memory cfg = order.orderConfig();
+            assertEq(cfg.maxXtReserve, configs[i].maxXtReserve, "maxXtReserve mismatch");
+            assertEq(order.virtualXtReserve(), configs[i].virtualXtReserve, "virtualXtReserve mismatch");
+            assertEq(
+                keccak256(abi.encode(cfg.curveCuts)), keccak256(abi.encode(configs[i].curveCuts)), "curveCuts mismatch"
+            );
+        }
+
+        vm.revertTo(record);
+        // Test update while paused
+        vault.pause();
+        vault.updateOrdersConfiguration(orders, configs);
+        vault.unpause();
+
+        vm.stopPrank();
+    }
+
+    function testRemoveLiquidityFromOrder() public {
+        vm.startPrank(curator);
+
+        uint256 originalVirtualXtReserve = 10000e8;
+
+        OrderV2ConfigurationParams memory orderConfigParams = OrderV2ConfigurationParams({
+            maxXtReserve: maxCapacity,
+            virtualXtReserve: 10000e8,
+            originalVirtualXtReserve: 0,
+            curveCuts: orderConfig.curveCuts
+        });
+
+        address[] memory orders = new address[](2);
+        orders[0] = address(vault.createOrder(ITermMaxMarketV2(address(market2)), orderConfigParams));
+        orders[1] = address(vault.createOrder(ITermMaxMarketV2(address(market2)), orderConfigParams));
+
+        res.debt.mint(curator, 10000e8);
+        res.debt.approve(address(market2), 10000e8);
+        market2.mint(orders[0], 10000e8 / 2);
+        market2.mint(orders[1], 10000e8 / 2);
+
+        uint256[] memory removeLiqs = new uint256[](2);
+        removeLiqs[0] = 10000e8 / 4;
+        removeLiqs[1] = 10000e8 / 4;
+
+        (IERC20 ft, IERC20 xt,,,) = market2.tokens();
+
+        uint256 liquidityBefore = res.debt.balanceOf(address(vault));
+        uint256 ftBefore0 = ft.balanceOf(orders[0]);
+        uint256 xtBefore0 = xt.balanceOf(orders[0]);
+        uint256 ftBefore1 = ft.balanceOf(orders[1]);
+        uint256 xtBefore1 = xt.balanceOf(orders[1]);
+
+        uint256 record = vm.snapshot();
+        vm.expectEmit();
+        emit VaultEventsV2.OrdersLiquidityRemoved(curator, orders, removeLiqs);
+        vault.removeLiquidityFromOrders(orders, removeLiqs);
+        uint256 liquidityAfter = res.debt.balanceOf(address(vault));
+        assertEq(liquidityAfter, liquidityBefore + removeLiqs[0] + removeLiqs[1], "liquidity mismatch");
+
+        vm.revertTo(record);
+        // Test update while paused
+        vault.pause();
+        vault.removeLiquidityFromOrders(orders, removeLiqs);
+        vault.unpause();
+
         vm.stopPrank();
     }
 }

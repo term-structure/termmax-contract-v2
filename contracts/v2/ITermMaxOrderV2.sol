@@ -35,16 +35,22 @@ interface ITermMaxOrderV2 {
     // V2-SPECIFIC ADMIN FUNCTIONS
     // =============================================================================
 
-    /// @notice Set curve configuration
-    function setCurve(CurveCuts memory newCurveCuts) external;
+    /// @notice Set curve and price configuration
+    /// @param originalVirtualXtReserve The original virtual reserve of XT token, which is used to prevent price manipulation
+    /// @param virtualXtReserve The virtual reserve of XT token, which presents the current price
+    /// @param maxXtReserve The maximum reserve of XT token
+    /// @param newCurveCuts The new curve configuration parameters
+    function setCurveAndPrice(
+        uint256 originalVirtualXtReserve,
+        uint256 virtualXtReserve,
+        uint256 maxXtReserve,
+        CurveCuts memory newCurveCuts
+    ) external;
 
     /// @notice Set general configuration parameters
     /// @param gtId The ID of the Gearing Token, which is used to borrow tokens
-    /// @param maxXtReserve The maximum reserve of XT token
     /// @param swapTrigger The callback contract to trigger swaps
-    /// @param virtualXtReserve The virtual reserve of XT token, which presents the current price
-    function setGeneralConfig(uint256 gtId, uint256 maxXtReserve, ISwapCallback swapTrigger, uint256 virtualXtReserve)
-        external;
+    function setGeneralConfig(uint256 gtId, ISwapCallback swapTrigger) external;
 
     /// @notice Set the staking pool
     /// @param newPool The new staking pool to be set, the address(0) can be used to unset the pool

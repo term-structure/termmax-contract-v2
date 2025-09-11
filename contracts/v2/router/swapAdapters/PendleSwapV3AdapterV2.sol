@@ -5,12 +5,11 @@ import {IPAllActionV3} from "@pendle/core-v2/contracts/interfaces/IPAllActionV3.
 import {IPMarket, IPPrincipalToken, IPYieldToken} from "@pendle/core-v2/contracts/interfaces/IPMarket.sol";
 import {PendleHelper} from "../../extensions/pendle/PendleHelper.sol";
 import "./ERC20SwapAdapterV2.sol";
-import {console} from "forge-std/console.sol";
-
 /**
  * @title TermMax PendleSwapV3AdapterV2
  * @author Term Structure Labs
  */
+
 contract PendleSwapV3AdapterV2 is ERC20SwapAdapterV2, PendleHelper {
     using TransferUtilsV2 for IERC20;
     using Math for uint256;
@@ -34,8 +33,6 @@ contract PendleSwapV3AdapterV2 is ERC20SwapAdapterV2, PendleHelper {
 
         (, IPPrincipalToken PT,) = market.readTokens();
         IERC20(tokenIn).safeIncreaseAllowance(address(router), amount);
-        console.log("pt-balance", PT.balanceOf(address(this)));
-        console.log("tokenIn-balance", IERC20(tokenIn).balanceOf(address(this)));
 
         /**
          * Note: Scaling Input/Output amount

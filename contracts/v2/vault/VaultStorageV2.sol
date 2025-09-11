@@ -3,11 +3,13 @@ pragma solidity ^0.8.0;
 
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {PendingAddress, PendingUint192} from "../../v1/lib/PendingLib.sol";
+import {CurveCuts} from "../../v1/storage/TermMaxStorage.sol";
 
 struct OrderV2ConfigurationParams {
-    uint256 maxXtReserve;
+    uint256 originalVirtualXtReserve;
     uint256 virtualXtReserve;
-    uint256 removingLiquidity;
+    uint256 maxXtReserve;
+    CurveCuts curveCuts;
 }
 
 contract VaultStorageV2 {

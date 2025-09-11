@@ -435,9 +435,7 @@ contract OrderTestV2WithPool is Test {
         (uint256 gtId,) = LoanUtils.fastMintGt(res, maker, 100e8, 1e18);
         DelegateAble(address(res.gt)).setDelegate(address(res.order), true);
         orderConfig.gtId = gtId;
-        res.order.setGeneralConfig(
-            orderConfig.gtId, orderConfig.maxXtReserve, orderConfig.swapTrigger, res.order.virtualXtReserve()
-        );
+        res.order.setGeneralConfig(orderConfig.gtId, orderConfig.swapTrigger);
         res.order.withdrawAssets(pool, maker, 150e8);
         vm.stopPrank();
 

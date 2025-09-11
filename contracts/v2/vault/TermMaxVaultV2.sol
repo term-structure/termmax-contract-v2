@@ -259,7 +259,7 @@ contract TermMaxVaultV2 is
 
     // Ordermanager functions
 
-    function createOrder(ITermMaxMarketV2 market, OrderV2ConfigurationParams memory params, CurveCuts memory curveCuts)
+    function createOrder(ITermMaxMarketV2 market, OrderV2ConfigurationParams memory params)
         external
         virtual
         nonReentrant
@@ -267,28 +267,28 @@ contract TermMaxVaultV2 is
         whenNotPaused
         returns (ITermMaxOrderV2 order)
     {
-        order = abi.decode(
-            _delegateCall(abi.encodeCall(IOrderManagerV2.createOrder, (market, params, curveCuts))), (ITermMaxOrderV2)
-        );
+        order =
+            abi.decode(_delegateCall(abi.encodeCall(IOrderManagerV2.createOrder, (market, params))), (ITermMaxOrderV2));
     }
 
-    function updateOrderCurves(address[] memory orders, CurveCuts[] memory newCurveCuts)
-        external
-        virtual
-        onlyCuratorRole
-        whenNotPaused
-    {
-        _delegateCall(abi.encodeCall(IOrderManagerV2.updateOrderCurves, (orders, newCurveCuts)));
-    }
-
-    function updateOrdersConfigAndLiquidity(address[] memory orders, OrderV2ConfigurationParams[] memory params)
+    function updateOrdersConfiguration(address[] memory orders, OrderV2ConfigurationParams[] memory orderConfigs)
         external
         virtual
         nonReentrant
         onlyCuratorRole
-        whenNotPaused
     {
-        _delegateCall(abi.encodeCall(IOrderManagerV2.updateOrdersConfigAndLiquidity, (IERC20(asset()), orders, params)));
+        _delegateCall(abi.encodeCall(IOrderManagerV2.updateOrdersConfiguration, (orders, orderConfigs)));
+    }
+
+    function removeLiquidityFromOrders(address[] memory orders, uint256[] memory removedLiquidities)
+        external
+        virtual
+        nonReentrant
+        onlyCuratorRole
+    {
+        _delegateCall(
+            abi.encodeCall(IOrderManagerV2.removeLiquidityFromOrders, (IERC20(asset()), orders, removedLiquidities))
+        );
     }
 
     function redeemOrder(ITermMaxOrderV2 order)
@@ -653,14 +653,14 @@ contract TermMaxVaultV2 is
     /**
      * @notice Pauses the contract
      */
-    function pause() external virtual onlyOwner {
+    function pause() external virtual onlyCuratorRole {
         _pause();
     }
 
     /**
      * @notice Unpauses the contract
      */
-    function unpause() external virtual onlyOwner {
+    function unpause() external virtual onlyCuratorRole {
         _unpause();
     }
 

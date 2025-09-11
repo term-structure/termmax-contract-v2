@@ -42,41 +42,43 @@ contract OrderManagerV2 is VaultStorageV2, OnlyProxyCall, IOrderManagerV2 {
         ORDER_MANAGER_SINGLETON = address(this);
     }
 
-    function updateOrderCurves(address[] memory orders, CurveCuts[] memory curveCuts) external onlyProxy {
-        require(orders.length == curveCuts.length, VaultErrorsV2.ArrayLengthMismatch());
+    function updateOrdersConfiguration(address[] memory orders, OrderV2ConfigurationParams[] memory orderConfigs)
+        external
+        onlyProxy
+    {
+        require(orders.length == orderConfigs.length, VaultErrorsV2.ArrayLengthMismatch());
         _accruedInterest();
         for (uint256 i = 0; i < orders.length; ++i) {
             address order = orders[i];
+            OrderV2ConfigurationParams memory config = orderConfigs[i];
             _checkOrder(order);
-            ITermMaxOrderV2(order).setCurve(curveCuts[i]);
+            ITermMaxOrderV2(order).setCurveAndPrice(
+                config.originalVirtualXtReserve, config.virtualXtReserve, config.maxXtReserve, config.curveCuts
+            );
         }
-        emit VaultEventsV2.UpdateOrderCurve(msg.sender, orders);
+        emit VaultEventsV2.OrdersConfigurationUpdated(msg.sender, orders);
     }
 
-    function updateOrdersConfigAndLiquidity(
-        IERC20 asset,
-        address[] memory orders,
-        OrderV2ConfigurationParams[] memory params
-    ) external onlyProxy {
-        require(orders.length == params.length, VaultErrorsV2.ArrayLengthMismatch());
+    function removeLiquidityFromOrders(IERC20 asset, address[] memory orders, uint256[] memory removedLiquidities)
+        external
+        onlyProxy
+    {
+        require(orders.length == removedLiquidities.length, VaultErrorsV2.ArrayLengthMismatch());
         _accruedInterest();
         uint256 totalRemovingLiquidity;
         for (uint256 i = 0; i < orders.length; ++i) {
             address order = orders[i];
-            OrderV2ConfigurationParams memory param = params[i];
+            uint256 removingLiquidity = removedLiquidities[i];
             _checkOrder(order);
-            ITermMaxOrderV2(order).setGeneralConfig(
-                0, param.maxXtReserve, ISwapCallback(address(this)), param.virtualXtReserve
-            );
-            if (param.removingLiquidity != 0) {
-                ITermMaxOrderV2(order).removeLiquidity(asset, param.removingLiquidity, address(this));
-                totalRemovingLiquidity += param.removingLiquidity;
+            if (removingLiquidity != 0) {
+                ITermMaxOrderV2(order).removeLiquidity(asset, removingLiquidity, address(this));
+                totalRemovingLiquidity += removingLiquidity;
             }
         }
         if (totalRemovingLiquidity != 0) {
             _depositToPoolOrNot(asset, totalRemovingLiquidity);
         }
-        emit VaultEventsV2.UpdateOrderConfiguration(msg.sender, orders);
+        emit VaultEventsV2.OrdersLiquidityRemoved(msg.sender, orders, removedLiquidities);
     }
 
     function withdrawPerformanceFee(IERC20 asset, address recipient, uint256 amount) external onlyProxy {
@@ -104,7 +106,7 @@ contract OrderManagerV2 is VaultStorageV2, OnlyProxyCall, IOrderManagerV2 {
         emit VaultEventsV2.RedeemOrder(msg.sender, order, badDebt, deliveryCollateral);
     }
 
-    function createOrder(ITermMaxMarketV2 market, OrderV2ConfigurationParams memory params, CurveCuts memory curveCuts)
+    function createOrder(ITermMaxMarketV2 market, OrderV2ConfigurationParams memory params)
         external
         onlyProxy
         returns (ITermMaxOrderV2 order)
@@ -118,7 +120,7 @@ contract OrderManagerV2 is VaultStorageV2, OnlyProxyCall, IOrderManagerV2 {
         initialParams.maker = address(this);
         initialParams.orderConfig.maxXtReserve = params.maxXtReserve;
         initialParams.orderConfig.swapTrigger = ISwapCallback(address(this));
-        initialParams.orderConfig.curveCuts = curveCuts;
+        initialParams.orderConfig.curveCuts = params.curveCuts;
         order = ITermMaxOrderV2(address(market.createOrder(initialParams)));
         uint64 orderMaturity = ITermMaxMarket(address(market)).config().maturity;
         _orderMaturityMapping[address(order)] = orderMaturity;

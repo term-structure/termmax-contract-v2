@@ -857,25 +857,18 @@ contract OrderTestV2 is Test {
         vm.stopPrank();
     }
 
-    function testSetGeneralConfig(
-        uint256 newGtId,
-        uint256 newMaxXtReserve,
-        ISwapCallback newTrigger,
-        uint256 newVirtualXtReserve
-    ) public {
+    function testSetGeneralConfig(uint256 newGtId, ISwapCallback newTrigger) public {
         vm.startPrank(maker);
 
         // Expect GeneralConfigUpdated event
         vm.expectEmit();
-        emit OrderEventsV2.GeneralConfigUpdated(newGtId, newMaxXtReserve, newTrigger, newVirtualXtReserve);
-        res.order.setGeneralConfig(newGtId, newMaxXtReserve, newTrigger, newVirtualXtReserve);
+        emit OrderEventsV2.GeneralConfigUpdated(newGtId, newTrigger);
+        res.order.setGeneralConfig(newGtId, newTrigger);
 
         // Verify the configuration was updated
         OrderConfig memory updatedConfig = res.order.orderConfig();
         assertEq(updatedConfig.gtId, newGtId, "GT ID should match");
-        assertEq(updatedConfig.maxXtReserve, newMaxXtReserve, "Max XT reserve should match");
         assertEq(address(updatedConfig.swapTrigger), address(newTrigger), "Swap trigger should match");
-        assertEq(res.order.virtualXtReserve(), newVirtualXtReserve, "Virtual XT reserve should match");
 
         vm.stopPrank();
     }
@@ -884,13 +877,11 @@ contract OrderTestV2 is Test {
         vm.startPrank(sender);
 
         uint256 newGtId = 12345;
-        uint256 newMaxXtReserve = 200e8;
         ISwapCallback newTrigger = ISwapCallback(address(0));
-        uint256 newVirtualXtReserve = 180e8;
 
         // Test that non-maker cannot update
         vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", sender));
-        res.order.setGeneralConfig(newGtId, newMaxXtReserve, newTrigger, newVirtualXtReserve);
+        res.order.setGeneralConfig(newGtId, newTrigger);
 
         vm.stopPrank();
     }
@@ -934,72 +925,85 @@ contract OrderTestV2 is Test {
         vm.stopPrank();
     }
 
-    function testSetCurve() public {
+    function testSetCurveAndPrice(uint256 virtualXtReserve, uint256 maxXtReserve) public {
         vm.startPrank(maker);
 
         OrderConfig memory newOrderConfig = JSONLoader.getOrderConfigFromJson(testdata, ".newOrderConfig");
 
         // Create new curve cuts
         CurveCuts memory newCurveCuts = newOrderConfig.curveCuts;
-
-        res.order.setCurve(newCurveCuts);
-
-        // Verify the curve was updated
-        OrderConfig memory updatedConfig = res.order.orderConfig();
-
-        // Check lend curve cuts
-        for (uint256 i = 0; i < updatedConfig.curveCuts.lendCurveCuts.length; i++) {
-            assertEq(
-                updatedConfig.curveCuts.lendCurveCuts[i].xtReserve,
-                newCurveCuts.lendCurveCuts[i].xtReserve,
-                "Lend curve XT reserve should match"
-            );
-            assertEq(
-                updatedConfig.curveCuts.lendCurveCuts[i].liqSquare,
-                newCurveCuts.lendCurveCuts[i].liqSquare,
-                "Lend curve liq square should match"
-            );
-            assertEq(
-                updatedConfig.curveCuts.lendCurveCuts[i].offset,
-                newCurveCuts.lendCurveCuts[i].offset,
-                "Lend curve offset should match"
-            );
+        uint256 originalVirtualXtReserve = res.order.virtualXtReserve();
+        if (virtualXtReserve % 2 == 0) {
+            originalVirtualXtReserve += 1; // make it odd to avoid price change error
+            vm.expectRevert(abi.encodeWithSelector(OrderErrorsV2.PriceChangedBeforeSet.selector));
+        } else {
+            vm.expectEmit();
+            emit OrderEventsV2.CurveAndPriceUpdated(virtualXtReserve, maxXtReserve, newCurveCuts);
         }
+        // Set new curve cuts
+        res.order.setCurveAndPrice(originalVirtualXtReserve, virtualXtReserve, maxXtReserve, newCurveCuts);
+        if (virtualXtReserve % 2 != 0) {
+            // Verify the curve was updated
+            OrderConfig memory updatedConfig = res.order.orderConfig();
 
-        // Check borrow curve cuts
-        for (uint256 i = 0; i < updatedConfig.curveCuts.borrowCurveCuts.length; i++) {
-            assertEq(
-                updatedConfig.curveCuts.borrowCurveCuts[i].xtReserve,
-                newCurveCuts.borrowCurveCuts[i].xtReserve,
-                "Borrow curve XT reserve should match"
-            );
-            assertEq(
-                updatedConfig.curveCuts.borrowCurveCuts[i].liqSquare,
-                newCurveCuts.borrowCurveCuts[i].liqSquare,
-                "Borrow curve liq square should match"
-            );
-            assertEq(
-                updatedConfig.curveCuts.borrowCurveCuts[i].offset,
-                newCurveCuts.borrowCurveCuts[i].offset,
-                "Borrow curve offset should match"
-            );
+            // Check lend curve cuts
+            for (uint256 i = 0; i < updatedConfig.curveCuts.lendCurveCuts.length; i++) {
+                assertEq(
+                    updatedConfig.curveCuts.lendCurveCuts[i].xtReserve,
+                    newCurveCuts.lendCurveCuts[i].xtReserve,
+                    "Lend curve XT reserve should match"
+                );
+                assertEq(
+                    updatedConfig.curveCuts.lendCurveCuts[i].liqSquare,
+                    newCurveCuts.lendCurveCuts[i].liqSquare,
+                    "Lend curve liq square should match"
+                );
+                assertEq(
+                    updatedConfig.curveCuts.lendCurveCuts[i].offset,
+                    newCurveCuts.lendCurveCuts[i].offset,
+                    "Lend curve offset should match"
+                );
+            }
+
+            // Check borrow curve cuts
+            for (uint256 i = 0; i < updatedConfig.curveCuts.borrowCurveCuts.length; i++) {
+                assertEq(
+                    updatedConfig.curveCuts.borrowCurveCuts[i].xtReserve,
+                    newCurveCuts.borrowCurveCuts[i].xtReserve,
+                    "Borrow curve XT reserve should match"
+                );
+                assertEq(
+                    updatedConfig.curveCuts.borrowCurveCuts[i].liqSquare,
+                    newCurveCuts.borrowCurveCuts[i].liqSquare,
+                    "Borrow curve liq square should match"
+                );
+                assertEq(
+                    updatedConfig.curveCuts.borrowCurveCuts[i].offset,
+                    newCurveCuts.borrowCurveCuts[i].offset,
+                    "Borrow curve offset should match"
+                );
+            }
+
+            // Cehck virtual XT reserve and max XT reserve
+            assertEq(res.order.virtualXtReserve(), virtualXtReserve, "Virtual XT reserve should match");
+            // Verify the configuration was updated
+            assertEq(updatedConfig.maxXtReserve, maxXtReserve, "Max XT reserve should match");
+            vm.stopPrank();
+
+            // Test that non-maker cannot set curve
+            vm.startPrank(sender);
+            vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", sender));
+            res.order.setCurveAndPrice(virtualXtReserve, virtualXtReserve, maxXtReserve, newCurveCuts);
+            vm.stopPrank();
+
+            // Test invalid curve cuts
+            vm.startPrank(maker);
+            CurveCuts memory invalidCurveCuts = newCurveCuts;
+            invalidCurveCuts.lendCurveCuts[0].offset = 0;
+            vm.expectRevert(abi.encodeWithSelector(OrderErrors.InvalidCurveCuts.selector));
+            res.order.setCurveAndPrice(virtualXtReserve, virtualXtReserve, maxXtReserve, invalidCurveCuts);
+            vm.stopPrank();
         }
-
-        vm.stopPrank();
-
-        // Test that non-maker cannot set curve
-        vm.startPrank(sender);
-        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", sender));
-        res.order.setCurve(newCurveCuts);
-        vm.stopPrank();
-
-        // Test invalid curve cuts
-        vm.startPrank(maker);
-        CurveCuts memory invalidCurveCuts = newCurveCuts;
-        invalidCurveCuts.lendCurveCuts[0].offset = 0;
-        vm.expectRevert(abi.encodeWithSelector(OrderErrors.InvalidCurveCuts.selector));
-        res.order.setCurve(invalidCurveCuts);
-        vm.stopPrank();
     }
 
     function testAddLiquidity() public {
@@ -1227,8 +1231,11 @@ contract OrderTestV2 is Test {
         vm.startPrank(maker);
         (uint256 gtId,) = LoanUtils.fastMintGt(res, maker, 100e8, 1e18);
         DelegateAble(address(res.gt)).setDelegate(address(res.order), true);
-        OrderConfig memory cfg = orderConfig;
-        res.order.setGeneralConfig(gtId, orderConfig.maxXtReserve, ISwapCallback(address(0)), 60e8);
+        OrderConfig memory cfg = res.order.orderConfig();
+        uint256 originalVirtualXtReserve = res.order.virtualXtReserve();
+        uint256 vitualXtReserve = 60e8;
+        res.order.setCurveAndPrice(originalVirtualXtReserve, vitualXtReserve, cfg.maxXtReserve, cfg.curveCuts);
+        res.order.setGeneralConfig(gtId, ISwapCallback(address(0)));
 
         uint256 maxBurn = res.xt.balanceOf(address(res.order));
 

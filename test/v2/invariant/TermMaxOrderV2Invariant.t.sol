@@ -317,18 +317,19 @@ contract TermMaxOrderV2Handler is Test {
 
     // ========== CONFIGURATION UPDATES ==========
 
-    function updateGeneralConfig(uint256 newMaxXtReserve, uint256 newVirtualXtReserve)
+    function updatePriceAndCapacity(uint256 newMaxXtReserve, uint256 newVirtualXtReserve)
         external
         countCall("updateGeneralConfig")
         onlyOrderMaker
     {
         OrderConfig memory currentConfig = order.orderConfig();
-
+        uint256 originalVirtualXtReserve = order.virtualXtReserve();
         newMaxXtReserve = bound(newMaxXtReserve, 1e18, type(uint128).max);
         newVirtualXtReserve = bound(newVirtualXtReserve, 1e6, newMaxXtReserve);
 
-        try order.setGeneralConfig(currentConfig.gtId, newMaxXtReserve, currentConfig.swapTrigger, newVirtualXtReserve)
-        {
+        try order.setCurveAndPrice(
+            originalVirtualXtReserve, newVirtualXtReserve, newMaxXtReserve, currentConfig.curveCuts
+        ) {
             ghost_virtualXtReserveChanges++;
             _updateVirtualXtReserveTracking();
         } catch {
@@ -436,7 +437,7 @@ contract TermMaxOrderV2InvariantTest is StdInvariant, Test {
         selectors[5] = handler.removeLiquidityDebtToken.selector;
         selectors[6] = handler.setPool.selector;
         selectors[7] = handler.removePool.selector;
-        selectors[8] = handler.updateGeneralConfig.selector;
+        selectors[8] = handler.updatePriceAndCapacity.selector;
         selectors[9] = handler.advanceTime.selector;
 
         targetSelector(FuzzSelector({addr: address(handler), selectors: selectors}));
