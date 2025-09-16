@@ -295,6 +295,7 @@ contract TermMaxVaultV2 is
         external
         virtual
         nonReentrant
+        onlyCuratorRole
         whenNotPaused
         returns (uint256 badDebt, uint256 deliveryCollateral)
     {
