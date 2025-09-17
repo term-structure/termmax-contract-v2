@@ -7,13 +7,14 @@ if [ "$#" -lt 2 ]; then
     echo ""
     echo "Commands:"
     echo "  1. Deployment Commands:"
-    echo "     - deploy:access-manager  - Deploy Access Manager contract"
-    echo "     - deploy:core            - Deploy Core contracts"
-    echo "     - deploy:market          - Deploy Market contracts"
-    echo "     - deploy:order           - Deploy Order contracts"
-    echo "     - deploy:vault           - Deploy Vault contracts"
-    echo "     - deploy:pretmx          - Deploy PreTMX token contract"
-    echo "     - deploy:adapters        - Deploy Adapters contracts"
+    echo "     - deploy:access-manager     - Deploy Access Manager contract"
+    echo "     - deploy:access-manager-v2  - Deploy Access Manager V2 contract"
+    echo "     - deploy:core               - Deploy Core contracts"
+    echo "     - deploy:market             - Deploy Market contracts"
+    echo "     - deploy:order              - Deploy Order contracts"
+    echo "     - deploy:vault              - Deploy Vault contracts"
+    echo "     - deploy:pretmx             - Deploy PreTMX token contract"
+    echo "     - deploy:adapters           - Deploy Adapters contracts"
     echo ""
     echo "  2. Script Commands:"
     echo "     - script:<script-name>   - Run a custom script (e.g., script:GrantRoles, script:SubmitOracles)"
@@ -89,12 +90,12 @@ esac
 # If deploying, validate deployment type
 if [ "$OPERATION" = "deploy" ]; then
     case $TYPE in
-        "access-manager"|"core"|"market"|"order"|"vault"|"pretmx"|"adapters")
+        "access-manager"|"access-manager-v2"|"core"|"market"|"order"|"vault"|"pretmx"|"adapters")
             echo "Deployment type: $TYPE"
             ;;
         *)
             echo "Unsupported deployment type: $TYPE"
-            echo "Supported deployment types: access-manager, core, market, order, vault, pretmx, adapters"
+            echo "Supported deployment types: access-manager, access-manager-v2, core, market, order, vault, pretmx, adapters"
             exit 1
             ;;
     esac
@@ -181,6 +182,8 @@ if [ "$OPERATION" = "deploy" ]; then
     # Capitalize first letter of type for script name
     if [ "$TYPE" = "access-manager" ]; then
         SCRIPT_NAME="DeployAccessManager"
+    elif [ "$TYPE" = "access-manager-v2" ]; then
+        SCRIPT_NAME="DeployAccessManagerV2"
     else
         TYPE_CAPITALIZED="$(tr '[:lower:]' '[:upper:]' <<< ${TYPE:0:1})${TYPE:1}"
         SCRIPT_NAME="Deploy${TYPE_CAPITALIZED}"
