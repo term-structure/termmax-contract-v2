@@ -4,6 +4,7 @@ pragma solidity ^0.8.27;
 import "../../v1/access/AccessManager.sol";
 import {IOracleV2} from "../oracle/IOracleV2.sol";
 import {ITermMaxVaultV2, OrderV2ConfigurationParams, CurveCuts} from "../vault/ITermMaxVaultV2.sol";
+import {VersionV2} from "../VersionV2.sol";
 
 /**
  * @title TermMax Access Manager V2
@@ -11,7 +12,7 @@ import {ITermMaxVaultV2, OrderV2ConfigurationParams, CurveCuts} from "../vault/I
  * @notice Extended access manager for TermMax V2 protocol with additional oracle and batch operations
  * @dev Inherits from AccessManager V1 and adds V2-specific functionality for managing oracles and batch operations
  */
-contract AccessManagerV2 is AccessManager {
+contract AccessManagerV2 is AccessManager, VersionV2 {
     error CannotRenounceRole();
     /**
      * @notice Batch pause/unpause multiple entities in a single transaction
