@@ -431,11 +431,12 @@ abstract contract AbstractGearingTokenV2 is
 
         LoanInfo memory loan = loanMapping[id];
         loan.collateralData = _removeCollateral(loan, collateralData);
-
-        ValueAndPrice memory valueAndPrice = _getValueAndPrice(config, loan);
-        uint128 ltv = _calculateLtv(valueAndPrice);
-        if (ltv > config.loanConfig.maxLtv) {
-            revert GtIsNotHealthy(id, msg.sender, ltv);
+        if (loan.debtAmt != 0) {
+            ValueAndPrice memory valueAndPrice = _getValueAndPrice(config, loan);
+            uint128 ltv = _calculateLtv(valueAndPrice);
+            if (ltv > config.loanConfig.maxLtv) {
+                revert GtIsNotHealthy(id, msg.sender, ltv);
+            }
         }
         loanMapping[id] = loan;
 
