@@ -5,6 +5,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC721Enumerable} from "@openzeppelin/contracts/interfaces/IERC721Enumerable.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts/interfaces/IERC721Receiver.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {
     Ownable2StepUpgradeable,
@@ -43,7 +44,8 @@ contract TermMaxRouter_Repay_Gt is
     ITermMaxRouter,
     RouterErrors,
     RouterEvents,
-    IGtRepayer
+    IGtRepayer,
+    ReentrancyGuardUpgradeable
 {
     using SafeCast for *;
     using TransferUtils for IERC20;
@@ -60,6 +62,7 @@ contract TermMaxRouter_Repay_Gt is
     function _authorizeUpgrade(address newImplementation) internal virtual override onlyOwner {}
 
     function initialize(address admin) public initializer {
+        __ReentrancyGuard_init_unchained();
         __UUPSUpgradeable_init();
         __Pausable_init();
         __Ownable_init(admin);
@@ -106,7 +109,7 @@ contract TermMaxRouter_Repay_Gt is
         uint128[] memory tradingAmts,
         uint128 minTokenOut,
         uint256 deadline
-    ) external whenNotPaused returns (uint256 netTokenOut) {
+    ) external nonReentrant whenNotPaused returns (uint256 netTokenOut) {
         uint256 totalAmtIn = sum(tradingAmts);
         tokenIn.safeTransferFrom(msg.sender, address(this), totalAmtIn);
         netTokenOut = _swapExactTokenToToken(tokenIn, tokenOut, recipient, orders, tradingAmts, minTokenOut, deadline);
@@ -139,7 +142,7 @@ contract TermMaxRouter_Repay_Gt is
         uint128[] memory tradingAmts,
         uint128 maxTokenIn,
         uint256 deadline
-    ) external whenNotPaused returns (uint256 netTokenIn) {
+    ) external nonReentrant whenNotPaused returns (uint256 netTokenIn) {
         tokenIn.safeTransferFrom(msg.sender, address(this), maxTokenIn);
         netTokenIn = _swapTokenToExactToken(tokenIn, tokenOut, recipient, orders, tradingAmts, maxTokenIn, deadline);
         tokenIn.safeTransfer(msg.sender, maxTokenIn - netTokenIn);
@@ -180,7 +183,7 @@ contract TermMaxRouter_Repay_Gt is
         uint128[] memory amtsToSellTokens,
         uint128 minTokenOut,
         uint256 deadline
-    ) external whenNotPaused returns (uint256 netTokenOut) {
+    ) external nonReentrant whenNotPaused returns (uint256 netTokenOut) {
         (IERC20 ft, IERC20 xt,,, IERC20 debtToken) = market.tokens();
         (uint256 maxBurn, IERC20 toenToSell) = ftInAmt > xtInAmt ? (xtInAmt, ft) : (ftInAmt, xt);
 
@@ -205,7 +208,7 @@ contract TermMaxRouter_Repay_Gt is
         uint128 maxLtv,
         SwapUnit[] memory units,
         uint256 deadline
-    ) external whenNotPaused returns (uint256 gtId, uint256 netXtOut) {
+    ) external nonReentrant whenNotPaused returns (uint256 gtId, uint256 netXtOut) {
         (, IERC20 xt, IGearingToken gt,, IERC20 debtToken) = market.tokens();
         uint256 totalAmtToBuyXt = sum(amtsToBuyXt);
         debtToken.safeTransferFrom(msg.sender, address(this), tokenToSwap + totalAmtToBuyXt);
@@ -233,7 +236,7 @@ contract TermMaxRouter_Repay_Gt is
         uint128 tokenInAmt,
         uint128 maxLtv,
         SwapUnit[] memory units
-    ) external whenNotPaused returns (uint256 gtId) {
+    ) external nonReentrant whenNotPaused returns (uint256 gtId) {
         (, IERC20 xt, IGearingToken gt,, IERC20 debtToken) = market.tokens();
         xt.safeTransferFrom(msg.sender, address(this), xtInAmt);
         xt.safeIncreaseAllowance(address(market), xtInAmt);
@@ -261,7 +264,7 @@ contract TermMaxRouter_Repay_Gt is
         uint128 collateralInAmt,
         uint128 maxLtv,
         SwapUnit[] memory units
-    ) external whenNotPaused returns (uint256 gtId) {
+    ) external nonReentrant whenNotPaused returns (uint256 gtId) {
         (, IERC20 xt, IGearingToken gt, address collAddr,) = market.tokens();
         IERC20 collateral = IERC20(collAddr);
         xt.safeTransferFrom(msg.sender, address(this), xtInAmt);
@@ -291,7 +294,7 @@ contract TermMaxRouter_Repay_Gt is
         uint128[] memory tokenAmtsWantBuy,
         uint128 maxDebtAmt,
         uint256 deadline
-    ) external whenNotPaused returns (uint256) {
+    ) external nonReentrant whenNotPaused returns (uint256) {
         (IERC20 ft,, IGearingToken gt, address collateralAddr, IERC20 debtToken) = market.tokens();
         IERC20(collateralAddr).safeTransferFrom(msg.sender, address(this), collInAmt);
         IERC20(collateralAddr).safeIncreaseAllowance(address(gt), collInAmt);
@@ -312,6 +315,7 @@ contract TermMaxRouter_Repay_Gt is
 
     function borrowTokenFromCollateral(address recipient, ITermMaxMarket market, uint256 collInAmt, uint256 borrowAmt)
         external
+        nonReentrant
         whenNotPaused
         returns (uint256)
     {
@@ -339,6 +343,7 @@ contract TermMaxRouter_Repay_Gt is
 
     function borrowTokenFromGt(address recipient, ITermMaxMarket market, uint256 gtId, uint256 borrowAmt)
         external
+        nonReentrant
         whenNotPaused
     {
         (IERC20 ft, IERC20 xt, IGearingToken gt,,) = market.tokens();
@@ -373,7 +378,7 @@ contract TermMaxRouter_Repay_Gt is
         bool byDebtToken,
         SwapUnit[] memory units,
         uint256 deadline
-    ) external whenNotPaused returns (uint256 netTokenOut) {
+    ) external nonReentrant whenNotPaused returns (uint256 netTokenOut) {
         (IERC20 ft,, IGearingToken gt,, IERC20 debtToken) = market.tokens();
         gt.safeTransferFrom(msg.sender, address(this), gtId, "");
         gt.flashRepay(gtId, byDebtToken, abi.encode(orders, amtsToBuyFt, ft, units, deadline));
@@ -392,7 +397,7 @@ contract TermMaxRouter_Repay_Gt is
         uint128[] memory ftAmtsWantBuy,
         uint128 maxTokenIn,
         uint256 deadline
-    ) external whenNotPaused returns (uint256 returnAmt) {
+    ) external nonReentrant whenNotPaused returns (uint256 returnAmt) {
         (IERC20 ft,, IGearingToken gt,, IERC20 debtToken) = market.tokens();
 
         debtToken.safeTransferFrom(msg.sender, address(this), maxTokenIn);
@@ -422,7 +427,7 @@ contract TermMaxRouter_Repay_Gt is
         uint256 ftAmount,
         SwapUnit[] memory units,
         uint256 minTokenOut
-    ) external whenNotPaused returns (uint256) {
+    ) external nonReentrant whenNotPaused returns (uint256) {
         (IERC20 ft,,, address collateralAddr, IERC20 debtToken) = market.tokens();
         ft.safeTransferFrom(msg.sender, address(this), ftAmount);
         ft.safeIncreaseAllowance(address(market), ftAmount);
@@ -445,7 +450,7 @@ contract TermMaxRouter_Repay_Gt is
         uint128 ftToDeposit,
         uint128 xtToDeposit,
         CurveCuts memory curveCuts
-    ) external whenNotPaused returns (ITermMaxOrder order) {
+    ) external nonReentrant whenNotPaused returns (ITermMaxOrder order) {
         (IERC20 ft, IERC20 xt,,, IERC20 debtToken) = market.tokens();
         order = market.createOrder(maker, maxXtReserve, swapTrigger, curveCuts);
         if (debtTokenToDeposit > 0) {
@@ -565,6 +570,7 @@ contract TermMaxRouter_Repay_Gt is
     function repayGt(ITermMaxMarket market, uint256 gtId, uint128 maxRepayAmt, bool byDebtToken)
         external
         override
+        nonReentrant
         whenNotPaused
         returns (uint128 repayAmt)
     {
