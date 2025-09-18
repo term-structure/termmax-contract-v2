@@ -4,7 +4,6 @@ pragma solidity ^0.8.27;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC721Enumerable} from "@openzeppelin/contracts/interfaces/IERC721Enumerable.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts/interfaces/IERC721Receiver.sol";
-import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {
@@ -298,6 +297,7 @@ contract TermMaxRouter_Repay_Gt is
         IERC20(collateralAddr).safeIncreaseAllowance(address(gt), collInAmt);
 
         (uint256 gtId, uint128 ftOutAmt) = market.issueFt(address(this), maxDebtAmt, _encodeAmount(collInAmt));
+        gt.safeTransferFrom(address(this), recipient, gtId);
         uint256 netTokenIn =
             _swapTokenToExactToken(ft, debtToken, recipient, orders, tokenAmtsWantBuy, ftOutAmt, deadline);
         uint256 repayAmt = ftOutAmt - netTokenIn;
@@ -306,7 +306,6 @@ contract TermMaxRouter_Repay_Gt is
             gt.repay(gtId, repayAmt.toUint128(), false);
         }
 
-        gt.safeTransferFrom(address(this), recipient, gtId);
         emit Borrow(market, gtId, msg.sender, recipient, collInAmt, ftOutAmt, netTokenIn.toUint128());
         return gtId;
     }
@@ -325,6 +324,7 @@ contract TermMaxRouter_Repay_Gt is
         uint128 debtAmt = ((borrowAmt * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - mintGtFeeRatio)).toUint128();
 
         (uint256 gtId, uint128 ftOutAmt) = market.issueFt(address(this), debtAmt, _encodeAmount(collInAmt));
+        gt.safeTransferFrom(address(this), recipient, gtId);
         borrowAmt = borrowAmt.min(ftOutAmt);
         xt.safeTransferFrom(msg.sender, address(this), borrowAmt);
 
@@ -333,7 +333,6 @@ contract TermMaxRouter_Repay_Gt is
 
         market.burn(recipient, borrowAmt);
 
-        gt.safeTransferFrom(address(this), recipient, gtId);
         emit Borrow(market, gtId, msg.sender, recipient, collInAmt, debtAmt, borrowAmt.toUint128());
         return gtId;
     }

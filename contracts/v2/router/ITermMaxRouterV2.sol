@@ -111,23 +111,6 @@ interface ITermMaxRouterV2 {
     ) external returns (uint256 gtId);
 
     /**
-     * @notice Borrows tokens from an existing GT position and XT
-     * @dev Increases the debt of an existing position
-     * @param recipient Address to receive the borrowed tokens
-     * @param market The market to borrow from
-     * @param gtId ID of the GT token to borrow from
-     * @param borrowAmt Amount of tokens to borrow
-     * @param isV1 Indicates if the borrow is for market V1 or V2
-     */
-    function borrowTokenFromGtAndXt(
-        address recipient,
-        ITermMaxMarket market,
-        uint256 gtId,
-        uint256 borrowAmt,
-        bool isV1
-    ) external;
-
-    /**
      * @notice Repays debt from collateral
      * @dev Repays debt and closes a position
      *      input/output: =>, swap: ->

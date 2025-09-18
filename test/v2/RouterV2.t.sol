@@ -8,6 +8,7 @@ import {JSONLoader} from "./utils/JSONLoader.sol";
 import {StateChecker} from "./utils/StateChecker.sol";
 import {SwapUtils} from "./utils/SwapUtils.sol";
 import {LoanUtils} from "./utils/LoanUtils.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
@@ -54,7 +55,8 @@ import {
     SwapUnit,
     RouterErrors,
     RouterEvents,
-    SwapPath
+    SwapPath,
+    UUPSUpgradeable
 } from "contracts/v2/router/TermMaxRouterV2.sol";
 import {RouterEventsV2} from "contracts/v2/events/RouterEventsV2.sol";
 import {ITermMaxRouter} from "contracts/v1/router/ITermMaxRouter.sol";
@@ -136,6 +138,19 @@ contract RouterTestV2 is Test {
 
         vm.prank(maker);
         res.order.updateOrder(orderConfig, 0, 0);
+    }
+
+    function testUpgradeRouterToV2() public {
+        TermMaxRouterV2 impl = new TermMaxRouterV2();
+        address admin = vm.randomAddress();
+        bytes memory data = abi.encodeCall(TermMaxRouterV2.initialize, admin);
+        ERC1967Proxy proxy = new ERC1967Proxy(address(impl), data);
+        TermMaxRouterV2 router_tmp = TermMaxRouterV2(address(proxy));
+        TermMaxRouterV2 impl2 = new TermMaxRouterV2();
+        data = abi.encodeCall(TermMaxRouterV2.initializeV2, ());
+
+        vm.prank(admin);
+        router_tmp.upgradeToAndCall(address(impl2), data);
     }
 
     function testSwapExactTokenToToken() public {
@@ -599,62 +614,6 @@ contract RouterTestV2 is Test {
         assertEq(collInAmt, abi.decode(collateralData, (uint256)));
         assert(previewDebtAmt == debtAmt);
         assertEq(res.debt.balanceOf(sender), borrowAmt);
-
-        vm.stopPrank();
-    }
-
-    function testBorrowTokenFromGtAndXt(bool isV1) public {
-        vm.startPrank(sender);
-        uint256 collInAmt = 1e18;
-
-        (uint256 gtId,) = LoanUtils.fastMintGt(res, sender, 100e8, collInAmt);
-
-        uint128 borrowAmt = 80e8;
-
-        res.debt.mint(sender, borrowAmt);
-        res.debt.approve(address(res.market), borrowAmt);
-        res.market.mint(sender, borrowAmt);
-
-        res.xt.approve(address(res.router), borrowAmt);
-        res.gt.approve(address(res.router), gtId);
-        DelegateAble(address(res.gt)).setDelegate(address(res.router), true);
-
-        uint256 mintGtFeeRatio = res.market.mintGtFeeRatio();
-        uint128 previewDebtAmt =
-            ((borrowAmt * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - mintGtFeeRatio)).toUint128();
-
-        vm.expectEmit();
-        emit RouterEvents.Borrow(res.market, 1, sender, sender, 0, previewDebtAmt, borrowAmt);
-        res.router.borrowTokenFromGtAndXt(sender, res.market, gtId, borrowAmt, isV1);
-        (, uint128 dAmt,) = res.gt.loanInfo(gtId);
-        assert(dAmt == 100e8 + previewDebtAmt);
-        assertEq(res.debt.balanceOf(sender), borrowAmt);
-
-        vm.stopPrank();
-    }
-
-    function testBorrowTokenFromGtInvalidSender(bool isV1) public {
-        vm.startPrank(sender);
-        uint256 collInAmt = 1e18;
-
-        (uint256 gtId,) = LoanUtils.fastMintGt(res, sender, 100e8, collInAmt);
-
-        uint128 borrowAmt = 80e8;
-
-        res.debt.mint(sender, borrowAmt);
-        res.debt.approve(address(res.market), borrowAmt);
-        res.market.mint(sender, borrowAmt);
-
-        res.xt.approve(address(res.router), borrowAmt);
-        res.gt.approve(address(res.router), gtId);
-
-        uint256 mintGtFeeRatio = res.market.mintGtFeeRatio();
-        ((borrowAmt * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - mintGtFeeRatio)).toUint128();
-        vm.stopPrank();
-
-        vm.expectRevert(abi.encodeWithSelector(RouterErrors.GtNotOwnedBySender.selector));
-        vm.prank(deployer);
-        res.router.borrowTokenFromGtAndXt(sender, res.market, gtId, borrowAmt, isV1);
 
         vm.stopPrank();
     }
