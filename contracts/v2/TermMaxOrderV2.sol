@@ -283,12 +283,7 @@ contract TermMaxOrderV2 is
         );
     }
 
-    function setCurveAndPrice(
-        uint256 originalVirtualXtReserve,
-        uint256 virtualXtReserve_,
-        uint256 maxXtReserve_,
-        CurveCuts memory newCurveCuts
-    ) external virtual onlyOwner {
+    function setCurveAndPrice(uint256 originalVirtualXtReserve, uint256 virtualXtReserve_, uint256 maxXtReserve_, CurveCuts memory newCurveCuts) external virtual onlyOwner {
         require(originalVirtualXtReserve == virtualXtReserve, OrderErrorsV2.PriceChangedBeforeSet());
         _setCurveAndPrice(virtualXtReserve_, maxXtReserve_, newCurveCuts);
     }
@@ -541,20 +536,12 @@ contract TermMaxOrderV2 is
         if (address(_pool) != address(0)) {
             receivedFromPool = _pool.redeem(_pool.balanceOf(address(this)), recipient, address(this));
         }
-        // Calculate bad debt
         badDebt = ftBalance - received;
-        // Clear order configuration
         delete _orderConfig;
         emit OrderEventsV2.Redeemed(recipient, received + receivedFromPool, badDebt, deliveryData);
     }
 
-    function withdrawAllAssetsBeforeMaturity(address recipient)
-        external
-        virtual
-        nonReentrant
-        onlyOwner
-        returns (uint256 debtTokenAmount, uint256 ftAmount, uint256 xtAmount)
-    {
+    function withdrawAllAssetsBeforeMaturity(address recipient) external virtual nonReentrant onlyOwner returns (uint256 debtTokenAmount, uint256 ftAmount, uint256 xtAmount) {
         IERC4626 _pool = pool;
         IERC20 _ft = ft;
         IERC20 _xt = xt;

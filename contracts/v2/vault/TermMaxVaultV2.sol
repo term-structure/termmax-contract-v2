@@ -377,12 +377,7 @@ contract TermMaxVaultV2 is
         emit Withdraw(caller, receiver, owner, assets, shares);
     }
 
-    function withdrawFts(address order, uint256 amount, address recipient, address owner)
-        external
-        virtual
-        nonReentrant
-        returns (uint256 shares)
-    {
+    function withdrawFts(address order, uint256 amount, address recipient, address owner) external virtual nonReentrant returns (uint256 shares) {
         address caller = msg.sender;
         shares = previewWithdraw(amount);
         uint256 maxShares = maxRedeem(owner);

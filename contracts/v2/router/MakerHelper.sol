@@ -71,9 +71,7 @@ contract MakerHelper is UUPSUpgradeable, Ownable2StepUpgradeable, IERC721Receive
         }
         ft.safeTransferFrom(msg.sender, address(order), ftToDeposit);
         xt.safeTransferFrom(msg.sender, address(order), xtToDeposit);
-        emit MakerHelperEvents.OrderPlaced(
-            maker, address(market), address(order), gtId, debtTokenToDeposit, ftToDeposit, xtToDeposit
-        );
+        emit MakerHelperEvents.OrderPlaced(maker, address(market), address(order), gtId, debtTokenToDeposit, ftToDeposit, xtToDeposit);
     }
 
     /**
@@ -125,15 +123,7 @@ contract MakerHelper is UUPSUpgradeable, Ownable2StepUpgradeable, IERC721Receive
         }
         ft.safeTransferFrom(msg.sender, address(order), ftToDeposit);
         xt.safeTransferFrom(msg.sender, address(order), xtToDeposit);
-        emit MakerHelperEvents.OrderPlaced(
-            initialParams.maker,
-            address(market),
-            address(order),
-            initialParams.orderConfig.gtId,
-            debtTokenToDeposit,
-            ftToDeposit,
-            xtToDeposit
-        );
+        emit MakerHelperEvents.OrderPlaced(initialParams.maker, address(market), address(order), initialParams.orderConfig.gtId, debtTokenToDeposit, ftToDeposit, xtToDeposit);
         return (order, initialParams.orderConfig.gtId);
     }
 

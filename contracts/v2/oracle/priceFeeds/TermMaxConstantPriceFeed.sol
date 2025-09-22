@@ -24,11 +24,7 @@ contract TermMaxConstantPriceFeed is ITermMaxPriceFeed, VersionV2 {
         return 1;
     }
 
-    function getRoundData(uint80 _roundId)
-        external
-        view
-        override
-        returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)
+    function getRoundData(uint80 _roundId) external view override returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)
     {
         answer = int256(result);
         startedAt = block.timestamp;
@@ -36,11 +32,7 @@ contract TermMaxConstantPriceFeed is ITermMaxPriceFeed, VersionV2 {
         answeredInRound = 1;
     }
 
-    function latestRoundData()
-        external
-        view
-        override
-        returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)
+    function latestRoundData() external view override returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)
     {
         answer = int256(result);
         startedAt = block.timestamp;

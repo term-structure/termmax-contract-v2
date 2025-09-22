@@ -14,16 +14,12 @@ contract OracleAggregatorWithSequencerV2 is OracleAggregatorV2 {
     /// @notice The grace period time in seconds for the sequencer uptime feed
     uint256 private gracePeriodTime;
 
-    constructor(address owner, uint256 timeLock, address _sequencerUptimeFeed, uint256 _gracePeriodTime)
-        OracleAggregatorV2(owner, timeLock)
+    constructor(address owner, uint256 timeLock, address _sequencerUptimeFeed, uint256 _gracePeriodTime) OracleAggregatorV2(owner, timeLock)
     {
         setSequencerUptimeFeedAndGracePeriod(_sequencerUptimeFeed, _gracePeriodTime);
     }
 
-    function setSequencerUptimeFeedAndGracePeriod(address _sequencerUptimeFeed, uint256 _gracePeriodTime)
-        public
-        onlyOwner
-    {
+    function setSequencerUptimeFeedAndGracePeriod(address _sequencerUptimeFeed, uint256 _gracePeriodTime) public onlyOwner {
         sequencerUptimeFeed = AggregatorV3Interface(_sequencerUptimeFeed);
         gracePeriodTime = _gracePeriodTime;
 
