@@ -12,7 +12,6 @@ import {
     OwnableUpgradeable
 } from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-
 import {ITermMaxMarket} from "../ITermMaxMarket.sol";
 import {ITermMaxOrder} from "../ITermMaxOrder.sol";
 import {SwapUnit, ISwapAdapter} from "./ISwapAdapter.sol";
@@ -28,6 +27,7 @@ import {ISwapCallback} from "../ISwapCallback.sol";
 import {Constants} from "../lib/Constants.sol";
 import {MathLib} from "../lib/MathLib.sol";
 import {IGtRepayer} from "./IGtRepayer.sol";
+import {RouterErrorsV2} from "../../v2/errors/RouterErrorsV2.sol";
 
 /**
  * @title TermMax Router for GT Repayment
@@ -58,6 +58,21 @@ contract TermMaxRouter_Repay_Gt is
 
     /// @notice whitelist mapping of adapter
     mapping(address => bool) public adapterWhitelist;
+
+    uint256 private constant T_CALLBACK_ADDRESS_STORE = 1;
+
+    modifier onlyCallbackAddress() {
+        address callbackAddress;
+        assembly {
+            callbackAddress := tload(T_CALLBACK_ADDRESS_STORE)
+            // clear callback address after use
+            tstore(T_CALLBACK_ADDRESS_STORE, 0)
+        }
+        if (_msgSender() != callbackAddress) {
+            revert RouterErrorsV2.CallbackAddressNotMatch();
+        }
+        _;
+    }
 
     function _authorizeUpgrade(address newImplementation) internal virtual override onlyOwner {}
 
@@ -209,6 +224,9 @@ contract TermMaxRouter_Repay_Gt is
         SwapUnit[] memory units,
         uint256 deadline
     ) external nonReentrant whenNotPaused returns (uint256 gtId, uint256 netXtOut) {
+        assembly {
+            tstore(T_CALLBACK_ADDRESS_STORE, market) // set callback address
+        }
         (, IERC20 xt, IGearingToken gt,, IERC20 debtToken) = market.tokens();
         uint256 totalAmtToBuyXt = sum(amtsToBuyXt);
         debtToken.safeTransferFrom(msg.sender, address(this), tokenToSwap + totalAmtToBuyXt);
@@ -237,6 +255,9 @@ contract TermMaxRouter_Repay_Gt is
         uint128 maxLtv,
         SwapUnit[] memory units
     ) external nonReentrant whenNotPaused returns (uint256 gtId) {
+        assembly {
+            tstore(T_CALLBACK_ADDRESS_STORE, market) // set callback address
+        }
         (, IERC20 xt, IGearingToken gt,, IERC20 debtToken) = market.tokens();
         xt.safeTransferFrom(msg.sender, address(this), xtInAmt);
         xt.safeIncreaseAllowance(address(market), xtInAmt);
@@ -265,6 +286,9 @@ contract TermMaxRouter_Repay_Gt is
         uint128 maxLtv,
         SwapUnit[] memory units
     ) external nonReentrant whenNotPaused returns (uint256 gtId) {
+        assembly {
+            tstore(T_CALLBACK_ADDRESS_STORE, market) // set callback address
+        }
         (, IERC20 xt, IGearingToken gt, address collAddr,) = market.tokens();
         IERC20 collateral = IERC20(collAddr);
         xt.safeTransferFrom(msg.sender, address(this), xtInAmt);
@@ -379,9 +403,13 @@ contract TermMaxRouter_Repay_Gt is
         SwapUnit[] memory units,
         uint256 deadline
     ) external nonReentrant whenNotPaused returns (uint256 netTokenOut) {
-        (IERC20 ft,, IGearingToken gt,, IERC20 debtToken) = market.tokens();
-        gt.safeTransferFrom(msg.sender, address(this), gtId, "");
-        gt.flashRepay(gtId, byDebtToken, abi.encode(orders, amtsToBuyFt, ft, units, deadline));
+        (IERC20 ft,, IGearingToken gtToken,, IERC20 debtToken) = market.tokens();
+        assembly {
+            // set callback address
+            tstore(T_CALLBACK_ADDRESS_STORE, gtToken)
+        }
+        gtToken.safeTransferFrom(msg.sender, address(this), gtId, "");
+        gtToken.flashRepay(gtId, byDebtToken, abi.encode(orders, amtsToBuyFt, ft, units, deadline));
         netTokenOut = debtToken.balanceOf(address(this));
         debtToken.safeTransfer(recipient, netTokenOut);
     }
@@ -471,6 +499,7 @@ contract TermMaxRouter_Repay_Gt is
     /// @dev Market flash leverage flashloan callback
     function executeOperation(address, IERC20, uint256 amount, bytes memory data)
         external
+        onlyCallbackAddress
         returns (bytes memory collateralData)
     {
         (address gt, uint256 tokenInAmt, SwapUnit[] memory units, FlashLoanType flashLoanType) =
@@ -517,7 +546,7 @@ contract TermMaxRouter_Repay_Gt is
         address,
         bytes memory collateralData,
         bytes memory callbackData
-    ) external override {
+    ) external override onlyCallbackAddress {
         (
             ITermMaxOrder[] memory orders,
             uint128[] memory amtsToBuyFt,

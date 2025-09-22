@@ -505,7 +505,7 @@ contract TermMaxOrderV2 is
                     _market.burn(address(this), maxBurned);
                     // approve pool to pull the resulting debt tokens
                     _debtToken.safeIncreaseAllowance(address(_pool), maxBurned);
-                    // deposit directly to recipient so they receive the minted pool shares
+                    // deposit to receive pool shares
                     _pool.deposit(maxBurned, address(this));
                 }
                 _pool.safeTransfer(recipient, amount);
