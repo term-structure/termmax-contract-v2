@@ -31,6 +31,7 @@ import {IMorpho, Id, MarketParams, Authorization, Signature} from "../extensions
 import {RouterErrorsV2} from "../errors/RouterErrorsV2.sol";
 import {RouterEventsV2} from "../events/RouterEventsV2.sol";
 import {ArrayUtilsV2} from "../lib/ArrayUtilsV2.sol";
+import {IWhitelistManager} from "../access/IWhitelistManager.sol";
 import {VersionV2} from "../VersionV2.sol";
 
 /**
@@ -57,6 +58,7 @@ contract TermMaxRouterV2 is
 
     /// @notice whitelist mapping of adapter
     mapping(address => bool) public adapterWhitelist;
+    IWhitelistManager internal whitelistManager;
 
     uint256 private constant T_ROLLOVER_GT_RESERVE_STORE = 0;
     uint256 private constant T_CALLBACK_ADDRESS_STORE = 1;
@@ -82,20 +84,25 @@ contract TermMaxRouterV2 is
 
     function _authorizeUpgrade(address newImplementation) internal virtual override onlyOwner {}
 
-    function initialize(address admin) public initializer {
+    function initialize(address admin) external initializer {
         __ReentrancyGuard_init_unchained();
         __UUPSUpgradeable_init_unchained();
         __Pausable_init_unchained();
         __Ownable_init_unchained(admin);
     }
 
-    function initializeV2() public reinitializer(2) {
+    function initializeV2(address whitelistManager_) external reinitializer(2) {
         __ReentrancyGuard_init_unchained();
+        _setWhitelistManager(whitelistManager_);
     }
 
-    function setAdapterWhitelist(address adapter, bool isWhitelist) external onlyOwner {
-        adapterWhitelist[adapter] = isWhitelist;
-        emit UpdateSwapAdapterWhiteList(adapter, isWhitelist);
+    function setWhitelistManager(address whitelistManager_) external onlyOwner {
+        _setWhitelistManager(whitelistManager_);
+    }
+
+    function _setWhitelistManager(address whitelistManager_) internal {
+        whitelistManager = IWhitelistManager(whitelistManager_);
+        emit RouterEventsV2.WhitelistManagerUpdated(whitelistManager_);
     }
 
     /**
@@ -142,9 +149,7 @@ contract TermMaxRouterV2 is
                 IERC20(units[i].tokenIn).safeTransfer(recipient, inputAmt);
                 continue;
             }
-            if (!adapterWhitelist[units[i].adapter]) {
-                revert AdapterNotWhitelisted(units[i].adapter);
-            }
+            _checkAdapterWhitelist(units[i].adapter);
             bytes memory dataToSwap = i == units.length - 1
                 ? abi.encodeCall(
                     IERC20SwapAdapter.swap, (recipient, units[i].tokenIn, units[i].tokenOut, inputAmt, units[i].swapData)
@@ -406,11 +411,9 @@ contract TermMaxRouterV2 is
     {
         (address gt, SwapUnit[] memory units) = abi.decode(data, (address, SwapUnit[]));
         uint256 totalAmount = IERC20(units[0].tokenIn).balanceOf(address(this));
-        uint256 collateralBalance = _doSwap(totalAmount, units);
+        uint256 collateralBalance = _executeSwapUnits(address(this), totalAmount, units);
         SwapUnit memory lastUnit = units[units.length - 1];
-        if (!adapterWhitelist[lastUnit.adapter]) {
-            revert AdapterNotWhitelisted(lastUnit.adapter);
-        }
+        _checkAdapterWhitelist(lastUnit.adapter);
         IERC20 collateral = IERC20(lastUnit.tokenOut);
         collateralBalance = collateral.balanceOf(address(this));
         collateral.safeIncreaseAllowance(gt, collateralBalance);
@@ -535,7 +538,8 @@ contract TermMaxRouterV2 is
         repayAmt = repayAmt - debtToken.balanceOf(address(this));
         if (collateralPath.units.length > 0) {
             // do swap to get the new collateral
-            uint256 newCollateralAmt = _doSwap(collateral.balanceOf(address(this)), collateralPath.units);
+            uint256 newCollateralAmt =
+                _executeSwapUnits(address(this), collateral.balanceOf(address(this)), collateralPath.units);
             IERC20 newCollateral = IERC20(collateralPath.units[collateralPath.units.length - 1].tokenOut);
             newCollateral.safeIncreaseAllowance(address(aave), newCollateralAmt);
             aave.supply(address(newCollateral), newCollateralAmt, caller, referralCode);
@@ -570,7 +574,8 @@ contract TermMaxRouterV2 is
         repayAmt = repayAmt - debtToken.balanceOf(address(this));
         if (collateralPath.units.length > 0) {
             // do swap to get the new collateral
-            uint256 newCollateralAmt = _doSwap(collateral.balanceOf(address(this)), collateralPath.units);
+            uint256 newCollateralAmt =
+                _executeSwapUnits(address(this), collateral.balanceOf(address(this)), collateralPath.units);
             IERC20 newCollateral = IERC20(collateralPath.units[collateralPath.units.length - 1].tokenOut);
             newCollateral.safeIncreaseAllowance(address(morpho), newCollateralAmt);
             morpho.supplyCollateral(marketParams, newCollateralAmt, caller, "");
@@ -583,26 +588,10 @@ contract TermMaxRouterV2 is
         morpho.borrow(marketParams, repayAmt, 0, caller, address(this));
     }
 
-    function _doSwap(uint256 inputAmt, SwapUnit[] memory units) internal returns (uint256 outputAmt) {
-        if (units.length == 0) {
-            revert SwapUnitsIsEmpty();
+    function _checkAdapterWhitelist(address adapter) internal view {
+        if (!whitelistManager.isWhitelisted(adapter, IWhitelistManager.ContractModule.ADAPTER)) {
+            revert AdapterNotWhitelisted(adapter);
         }
-        for (uint256 i = 0; i < units.length; ++i) {
-            if (!adapterWhitelist[units[i].adapter]) {
-                revert AdapterNotWhitelisted(units[i].adapter);
-            }
-            bytes memory dataToSwap = abi.encodeCall(
-                IERC20SwapAdapter.swap,
-                (address(this), units[i].tokenIn, units[i].tokenOut, inputAmt, units[i].swapData)
-            );
-
-            (bool success, bytes memory returnData) = units[i].adapter.delegatecall(dataToSwap);
-            if (!success) {
-                revert SwapFailed(units[i].adapter, returnData);
-            }
-            inputAmt = abi.decode(returnData, (uint256));
-        }
-        outputAmt = inputAmt;
     }
 
     function onERC721Received(address, address, uint256, bytes memory) external pure override returns (bytes4) {

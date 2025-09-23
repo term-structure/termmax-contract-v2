@@ -7,8 +7,9 @@ import {ITermMaxOrder} from "contracts/interfaces/ITermMaxOrder.sol";
 import {TransferUtilsV2} from "../../lib/TransferUtilsV2.sol";
 import {Constants} from "../../../v1/lib/Constants.sol";
 import {ArrayUtilsV2} from "../../lib/ArrayUtilsV2.sol";
-/// @notice The data structure for the TermMax swap adapter.
+import {IWhitelistManager} from "../../access/IWhitelistManager.sol";
 
+/// @notice The data structure for the TermMax swap adapter.
 struct TermMaxSwapData {
     /// @notice Whether the swap is exact token in for net token out.
     bool swapExactTokenForToken;
@@ -36,6 +37,16 @@ contract TermMaxSwapAdapter is ERC20SwapAdapterV2 {
     error OrdersAndAmtsLengthNotMatch();
     /// @notice Emitted when the actual token cost or income is not as expected.
     error ActualTokenBalanceNotMatch();
+    /// @notice Emitted when the callback is not authorized.
+    error UnauthorizedCallback(address callback);
+    /// @notice Emitted when the pool is not authorized.
+    error UnauthorizedPool(address pool);
+
+    IWhitelistManager public immutable whitelistManager;
+
+    constructor(address _whitelistManager) {
+        whitelistManager = IWhitelistManager(_whitelistManager);
+    }
 
     function _swap(address recipient, IERC20 tokenIn, IERC20 tokenOut, uint256 tokenInAmt, bytes memory swapData)
         internal
@@ -54,6 +65,7 @@ contract TermMaxSwapAdapter is ERC20SwapAdapterV2 {
             _scaleTradingAmts(tokenInAmt, data);
             for (uint256 i = 0; i < data.orders.length; ++i) {
                 address order = data.orders[i];
+                _checkOrderCallback(order);
                 tokenIn.safeIncreaseAllowance(order, data.tradingAmts[i]);
                 netTokenOutOrIn += ITermMaxOrder(order).swapExactTokenToToken(
                     tokenIn, tokenOut, recipient, data.tradingAmts[i], 0, data.deadline
@@ -67,6 +79,7 @@ contract TermMaxSwapAdapter is ERC20SwapAdapterV2 {
         } else {
             for (uint256 i = 0; i < data.orders.length; ++i) {
                 address order = data.orders[i];
+                _checkOrderCallback(order);
                 // Use maximum allowance for the swap because the final input amount is unknown
                 tokenIn.safeIncreaseAllowance(order, data.netTokenAmt);
                 netTokenOutOrIn += ITermMaxOrder(order).swapTokenToExactToken(
@@ -83,6 +96,20 @@ contract TermMaxSwapAdapter is ERC20SwapAdapterV2 {
         uint256 actualOutput = tokenOut.balanceOf(recipient) - outputTokenBalanceBefore;
         if (actualInput != finalInput || actualOutput != finalOutput) {
             revert ActualTokenBalanceNotMatch();
+        }
+    }
+
+    function _checkOrderCallback(address order) internal view virtual {
+        address callbackAddr = address(ITermMaxOrder(order).orderConfig().swapTrigger);
+        address pool = address(ITermMaxOrder(order).pool());
+        if (
+            callbackAddr != address(0)
+                && !whitelistManager.isWhitelisted(callbackAddr, IWhitelistManager.ContractModule.ORDER_CALLBACK)
+        ) {
+            revert UnauthorizedCallback(callbackAddr);
+        }
+        if (pool != address(0) && !whitelistManager.isWhitelisted(pool, IWhitelistManager.ContractModule.POOL)) {
+            revert UnauthorizedPool(pool);
         }
     }
 

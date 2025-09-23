@@ -30,6 +30,7 @@ import {
     IERC20Metadata
 } from "test/v2/mainnet-fork/ForkBaseTestV2.sol";
 import {TermMaxSwapData, TermMaxSwapAdapter} from "contracts/v2/router/swapAdapters/TermMaxSwapAdapter.sol";
+import {IWhitelistManager} from "contracts/v2/access/IWhitelistManager.sol";
 import {console} from "forge-std/console.sol";
 
 interface TestOracle is IOracle {
@@ -103,10 +104,6 @@ contract ForkPrdRollover is ForkBaseTestV2 {
         OdosV2AdapterV2 od = new OdosV2AdapterV2(0xCf5540fFFCdC3d510B18bFcA6d2b9987b0772559);
         odosAdapter = address(od);
 
-        TermMaxSwapAdapter tmx = new TermMaxSwapAdapter();
-        tmxAdapter = address(tmx);
-        vm.label(tmxAdapter, "TermMaxAdapter");
-
         vm.label(pt_susde_may_29, "pt_susde_may_29");
         vm.label(pt_susde_jun_31, "pt_susde_jun_31");
         vm.label(susde, "susde");
@@ -120,10 +117,19 @@ contract ForkPrdRollover is ForkBaseTestV2 {
         address admin = vm.randomAddress();
 
         vm.startPrank(admin);
-        router = deployRouter(admin);
-        router.setAdapterWhitelist(pendleAdapter, true);
-        router.setAdapterWhitelist(odosAdapter, true);
-        router.setAdapterWhitelist(tmxAdapter, true);
+        IWhitelistManager whitelistManager;
+        (router, whitelistManager) = deployRouter(admin);
+        router.setWhitelistManager(address(whitelistManager));
+
+        TermMaxSwapAdapter tmx = new TermMaxSwapAdapter(address(whitelistManager));
+        tmxAdapter = address(tmx);
+        vm.label(tmxAdapter, "TermMaxAdapter");
+
+        address[] memory adapters = new address[](3);
+        adapters[0] = pendleAdapter;
+        adapters[1] = odosAdapter;
+        adapters[2] = tmxAdapter;
+        whitelistManager.batchSetWhitelist(adapters, IWhitelistManager.ContractModule.ADAPTER, true);
         vm.stopPrank();
     }
 

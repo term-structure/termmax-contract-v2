@@ -22,7 +22,6 @@ import {ITermMaxMarketV2} from "../ITermMaxMarketV2.sol";
 import {ITermMaxOrderV2} from "../ITermMaxOrderV2.sol";
 import {VaultInitialParams, CurveCuts} from "../../v1/storage/TermMaxStorage.sol";
 import {VaultInitialParamsV2} from "../storage/TermMaxStorageV2.sol";
-import {ITermMaxOrder} from "../../v1/ITermMaxOrder.sol";
 import {VaultConstants} from "../../v1/lib/VaultConstants.sol";
 import {TransferUtils} from "../../v1/lib/TransferUtils.sol";
 import {ISwapCallback} from "../../v1/ISwapCallback.sol";
@@ -131,8 +130,8 @@ contract TermMaxVaultV2 is
         return _marketWhitelist[market];
     }
 
-    function poolWhitelist(address pool) external view virtual returns (bool) {
-        return _poolWhitelist[pool];
+    function poolWhitelist(address pool_) external view virtual returns (bool) {
+        return _poolWhitelist[pool_];
     }
 
     function timelock() external view virtual returns (uint256) {

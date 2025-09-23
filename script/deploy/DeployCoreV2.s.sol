@@ -112,6 +112,8 @@ contract DeployCoreV2 is DeployBaseV2 {
 
         vm.startBroadcast(deployerPrivateKey);
 
+        IWhitelistManager whitelistManager = deployWhitelistManager(accessManagerAddr);
+
         if (
             keccak256(abi.encodePacked(network)) == keccak256(abi.encodePacked("eth-mainnet"))
                 || keccak256(abi.encodePacked(network)) == keccak256(abi.encodePacked("arb-mainnet"))
@@ -130,7 +132,13 @@ contract DeployCoreV2 is DeployBaseV2 {
                     pendleSwapV3Adapter,
                     vaultAdapter,
                     termMaxSwapAdapter
-                ) = deployCoreMainnet(accessManagerAddr, uniswapV3RouterAddr, odosV2RouterAddr, pendleSwapV3RouterAddr);
+                ) = deployCoreMainnet(
+                    accessManagerAddr,
+                    address(whitelistManager),
+                    uniswapV3RouterAddr,
+                    odosV2RouterAddr,
+                    pendleSwapV3RouterAddr
+                );
             } else {
                 (
                     factory,
@@ -144,7 +152,12 @@ contract DeployCoreV2 is DeployBaseV2 {
                     vaultAdapter,
                     termMaxSwapAdapter
                 ) = deployAndUpgradeCoreMainnet(
-                    accessManagerAddr, address(router), uniswapV3RouterAddr, odosV2RouterAddr, pendleSwapV3RouterAddr
+                    accessManagerAddr,
+                    address(whitelistManager),
+                    address(router),
+                    uniswapV3RouterAddr,
+                    odosV2RouterAddr,
+                    pendleSwapV3RouterAddr
                 );
             }
         } else {

@@ -48,6 +48,7 @@ import {OdosV2AdapterV2} from "contracts/v2/router/swapAdapters/OdosV2AdapterV2.
 import {ERC4626VaultAdapterV2} from "contracts/v2/router/swapAdapters/ERC4626VaultAdapterV2.sol";
 import {KyberswapV2AdapterV2} from "contracts/v2/router/swapAdapters/KyberswapV2AdapterV2.sol";
 import {TermMaxSwapData, TermMaxSwapAdapter} from "contracts/v2/router/swapAdapters/TermMaxSwapAdapter.sol";
+import {IWhitelistManager} from "contracts/v2/access/IWhitelistManager.sol";
 
 abstract contract GtBaseTestV2 is ForkBaseTestV2 {
     enum TokenType {
@@ -156,13 +157,16 @@ abstract contract GtBaseTestV2 is ForkBaseTestV2 {
         res.swapAdapters.odosAdapter =
             address(new OdosV2AdapterV2(vm.parseJsonAddress(jsonData, ".routers.odosRouter")));
         res.swapAdapters.vaultAdapter = address(new ERC4626VaultAdapterV2());
-        res.termMaxSwapAdapter = new TermMaxSwapAdapter();
-        res.router = deployRouter(res.marketInitialParams.admin);
-        res.router.setAdapterWhitelist(res.swapAdapters.uniswapAdapter, true);
-        res.router.setAdapterWhitelist(res.swapAdapters.pendleAdapter, true);
-        res.router.setAdapterWhitelist(res.swapAdapters.odosAdapter, true);
-        res.router.setAdapterWhitelist(res.swapAdapters.vaultAdapter, true);
-        res.router.setAdapterWhitelist(address(res.termMaxSwapAdapter), true);
+        IWhitelistManager whitelistManager;
+        (res.router, whitelistManager) = deployRouter(res.marketInitialParams.admin);
+        address[] memory adapters = new address[](5);
+        adapters[0] = res.swapAdapters.uniswapAdapter;
+        adapters[1] = res.swapAdapters.pendleAdapter;
+        adapters[2] = res.swapAdapters.odosAdapter;
+        adapters[3] = res.swapAdapters.vaultAdapter;
+        res.termMaxSwapAdapter = new TermMaxSwapAdapter(address(whitelistManager));
+        adapters[4] = address(res.termMaxSwapAdapter);
+        whitelistManager.batchSetWhitelist(adapters, IWhitelistManager.ContractModule.ADAPTER, true);
         res.swapData = _readSwapData(key);
 
         res.orderInitialAmount = vm.parseJsonUint(jsonData, string.concat(key, ".orderInitialAmount"));

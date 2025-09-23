@@ -4,6 +4,7 @@ pragma solidity ^0.8.27;
 import "../../v1/access/AccessManager.sol";
 import {IOracleV2} from "../oracle/IOracleV2.sol";
 import {ITermMaxVaultV2, OrderV2ConfigurationParams, CurveCuts} from "../vault/ITermMaxVaultV2.sol";
+import {IWhitelistManager} from "./IWhitelistManager.sol";
 import {VersionV2} from "../VersionV2.sol";
 
 /**
@@ -14,6 +15,19 @@ import {VersionV2} from "../VersionV2.sol";
  */
 contract AccessManagerV2 is AccessManager, VersionV2 {
     error CannotRenounceRole();
+    /// @notice Role to manage whitelist
+
+    bytes32 public constant WHITELIST_ROLE = keccak256("WHITELIST_ROLE");
+
+    function batchSetWhitelist(
+        IWhitelistManager whitelistManager,
+        address[] calldata contractAddresses,
+        IWhitelistManager.ContractModule module,
+        bool approved
+    ) external onlyRole(WHITELIST_ROLE) {
+        whitelistManager.batchSetWhitelist(contractAddresses, module, approved);
+    }
+
     /**
      * @notice Batch pause/unpause multiple entities in a single transaction
      * @dev Allows efficient management of multiple pausable contracts simultaneously
@@ -22,7 +36,6 @@ contract AccessManagerV2 is AccessManager, VersionV2 {
      * @custom:access Requires PAUSER_ROLE
      * @custom:gas-optimization Uses a simple loop for batch operations
      */
-
     function batchSetSwitch(IPausable[] calldata entities, bool state) external onlyRole(PAUSER_ROLE) {
         if (state) {
             for (uint256 i = 0; i < entities.length; ++i) {

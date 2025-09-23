@@ -25,6 +25,7 @@ import {
 } from "../mainnet-fork/ForkBaseTestV2.sol";
 import {ITermMaxMarketV2} from "contracts/v2/ITermMaxMarketV2.sol";
 import {ITermMaxRouterV2, TermMaxRouterV2, SwapPath, FlashRepayOptions} from "contracts/v2/router/TermMaxRouterV2.sol";
+import {IWhitelistManager} from "contracts/v2/access/IWhitelistManager.sol";
 import {console} from "forge-std/console.sol";
 
 interface TestOracle is IOracle {
@@ -109,9 +110,14 @@ contract ForkPrdFlashRepay is ForkBaseTestV2 {
         address admin = vm.randomAddress();
 
         vm.startPrank(admin);
-        router = deployRouter(admin);
-        router.setAdapterWhitelist(pendleAdapter, true);
-        router.setAdapterWhitelist(odosAdapter, true);
+        IWhitelistManager whitelistManager;
+        (router, whitelistManager) = deployRouter(admin);
+        router.setWhitelistManager(address(whitelistManager));
+
+        address[] memory adapters = new address[](2);
+        adapters[0] = pendleAdapter;
+        adapters[1] = odosAdapter;
+        whitelistManager.batchSetWhitelist(adapters, IWhitelistManager.ContractModule.ADAPTER, true);
         vm.stopPrank();
     }
 
@@ -214,9 +220,11 @@ contract ForkPrdFlashRepay is ForkBaseTestV2 {
         address admin = vm.randomAddress();
 
         vm.startPrank(admin);
-        TermMaxRouterV2 router2 = deployRouter(admin);
-        router2.setAdapterWhitelist(pendleAdapter, true);
-        router2.setAdapterWhitelist(odosAdapter, true);
+        (TermMaxRouterV2 router2, IWhitelistManager whitelistManager) = deployRouter(admin);
+        address[] memory adapters = new address[](2);
+        adapters[0] = pendleAdapter;
+        adapters[1] = odosAdapter;
+        whitelistManager.batchSetWhitelist(adapters, IWhitelistManager.ContractModule.ADAPTER, true);
         vm.stopPrank();
 
         uint128 debt;

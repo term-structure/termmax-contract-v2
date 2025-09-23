@@ -26,6 +26,8 @@ import {
     LoanConfig,
     VaultInitialParams
 } from "contracts/v1/storage/TermMaxStorage.sol";
+import {IWhitelistManager} from "contracts/v2/access/IWhitelistManager.sol";
+import {DeployUtils} from "../utils/DeployUtils.sol";
 import {JSONLoader} from "../utils/JSONLoader.sol";
 import "forge-std/Test.sol";
 
@@ -165,10 +167,7 @@ abstract contract ForkBaseTestV2 is Test {
         priceFeed = new MockPriceFeed(admin);
     }
 
-    function deployRouter(address admin) public returns (TermMaxRouterV2 router) {
-        TermMaxRouterV2 implementation = new TermMaxRouterV2();
-        bytes memory data = abi.encodeCall(TermMaxRouterV2.initialize, admin);
-        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), data);
-        router = TermMaxRouterV2(address(proxy));
+    function deployRouter(address admin) public returns (TermMaxRouterV2, IWhitelistManager) {
+        return DeployUtils.deployRouter(admin);
     }
 }
