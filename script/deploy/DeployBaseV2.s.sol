@@ -45,6 +45,7 @@ import {AccessManagerV2, AccessManager} from "contracts/v2/access/AccessManagerV
 import {StringHelper} from "../utils/StringHelper.sol";
 import {TermMaxPriceFeedFactoryV2} from "contracts/v2/factory/TermMaxPriceFeedFactoryV2.sol";
 import {OracleAggregatorWithSequencerV2} from "contracts/v2/oracle/OracleAggregatorWithSequencerV2.sol";
+import {WhitelistManager, IWhitelistManager} from "contracts/v2/access/WhitelistManager.sol";
 
 contract DeployBaseV2 is Script {
     bytes32 constant GT_ERC20 = keccak256("GearingTokenWithERC20");
@@ -188,6 +189,7 @@ contract DeployBaseV2 is Script {
 
     function deployCoreMainnet(
         address accessManagerAddr,
+        address whitelistManagerAddr,
         address uniswapV3Router,
         address odosV2Router,
         address pendleSwapV3Router
@@ -204,7 +206,7 @@ contract DeployBaseV2 is Script {
             OdosV2AdapterV2 odosV2Adapter,
             PendleSwapV3AdapterV2 pendleSwapV3Adapter,
             ERC4626VaultAdapterV2 vaultAdapter,
-            TermMaxSwapAdapter termMaxSwapAdapterV2
+            TermMaxSwapAdapter termMaxSwapAdapter
         )
     {
         // deploy access manager
@@ -229,23 +231,13 @@ contract DeployBaseV2 is Script {
         marketViewer = deployMarketViewer();
 
         // deploy and whitelist swap adapter
-        uniswapV3Adapter = new UniswapV3AdapterV2(address(uniswapV3Router));
-        odosV2Adapter = new OdosV2AdapterV2(odosV2Router);
-        pendleSwapV3Adapter = new PendleSwapV3AdapterV2(address(pendleSwapV3Router));
-        vaultAdapter = new ERC4626VaultAdapterV2();
-        termMaxSwapAdapterV2 = new TermMaxSwapAdapter();
-
-        ITermMaxRouter irouter = ITermMaxRouter(address(router));
-
-        accessManager.setAdapterWhitelist(irouter, address(uniswapV3Adapter), true);
-        accessManager.setAdapterWhitelist(irouter, address(odosV2Adapter), true);
-        accessManager.setAdapterWhitelist(irouter, address(pendleSwapV3Adapter), true);
-        accessManager.setAdapterWhitelist(irouter, address(vaultAdapter), true);
-        accessManager.setAdapterWhitelist(irouter, address(termMaxSwapAdapterV2), true);
+        (uniswapV3Adapter, odosV2Adapter, pendleSwapV3Adapter, vaultAdapter, termMaxSwapAdapter) =
+            deployAdapters(accessManagerAddr, whitelistManagerAddr, uniswapV3Router, odosV2Router, pendleSwapV3Router);
     }
 
     function deployAndUpgradeCoreMainnet(
         address accessManagerAddr,
+        address whitelistManagerAddr,
         address routerAddr,
         address uniswapV3Router,
         address odosV2Router,
@@ -266,7 +258,7 @@ contract DeployBaseV2 is Script {
         )
     {
         (uniswapV3Adapter, odosV2Adapter, pendleSwapV3Adapter, vaultAdapter, termMaxSwapAdapterV2) =
-            deployAdapters(accessManagerAddr, routerAddr, uniswapV3Router, odosV2Router, pendleSwapV3Router);
+            deployAdapters(accessManagerAddr, whitelistManagerAddr, uniswapV3Router, odosV2Router, pendleSwapV3Router);
         // upgrade router
         router = upgradeRouter(AccessManagerV2(accessManagerAddr), routerAddr);
         // deploy factory
@@ -281,7 +273,7 @@ contract DeployBaseV2 is Script {
 
     function deployAdapters(
         address accessManagerAddr,
-        address routerAddr,
+        address whitelistManagerAddr,
         address uniswapV3Router,
         address odosV2Router,
         address pendleSwapV3Router
@@ -292,29 +284,36 @@ contract DeployBaseV2 is Script {
             OdosV2AdapterV2 odosV2Adapter,
             PendleSwapV3AdapterV2 pendleSwapV3Adapter,
             ERC4626VaultAdapterV2 vaultAdapter,
-            TermMaxSwapAdapter termMaxSwapAdapterV2
+            TermMaxSwapAdapter termMaxSwapAdapter
         )
     {
         // deploy access manager
         AccessManagerV2 accessManager = AccessManagerV2(accessManagerAddr);
-
-        // deploy router
-        TermMaxRouterV2 router = TermMaxRouterV2(routerAddr);
 
         // deploy and whitelist swap adapter
         uniswapV3Adapter = new UniswapV3AdapterV2(address(uniswapV3Router));
         odosV2Adapter = new OdosV2AdapterV2(odosV2Router);
         pendleSwapV3Adapter = new PendleSwapV3AdapterV2(address(pendleSwapV3Router));
         vaultAdapter = new ERC4626VaultAdapterV2();
-        termMaxSwapAdapterV2 = new TermMaxSwapAdapter();
+        termMaxSwapAdapter = new TermMaxSwapAdapter(whitelistManagerAddr);
 
-        ITermMaxRouter irouter = ITermMaxRouter(address(router));
+        address[] memory whitelistManager = new address[](5);
+        whitelistManager[0] = address(uniswapV3Adapter);
+        whitelistManager[1] = address(odosV2Adapter);
+        whitelistManager[2] = address(pendleSwapV3Adapter);
+        whitelistManager[3] = address(vaultAdapter);
+        whitelistManager[4] = address(termMaxSwapAdapter);
+        whitelistManager[5] = address(uniswapV3Adapter);
+        accessManager.batchSetWhitelist(
+            IWhitelistManager(whitelistManagerAddr), whitelistManager, IWhitelistManager.ContractModule.ADAPTER, true
+        );
+    }
 
-        accessManager.setAdapterWhitelist(irouter, address(uniswapV3Adapter), true);
-        accessManager.setAdapterWhitelist(irouter, address(odosV2Adapter), true);
-        accessManager.setAdapterWhitelist(irouter, address(pendleSwapV3Adapter), true);
-        accessManager.setAdapterWhitelist(irouter, address(vaultAdapter), true);
-        accessManager.setAdapterWhitelist(irouter, address(termMaxSwapAdapterV2), true);
+    function deployWhitelistManager(address admin) public returns (IWhitelistManager whitelistManager) {
+        address implementation = address(new WhitelistManager());
+        bytes memory data = abi.encodeCall(WhitelistManager.initialize, admin);
+        address proxy = address(new ERC1967Proxy(address(implementation), data));
+        whitelistManager = IWhitelistManager(proxy);
     }
 
     function deployMarkets(

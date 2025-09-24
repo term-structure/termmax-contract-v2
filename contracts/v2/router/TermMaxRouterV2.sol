@@ -4,6 +4,7 @@ pragma solidity ^0.8.27;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts/interfaces/IERC721Receiver.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {
     Ownable2StepUpgradeable,
@@ -30,6 +31,7 @@ import {IMorpho, Id, MarketParams, Authorization, Signature} from "../extensions
 import {RouterErrorsV2} from "../errors/RouterErrorsV2.sol";
 import {RouterEventsV2} from "../events/RouterEventsV2.sol";
 import {ArrayUtilsV2} from "../lib/ArrayUtilsV2.sol";
+import {IWhitelistManager} from "../access/IWhitelistManager.sol";
 import {VersionV2} from "../VersionV2.sol";
 
 /**
@@ -46,7 +48,8 @@ contract TermMaxRouterV2 is
     ITermMaxRouterV2,
     RouterErrors,
     RouterEvents,
-    VersionV2
+    VersionV2,
+    ReentrancyGuardUpgradeable
 {
     using SafeCast for *;
     using TransferUtilsV2 for IERC20;
@@ -55,6 +58,7 @@ contract TermMaxRouterV2 is
 
     /// @notice whitelist mapping of adapter
     mapping(address => bool) public adapterWhitelist;
+    IWhitelistManager internal whitelistManager;
 
     uint256 private constant T_ROLLOVER_GT_RESERVE_STORE = 0;
     uint256 private constant T_CALLBACK_ADDRESS_STORE = 1;
@@ -78,28 +82,27 @@ contract TermMaxRouterV2 is
         _;
     }
 
-    modifier noCallbackReentrant() {
-        address callbackAddress;
-        assembly {
-            callbackAddress := tload(T_CALLBACK_ADDRESS_STORE)
-        }
-        if (callbackAddress != address(0)) {
-            revert RouterErrorsV2.CallbackReentrant();
-        }
-        _;
-    }
-
     function _authorizeUpgrade(address newImplementation) internal virtual override onlyOwner {}
 
-    function initialize(address admin) public initializer {
+    function initialize(address admin) external initializer {
+        __ReentrancyGuard_init_unchained();
         __UUPSUpgradeable_init_unchained();
         __Pausable_init_unchained();
         __Ownable_init_unchained(admin);
     }
 
-    function setAdapterWhitelist(address adapter, bool isWhitelist) external onlyOwner {
-        adapterWhitelist[adapter] = isWhitelist;
-        emit UpdateSwapAdapterWhiteList(adapter, isWhitelist);
+    function initializeV2(address whitelistManager_) external reinitializer(2) {
+        __ReentrancyGuard_init_unchained();
+        _setWhitelistManager(whitelistManager_);
+    }
+
+    function setWhitelistManager(address whitelistManager_) external onlyOwner {
+        _setWhitelistManager(whitelistManager_);
+    }
+
+    function _setWhitelistManager(address whitelistManager_) internal {
+        whitelistManager = IWhitelistManager(whitelistManager_);
+        emit RouterEventsV2.WhitelistManagerUpdated(whitelistManager_);
     }
 
     /**
@@ -107,6 +110,7 @@ contract TermMaxRouterV2 is
      */
     function swapTokens(SwapPath[] memory paths)
         external
+        nonReentrant
         whenNotPaused
         checkSwapPaths(paths)
         returns (uint256[] memory)
@@ -145,9 +149,7 @@ contract TermMaxRouterV2 is
                 IERC20(units[i].tokenIn).safeTransfer(recipient, inputAmt);
                 continue;
             }
-            if (!adapterWhitelist[units[i].adapter]) {
-                revert AdapterNotWhitelisted(units[i].adapter);
-            }
+            _checkAdapterWhitelist(units[i].adapter);
             bytes memory dataToSwap = i == units.length - 1
                 ? abi.encodeCall(
                     IERC20SwapAdapter.swap, (recipient, units[i].tokenIn, units[i].tokenOut, inputAmt, units[i].swapData)
@@ -175,7 +177,7 @@ contract TermMaxRouterV2 is
         bool isV1,
         SwapPath[] memory inputPaths,
         SwapPath memory swapCollateralPath
-    ) external whenNotPaused noCallbackReentrant returns (uint256 gtId, uint256 netXtOut) {
+    ) external nonReentrant whenNotPaused returns (uint256 gtId, uint256 netXtOut) {
         assembly {
             tstore(T_CALLBACK_ADDRESS_STORE, market) // set callback address
         }
@@ -214,12 +216,13 @@ contract TermMaxRouterV2 is
         uint256 collInAmt,
         uint128 maxDebtAmt,
         SwapPath memory swapFtPath
-    ) external whenNotPaused returns (uint256) {
+    ) external nonReentrant whenNotPaused returns (uint256) {
         (IERC20 ft,, IGearingToken gt, address collateralAddr,) = market.tokens();
         IERC20(collateralAddr).safeTransferFrom(_msgSender(), address(this), collInAmt);
         IERC20(collateralAddr).safeIncreaseAllowance(address(gt), collInAmt);
 
         (uint256 gtId, uint128 ftOutAmt) = market.issueFt(address(this), maxDebtAmt, abi.encode(collInAmt));
+        gt.safeTransferFrom(address(this), recipient, gtId);
         uint256 netTokenIn = _executeSwapUnits(swapFtPath.recipient, ftOutAmt, swapFtPath.units);
         uint256 repayAmt = ftOutAmt - netTokenIn;
         if (repayAmt > 0) {
@@ -227,8 +230,6 @@ contract TermMaxRouterV2 is
             // repay in ft, bool false means not using debt token
             gt.repay(gtId, repayAmt.toUint128(), false);
         }
-
-        gt.safeTransferFrom(address(this), recipient, gtId);
         emit Borrow(market, gtId, _msgSender(), recipient, collInAmt, ftOutAmt, netTokenIn.toUint128());
         return gtId;
     }
@@ -239,7 +240,7 @@ contract TermMaxRouterV2 is
         uint256 collInAmt,
         uint256 borrowAmt,
         bool isV1
-    ) external whenNotPaused returns (uint256) {
+    ) external nonReentrant whenNotPaused returns (uint256) {
         (IERC20 ft, IERC20 xt, IGearingToken gt, address collateralAddr,) = market.tokens();
 
         IERC20(collateralAddr).safeTransferFrom(_msgSender(), address(this), collInAmt);
@@ -249,6 +250,7 @@ contract TermMaxRouterV2 is
         uint128 debtAmt = ((borrowAmt * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - mintGtFeeRatio)).toUint128();
 
         (uint256 gtId, uint128 ftOutAmt) = market.issueFt(address(this), debtAmt, abi.encode(collInAmt));
+        gt.safeTransferFrom(address(this), recipient, gtId);
         borrowAmt = borrowAmt.min(ftOutAmt);
         xt.safeTransferFrom(_msgSender(), address(this), borrowAmt);
         if (isV1) {
@@ -257,38 +259,9 @@ contract TermMaxRouterV2 is
         }
 
         market.burn(recipient, borrowAmt);
-        gt.safeTransferFrom(address(this), recipient, gtId);
 
         emit Borrow(market, gtId, _msgSender(), recipient, collInAmt, debtAmt, borrowAmt.toUint128());
         return gtId;
-    }
-
-    // order integrate the funtion internally
-    function borrowTokenFromGtAndXt(
-        address recipient,
-        ITermMaxMarket market,
-        uint256 gtId,
-        uint256 borrowAmt,
-        bool isV1
-    ) external whenNotPaused {
-        (IERC20 ft, IERC20 xt, IGearingToken gt,,) = market.tokens();
-
-        if (gt.ownerOf(gtId) != _msgSender()) {
-            revert GtNotOwnedBySender();
-        }
-
-        uint256 mintGtFeeRatio = market.mintGtFeeRatio();
-        uint128 debtAmt = ((borrowAmt * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - mintGtFeeRatio)).toUint128();
-
-        market.issueFtByExistedGt(address(this), debtAmt, gtId);
-        xt.safeTransferFrom(_msgSender(), address(this), borrowAmt);
-        if (isV1) {
-            xt.safeIncreaseAllowance(address(market), borrowAmt);
-            ft.safeIncreaseAllowance(address(market), borrowAmt);
-        }
-        market.burn(recipient, borrowAmt);
-
-        emit Borrow(market, gtId, _msgSender(), recipient, 0, debtAmt, borrowAmt.toUint128());
     }
 
     function flashRepayFromCollForV1(
@@ -298,7 +271,7 @@ contract TermMaxRouterV2 is
         bool byDebtToken,
         uint256 expectedOutput,
         bytes memory callbackData
-    ) external whenNotPaused noCallbackReentrant returns (uint256 netTokenOut) {
+    ) external nonReentrant whenNotPaused returns (uint256 netTokenOut) {
         (,, IGearingToken gtToken,, IERC20 debtToken) = market.tokens();
         assembly {
             // set callback address
@@ -323,7 +296,7 @@ contract TermMaxRouterV2 is
         uint256 expectedOutput,
         uint256 removedCollateral,
         bytes memory callbackData
-    ) external whenNotPaused noCallbackReentrant returns (uint256 netTokenOut) {
+    ) external nonReentrant whenNotPaused returns (uint256 netTokenOut) {
         (,, IGearingToken gtToken,, IERC20 debtToken) = market.tokens();
         assembly {
             // set callback address
@@ -350,7 +323,7 @@ contract TermMaxRouterV2 is
         IERC20 additionalAsset,
         uint256 additionalAmt,
         bytes memory rolloverData
-    ) external whenNotPaused noCallbackReentrant returns (uint256 newGtId) {
+    ) external nonReentrant whenNotPaused returns (uint256 newGtId) {
         return _rolloverGt(true, gtToken, gtId, 0, 0, additionalAsset, additionalAmt, rolloverData);
     }
 
@@ -362,7 +335,7 @@ contract TermMaxRouterV2 is
         IERC20 additionalAsset,
         uint256 additionalAmt,
         bytes memory rolloverData
-    ) external whenNotPaused noCallbackReentrant returns (uint256 newGtId) {
+    ) external nonReentrant whenNotPaused returns (uint256 newGtId) {
         return
             _rolloverGt(false, gtToken, gtId, repayAmt, removedCollateral, additionalAsset, additionalAmt, rolloverData);
     }
@@ -413,6 +386,7 @@ contract TermMaxRouterV2 is
     function swapAndRepay(IGearingToken gt, uint256 gtId, uint128 repayAmt, bool byDebtToken, SwapPath[] memory paths)
         external
         override
+        nonReentrant
         whenNotPaused
         checkSwapPaths(paths)
         returns (uint256[] memory netOutOrIns)
@@ -437,11 +411,9 @@ contract TermMaxRouterV2 is
     {
         (address gt, SwapUnit[] memory units) = abi.decode(data, (address, SwapUnit[]));
         uint256 totalAmount = IERC20(units[0].tokenIn).balanceOf(address(this));
-        uint256 collateralBalance = _doSwap(totalAmount, units);
+        uint256 collateralBalance = _executeSwapUnits(address(this), totalAmount, units);
         SwapUnit memory lastUnit = units[units.length - 1];
-        if (!adapterWhitelist[lastUnit.adapter]) {
-            revert AdapterNotWhitelisted(lastUnit.adapter);
-        }
+        _checkAdapterWhitelist(lastUnit.adapter);
         IERC20 collateral = IERC20(lastUnit.tokenOut);
         collateralBalance = collateral.balanceOf(address(this));
         collateral.safeIncreaseAllowance(gt, collateralBalance);
@@ -511,6 +483,8 @@ contract TermMaxRouterV2 is
             ).toUint128();
             IERC20(collateral).safeIncreaseAllowance(address(gt), newCollateralAmt);
             (gtId,) = market.issueFt(address(this), newDebtAmt, abi.encode(newCollateralAmt));
+            // transfer new gt to recipient
+            gt.safeTransferFrom(address(this), recipient, gtId);
         }
         // Swap ft to debt token to repay(swap amount + additional debt token amount should equal repay amt)
         {
@@ -527,8 +501,6 @@ contract TermMaxRouterV2 is
                 revert LtvBiggerThanExpected(maxLtv, ltv);
             }
         }
-        // transfer new gt to recipient
-        gt.safeTransferFrom(address(this), recipient, gtId);
         assembly {
             tstore(T_ROLLOVER_GT_RESERVE_STORE, gtId)
         }
@@ -566,7 +538,8 @@ contract TermMaxRouterV2 is
         repayAmt = repayAmt - debtToken.balanceOf(address(this));
         if (collateralPath.units.length > 0) {
             // do swap to get the new collateral
-            uint256 newCollateralAmt = _doSwap(collateral.balanceOf(address(this)), collateralPath.units);
+            uint256 newCollateralAmt =
+                _executeSwapUnits(address(this), collateral.balanceOf(address(this)), collateralPath.units);
             IERC20 newCollateral = IERC20(collateralPath.units[collateralPath.units.length - 1].tokenOut);
             newCollateral.safeIncreaseAllowance(address(aave), newCollateralAmt);
             aave.supply(address(newCollateral), newCollateralAmt, caller, referralCode);
@@ -601,7 +574,8 @@ contract TermMaxRouterV2 is
         repayAmt = repayAmt - debtToken.balanceOf(address(this));
         if (collateralPath.units.length > 0) {
             // do swap to get the new collateral
-            uint256 newCollateralAmt = _doSwap(collateral.balanceOf(address(this)), collateralPath.units);
+            uint256 newCollateralAmt =
+                _executeSwapUnits(address(this), collateral.balanceOf(address(this)), collateralPath.units);
             IERC20 newCollateral = IERC20(collateralPath.units[collateralPath.units.length - 1].tokenOut);
             newCollateral.safeIncreaseAllowance(address(morpho), newCollateralAmt);
             morpho.supplyCollateral(marketParams, newCollateralAmt, caller, "");
@@ -614,26 +588,10 @@ contract TermMaxRouterV2 is
         morpho.borrow(marketParams, repayAmt, 0, caller, address(this));
     }
 
-    function _doSwap(uint256 inputAmt, SwapUnit[] memory units) internal returns (uint256 outputAmt) {
-        if (units.length == 0) {
-            revert SwapUnitsIsEmpty();
+    function _checkAdapterWhitelist(address adapter) internal view {
+        if (!whitelistManager.isWhitelisted(adapter, IWhitelistManager.ContractModule.ADAPTER)) {
+            revert AdapterNotWhitelisted(adapter);
         }
-        for (uint256 i = 0; i < units.length; ++i) {
-            if (!adapterWhitelist[units[i].adapter]) {
-                revert AdapterNotWhitelisted(units[i].adapter);
-            }
-            bytes memory dataToSwap = abi.encodeCall(
-                IERC20SwapAdapter.swap,
-                (address(this), units[i].tokenIn, units[i].tokenOut, inputAmt, units[i].swapData)
-            );
-
-            (bool success, bytes memory returnData) = units[i].adapter.delegatecall(dataToSwap);
-            if (!success) {
-                revert SwapFailed(units[i].adapter, returnData);
-            }
-            inputAmt = abi.decode(returnData, (uint256));
-        }
-        outputAmt = inputAmt;
     }
 
     function onERC721Received(address, address, uint256, bytes memory) external pure override returns (bytes4) {

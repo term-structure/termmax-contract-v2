@@ -31,6 +31,7 @@ import {VaultInitialParamsV2} from "contracts/v2/storage/TermMaxStorageV2.sol";
 import {TermMaxOrderV2} from "contracts/v2/TermMaxOrderV2.sol";
 import {ITermMaxVaultV2, OrderV2ConfigurationParams, CurveCuts} from "contracts/v2/vault/ITermMaxVaultV2.sol";
 import {VaultEventsV2} from "contracts/v2/events/VaultEventsV2.sol";
+import {IWhitelistManager} from "contracts/v2/access/IWhitelistManager.sol";
 
 contract AccessManagerTestV2 is Test {
     using JSONLoader for *;
@@ -82,7 +83,8 @@ contract AccessManagerTestV2 is Test {
         res.ft.transfer(address(res.order), amount);
         res.xt.transfer(address(res.order), amount);
 
-        res.router = DeployUtils.deployRouter(deployer);
+        (res.router, res.whitelistManager) = DeployUtils.deployRouter(deployer);
+        res.router.setWhitelistManager(address(res.whitelistManager));
 
         AccessManagerV2 implementation = new AccessManagerV2();
         bytes memory data = abi.encodeCall(AccessManager.initialize, deployer);
@@ -94,20 +96,20 @@ contract AccessManagerTestV2 is Test {
         IOwnable(address(res.market)).transferOwnership(address(manager));
         IOwnable(address(res.router)).transferOwnership(address(manager));
         IOwnable(address(res.oracle)).transferOwnership(address(manager));
+        IOwnable(address(res.whitelistManager)).transferOwnership(address(manager));
 
         manager.acceptOwnership(IOwnable(address(res.factory)));
-
         manager.acceptOwnership(IOwnable(address(res.market)));
-
         manager.acceptOwnership(IOwnable(address(res.router)));
-
         manager.acceptOwnership(IOwnable(address(res.oracle)));
+        manager.acceptOwnership(IOwnable(address(res.whitelistManager)));
 
         manager.grantRole(manager.CONFIGURATOR_ROLE(), deployer);
         manager.grantRole(manager.PAUSER_ROLE(), deployer);
         manager.grantRole(manager.VAULT_ROLE(), deployer);
         manager.grantRole(manager.MARKET_ROLE(), deployer);
         manager.grantRole(manager.ORACLE_ROLE(), deployer);
+        manager.grantRole(manager.WHITELIST_ROLE(), deployer);
 
         // Create vault initialization parameters
         VaultInitialParamsV2 memory params = VaultInitialParamsV2({
@@ -285,6 +287,45 @@ contract AccessManagerTestV2 is Test {
             )
         );
         manager.batchSetSwitch(entities, false);
+        vm.stopPrank();
+    }
+
+    function testBatchSetWhitelist() public {
+        // prepare addresses and module
+        address[] memory addrs = new address[](2);
+        addrs[0] = vm.randomAddress();
+        addrs[1] = vm.randomAddress();
+        IWhitelistManager.ContractModule module = IWhitelistManager.ContractModule.ADAPTER;
+
+        // manager has been granted WHITELIST_ROLE in setUp and is owner of whitelistManager
+        vm.prank(deployer);
+        manager.batchSetWhitelist(IWhitelistManager(address(res.whitelistManager)), addrs, module, true);
+
+        // verify whitelist entries set
+        assertTrue(res.whitelistManager.isWhitelisted(addrs[0], module));
+        assertTrue(res.whitelistManager.isWhitelisted(addrs[1], module));
+
+        // unset them
+        vm.prank(deployer);
+        manager.batchSetWhitelist(IWhitelistManager(address(res.whitelistManager)), addrs, module, false);
+
+        assertFalse(res.whitelistManager.isWhitelisted(addrs[0], module));
+        assertFalse(res.whitelistManager.isWhitelisted(addrs[1], module));
+    }
+
+    function testBatchSetWhitelistWithoutRole() public {
+        address[] memory addrs = new address[](1);
+        addrs[0] = vm.randomAddress();
+        IWhitelistManager.ContractModule module = IWhitelistManager.ContractModule.MARKET;
+
+        address unauthorized = vm.randomAddress();
+        vm.startPrank(unauthorized);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector, unauthorized, manager.WHITELIST_ROLE()
+            )
+        );
+        manager.batchSetWhitelist(IWhitelistManager(address(res.whitelistManager)), addrs, module, true);
         vm.stopPrank();
     }
 
@@ -484,30 +525,6 @@ contract AccessManagerTestV2 is Test {
             ITermMaxFactory(address(res.factory)), keccak256("GearingTokenWithERC20"), params, salt
         );
         assertTrue(newMarket != address(0));
-        vm.stopPrank();
-    }
-
-    function testSetAdapterWhitelist() public {
-        address adapter = vm.randomAddress();
-
-        // Test that non-market role cannot set adapter whitelist
-        vm.startPrank(sender);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector, sender, manager.MARKET_ROLE()
-            )
-        );
-        manager.setAdapterWhitelist(ITermMaxRouter(address(res.router)), adapter, true);
-        vm.stopPrank();
-
-        // Test that market role can set adapter whitelist
-        vm.startPrank(deployer);
-        manager.setAdapterWhitelist(ITermMaxRouter(address(res.router)), adapter, true);
-        assertTrue(res.router.adapterWhitelist(adapter));
-
-        // Test setting adapter whitelist to false
-        manager.setAdapterWhitelist(ITermMaxRouter(address(res.router)), adapter, false);
-        assertFalse(res.router.adapterWhitelist(adapter));
         vm.stopPrank();
     }
 
