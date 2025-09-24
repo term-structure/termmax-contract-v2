@@ -100,7 +100,7 @@ contract DeployAccessManagerV2 is DeployBaseV2 {
                 vm.toString(adminAddr),
                 '",\n',
                 '  "contracts": {\n',
-                '    "accessManagerV2": "',
+                '    "accessManager": "',
                 vm.toString(address(accessManager)),
                 '"\n',
                 "  }\n",

@@ -56,7 +56,7 @@ import {
 contract DeployBaseV2 is Script {
     struct DeployedContracts {
         AccessManagerV2 accessManager;
-        IWhitelistManager whitelistManager;
+        WhitelistManager whitelistManager;
         TermMaxFactoryV2 factory;
         TermMaxVaultFactoryV2 vaultFactory;
         TermMaxPriceFeedFactoryV2 priceFeedFactory;
@@ -245,11 +245,11 @@ contract DeployBaseV2 is Script {
             adapters[0] = address(contracts.swapAdapter);
             adapters[1] = address(contracts.termMaxSwapAdapter);
         }
+        // whitelist swap adapters
+        bytes32 whitelistRole = contracts.accessManager.WHITELIST_ROLE();
+        contracts.accessManager.grantRole(whitelistRole, params.deployerAddr);
         contracts.accessManager.batchSetWhitelist(
-            IWhitelistManager(address(contracts.whitelistManager)),
-            adapters,
-            IWhitelistManager.ContractModule.ADAPTER,
-            true
+            contracts.whitelistManager, adapters, IWhitelistManager.ContractModule.ADAPTER, true
         );
         return contracts;
     }
@@ -279,24 +279,13 @@ contract DeployBaseV2 is Script {
         pendleSwapV3Adapter = new PendleSwapV3AdapterV2(address(pendleSwapV3Router));
         vaultAdapter = new ERC4626VaultAdapterV2();
         termMaxSwapAdapter = new TermMaxSwapAdapter(whitelistManagerAddr);
-
-        address[] memory whitelistManager = new address[](5);
-        whitelistManager[0] = address(uniswapV3Adapter);
-        whitelistManager[1] = address(odosV2Adapter);
-        whitelistManager[2] = address(pendleSwapV3Adapter);
-        whitelistManager[3] = address(vaultAdapter);
-        whitelistManager[4] = address(termMaxSwapAdapter);
-        whitelistManager[5] = address(uniswapV3Adapter);
-        accessManager.batchSetWhitelist(
-            IWhitelistManager(whitelistManagerAddr), whitelistManager, IWhitelistManager.ContractModule.ADAPTER, true
-        );
     }
 
-    function deployWhitelistManager(address admin) public returns (IWhitelistManager whitelistManager) {
+    function deployWhitelistManager(address admin) public returns (WhitelistManager whitelistManager) {
         address implementation = address(new WhitelistManager());
         bytes memory data = abi.encodeCall(WhitelistManager.initialize, admin);
         address proxy = address(new ERC1967Proxy(address(implementation), data));
-        whitelistManager = IWhitelistManager(proxy);
+        whitelistManager = WhitelistManager(proxy);
     }
 
     function deployMarkets(

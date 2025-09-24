@@ -22,6 +22,12 @@ contract DeployCoreV2 is DeployBaseV2 {
         // Load network-specific configuration
         string memory privateKeyVar = string.concat(networkUpper, "_DEPLOYER_PRIVATE_KEY");
         string memory adminVar = string.concat(networkUpper, "_ADMIN_ADDRESS");
+        {
+            string memory AAVEPoolVar = string.concat(networkUpper, "_AAVE_POOL");
+            string memory AAVEReferralCodeVar = string.concat(networkUpper, "_AAVE_REFERRAL_CODE");
+            coreParams.AAVE_POOL = vm.envAddress(AAVEPoolVar);
+            coreParams.AAVE_REFERRAL_CODE = uint16(vm.envUint(AAVEReferralCodeVar));
+        }
 
         deployerPrivateKey = vm.envUint(privateKeyVar);
         coreParams.deployerAddr = vm.addr(deployerPrivateKey);
@@ -63,8 +69,9 @@ contract DeployCoreV2 is DeployBaseV2 {
             vm.projectRoot(), "/deployments/", coreParams.network, "/", coreParams.network, "-access-manager.json"
         );
         string memory json = vm.readFile(deploymentPath);
-        accessManagerAddr = vm.parseJsonAddress(json, ".contracts.accessManagerV2");
-
+        accessManagerAddr = vm.parseJsonAddress(json, ".contracts.accessManager");
+        console.log("Using existing AccessManagerV2 at:", accessManagerAddr);
+        coreContracts.accessManager = AccessManagerV2(accessManagerAddr);
         deploymentPath =
             string.concat(vm.projectRoot(), "/deployments/", coreParams.network, "/", coreParams.network, "-core.json");
         if (vm.exists(deploymentPath)) {
@@ -229,7 +236,7 @@ contract DeployCoreV2 is DeployBaseV2 {
                             '      "TermMaxSwapAdapter": "',
                             vm.toString(address(coreContracts.termMaxSwapAdapter)),
                             '"\n',
-                            "    },\n"
+                            "    }\n"
                         )
                         : string.concat(
                             "{\n",
@@ -242,9 +249,8 @@ contract DeployCoreV2 is DeployBaseV2 {
                             "    },\n",
                             '    "faucet": "',
                             vm.toString(address(coreContracts.faucet)),
-                            '",\n'
+                            '"\n'
                         ),
-                    '"\n',
                     "  }\n",
                     "}"
                 )
