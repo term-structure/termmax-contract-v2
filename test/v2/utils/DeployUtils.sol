@@ -329,7 +329,7 @@ library DeployUtils {
     function deployRouter(address admin) public returns (TermMaxRouterV2 router, IWhitelistManager whitelistManager) {
         whitelistManager = deployWhitelistManager(admin);
         TermMaxRouterV2 implementation = new TermMaxRouterV2();
-        bytes memory data = abi.encodeCall(TermMaxRouterV2.initialize, admin);
+        bytes memory data = abi.encodeCall(TermMaxRouterV2.initialize, (admin, address(whitelistManager)));
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), data);
         router = TermMaxRouterV2(address(proxy));
     }

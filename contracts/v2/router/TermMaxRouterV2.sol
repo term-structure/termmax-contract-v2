@@ -84,11 +84,12 @@ contract TermMaxRouterV2 is
 
     function _authorizeUpgrade(address newImplementation) internal virtual override onlyOwner {}
 
-    function initialize(address admin) external initializer {
+    function initialize(address admin, address whitelistManager_) external initializer {
         __ReentrancyGuard_init_unchained();
         __UUPSUpgradeable_init_unchained();
         __Pausable_init_unchained();
         __Ownable_init_unchained(admin);
+        _setWhitelistManager(whitelistManager_);
     }
 
     function initializeV2(address whitelistManager_) external reinitializer(2) {

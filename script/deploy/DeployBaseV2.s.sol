@@ -46,8 +46,49 @@ import {StringHelper} from "../utils/StringHelper.sol";
 import {TermMaxPriceFeedFactoryV2} from "contracts/v2/factory/TermMaxPriceFeedFactoryV2.sol";
 import {OracleAggregatorWithSequencerV2} from "contracts/v2/oracle/OracleAggregatorWithSequencerV2.sol";
 import {WhitelistManager, IWhitelistManager} from "contracts/v2/access/WhitelistManager.sol";
+import {
+    TermMax4626Factory,
+    StableERC4626For4626,
+    StableERC4626ForAave,
+    VariableERC4626ForAave
+} from "contracts/v2/factory/TermMax4626Factory.sol";
 
 contract DeployBaseV2 is Script {
+    struct DeployedContracts {
+        AccessManagerV2 accessManager;
+        IWhitelistManager whitelistManager;
+        TermMaxFactoryV2 factory;
+        TermMaxVaultFactoryV2 vaultFactory;
+        TermMaxPriceFeedFactoryV2 priceFeedFactory;
+        TermMax4626Factory tmx4626Factory;
+        IOracle oracle;
+        TermMaxRouterV2 router;
+        MakerHelper makerHelper;
+        SwapAdapterV2 swapAdapter;
+        Faucet faucet;
+        MarketViewer marketViewer;
+        UniswapV3AdapterV2 uniswapV3Adapter;
+        OdosV2AdapterV2 odosV2Adapter;
+        PendleSwapV3AdapterV2 pendleSwapV3Adapter;
+        ERC4626VaultAdapterV2 vaultAdapter;
+        TermMaxSwapAdapter termMaxSwapAdapter;
+    }
+
+    struct CoreParams {
+        address deployerAddr;
+        string network;
+        bool isL2Network;
+        bool isMainnet;
+        uint256 oracleTimelock;
+        address l2SequencerUpPriceFeed;
+        uint256 l2GracePeriod;
+        address uniswapV3Router;
+        address odosV2Router;
+        address pendleSwapV3Router;
+        address AAVE_POOL;
+        uint16 AAVE_REFERRAL_CODE;
+    }
+
     bytes32 constant GT_ERC20 = keccak256("GearingTokenWithERC20");
 
     function deployFactory(address admin) public returns (TermMaxFactoryV2 factory) {
@@ -63,30 +104,34 @@ contract DeployBaseV2 is Script {
         vaultFactory = new TermMaxVaultFactoryV2(address(implementation));
     }
 
-    function deployOracleAggregator(address admin, uint256 timelock) public returns (OracleAggregatorV2 oracle) {
-        oracle = new OracleAggregatorV2(admin, timelock);
+    function deployOracleAggregator(address admin, uint256 oracleTimelock) public returns (OracleAggregatorV2 oracle) {
+        oracle = new OracleAggregatorV2(admin, oracleTimelock);
     }
 
     function deployOracleAggregatorWithSequencer(
         address admin,
-        uint256 timelock,
+        uint256 oracleTimelock,
         address sequencerUpPriceFeed,
         uint256 gracePeriod
     ) public returns (OracleAggregatorWithSequencerV2 oracle) {
-        oracle = new OracleAggregatorWithSequencerV2(admin, timelock, sequencerUpPriceFeed, gracePeriod);
+        oracle = new OracleAggregatorWithSequencerV2(admin, oracleTimelock, sequencerUpPriceFeed, gracePeriod);
     }
 
-    function deployRouter(address admin) public returns (TermMaxRouterV2 router) {
+    function deployRouter(address admin, address whitelistManager) public returns (TermMaxRouterV2 router) {
         TermMaxRouterV2 implementation = new TermMaxRouterV2();
 
-        bytes memory data = abi.encodeCall(TermMaxRouterV2.initialize, admin);
+        bytes memory data = abi.encodeCall(TermMaxRouterV2.initialize, (admin, whitelistManager));
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), data);
         router = TermMaxRouterV2(address(proxy));
     }
 
-    function upgradeRouter(AccessManagerV2 manager, address routerProxy) public returns (TermMaxRouterV2 router) {
+    function upgradeRouter(AccessManagerV2 manager, address routerProxy, address whitelistManager)
+        public
+        returns (TermMaxRouterV2 router)
+    {
         TermMaxRouterV2 implementation = new TermMaxRouterV2();
-        manager.upgradeSubContract(UUPSUpgradeable(routerProxy), address(implementation), bytes(""));
+        bytes memory data = abi.encodeCall(TermMaxRouterV2.initializeV2, whitelistManager);
+        manager.upgradeSubContract(UUPSUpgradeable(routerProxy), address(implementation), data);
         router = TermMaxRouterV2(routerProxy);
     }
 
@@ -112,163 +157,101 @@ contract DeployBaseV2 is Script {
         return existingAccessManager;
     }
 
-    function deployCore(address deployerAddr, address accessManagerAddr)
+    function deployCore(DeployedContracts memory contracts, CoreParams memory params)
         public
-        returns (
-            TermMaxFactoryV2 factory,
-            TermMaxVaultFactoryV2 vaultFactory,
-            TermMaxPriceFeedFactoryV2 priceFeedFactory,
-            TermMaxRouterV2 router,
-            MakerHelper makerHelper,
-            SwapAdapterV2 swapAdapter,
-            Faucet faucet,
-            MarketViewer marketViewer
-        )
+        returns (DeployedContracts memory)
     {
-        // deploy access manager
-        AccessManagerV2 accessManager = AccessManagerV2(accessManagerAddr);
-
         // deploy factory
-        factory = deployFactory(address(accessManager));
+        contracts.factory = deployFactory(address(contracts.accessManager));
+
+        // deploy whitelist manager
+        contracts.whitelistManager = deployWhitelistManager(address(contracts.accessManager));
+
+        contracts.vaultFactory = deployVaultFactory();
 
         // deploy vault factory
-        vaultFactory = deployVaultFactory();
+        contracts.vaultFactory = deployVaultFactory();
 
+        // deploy 4626 factory
+        contracts.tmx4626Factory = new TermMax4626Factory(params.AAVE_POOL, params.AAVE_REFERRAL_CODE);
+
+        //deploy price feed factory
+        contracts.priceFeedFactory = new TermMaxPriceFeedFactoryV2();
+
+        //deploy oracle
+        if (address(contracts.oracle) == address(0)) {
+            contracts.oracle = params.isL2Network
+                ? IOracle(
+                    address(
+                        deployOracleAggregatorWithSequencer(
+                            address(contracts.accessManager),
+                            params.oracleTimelock,
+                            params.l2SequencerUpPriceFeed,
+                            params.l2GracePeriod
+                        )
+                    )
+                )
+                : IOracle(address(deployOracleAggregator(address(contracts.accessManager), params.oracleTimelock)));
+        }
         // deploy price feed factory
-        priceFeedFactory = new TermMaxPriceFeedFactoryV2();
+        contracts.priceFeedFactory = new TermMaxPriceFeedFactoryV2();
 
-        // deploy router
-        router = deployRouter(address(accessManager));
-
-        // deploy swap adapter
-        swapAdapter = new SwapAdapterV2(deployerAddr);
-        accessManager.setAdapterWhitelist(ITermMaxRouter(address(router)), address(swapAdapter), true);
-
-        faucet = new Faucet(deployerAddr);
-
+        // deploy or upgrade router
+        if (address(contracts.router) == address(0)) {
+            contracts.router = deployRouter(address(contracts.accessManager), address(contracts.whitelistManager));
+        } else {
+            contracts.router =
+                upgradeRouter(contracts.accessManager, address(contracts.router), address(contracts.whitelistManager));
+        }
+        // deploy maker helper
+        contracts.makerHelper = deployMakerHelper(address(contracts.accessManager));
+        // deploy faucet
+        if (address(contracts.faucet) == address(0)) {
+            contracts.faucet = new Faucet(params.deployerAddr);
+        }
         // deploy market viewer
-        marketViewer = deployMarketViewer();
-
-        // deploy maker helper
-        makerHelper = deployMakerHelper(address(accessManager));
-    }
-
-    function deployAndUpgradeCore(address deployerAddr, address accessManagerAddr, address routerAddr)
-        public
-        returns (
-            TermMaxFactoryV2 factory,
-            TermMaxVaultFactoryV2 vaultFactory,
-            TermMaxPriceFeedFactoryV2 priceFeedFactory,
-            TermMaxRouterV2 router,
-            MakerHelper makerHelper,
-            SwapAdapterV2 swapAdapter
-        )
-    {
-        // deploy access manager
-        AccessManagerV2 accessManager = AccessManagerV2(accessManagerAddr);
-
-        // deploy factory
-        factory = deployFactory(address(accessManager));
-
-        // deploy vault factory
-        vaultFactory = deployVaultFactory();
-
-        // deploy price feed factory
-        priceFeedFactory = new TermMaxPriceFeedFactoryV2();
-
-        // deploy and upgrade router
-        router = upgradeRouter(accessManager, routerAddr);
-
-        // deploy swap adapter
-        swapAdapter = new SwapAdapterV2(deployerAddr);
-        accessManager.setAdapterWhitelist(ITermMaxRouter(address(router)), address(swapAdapter), true);
-
-        // deploy maker helper
-        makerHelper = deployMakerHelper(address(accessManager));
-    }
-
-    function deployCoreMainnet(
-        address accessManagerAddr,
-        address whitelistManagerAddr,
-        address uniswapV3Router,
-        address odosV2Router,
-        address pendleSwapV3Router
-    )
-        public
-        returns (
-            TermMaxFactoryV2 factory,
-            TermMaxVaultFactoryV2 vaultFactory,
-            TermMaxPriceFeedFactoryV2 priceFeedFactory,
-            TermMaxRouterV2 router,
-            MakerHelper makerHelper,
-            MarketViewer marketViewer,
-            UniswapV3AdapterV2 uniswapV3Adapter,
-            OdosV2AdapterV2 odosV2Adapter,
-            PendleSwapV3AdapterV2 pendleSwapV3Adapter,
-            ERC4626VaultAdapterV2 vaultAdapter,
-            TermMaxSwapAdapter termMaxSwapAdapter
-        )
-    {
-        // deploy access manager
-        AccessManagerV2 accessManager = AccessManagerV2(accessManagerAddr);
-
-        // deploy factory
-        factory = deployFactory(address(accessManager));
-
-        // deploy vault factory
-        vaultFactory = deployVaultFactory();
-
-        // deploy price feed factory
-        priceFeedFactory = new TermMaxPriceFeedFactoryV2();
-
-        // deploy router
-        router = deployRouter(address(accessManager));
-
-        // deploy maker helper
-        makerHelper = deployMakerHelper(address(accessManager));
-
-        // deploy market viewer
-        marketViewer = deployMarketViewer();
-
-        // deploy and whitelist swap adapter
-        (uniswapV3Adapter, odosV2Adapter, pendleSwapV3Adapter, vaultAdapter, termMaxSwapAdapter) =
-            deployAdapters(accessManagerAddr, whitelistManagerAddr, uniswapV3Router, odosV2Router, pendleSwapV3Router);
-    }
-
-    function deployAndUpgradeCoreMainnet(
-        address accessManagerAddr,
-        address whitelistManagerAddr,
-        address routerAddr,
-        address uniswapV3Router,
-        address odosV2Router,
-        address pendleSwapV3Router
-    )
-        public
-        returns (
-            TermMaxFactoryV2 factory,
-            TermMaxVaultFactoryV2 vaultFactory,
-            TermMaxPriceFeedFactoryV2 priceFeedFactory,
-            TermMaxRouterV2 router,
-            MakerHelper makerHelper,
-            UniswapV3AdapterV2 uniswapV3Adapter,
-            OdosV2AdapterV2 odosV2Adapter,
-            PendleSwapV3AdapterV2 pendleSwapV3Adapter,
-            ERC4626VaultAdapterV2 vaultAdapter,
-            TermMaxSwapAdapter termMaxSwapAdapterV2
-        )
-    {
-        (uniswapV3Adapter, odosV2Adapter, pendleSwapV3Adapter, vaultAdapter, termMaxSwapAdapterV2) =
-            deployAdapters(accessManagerAddr, whitelistManagerAddr, uniswapV3Router, odosV2Router, pendleSwapV3Router);
-        // upgrade router
-        router = upgradeRouter(AccessManagerV2(accessManagerAddr), routerAddr);
-        // deploy factory
-        factory = deployFactory(address(AccessManagerV2(accessManagerAddr)));
-        // deploy vault factory
-        vaultFactory = deployVaultFactory();
-        // deploy price feed factory
-        priceFeedFactory = new TermMaxPriceFeedFactoryV2();
-        // deploy maker helper
-        makerHelper = deployMakerHelper(address(AccessManagerV2(accessManagerAddr)));
+        if (address(contracts.marketViewer) == address(0)) {
+            contracts.marketViewer = deployMarketViewer();
+        }
+        // deploy and whitelist swap adapters
+        address[] memory adapters;
+        if (params.isMainnet) {
+            (
+                contracts.uniswapV3Adapter,
+                contracts.odosV2Adapter,
+                contracts.pendleSwapV3Adapter,
+                contracts.vaultAdapter,
+                contracts.termMaxSwapAdapter
+            ) = deployAdapters(
+                address(contracts.accessManager),
+                address(contracts.whitelistManager),
+                // Uniswap V3 Router
+                params.uniswapV3Router,
+                // Odos V2 Router
+                params.odosV2Router,
+                // Pendle Swap V3 Router
+                params.pendleSwapV3Router
+            );
+            adapters = new address[](5);
+            adapters[0] = address(contracts.uniswapV3Adapter);
+            adapters[1] = address(contracts.odosV2Adapter);
+            adapters[2] = address(contracts.pendleSwapV3Adapter);
+            adapters[3] = address(contracts.vaultAdapter);
+            adapters[4] = address(contracts.termMaxSwapAdapter);
+        } else {
+            contracts.swapAdapter = new SwapAdapterV2(params.deployerAddr);
+            contracts.termMaxSwapAdapter = new TermMaxSwapAdapter(address(contracts.whitelistManager));
+            adapters = new address[](2);
+            adapters[0] = address(contracts.swapAdapter);
+            adapters[1] = address(contracts.termMaxSwapAdapter);
+        }
+        contracts.accessManager.batchSetWhitelist(
+            IWhitelistManager(address(contracts.whitelistManager)),
+            adapters,
+            IWhitelistManager.ContractModule.ADAPTER,
+            true
+        );
+        return contracts;
     }
 
     function deployAdapters(
@@ -499,19 +482,6 @@ contract DeployBaseV2 is Script {
         returns (TermMaxVaultV2 vault)
     {
         TermMaxVaultFactoryV2 vaultFactory = TermMaxVaultFactoryV2(factoryAddr);
-        // VaultInitialParamsV2 memory initialParams = VaultInitialParamsV2({
-        //     admin: accessManagerAddr,
-        //     curator: curator,
-        //     guardian: guardian,
-        //     timelock: timelock,
-        //     asset: IERC20(assetAddr),
-        //     pool: IERC4626(address(0)), // No pool for now, can be set later
-        //     maxCapacity: maxCapacity,
-        //     name: name,
-        //     symbol: symbol,
-        //     performanceFeeRate: performanceFeeRate,
-        //     minApy: minApy
-        // });
         vault = TermMaxVaultV2(vaultFactory.createVault(initialParams, 0));
     }
 

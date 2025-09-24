@@ -150,7 +150,7 @@ contract RouterTestV2 is Test {
     function testUpgradeRouterToV2() public {
         TermMaxRouterV2 impl = new TermMaxRouterV2();
         address admin = vm.randomAddress();
-        bytes memory data = abi.encodeCall(TermMaxRouterV2.initialize, admin);
+        bytes memory data = abi.encodeCall(TermMaxRouterV2.initialize, (admin, vm.randomAddress()));
         ERC1967Proxy proxy = new ERC1967Proxy(address(impl), data);
         TermMaxRouterV2 router_tmp = TermMaxRouterV2(address(proxy));
         TermMaxRouterV2 impl2 = new TermMaxRouterV2();
