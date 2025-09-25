@@ -1,0 +1,28 @@
+{
+  "network": "eth-sepolia",
+  "deployedAt": "1758699588",
+  "gitBranch": "v2/deployment",
+  "gitCommitHash": "0x0xd37539e609c401c7e041e615328e7d1545cd5813",
+  "blockInfo": {
+    "number": "9268281",
+    "timestamp": "1758699588"
+  },
+  "deployer": "0xE355d5D8aa52EF0FbbD037C4a3C5E6Fd659cf46B",
+  "admin": "0x81f314f70702Bbe89FEd0F2cFe6841950275E0b7",
+  "contracts": {
+    "factoryV2": "0xb68B95f743E88cF92A8F3Ae6cc25C067CF5A4697",
+    "vaultFactoryV2": "0x06520075a327E31C17B55524e47924beA21b45Fa",
+    "priceFeedFactoryV2": "0x10472bFB7De778C9806CfBf6722359ae2285865c",
+    "termMax4626Factory": "0xFF69A2b53aD891d26D706BB18C44B7079Ce78958",
+    "whitelistManager": "0xC4128E226e1d309C80D1841da4FFEBb0a92Eb6AA",
+    "oracleAggregatorV2": "0x8e0eF9E4532DC6B5D8eA75E4366001fed6fDcB30",
+    "routerV2": "0x2F68071baC2bE3332c8107Dd15a76f7230F34013",
+    "MarketViewer": "0x235f12Ac9B6947cAF234D78712a68941c30c0cdb",
+    "makerHelper": "0x7A89f7946Bbe98AEbE8A19d5dE14Fba3cCfC6f17",
+    "swapAdapterV2": {
+      "swapAdapter": "0x59017190342e00Fd7976997A3133c6C282699D85",
+      "TermMaxSwapAdapter": "0x713AEe3a484813440450459dff4bD18575A23FA5"
+    },
+    "faucet": "0x34230231A3E309fa68d81ED6a0183282DD629859"
+  }
+}

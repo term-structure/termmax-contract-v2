@@ -338,10 +338,11 @@ contract VaultV2WithPoolTest is Test {
 
         console.log("----day 92----");
         vm.warp(currentTime + 92 days);
+        vm.prank(curator);
+        vault.redeemOrder(res.order);
         console.log("new principal:", vault.totalAssets());
         vm.startPrank(lper2);
         console.log("previewRedeem: ", vault.previewRedeem(1000e8));
-        vault.redeemOrder(res.order);
         assertEq(vault.previewRedeem(1000e8), vault.redeem(1000e8, lper2, lper2));
         console.log("principal after redeem:", vault.totalAssets());
         console.log("total supply:", vault.totalSupply());
@@ -408,8 +409,9 @@ contract VaultV2WithPoolTest is Test {
         uint256 badDebt = res.ft.balanceOf(address(res.order)) - tokenOut;
         uint256 delivered = (propotion * 1e18) / Constants.DECIMAL_BASE_SQ;
 
-        vm.startPrank(lper2);
+        vm.prank(curator);
         vault.redeemOrder(res.order);
+        vm.startPrank(lper2);
         vault.redeem(1000e8, lper2, lper2);
         vm.stopPrank();
 
@@ -459,8 +461,9 @@ contract VaultV2WithPoolTest is Test {
         vm.stopPrank();
 
         vm.warp(currentTime + 92 days);
-        vm.startPrank(lper2);
+        vm.prank(curator);
         vault.redeemOrder(res.order);
+        vm.startPrank(lper2);
         vault.redeem(1000e8, lper2, lper2);
 
         uint256 badDebt = vault.badDebtMapping(address(res.collateral));

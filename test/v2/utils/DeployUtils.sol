@@ -33,6 +33,7 @@ import {
 import {VaultInitialParamsV2} from "contracts/v2/storage/TermMaxStorageV2.sol";
 import {TermMaxVaultFactoryV2} from "contracts/v2/factory/TermMaxVaultFactoryV2.sol";
 import {MockAave} from "contracts/v2/test/MockAave.sol";
+import {WhitelistManager, IWhitelistManager} from "contracts/v2/access/WhitelistManager.sol";
 
 library DeployUtils {
     bytes32 constant GT_ERC20 = keccak256("GearingTokenWithERC20");
@@ -67,6 +68,7 @@ library DeployUtils {
         MockERC20 debt;
         SwapRange swapRange;
         MockAave aave;
+        IWhitelistManager whitelistManager;
     }
 
     function deployMarket(address admin, MarketConfig memory marketConfig, uint32 maxLtv, uint32 liquidationLtv)
@@ -324,9 +326,10 @@ library DeployUtils {
         oracle = new OracleAggregatorV2(admin, timeLock);
     }
 
-    function deployRouter(address admin) public returns (TermMaxRouterV2 router) {
+    function deployRouter(address admin) public returns (TermMaxRouterV2 router, IWhitelistManager whitelistManager) {
+        whitelistManager = deployWhitelistManager(admin);
         TermMaxRouterV2 implementation = new TermMaxRouterV2();
-        bytes memory data = abi.encodeCall(TermMaxRouterV2.initialize, admin);
+        bytes memory data = abi.encodeCall(TermMaxRouterV2.initialize, (admin, address(whitelistManager)));
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), data);
         router = TermMaxRouterV2(address(proxy));
     }
@@ -344,5 +347,12 @@ library DeployUtils {
         bytes memory data = abi.encodeCall(AccessManager.initialize, admin);
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), data);
         accessManager = AccessManager(address(proxy));
+    }
+
+    function deployWhitelistManager(address admin) internal returns (IWhitelistManager whitelistManager) {
+        WhitelistManager implementation = new WhitelistManager();
+        bytes memory data = abi.encodeCall(WhitelistManager.initialize, admin);
+        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), data);
+        whitelistManager = IWhitelistManager(address(proxy));
     }
 }

@@ -697,6 +697,50 @@ contract OrderTestV2WithPool is Test {
             );
         }
     }
+
+    // Fuzz test: remove liquidity by specifying pool share amount
+    function testFuzz_removeLiquidityAsShare(uint256 shares) public {
+        vm.startPrank(maker);
+
+        // order must have shares from setUp
+        uint256 orderSharesBefore = pool.balanceOf(address(res.order));
+        vm.assume(orderSharesBefore > 0);
+
+        // bound shares to [1, orderSharesBefore]
+        uint256 sharesToRemove = (shares % orderSharesBefore) + 1;
+
+        // Ensure the order has some ft/xt reserves so _pool.deposit(maxBurned, recipient) path is executed.
+        uint256 mintAmt = 10e8;
+        // give maker debt and approve market to mint ft/xt to the order
+        res.debt.mint(maker, mintAmt);
+        res.debt.approve(address(res.market), mintAmt);
+        // mint ft/xt to the order
+        res.market.mint(address(res.order), mintAmt);
+
+        // capture balances before
+        uint256 makerBefore = pool.balanceOf(maker);
+        uint256 ftBefore = res.ft.balanceOf(address(res.order));
+        uint256 xtBefore = res.xt.balanceOf(address(res.order));
+
+        uint256 maxBurned = ftBefore < xtBefore ? ftBefore : xtBefore;
+        // ensure we exercise the branch that deposits the burned debt back to the pool for recipient
+        vm.assume(maxBurned > 0);
+
+        // expected shares minted by depositing `maxBurned` debt tokens to pool
+        uint256 expectedDepositShares = pool.previewDeposit(maxBurned);
+
+        // remove pool shares from order to maker
+        res.order.removeLiquidity(IERC20(address(pool)), sharesToRemove, maker);
+
+        vm.stopPrank();
+
+        // assertions: pool shares moved from order to maker and deposited shares minted to maker
+        assertEq(pool.balanceOf(address(res.order)), orderSharesBefore + expectedDepositShares - sharesToRemove);
+        assertEq(pool.balanceOf(maker), makerBefore + sharesToRemove);
+        // ft/xt reserves should decrease by `maxBurned` since that debt was deposited to pool for maker
+        assertEq(res.ft.balanceOf(address(res.order)), ftBefore - maxBurned);
+        assertEq(res.xt.balanceOf(address(res.order)), xtBefore - maxBurned);
+    }
 } // end OrderTestV2WithPool
 
 // Mock contracts for testing

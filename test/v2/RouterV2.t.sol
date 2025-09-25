@@ -8,6 +8,7 @@ import {JSONLoader} from "./utils/JSONLoader.sol";
 import {StateChecker} from "./utils/StateChecker.sol";
 import {SwapUtils} from "./utils/SwapUtils.sol";
 import {LoanUtils} from "./utils/LoanUtils.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
@@ -54,7 +55,8 @@ import {
     SwapUnit,
     RouterErrors,
     RouterEvents,
-    SwapPath
+    SwapPath,
+    UUPSUpgradeable
 } from "contracts/v2/router/TermMaxRouterV2.sol";
 import {RouterEventsV2} from "contracts/v2/events/RouterEventsV2.sol";
 import {ITermMaxRouter} from "contracts/v1/router/ITermMaxRouter.sol";
@@ -63,6 +65,9 @@ import {ITermMaxOrder} from "contracts/v1/ITermMaxOrder.sol";
 import {TermMaxSwapData, TermMaxSwapAdapter} from "contracts/v2/router/swapAdapters/TermMaxSwapAdapter.sol";
 import {TermMaxOrderV2, OrderInitialParams} from "contracts/v2/TermMaxOrderV2.sol";
 import {DelegateAble} from "contracts/v2/lib/DelegateAble.sol";
+import {IWhitelistManager} from "contracts/v2/access/IWhitelistManager.sol";
+import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
+import {MockERC4626} from "contracts/v2/test/MockERC4626.sol";
 
 contract RouterTestV2 is Test {
     using JSONLoader for *;
@@ -125,12 +130,16 @@ contract RouterTestV2 is Test {
         res.ft.transfer(address(res.order), amount);
         res.xt.transfer(address(res.order), amount);
 
-        res.router = DeployUtils.deployRouter(deployer);
+        (res.router, res.whitelistManager) = DeployUtils.deployRouter(deployer);
+        res.router.setWhitelistManager(address(res.whitelistManager));
         adapter = new MockSwapAdapterV2(pool);
-        res.router.setAdapterWhitelist(address(adapter), true);
+        termMaxSwapAdapter = new TermMaxSwapAdapter(address(res.whitelistManager));
 
-        termMaxSwapAdapter = new TermMaxSwapAdapter();
-        res.router.setAdapterWhitelist(address(termMaxSwapAdapter), true);
+        address[] memory adapters = new address[](2);
+        adapters[0] = address(adapter);
+        adapters[1] = address(termMaxSwapAdapter);
+
+        res.whitelistManager.batchSetWhitelist(adapters, IWhitelistManager.ContractModule.ADAPTER, true);
 
         vm.stopPrank();
 
@@ -138,7 +147,84 @@ contract RouterTestV2 is Test {
         res.order.updateOrder(orderConfig, 0, 0);
     }
 
+    function testUpgradeRouterToV2() public {
+        TermMaxRouterV2 impl = new TermMaxRouterV2();
+        address admin = vm.randomAddress();
+        bytes memory data = abi.encodeCall(TermMaxRouterV2.initialize, (admin, vm.randomAddress()));
+        ERC1967Proxy proxy = new ERC1967Proxy(address(impl), data);
+        TermMaxRouterV2 router_tmp = TermMaxRouterV2(address(proxy));
+        TermMaxRouterV2 impl2 = new TermMaxRouterV2();
+        data = abi.encodeCall(TermMaxRouterV2.initializeV2, (vm.randomAddress()));
+
+        vm.prank(admin);
+        router_tmp.upgradeToAndCall(address(impl2), data);
+    }
+
     function testSwapExactTokenToToken() public {
+        vm.startPrank(sender);
+
+        uint128 amountIn = 100e8;
+        uint128[] memory tradingAmts = new uint128[](2);
+        tradingAmts[0] = 50e8;
+        tradingAmts[1] = 50e8;
+        uint128 mintTokenOut = 80e8;
+
+        address[] memory orders = new address[](2);
+        orders[0] = address(res.order);
+        orders[1] = address(res.order);
+
+        TermMaxSwapData memory swapData = TermMaxSwapData({
+            swapExactTokenForToken: true,
+            scalingFactor: 0,
+            orders: orders,
+            tradingAmts: tradingAmts,
+            netTokenAmt: mintTokenOut,
+            deadline: block.timestamp + 1 hours
+        });
+
+        res.debt.mint(sender, amountIn);
+        res.debt.approve(address(res.router), amountIn);
+
+        SwapUnit[] memory swapUnits = new SwapUnit[](1);
+        swapUnits[0] = SwapUnit({
+            adapter: address(termMaxSwapAdapter),
+            tokenIn: address(res.debt),
+            tokenOut: address(res.ft),
+            swapData: abi.encode(swapData)
+        });
+
+        SwapPath[] memory swapPaths = new SwapPath[](1);
+        swapPaths[0] = SwapPath({units: swapUnits, recipient: sender, inputAmount: amountIn, useBalanceOnchain: false});
+
+        uint256[] memory netOutputs = res.router.swapTokens(swapPaths);
+
+        assertEq(netOutputs[0], res.ft.balanceOf(sender));
+        assertEq(res.debt.balanceOf(sender), 0);
+
+        vm.stopPrank();
+    }
+
+    function testSwapExactTokenToTokenWithWhitelistedCallbackAdnPool() public {
+        {
+            // deploy a mock callback and set it on the order as swapTrigger
+            MockSwapCallback mockCallback = new MockSwapCallback();
+            // deploy a mock pool and set it on the order
+            MockERC4626 mockPool = new MockERC4626(res.debt);
+            vm.startPrank(maker);
+            res.order.setPool(IERC4626(address(mockPool)));
+            res.order.setGeneralConfig(0, ISwapCallback(address(mockCallback)));
+            vm.stopPrank();
+
+            vm.startPrank(deployer);
+            address[] memory callbacks = new address[](1);
+            callbacks[0] = address(mockCallback);
+            res.whitelistManager.batchSetWhitelist(callbacks, IWhitelistManager.ContractModule.ORDER_CALLBACK, true);
+            address[] memory pools = new address[](1);
+            pools[0] = address(mockPool);
+            res.whitelistManager.batchSetWhitelist(pools, IWhitelistManager.ContractModule.POOL, true);
+            vm.stopPrank();
+        }
+
         vm.startPrank(sender);
 
         uint128 amountIn = 100e8;
@@ -603,62 +689,6 @@ contract RouterTestV2 is Test {
         vm.stopPrank();
     }
 
-    function testBorrowTokenFromGtAndXt(bool isV1) public {
-        vm.startPrank(sender);
-        uint256 collInAmt = 1e18;
-
-        (uint256 gtId,) = LoanUtils.fastMintGt(res, sender, 100e8, collInAmt);
-
-        uint128 borrowAmt = 80e8;
-
-        res.debt.mint(sender, borrowAmt);
-        res.debt.approve(address(res.market), borrowAmt);
-        res.market.mint(sender, borrowAmt);
-
-        res.xt.approve(address(res.router), borrowAmt);
-        res.gt.approve(address(res.router), gtId);
-        DelegateAble(address(res.gt)).setDelegate(address(res.router), true);
-
-        uint256 mintGtFeeRatio = res.market.mintGtFeeRatio();
-        uint128 previewDebtAmt =
-            ((borrowAmt * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - mintGtFeeRatio)).toUint128();
-
-        vm.expectEmit();
-        emit RouterEvents.Borrow(res.market, 1, sender, sender, 0, previewDebtAmt, borrowAmt);
-        res.router.borrowTokenFromGtAndXt(sender, res.market, gtId, borrowAmt, isV1);
-        (, uint128 dAmt,) = res.gt.loanInfo(gtId);
-        assert(dAmt == 100e8 + previewDebtAmt);
-        assertEq(res.debt.balanceOf(sender), borrowAmt);
-
-        vm.stopPrank();
-    }
-
-    function testBorrowTokenFromGtInvalidSender(bool isV1) public {
-        vm.startPrank(sender);
-        uint256 collInAmt = 1e18;
-
-        (uint256 gtId,) = LoanUtils.fastMintGt(res, sender, 100e8, collInAmt);
-
-        uint128 borrowAmt = 80e8;
-
-        res.debt.mint(sender, borrowAmt);
-        res.debt.approve(address(res.market), borrowAmt);
-        res.market.mint(sender, borrowAmt);
-
-        res.xt.approve(address(res.router), borrowAmt);
-        res.gt.approve(address(res.router), gtId);
-
-        uint256 mintGtFeeRatio = res.market.mintGtFeeRatio();
-        ((borrowAmt * Constants.DECIMAL_BASE) / (Constants.DECIMAL_BASE - mintGtFeeRatio)).toUint128();
-        vm.stopPrank();
-
-        vm.expectRevert(abi.encodeWithSelector(RouterErrors.GtNotOwnedBySender.selector));
-        vm.prank(deployer);
-        res.router.borrowTokenFromGtAndXt(sender, res.market, gtId, borrowAmt, isV1);
-
-        vm.stopPrank();
-    }
-
     function testFlashRepayFromCollateral(bool isV1) public {
         vm.startPrank(sender);
         uint128 debtAmt = 100e8;
@@ -905,36 +935,6 @@ contract RouterTestV2 is Test {
         vm.stopPrank();
     }
 
-    function testSetAdapterWhitelist() public {
-        vm.startPrank(deployer);
-
-        address randomAdapter = vm.randomAddress();
-
-        // Test adding to whitelist with event check
-        vm.expectEmit(true, true, true, true);
-        emit RouterEvents.UpdateSwapAdapterWhiteList(randomAdapter, true);
-        res.router.setAdapterWhitelist(randomAdapter, true);
-        assertTrue(res.router.adapterWhitelist(randomAdapter));
-
-        // Test removing from whitelist with event check
-        vm.expectEmit(true, true, true, true);
-        emit RouterEvents.UpdateSwapAdapterWhiteList(randomAdapter, false);
-        res.router.setAdapterWhitelist(randomAdapter, false);
-        assertFalse(res.router.adapterWhitelist(randomAdapter));
-
-        vm.stopPrank();
-    }
-
-    function testSetAdapterWhitelistUnauthorized() public {
-        vm.startPrank(sender);
-
-        address randomAdapter = vm.randomAddress();
-        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, address(sender)));
-        res.router.setAdapterWhitelist(randomAdapter, true);
-
-        vm.stopPrank();
-    }
-
     function testPause() public {
         vm.startPrank(deployer);
 
@@ -954,5 +954,109 @@ contract RouterTestV2 is Test {
         res.router.pause();
 
         vm.stopPrank();
+    }
+
+    function testSwap_RevertWhenCallbackNotWhitelisted() public {
+        // deploy a mock callback and set it on the order as swapTrigger
+        MockSwapCallback mockCallback = new MockSwapCallback();
+        vm.startPrank(maker);
+        res.order.setGeneralConfig(0, ISwapCallback(address(mockCallback)));
+        vm.stopPrank();
+
+        vm.startPrank(sender);
+
+        uint128 amountIn = 10e8;
+        uint128[] memory tradingAmts = new uint128[](1);
+        tradingAmts[0] = 10e8;
+
+        address[] memory orders = new address[](1);
+        orders[0] = address(res.order);
+
+        TermMaxSwapData memory swapData = TermMaxSwapData({
+            swapExactTokenForToken: true,
+            scalingFactor: 0,
+            orders: orders,
+            tradingAmts: tradingAmts,
+            netTokenAmt: 1e8,
+            deadline: block.timestamp + 1 hours
+        });
+
+        res.debt.mint(sender, amountIn);
+        res.debt.approve(address(res.router), amountIn);
+
+        SwapUnit[] memory swapUnits = new SwapUnit[](1);
+        swapUnits[0] = SwapUnit({
+            adapter: address(termMaxSwapAdapter),
+            tokenIn: address(res.debt),
+            tokenOut: address(res.ft),
+            swapData: abi.encode(swapData)
+        });
+
+        SwapPath[] memory swapPaths = new SwapPath[](1);
+        swapPaths[0] = SwapPath({units: swapUnits, recipient: sender, inputAmount: amountIn, useBalanceOnchain: false});
+        bytes memory errorData =
+            abi.encodeWithSelector(bytes4(keccak256("UnauthorizedCallback(address)")), address(mockCallback));
+
+        vm.expectRevert(abi.encodeWithSelector(RouterErrors.SwapFailed.selector, termMaxSwapAdapter, errorData));
+        res.router.swapTokens(swapPaths);
+
+        vm.stopPrank();
+    }
+
+    function testSwap_RevertWhenPoolNotWhitelisted() public {
+        // deploy a mock pool and set it on the order
+        MockERC4626 mockPool = new MockERC4626(res.debt);
+        vm.startPrank(maker);
+        res.order.setPool(IERC4626(address(mockPool)));
+        vm.stopPrank();
+
+        vm.startPrank(sender);
+
+        uint128 amountIn = 10e8;
+        uint128[] memory tradingAmts = new uint128[](1);
+        tradingAmts[0] = 10e8;
+
+        address[] memory orders = new address[](1);
+        orders[0] = address(res.order);
+
+        TermMaxSwapData memory swapData = TermMaxSwapData({
+            swapExactTokenForToken: true,
+            scalingFactor: 0,
+            orders: orders,
+            tradingAmts: tradingAmts,
+            netTokenAmt: 1e8,
+            deadline: block.timestamp + 1 hours
+        });
+
+        res.debt.mint(sender, amountIn);
+        res.debt.approve(address(res.router), amountIn);
+
+        SwapUnit[] memory swapUnits = new SwapUnit[](1);
+        swapUnits[0] = SwapUnit({
+            adapter: address(termMaxSwapAdapter),
+            tokenIn: address(res.debt),
+            tokenOut: address(res.ft),
+            swapData: abi.encode(swapData)
+        });
+
+        SwapPath[] memory swapPaths = new SwapPath[](1);
+        swapPaths[0] = SwapPath({units: swapUnits, recipient: sender, inputAmount: amountIn, useBalanceOnchain: false});
+        bytes memory errorData =
+            abi.encodeWithSelector(bytes4(keccak256("UnauthorizedPool(address)")), address(mockPool));
+        vm.expectRevert(abi.encodeWithSelector(RouterErrors.SwapFailed.selector, termMaxSwapAdapter, errorData));
+        res.router.swapTokens(swapPaths);
+
+        vm.stopPrank();
+    }
+}
+
+// Minimal mock swap callback used by some tests in this file
+contract MockSwapCallback is ISwapCallback {
+    int256 public deltaFt;
+    int256 public deltaXt;
+
+    function afterSwap(uint256, uint256, int256 deltaFt_, int256 deltaXt_) external override {
+        deltaFt = deltaFt_;
+        deltaXt = deltaXt_;
     }
 }

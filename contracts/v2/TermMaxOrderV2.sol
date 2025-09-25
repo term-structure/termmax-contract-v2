@@ -500,9 +500,14 @@ contract TermMaxOrderV2 is
                     _pool.withdraw(amount - maxBurned, recipient, address(this));
                 }
             } else {
-                // transform ft and xt to debt token and deposit to pool
-                _market.burn(address(this), maxBurned);
-                _pool.deposit(maxBurned, recipient);
+                if (maxBurned != 0) {
+                    // transform ft and xt to debt token and deposit to pool
+                    _market.burn(address(this), maxBurned);
+                    // approve pool to pull the resulting debt tokens
+                    _debtToken.safeIncreaseAllowance(address(_pool), maxBurned);
+                    // deposit to receive pool shares
+                    _pool.deposit(maxBurned, address(this));
+                }
                 _pool.safeTransfer(recipient, amount);
             }
         }

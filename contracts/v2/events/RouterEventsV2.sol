@@ -10,6 +10,8 @@ import {OrderInitialParams} from "../storage/TermMaxStorageV2.sol";
  * @notice Interface defining events for the TermMax V2 protocol's router operations
  */
 interface RouterEventsV2 {
+    event WhitelistManagerUpdated(address whitelistManager);
+
     event SwapAndRepay(address indexed gt, uint256 indexed gtId, uint256 repayAmt, uint256 remainingRepayToken);
 
     event FlashRepay(address indexed gt, uint256 indexed gtId, uint256 netTokenOut);

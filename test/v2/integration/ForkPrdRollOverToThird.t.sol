@@ -35,6 +35,7 @@ import {console} from "forge-std/console.sol";
 import {IAaveV3Pool} from "contracts/v2/extensions/aave/IAaveV3Pool.sol";
 import {ICreditDelegationToken} from "contracts/v2/extensions/aave/ICreditDelegationToken.sol";
 import {IMorpho, Id, MarketParams, Authorization, Signature} from "contracts/v2/extensions/morpho/IMorpho.sol";
+import {IWhitelistManager} from "contracts/v2/access/IWhitelistManager.sol";
 
 interface TestOracle is IOracle {
     function acceptPendingOracle(address asset) external;
@@ -87,10 +88,6 @@ contract ForkPrdRollOverToThird is ForkBaseTestV2 {
         OdosV2AdapterV2 od = new OdosV2AdapterV2(0xCf5540fFFCdC3d510B18bFcA6d2b9987b0772559);
         odosAdapter = address(od);
 
-        TermMaxSwapAdapter tmx = new TermMaxSwapAdapter();
-        tmxAdapter = address(tmx);
-        vm.label(tmxAdapter, "TermMaxAdapter");
-
         vaultAdapter = address(new ERC4626VaultAdapterV2());
         vm.label(vaultAdapter, "ERC4626VaultAdapterV2");
 
@@ -103,11 +100,20 @@ contract ForkPrdRollOverToThird is ForkBaseTestV2 {
         address admin = vm.randomAddress();
 
         vm.startPrank(admin);
-        router = deployRouter(admin);
-        router.setAdapterWhitelist(pendleAdapter, true);
-        router.setAdapterWhitelist(odosAdapter, true);
-        router.setAdapterWhitelist(tmxAdapter, true);
-        router.setAdapterWhitelist(vaultAdapter, true);
+        IWhitelistManager whitelistManager;
+        (router, whitelistManager) = deployRouter(admin);
+        router.setWhitelistManager(address(whitelistManager));
+
+        TermMaxSwapAdapter tmx = new TermMaxSwapAdapter(address(whitelistManager));
+        tmxAdapter = address(tmx);
+        vm.label(tmxAdapter, "TermMaxAdapter");
+
+        address[] memory adapters = new address[](4);
+        adapters[0] = pendleAdapter;
+        adapters[1] = odosAdapter;
+        adapters[2] = tmxAdapter;
+        adapters[3] = vaultAdapter;
+        whitelistManager.batchSetWhitelist(adapters, IWhitelistManager.ContractModule.ADAPTER, true);
         vm.stopPrank();
 
         IAaveV3Pool.ReserveData memory rd = IAaveV3Pool(address(aave)).getReserveData(usdc);

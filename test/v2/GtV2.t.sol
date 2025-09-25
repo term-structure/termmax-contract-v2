@@ -736,6 +736,46 @@ contract GtTestV2 is Test {
         vm.stopPrank();
     }
 
+    function testRemoveCollateralZeroDebt(uint256 removedCollateral) public {
+        uint256 collateralAmt = 1e18;
+        uint128 debtAmt = 0;
+        vm.assume(removedCollateral > 0 && removedCollateral <= collateralAmt);
+
+        vm.startPrank(sender);
+        res.collateral.mint(sender, collateralAmt);
+        bytes memory collateralData = abi.encode(collateralAmt);
+        res.collateral.approve(address(res.gt), collateralAmt);
+        (uint256 gtId,) = res.market.issueFt(sender, debtAmt, collateralData);
+
+        uint256 collateralBalanceBefore = res.collateral.balanceOf(sender);
+        StateChecker.MarketState memory state = StateChecker.getMarketState(res);
+
+        vm.expectEmit();
+        emit GearingTokenEvents.RemoveCollateral(gtId, abi.encode(collateralAmt - removedCollateral));
+        res.gt.removeCollateral(gtId, abi.encode(removedCollateral));
+
+        uint256 collateralBalanceAfter = res.collateral.balanceOf(sender);
+        state.collateralReserve -= removedCollateral;
+        StateChecker.checkMarketState(res, state);
+
+        assertEq(
+            collateralBalanceAfter - collateralBalanceBefore,
+            removedCollateral,
+            "sender should receive removed collateral"
+        );
+
+        (address owner, uint128 currentDebt, bytes memory currentCollateral) = res.gt.loanInfo(gtId);
+        assertEq(owner, sender, "owner should remain sender");
+        assertEq(currentDebt, 0, "debt should remain zero");
+        assertEq(
+            abi.decode(currentCollateral, (uint256)),
+            collateralAmt - removedCollateral,
+            "collateral should be reduced by removed amount"
+        );
+
+        vm.stopPrank();
+    }
+
     function testRemoveCollateralWhenOracleOutdated() public {
         // debt 100 USD collaretal 2200USD
         uint128 debtAmt = 100e8;
