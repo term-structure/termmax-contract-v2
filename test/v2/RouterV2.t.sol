@@ -1048,6 +1048,77 @@ contract RouterTestV2 is Test {
 
         vm.stopPrank();
     }
+
+    function testSwap_WithV1OrderWithoutPool() public {
+        // deploy a minimal V1-like order that does NOT implement pool()
+        MockV1Order mockOrder = new MockV1Order();
+
+        vm.startPrank(sender);
+
+        uint128 amountIn = 100e8;
+        uint128[] memory tradingAmts = new uint128[](1);
+        tradingAmts[0] = amountIn;
+        uint128 mintTokenOut = amountIn; // we will treat tokenOut == tokenIn for this mock
+
+        address[] memory orders = new address[](1);
+        orders[0] = address(mockOrder);
+
+        TermMaxSwapData memory swapData = TermMaxSwapData({
+            swapExactTokenForToken: true,
+            scalingFactor: 0,
+            orders: orders,
+            tradingAmts: tradingAmts,
+            netTokenAmt: mintTokenOut,
+            deadline: block.timestamp + 1 hours
+        });
+
+        // fund sender and approve router to pull tokens
+        res.debt.mint(sender, amountIn);
+        res.debt.approve(address(res.router), amountIn);
+
+        // build swap unit using TermMaxSwapAdapter
+        SwapUnit[] memory swapUnits = new SwapUnit[](1);
+        swapUnits[0] = SwapUnit({
+            adapter: address(termMaxSwapAdapter),
+            tokenIn: address(res.debt),
+            tokenOut: address(res.debt), // same token to simplify mock
+            swapData: abi.encode(swapData)
+        });
+
+        SwapPath[] memory swapPaths = new SwapPath[](1);
+        swapPaths[0] = SwapPath({units: swapUnits, recipient: sender, inputAmount: amountIn, useBalanceOnchain: false});
+
+        // Execute swap - should NOT revert even though mockOrder has no pool()
+        uint256[] memory netOutputs = res.router.swapTokens(swapPaths);
+
+        // Because our mock simply transfers tokenIn to recipient, netOutputs[0] should equal amountIn
+        assertEq(netOutputs[0], amountIn);
+        // Sender's debt balance should be zero
+        assertEq(res.debt.balanceOf(sender), 0);
+
+        vm.stopPrank();
+    }
+}
+
+// Minimal V1-like order mock that does NOT implement pool()
+contract MockV1Order {
+    // No TransferUtils usage here to avoid compile issues in tests
+
+    function orderConfig() external pure returns (OrderConfig memory) {
+        OrderConfig memory cfg;
+        // leave swapTrigger as zero address
+        return cfg;
+    }
+
+    // Simplified swapExactTokenToToken: pull tokenIn from caller and forward to recipient
+    function swapExactTokenToToken(IERC20 tokenIn, IERC20, address recipient, uint128 tokenAmtIn, uint128, uint256)
+        external
+        returns (uint256 netTokenOut)
+    {
+        // msg.sender will be the router (delegatecall context), so pull tokens from router
+        tokenIn.transferFrom(msg.sender, recipient, tokenAmtIn);
+        return tokenAmtIn;
+    }
 }
 
 // Minimal mock swap callback used by some tests in this file

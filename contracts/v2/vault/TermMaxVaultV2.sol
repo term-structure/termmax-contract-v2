@@ -130,10 +130,6 @@ contract TermMaxVaultV2 is
         return _marketWhitelist[market];
     }
 
-    function poolWhitelist(address pool_) external view virtual returns (bool) {
-        return _poolWhitelist[pool_];
-    }
-
     function timelock() external view virtual returns (uint256) {
         return _timelock;
     }

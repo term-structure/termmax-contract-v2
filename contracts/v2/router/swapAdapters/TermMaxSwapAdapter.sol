@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import "./ERC20SwapAdapterV2.sol";
 import {ITermMaxOrder} from "contracts/interfaces/ITermMaxOrder.sol";
 import {TransferUtilsV2} from "../../lib/TransferUtilsV2.sol";
@@ -101,16 +102,18 @@ contract TermMaxSwapAdapter is ERC20SwapAdapterV2 {
 
     function _checkOrderCallback(address order) internal view virtual {
         address callbackAddr = address(ITermMaxOrder(order).orderConfig().swapTrigger);
-        address pool = address(ITermMaxOrder(order).pool());
         if (
             callbackAddr != address(0)
                 && !whitelistManager.isWhitelisted(callbackAddr, IWhitelistManager.ContractModule.ORDER_CALLBACK)
         ) {
             revert UnauthorizedCallback(callbackAddr);
         }
-        if (pool != address(0) && !whitelistManager.isWhitelisted(pool, IWhitelistManager.ContractModule.POOL)) {
-            revert UnauthorizedPool(pool);
-        }
+        try ITermMaxOrder(order).pool() returns (IERC4626 pool4626) {
+            address pool = address(pool4626);
+            if (pool != address(0) && !whitelistManager.isWhitelisted(pool, IWhitelistManager.ContractModule.POOL)) {
+                revert UnauthorizedPool(pool);
+            }
+        } catch {}
     }
 
     function _scaleTradingAmts(uint256 tokenInAmt, TermMaxSwapData memory data) internal pure virtual {
