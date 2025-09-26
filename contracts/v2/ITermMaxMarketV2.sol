@@ -52,5 +52,24 @@ interface ITermMaxMarketV2 {
      */
     function redeem(address ftOwner, address recipient, uint256 ftAmount) external returns (uint256, bytes memory);
 
+    /**
+     * @notice Creates a new TermMax order with default parameters
+     * @dev Uses CREATE to deploy the order contract at a non-deterministic address
+     */
     function createOrder(OrderInitialParams memory params) external returns (ITermMaxOrder order);
+
+    /**
+     * @notice Creates a new TermMax order with a unique salt for address uniqueness
+     * @dev Uses CREATE2 to deploy the order contract at a deterministic address based on the salt
+     */
+    function createOrder(OrderInitialParams memory params, uint256 salt) external returns (ITermMaxOrder order);
+
+    /**
+     * @notice Predict the address of a TermMax order that would be created with given parameters and salt
+     * @dev Computes the address using CREATE2 without actually deploying the contract
+     * @param maker The address of the maker for the order
+     * @param salt A unique salt to ensure the order address is unique
+     * @return orderAddress The computed address where the order would be deployed
+     */
+    function predictOrderAddress(address maker, uint256 salt) external view returns (address orderAddress);
 }

@@ -61,7 +61,7 @@ import {MockSwapAdapterV2} from "contracts/v2/test/MockSwapAdapterV2.sol";
 import {ITermMaxOrder} from "contracts/v1/ITermMaxOrder.sol";
 import {TermMaxSwapData, TermMaxSwapAdapter} from "contracts/v2/router/swapAdapters/TermMaxSwapAdapter.sol";
 import {TermMaxOrderV2, OrderInitialParams} from "contracts/v2/TermMaxOrderV2.sol";
-import {MakerHelper} from "contracts/v2/router/MakerHelper.sol";
+import {MakerHelper, MakerHelperErrors} from "contracts/v2/router/MakerHelper.sol";
 import {DelegateAble} from "contracts/v2/lib/DelegateAble.sol";
 
 contract MakerHelperTest is Test {
@@ -163,7 +163,7 @@ contract MakerHelperTest is Test {
         vm.stopPrank();
     }
 
-    function testPlaceOrderForV2() public {
+    function testPlaceOrderForV2(uint256 salt) public {
         vm.startPrank(sender);
 
         uint256 debtTokenToDeposit = 1e8;
@@ -189,6 +189,7 @@ contract MakerHelperTest is Test {
 
         (ITermMaxOrder order, uint256 gtId) = makerHelper.placeOrderForV2(
             res.market,
+            salt,
             collateralToMintGt,
             debtTokenToDeposit,
             ftToDeposit,
@@ -206,11 +207,10 @@ contract MakerHelperTest is Test {
         vm.stopPrank();
     }
 
-    function testPlaceOrderForV2AndDelegateWithSignature() public {
+    function testPlaceOrderForV2AndDelegateWithSignature(uint256 salt) public {
         // Set up delegator and delegatee
         uint256 delegatorPrivateKey = 0x1234567890123456789012345678901234567890123456789012345678901234;
         address delegator = vm.addr(delegatorPrivateKey);
-        address delegatee = vm.randomAddress();
 
         vm.startPrank(delegator);
 
@@ -235,6 +235,8 @@ contract MakerHelperTest is Test {
         // Set up proper delegation parameters
         uint256 nonce = DelegateAble(address(res.gt)).nonces(delegator);
         uint256 deadline = block.timestamp + 1 hours;
+        address delegatee =
+            salt % 2 == 0 ? vm.randomAddress() : res.market.predictOrderAddress(initialParams.maker, salt);
 
         DelegateAble.DelegateParameters memory delegateParams = DelegateAble.DelegateParameters({
             delegator: delegator,
@@ -275,9 +277,12 @@ contract MakerHelperTest is Test {
         res.xt.approve(address(makerHelper), xtToDeposit);
         res.collateral.mint(delegatee, collateralToMintGt);
         res.collateral.approve(address(makerHelper), collateralToMintGt);
-
+        if (salt % 2 == 0) {
+            vm.expectRevert(MakerHelperErrors.OrderAddressIsDifferentFromDelegatee.selector);
+        }
         (ITermMaxOrder order, uint256 gtId) = makerHelper.placeOrderForV2(
             res.market,
+            salt,
             collateralToMintGt,
             debtTokenToDeposit,
             ftToDeposit,
@@ -286,7 +291,7 @@ contract MakerHelperTest is Test {
             delegateParams,
             delegateSignature
         );
-
+        if (salt % 2 == 0) return;
         assertEq(gtId, order.orderConfig().gtId);
         assertEq(order.maker(), delegator);
         assertEq(res.ft.balanceOf(address(order)), ftToDeposit + debtTokenToDeposit);

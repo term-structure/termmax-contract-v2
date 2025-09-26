@@ -28,6 +28,7 @@ import {
 } from "contracts/v1/storage/TermMaxStorage.sol";
 import {OrderEventsV2} from "contracts/v2/events/OrderEventsV2.sol";
 import {TermMaxOrderV2} from "contracts/v2/TermMaxOrderV2.sol";
+import {OrderInitialParams} from "contracts/v2/storage/TermMaxStorageV2.sol";
 
 contract MarketV2Test is Test {
     using JSONLoader for *;
@@ -426,5 +427,46 @@ contract MarketV2Test is Test {
         uint128 ftOutAmt = res.market.issueFtByExistedGt(sender, debt, 1);
         assertTrue(ftOutAmt == issueAmount);
         vm.stopPrank();
+    }
+
+    // Test deterministic clone prediction and creation with salt
+    function testPredictAndCreateOrderWithSalt() public {
+        vm.startPrank(sender);
+
+        // prepare OrderInitialParams with maker and orderConfig; other fields are set by market during initialization
+        OrderInitialParams memory params;
+        params.maker = sender;
+        params.orderConfig = orderConfig;
+
+        uint256 salt = 0xfeedbeef;
+
+        // predict address
+        address predicted = res.market.predictOrderAddress(params.maker, salt);
+
+        // create order with salt
+        ITermMaxOrder order = res.market.createOrder(params, salt);
+
+        // deployed clone should match prediction
+        assertEq(address(order), predicted);
+
+        // owner should be maker
+        assertEq(Ownable(address(order)).owner(), params.maker);
+
+        // order config persisted
+        assertEq(order.orderConfig().maxXtReserve, orderConfig.maxXtReserve);
+
+        vm.stopPrank();
+    }
+
+    // Predict twice yields same address
+    function testPredictOrderAddressIsStable() public {
+        OrderInitialParams memory params;
+        params.maker = maker;
+        params.orderConfig = orderConfig;
+        uint256 salt = 123456;
+
+        address a1 = res.market.predictOrderAddress(params.maker, salt);
+        address a2 = res.market.predictOrderAddress(params.maker, salt);
+        assertEq(a1, a2);
     }
 }

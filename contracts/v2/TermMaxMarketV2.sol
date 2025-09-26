@@ -457,8 +457,31 @@ contract TermMaxMarketV2 is
         return _createOrder(params);
     }
 
-    function _createOrder(OrderInitialParams memory params) internal returns (ITermMaxOrder) {
-        address order = Clones.clone(TERMMAX_ORDER_IMPLEMENT);
+    /**
+     * @inheritdoc ITermMaxMarketV2
+     */
+    function createOrder(OrderInitialParams memory params, uint256 salt)
+        external
+        nonReentrant
+        isOpen
+        returns (ITermMaxOrder order)
+    {
+        order = ITermMaxOrder(
+            Clones.cloneDeterministic(TERMMAX_ORDER_IMPLEMENT, keccak256(abi.encode(params.maker, address(this), salt)))
+        );
+        _initalizeOrder(params, address(order));
+    }
+
+    /**
+     * @inheritdoc ITermMaxMarketV2
+     */
+    function predictOrderAddress(address maker, uint256 salt) external view returns (address orderAddress) {
+        return Clones.predictDeterministicAddress(
+            TERMMAX_ORDER_IMPLEMENT, keccak256(abi.encode(maker, address(this), salt))
+        );
+    }
+
+    function _initalizeOrder(OrderInitialParams memory params, address order) internal {
         params.maturity = _config.maturity;
         params.ft = ft;
         params.xt = xt;
@@ -466,7 +489,11 @@ contract TermMaxMarketV2 is
         params.debtToken = debtToken;
         ITermMaxOrderV2(order).initialize(params);
         emit CreateOrder(params.maker, ITermMaxOrder(order));
-        return ITermMaxOrder(order);
+    }
+
+    function _createOrder(OrderInitialParams memory params) internal returns (ITermMaxOrder order) {
+        order = ITermMaxOrder(Clones.clone(TERMMAX_ORDER_IMPLEMENT));
+        _initalizeOrder(params, address(order));
     }
 
     function updateOrderFeeRate(ITermMaxOrder order, FeeConfig memory newFeeConfig) external virtual onlyOwner {

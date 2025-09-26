@@ -130,6 +130,11 @@ contract ForkPrdRollover is ForkBaseTestV2 {
         adapters[1] = odosAdapter;
         adapters[2] = tmxAdapter;
         whitelistManager.batchSetWhitelist(adapters, IWhitelistManager.ContractModule.ADAPTER, true);
+
+        address[] memory callbacks = new address[](2);
+        callbacks[0] = address(ITermMaxOrder(o_may_30).orderConfig().swapTrigger);
+        callbacks[1] = address(ITermMaxOrder(o_aug_1).orderConfig().swapTrigger);
+        whitelistManager.batchSetWhitelist(callbacks, IWhitelistManager.ContractModule.ORDER_CALLBACK, true);
         vm.stopPrank();
     }
 
