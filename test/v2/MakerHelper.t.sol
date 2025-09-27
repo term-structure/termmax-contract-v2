@@ -235,8 +235,7 @@ contract MakerHelperTest is Test {
         // Set up proper delegation parameters
         uint256 nonce = DelegateAble(address(res.gt)).nonces(delegator);
         uint256 deadline = block.timestamp + 1 hours;
-        address delegatee =
-            salt % 2 == 0 ? vm.randomAddress() : res.market.predictOrderAddress(initialParams.maker, salt);
+        address delegatee = salt % 2 == 0 ? vm.randomAddress() : res.market.predictOrderAddress(initialParams, salt);
 
         DelegateAble.DelegateParameters memory delegateParams = DelegateAble.DelegateParameters({
             delegator: delegator,

@@ -441,7 +441,7 @@ contract MarketV2Test is Test {
         uint256 salt = 0xfeedbeef;
 
         // predict address
-        address predicted = res.market.predictOrderAddress(params.maker, salt);
+        address predicted = res.market.predictOrderAddress(params, salt);
 
         // create order with salt
         ITermMaxOrder order = res.market.createOrder(params, salt);
@@ -465,8 +465,8 @@ contract MarketV2Test is Test {
         params.orderConfig = orderConfig;
         uint256 salt = 123456;
 
-        address a1 = res.market.predictOrderAddress(params.maker, salt);
-        address a2 = res.market.predictOrderAddress(params.maker, salt);
+        address a1 = res.market.predictOrderAddress(params, salt);
+        address a2 = res.market.predictOrderAddress(params, salt);
         assertEq(a1, a2);
     }
 }

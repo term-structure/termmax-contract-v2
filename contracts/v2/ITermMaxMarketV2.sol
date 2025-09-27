@@ -67,9 +67,9 @@ interface ITermMaxMarketV2 {
     /**
      * @notice Predict the address of a TermMax order that would be created with given parameters and salt
      * @dev Computes the address using CREATE2 without actually deploying the contract
-     * @param maker The address of the maker for the order
-     * @param salt A unique salt to ensure the order address is unique
-     * @return orderAddress The computed address where the order would be deployed
      */
-    function predictOrderAddress(address maker, uint256 salt) external view returns (address orderAddress);
+    function predictOrderAddress(OrderInitialParams memory params, uint256 salt)
+        external
+        view
+        returns (address orderAddress);
 }

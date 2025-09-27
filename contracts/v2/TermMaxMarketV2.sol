@@ -467,7 +467,10 @@ contract TermMaxMarketV2 is
         returns (ITermMaxOrder order)
     {
         order = ITermMaxOrder(
-            Clones.cloneDeterministic(TERMMAX_ORDER_IMPLEMENT, keccak256(abi.encode(params.maker, address(this), salt)))
+            Clones.cloneDeterministic(
+                TERMMAX_ORDER_IMPLEMENT,
+                keccak256(abi.encode(params.maker, params.pool, params.orderConfig.swapTrigger, address(this), salt))
+            )
         );
         _initalizeOrder(params, address(order));
     }
@@ -475,9 +478,14 @@ contract TermMaxMarketV2 is
     /**
      * @inheritdoc ITermMaxMarketV2
      */
-    function predictOrderAddress(address maker, uint256 salt) external view returns (address orderAddress) {
+    function predictOrderAddress(OrderInitialParams memory params, uint256 salt)
+        external
+        view
+        returns (address orderAddress)
+    {
         return Clones.predictDeterministicAddress(
-            TERMMAX_ORDER_IMPLEMENT, keccak256(abi.encode(maker, address(this), salt))
+            TERMMAX_ORDER_IMPLEMENT,
+            keccak256(abi.encode(params.maker, params.pool, params.orderConfig.swapTrigger, address(this), salt))
         );
     }
 
