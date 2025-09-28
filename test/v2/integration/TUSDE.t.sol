@@ -26,19 +26,24 @@ import {
 import {ITermMaxMarketV2} from "contracts/v2/ITermMaxMarketV2.sol";
 import {ITermMaxRouterV2, TermMaxRouterV2, SwapPath, FlashRepayOptions} from "contracts/v2/router/TermMaxRouterV2.sol";
 import {IWhitelistManager} from "contracts/v2/access/IWhitelistManager.sol";
-import {TUSDERedeemAdapter} from "contracts/v2/router/swapAdapters/TUSDERedeemAdapter.sol";
+import {TUSDEVaultAdapter} from "contracts/v2/router/swapAdapters/TUSDEVaultAdapter.sol";
+import {ERC4626VaultAdapterV2} from "contracts/v2/router/swapAdapters/ERC4626VaultAdapterV2.sol";
 import {console} from "forge-std/console.sol";
 
 contract TUSDETest is ForkBaseTestV2 {
     string MAINNET_RPC_URL = vm.envString("MAINNET_RPC_URL");
     string DATA_PATH = string.concat(vm.projectRoot(), "/test/testdata/fork/mainnet.json");
 
+    address usde = 0x4c9EDD5852cd905f086C759E8383e09bff1E68B3;
     address susde = 0x9D39A5DE30e57443BfF2A8307A4256c8797A3497;
     address tusde = 0xA01227A26A7710bc75071286539E47AdB6DEa417;
-    address tUSDEVault = 0xFaAE52c6A6d477f859a740a76B29c33559ace18c;
+    // only can redeem tUSDE to sUSDE
+    address tUSDERedeemVault = 0xFaAE52c6A6d477f859a740a76B29c33559ace18c;
+    // only can deposit USDE to get tUSDE
+    address tUSDEDepositVault = 0x5AD2e3d65f8eCDc36eeba38BAE3Cc6Ff258D2dfa;
 
     TermMaxRouterV2 router;
-    TUSDERedeemAdapter tusdeAdapter;
+    TUSDEVaultAdapter tusdeAdapter;
 
     function _getForkRpcUrl() internal view override returns (string memory) {
         return MAINNET_RPC_URL;
@@ -49,10 +54,11 @@ contract TUSDETest is ForkBaseTestV2 {
     }
 
     function _finishSetup() internal override {
-        tusdeAdapter = new TUSDERedeemAdapter();
+        tusdeAdapter = new TUSDEVaultAdapter(tUSDERedeemVault, tUSDEDepositVault);
         vm.label(susde, "susde");
         vm.label(tusde, "tusde");
-        vm.label(tUSDEVault, "tUSDEVault");
+        vm.label(tUSDERedeemVault, "tUSDERedeemVault");
+        vm.label(tUSDEDepositVault, "tUSDEDepositVault");
         vm.label(address(tusdeAdapter), "tusdeAdapter");
 
         address admin = vm.randomAddress();
@@ -81,7 +87,7 @@ contract TUSDETest is ForkBaseTestV2 {
             adapter: address(tusdeAdapter),
             tokenIn: tusde,
             tokenOut: susde,
-            swapData: abi.encode(tUSDEVault, tusdeAmt, tusdeAmt * 8 / 10) // inAmount, minReceiveAmount
+            swapData: abi.encode(ERC4626VaultAdapterV2.Action.Redeem, tusdeAmt, tusdeAmt * 8 / 10, bytes32(0)) // inAmount, minReceiveAmount
         });
         SwapPath[] memory swapPaths = new SwapPath[](1);
         swapPaths[0] = SwapPath({units: swapUnits, recipient: user, inputAmount: tusdeAmt, useBalanceOnchain: false});
@@ -90,5 +96,29 @@ contract TUSDETest is ForkBaseTestV2 {
         router.swapTokens(swapPaths);
         uint256 susdeAfter = IERC20(susde).balanceOf(user);
         console.log("susde out", susdeAfter - susdeBefore);
+    }
+
+    function testDeposit() public {
+        address user = vm.addr(1);
+        vm.label(user, "user");
+        uint256 usdeAmt = 100_000e18;
+        deal(usde, user, usdeAmt);
+        vm.startPrank(user);
+        IERC20(usde).approve(address(router), usdeAmt);
+
+        SwapUnit[] memory swapUnits = new SwapUnit[](1);
+        swapUnits[0] = SwapUnit({
+            adapter: address(tusdeAdapter),
+            tokenIn: usde,
+            tokenOut: tusde,
+            swapData: abi.encode(ERC4626VaultAdapterV2.Action.Deposit, usdeAmt, usdeAmt * 8 / 10, bytes32(0)) // inAmount, minReceiveAmount, referrerId
+        });
+        SwapPath[] memory swapPaths = new SwapPath[](1);
+        swapPaths[0] = SwapPath({units: swapUnits, recipient: user, inputAmount: usdeAmt, useBalanceOnchain: false});
+
+        uint256 tusdeBefore = IERC20(tusde).balanceOf(user);
+        router.swapTokens(swapPaths);
+        uint256 tusdeAfter = IERC20(tusde).balanceOf(user);
+        console.log("tusde out", tusdeAfter - tusdeBefore);
     }
 }
