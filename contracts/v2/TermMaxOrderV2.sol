@@ -403,7 +403,7 @@ contract TermMaxOrderV2 is
     }
 
     /**
-     * @notice Update fee configuration (only callable by market)
+     * @notice This function is disabled and will always revert
      * @inheritdoc ITermMaxOrder
      * @param newFeeConfig New fee configuration
      */
