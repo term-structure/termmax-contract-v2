@@ -540,11 +540,11 @@ contract TermMaxOrderV2 is
         uint256 ftBalance = ft.balanceOf(address(this));
         uint256 received;
         uint256 receivedFromPool;
-
-        (received, deliveryData) = market.redeem(ftBalance, recipient);
+        if (ftBalance != 0) (received, deliveryData) = market.redeem(ftBalance, recipient);
         // if pool is set, redeem all shares
         if (address(_pool) != address(0)) {
-            receivedFromPool = _pool.redeem(_pool.balanceOf(address(this)), recipient, address(this));
+            uint256 shares = _pool.balanceOf(address(this));
+            if (shares != 0) receivedFromPool = _pool.redeem(shares, recipient, address(this));
         }
         // Calculate bad debt
         badDebt = ftBalance - received;

@@ -23,6 +23,7 @@ import {
     OrderErrors,
     OrderInitialParams
 } from "contracts/v2/TermMaxOrderV2.sol";
+import {OrderEventsV2} from "contracts/v2/events/OrderEventsV2.sol";
 import {MockERC20, ERC20} from "contracts/v1/test/MockERC20.sol";
 import {MockPriceFeed} from "contracts/v1/test/MockPriceFeed.sol";
 import {MockFlashLoanReceiver} from "contracts/v1/test/MockFlashLoanReceiver.sol";
@@ -696,6 +697,31 @@ contract OrderTestV2WithPool is Test {
                 "pool shares burned should match previewWithdraw"
             );
         }
+    }
+
+    function testRedeemAllWhenOrderEmpty() public {
+        vm.startPrank(maker);
+        uint256 shareBalance = pool.balanceOf(address(res.order));
+        if (shareBalance != 0) {
+            res.order.withdrawAssets(IERC20(address(pool)), maker, shareBalance);
+        }
+        vm.stopPrank();
+
+        assertEq(pool.balanceOf(address(res.order)), 0, "order pool shares should be zero");
+        assertEq(res.ft.balanceOf(address(res.order)), 0, "order ft reserve should be zero");
+        assertEq(res.ft.totalSupply(), 0, "ft total supply should be zero");
+
+        uint256 maturity = res.market.config().maturity;
+        vm.warp(maturity + Constants.LIQUIDATION_WINDOW + 1);
+
+        vm.startPrank(maker);
+        vm.expectEmit(true, true, true, true, address(res.order));
+        emit OrderEventsV2.Redeemed(maker, 0, 0, new bytes(0));
+        (uint256 badDebt, bytes memory deliveryData) = res.order.redeemAll(maker);
+        vm.stopPrank();
+
+        assertEq(badDebt, 0, "bad debt should be zero");
+        assertEq(deliveryData.length, 0, "delivery data should be empty");
     }
 
     // Fuzz test: remove liquidity by specifying pool share amount
