@@ -110,6 +110,29 @@ contract StableERC4626For4626 is
         }
     }
 
+    function withdrawAsPoolShare(uint256 assets, address receiver, address owner)
+        external
+        virtual
+        nonReentrant
+        onlyOwner
+        returns (uint256)
+    {
+        uint256 shares = previewWithdraw(assets);
+        uint256 maxShares = maxRedeem(owner);
+        if (shares > maxShares) {
+            revert ERC4626ExceededMaxRedeem(recipient, shares, maxShares);
+        }
+        if (msg.sender != owner) {
+            _spendAllowance(owner, msg.sender, shares);
+        }
+        _burn(owner, shares);
+
+        uint256 poolShares = thirdPool.previewWithdraw(assets);
+        thirdPool.safeTransfer(receiver, poolShares);
+
+        return poolShares;
+    }
+
     function withdrawIncomeAssets(address asset, address to, uint256 amount) external nonReentrant onlyOwner {
         uint256 assetInPool = _assetInPool(address(0));
         uint256 underlyingBalance = underlying.balanceOf(address(this));
@@ -159,6 +182,9 @@ contract StableERC4626For4626 is
     }
 
     function _assetInPool(address) internal view virtual override returns (uint256 amount) {
-        amount = thirdPool.previewRedeem(thirdPool.balanceOf(address(this)));
+        uint256 shares = thirdPool.balanceOf(address(this));
+        if (shares != 0) {
+            amount = thirdPool.convertToAssets(shares);
+        }
     }
 }
