@@ -108,7 +108,9 @@ contract StableERC4626ForAave is
     function totalIncomeAssets() external view returns (uint256) {
         uint256 aTokenBalance = aToken.balanceOf(address(this));
         uint256 underlyingBalance = underlying.balanceOf(address(this));
-        return aTokenBalance + underlyingBalance - totalSupply() + withdawedIncomeAssets;
+        uint256 assetsWithHistoryIncome = aTokenBalance + underlyingBalance + withdawedIncomeAssets;
+        // assetsWithHistoryIncome might be smaller than totalSupply() if the vault is at a loss
+        return assetsWithHistoryIncome > totalSupply() ? assetsWithHistoryIncome - totalSupply() : 0;
     }
 
     function withdrawIncomeAssets(address asset, address to, uint256 amount) external nonReentrant onlyOwner {

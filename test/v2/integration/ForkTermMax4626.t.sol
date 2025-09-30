@@ -1,276 +1,118 @@
-// // SPDX-License-Identifier: MIT
-// pragma solidity ^0.8.27;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.27;
 
-// import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-// import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
-// import {ITermMaxMarket} from "contracts/v1/ITermMaxMarket.sol";
-// import {ITermMaxOrder} from "contracts/v1/ITermMaxOrder.sol";
-// import {
-//     IGearingToken,
-//     GearingTokenEvents,
-//     AbstractGearingToken,
-//     GtConfig
-// } from "contracts/v1/tokens/AbstractGearingToken.sol";
-// import {IOracle} from "contracts/v1/oracle/IOracle.sol";
-// import {
-//     ForkBaseTestV2,
-//     TermMaxFactoryV2,
-//     MarketConfig,
-//     IERC20,
-//     MarketInitialParams,
-//     IERC20Metadata
-// } from "test/v2/mainnet-fork/ForkBaseTestV2.sol";
-// import {console} from "forge-std/console.sol";
-// import {IAaveV3Pool} from "contracts/v2/extensions/aave/IAaveV3Pool.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
+import {ITermMaxMarket} from "contracts/v1/ITermMaxMarket.sol";
+import {ITermMaxOrder} from "contracts/v1/ITermMaxOrder.sol";
+import {
+    IGearingToken,
+    GearingTokenEvents,
+    AbstractGearingToken,
+    GtConfig
+} from "contracts/v1/tokens/AbstractGearingToken.sol";
+import {IOracle} from "contracts/v1/oracle/IOracle.sol";
+import {
+    ForkBaseTestV2,
+    TermMaxFactoryV2,
+    MarketConfig,
+    IERC20,
+    MarketInitialParams,
+    IERC20Metadata
+} from "test/v2/mainnet-fork/ForkBaseTestV2.sol";
+import {console} from "forge-std/console.sol";
+import {IAaveV3Pool} from "contracts/v2/extensions/aave/IAaveV3Pool.sol";
+import {StableERC4626ForAave} from "contracts/v2/tokens/StableERC4626ForAave.sol";
+import {StakingBuffer} from "contracts/v2/tokens/StakingBuffer.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
-// contract ForkTermMax4626 is ForkBaseTestV2 {
-//     string MAINNET_RPC_URL = vm.envString("MAINNET_RPC_URL");
-//     string DATA_PATH = string.concat(vm.projectRoot(), "/test/testdata/fork/mainnet.json");
+contract ForkTermMax4626 is ForkBaseTestV2 {
+    string MAINNET_RPC_URL = vm.envString("MAINNET_RPC_URL");
+    string DATA_PATH = string.concat(vm.projectRoot(), "/test/testdata/fork/mainnet.json");
 
-//     uint64 may_30 = 1748534400; // 2025-05-30 00:00:00
-//     address pt_susde_may_29 = 0xb7de5dFCb74d25c2f21841fbd6230355C50d9308;
-//     address pt_susde_jul_31 = 0x3b3fB9C57858EF816833dC91565EFcd85D96f634;
-//     address usdc = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
-//     address usde = 0x4c9EDD5852cd905f086C759E8383e09bff1E68B3;
-//     address susde = 0x9D39A5DE30e57443BfF2A8307A4256c8797A3497;
-//     address weth = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-//     TestOracle oracle = TestOracle(0xE3a31690392E8E18DC3d862651C079339E2c1ADE);
+    address usdc = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+    address aUSDC;
+    IAaveV3Pool aave = IAaveV3Pool(0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2);
 
-//     IAaveV3Pool aave = IAaveV3Pool(0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2);
-//     ICreditDelegationToken aaveDebtToken;
+    StableERC4626ForAave aave4626;
+    StakingBuffer.BufferConfig stakingBuffer;
+    address admin = vm.randomAddress();
 
-//     IMorpho morpho = IMorpho(0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb);
-//     Id morpho_market_id = Id.wrap(0xbc552f0b14dd6f8e60b760a534ac1d8613d3539153b4d9675d697e048f2edc7e);
+    function _getForkRpcUrl() internal view override returns (string memory) {
+        return MAINNET_RPC_URL;
+    }
 
-//     function _getForkRpcUrl() internal view override returns (string memory) {
-//         return MAINNET_RPC_URL;
-//     }
+    function _getDataPath() internal view override returns (string memory) {
+        return DATA_PATH;
+    }
 
-//     function _getDataPath() internal view override returns (string memory) {
-//         return DATA_PATH;
-//     }
+    function _finishSetup() internal override {
+        stakingBuffer.minimumBuffer = 100e6;
+        stakingBuffer.maximumBuffer = 1000e6;
+        stakingBuffer.buffer = 500e6;
+        address implementation = address(new StableERC4626ForAave(address(aave), 0));
+        aave4626 = StableERC4626ForAave(
+            address(
+                new ERC1967Proxy(
+                    implementation,
+                    abi.encodeWithSelector(StableERC4626ForAave.initialize.selector, admin, usdc, stakingBuffer)
+                )
+            )
+        );
+        aUSDC = aave.getReserveData(usdc).aTokenAddress;
 
-//     function _finishSetup() internal override {}
+        vm.label(usdc, "USDC");
+        vm.label(aUSDC, "aUSDC");
+        vm.label(address(aave), "AavePool");
+        vm.label(address(aave4626), "Aave4626");
+        vm.label(admin, "Admin");
+    }
 
-//     function _initResourcesWithBlockNumber(uint256 blockNumber) internal {
-//         vm.rollFork(blockNumber);
-//         PendleSwapV3AdapterV2 adapter = new PendleSwapV3AdapterV2(0x888888888889758F76e7103c6CbF23ABbF58F946);
-//         pendleAdapter = address(adapter);
+    function test_withdraw(uint256 depositAmount) public {
+        vm.assume(depositAmount > 0 && depositAmount < 10_000_000e6);
+        uint256 interest;
+        uint256 withdrawAmount;
+        uint256 withdrawInterest;
+        bound(withdrawAmount, 1, depositAmount);
+        bound(interest, 0, depositAmount / 10);
+        bound(withdrawInterest, 0, interest);
 
-//         OdosV2AdapterV2 od = new OdosV2AdapterV2(0xCf5540fFFCdC3d510B18bFcA6d2b9987b0772559);
-//         odosAdapter = address(od);
+        address user = vm.addr(1);
+        vm.label(user, "User");
+        vm.startPrank(user);
+        deal(usdc, user, depositAmount);
+        IERC20(usdc).approve(address(aave4626), type(uint256).max);
+        aave4626.deposit(depositAmount, user);
+        if (interest > 0) {
+            deal(usdc, user, interest);
+            IERC20(usdc).approve(address(aave), type(uint256).max);
+            aave.supply(usdc, interest, address(aave4626), 0);
+        }
+        vm.stopPrank();
 
-//         vaultAdapter = address(new ERC4626VaultAdapterV2());
-//         vm.label(vaultAdapter, "ERC4626VaultAdapterV2");
+        if (withdrawInterest > aave4626.totalIncomeAssets()) {
+            withdrawInterest = aave4626.totalIncomeAssets();
+        }
 
-//         vm.label(pt_susde_may_29, "pt_susde_may_29");
-//         vm.label(susde, "susde");
-//         vm.label(address(oracle), "oracle");
-//         vm.label(address(mmay_30), "mmay_30");
-//         vm.label(address(pendleAdapter), "pendleAdapter");
-
-//         address admin = vm.randomAddress();
-
-//         vm.startPrank(admin);
-//         IWhitelistManager whitelistManager;
-//         (router, whitelistManager) = deployRouter(admin);
-//         router.setWhitelistManager(address(whitelistManager));
-
-//         TermMaxSwapAdapter tmx = new TermMaxSwapAdapter(address(whitelistManager));
-//         tmxAdapter = address(tmx);
-//         vm.label(tmxAdapter, "TermMaxAdapter");
-
-//         address[] memory adapters = new address[](4);
-//         adapters[0] = pendleAdapter;
-//         adapters[1] = odosAdapter;
-//         adapters[2] = tmxAdapter;
-//         adapters[3] = vaultAdapter;
-//         whitelistManager.batchSetWhitelist(adapters, IWhitelistManager.ContractModule.ADAPTER, true);
-//         vm.stopPrank();
-
-//         IAaveV3Pool.ReserveData memory rd = IAaveV3Pool(address(aave)).getReserveData(usdc);
-//         aaveDebtToken = ICreditDelegationToken(rd.variableDebtTokenAddress);
-//     }
-
-//     function testRolloverPtToAave() public {
-//         _initResourcesWithBlockNumber(22486319); // 2025-05-15
-//         uint128 debt;
-//         uint256 collateralAmount;
-//         uint256 gt1;
-//         uint256 privateKey = 0x1234567890123456789012345678901234567890123456789012345678901234; // Replace with actual private key
-//         address borrower = vm.addr(privateKey);
-//         vm.startPrank(borrower);
-//         {
-//             (,, IGearingToken gt,,) = mmay_30.tokens();
-//             // create a new debt position
-//             debt = 2012814397;
-//             collateralAmount = 2501271245527830095803;
-//             deal(pt_susde_may_29, borrower, collateralAmount);
-//             IERC20(pt_susde_may_29).approve(address(gt), collateralAmount);
-//             (gt1,) = mmay_30.issueFt(borrower, debt, abi.encode(collateralAmount));
-//             console.log("collateralAmount:", collateralAmount);
-//             console.log("debt:", debt);
-//         }
-//         ICreditDelegationToken.AaveDelegationParams memory params = ICreditDelegationToken.AaveDelegationParams({
-//             aaveDebtToken: aaveDebtToken,
-//             delegator: borrower,
-//             delegatee: address(router),
-//             value: debt,
-//             deadline: type(uint256).max,
-//             v: 0,
-//             r: bytes32(0),
-//             s: bytes32(0)
-//         });
-//         {
-//             bytes32 digest =
-//                 AaveSigUtils.getTypedDataHash(aaveDebtToken.DOMAIN_SEPARATOR(), aaveDebtToken.nonces(borrower), params);
-//             (params.v, params.r, params.s) = vm.sign(privateKey, digest);
-//         }
-
-//         vm.warp(may_30 - 0.5 days);
-//         // roll gt
-//         {
-//             address pm1 = 0xB162B764044697cf03617C2EFbcB1f42e31E4766;
-
-//             SwapUnit[] memory swapUnits = new SwapUnit[](1);
-//             swapUnits[0] = SwapUnit({
-//                 adapter: pendleAdapter,
-//                 tokenIn: pt_susde_may_29,
-//                 tokenOut: susde,
-//                 swapData: abi.encode(pm1, collateralAmount, 0)
-//             });
-//             SwapPath memory collateralPath =
-//                 SwapPath({units: swapUnits, recipient: address(router), inputAmount: 0, useBalanceOnchain: true});
-
-//             uint256 additionalAmt = debt / 3;
-//             IERC20 additionalAsset = IERC20(usdc);
-//             (IERC20 ft,, IGearingToken gt, address collateral,) = mmay_30.tokens();
-
-//             deal(address(additionalAsset), borrower, additionalAmt);
-//             additionalAsset.approve(address(router), additionalAmt);
-//             // aaveDebtToken.approveDelegation(address(router), debt - additionalAmt);
-//             gt.approve(address(router), gt1);
-//             // 1-stable 2-variable
-//             uint256 interestRateMode = 2;
-//             uint16 referralCode = 0;
-//             bytes memory rolloverData = abi.encode(
-//                 FlashRepayOptions.ROLLOVER_AAVE,
-//                 abi.encode(collateral, aave, interestRateMode, referralCode, params, collateralPath)
-//             );
-
-//             router.rolloverGtForV1(gt, gt1, additionalAsset, additionalAmt, rolloverData);
-//         }
-
-//         vm.stopPrank();
-//     }
-
-//     function testRolloverPtToMorpho() public {
-//         _initResourcesWithBlockNumber(22985670); // 2025-07-24
-//         uint128 debt;
-//         uint256 collateralAmount;
-//         uint256 gt1;
-//         uint256 privateKey = 0x1234567890123456789012345678901234567890123456789012345678901234; // Replace with actual private key
-//         address borrower = vm.addr(privateKey);
-//         vm.startPrank(borrower);
-//         {
-//             (,, IGearingToken gt,,) = mjul_31.tokens();
-//             // create a new debt position
-//             debt = 2448639688;
-//             collateralAmount = 2869261070978839154575;
-//             deal(pt_susde_jul_31, borrower, collateralAmount);
-//             IERC20(pt_susde_jul_31).approve(address(gt), collateralAmount);
-//             (gt1,) = mjul_31.issueFt(borrower, debt, abi.encode(collateralAmount));
-//             console.log("collateralAmount:", collateralAmount);
-//             console.log("debt:", debt);
-//         }
-//         Authorization memory authorization;
-//         Signature memory sig;
-//         {
-//             authorization = Authorization({
-//                 authorizer: borrower,
-//                 authorized: address(router),
-//                 isAuthorized: true,
-//                 nonce: morpho.nonce(borrower),
-//                 deadline: type(uint256).max
-//             });
-
-//             bytes32 digest = MorphoSigUtils.getTypedDataHash(morpho.DOMAIN_SEPARATOR(), authorization);
-//             (sig.v, sig.r, sig.s) = vm.sign(privateKey, digest);
-//         }
-//         // roll gt
-//         {
-//             Id marketId = morpho_market_id;
-
-//             SwapPath memory collateralPath;
-
-//             uint256 additionalAmt = debt / 3;
-//             IERC20 additionalAsset = IERC20(usdc);
-
-//             (,, IGearingToken gt, address collateral,) = mjul_31.tokens();
-
-//             deal(usdc, borrower, additionalAmt);
-//             IERC20(usdc).approve(address(router), additionalAmt);
-
-//             gt.approve(address(router), gt1);
-
-//             bytes memory rolloverData = abi.encode(
-//                 FlashRepayOptions.ROLLOVER_MORPHO,
-//                 abi.encode(collateral, morpho, marketId, authorization, sig, collateralPath)
-//             );
-//             router.rolloverGtForV1(gt, gt1, additionalAsset, additionalAmt, rolloverData);
-//         }
-
-//         vm.stopPrank();
-//     }
-// }
-
-// library MorphoSigUtils {
-//     bytes32 constant AUTHORIZATION_TYPEHASH = keccak256(
-//         "Authorization(address authorizer,address authorized,bool isAuthorized,uint256 nonce,uint256 deadline)"
-//     );
-
-//     /// @dev Computes the hash of the EIP-712 encoded data.
-//     function getTypedDataHash(bytes32 domainSeparator, Authorization memory authorization)
-//         public
-//         pure
-//         returns (bytes32)
-//     {
-//         return keccak256(bytes.concat("\x19\x01", domainSeparator, hashStruct(authorization)));
-//     }
-
-//     function hashStruct(Authorization memory authorization) internal pure returns (bytes32) {
-//         return keccak256(
-//             abi.encode(
-//                 AUTHORIZATION_TYPEHASH,
-//                 authorization.authorizer,
-//                 authorization.authorized,
-//                 authorization.isAuthorized,
-//                 authorization.nonce,
-//                 authorization.deadline
-//             )
-//         );
-//     }
-// }
-
-// library AaveSigUtils {
-//     bytes32 public constant DELEGATION_WITH_SIG_TYPEHASH =
-//         keccak256("DelegationWithSig(address delegatee,uint256 value,uint256 nonce,uint256 deadline)");
-
-//     /// @dev Computes the hash of the EIP-712 encoded data.
-//     function getTypedDataHash(
-//         bytes32 domainSeparator,
-//         uint256 nonce,
-//         ICreditDelegationToken.AaveDelegationParams memory params
-//     ) public pure returns (bytes32) {
-//         return keccak256(bytes.concat("\x19\x01", domainSeparator, hashStruct(nonce, params)));
-//     }
-
-//     function hashStruct(uint256 nonce, ICreditDelegationToken.AaveDelegationParams memory params)
-//         internal
-//         pure
-//         returns (bytes32)
-//     {
-//         return
-//             keccak256(abi.encode(DELEGATION_WITH_SIG_TYPEHASH, params.delegatee, params.value, nonce, params.deadline));
-//     }
-// }
+        if (depositAmount % 2 != 0) {
+            vm.prank(user);
+            aave4626.redeem(withdrawAmount, user, user);
+            if (withdrawInterest > 0) {
+                vm.prank(admin);
+                aave4626.withdrawIncomeAssets(usdc, admin, withdrawInterest);
+            }
+        } else {
+            if (withdrawInterest > 0) {
+                vm.prank(admin);
+                aave4626.withdrawIncomeAssets(usdc, admin, withdrawInterest);
+            }
+            vm.prank(user);
+            aave4626.redeem(withdrawAmount, user, user);
+        }
+        assertEq(IERC20(usdc).balanceOf(user), withdrawAmount, "user balance after withdraw");
+        assertEq(IERC20(usdc).balanceOf(admin), withdrawInterest, "admin balance after withdraw income");
+        uint256 totalAssets = IERC20(usdc).balanceOf(address(aave4626)) + IERC20(aUSDC).balanceOf(address(aave4626));
+        uint256 totalRemaining = depositAmount - withdrawAmount + interest - withdrawInterest;
+        assertApproxEqAbs(totalAssets, totalRemaining, 10, "total assets remaining in vault");
+    }
+}
