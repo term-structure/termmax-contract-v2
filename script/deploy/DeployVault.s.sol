@@ -73,8 +73,7 @@ contract DeployVaults is DeployBaseV2 {
         );
         string memory json = vm.readFile(deploymentPath);
         accessManagerAddr = vm.parseJsonAddress(json, ".contracts.accessManager");
-        console.log("Using existing AccessManagerV2 at:", accessManagerAddr);
-        coreContracts.accessManager = AccessManagerV2(accessManagerAddr);
+
         deploymentPath = string.concat(
             vm.projectRoot(), "/deployments/", coreParams.network, "/", coreParams.network, "-core-v2.json"
         );
@@ -82,6 +81,8 @@ contract DeployVaults is DeployBaseV2 {
             json = vm.readFile(deploymentPath);
             coreContracts = readDeployData(json);
         }
+        console.log("Using existing AccessManagerV2 at:", accessManagerAddr);
+        coreContracts.accessManager = AccessManagerV2(accessManagerAddr);
         console.log("Using existing WhitelistManager at:", address(coreContracts.whitelistManager));
         console.log("Using existing TermMaxVaultFactoryV2 at:", address(coreContracts.vaultFactory));
     }
