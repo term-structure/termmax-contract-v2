@@ -158,10 +158,11 @@ contract TermMaxOrderV2 is
     /**
      * @notice Get the current order configuration
      * @inheritdoc ITermMaxOrder
-     * @return The current order configuration
+     * @return orderConfig_ The current order configuration
      */
-    function orderConfig() external view virtual returns (OrderConfig memory) {
-        return _orderConfig;
+    function orderConfig() external view virtual returns (OrderConfig memory orderConfig_) {
+        orderConfig_ = _orderConfig;
+        orderConfig_.feeConfig = market.config().feeConfig;
     }
 
     /**
