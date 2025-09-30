@@ -66,17 +66,17 @@ contract DeployCoreV2_20250930 is DeployBaseV2 {
         }
 
         string memory deploymentPath = string.concat(
-            vm.projectRoot(), "/deployments/", coreParams.network, "/", coreParams.network, "-access-manager.json"
-        );
-        string memory json = vm.readFile(deploymentPath);
-        
-        deploymentPath = string.concat(
             vm.projectRoot(), "/deployments/", coreParams.network, "/", coreParams.network, "-core-v2.json"
         );
         if (vm.exists(deploymentPath)) {
-            json = vm.readFile(deploymentPath);
+            string memory json = vm.readFile(deploymentPath);
             coreContracts = readDeployData(json);
         }
+
+        deploymentPath = string.concat(
+            vm.projectRoot(), "/deployments/", coreParams.network, "/", coreParams.network, "-access-manager.json"
+        );
+        string memory json = vm.readFile(deploymentPath);
 
         accessManagerAddr = vm.parseJsonAddress(json, ".contracts.accessManager");
         console.log("Using existing AccessManagerV2 at:", accessManagerAddr);
