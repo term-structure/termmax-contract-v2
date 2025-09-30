@@ -95,9 +95,9 @@ contract DeployBaseV2 is Script {
 
     function readDeployData(string memory json) public view returns (DeployedContracts memory contracts) {
         // read deployed contracts from json
-        if (vm.keyExistsJson(json, ".contracts.accessManagerV2")) {
-            contracts.accessManager = AccessManagerV2(vm.parseJsonAddress(json, ".contracts.accessManagerV2"));
-        }
+        // if (vm.keyExistsJson(json, ".contracts.accessManagerV2")) {
+        //     contracts.accessManager = AccessManagerV2(vm.parseJsonAddress(json, ".contracts.accessManagerV2"));
+        // }
         if (vm.keyExistsJson(json, ".contracts.whitelistManager")) {
             contracts.whitelistManager = WhitelistManager(vm.parseJsonAddress(json, ".contracts.whitelistManager"));
         }
@@ -158,7 +158,7 @@ contract DeployBaseV2 is Script {
         }
     }
 
-    function deployFactory(address admin) public returns (TermMaxFactoryV2 factory) {
+    function deployFactry(address admin) public returns (TermMaxFactoryV2 factory) {
         address tokenImplementation = address(new MintableERC20V2());
         address orderImplementation = address(new TermMaxOrderV2());
         TermMaxMarketV2 m = new TermMaxMarketV2(tokenImplementation, orderImplementation);
