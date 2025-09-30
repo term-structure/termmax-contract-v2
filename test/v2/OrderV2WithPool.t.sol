@@ -463,7 +463,7 @@ contract OrderTestV2WithPool is Test {
 
         orderConfig.swapTrigger = callback;
         vm.startPrank(maker);
-        res.order.updateOrder(orderConfig, 0, 0);
+        res.order.setGeneralConfig(orderConfig.gtId, orderConfig.swapTrigger);
 
         res.debt.mint(maker, 150e8);
         res.debt.approve(address(res.market), 150e8);
@@ -519,16 +519,9 @@ contract OrderTestV2WithPool is Test {
         OrderConfig memory testOrderConfig = res.order.orderConfig();
         testOrderConfig.curveCuts.borrowCurveCuts = new CurveCut[](0);
 
-        vm.expectEmit();
-        emit OrderEvents.UpdateOrder(
-            testOrderConfig.curveCuts,
-            0,
-            0,
-            testOrderConfig.gtId,
-            testOrderConfig.maxXtReserve,
-            ISwapCallback(address(0))
+        res.order.setCurveAndPrice(
+            res.order.virtualXtReserve(), res.order.virtualXtReserve(), type(uint128).max, testOrderConfig.curveCuts
         );
-        res.order.updateOrder(testOrderConfig, 0, 0);
         vm.stopPrank();
 
         vm.startPrank(sender);
@@ -551,16 +544,9 @@ contract OrderTestV2WithPool is Test {
         OrderConfig memory testOrderConfig = res.order.orderConfig();
         testOrderConfig.curveCuts.lendCurveCuts = new CurveCut[](0);
 
-        vm.expectEmit();
-        emit OrderEvents.UpdateOrder(
-            testOrderConfig.curveCuts,
-            0,
-            0,
-            testOrderConfig.gtId,
-            testOrderConfig.maxXtReserve,
-            ISwapCallback(address(0))
+        res.order.setCurveAndPrice(
+            res.order.virtualXtReserve(), res.order.virtualXtReserve(), type(uint128).max, testOrderConfig.curveCuts
         );
-        res.order.updateOrder(testOrderConfig, 0, 0);
         vm.stopPrank();
 
         vm.startPrank(sender);

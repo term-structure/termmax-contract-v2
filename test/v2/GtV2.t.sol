@@ -113,9 +113,6 @@ contract GtTestV2 is Test {
         flashRepayer = new MockFlashRepayerV2(res.gt);
 
         vm.stopPrank();
-
-        vm.prank(maker);
-        res.order.updateOrder(orderConfig, 0, 0);
     }
 
     function testMintGtByIssueFt() public {
