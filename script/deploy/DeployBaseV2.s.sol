@@ -158,7 +158,7 @@ contract DeployBaseV2 is Script {
         }
     }
 
-    function deployFactry(address admin) public returns (TermMaxFactoryV2 factory) {
+    function deployFactory(address admin) public returns (TermMaxFactoryV2 factory) {
         address tokenImplementation = address(new MintableERC20V2());
         address orderImplementation = address(new TermMaxOrderV2());
         TermMaxMarketV2 m = new TermMaxMarketV2(tokenImplementation, orderImplementation);
