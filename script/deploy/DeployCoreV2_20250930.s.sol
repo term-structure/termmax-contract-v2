@@ -6,7 +6,7 @@ import {VmSafe} from "forge-std/Vm.sol";
 import "forge-std/console.sol";
 import "./DeployBaseV2.s.sol";
 
-contract DeployCoreV2 is DeployBaseV2 {
+contract DeployCoreV2_0930 is DeployBaseV2 {
     uint256 deployerPrivateKey;
     address adminAddr;
     address accessManagerAddr;
@@ -73,24 +73,22 @@ contract DeployCoreV2 is DeployBaseV2 {
         console.log("Using existing AccessManagerV2 at:", accessManagerAddr);
         coreContracts.accessManager = AccessManagerV2(accessManagerAddr);
         deploymentPath =
-            string.concat(vm.projectRoot(), "/deployments/", coreParams.network, "/", coreParams.network, "-core.json");
+            string.concat(vm.projectRoot(), "/deployments/", coreParams.network, "/", coreParams.network, "-core-v2.json");
         if (vm.exists(deploymentPath)) {
             json = vm.readFile(deploymentPath);
-            if (vm.keyExistsJson(json, ".contracts.router")) {
-                address routerAddr = vm.parseJsonAddress(json, ".contracts.router");
-                console.log("Router already deployed at:", routerAddr);
-                coreContracts.router = TermMaxRouterV2(routerAddr);
-            }
-            if (vm.keyExistsJson(json, ".contracts.faucet")) {
-                address faucetAddr = vm.parseJsonAddress(json, ".contracts.faucet");
-                console.log("Faucet already deployed at:", faucetAddr);
-                coreContracts.faucet = Faucet(faucetAddr);
-            }
-            if (vm.keyExistsJson(json, ".contracts.marketViewer")) {
-                address marketViewerAddr = vm.parseJsonAddress(json, ".contracts.marketViewer");
-                console.log("MarketViewer already deployed at:", marketViewerAddr);
-                coreContracts.marketViewer = MarketViewer(marketViewerAddr);
-            }
+            coreContracts.router = TermMaxRouterV2(vm.parseJsonAddress(json, ".contracts.routerV2"));
+            console.log("Using existing RouterV2 at:", address(coreContracts.router));
+            coreContracts.whitelistManager =
+                WhitelistManagerV2(vm.parseJsonAddress(json, ".contracts.whitelistManager"));
+            console.log("Using existing WhitelistManager at:", address(coreContracts.whitelistManager));
+            coreContracts.priceFeedFactory =
+                PriceFeedFactoryV2(vm.parseJsonAddress(json, ".contracts.priceFeedFactoryV2"));
+            console.log("Using existing PriceFeedFactoryV2 at:", address(coreContracts.priceFeedFactory));
+            coreContracts.oracle = OracleAggregatorV2(vm.parseJsonAddress(json, ".contracts.oracleAggregatorV2"));
+            console.log("Using existing OracleAggregatorV2 at:", address(coreContracts.oracle));
+            
+
+            
         }
     }
 

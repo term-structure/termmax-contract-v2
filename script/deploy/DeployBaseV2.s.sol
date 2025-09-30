@@ -41,6 +41,7 @@ import {OdosV2AdapterV2} from "contracts/v2/router/swapAdapters/OdosV2AdapterV2.
 import {PendleSwapV3AdapterV2} from "contracts/v2/router/swapAdapters/PendleSwapV3AdapterV2.sol";
 import {UniswapV3AdapterV2} from "contracts/v2/router/swapAdapters/UniswapV3AdapterV2.sol";
 import {TermMaxSwapAdapter} from "contracts/v2/router/swapAdapters/TermMaxSwapAdapter.sol";
+import {TerminalVaultAdapter} from "contracts/v2/router/swapAdapters/TerminalVaultAdapter.sol";
 import {AccessManagerV2, AccessManager} from "contracts/v2/access/AccessManagerV2.sol";
 import {StringHelper} from "../utils/StringHelper.sol";
 import {TermMaxPriceFeedFactoryV2} from "contracts/v2/factory/TermMaxPriceFeedFactoryV2.sol";
@@ -72,6 +73,7 @@ contract DeployBaseV2 is Script {
         PendleSwapV3AdapterV2 pendleSwapV3Adapter;
         ERC4626VaultAdapterV2 vaultAdapter;
         TermMaxSwapAdapter termMaxSwapAdapter;
+        TerminalVaultAdapter terminalVaultAdapter;
     }
 
     struct CoreParams {
@@ -221,7 +223,8 @@ contract DeployBaseV2 is Script {
                 contracts.odosV2Adapter,
                 contracts.pendleSwapV3Adapter,
                 contracts.vaultAdapter,
-                contracts.termMaxSwapAdapter
+                contracts.termMaxSwapAdapter,
+                contracts.terminalVaultAdapter
             ) = deployAdapters(
                 address(contracts.accessManager),
                 address(contracts.whitelistManager),
@@ -232,12 +235,13 @@ contract DeployBaseV2 is Script {
                 // Pendle Swap V3 Router
                 params.pendleSwapV3Router
             );
-            adapters = new address[](5);
+            adapters = new address[](6);
             adapters[0] = address(contracts.uniswapV3Adapter);
             adapters[1] = address(contracts.odosV2Adapter);
             adapters[2] = address(contracts.pendleSwapV3Adapter);
             adapters[3] = address(contracts.vaultAdapter);
             adapters[4] = address(contracts.termMaxSwapAdapter);
+            adapters[5] = address(contracts.terminalVaultAdapter);
         } else {
             contracts.swapAdapter = new SwapAdapterV2(params.deployerAddr);
             contracts.termMaxSwapAdapter = new TermMaxSwapAdapter(address(contracts.whitelistManager));
@@ -267,7 +271,8 @@ contract DeployBaseV2 is Script {
             OdosV2AdapterV2 odosV2Adapter,
             PendleSwapV3AdapterV2 pendleSwapV3Adapter,
             ERC4626VaultAdapterV2 vaultAdapter,
-            TermMaxSwapAdapter termMaxSwapAdapter
+            TermMaxSwapAdapter termMaxSwapAdapter,
+            TerminalVaultAdapter terminalVaultAdapter
         )
     {
         // deploy access manager
@@ -279,6 +284,7 @@ contract DeployBaseV2 is Script {
         pendleSwapV3Adapter = new PendleSwapV3AdapterV2(address(pendleSwapV3Router));
         vaultAdapter = new ERC4626VaultAdapterV2();
         termMaxSwapAdapter = new TermMaxSwapAdapter(whitelistManagerAddr);
+        terminalVaultAdapter = new TerminalVaultAdapter();
     }
 
     function deployWhitelistManager(address admin) public returns (WhitelistManager whitelistManager) {
