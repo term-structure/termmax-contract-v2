@@ -24,6 +24,7 @@ abstract contract StakingBuffer is VersionV2 {
     }
 
     function _withdrawWithBuffer(address assetAddr, address to, uint256 amount) internal {
+        if (amount == 0) return;
         uint256 assetBalance = IERC20(assetAddr).balanceOf(address(this));
         BufferConfig memory bufferConfig = _bufferConfig(assetAddr);
 
@@ -42,7 +43,7 @@ abstract contract StakingBuffer is VersionV2 {
         if (amountFromPool == amount) {
             _withdrawFromPool(assetAddr, to, amountFromPool);
         } else {
-            _withdrawFromPool(assetAddr, address(this), amountFromPool);
+            if (amountFromPool != 0) _withdrawFromPool(assetAddr, address(this), amountFromPool);
             IERC20(assetAddr).safeTransfer(to, amount);
         }
     }
