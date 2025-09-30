@@ -6,7 +6,7 @@ import {VmSafe} from "forge-std/Vm.sol";
 import "forge-std/console.sol";
 import "./DeployBaseV2.s.sol";
 
-contract DeployCoreV2_20250930 is DeployBaseV2 {
+contract DeployVaults is DeployBaseV2 {
     uint256 deployerPrivateKey;
     address adminAddr;
     address accessManagerAddr;
