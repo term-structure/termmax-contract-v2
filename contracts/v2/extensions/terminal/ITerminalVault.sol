@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-interface ITUSDEVault {
+interface ITerminalVault {
     /**
      * @notice redeem mToken to tokenOut if daily limit and allowance not exceeded
      * Burns mTBILL from the user.
