@@ -249,11 +249,7 @@ contract TermMaxOrderV2 is
     // =============================================================================
 
     /**
-     * @notice Update order configuration and token amounts
-     * @inheritdoc ITermMaxOrder
-     * @param newOrderConfig New order configuration
-     * @param ftChangeAmt Change in FT amount (positive = deposit, negative = withdraw)
-     * @param xtChangeAmt Change in XT amount (positive = deposit, negative = withdraw)
+     * @notice This function is disabled and will always revert
      */
     function updateOrder(OrderConfig memory newOrderConfig, int256 ftChangeAmt, int256 xtChangeAmt)
         external
@@ -261,27 +257,7 @@ contract TermMaxOrderV2 is
         override
         onlyOwner
     {
-        _setCurveAndPrice(virtualXtReserve, newOrderConfig.maxXtReserve, newOrderConfig.curveCuts);
-        if (ftChangeAmt > 0) {
-            ft.safeTransferFrom(msg.sender, address(this), ftChangeAmt.toUint256());
-        } else if (ftChangeAmt < 0) {
-            ft.safeTransfer(msg.sender, (-ftChangeAmt).toUint256());
-        }
-        if (xtChangeAmt > 0) {
-            xt.safeTransferFrom(msg.sender, address(this), xtChangeAmt.toUint256());
-        } else if (xtChangeAmt < 0) {
-            xt.safeTransfer(msg.sender, (-xtChangeAmt).toUint256());
-        }
-        _orderConfig.gtId = newOrderConfig.gtId;
-        _orderConfig.swapTrigger = newOrderConfig.swapTrigger;
-        emit UpdateOrder(
-            newOrderConfig.curveCuts,
-            ftChangeAmt,
-            xtChangeAmt,
-            newOrderConfig.gtId,
-            newOrderConfig.maxXtReserve,
-            newOrderConfig.swapTrigger
-        );
+        revert OrderErrorsV2.UpdateOrderFunctionDisabled();
     }
 
     function setCurveAndPrice(

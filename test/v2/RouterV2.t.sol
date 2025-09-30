@@ -142,9 +142,6 @@ contract RouterTestV2 is Test {
         res.whitelistManager.batchSetWhitelist(adapters, IWhitelistManager.ContractModule.ADAPTER, true);
 
         vm.stopPrank();
-
-        vm.prank(maker);
-        res.order.updateOrder(orderConfig, 0, 0);
     }
 
     function testUpgradeRouterToV2() public {

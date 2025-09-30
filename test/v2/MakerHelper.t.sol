@@ -130,9 +130,6 @@ contract MakerHelperTest is Test {
         makerHelper = MakerHelper(address(proxy));
 
         vm.stopPrank();
-
-        vm.prank(maker);
-        res.order.updateOrder(orderConfig, 0, 0);
     }
 
     function testPlaceOrderForV1() public {

@@ -70,9 +70,6 @@ contract MarketV2Test is Test {
         res.debtOracle.updateRoundData(JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_2000_DAI_1.dai"));
 
         vm.stopPrank();
-
-        vm.prank(maker);
-        res.order.updateOrder(orderConfig, 0, 0);
     }
 
     function testUpdateMarketConfig() public {
