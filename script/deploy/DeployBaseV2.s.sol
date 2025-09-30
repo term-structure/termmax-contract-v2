@@ -93,6 +93,71 @@ contract DeployBaseV2 is Script {
 
     bytes32 constant GT_ERC20 = keccak256("GearingTokenWithERC20");
 
+    function readDeployData(string memory json) public view returns (DeployedContracts memory contracts) {
+        // read deployed contracts from json
+        if (vm.keyExistsJson(json, ".contracts.accessManagerV2")) {
+            contracts.accessManager = AccessManagerV2(vm.parseJsonAddress(json, ".contracts.accessManagerV2"));
+        }
+        if (vm.keyExistsJson(json, ".contracts.whitelistManager")) {
+            contracts.whitelistManager = WhitelistManager(vm.parseJsonAddress(json, ".contracts.whitelistManager"));
+        }
+        if (vm.keyExistsJson(json, ".contracts.factoryV2")) {
+            contracts.factory = TermMaxFactoryV2(vm.parseJsonAddress(json, ".contracts.factoryV2"));
+        }
+        if (vm.keyExistsJson(json, ".contracts.vaultFactoryV2")) {
+            contracts.vaultFactory = TermMaxVaultFactoryV2(vm.parseJsonAddress(json, ".contracts.vaultFactoryV2"));
+        }
+        if (vm.keyExistsJson(json, ".contracts.priceFeedFactoryV2")) {
+            contracts.priceFeedFactory =
+                TermMaxPriceFeedFactoryV2(vm.parseJsonAddress(json, ".contracts.priceFeedFactoryV2"));
+        }
+        if (vm.keyExistsJson(json, ".contracts.termMax4626Factory")) {
+            contracts.tmx4626Factory = TermMax4626Factory(vm.parseJsonAddress(json, ".contracts.termMax4626Factory"));
+        }
+        if (vm.keyExistsJson(json, ".contracts.oracleV2")) {
+            contracts.oracle = IOracle(vm.parseJsonAddress(json, ".contracts.oracleV2"));
+        }
+        if (vm.keyExistsJson(json, ".contracts.routerV2")) {
+            contracts.router = TermMaxRouterV2(vm.parseJsonAddress(json, ".contracts.routerV2"));
+        }
+        if (vm.keyExistsJson(json, ".contracts.makerHelper")) {
+            contracts.makerHelper = MakerHelper(vm.parseJsonAddress(json, ".contracts.makerHelper"));
+        }
+        if (vm.keyExistsJson(json, ".contracts.faucet")) {
+            contracts.faucet = Faucet(vm.parseJsonAddress(json, ".contracts.faucet"));
+        }
+        if (vm.keyExistsJson(json, ".contracts.marketViewer")) {
+            contracts.marketViewer = MarketViewer(vm.parseJsonAddress(json, ".contracts.marketViewer"));
+        }
+        if (vm.keyExistsJson(json, ".contracts.swapAdapterV2.swapAdapter")) {
+            contracts.swapAdapter = SwapAdapterV2(vm.parseJsonAddress(json, ".contracts.swapAdapterV2.swapAdapter"));
+        }
+        if (vm.keyExistsJson(json, ".contracts.swapAdapterV2.uniswapV3AdapterV2")) {
+            contracts.uniswapV3Adapter =
+                UniswapV3AdapterV2(vm.parseJsonAddress(json, ".contracts.swapAdapterV2.uniswapV3AdapterV2"));
+        }
+        if (vm.keyExistsJson(json, ".contracts.swapAdapterV2.odosV2AdapterV2")) {
+            contracts.odosV2Adapter =
+                OdosV2AdapterV2(vm.parseJsonAddress(json, ".contracts.swapAdapterV2.odosV2AdapterV2"));
+        }
+        if (vm.keyExistsJson(json, ".contracts.swapAdapterV2.pendleSwapV3AdapterV2")) {
+            contracts.pendleSwapV3Adapter =
+                PendleSwapV3AdapterV2(vm.parseJsonAddress(json, ".contracts.swapAdapterV2.pendleSwapV3AdapterV2"));
+        }
+        if (vm.keyExistsJson(json, ".contracts.swapAdapterV2.vaultAdapterV2")) {
+            contracts.vaultAdapter =
+                ERC4626VaultAdapterV2(vm.parseJsonAddress(json, ".contracts.swapAdapterV2.vaultAdapterV2"));
+        }
+        if (vm.keyExistsJson(json, ".contracts.swapAdapterV2.termMaxSwapAdapter")) {
+            contracts.termMaxSwapAdapter =
+                TermMaxSwapAdapter(vm.parseJsonAddress(json, ".contracts.swapAdapterV2.termMaxSwapAdapter"));
+        }
+        if (vm.keyExistsJson(json, ".contracts.swapAdapterV2.terminalVaultAdapter")) {
+            contracts.terminalVaultAdapter =
+                TerminalVaultAdapter(vm.parseJsonAddress(json, ".contracts.swapAdapterV2.terminalVaultAdapter"));
+        }
+    }
+
     function deployFactory(address admin) public returns (TermMaxFactoryV2 factory) {
         address tokenImplementation = address(new MintableERC20V2());
         address orderImplementation = address(new TermMaxOrderV2());
@@ -142,6 +207,16 @@ contract DeployBaseV2 is Script {
         bytes memory data = abi.encodeCall(MakerHelper.initialize, admin);
         address proxy = address(new ERC1967Proxy(address(implementation), data));
         makerHelper = MakerHelper(proxy);
+    }
+
+    function upgradeMakerHelper(AccessManagerV2 manager, address makerHelperProxy)
+        public
+        returns (MakerHelper makerHelper)
+    {
+        address implementation = address(new MakerHelper());
+        bytes memory data = bytes("");
+        manager.upgradeSubContract(UUPSUpgradeable(makerHelperProxy), address(implementation), data);
+        makerHelper = MakerHelper(makerHelperProxy);
     }
 
     function deployAccessManager(address admin) public returns (AccessManagerV2 accessManager) {

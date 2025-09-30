@@ -6,7 +6,7 @@ import {VmSafe} from "forge-std/Vm.sol";
 import "forge-std/console.sol";
 import "./DeployBaseV2.s.sol";
 
-contract DeployCoreV2_0930 is DeployBaseV2 {
+contract DeployCoreV2_20250930 is DeployBaseV2 {
     uint256 deployerPrivateKey;
     address adminAddr;
     address accessManagerAddr;
@@ -72,23 +72,12 @@ contract DeployCoreV2_0930 is DeployBaseV2 {
         accessManagerAddr = vm.parseJsonAddress(json, ".contracts.accessManager");
         console.log("Using existing AccessManagerV2 at:", accessManagerAddr);
         coreContracts.accessManager = AccessManagerV2(accessManagerAddr);
-        deploymentPath =
-            string.concat(vm.projectRoot(), "/deployments/", coreParams.network, "/", coreParams.network, "-core-v2.json");
+        deploymentPath = string.concat(
+            vm.projectRoot(), "/deployments/", coreParams.network, "/", coreParams.network, "-core-v2.json"
+        );
         if (vm.exists(deploymentPath)) {
             json = vm.readFile(deploymentPath);
-            coreContracts.router = TermMaxRouterV2(vm.parseJsonAddress(json, ".contracts.routerV2"));
-            console.log("Using existing RouterV2 at:", address(coreContracts.router));
-            coreContracts.whitelistManager =
-                WhitelistManagerV2(vm.parseJsonAddress(json, ".contracts.whitelistManager"));
-            console.log("Using existing WhitelistManager at:", address(coreContracts.whitelistManager));
-            coreContracts.priceFeedFactory =
-                PriceFeedFactoryV2(vm.parseJsonAddress(json, ".contracts.priceFeedFactoryV2"));
-            console.log("Using existing PriceFeedFactoryV2 at:", address(coreContracts.priceFeedFactory));
-            coreContracts.oracle = OracleAggregatorV2(vm.parseJsonAddress(json, ".contracts.oracleAggregatorV2"));
-            console.log("Using existing OracleAggregatorV2 at:", address(coreContracts.oracle));
-            
-
-            
+            coreContracts = readDeployData(json);
         }
     }
 
@@ -97,7 +86,16 @@ contract DeployCoreV2_0930 is DeployBaseV2 {
         console.log("Deployer balance:", coreParams.deployerAddr.balance);
 
         vm.startBroadcast(deployerPrivateKey);
-        coreContracts = deployCore(coreContracts, coreParams);
+
+        coreContracts.factory = deployFactory(address(coreContracts.accessManager));
+        console.log("FactoryV2 deployed at:", address(coreContracts.factory));
+
+        coreContracts.vaultFactory = deployVaultFactory();
+        console.log("VaultFactoryV2 deployed at:", address(coreContracts.vaultFactory));
+
+        console.log("Upgrading MakerHelper at:", address(coreContracts.makerHelper));
+        coreContracts.makerHelper = upgradeMakerHelper(coreContracts.accessManager, address(coreContracts.makerHelper));
+
         vm.stopBroadcast();
 
         console.log("===== Git Info =====");
@@ -114,28 +112,6 @@ contract DeployCoreV2_0930 is DeployBaseV2 {
         console.log("===== Core Info =====");
         console.log("Deployer:", coreParams.deployerAddr);
         console.log("Admin:", adminAddr);
-        console.log("AccessManagerV2 deployed at:", accessManagerAddr);
-        console.log("WhitelistManager deployed at:", address(coreContracts.whitelistManager));
-        console.log("FactoryV2 deployed at:", address(coreContracts.factory));
-        console.log("VaultFactoryV2 deployed at:", address(coreContracts.vaultFactory));
-        console.log("PriceFeedFactoryV2 deployed at:", address(coreContracts.priceFeedFactory));
-        console.log("TermMax4626Factory deployed at:", address(coreContracts.tmx4626Factory));
-        console.log("OracleAggregatorV2 deployed at:", address(coreContracts.oracle));
-        console.log("RouterV2 deployed at:", address(coreContracts.router));
-        console.log("MakerHelper deployed at:", address(coreContracts.makerHelper));
-        console.log("MarketViewer deployed at:", address(coreContracts.marketViewer));
-        if (coreParams.isMainnet) {
-            console.log("UniswapV3AdapterV2 deployed at:", address(coreContracts.uniswapV3Adapter));
-            console.log("OdosV2AdapterV2 deployed at:", address(coreContracts.odosV2Adapter));
-            console.log("PendleSwapV3AdapterV2 deployed at:", address(coreContracts.pendleSwapV3Adapter));
-            console.log("ERC4626VaultAdapterV2 deployed at:", address(coreContracts.vaultAdapter));
-            console.log("TerminalVaultAdapter deployed at:", address(coreContracts.terminalVaultAdapter));
-        } else {
-            console.log("Faucet deployed at:", address(coreContracts.faucet));
-            console.log("SwapAdapterV2 deployed at:", address(coreContracts.swapAdapter));
-        }
-        console.log("TermMaxSwapAdapter deployed at:", address(coreContracts.termMaxSwapAdapter));
-
         writeAsJson();
     }
 

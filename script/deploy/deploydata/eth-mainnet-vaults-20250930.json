@@ -1,0 +1,17 @@
+{
+  "configNum": 1,
+  "configs": {
+    "configs_0": {
+      "curator": "0x0000000000000000000000000000000000000000",
+      "guardian": "0x0000000000000000000000000000000000000000",
+      "timelock": 86400,
+      "asset": "0x0000000000000000000000000000000000000000",
+      "pool": "0x0000000000000000000000000000000000000000",
+      "maxCapacity": "1",
+      "name": "TermMax XXX Vault",
+      "symbol": "tmXXX",
+      "performanceFeeRate": 0,
+      "minApy": 0
+    }
+  }
+}
