@@ -1869,4 +1869,27 @@ contract GtTestV2 is Test {
         );
         vm.stopPrank();
     }
+
+    function testRepayAndRemoveCollateralAfterMaturity() public {
+        uint128 debtAmt = 100e8;
+        uint256 collateralAmt = 1e18;
+        uint128 repayAmt = 50e8;
+        uint256 removedCollateral = 0.1e18;
+
+        vm.startPrank(sender);
+
+        (uint256 gtId,) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
+
+        res.debt.mint(sender, repayAmt);
+        res.debt.approve(address(res.gt), repayAmt);
+
+        vm.warp(marketConfig.maturity + 1);
+
+        bool byDebtToken = true;
+        vm.expectRevert(abi.encodeWithSelector(GearingTokenErrorsV2.GtIsExpired.selector));
+        (bool repayAll, uint128 finalRepayAmt) = GearingTokenWithERC20V2(address(res.gt)).repayAndRemoveCollateral(
+            gtId, repayAmt, byDebtToken, sender, abi.encode(removedCollateral)
+        );
+        vm.stopPrank();
+    }
 }
