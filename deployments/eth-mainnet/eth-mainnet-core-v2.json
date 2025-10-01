@@ -1,30 +1,31 @@
 {
   "network": "eth-mainnet",
-  "deployedAt": "1758871535",
-  "gitBranch": "v2/deployment_maintest",
-  "gitCommitHash": "0x0x826b302f6236a7f7484d3c8e086c25d8ec76b46e",
+  "deployedAt": "1759282223",
+  "gitBranch": "v2/deployment",
+  "gitCommitHash": "0x0x91d12bbaa61aa56d3174e060fd22a446ecf3a65d",
   "blockInfo": {
-    "number": "23445689",
-    "timestamp": "1758871535"
+    "number": "23479692",
+    "timestamp": "1759282223"
   },
   "deployer": "0x56E3665038C5F0b56Cc7D81aC66C86521274B251",
   "admin": "0x8409a9C1A911CED491892c5694E43994c9d47E8f",
   "contracts": {
-    "factoryV2": "0x0000000000000000000000000000000000000000",
-    "vaultFactoryV2": "0x0000000000000000000000000000000000000000",
+    "factoryV2": "0x34baB42f022d0Ad6d9DA468C3672501a131A8906",
+    "vaultFactoryV2": "0xB4314Cbe0f5bc5be6e247892aC4543dbA223A13d",
     "priceFeedFactoryV2": "0xFD9B5ee419C56f5ED3E86ba70953342906a7dE2B",
     "termMax4626Factory": "0x05e7774D0788671C0065415ec2EFdDdA5847eBA1",
     "whitelistManager": "0xB84f2a39b271D92586c61232a73ee1F7adFBf317",
-    "oracleAggregatorV2": "0xEDB5DFB6393551fAF499CF55494b1F6e44C2c612",
+    "oracleAggregatorV2": "0x0000000000000000000000000000000000000000",
     "routerV2": "0xD7B162c1fA3C8cd0cb03e2c256715a4f4BEc42d0",
-    "MarketViewer": "0x506a9Dd073D51FcC0BF96d26727928008c4C5Ba3",
+    "MarketViewer": "0x0000000000000000000000000000000000000000",
     "makerHelper": "0x513690136500dEc06553385f7a00b010455dce92",
     "swapAdapterV2": {
       "uniswapV3AdapterV2": "0x92C31d38F981D3AeC3A5570609003aB6df13b50E",
       "odosV2AdapterV2": "0xf18A06ae13ca55e10a27d3B2B5F76A4B6CFb1bb0",
       "pendleSwapV3AdapterV2": "0x5b47df5adfd363b7872263A48132396703cB367c",
-      "ERC4626VaultAdapterV2": "0xc18355f83204630AE910D5953a411812A33A6101",
-      "TermMaxSwapAdapter": "0x5bE681ac79F288c877aA7b3bbc95891979075412"
+      "ERC4626VaultAdapterV2": "0x0000000000000000000000000000000000000000",
+      "TerminalVaultAdapter": "0x0000000000000000000000000000000000000000",
+      "TermMaxSwapAdapter": "0x0000000000000000000000000000000000000000"
     }
   }
 }
