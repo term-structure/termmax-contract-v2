@@ -1135,6 +1135,37 @@ contract OrderTestV2 is Test {
         }
     }
 
+    function testFuzz_Redeem(uint128 addDebt, uint128 addFt, uint128 addXt) public {
+        addDebt = uint128(bound(addDebt, 0, 1e30));
+        addFt = uint128(bound(addFt, 0, 1_000e8));
+        addXt = uint128(bound(addXt, 0, 1_000e8));
+
+        vm.startPrank(maker);
+        // Optionally leave residual FT on order
+        if (addFt > 0) {
+            // Mint FT/XT to maker, then transfer only FT to the order
+            res.debt.mint(maker, addFt);
+            res.debt.approve(address(res.market), addFt);
+            res.market.mint(maker, addFt);
+            res.ft.transfer(address(res.order), addFt);
+        }
+        // Optionally leave residual XT on order
+        if (addXt > 0) {
+            res.debt.mint(maker, addXt);
+            res.debt.approve(address(res.market), addXt);
+            res.market.mint(maker, addXt);
+            res.xt.transfer(address(res.order), addXt);
+        }
+        vm.stopPrank();
+        res.debt.mint(address(res.market), addDebt);
+
+        // Execute withdrawal as owner
+        vm.startPrank(maker);
+        vm.warp(marketConfig.maturity + 1 days); // move past maturity
+        res.order.redeemAll(maker);
+        vm.stopPrank();
+    }
+
     function testBorrowToken_SufficientBalances() public {
         address recipient = vm.randomAddress();
         uint256 amount = 10e8;

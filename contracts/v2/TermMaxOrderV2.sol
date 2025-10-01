@@ -524,7 +524,7 @@ contract TermMaxOrderV2 is
             if (shares != 0) receivedFromPool = _pool.redeem(shares, recipient, address(this));
         }
         // Calculate bad debt
-        badDebt = ftBalance - received;
+        badDebt = ftBalance > received ? ftBalance - received : 0;
         // Clear order configuration
         delete _orderConfig;
         emit OrderEventsV2.Redeemed(recipient, received + receivedFromPool, badDebt, deliveryData);
@@ -812,24 +812,6 @@ contract TermMaxOrderV2 is
             virtualXtReserve = newXtReserve;
             return (netAmt, feeAmt, -deltaFt.toInt256(), deltaXt.toInt256());
         }
-    }
-
-    /**
-     * @notice Calculate mint amount needed for token operations
-     * @param tokenToMint Total tokens needed to mint
-     * @param netTokenOut Net output tokens
-     * @param ftBalance Current FT balance
-     * @param xtBalance Current XT balance
-     * @return Calculated mint amount
-     */
-    function _calculateMintAmount(uint256 tokenToMint, uint256 netTokenOut, uint256 ftBalance, uint256 xtBalance)
-        private
-        pure
-        returns (uint256)
-    {
-        uint256 mintAmount = tokenToMint - ftBalance;
-        uint256 xtShortfall = netTokenOut > xtBalance ? netTokenOut - xtBalance : 0;
-        return mintAmount > xtShortfall ? mintAmount : xtShortfall;
     }
 
     /**
