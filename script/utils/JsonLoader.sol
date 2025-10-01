@@ -157,7 +157,7 @@ library JsonLoader {
         pure
         returns (VaultInitialParamsV2 memory initialParams)
     {
-        string memory configPrefix = string.concat("configs.configs_", vm.toString(index));
+        string memory configPrefix = string.concat(".configs.configs_", vm.toString(index));
         initialParams.curator = jsonData.readAddress(string.concat(configPrefix, ".curator"));
         initialParams.guardian = jsonData.readAddress(string.concat(configPrefix, ".guardian"));
         initialParams.timelock = uint64(vm.parseUint(jsonData.readString(string.concat(configPrefix, ".timelock"))));

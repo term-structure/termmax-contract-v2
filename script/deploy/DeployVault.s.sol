@@ -25,12 +25,6 @@ contract DeployVaults is DeployBaseV2 {
         // Load network-specific configuration
         string memory privateKeyVar = string.concat(networkUpper, "_DEPLOYER_PRIVATE_KEY");
         string memory adminVar = string.concat(networkUpper, "_ADMIN_ADDRESS");
-        {
-            string memory AAVEPoolVar = string.concat(networkUpper, "_AAVE_POOL");
-            string memory AAVEReferralCodeVar = string.concat(networkUpper, "_AAVE_REFERRAL_CODE");
-            coreParams.AAVE_POOL = vm.envAddress(AAVEPoolVar);
-            coreParams.AAVE_REFERRAL_CODE = uint16(vm.envUint(AAVEReferralCodeVar));
-        }
 
         deployerPrivateKey = vm.envUint(privateKeyVar);
         coreParams.deployerAddr = vm.addr(deployerPrivateKey);
@@ -93,7 +87,7 @@ contract DeployVaults is DeployBaseV2 {
 
         vm.startBroadcast(deployerPrivateKey);
 
-        VaultInitialParamsV2[] memory vaultParams = JsonLoader.getVaultConfigsFromJson(configPath);
+        VaultInitialParamsV2[] memory vaultParams = JsonLoader.getVaultConfigsFromJson(vm.readFile(configPath));
         for (uint256 i; i < vaultParams.length; i++) {
             VaultInitialParamsV2 memory params = vaultParams[i];
             params.admin = address(coreContracts.accessManager);
@@ -148,7 +142,7 @@ contract DeployVaults is DeployBaseV2 {
                 vm.toString(block.timestamp),
                 "\nGIT_BRANCH=",
                 getGitBranch(),
-                "\nGIT_COMMIT_HASH=0x",
+                "\nGIT_COMMIT_HASH=",
                 vm.toString(getGitCommitHash()),
                 "\nBLOCK_NUMBER=",
                 vm.toString(block.number),
