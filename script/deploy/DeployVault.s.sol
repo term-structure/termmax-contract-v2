@@ -25,12 +25,6 @@ contract DeployVaults is DeployBaseV2 {
         // Load network-specific configuration
         string memory privateKeyVar = string.concat(networkUpper, "_DEPLOYER_PRIVATE_KEY");
         string memory adminVar = string.concat(networkUpper, "_ADMIN_ADDRESS");
-        {
-            string memory AAVEPoolVar = string.concat(networkUpper, "_AAVE_POOL");
-            string memory AAVEReferralCodeVar = string.concat(networkUpper, "_AAVE_REFERRAL_CODE");
-            coreParams.AAVE_POOL = vm.envAddress(AAVEPoolVar);
-            coreParams.AAVE_REFERRAL_CODE = uint16(vm.envUint(AAVEReferralCodeVar));
-        }
 
         deployerPrivateKey = vm.envUint(privateKeyVar);
         coreParams.deployerAddr = vm.addr(deployerPrivateKey);
@@ -73,8 +67,7 @@ contract DeployVaults is DeployBaseV2 {
         );
         string memory json = vm.readFile(deploymentPath);
         accessManagerAddr = vm.parseJsonAddress(json, ".contracts.accessManager");
-        console.log("Using existing AccessManagerV2 at:", accessManagerAddr);
-        coreContracts.accessManager = AccessManagerV2(accessManagerAddr);
+
         deploymentPath = string.concat(
             vm.projectRoot(), "/deployments/", coreParams.network, "/", coreParams.network, "-core-v2.json"
         );
@@ -82,6 +75,8 @@ contract DeployVaults is DeployBaseV2 {
             json = vm.readFile(deploymentPath);
             coreContracts = readDeployData(json);
         }
+        console.log("Using existing AccessManagerV2 at:", accessManagerAddr);
+        coreContracts.accessManager = AccessManagerV2(accessManagerAddr);
         console.log("Using existing WhitelistManager at:", address(coreContracts.whitelistManager));
         console.log("Using existing TermMaxVaultFactoryV2 at:", address(coreContracts.vaultFactory));
     }
@@ -92,7 +87,7 @@ contract DeployVaults is DeployBaseV2 {
 
         vm.startBroadcast(deployerPrivateKey);
 
-        VaultInitialParamsV2[] memory vaultParams = JsonLoader.getVaultConfigsFromJson(configPath);
+        VaultInitialParamsV2[] memory vaultParams = JsonLoader.getVaultConfigsFromJson(vm.readFile(configPath));
         for (uint256 i; i < vaultParams.length; i++) {
             VaultInitialParamsV2 memory params = vaultParams[i];
             params.admin = address(coreContracts.accessManager);
@@ -147,7 +142,7 @@ contract DeployVaults is DeployBaseV2 {
                 vm.toString(block.timestamp),
                 "\nGIT_BRANCH=",
                 getGitBranch(),
-                "\nGIT_COMMIT_HASH=0x",
+                "\nGIT_COMMIT_HASH=",
                 vm.toString(getGitCommitHash()),
                 "\nBLOCK_NUMBER=",
                 vm.toString(block.number),
