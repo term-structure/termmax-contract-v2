@@ -78,6 +78,7 @@ contract DeployBaseV2 is Script {
 
     struct CoreParams {
         address deployerAddr;
+        address adminAddr;
         string network;
         bool isL2Network;
         bool isMainnet;
@@ -114,8 +115,8 @@ contract DeployBaseV2 is Script {
         if (vm.keyExistsJson(json, ".contracts.termMax4626Factory")) {
             contracts.tmx4626Factory = TermMax4626Factory(vm.parseJsonAddress(json, ".contracts.termMax4626Factory"));
         }
-        if (vm.keyExistsJson(json, ".contracts.oracleV2")) {
-            contracts.oracle = IOracle(vm.parseJsonAddress(json, ".contracts.oracleV2"));
+        if (vm.keyExistsJson(json, ".contracts.oracleAggregatorV2")) {
+            contracts.oracle = IOracle(vm.parseJsonAddress(json, ".contracts.oracleAggregatorV2"));
         }
         if (vm.keyExistsJson(json, ".contracts.routerV2")) {
             contracts.router = TermMaxRouterV2(vm.parseJsonAddress(json, ".contracts.routerV2"));
@@ -156,6 +157,132 @@ contract DeployBaseV2 is Script {
             contracts.terminalVaultAdapter =
                 TerminalVaultAdapter(vm.parseJsonAddress(json, ".contracts.swapAdapterV2.terminalVaultAdapter"));
         }
+    }
+
+    function writeAsJson(string memory filePath, CoreParams memory coreParams, DeployedContracts memory coreContracts)
+        internal
+    {
+        // Write deployment results to a JSON file with timestamp
+        string memory deploymentJson;
+
+        {
+            deploymentJson = string(
+                abi.encodePacked(
+                    "{\n",
+                    '  "network": "',
+                    coreParams.network,
+                    '",\n',
+                    '  "deployedAt": "',
+                    vm.toString(block.timestamp),
+                    '",\n',
+                    '  "gitBranch": "',
+                    getGitBranch(),
+                    '",\n',
+                    '  "gitCommitHash": "0x',
+                    vm.toString(getGitCommitHash()),
+                    '",\n',
+                    '  "blockInfo": {\n',
+                    '    "number": "',
+                    vm.toString(block.number),
+                    '",\n',
+                    '    "timestamp": "',
+                    vm.toString(block.timestamp),
+                    '"\n',
+                    "  },\n"
+                )
+            );
+        }
+        {
+            deploymentJson = string(
+                abi.encodePacked(
+                    deploymentJson,
+                    '  "deployer": "',
+                    vm.toString(coreParams.deployerAddr),
+                    '",\n',
+                    '  "admin": "',
+                    vm.toString(coreParams.adminAddr),
+                    '",\n',
+                    '  "contracts": {\n',
+                    '    "factoryV2": "',
+                    vm.toString(address(coreContracts.factory)),
+                    '",\n',
+                    '    "vaultFactoryV2": "',
+                    vm.toString(address(coreContracts.vaultFactory)),
+                    '",\n',
+                    '    "priceFeedFactoryV2": "',
+                    vm.toString(address(coreContracts.priceFeedFactory)),
+                    '",\n',
+                    '    "termMax4626Factory": "',
+                    vm.toString(address(coreContracts.tmx4626Factory)),
+                    '",\n',
+                    '    "whitelistManager": "',
+                    vm.toString(address(coreContracts.whitelistManager)),
+                    '",\n',
+                    '    "oracleAggregatorV2": "',
+                    vm.toString(address(coreContracts.oracle)),
+                    '",\n',
+                    '    "routerV2": "',
+                    vm.toString(address(coreContracts.router)),
+                    '",\n',
+                    '    "marketViewer": "',
+                    vm.toString(address(coreContracts.marketViewer)),
+                    '",\n',
+                    '    "makerHelper": "',
+                    vm.toString(address(coreContracts.makerHelper)),
+                    '",\n',
+                    '    "swapAdapterV2": '
+                )
+            );
+        }
+
+        {
+            deploymentJson = string(
+                abi.encodePacked(
+                    deploymentJson,
+                    coreParams.isMainnet
+                        ? string.concat(
+                            "{\n",
+                            '      "uniswapV3AdapterV2": "',
+                            vm.toString(address(coreContracts.uniswapV3Adapter)),
+                            '",\n',
+                            '      "odosV2AdapterV2": "',
+                            vm.toString(address(coreContracts.odosV2Adapter)),
+                            '",\n',
+                            '      "pendleSwapV3AdapterV2": "',
+                            vm.toString(address(coreContracts.pendleSwapV3Adapter)),
+                            '",\n',
+                            '      "vaultAdapterV2": "',
+                            vm.toString(address(coreContracts.vaultAdapter)),
+                            '",\n',
+                            '      "terminalVaultAdapter": "',
+                            vm.toString(address(coreContracts.terminalVaultAdapter)),
+                            '",\n',
+                            '      "termMaxSwapAdapter": "',
+                            vm.toString(address(coreContracts.termMaxSwapAdapter)),
+                            '"\n',
+                            "    }\n"
+                        )
+                        : string.concat(
+                            "{\n",
+                            '      "swapAdapter": "',
+                            vm.toString(address(coreContracts.swapAdapter)),
+                            '",\n',
+                            '      "termMaxSwapAdapter": "',
+                            vm.toString(address(coreContracts.termMaxSwapAdapter)),
+                            '"\n',
+                            "    },\n",
+                            '    "faucet": "',
+                            vm.toString(address(coreContracts.faucet)),
+                            '"\n'
+                        ),
+                    "  }\n",
+                    "}"
+                )
+            );
+        }
+
+        vm.writeFile(filePath, deploymentJson);
+        console.log("Deployment info written to:", filePath);
     }
 
     function deployFactory(address admin) public returns (TermMaxFactoryV2 factory) {
