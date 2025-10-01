@@ -178,7 +178,7 @@ contract DeployBaseV2 is Script {
                     '  "gitBranch": "',
                     getGitBranch(),
                     '",\n',
-                    '  "gitCommitHash": "0x',
+                    '  "gitCommitHash": "',
                     vm.toString(getGitCommitHash()),
                     '",\n',
                     '  "blockInfo": {\n',
