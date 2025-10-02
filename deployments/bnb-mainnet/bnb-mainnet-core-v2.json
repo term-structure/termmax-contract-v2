@@ -1,11 +1,11 @@
 {
   "network": "bnb-mainnet",
-  "deployedAt": "1759393684",
+  "deployedAt": "1759405795",
   "gitBranch": "v2/deployment",
-  "gitCommitHash": "0x2eccaf14bf77da3c11b66d858653cc2bbae6a874",
+  "gitCommitHash": "0xea972d7dd6ef8e2b6fba63559e5a52b9a69e6463",
   "blockInfo": {
-    "number": "63192804",
-    "timestamp": "1759393684"
+    "number": "63208950",
+    "timestamp": "1759405795"
   },
   "deployer": "0x56E3665038C5F0b56Cc7D81aC66C86521274B251",
   "admin": "0x8409a9C1A911CED491892c5694E43994c9d47E8f",
@@ -13,8 +13,8 @@
     "factoryV2": "0xdffE6De6de1dB8e1B5Ce77D3222eba401C2573b5",
     "vaultFactoryV2": "0x1401049368eD6AD8194f8bb7E41732c4620F170b",
     "priceFeedFactoryV2": "0x0000000000000000000000000000000000000000",
-    "termMax4626Factory": "0x0000000000000000000000000000000000000000",
-    "whitelistManager": "0x0000000000000000000000000000000000000000",
+    "termMax4626Factory": "0x67dcDCc57208B574B05999AA3dFA57bfF2324129",
+    "whitelistManager": "0x6119E236d3798777A3f2553926070958DF5704F1",
     "oracleAggregatorV2": "0x0000000000000000000000000000000000000000",
     "routerV2": "0x0000000000000000000000000000000000000000",
     "marketViewer": "0x0000000000000000000000000000000000000000",

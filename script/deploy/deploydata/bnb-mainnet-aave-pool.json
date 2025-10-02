@@ -2,19 +2,19 @@
     "configNum": 2,
     "configs": {
         "configs_0": {
-            "asset": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+            "asset": "0x55d398326f99059ff775485246999027b3197955",
             "bufferConfig": {
-                "minimumBuffer": 1000,
-                "maximumBuffer": 10000,
-                "buffer": 5000
+                "minimumBuffer": 5000000000,
+                "maximumBuffer": 10000000000,
+                "buffer": 7000000000
             }
         },
         "configs_1": {
-            "asset": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+            "asset": "0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c",
             "bufferConfig": {
-                "minimumBuffer": 1000,
-                "maximumBuffer": 10000,
-                "buffer": 5000
+                "minimumBuffer": 500000000000000000,
+                "maximumBuffer": 1000000000000000000,
+                "buffer": 750000000000000000
             }
         }
     }
