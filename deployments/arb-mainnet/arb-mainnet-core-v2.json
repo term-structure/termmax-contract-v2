@@ -1,11 +1,11 @@
 {
   "network": "arb-mainnet",
-  "deployedAt": "1759393251",
+  "deployedAt": "1759404983",
   "gitBranch": "v2/deployment",
-  "gitCommitHash": "0x2eccaf14bf77da3c11b66d858653cc2bbae6a874",
+  "gitCommitHash": "0x5101e8a68db2da0b81914092246a180cb35aae49",
   "blockInfo": {
-    "number": "385227927",
-    "timestamp": "1759393251"
+    "number": "385274897",
+    "timestamp": "1759404983"
   },
   "deployer": "0x56E3665038C5F0b56Cc7D81aC66C86521274B251",
   "admin": "0x8409a9C1A911CED491892c5694E43994c9d47E8f",
@@ -13,8 +13,8 @@
     "factoryV2": "0x18b8A9433dBefcd15370F10a75e28149bcc2e301",
     "vaultFactoryV2": "0xa7c93162962D050098f4BB44E88661517484C5EB",
     "priceFeedFactoryV2": "0x0000000000000000000000000000000000000000",
-    "termMax4626Factory": "0x0000000000000000000000000000000000000000",
-    "whitelistManager": "0x0000000000000000000000000000000000000000",
+    "termMax4626Factory": "0xe306A0A5Ac675dab1CD77aA7873D241715aEB217",
+    "whitelistManager": "0x7a571901687E7F30431B4E86bdd1baB6caE51D43",
     "oracleAggregatorV2": "0x0000000000000000000000000000000000000000",
     "routerV2": "0x0000000000000000000000000000000000000000",
     "marketViewer": "0x0000000000000000000000000000000000000000",
