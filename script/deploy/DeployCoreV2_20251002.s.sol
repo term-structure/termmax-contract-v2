@@ -6,7 +6,7 @@ import {VmSafe} from "forge-std/Vm.sol";
 import "forge-std/console.sol";
 import "./DeployBaseV2.s.sol";
 
-contract DeployCoreV2_20250930 is DeployBaseV2 {
+contract DeployCoreV2_20251002 is DeployBaseV2 {
     uint256 deployerPrivateKey;
     address adminAddr;
     address accessManagerAddr;
@@ -94,9 +94,6 @@ contract DeployCoreV2_20250930 is DeployBaseV2 {
 
         coreContracts.vaultFactory = deployVaultFactory();
         console.log("VaultFactoryV2 deployed at:", address(coreContracts.vaultFactory));
-
-        console.log("Upgrading MakerHelper at:", address(coreContracts.makerHelper));
-        coreContracts.makerHelper = upgradeMakerHelper(coreContracts.accessManager, address(coreContracts.makerHelper));
 
         vm.stopBroadcast();
 
