@@ -136,6 +136,7 @@ contract DeployCoreV2_20251002 is DeployBaseV2 {
         );
 
         writeAsJson(deploymentPath, coreParams, coreContracts);
+        writeToEnv();
     }
 
     function writeToEnv() internal {
