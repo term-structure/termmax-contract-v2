@@ -2,7 +2,7 @@
   "network": "eth-mainnet",
   "deployedAt": "1759390271",
   "gitBranch": "v2/deployment",
-  "gitCommitHash": "0x0x18990bdd4774761eacdf52271da851a2abeff18c",
+  "gitCommitHash": "0x18990bdd4774761eacdf52271da851a2abeff18c",
   "blockInfo": {
     "number": "23488627",
     "timestamp": "1759390271"

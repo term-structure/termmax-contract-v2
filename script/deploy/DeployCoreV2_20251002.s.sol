@@ -8,7 +8,6 @@ import "./DeployBaseV2.s.sol";
 
 contract DeployCoreV2_20251002 is DeployBaseV2 {
     uint256 deployerPrivateKey;
-    address adminAddr;
     address accessManagerAddr;
 
     CoreParams coreParams;
@@ -31,7 +30,7 @@ contract DeployCoreV2_20251002 is DeployBaseV2 {
 
         deployerPrivateKey = vm.envUint(privateKeyVar);
         coreParams.deployerAddr = vm.addr(deployerPrivateKey);
-        adminAddr = vm.envAddress(adminVar);
+        coreParams.adminAddr = vm.envAddress(adminVar);
 
         coreParams.isMainnet = keccak256(abi.encodePacked(coreParams.network))
             == keccak256(abi.encodePacked("eth-mainnet"))
@@ -110,135 +109,12 @@ contract DeployCoreV2_20251002 is DeployBaseV2 {
 
         console.log("===== Core Info =====");
         console.log("Deployer:", coreParams.deployerAddr);
-        console.log("Admin:", adminAddr);
-        writeAsJson();
-    }
-
-    function writeAsJson() internal {
-        // Write deployment results to a JSON file with timestamp
-        string memory deploymentJson;
-
-        {
-            deploymentJson = string(
-                abi.encodePacked(
-                    "{\n",
-                    '  "network": "',
-                    coreParams.network,
-                    '",\n',
-                    '  "deployedAt": "',
-                    vm.toString(block.timestamp),
-                    '",\n',
-                    '  "gitBranch": "',
-                    getGitBranch(),
-                    '",\n',
-                    '  "gitCommitHash": "0x',
-                    vm.toString(getGitCommitHash()),
-                    '",\n',
-                    '  "blockInfo": {\n',
-                    '    "number": "',
-                    vm.toString(block.number),
-                    '",\n',
-                    '    "timestamp": "',
-                    vm.toString(block.timestamp),
-                    '"\n',
-                    "  },\n"
-                )
-            );
-        }
-        {
-            deploymentJson = string(
-                abi.encodePacked(
-                    deploymentJson,
-                    '  "deployer": "',
-                    vm.toString(coreParams.deployerAddr),
-                    '",\n',
-                    '  "admin": "',
-                    vm.toString(adminAddr),
-                    '",\n',
-                    '  "contracts": {\n',
-                    '    "factoryV2": "',
-                    vm.toString(address(coreContracts.factory)),
-                    '",\n',
-                    '    "vaultFactoryV2": "',
-                    vm.toString(address(coreContracts.vaultFactory)),
-                    '",\n',
-                    '    "priceFeedFactoryV2": "',
-                    vm.toString(address(coreContracts.priceFeedFactory)),
-                    '",\n',
-                    '    "termMax4626Factory": "',
-                    vm.toString(address(coreContracts.tmx4626Factory)),
-                    '",\n',
-                    '    "whitelistManager": "',
-                    vm.toString(address(coreContracts.whitelistManager)),
-                    '",\n',
-                    '    "oracleAggregatorV2": "',
-                    vm.toString(address(coreContracts.oracle)),
-                    '",\n',
-                    '    "routerV2": "',
-                    vm.toString(address(coreContracts.router)),
-                    '",\n',
-                    '    "MarketViewer": "',
-                    vm.toString(address(coreContracts.marketViewer)),
-                    '",\n',
-                    '    "makerHelper": "',
-                    vm.toString(address(coreContracts.makerHelper)),
-                    '",\n',
-                    '    "swapAdapterV2": '
-                )
-            );
-        }
-
-        {
-            deploymentJson = string(
-                abi.encodePacked(
-                    deploymentJson,
-                    coreParams.isMainnet
-                        ? string.concat(
-                            "{\n",
-                            '      "uniswapV3AdapterV2": "',
-                            vm.toString(address(coreContracts.uniswapV3Adapter)),
-                            '",\n',
-                            '      "odosV2AdapterV2": "',
-                            vm.toString(address(coreContracts.odosV2Adapter)),
-                            '",\n',
-                            '      "pendleSwapV3AdapterV2": "',
-                            vm.toString(address(coreContracts.pendleSwapV3Adapter)),
-                            '",\n',
-                            '      "ERC4626VaultAdapterV2": "',
-                            vm.toString(address(coreContracts.vaultAdapter)),
-                            '",\n',
-                            '      "TerminalVaultAdapter": "',
-                            vm.toString(address(coreContracts.terminalVaultAdapter)),
-                            '",\n',
-                            '      "TermMaxSwapAdapter": "',
-                            vm.toString(address(coreContracts.termMaxSwapAdapter)),
-                            '"\n',
-                            "    }\n"
-                        )
-                        : string.concat(
-                            "{\n",
-                            '      "swapAdapter": "',
-                            vm.toString(address(coreContracts.swapAdapter)),
-                            '",\n',
-                            '      "TermMaxSwapAdapter": "',
-                            vm.toString(address(coreContracts.termMaxSwapAdapter)),
-                            '"\n',
-                            "    },\n",
-                            '    "faucet": "',
-                            vm.toString(address(coreContracts.faucet)),
-                            '"\n'
-                        ),
-                    "  }\n",
-                    "}"
-                )
-            );
-        }
+        console.log("Admin:", coreParams.adminAddr);
 
         string memory deploymentPath = string.concat(
             vm.projectRoot(), "/deployments/", coreParams.network, "/", coreParams.network, "-core-v2.json"
         );
 
-        vm.writeFile(deploymentPath, deploymentJson);
-        console.log("Deployment info written to:", deploymentPath);
+        writeAsJson(deploymentPath, coreParams, coreContracts);
     }
 }
