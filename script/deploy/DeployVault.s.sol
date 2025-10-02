@@ -15,12 +15,13 @@ contract DeployVaults is DeployBaseV2 {
     DeployedContracts coreContracts;
 
     address[] vaults;
-    string configPath = "script/deploy/deploydata/eth-mainnet-vaults-20250930.json";
+    string configPath = "-vaults-20251002.json";
 
     function setUp() public {
         // Load network from environment variable
         coreParams.network = vm.envString("NETWORK");
         string memory networkUpper = toUpper(coreParams.network);
+        configPath = string.concat(vm.projectRoot(), "/script/deploy/deploydata/", coreParams.network, configPath);
 
         // Load network-specific configuration
         string memory privateKeyVar = string.concat(networkUpper, "_DEPLOYER_PRIVATE_KEY");
