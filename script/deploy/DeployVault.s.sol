@@ -154,7 +154,7 @@ contract DeployVaults is DeployBaseV2 {
                 vm.toString(adminAddr)
             )
         );
-        for (uint256 i = 3; i < vaults.length; i++) {
+        for (uint256 i = 0; i < vaults.length; i++) {
             deploymentEnv = string(
                 abi.encodePacked(deploymentEnv, "VAULT_ADDRESS_", vm.toString(i + 1), "=", vm.toString(vaults[i]), "\n")
             );
