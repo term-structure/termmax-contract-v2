@@ -304,11 +304,16 @@ contract TermMaxRouterV2 is
             tstore(T_CALLBACK_ADDRESS_STORE, gtToken)
         }
         gtToken.safeTransferFrom(_msgSender(), address(this), gtId, "");
+        (,, bytes memory collateralData) = gtToken.loanInfo(gtId);
         bool repayAll = IGearingTokenV2(address(gtToken)).flashRepay(
             gtId, repayAmt, byDebtToken, abi.encode(removedCollateral), callbackData
         );
         if (!repayAll) {
             gtToken.safeTransferFrom(address(this), _msgSender(), gtId);
+        } else {
+            require(
+                abi.decode(collateralData, (uint256)) == removedCollateral, RouterErrorsV2.RemovedCollateralNotMatch()
+            );
         }
         netTokenOut = debtToken.balanceOf(address(this));
         if (netTokenOut < expectedOutput) {
@@ -367,13 +372,21 @@ contract TermMaxRouterV2 is
         gtToken.safeTransferFrom(firstCaller, address(this), gtId, "");
         if (isV1) {
             gtToken.flashRepay(gtId, true, rolloverData);
-        } else if (
-            !IGearingTokenV2(address(gtToken)).flashRepay(
-                gtId, repayAmt.toUint128(), true, abi.encode(removedCollateral), rolloverData
-            )
-        ) {
-            // if the flash repay is not all repaid, we need to transfer the gt back to the sender
-            gtToken.safeTransferFrom(address(this), firstCaller, gtId);
+        } else {
+            (,, bytes memory collateralData) = gtToken.loanInfo(gtId);
+            if (
+                !IGearingTokenV2(address(gtToken)).flashRepay(
+                    gtId, repayAmt.toUint128(), true, abi.encode(removedCollateral), rolloverData
+                )
+            ) {
+                // if the flash repay is not all repaid, we need to transfer the gt back to the sender
+                gtToken.safeTransferFrom(address(this), firstCaller, gtId);
+            } else {
+                require(
+                    abi.decode(collateralData, (uint256)) == removedCollateral,
+                    RouterErrorsV2.RemovedCollateralNotMatch()
+                );
+            }
         }
         assembly {
             newGtId := tload(T_ROLLOVER_GT_RESERVE_STORE)
