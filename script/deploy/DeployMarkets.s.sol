@@ -159,7 +159,7 @@ contract DeployMarketsScript is DeployBaseV2 {
             network,
             "/",
             network,
-            "-test-v2-markets-",
+            "-v2-markets-",
             vm.toString(block.timestamp),
             ".env"
         );
