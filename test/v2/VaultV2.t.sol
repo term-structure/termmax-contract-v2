@@ -1243,10 +1243,6 @@ contract VaultTestV2 is Test {
         (IERC20 ft, IERC20 xt,,,) = market2.tokens();
 
         uint256 liquidityBefore = res.debt.balanceOf(address(vault));
-        uint256 ftBefore0 = ft.balanceOf(orders[0]);
-        uint256 xtBefore0 = xt.balanceOf(orders[0]);
-        uint256 ftBefore1 = ft.balanceOf(orders[1]);
-        uint256 xtBefore1 = xt.balanceOf(orders[1]);
 
         uint256 record = vm.snapshot();
         vm.expectEmit();
@@ -1260,6 +1256,34 @@ contract VaultTestV2 is Test {
         vault.pause();
         vault.removeLiquidityFromOrders(orders, removeLiqs);
         vault.unpause();
+
+        vm.stopPrank();
+    }
+
+    function testRedeemOrder(uint256 ftBalance) public {
+        vm.assume(ftBalance < 10000e18);
+        vm.startPrank(curator);
+
+        OrderV2ConfigurationParams memory orderConfigParams = OrderV2ConfigurationParams({
+            maxXtReserve: maxCapacity,
+            virtualXtReserve: 10000e8,
+            originalVirtualXtReserve: 0,
+            curveCuts: orderConfig.curveCuts
+        });
+
+        address[] memory orders = new address[](2);
+        orders[0] = address(vault.createOrder(ITermMaxMarketV2(address(market2)), orderConfigParams));
+        orders[1] = address(vault.createOrder(ITermMaxMarketV2(address(market2)), orderConfigParams));
+
+        res.debt.mint(curator, ftBalance);
+        res.debt.approve(address(market2), ftBalance);
+        market2.mint(orders[0], ftBalance);
+
+        uint256 maturity = market2.config().maturity;
+        vm.warp(maturity + 1 days);
+
+        vault.redeemOrder(TermMaxOrderV2(orders[0]));
+        vault.redeemOrder(TermMaxOrderV2(orders[1]));
 
         vm.stopPrank();
     }

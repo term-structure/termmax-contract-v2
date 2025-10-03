@@ -110,6 +110,7 @@ contract AccessManagerTestV2 is Test {
         manager.grantRole(manager.MARKET_ROLE(), deployer);
         manager.grantRole(manager.ORACLE_ROLE(), deployer);
         manager.grantRole(manager.WHITELIST_ROLE(), deployer);
+        manager.grantRole(manager.UPGRADER_ROLE(), deployer);
 
         // Create vault initialization parameters
         VaultInitialParamsV2 memory params = VaultInitialParamsV2({
@@ -456,17 +457,17 @@ contract AccessManagerTestV2 is Test {
         // Deploy a new router implementation
         TermMaxRouterV2 routerV2 = new TermMaxRouterV2();
 
-        // Test upgrade with DEFAULT_ADMIN_ROLE
+        // Test upgrade with UPDATER_ROLE
         manager.upgradeSubContract(UUPSUpgradeable(address(res.router)), address(routerV2), "");
 
-        // Test upgrade without DEFAULT_ADMIN_ROLE
-        address nonAdmin = vm.randomAddress();
+        // Test upgrade without UPDATER_ROLE
+        address nonUpgrader = vm.randomAddress();
         vm.stopPrank();
 
-        vm.startPrank(nonAdmin);
+        vm.startPrank(nonUpgrader);
         vm.expectRevert(
             abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector, nonAdmin, manager.DEFAULT_ADMIN_ROLE()
+                IAccessControl.AccessControlUnauthorizedAccount.selector, nonUpgrader, manager.UPGRADER_ROLE()
             )
         );
         manager.upgradeSubContract(UUPSUpgradeable(address(res.router)), address(routerV2), "");

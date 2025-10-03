@@ -11,6 +11,7 @@ import {MockERC4626} from "contracts/v2/test/MockERC4626.sol";
 import {MockERC20} from "contracts/v1/test/MockERC20.sol";
 import {IAaveV3Pool} from "contracts/v2/extensions/aave/IAaveV3Pool.sol";
 import {ERC4626TokenEvents} from "contracts/v2/events/ERC4626TokenEvents.sol";
+import {FactoryEventsV2} from "contracts/v2/events/FactoryEventsV2.sol";
 
 // Mock Aave Pool for testing
 contract MockAavePool {
@@ -47,13 +48,6 @@ contract TermMax4626FactoryTest is Test {
     address public user2 = makeAddr("user2");
 
     StakingBuffer.BufferConfig public defaultBufferConfig;
-
-    // Events to test - matching the actual factory contract events
-    event StableERC4626For4626Created(address indexed caller, address stableERC4626For4626);
-
-    event StableERC4626ForAaveCreated(address indexed caller, address stableERC4626ForAave);
-
-    event VariableERC4626ForAaveCreated(address indexed caller, address variableERC4626ForAave);
 
     function setUp() public {
         // Deploy mocks
@@ -95,7 +89,7 @@ contract TermMax4626FactoryTest is Test {
 
     function testCreateStableERC4626For4626() public {
         vm.expectEmit(true, false, false, false);
-        emit StableERC4626For4626Created(address(this), address(0));
+        emit FactoryEventsV2.StableERC4626For4626Created(address(this), address(0));
 
         StableERC4626For4626 vault = factory.createStableERC4626For4626(admin, address(thirdPool), defaultBufferConfig);
 
@@ -118,7 +112,7 @@ contract TermMax4626FactoryTest is Test {
 
     function testCreateStableERC4626ForAave() public {
         vm.expectEmit(true, false, false, false);
-        emit StableERC4626ForAaveCreated(address(this), address(0));
+        emit FactoryEventsV2.StableERC4626ForAaveCreated(address(this), address(0));
 
         StableERC4626ForAave vault = factory.createStableERC4626ForAave(admin, address(underlying), defaultBufferConfig);
 
@@ -141,7 +135,7 @@ contract TermMax4626FactoryTest is Test {
 
     function testCreateVariableERC4626ForAave() public {
         vm.expectEmit(true, false, false, false);
-        emit VariableERC4626ForAaveCreated(address(this), address(0));
+        emit FactoryEventsV2.VariableERC4626ForAaveCreated(address(this), address(0));
 
         VariableERC4626ForAave vault =
             factory.createVariableERC4626ForAave(admin, address(underlying), defaultBufferConfig);
@@ -257,18 +251,18 @@ contract TermMax4626FactoryTest is Test {
     function testEventEmissions() public {
         // Test StableERC4626For4626Created event
         vm.expectEmit(true, false, false, false);
-        emit StableERC4626For4626Created(address(this), address(0));
+        emit FactoryEventsV2.StableERC4626For4626Created(address(this), address(0));
         StableERC4626For4626 vault1 = factory.createStableERC4626For4626(admin, address(thirdPool), defaultBufferConfig);
 
         // Test StableERC4626ForAaveCreated event
         vm.expectEmit(true, false, false, false);
-        emit StableERC4626ForAaveCreated(address(this), address(0));
+        emit FactoryEventsV2.StableERC4626ForAaveCreated(address(this), address(0));
         StableERC4626ForAave vault2 =
             factory.createStableERC4626ForAave(admin, address(underlying), defaultBufferConfig);
 
         // Test VariableERC4626ForAaveCreated event
         vm.expectEmit(true, false, false, false);
-        emit VariableERC4626ForAaveCreated(address(this), address(0));
+        emit FactoryEventsV2.VariableERC4626ForAaveCreated(address(this), address(0));
         VariableERC4626ForAave vault3 =
             factory.createVariableERC4626ForAave(admin, address(underlying), defaultBufferConfig);
 

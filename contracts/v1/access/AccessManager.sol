@@ -77,6 +77,7 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
     /// @notice Upgrade the target contract using UUPS
     function upgradeSubContract(UUPSUpgradeable proxy, address newImplementation, bytes memory data)
         external
+        virtual
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
         proxy.upgradeToAndCall(newImplementation, data);

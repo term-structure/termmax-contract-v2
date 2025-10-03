@@ -1,0 +1,21 @@
+{
+    "configNum": 2,
+    "configs": {
+        "configs_0": {
+            "asset": "0x55d398326f99059ff775485246999027b3197955",
+            "bufferConfig": {
+                "minimumBuffer": 5000000000,
+                "maximumBuffer": 10000000000,
+                "buffer": 7000000000
+            }
+        },
+        "configs_1": {
+            "asset": "0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c",
+            "bufferConfig": {
+                "minimumBuffer": 500000000000000000,
+                "maximumBuffer": 1000000000000000000,
+                "buffer": 750000000000000000
+            }
+        }
+    }
+}

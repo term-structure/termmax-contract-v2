@@ -39,12 +39,12 @@ done
 
 # Validate network
 case $NETWORK in
-    "eth-sepolia"|"arb-sepolia"|"eth-mainnet"|"arb-mainnet")
+    "eth-sepolia"|"arb-sepolia"|"eth-mainnet"|"arb-mainnet"|"bnb-mainnet")
         echo "Deploying to $NETWORK..."
         ;;
     *)
         echo "Unsupported network: $NETWORK"
-        echo "Supported networks: eth-sepolia, arb-sepolia, eth-mainnet, arb-mainnet"
+        echo "Supported networks: eth-sepolia, arb-sepolia, eth-mainnet, arb-mainnet, bnb-mainnet"
         exit 1
         ;;
 esac

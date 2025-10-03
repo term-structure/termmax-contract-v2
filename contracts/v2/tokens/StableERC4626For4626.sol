@@ -159,6 +159,9 @@ contract StableERC4626For4626 is
     }
 
     function _assetInPool(address) internal view virtual override returns (uint256 amount) {
-        amount = thirdPool.previewRedeem(thirdPool.balanceOf(address(this)));
+        uint256 shares = thirdPool.balanceOf(address(this));
+        if (shares != 0) {
+            amount = thirdPool.convertToAssets(shares);
+        }
     }
 }

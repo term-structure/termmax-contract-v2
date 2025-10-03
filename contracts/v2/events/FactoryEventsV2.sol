@@ -34,4 +34,42 @@ interface FactoryEventsV2 {
      * @param priceFeed The address of the newly created price feed contract
      */
     event PriceFeedCreated(address indexed priceFeed);
+
+    // Events from TermMax4626Factory
+    /**
+     * @notice Emitted when TermMax4626Factory is initialized
+     * @param aavePool The Aave pool address
+     * @param aaveReferralCode The Aave referral code
+     * @param stableERC4626For4626Implementation The stable ERC4626For4626 implementation address
+     * @param stableERC4626ForAaveImplementation The stable ERC4626ForAave implementation address
+     * @param variableERC4626ForAaveImplementation The variable ERC4626ForAave implementation address
+     */
+    event TermMax4626FactoryInitialized(
+        address indexed aavePool,
+        uint16 aaveReferralCode,
+        address stableERC4626For4626Implementation,
+        address stableERC4626ForAaveImplementation,
+        address variableERC4626ForAaveImplementation
+    );
+
+    /**
+     * @notice Emitted when a new StableERC4626For4626 is created
+     * @param caller The address that called the creation function
+     * @param stableERC4626For4626 The address of the created StableERC4626For4626
+     */
+    event StableERC4626For4626Created(address indexed caller, address indexed stableERC4626For4626);
+
+    /**
+     * @notice Emitted when a new StableERC4626ForAave is created
+     * @param caller The address that called the creation function
+     * @param stableERC4626ForAave The address of the created StableERC4626ForAave
+     */
+    event StableERC4626ForAaveCreated(address indexed caller, address indexed stableERC4626ForAave);
+
+    /**
+     * @notice Emitted when a new VariableERC4626ForAave is created
+     * @param caller The address that called the creation function
+     * @param variableERC4626ForAave The address of the created VariableERC4626ForAave
+     */
+    event VariableERC4626ForAaveCreated(address indexed caller, address indexed variableERC4626ForAave);
 }

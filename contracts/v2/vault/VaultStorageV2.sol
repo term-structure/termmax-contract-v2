@@ -18,7 +18,6 @@ contract VaultStorageV2 {
     address internal _curator;
 
     mapping(address => bool) internal _marketWhitelist;
-    mapping(address => bool) internal _poolWhitelist;
     mapping(address => PendingUint192) internal _pendingMarkets;
 
     PendingUint192 internal _pendingTimelock;

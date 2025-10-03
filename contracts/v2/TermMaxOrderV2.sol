@@ -158,10 +158,11 @@ contract TermMaxOrderV2 is
     /**
      * @notice Get the current order configuration
      * @inheritdoc ITermMaxOrder
-     * @return The current order configuration
+     * @return orderConfig_ The current order configuration
      */
-    function orderConfig() external view virtual returns (OrderConfig memory) {
-        return _orderConfig;
+    function orderConfig() external view virtual returns (OrderConfig memory orderConfig_) {
+        orderConfig_ = _orderConfig;
+        orderConfig_.feeConfig = market.config().feeConfig;
     }
 
     /**
@@ -248,11 +249,7 @@ contract TermMaxOrderV2 is
     // =============================================================================
 
     /**
-     * @notice Update order configuration and token amounts
-     * @inheritdoc ITermMaxOrder
-     * @param newOrderConfig New order configuration
-     * @param ftChangeAmt Change in FT amount (positive = deposit, negative = withdraw)
-     * @param xtChangeAmt Change in XT amount (positive = deposit, negative = withdraw)
+     * @notice This function is disabled and will always revert
      */
     function updateOrder(OrderConfig memory newOrderConfig, int256 ftChangeAmt, int256 xtChangeAmt)
         external
@@ -260,27 +257,7 @@ contract TermMaxOrderV2 is
         override
         onlyOwner
     {
-        _setCurveAndPrice(virtualXtReserve, newOrderConfig.maxXtReserve, newOrderConfig.curveCuts);
-        if (ftChangeAmt > 0) {
-            ft.safeTransferFrom(msg.sender, address(this), ftChangeAmt.toUint256());
-        } else if (ftChangeAmt < 0) {
-            ft.safeTransfer(msg.sender, (-ftChangeAmt).toUint256());
-        }
-        if (xtChangeAmt > 0) {
-            xt.safeTransferFrom(msg.sender, address(this), xtChangeAmt.toUint256());
-        } else if (xtChangeAmt < 0) {
-            xt.safeTransfer(msg.sender, (-xtChangeAmt).toUint256());
-        }
-        _orderConfig.gtId = newOrderConfig.gtId;
-        _orderConfig.swapTrigger = newOrderConfig.swapTrigger;
-        emit UpdateOrder(
-            newOrderConfig.curveCuts,
-            ftChangeAmt,
-            xtChangeAmt,
-            newOrderConfig.gtId,
-            newOrderConfig.maxXtReserve,
-            newOrderConfig.swapTrigger
-        );
+        revert OrderErrorsV2.UpdateOrderFunctionDisabled();
     }
 
     function setCurveAndPrice(
@@ -403,7 +380,7 @@ contract TermMaxOrderV2 is
     }
 
     /**
-     * @notice Update fee configuration (only callable by market)
+     * @notice This function is disabled and will always revert
      * @inheritdoc ITermMaxOrder
      * @param newFeeConfig New fee configuration
      */
@@ -540,14 +517,14 @@ contract TermMaxOrderV2 is
         uint256 ftBalance = ft.balanceOf(address(this));
         uint256 received;
         uint256 receivedFromPool;
-
-        (received, deliveryData) = market.redeem(ftBalance, recipient);
+        if (ftBalance != 0) (received, deliveryData) = market.redeem(ftBalance, recipient);
         // if pool is set, redeem all shares
         if (address(_pool) != address(0)) {
-            receivedFromPool = _pool.redeem(_pool.balanceOf(address(this)), recipient, address(this));
+            uint256 shares = _pool.balanceOf(address(this));
+            if (shares != 0) receivedFromPool = _pool.redeem(shares, recipient, address(this));
         }
         // Calculate bad debt
-        badDebt = ftBalance - received;
+        badDebt = ftBalance > received ? ftBalance - received : 0;
         // Clear order configuration
         delete _orderConfig;
         emit OrderEventsV2.Redeemed(recipient, received + receivedFromPool, badDebt, deliveryData);
@@ -835,24 +812,6 @@ contract TermMaxOrderV2 is
             virtualXtReserve = newXtReserve;
             return (netAmt, feeAmt, -deltaFt.toInt256(), deltaXt.toInt256());
         }
-    }
-
-    /**
-     * @notice Calculate mint amount needed for token operations
-     * @param tokenToMint Total tokens needed to mint
-     * @param netTokenOut Net output tokens
-     * @param ftBalance Current FT balance
-     * @param xtBalance Current XT balance
-     * @return Calculated mint amount
-     */
-    function _calculateMintAmount(uint256 tokenToMint, uint256 netTokenOut, uint256 ftBalance, uint256 xtBalance)
-        private
-        pure
-        returns (uint256)
-    {
-        uint256 mintAmount = tokenToMint - ftBalance;
-        uint256 xtShortfall = netTokenOut > xtBalance ? netTokenOut - xtBalance : 0;
-        return mintAmount > xtShortfall ? mintAmount : xtShortfall;
     }
 
     /**
