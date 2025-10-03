@@ -20,6 +20,7 @@ contract DeployMarketsScript is DeployBaseV2 {
     uint256 deployerPrivateKey;
     address deployerAddr;
     address adminAddr;
+    address treasurerAddr;
 
     CoreParams coreParams;
     DeployedContracts coreContracts;
@@ -39,9 +40,11 @@ contract DeployMarketsScript is DeployBaseV2 {
             deployerPrivateKey = vm.envUint(privateKeyVar);
             adminAddr = vm.envAddress(adminVar);
             deployerAddr = vm.addr(deployerPrivateKey);
+            treasurerAddr = vm.envAddress(string.concat(networkUpper, "_TREASURER_ADDRESS"));
 
             console.log("Admin:", adminAddr);
             console.log("Deployer:", deployerAddr);
+            console.log("Treasurer:", treasurerAddr);
         }
 
         string memory deploymentPath =
@@ -89,6 +92,7 @@ contract DeployMarketsScript is DeployBaseV2 {
                 console.log("  Collateral Token Address:", config.collateralConfig.tokenAddr);
 
                 config.loanConfig.oracle = coreContracts.oracle;
+                config.marketConfig.treasurer = treasurerAddr;
                 // deploy new market
                 MarketInitialParams memory params = MarketInitialParams({
                     collateral: config.collateralConfig.tokenAddr,
