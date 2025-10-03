@@ -88,7 +88,6 @@ contract DeployMarketsScript is DeployBaseV2 {
                 console.log("  Underlying Token Address:", config.underlyingConfig.tokenAddr);
                 console.log("  Collateral Token Address:", config.collateralConfig.tokenAddr);
 
-                config.marketConfig.treasurer = deployerAddr;
                 config.loanConfig.oracle = coreContracts.oracle;
                 // deploy new market
                 MarketInitialParams memory params = MarketInitialParams({
