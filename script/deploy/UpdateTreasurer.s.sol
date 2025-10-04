@@ -70,7 +70,6 @@ contract DeployMarketsScript is DeployBaseV2 {
                 console.log("  Name:", IERC20Metadata(markets[i]).name());
                 config.treasurer = treasurerAddr;
                 coreContracts.accessManager.updateMarketConfig(ITermMaxMarket(markets[i]), config);
-                TermMaxMarketV2(markets[i]).updateMarketConfig(config);
             }
         }
         vm.stopBroadcast();
