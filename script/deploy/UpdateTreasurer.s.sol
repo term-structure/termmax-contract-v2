@@ -12,6 +12,7 @@ import {JsonLoader} from "script/utils/JsonLoader.sol";
 import {OrderV2ConfigurationParams} from "contracts/v2/vault/VaultStorageV2.sol";
 import {ITermMaxOrderV2} from "contracts/v2/ITermMaxOrderV2.sol";
 import {ITermMaxMarketV2} from "contracts/v2/ITermMaxMarketV2.sol";
+import {ITermMaxMarket} from "contracts/v1/ITermMaxMarket.sol";
 import {StakingBuffer} from "contracts/v2/tokens/StakingBuffer.sol";
 import {TermMaxMarketV2} from "contracts/v2/TermMaxMarketV2.sol";
 
@@ -68,6 +69,7 @@ contract DeployMarketsScript is DeployBaseV2 {
                 console.log("Market:", markets[i]);
                 console.log("  Name:", IERC20Metadata(markets[i]).name());
                 config.treasurer = treasurerAddr;
+                coreContracts.accessManager.updateMarketConfig(ITermMaxMarket(markets[i]), config);
                 TermMaxMarketV2(markets[i]).updateMarketConfig(config);
             }
         }
