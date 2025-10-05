@@ -179,18 +179,6 @@ contract RouterTestV2 is Test {
             netTokenAmt: mintTokenOut,
             deadline: block.timestamp + 1 hours
         });
-        bytes memory testData =
-            hex"0000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c0000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000068df6e3e0000000000000000000000000000000000000000000000000000000000000001000000000000000000000000635cfd307802a3a6d63bfe589eaa3dbddbf9173600000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000000";
-        TermMaxSwapData memory swapData2 = abi.decode(testData, (TermMaxSwapData));
-        console.log("swapData2 netTokenAmt:", swapData2.netTokenAmt);
-        console.log("swapData2 swapExactTokenForToken:", swapData2.swapExactTokenForToken);
-        console.log("swapData2 deadline:", swapData2.deadline);
-        console.log("swapData2 scalingFactor:", swapData2.scalingFactor);
-        uint256 length = swapData2.tradingAmts.length;
-        for (uint256 i = 0; i < length; i++) {
-            console.log("swapData2 tradingAmts:", swapData2.tradingAmts[i]);
-            console.log("swapData2 orders:", swapData2.orders[i]);
-        }
 
         res.debt.mint(sender, amountIn);
         res.debt.approve(address(res.router), amountIn);
@@ -699,7 +687,7 @@ contract RouterTestV2 is Test {
         vm.stopPrank();
     }
 
-    function testFlashRepayFromCollateral(bool isV1) public {
+    function testFlashRepayFromCollateral() public {
         vm.startPrank(sender);
         uint128 debtAmt = 100e8;
         (uint256 gtId,) = LoanUtils.fastMintGt(res, sender, debtAmt, 1e18);
@@ -724,13 +712,7 @@ contract RouterTestV2 is Test {
         vm.expectEmit(true, true, true, true);
         emit RouterEventsV2.FlashRepay(address(res.gt), gtId, mintTokenOut - debtAmt);
 
-        if (isV1) {
-            res.router.flashRepayFromCollForV1(sender, res.market, gtId, byDebtToken, 0, callbackData);
-        } else {
-            res.router.flashRepayFromCollForV2(
-                sender, res.market, gtId, debtAmt, byDebtToken, 0, collateralAmt, callbackData
-            );
-        }
+        res.router.flashRepayFromColl(sender, res.market, gtId, byDebtToken, 0, callbackData);
 
         assertEq(res.collateral.balanceOf(sender), 0);
         assertEq(res.debt.balanceOf(sender), mintTokenOut - debtAmt);
@@ -741,7 +723,7 @@ contract RouterTestV2 is Test {
         vm.stopPrank();
     }
 
-    function testFlashRepayFromCollateral_ByFt(bool isV1) public {
+    function testFlashRepayFromCollateral_ByFt() public {
         vm.startPrank(sender);
         uint128 debtAmt = 100e8;
         (uint256 gtId,) = LoanUtils.fastMintGt(res, sender, debtAmt, 1e18);
@@ -782,14 +764,7 @@ contract RouterTestV2 is Test {
         bytes memory callbackData = abi.encode(FlashRepayOptions.REPAY, abi.encode(swapPath));
 
         res.gt.approve(address(res.router), gtId);
-        if (isV1) {
-            res.router.flashRepayFromCollForV1(sender, res.market, gtId, byDebtToken, 0, callbackData);
-        } else {
-            // DelegateAble(address(res.gt)).setDelegate(address(res.router), true);
-            res.router.flashRepayFromCollForV2(
-                sender, res.market, gtId, debtAmt, byDebtToken, 0, collateralAmt, callbackData
-            );
-        }
+        res.router.flashRepayFromColl(sender, res.market, gtId, byDebtToken, 0, callbackData);
 
         assertEq(res.collateral.balanceOf(sender), 0);
         assert(res.debt.balanceOf(sender) > mintTokenOut - debtAmt);
@@ -800,73 +775,73 @@ contract RouterTestV2 is Test {
         vm.stopPrank();
     }
 
-    function testFlashRepayFromCollateralPatrially() public {
-        vm.startPrank(sender);
-        uint128 debtAmt = 100e8;
-        uint256 collateralAmt = 1e18;
-        (uint256 gtId,) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
-        bytes memory collateralData = abi.encode(collateralAmt / 2);
-        bool byDebtToken = true;
+    // function testFlashRepayFromCollateralPatrially() public {
+    //     vm.startPrank(sender);
+    //     uint128 debtAmt = 100e8;
+    //     uint256 collateralAmt = 1e18;
+    //     (uint256 gtId,) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
+    //     bytes memory collateralData = abi.encode(collateralAmt / 2);
+    //     bool byDebtToken = true;
 
-        uint256 mintTokenOut = debtAmt / 2;
-        SwapUnit[] memory units = new SwapUnit[](1);
-        units[0] = SwapUnit(address(adapter), address(res.collateral), address(res.debt), abi.encode(mintTokenOut));
+    //     uint256 mintTokenOut = debtAmt / 2;
+    //     SwapUnit[] memory units = new SwapUnit[](1);
+    //     units[0] = SwapUnit(address(adapter), address(res.collateral), address(res.debt), abi.encode(mintTokenOut));
 
-        SwapPath memory swapPath = SwapPath({
-            units: units,
-            recipient: address(res.router),
-            inputAmount: collateralAmt / 2,
-            useBalanceOnchain: true
-        });
-        bytes memory callbackData = abi.encode(FlashRepayOptions.REPAY, abi.encode(swapPath));
+    //     SwapPath memory swapPath = SwapPath({
+    //         units: units,
+    //         recipient: address(res.router),
+    //         inputAmount: collateralAmt / 2,
+    //         useBalanceOnchain: true
+    //     });
+    //     bytes memory callbackData = abi.encode(FlashRepayOptions.REPAY, abi.encode(swapPath));
 
-        res.gt.approve(address(res.router), gtId);
-        res.router.flashRepayFromCollForV2(
-            sender, res.market, gtId, debtAmt / 2, byDebtToken, 0, abi.decode(collateralData, (uint256)), callbackData
-        );
+    //     res.gt.approve(address(res.router), gtId);
+    //     res.router.flashRepayFromCollForV2(
+    //         sender, res.market, gtId, debtAmt / 2, byDebtToken, 0, abi.decode(collateralData, (uint256)), callbackData
+    //     );
 
-        assertEq(res.collateral.balanceOf(sender), 0);
-        assertEq(res.debt.balanceOf(sender), 0);
-        (address owner, uint128 remainingDebtAmt, bytes memory remainingCollateralData) = res.gt.loanInfo(gtId);
-        assertEq(owner, sender);
-        assertEq(remainingDebtAmt, debtAmt - debtAmt / 2);
-        assertEq(abi.decode(remainingCollateralData, (uint256)), collateralAmt - collateralAmt / 2);
+    //     assertEq(res.collateral.balanceOf(sender), 0);
+    //     assertEq(res.debt.balanceOf(sender), 0);
+    //     (address owner, uint128 remainingDebtAmt, bytes memory remainingCollateralData) = res.gt.loanInfo(gtId);
+    //     assertEq(owner, sender);
+    //     assertEq(remainingDebtAmt, debtAmt - debtAmt / 2);
+    //     assertEq(abi.decode(remainingCollateralData, (uint256)), collateralAmt - collateralAmt / 2);
 
-        vm.stopPrank();
-    }
+    //     vm.stopPrank();
+    // }
 
-    function testFrontRunFlashRepayFromCollateralPatrially() public {
-        vm.startPrank(sender);
-        uint128 debtAmt = 100e8;
-        uint256 collateralAmt = 1e18;
-        (uint256 gtId,) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
-        bytes memory collateralData = abi.encode(collateralAmt / 2);
-        bool byDebtToken = true;
+    // function testFrontRunFlashRepayFromCollateralPatrially() public {
+    //     vm.startPrank(sender);
+    //     uint128 debtAmt = 100e8;
+    //     uint256 collateralAmt = 1e18;
+    //     (uint256 gtId,) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
+    //     bytes memory collateralData = abi.encode(collateralAmt / 2);
+    //     bool byDebtToken = true;
 
-        uint256 mintTokenOut = debtAmt / 2;
-        SwapUnit[] memory units = new SwapUnit[](1);
-        units[0] = SwapUnit(address(adapter), address(res.collateral), address(res.debt), abi.encode(mintTokenOut));
+    //     uint256 mintTokenOut = debtAmt / 2;
+    //     SwapUnit[] memory units = new SwapUnit[](1);
+    //     units[0] = SwapUnit(address(adapter), address(res.collateral), address(res.debt), abi.encode(mintTokenOut));
 
-        SwapPath memory swapPath = SwapPath({
-            units: units,
-            recipient: address(res.router),
-            inputAmount: collateralAmt / 2,
-            useBalanceOnchain: true
-        });
-        bytes memory callbackData = abi.encode(FlashRepayOptions.REPAY, abi.encode(swapPath));
-        // front run here by borrowing the debt token
-        res.debt.mint(sender, debtAmt / 2 + 1);
-        res.debt.approve(address(res.gt), debtAmt / 2 + 1);
-        res.gt.repay(gtId, debtAmt / 2 + 1, true);
+    //     SwapPath memory swapPath = SwapPath({
+    //         units: units,
+    //         recipient: address(res.router),
+    //         inputAmount: collateralAmt / 2,
+    //         useBalanceOnchain: true
+    //     });
+    //     bytes memory callbackData = abi.encode(FlashRepayOptions.REPAY, abi.encode(swapPath));
+    //     // front run here by borrowing the debt token
+    //     res.debt.mint(sender, debtAmt / 2 + 1);
+    //     res.debt.approve(address(res.gt), debtAmt / 2 + 1);
+    //     res.gt.repay(gtId, debtAmt / 2 + 1, true);
 
-        res.gt.approve(address(res.router), gtId);
+    //     res.gt.approve(address(res.router), gtId);
 
-        vm.expectRevert(abi.encodeWithSelector(RouterErrorsV2.RemovedCollateralNotMatch.selector));
-        res.router.flashRepayFromCollForV2(
-            sender, res.market, gtId, debtAmt / 2, byDebtToken, 0, abi.decode(collateralData, (uint256)), callbackData
-        );
-        vm.stopPrank();
-    }
+    //     vm.expectRevert(abi.encodeWithSelector(RouterErrorsV2.RemovedCollateralNotMatch.selector));
+    //     res.router.flashRepayFromCollForV2(
+    //         sender, res.market, gtId, debtAmt / 2, byDebtToken, 0, abi.decode(collateralData, (uint256)), callbackData
+    //     );
+    //     vm.stopPrank();
+    // }
 
     function testRepayByTokenThroughFt() public {
         vm.startPrank(sender);

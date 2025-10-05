@@ -186,7 +186,7 @@ contract ForkPrdRollOverToThird is ForkBaseTestV2 {
                 abi.encode(collateral, aave, interestRateMode, referralCode, params, collateralPath)
             );
 
-            router.rolloverGtForV1(gt, gt1, additionalAsset, additionalAmt, rolloverData);
+            router.rolloverGt(gt, gt1, additionalAsset, additionalAmt, rolloverData);
         }
 
         vm.stopPrank();
@@ -245,7 +245,7 @@ contract ForkPrdRollOverToThird is ForkBaseTestV2 {
                 FlashRepayOptions.ROLLOVER_MORPHO,
                 abi.encode(collateral, morpho, marketId, authorization, sig, collateralPath)
             );
-            router.rolloverGtForV1(gt, gt1, additionalAsset, additionalAmt, rolloverData);
+            router.rolloverGt(gt, gt1, additionalAsset, additionalAmt, rolloverData);
         }
 
         vm.stopPrank();

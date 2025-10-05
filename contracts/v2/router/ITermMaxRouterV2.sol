@@ -123,23 +123,12 @@ interface ITermMaxRouterV2 {
      * @param callbackData The data for callback, abi.encode(FlashRepayOptions.FLASH_REPAY, abi.encode(swapPath))
      * @return netTokenOut Actual amount of tokens received
      */
-    function flashRepayFromCollForV1(
+    function flashRepayFromColl(
         address recipient,
         ITermMaxMarket market,
         uint256 gtId,
         bool byDebtToken,
         uint256 expectedOutput,
-        bytes memory callbackData
-    ) external returns (uint256 netTokenOut);
-
-    function flashRepayFromCollForV2(
-        address recipient,
-        ITermMaxMarket market,
-        uint256 gtId,
-        uint128 repayAmt,
-        bool byDebtToken,
-        uint256 expectedOutput,
-        uint256 removedCollateral,
         bytes memory callbackData
     ) external returns (uint256 netTokenOut);
 
@@ -158,36 +147,9 @@ interface ITermMaxRouterV2 {
      * rollover to Morpho: abi.encode(FlashRepayOptions.ROLLOVER_MORPHO, abi.encode(recipient, oldCollateral, morpho, marketId, collateralPath))
      * @return newGtId The ID of the newly created GT token in the next market, newGtId is zero if rollover to Aave or Morpho
      */
-    function rolloverGtForV1(
+    function rolloverGt(
         IGearingToken gtToken,
         uint256 gtId,
-        IERC20 additionalAsset,
-        uint256 additionalAmt,
-        bytes memory rolloverData
-    ) external returns (uint256 newGtId);
-
-    /**
-     * @notice Rollover GT position
-     * @dev This function allows users to rollover their GT position to a new market or third-protocol
-     * @param gtToken The GearingToken contract instance
-     * @param gtId The ID of the GT token being rolled over
-     * @param repayAmt Amount of debt to repay the old GT position
-     * @param removedCollateral Amount of collateral to remove from the old position
-     * @param additionalAsset The additional asset(debt or new collateral token) to reduce the LTV
-     * @param additionalAmt Amount of the additional asset
-     * @param rolloverData Additional data for the rollover operation
-     * rollover to TermMax: abi.encode(FlashRepayOptions.ROLLOVER, abi.encode(recipient, nextMarket, maxLtv, collateralPath, debtTokenPath))
-     *  - collateralPaths: old collateral -> new collateral => router
-     *  - debtTokenPaths: ft -> debt token => router
-     * rollover to Aave: abi.encode(FlashRepayOptions.ROLLOVER_AAVE, abi.encode(recipient, aave, interestRateMode, referralCode, collateralPath))
-     * rollover to Morpho: abi.encode(FlashRepayOptions.ROLLOVER_MORPHO, abi.encode(recipient, morpho, marketId, collateralPath))
-     * @return newGtId The ID of the newly created GT token in the next market, newGtId is zero if rollover to Aave or Morpho
-     */
-    function rolloverGtForV2(
-        IGearingToken gtToken,
-        uint256 gtId,
-        uint256 repayAmt,
-        uint256 removedCollateral,
         IERC20 additionalAsset,
         uint256 additionalAmt,
         bytes memory rolloverData

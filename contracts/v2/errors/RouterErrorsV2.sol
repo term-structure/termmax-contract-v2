@@ -10,6 +10,4 @@ interface RouterErrorsV2 {
     error SwapPathsIsEmpty();
     /// @notice Error when rollover fails
     error RolloverFailed(uint256 expectedRepayAmt, uint256 actualRepayAmt);
-    /// @notice Error when the removed collateral does not match the expected amount
-    error RemovedCollateralNotMatch();
 }

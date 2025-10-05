@@ -410,15 +410,17 @@ abstract contract GtBaseTestV2 is ForkBaseTestV2 {
         uint256 debtTokenBalanceBeforeRepay = res.debtToken.balanceOf(taker);
         bool byDebtToken = true;
 
-        SwapPath[] memory swapPaths = new SwapPath[](1);
-        swapPaths[0] = SwapPath({units: units, recipient: address(res.router), inputAmount: 0, useBalanceOnchain: true});
-
         (, uint128 debtAmt, bytes memory collateralData) = res.gt.loanInfo(gtId);
-        bytes memory callbackData = abi.encode(FlashRepayOptions.REPAY, abi.encode(swapPaths));
+        SwapPath memory swapPath = SwapPath({
+            units: units,
+            recipient: address(res.router),
+            inputAmount: abi.decode(collateralData, (uint256)),
+            useBalanceOnchain: false
+        });
 
-        uint256 netTokenOut = res.router.flashRepayFromCollForV2(
-            taker, res.market, gtId, debtAmt, byDebtToken, 0, abi.decode(collateralData, (uint256)), callbackData
-        );
+        bytes memory callbackData = abi.encode(FlashRepayOptions.REPAY, abi.encode(swapPath));
+
+        uint256 netTokenOut = res.router.flashRepayFromColl(taker, res.market, gtId, byDebtToken, 0, callbackData);
 
         uint256 debtTokenBalanceAfterRepay = res.debtToken.balanceOf(taker);
 
@@ -460,14 +462,15 @@ abstract contract GtBaseTestV2 is ForkBaseTestV2 {
             swapData: abi.encode(swapData)
         });
 
-        SwapPath[] memory swapPaths = new SwapPath[](1);
-        swapPaths[0] =
-            SwapPath({units: units2, recipient: address(res.router), inputAmount: 0, useBalanceOnchain: true});
-        bytes memory callbackData = abi.encode(FlashRepayOptions.REPAY, abi.encode(swapPaths));
+        SwapPath memory swapPath = SwapPath({
+            units: units2,
+            recipient: address(res.router),
+            inputAmount: abi.decode(collateralData, (uint256)),
+            useBalanceOnchain: true
+        });
+        bytes memory callbackData = abi.encode(FlashRepayOptions.REPAY, abi.encode(swapPath));
 
-        uint256 netTokenOut = res.router.flashRepayFromCollForV2(
-            taker, res.market, gtId, debtAmt, byDebtToken, 0, abi.decode(collateralData, (uint256)), callbackData
-        );
+        uint256 netTokenOut = res.router.flashRepayFromColl(taker, res.market, gtId, byDebtToken, 0, callbackData);
 
         uint256 debtTokenBalanceAfterRepay = res.debtToken.balanceOf(taker);
 
