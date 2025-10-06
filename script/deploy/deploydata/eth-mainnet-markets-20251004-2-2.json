@@ -1,0 +1,87 @@
+{
+  "configNum": "2",
+  "configs": {
+    "configs_0": {
+      "salt": 0,
+      "collateralCapForGt": "4500000000000000000000000",
+      "marketName": "USDC/yUSD@26DEC2025",
+      "marketSymbol": "USDC/yUSD@26DEC2025",
+      "marketConfig": {
+        "maturity": "1766714400",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "mintGtFeeRatio": "10000000",
+        "mintGtFeeRef": "6000000"
+      },
+      "loanConfig": {
+        "liquidationLtv": "91500000",
+        "maxLtv": "87500000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "priceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "backupPriceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "heartBeat": "86400",
+        "name": "USD Coin",
+        "symbol": "USDC",
+        "decimals": "6",
+        "initialPrice": "99985232"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0x19Ebd191f7A24ECE672ba13A302212b5eF7F35cb",
+        "priceFeedAddr": "0x2da05F177485264D432878D4A17d722bc64Db0EF",
+        "backupPriceFeedAddr": "0x0000000000000000000000000000000000000000",
+        "heartBeat": "86400",
+        "name": "YieldFi yUSD",
+        "symbol": "yUSD",
+        "decimals": "18",
+        "initialPrice": "111427905",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    },
+    "configs_1": {
+      "salt": 0,
+      "collateralCapForGt": "4200000000000000000000000",
+      "marketName": "WBTC/sUSDe@26DEC2025",
+      "marketSymbol": "WBTC/sUSDe@26DEC2025",
+      "marketConfig": {
+        "maturity": "1766714400",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "mintGtFeeRatio": "10000000",
+        "mintGtFeeRef": "3000000"
+      },
+      "loanConfig": {
+        "liquidationLtv": "75000000",
+        "maxLtv": "71000000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+        "priceFeedAddr": "0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c",
+        "backupPriceFeedAddr": "0xAB7f623fb2F6fea6601D4350FA0E2290663C28Fc",
+        "heartBeat": "86400",
+        "name": "Wrapped BTC",
+        "symbol": "WBTC",
+        "decimals": "8",
+        "initialPrice": "11297968167577"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0x9D39A5DE30e57443BfF2A8307A4256c8797A3497",
+        "priceFeedAddr": "0xFF3BC18cCBd5999CE63E788A1c250a88626aD099",
+        "backupPriceFeedAddr": "0xb99D174ED06c83588Af997c8859F93E83dD4733f",
+        "heartBeat": "86400",
+        "name": "Staked USDe",
+        "symbol": "sUSDe",
+        "decimals": "18",
+        "initialPrice": "119464344",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    }
+  }
+}

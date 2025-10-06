@@ -1,0 +1,702 @@
+{
+  "configNum": "17",
+  "configs": {
+    "configs_0": {
+      "salt": 0,
+      "collateralCapForGt": "1100000000000000000000",
+      "marketName": "WETH/ETH+@26DEC2025",
+      "marketSymbol": "WETH/ETH+@26DEC2025",
+      "marketConfig": {
+        "maturity": "1766714400",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "mintGtFeeRatio": "10000000",
+        "mintGtFeeRef": "3000000"
+      },
+      "loanConfig": {
+        "liquidationLtv": "94000000",
+        "maxLtv": "90000000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+        "priceFeedAddr": "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
+        "backupPriceFeedAddr": "0x67F6838e58859d612E4ddF04dA396d6DABB66Dc4",
+        "heartBeat": "86400",
+        "name": "Wrapped Ether",
+        "symbol": "WETH",
+        "decimals": "18",
+        "initialPrice": "437458917500"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0xE72B141DF173b999AE7c1aDcbF60Cc9833Ce56a8",
+        "priceFeedAddr": "0x1d309F2E29b0b30dbB536a8100fCCCe3bd90F776",
+        "backupPriceFeedAddr": "0xA9A785BE67e831fF0c9e589c2798833a282374Fa",
+        "heartBeat": "86400",
+        "name": "ETHPlus",
+        "symbol": "ETH+",
+        "decimals": "18",
+        "initialPrice": "459958168932",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    },
+    "configs_1": {
+      "salt": 0,
+      "collateralCapForGt": "3000000000000000000000",
+      "marketName": "WETH/PT-tETH-18DEC2025@25DEC2025",
+      "marketSymbol": "WETH/PT-tETH-18DEC2025@25DEC2025",
+      "marketConfig": {
+        "maturity": "1766628000",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "mintGtFeeRatio": "10000000",
+        "mintGtFeeRef": "3000000"
+      },
+      "loanConfig": {
+        "liquidationLtv": "100000000",
+        "maxLtv": "99000000",
+        "liquidatable": false
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+        "priceFeedAddr": "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
+        "backupPriceFeedAddr": "0x67F6838e58859d612E4ddF04dA396d6DABB66Dc4",
+        "heartBeat": "86400",
+        "name": " Wrapped Ether",
+        "symbol": "WETH",
+        "decimals": "18",
+        "initialPrice": "419612000000"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0x5982837d2d138af78a42a92f8f2f6863bb25f129",
+        "priceFeedAddr": "0xa7C16d0e41Fbe60Cc36454846CBA43034B5d710C",
+        "backupPriceFeedAddr": "0x659019d0F0eF17edfA32a23Ed1AacCDf8eBfc459",
+        "heartBeat": "86400",
+        "name": "PT Terminal WETH 18DEC2025",
+        "symbol": "PT-tETH-18DEC2025",
+        "decimals": "18",
+        "initialPrice": "413147361899",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    },
+    "configs_2": {
+      "salt": 0,
+      "collateralCapForGt": "1100000000000000000000",
+      "marketName": "WETH/pufETH@26DEC2025",
+      "marketSymbol": "WETH/pufETH@26DEC2025",
+      "marketConfig": {
+        "maturity": "1766714400",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "mintGtFeeRatio": "10000000",
+        "mintGtFeeRef": "3000000"
+      },
+      "loanConfig": {
+        "liquidationLtv": "94000000",
+        "maxLtv": "90000000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+        "priceFeedAddr": "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
+        "backupPriceFeedAddr": "0x67F6838e58859d612E4ddF04dA396d6DABB66Dc4",
+        "heartBeat": "86400",
+        "name": "Wrapped Ether",
+        "symbol": "WETH",
+        "decimals": "18",
+        "initialPrice": "437355543753"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0xD9A442856C234a39a81a089C06451EBAa4306a72",
+        "priceFeedAddr": "0xB3ae8A16CF827d193Ae51a92fd2630e6839F5761",
+        "backupPriceFeedAddr": "0x5F08C227deAe74D8e5Ec0d743FB0744AB1B6c984",
+        "heartBeat": "86400",
+        "name": "pufETH",
+        "symbol": "pufETH",
+        "decimals": "18",
+        "initialPrice": "459292622927",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    },
+    "configs_3": {
+      "salt": 0,
+      "collateralCapForGt": "4200000000000000000000000",
+      "marketName": "WETH/sUSDe@26DEC2025",
+      "marketSymbol": "WETH/sUSDe@26DEC2025",
+      "marketConfig": {
+        "maturity": "1766714400",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "mintGtFeeRatio": "10000000",
+        "mintGtFeeRef": "3000000"
+      },
+      "loanConfig": {
+        "liquidationLtv": "75000000",
+        "maxLtv": "71000000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+        "priceFeedAddr": "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
+        "backupPriceFeedAddr": "0x67F6838e58859d612E4ddF04dA396d6DABB66Dc4",
+        "heartBeat": "86400",
+        "name": "Wrapped Ether",
+        "symbol": "WETH",
+        "decimals": "18",
+        "initialPrice": "437355543753"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0x9D39A5DE30e57443BfF2A8307A4256c8797A3497",
+        "priceFeedAddr": "0xFF3BC18cCBd5999CE63E788A1c250a88626aD099",
+        "backupPriceFeedAddr": "0xb99D174ED06c83588Af997c8859F93E83dD4733f",
+        "heartBeat": "86400",
+        "name": "Staked USDe",
+        "symbol": "sUSDe",
+        "decimals": "18",
+        "initialPrice": "119381625",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    },
+    "configs_4": {
+      "salt": 0,
+      "collateralCapForGt": "940000000000000000000",
+      "marketName": "WETH/tETH@26DEC2025",
+      "marketSymbol": "WETH/tETH@26DEC2025",
+      "marketConfig": {
+        "maturity": "1766714400",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "mintGtFeeRatio": "10000000",
+        "mintGtFeeRef": "3000000"
+      },
+      "loanConfig": {
+        "liquidationLtv": "94000000",
+        "maxLtv": "92000000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+        "priceFeedAddr": "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
+        "backupPriceFeedAddr": "0x67F6838e58859d612E4ddF04dA396d6DABB66Dc4",
+        "heartBeat": "86400",
+        "name": "Wrapped Ether",
+        "symbol": "WETH",
+        "decimals": "18",
+        "initialPrice": "437151000000"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0xD11c452fc99cF405034ee446803b6F6c1F6d5ED8",
+        "priceFeedAddr": "0x71DFf31Be0182174dceAbdF60BE5ccE37D897f75",
+        "backupPriceFeedAddr": "0x0000000000000000000000000000000000000000",
+        "heartBeat": "86400",
+        "name": "Treehouse ETH",
+        "symbol": "tETH",
+        "decimals": "18",
+        "initialPrice": "530155172182",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    },
+    "configs_5": {
+      "salt": 0,
+      "collateralCapForGt": "1100000000000000000000",
+      "marketName": "WETH/weETH@26DEC2025",
+      "marketSymbol": "WETH/weETH@26DEC2025",
+      "marketConfig": {
+        "maturity": "1766714400",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "mintGtFeeRatio": "10000000",
+        "mintGtFeeRef": "3000000"
+      },
+      "loanConfig": {
+        "liquidationLtv": "94000000",
+        "maxLtv": "90000000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+        "priceFeedAddr": "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
+        "backupPriceFeedAddr": "0x67F6838e58859d612E4ddF04dA396d6DABB66Dc4",
+        "heartBeat": "86400",
+        "name": "Wrapped Ether",
+        "symbol": "WETH",
+        "decimals": "18",
+        "initialPrice": "100000000"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee",
+        "priceFeedAddr": "0xdDb6F90fFb4d3257dd666b69178e5B3c5Bf41136",
+        "backupPriceFeedAddr": "0x24CFEf73A30b2CEEC23d3659fA98B491D996F152",
+        "heartBeat": "86400",
+        "name": "Wrapped eETH",
+        "symbol": "weETH",
+        "decimals": "18",
+        "initialPrice": "492124046227",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    },
+    "configs_6": {
+      "salt": 0,
+      "collateralCapForGt": "940000000000000000000",
+      "marketName": "WETH/wstETH@26DEC2025",
+      "marketSymbol": "WETH/wstETH@26DEC2025",
+      "marketConfig": {
+        "maturity": "1766714400",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "mintGtFeeRatio": "10000000",
+        "mintGtFeeRef": "3000000"
+      },
+      "loanConfig": {
+        "liquidationLtv": "85000000",
+        "maxLtv": "81000000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+        "priceFeedAddr": "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
+        "backupPriceFeedAddr": "0x67F6838e58859d612E4ddF04dA396d6DABB66Dc4",
+        "heartBeat": "86400",
+        "name": "Wrapped Ether",
+        "symbol": "WETH",
+        "decimals": "18",
+        "initialPrice": "437355543753"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0",
+        "priceFeedAddr": "0x164b276057258d81941e97B0a900D4C7B358bCe0",
+        "backupPriceFeedAddr": "0x164b276057258d81941e97B0a900D4C7B358bCe0",
+        "heartBeat": "86400",
+        "name": "Wrapped liquid staked Ether 2.0",
+        "symbol": "wstETH",
+        "decimals": "18",
+        "initialPrice": "531040111327",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    },
+    "configs_7": {
+      "salt": 0,
+      "collateralCapForGt": "1100000000000000000000",
+      "marketName": "WETH/ynETHx@26DEC2025",
+      "marketSymbol": "WETH/ynETHx@26DEC2025",
+      "marketConfig": {
+        "maturity": "1766714400",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "mintGtFeeRatio": "10000000",
+        "mintGtFeeRef": "3000000"
+      },
+      "loanConfig": {
+        "liquidationLtv": "94000000",
+        "maxLtv": "90000000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+        "priceFeedAddr": "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
+        "backupPriceFeedAddr": "0x67F6838e58859d612E4ddF04dA396d6DABB66Dc4",
+        "heartBeat": "86400",
+        "name": "Wrapped Ether",
+        "symbol": "WETH",
+        "decimals": "18",
+        "initialPrice": "432911000000"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0x657d9ABA1DBb59e53f9F3eCAA878447dCfC96dCb",
+        "priceFeedAddr": "0x5FDaa369D623d86191105435c7DA03F25417753a",
+        "backupPriceFeedAddr": "0x2D9f82CcF2068686B46218B7A5Ad47177aF2ef7a",
+        "heartBeat": "86400",
+        "name": "ynETH MAX",
+        "symbol": "ynETHx",
+        "decimals": "18",
+        "initialPrice": "456131140104",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    },
+    "configs_8": {
+      "salt": 0,
+      "collateralCapForGt": "1100000000000000000000",
+      "marketName": "wstETH/ETH+@26DEC2025",
+      "marketSymbol": "wstETH/ETH+@26DEC2025",
+      "marketConfig": {
+        "maturity": "1766714400",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "mintGtFeeRatio": "10000000",
+        "mintGtFeeRef": "3000000"
+      },
+      "loanConfig": {
+        "liquidationLtv": "94000000",
+        "maxLtv": "90000000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0",
+        "priceFeedAddr": "0x164b276057258d81941e97B0a900D4C7B358bCe0",
+        "backupPriceFeedAddr": "0x164b276057258d81941e97B0a900D4C7B358bCe0",
+        "heartBeat": "86400",
+        "name": "Wrapped liquid staked Ether 2.0",
+        "symbol": "wstETH",
+        "decimals": "18",
+        "initialPrice": "527968368668"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0xE72B141DF173b999AE7c1aDcbF60Cc9833Ce56a8",
+        "priceFeedAddr": "0x1d309F2E29b0b30dbB536a8100fCCCe3bd90F776",
+        "backupPriceFeedAddr": "0xA9A785BE67e831fF0c9e589c2798833a282374Fa",
+        "heartBeat": "86400",
+        "name": "ETHPlus",
+        "symbol": "ETH+",
+        "decimals": "18",
+        "initialPrice": "459634414715",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    },
+    "configs_9": {
+      "salt": 0,
+      "collateralCapForGt": "950000000000000000000",
+      "marketName": "wstETH/inwstETHs@26DEC2025",
+      "marketSymbol": "wstETH/inwstETHs@26DEC2025",
+      "marketConfig": {
+        "maturity": "1766714400",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "mintGtFeeRatio": "10000000",
+        "mintGtFeeRef": "3000000"
+      },
+      "loanConfig": {
+        "liquidationLtv": "94000000",
+        "maxLtv": "90000000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0",
+        "priceFeedAddr": "0x164b276057258d81941e97B0a900D4C7B358bCe0",
+        "backupPriceFeedAddr": "0x164b276057258d81941e97B0a900D4C7B358bCe0",
+        "heartBeat": "86400",
+        "name": "Wrapped liquid staked Ether 2.0",
+        "symbol": "wstETH",
+        "decimals": "18",
+        "initialPrice": "523851607207"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0x8E0789d39db454DBE9f4a77aCEF6dc7c69f6D552",
+        "priceFeedAddr": "0x164b276057258d81941e97B0a900D4C7B358bCe0",
+        "backupPriceFeedAddr": "0x164b276057258d81941e97B0a900D4C7B358bCe0",
+        "heartBeat": "86400",
+        "name": "Inception Symbiotic Restaked wstETH",
+        "symbol": "inwstETHs",
+        "decimals": "18",
+        "initialPrice": "523851607207",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    },
+    "configs_10": {
+      "salt": 0,
+      "collateralCapForGt": "940000000000000000000",
+      "marketName": "wstETH/tETH@26DEC2025",
+      "marketSymbol": "wstETH/tETH@26DEC2025",
+      "marketConfig": {
+        "maturity": "1766714400",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "mintGtFeeRatio": "10000000",
+        "mintGtFeeRef": "3000000"
+      },
+      "loanConfig": {
+        "liquidationLtv": "94000000",
+        "maxLtv": "92000000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0",
+        "priceFeedAddr": "0x164b276057258d81941e97B0a900D4C7B358bCe0",
+        "backupPriceFeedAddr": "0x164b276057258d81941e97B0a900D4C7B358bCe0",
+        "heartBeat": "86400",
+        "name": "Wrapped liquid staked Ether 2.0",
+        "symbol": "wstETH",
+        "decimals": "18",
+        "initialPrice": "531563040427"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0xD11c452fc99cF405034ee446803b6F6c1F6d5ED8",
+        "priceFeedAddr": "0x71DFf31Be0182174dceAbdF60BE5ccE37D897f75",
+        "backupPriceFeedAddr": "0x0000000000000000000000000000000000000000",
+        "heartBeat": "86400",
+        "name": "Treehouse ETH",
+        "symbol": "tETH",
+        "decimals": "18",
+        "initialPrice": "533764732789",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    },
+    "configs_11": {
+      "salt": 0,
+      "collateralCapForGt": "1150000000000000000000",
+      "marketName": "wstETH/tETH@26DEC2025",
+      "marketSymbol": "wstETH/tETH@26DEC2025",
+      "marketConfig": {
+        "maturity": "1766714400",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "mintGtFeeRatio": "10000000",
+        "mintGtFeeRef": "3000000"
+      },
+      "loanConfig": {
+        "liquidationLtv": "94000000",
+        "maxLtv": "90000000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0",
+        "priceFeedAddr": "0x164b276057258d81941e97B0a900D4C7B358bCe0",
+        "backupPriceFeedAddr": "0x164b276057258d81941e97B0a900D4C7B358bCe0",
+        "heartBeat": "86400",
+        "name": "Wrapped liquid staked Ether 2.0",
+        "symbol": "wstETH",
+        "decimals": "18",
+        "initialPrice": "527968368668"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0xa1150cd4A014e06F5E0A6ec9453fE0208dA5adAb",
+        "priceFeedAddr": "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
+        "backupPriceFeedAddr": "0x67F6838e58859d612E4ddF04dA396d6DABB66Dc4",
+        "heartBeat": "86400",
+        "name": "Terminal WETH",
+        "symbol": "tETH",
+        "decimals": "18",
+        "initialPrice": "437151000000",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    },
+    "configs_12": {
+      "salt": 0,
+      "collateralCapForGt": "3000000000000000000000",
+      "marketName": "wstETH/PT-tETH-18DEC2025@25DEC2025",
+      "marketSymbol": "wstETH/PT-tETH-18DEC2025@25DEC2025",
+      "marketConfig": {
+        "maturity": "1766628000",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "mintGtFeeRatio": "10000000",
+        "mintGtFeeRef": "3000000"
+      },
+      "loanConfig": {
+        "liquidationLtv": "100000000",
+        "maxLtv": "99000000",
+        "liquidatable": false
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0",
+        "priceFeedAddr": "0x164b276057258d81941e97B0a900D4C7B358bCe0",
+        "backupPriceFeedAddr": "0x164b276057258d81941e97B0a900D4C7B358bCe0",
+        "heartBeat": "86400",
+        "name": "Wrapped liquid staked Ether 2.0",
+        "symbol": "wstETH",
+        "decimals": "18",
+        "initialPrice": "547852174152"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0x5982837d2d138af78a42a92f8f2f6863bb25f129",
+        "priceFeedAddr": "0xa7C16d0e41Fbe60Cc36454846CBA43034B5d710C",
+        "backupPriceFeedAddr": "0x659019d0F0eF17edfA32a23Ed1AacCDf8eBfc459",
+        "heartBeat": "86400",
+        "name": "PT Terminal WETH 18DEC2025",
+        "symbol": "PT-tETH-18DEC2025",
+        "decimals": "18",
+        "initialPrice": "441456870662",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    },
+    "configs_13": {
+      "salt": 0,
+      "collateralCapForGt": "5000000000000000000000000",
+      "marketName": "USDC/PT-sUSDE-27NOV2025@03DEC2025",
+      "marketSymbol": "USDC/PT-sUSDE-27NOV2025@03DEC2025",
+      "marketConfig": {
+        "maturity": "1764727200",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "mintGtFeeRatio": "10000000",
+        "mintGtFeeRef": "6000000"
+      },
+      "loanConfig": {
+        "liquidationLtv": "91500000",
+        "maxLtv": "87500000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "priceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "backupPriceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "heartBeat": "86400",
+        "name": "USD Coin",
+        "symbol": "USDC",
+        "decimals": "6",
+        "initialPrice": "99962000"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0xe6A934089BBEe34F832060CE98848359883749B3",
+        "priceFeedAddr": "0x6207D62959a12C7552eD01a1D55aA046F9e1f787",
+        "backupPriceFeedAddr": "0x261E7AB8966fDcBa7a1fa51955b3d08f7956Ce4A",
+        "heartBeat": "86400",
+        "name": "PT Ethena sUSDE 27NOV2025",
+        "symbol": "PT-sUSDE-27NOV2025",
+        "decimals": "18",
+        "initialPrice": "98858247",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    },
+    "configs_14": {
+      "salt": 0,
+      "collateralCapForGt": "5000000000000",
+      "marketName": "USDC/PT-RLP-4DEC2025@05DEC2025",
+      "marketSymbol": "USDC/PT-RLP-4DEC2025@05DEC2025",
+      "marketConfig": {
+        "maturity": "1764900000",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "mintGtFeeRatio": "10000000",
+        "mintGtFeeRef": "6000000"
+      },
+      "loanConfig": {
+        "liquidationLtv": "91500000",
+        "maxLtv": "87500000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "priceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "backupPriceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "heartBeat": "86400",
+        "name": "USD Coin",
+        "symbol": "USDC",
+        "decimals": "6",
+        "initialPrice": "99984536"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0x3A70F0C696dcB3A4aB3833cD9726397dD61AC85e",
+        "priceFeedAddr": "0x53D6E90023DE3bd9FD5603105FbdB15A11c54759",
+        "backupPriceFeedAddr": "0x0000000000000000000000000000000000000000",
+        "heartBeat": "86400",
+        "name": "PT Resolv Liquidity Provider Token 4DEC2025",
+        "symbol": "PT-RLP-4DEC2025",
+        "decimals": "6",
+        "initialPrice": "96420964",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    },
+    "configs_15": {
+      "salt": 0,
+      "collateralCapForGt": "5000000000000",
+      "marketName": "USDC/PT-siUSD-9OCT2025@16OCT2025",
+      "marketSymbol": "USDC/PT-siUSD-9OCT2025@16OCT2025",
+      "marketConfig": {
+        "maturity": "1760580000",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "mintGtFeeRatio": "10000000",
+        "mintGtFeeRef": "6000000"
+      },
+      "loanConfig": {
+        "liquidationLtv": "91500000",
+        "maxLtv": "87500000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "priceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "backupPriceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "heartBeat": "86400",
+        "name": "USD Coin",
+        "symbol": "USDC",
+        "decimals": "6",
+        "initialPrice": "99985605"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0x711214da1A94F478B96C1Ca3D14A750f496F2a80",
+        "priceFeedAddr": "0x4cb037a12A6c60Ab9623fD3fe0093C8Aa9101b08",
+        "backupPriceFeedAddr": "0x0000000000000000000000000000000000000000",
+        "heartBeat": "86400",
+        "name": "PT Pendle InfiniFi siUSD 9OCT2025",
+        "symbol": "PT-PendleInfiniFi-siUSD-9OCT2025",
+        "decimals": "6",
+        "initialPrice": "98885613",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    },
+    "configs_16": {
+      "salt": 0,
+      "collateralCapForGt": "5000000000000000000000000",
+      "marketName": "USDC/MC_PTs@26DEC2025",
+      "marketSymbol": "USDC/MC_PTs@26DEC2025",
+      "marketConfig": {
+        "maturity": "1766714400",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "mintGtFeeRatio": "10000000",
+        "mintGtFeeRef": "6000000"
+      },
+      "loanConfig": {
+        "liquidationLtv": "94000000",
+        "maxLtv": "90000000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "priceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "backupPriceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "heartBeat": "86400",
+        "name": "USD Coin",
+        "symbol": "USDC",
+        "decimals": "6",
+        "initialPrice": "99983046"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0xd41830d88dfD08678b0B886E0122193d54b02Acc",
+        "priceFeedAddr": "0xe594f0E0013d304c63012F3C14fCf523Fd98613D",
+        "backupPriceFeedAddr": "0xe594f0E0013d304c63012F3C14fCf523Fd98613D",
+        "heartBeat": "86400",
+        "name": "MEV Capital PTs USDC",
+        "symbol": "MC_PTs",
+        "decimals": "18",
+        "initialPrice": "101793039",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    }
+  }
+}

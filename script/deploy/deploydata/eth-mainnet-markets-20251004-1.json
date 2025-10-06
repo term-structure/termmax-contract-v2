@@ -1,0 +1,620 @@
+{
+  "configNum": "15",
+  "configs": {
+    "configs_0": {
+      "salt": 0,
+      "collateralCapForGt": "5000000000000000000000000",
+      "marketName": "USDC/cUSDO@26DEC2025",
+      "marketSymbol": "USDC/cUSDO@26DEC2025",
+      "marketConfig": {
+        "maturity": "1766714400",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "mintGtFeeRatio": "10000000",
+        "mintGtFeeRef": "6000000"
+      },
+      "loanConfig": {
+        "liquidationLtv": "94000000",
+        "maxLtv": "92000000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "priceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "backupPriceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "heartBeat": "86400",
+        "name": "USD Coin",
+        "symbol": "USDC",
+        "decimals": "6",
+        "initialPrice": "99985232"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0xaD55aebc9b8c03FC43cd9f62260391c13c23e7c0",
+        "priceFeedAddr": "0xf158000de86899b5EB5E6fA3BB78F32A072bD14b",
+        "backupPriceFeedAddr": "0xf158000de86899b5EB5E6fA3BB78F32A072bD14b",
+        "heartBeat": "86400",
+        "name": "Compounding Open Dollar",
+        "symbol": "cUSDO",
+        "decimals": "18",
+        "initialPrice": "102516087",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    },
+    "configs_1": {
+      "salt": 0,
+      "collateralCapForGt": "4500000000000000000000000",
+      "marketName": "USDC/liUSD-1w@10OCT2025",
+      "marketSymbol": "USDC/liUSD-1w@10OCT2025",
+      "marketConfig": {
+        "maturity": "1760061600",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "mintGtFeeRatio": "10000000",
+        "mintGtFeeRef": "6000000"
+      },
+      "loanConfig": {
+        "liquidationLtv": "90000000",
+        "maxLtv": "86000000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "priceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "backupPriceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "heartBeat": "86400",
+        "name": "USD Coin",
+        "symbol": "USDC",
+        "decimals": "6",
+        "initialPrice": "99985605"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0x12b004719fb632f1E7c010c6F5D6009Fb4258442",
+        "priceFeedAddr": "0x9798837730640E881C2bb3d769418Da6cbA65d22",
+        "backupPriceFeedAddr": "0x0000000000000000000000000000000000000000",
+        "heartBeat": "86400",
+        "name": "Locked iUSD - 1 weeks",
+        "symbol": "liUSD-1w",
+        "decimals": "18",
+        "initialPrice": "111639949",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    },
+    "configs_2": {
+      "salt": 0,
+      "collateralCapForGt": "4500000000000000000000000",
+      "marketName": "USDC/liUSD-1w@31OCT2025",
+      "marketSymbol": "USDC/liUSD-1w@31OCT2025",
+      "marketConfig": {
+        "maturity": "1761876000",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "mintGtFeeRatio": "10000000",
+        "mintGtFeeRef": "6000000"
+      },
+      "loanConfig": {
+        "liquidationLtv": "86000000",
+        "maxLtv": "82000000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "priceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "backupPriceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "heartBeat": "86400",
+        "name": "USD Coin",
+        "symbol": "USDC",
+        "decimals": "6",
+        "initialPrice": "99984219"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0x12b004719fb632f1E7c010c6F5D6009Fb4258442",
+        "priceFeedAddr": "0x9798837730640E881C2bb3d769418Da6cbA65d22",
+        "backupPriceFeedAddr": "0x0000000000000000000000000000000000000000",
+        "heartBeat": "86400",
+        "name": "Locked iUSD - 1 weeks",
+        "symbol": "liUSD-1w",
+        "decimals": "18",
+        "initialPrice": "110628079",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    },
+    "configs_3": {
+      "salt": 0,
+      "collateralCapForGt": "5000000000000000000000000",
+      "marketName": "USDC/mBASIS@26DEC2025",
+      "marketSymbol": "USDC/mBASIS@26DEC2025",
+      "marketConfig": {
+        "maturity": "1766714400",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "mintGtFeeRatio": "10000000",
+        "mintGtFeeRef": "6000000"
+      },
+      "loanConfig": {
+        "liquidationLtv": "91500000",
+        "maxLtv": "87000000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "priceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "backupPriceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "heartBeat": "86400",
+        "name": "USD Coin",
+        "symbol": "USDC",
+        "decimals": "6",
+        "initialPrice": "99972560"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0x2a8c22E3b10036f3AEF5875d04f8441d4188b656",
+        "priceFeedAddr": "0xE4f2AE539442e1D3Fb40F03ceEbF4A372a390d24",
+        "backupPriceFeedAddr": "0x0000000000000000000000000000000000000000",
+        "heartBeat": "86400",
+        "name": "Midas Basis Trading Token",
+        "symbol": "mBASIS",
+        "decimals": "18",
+        "initialPrice": "114535946",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    },
+    "configs_4": {
+      "salt": 0,
+      "collateralCapForGt": "5000000000000000000000000",
+      "marketName": "USDC/mEDGE@26DEC2025",
+      "marketSymbol": "USDC/mEDGE@26DEC2025",
+      "marketConfig": {
+        "maturity": "1766714400",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "mintGtFeeRatio": "10000000",
+        "mintGtFeeRef": "6000000"
+      },
+      "loanConfig": {
+        "liquidationLtv": "91500000",
+        "maxLtv": "87000000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "priceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "backupPriceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "heartBeat": "86400",
+        "name": "USD Coin",
+        "symbol": "USDC",
+        "decimals": "6",
+        "initialPrice": "99972560"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0xbB51E2a15A9158EBE2b0Ceb8678511e063AB7a55",
+        "priceFeedAddr": "0x698dA5D987a71b68EbF30C1555cfd38F190406b7",
+        "backupPriceFeedAddr": "0x0000000000000000000000000000000000000000",
+        "heartBeat": "86400",
+        "name": "Midas mEDGE",
+        "symbol": "mEDGE",
+        "decimals": "18",
+        "initialPrice": "104677174",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    },
+    "configs_5": {
+      "salt": 0,
+      "collateralCapForGt": "4700000000000000000000000",
+      "marketName": "USDC/mMEV@28NOV2025",
+      "marketSymbol": "USDC/mMEV@28NOV2025",
+      "marketConfig": {
+        "maturity": "1764295200",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "mintGtFeeRatio": "10000000",
+        "mintGtFeeRef": "6000000"
+      },
+      "loanConfig": {
+        "liquidationLtv": "91500000",
+        "maxLtv": "87000000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "priceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "backupPriceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "heartBeat": "86400",
+        "name": "USD Coin",
+        "symbol": "USDC",
+        "decimals": "6",
+        "initialPrice": "99979064"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0x030b69280892c888670EDCDCD8B69Fd8026A0BF3",
+        "priceFeedAddr": "0x5f09Aff8B9b1f488B7d1bbaD4D89648579e55d61",
+        "backupPriceFeedAddr": "0x5f09Aff8B9b1f488B7d1bbaD4D89648579e55d61",
+        "heartBeat": "86400",
+        "name": "Midas MEV",
+        "symbol": "mMEV",
+        "decimals": "18",
+        "initialPrice": "106639775",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    },
+    "configs_6": {
+      "salt": 0,
+      "collateralCapForGt": "5000000000000000000000000",
+      "marketName": "USDC/PT-cUSD-29JAN2026@30JAN2026",
+      "marketSymbol": "USDC/PT-cUSD-29JAN2026@30JAN2026",
+      "marketConfig": {
+        "maturity": "1769738400",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "mintGtFeeRatio": "10000000",
+        "mintGtFeeRef": "6000000"
+      },
+      "loanConfig": {
+        "liquidationLtv": "91500000",
+        "maxLtv": "87500000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "priceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "backupPriceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "heartBeat": "86400",
+        "name": "USD Coin",
+        "symbol": "USDC",
+        "decimals": "6",
+        "initialPrice": "99972969"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0x545A490f9ab534AdF409A2E682bc4098f49952e3",
+        "priceFeedAddr": "0xaAC663709a77Bf6e72E573CA6EF9bf830508E1F1",
+        "backupPriceFeedAddr": "0x0000000000000000000000000000000000000000",
+        "heartBeat": "86400",
+        "name": "PT cap USD 29JAN2026",
+        "symbol": "PT-cUSD-29JAN2026",
+        "decimals": "18",
+        "initialPrice": "94984073",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    },
+    "configs_7": {
+      "salt": 0,
+      "collateralCapForGt": "5000000000000000000000000",
+      "marketName": "USDC/PT-cUSDO-20NOV2025@27NOV2025",
+      "marketSymbol": "USDC/PT-cUSDO-20NOV2025@27NOV2025",
+      "marketConfig": {
+        "maturity": "1764208800",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "mintGtFeeRatio": "10000000",
+        "mintGtFeeRef": "6000000"
+      },
+      "loanConfig": {
+        "liquidationLtv": "91500000",
+        "maxLtv": "87500000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "priceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "backupPriceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "heartBeat": "86400",
+        "name": "USD Coin",
+        "symbol": "USDC",
+        "decimals": "6",
+        "initialPrice": "99972969"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0xb10da2f9147f9cf2b8826877cd0c95c18a0f42dc",
+        "priceFeedAddr": "0x1039F090392798Be2FeA222D6468676cB2F07699",
+        "backupPriceFeedAddr": "0x0000000000000000000000000000000000000000",
+        "heartBeat": "86400",
+        "name": "PT Compounding Open Dollar 20NOV2025",
+        "symbol": "PT-cUSDO-20NOV2025",
+        "decimals": "18",
+        "initialPrice": "98254417",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    },
+    "configs_8": {
+      "salt": 0,
+      "collateralCapForGt": "5000000000000000000000000",
+      "marketName": "USDC/PT-iUSD-4DEC2025@11DEC2025",
+      "marketSymbol": "USDC/PT-iUSD-4DEC2025@11DEC2025",
+      "marketConfig": {
+        "maturity": "1765418400",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "mintGtFeeRatio": "10000000",
+        "mintGtFeeRef": "6000000"
+      },
+      "loanConfig": {
+        "liquidationLtv": "91500000",
+        "maxLtv": "87500000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "priceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "backupPriceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "heartBeat": "86400",
+        "name": "USD Coin",
+        "symbol": "USDC",
+        "decimals": "6",
+        "initialPrice": "99985605"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0xb44cdBEF3145C1c1E772e8228E1154c80e70618e",
+        "priceFeedAddr": "0x04682838B481169442d0062F277F69Ee65546958",
+        "backupPriceFeedAddr": "0x0000000000000000000000000000000000000000",
+        "heartBeat": "86400",
+        "name": "PT infiniFi USD 4DEC2025",
+        "symbol": "PT-iUSD-4DEC2025",
+        "decimals": "18",
+        "initialPrice": "97135298",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    },
+    "configs_9": {
+      "salt": 0,
+      "collateralCapForGt": "5000000000000",
+      "marketName": "USDC/PT-mMEV-30OCT2025@06NOV2025",
+      "marketSymbol": "USDC/PT-mMEV-30OCT2025@06NOV2025",
+      "marketConfig": {
+        "maturity": "1762394400",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "mintGtFeeRatio": "10000000",
+        "mintGtFeeRef": "6000000"
+      },
+      "loanConfig": {
+        "liquidationLtv": "91500000",
+        "maxLtv": "87500000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "priceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "backupPriceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "heartBeat": "86400",
+        "name": "USD Coin",
+        "symbol": "USDC",
+        "decimals": "6",
+        "initialPrice": "99983469"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0x61da65F0534C6A4F4c9757f2979A923c08d6D2aa",
+        "priceFeedAddr": "0xE63dFfdD3aE3d0ef570149D063805D3F74b6611C",
+        "backupPriceFeedAddr": "0x0000000000000000000000000000000000000000",
+        "heartBeat": "86400",
+        "name": "PT Midas MEV 30OCT2025",
+        "symbol": "PT-mMEV-30OCT2025",
+        "decimals": "6",
+        "initialPrice": "98168816",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    },
+    "configs_10": {
+      "salt": 0,
+      "collateralCapForGt": "5000000000000000000000000",
+      "marketName": "USDC/PT-pUSDe-16OCT2025@17OCT2025",
+      "marketSymbol": "USDC/PT-pUSDe-16OCT2025@17OCT2025",
+      "marketConfig": {
+        "maturity": "1760666400",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "mintGtFeeRatio": "10000000",
+        "mintGtFeeRef": "6000000"
+      },
+      "loanConfig": {
+        "liquidationLtv": "94000000",
+        "maxLtv": "92000000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "priceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "backupPriceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "heartBeat": "86400",
+        "name": "USD Coin",
+        "symbol": "USDC",
+        "decimals": "6",
+        "initialPrice": "99985417"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0xf3f491e5608f8b8a6fd9e9d66a4a4036d7fd282c",
+        "priceFeedAddr": "0x1fdD63cA031a7ce8001fb35D7A43A9de54b662F8",
+        "backupPriceFeedAddr": "0xbD7a9Dc2FBC256686274233B0A68E968A1A40378",
+        "heartBeat": "86400",
+        "name": "PT Strata Pre-deposit Receipt Token 16OCT2025",
+        "symbol": "PT-pUSDe-16OCT2025",
+        "decimals": "18",
+        "initialPrice": "97436803",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    },
+    "configs_11": {
+      "salt": 0,
+      "collateralCapForGt": "5000000000000",
+      "marketName": "USDC/PT-RLP-4DEC2025@11DEC2025",
+      "marketSymbol": "USDC/PT-RLP-4DEC2025@11DEC2025",
+      "marketConfig": {
+        "maturity": "1765418400",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "mintGtFeeRatio": "10000000",
+        "mintGtFeeRef": "6000000"
+      },
+      "loanConfig": {
+        "liquidationLtv": "91500000",
+        "maxLtv": "87500000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "priceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "backupPriceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "heartBeat": "86400",
+        "name": "USD Coin",
+        "symbol": "USDC",
+        "decimals": "6",
+        "initialPrice": "99985839"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0x3A70F0C696dcB3A4aB3833cD9726397dD61AC85e",
+        "priceFeedAddr": "0x53D6E90023DE3bd9FD5603105FbdB15A11c54759",
+        "backupPriceFeedAddr": "0x0000000000000000000000000000000000000000",
+        "heartBeat": "86400",
+        "name": "PT Resolv Liquidity Provider Token 4DEC2025",
+        "symbol": "PT-RLP-4DEC2025",
+        "decimals": "6",
+        "initialPrice": "96326636",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    },
+    "configs_12": {
+      "salt": 0,
+      "collateralCapForGt": "5000000000000000000000000",
+      "marketName": "USDC/PT-sdeUSD-11DEC2025@12DEC2025",
+      "marketSymbol": "USDC/PT-sdeUSD-11DEC2025@12DEC2025",
+      "marketConfig": {
+        "maturity": "1765504800",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "mintGtFeeRatio": "10000000",
+        "mintGtFeeRef": "6000000"
+      },
+      "loanConfig": {
+        "liquidationLtv": "91500000",
+        "maxLtv": "87500000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "priceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "backupPriceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "heartBeat": "86400",
+        "name": "USD Coin",
+        "symbol": "USDC",
+        "decimals": "6",
+        "initialPrice": "99978985"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0x9AEf3BF940A22A58d8c55e287E2EdFDb0130cf2B",
+        "priceFeedAddr": "0x4e36DBF4Ef140Ccf648375486EF7975d19b311Db",
+        "backupPriceFeedAddr": "0x0000000000000000000000000000000000000000",
+        "heartBeat": "86400",
+        "name": "PT Staked deUSD 11DEC2025",
+        "symbol": "PT-sdeUSD-11DEC2025",
+        "decimals": "18",
+        "initialPrice": "96921882",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    },
+    "configs_13": {
+      "salt": 0,
+      "collateralCapForGt": "5000000000000000000000000",
+      "marketName": "USDC/PT-stcUSD-29JAN2026@05FEB2026",
+      "marketSymbol": "USDC/PT-stcUSD-29JAN2026@05FEB2026",
+      "marketConfig": {
+        "maturity": "1770256800",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "mintGtFeeRatio": "10000000",
+        "mintGtFeeRef": "6000000"
+      },
+      "loanConfig": {
+        "liquidationLtv": "91500000",
+        "maxLtv": "87500000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "priceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "backupPriceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "heartBeat": "86400",
+        "name": "USD Coin",
+        "symbol": "USDC",
+        "decimals": "6",
+        "initialPrice": "99974223"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0xC3c7E5E277d31CD24a3Ac4cC9af3B6770F30eA33",
+        "priceFeedAddr": "0xd3EaDCc06e04C98f530401F7B71d6BDDec1c728c",
+        "backupPriceFeedAddr": "0x0000000000000000000000000000000000000000",
+        "heartBeat": "86400",
+        "name": "PT Staked cap USD 29JAN2026",
+        "symbol": "PT-stcUSD-29JAN2026",
+        "decimals": "18",
+        "initialPrice": "94996462",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    },
+    "configs_14": {
+      "salt": 0,
+      "collateralCapForGt": "5000000000000000000000000",
+      "marketName": "USDC/PT-tUSDe-18DEC2025@25DEC2025",
+      "marketSymbol": "USDC/PT-tUSDe-18DEC2025@25DEC2025",
+      "marketConfig": {
+        "maturity": "1766628000",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "mintGtFeeRatio": "10000000",
+        "mintGtFeeRef": "6000000"
+      },
+      "loanConfig": {
+        "liquidationLtv": "91500000",
+        "maxLtv": "87500000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "priceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "backupPriceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "heartBeat": "86400",
+        "name": "USD Coin",
+        "symbol": "USDC",
+        "decimals": "6",
+        "initialPrice": "100000000"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0x1135b22d6e8FD0809392478eEDcd8c107dB6aF9D",
+        "priceFeedAddr": "0xDf2CB8630d995648C621Dbb6779b53B29B8e8faF",
+        "backupPriceFeedAddr": "0xdFa6769615107BB341Cb503257404bF5c9fCA839",
+        "heartBeat": "86400",
+        "name": "PT Terminal USDe 18DEC2025",
+        "symbol": "PT-tUSDe-18DEC2025",
+        "decimals": "18",
+        "initialPrice": "96805754",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    }
+  }
+}
