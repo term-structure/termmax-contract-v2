@@ -46,6 +46,7 @@ library JsonLoader {
 
     struct PoolConfig {
         address asset;
+        address thirdPool;
         StakingBuffer.BufferConfig bufferConfig;
     }
 
@@ -178,7 +179,7 @@ library JsonLoader {
         initialParams.minApy = uint32(vm.parseUint(jsonData.readString(string.concat(configPrefix, ".minApy"))));
     }
 
-    function getPoolConfigsFromJson(string memory jsonData) internal pure returns (PoolConfig[] memory poolConfigs) {
+    function getPoolConfigsFromJson(string memory jsonData) internal view returns (PoolConfig[] memory poolConfigs) {
         uint256 configNum = uint256(vm.parseUint(vm.parseJsonString(jsonData, ".configNum")));
         poolConfigs = new PoolConfig[](configNum);
         for (uint256 i; i < configNum; i++) {
@@ -189,11 +190,16 @@ library JsonLoader {
 
     function getPoolConfigFromJson(string memory jsonData, uint256 index)
         internal
-        pure
+        view
         returns (PoolConfig memory poolConfig)
     {
         string memory configPrefix = string.concat(".configs.configs_", vm.toString(index));
-        poolConfig.asset = jsonData.readAddress(string.concat(configPrefix, ".asset"));
+        if (vm.keyExistsJson(jsonData, string.concat(configPrefix, ".thirdPool"))) {
+            poolConfig.thirdPool = jsonData.readAddress(string.concat(configPrefix, ".thirdPool"));
+        }
+        if (vm.keyExistsJson(jsonData, string.concat(configPrefix, ".asset"))) {
+            poolConfig.asset = jsonData.readAddress(string.concat(configPrefix, ".asset"));
+        }
         StakingBuffer.BufferConfig memory bufferConfig;
         bufferConfig.minimumBuffer =
             uint256(vm.parseUint(jsonData.readString(string.concat(configPrefix, ".bufferConfig.minimumBuffer"))));
