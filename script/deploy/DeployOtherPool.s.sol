@@ -6,20 +6,19 @@ import {VmSafe} from "forge-std/Vm.sol";
 import "forge-std/console.sol";
 import "./DeployBaseV2.s.sol";
 
-contract DeployCoreV2_20251002 is DeployBaseV2 {
+contract DeployOtherPool is DeployBaseV2 {
     uint256 deployerPrivateKey;
     address accessManagerAddr;
 
     CoreParams coreParams;
     DeployedContracts coreContracts;
 
-    struct AavePools {
-        address assets;
-        address variable;
+    struct ThirdPools {
+        address thirdPool;
         address stable;
     }
 
-    AavePools[] public aavePools;
+    ThirdPools[] public thirdPools;
 
     function setUp() public {
         // Load network from environment variable
@@ -89,28 +88,22 @@ contract DeployCoreV2_20251002 is DeployBaseV2 {
         console.log("Using existing TermMax4626Factory at:", address(coreContracts.tmx4626Factory));
 
         string memory configPath =
-            string.concat(vm.projectRoot(), "/script/deploy/deploydata/", coreParams.network, "-aave-pool.json");
+            string.concat(vm.projectRoot(), "/script/deploy/deploydata/", coreParams.network, "-4626-pool.json");
         JsonLoader.PoolConfig[] memory poolConfigs = JsonLoader.getPoolConfigsFromJson(vm.readFile(configPath));
-        address[] memory thirdPools = new address[](poolConfigs.length * 2);
+        address[] memory pools = new address[](poolConfigs.length);
         for (uint256 i = 0; i < poolConfigs.length; i++) {
-            console.log("Deploying AavePool for asset:", poolConfigs[i].asset);
-            (VariableERC4626ForAave aaveVariable, StableERC4626ForAave aaveStable) = coreContracts
-                .tmx4626Factory
-                .createVariableAndStableERC4626ForAave(
-                coreParams.adminAddr, poolConfigs[i].asset, poolConfigs[i].bufferConfig
+            console.log("Deploying 4626 pool with thirdPool:", poolConfigs[i].thirdPool);
+            StableERC4626For4626 stable = coreContracts.tmx4626Factory.createStableERC4626For4626(
+                coreParams.adminAddr, poolConfigs[i].thirdPool, poolConfigs[i].bufferConfig
             );
-            aavePools.push(
-                AavePools({assets: poolConfigs[i].asset, variable: address(aaveVariable), stable: address(aaveStable)})
-            );
-            console.log("  Deployed VariableERC4626ForAave at:", address(aaveVariable));
-            console.log("  Deployed StableERC4626ForAave at:", address(aaveStable));
-            thirdPools[i * 2] = address(aaveVariable);
-            thirdPools[i * 2 + 1] = address(aaveStable);
+            pools[i] = address(stable);
+            thirdPools.push(ThirdPools({thirdPool: poolConfigs[i].thirdPool, stable: address(stable)}));
+            console.log("  Deployed StableERC4626For4626 at:", address(stable));
         }
 
         // whitelist the pool
         coreContracts.accessManager.batchSetWhitelist(
-            coreContracts.whitelistManager, thirdPools, IWhitelistManager.ContractModule.POOL, true
+            coreContracts.whitelistManager, pools, IWhitelistManager.ContractModule.POOL, true
         );
 
         vm.stopBroadcast();
@@ -158,24 +151,19 @@ contract DeployCoreV2_20251002 is DeployBaseV2 {
                 "\n"
             )
         );
-        for (uint256 i = 0; i < aavePools.length; i++) {
+        for (uint256 i = 0; i < thirdPools.length; i++) {
             deploymentEnv = string(
                 abi.encodePacked(
                     deploymentEnv,
-                    "ASSET_ADDRESS_",
+                    "THIRD_POOL_ADDRESS_",
                     vm.toString(i + 1),
                     "=",
-                    vm.toString(aavePools[i].assets),
+                    vm.toString(thirdPools[i].thirdPool),
                     "\n",
-                    "STABLE_AAVE_POOL_ADDRESS_",
+                    "STABLE_4626_POOL_ADDRESS_",
                     vm.toString(i + 1),
                     "=",
-                    vm.toString(aavePools[i].stable),
-                    "\n",
-                    "VARIABLE_AAVE_POOL_ADDRESS_",
-                    vm.toString(i + 1),
-                    "=",
-                    vm.toString(aavePools[i].variable),
+                    vm.toString(thirdPools[i].stable),
                     "\n"
                 )
             );
@@ -187,7 +175,7 @@ contract DeployCoreV2_20251002 is DeployBaseV2 {
             coreParams.network,
             "/",
             coreParams.network,
-            "-v2-aave-pools-",
+            "-v2-4626-pools-",
             vm.toString(block.timestamp),
             ".env"
         );
