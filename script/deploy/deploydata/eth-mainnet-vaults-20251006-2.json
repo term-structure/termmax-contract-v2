@@ -1,0 +1,29 @@
+{
+  "configNum": 2,
+  "configs": {
+    "configs_0": {
+      "curator": "0x000cA4853bBDca1347f190bbF31B5Bb564A849Be",
+      "guardian": "0x15fF7Cc1Fa7963B0E31c3163B98F759C4CAf4198",
+      "timelock": 86400,
+      "asset": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "pool": "0x2e3E14A0b42d22E4a326528D882Fc07540DF1Ce5",
+      "maxCapacity": "50000000000000",
+      "name": "MEV Capital USDC v2",
+      "symbol": "TMX-MEV-USDC",
+      "performanceFeeRate": 10000000,
+      "minApy": 0
+    },
+    "configs_1": {
+      "curator": "0x000cA4853bBDca1347f190bbF31B5Bb564A849Be",
+      "guardian": "0x15fF7Cc1Fa7963B0E31c3163B98F759C4CAf4198",
+      "timelock": 86400,
+      "asset": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+      "pool": "0x05BB3e6a027FB13613f86BA0E5B54403806eaCB4",
+      "maxCapacity": "20000000000000000000000",
+      "name": "amphrETH",
+      "symbol": "TMX-MEV-WETH",
+      "performanceFeeRate": 10000000,
+      "minApy": 0
+    }
+  }
+}

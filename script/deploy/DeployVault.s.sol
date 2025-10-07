@@ -15,7 +15,7 @@ contract DeployVaults is DeployBaseV2 {
     DeployedContracts coreContracts;
 
     address[] vaults;
-    string configPath = "-vaults-20251006.json";
+    string configPath = "-vaults-20251006-2.json";
 
     function setUp() public {
         // Load network from environment variable
