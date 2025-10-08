@@ -1,0 +1,169 @@
+{
+  "configNum": "4",
+  "configs": {
+    "configs_0": {
+      "salt": 0,
+      "collateralCapForGt": "100000000000",
+      "marketName": "WBTC/uniBTC@26DEC2025",
+      "marketSymbol": "WBTC/uniBTC@26DEC2025",
+      "marketConfig": {
+        "maturity": "1766714400",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "mintGtFeeRatio": "10000000",
+        "mintGtFeeRef": "3000000"
+      },
+      "loanConfig": {
+        "liquidationLtv": "94000000",
+        "maxLtv": "86000000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+        "priceFeedAddr": "0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c",
+        "backupPriceFeedAddr": "0xAB7f623fb2F6fea6601D4350FA0E2290663C28Fc",
+        "heartBeat": "86400",
+        "name": "Wrapped BTC",
+        "symbol": "WBTC",
+        "decimals": "8",
+        "initialPrice": "12199442000000"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0x004E9C3EF86bc1ca1f0bB5C7662861Ee93350568",
+        "priceFeedAddr": "0x11c48dccbC6a9798cEd8697bf5cf402FFE5bb8F9",
+        "backupPriceFeedAddr": "0x989B5A59BAD6CEE6B6F462E25C8D582C178df46a",
+        "heartBeat": "86400",
+        "name": "uniBTC",
+        "symbol": "uniBTC",
+        "decimals": "8",
+        "initialPrice": "101860548",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    },
+    "configs_1": {
+      "salt": 0,
+      "collateralCapForGt": "100000000000",
+      "marketName": "WBTC/pumpBTC@26DEC2025",
+      "marketSymbol": "WBTC/pumpBTC@26DEC2025",
+      "marketConfig": {
+        "maturity": "1766714400",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "mintGtFeeRatio": "10000000",
+        "mintGtFeeRef": "3000000"
+      },
+      "loanConfig": {
+        "liquidationLtv": "94000000",
+        "maxLtv": "86000000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+        "priceFeedAddr": "0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c",
+        "backupPriceFeedAddr": "0xAB7f623fb2F6fea6601D4350FA0E2290663C28Fc",
+        "heartBeat": "86400",
+        "name": "Wrapped BTC",
+        "symbol": "WBTC",
+        "decimals": "8",
+        "initialPrice": "12199442000000"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0xF469fBD2abcd6B9de8E169d128226C0Fc90a012e",
+        "priceFeedAddr": "0xF31c19EFC974465C60a771221742E6C4Ee799f79",
+        "backupPriceFeedAddr": "0x3F0b395369b607E6DDAC6D3397fdbe02C03c1f5f",
+        "heartBeat": "86400",
+        "name": "pumpBTC",
+        "symbol": "pumpBTC",
+        "decimals": "8",
+        "initialPrice": "11986980132409",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    },
+    "configs_2": {
+      "salt": 0,
+      "collateralCapForGt": "20000000000000000000000000",
+      "marketName": "USDC/mF-ONE@26DEC2025",
+      "marketSymbol": "USDC/mF-ONE@26DEC2025",
+      "marketConfig": {
+        "maturity": "1766714400",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "mintGtFeeRatio": "10000000",
+        "mintGtFeeRef": "6000000"
+      },
+      "loanConfig": {
+        "liquidationLtv": "91500000",
+        "maxLtv": "87000000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "priceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "backupPriceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "heartBeat": "86400",
+        "name": "USD Coin",
+        "symbol": "USDC",
+        "decimals": "6",
+        "initialPrice": "99973969"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0x238a700eD6165261Cf8b2e544ba797BC11e466Ba",
+        "priceFeedAddr": "0x8D51DBC85cEef637c97D02bdaAbb5E274850e68C",
+        "backupPriceFeedAddr": "0x0000000000000000000000000000000000000000",
+        "heartBeat": "86400",
+        "name": "Midas Fasanara ONE",
+        "symbol": "mF-ONE",
+        "decimals": "18",
+        "initialPrice": "103979943",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    },
+    "configs_3": {
+      "salt": 0,
+      "collateralCapForGt": "3000000000000000000000",
+      "marketName": "WETH/PT-tETH-8JAN2026@30NOV2025",
+      "marketSymbol": "WETH/PT-tETH-8JAN2026@30NOV2025",
+      "marketConfig": {
+        "maturity": "1764468000",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "mintGtFeeRatio": "10000000",
+        "mintGtFeeRef": "3000000"
+      },
+      "loanConfig": {
+        "liquidationLtv": "91500000",
+        "maxLtv": "87000000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+        "priceFeedAddr": "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
+        "backupPriceFeedAddr": "0x67F6838e58859d612E4ddF04dA396d6DABB66Dc4",
+        "heartBeat": "86400",
+        "name": "Wrapped Ether",
+        "symbol": "WETH",
+        "decimals": "18",
+        "initialPrice": "448225871926"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0x11214aD8159A315148d98EeecE228CCdA8B1c6D8",
+        "priceFeedAddr": "0x27D92e798b7F0097638AC501b7EfF28D4f8Ea740",
+        "backupPriceFeedAddr": "0x0000000000000000000000000000000000000000",
+        "heartBeat": "86400",
+        "name": "PT Treehouse ETH 8JAN2026",
+        "symbol": "PT-tETH-8JAN2026",
+        "decimals": "18",
+        "initialPrice": "440839299756",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    }
+  }
+}

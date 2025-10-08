@@ -1,0 +1,46 @@
+{
+  "configNum": "1",
+  "configs": {
+    "configs_0": {
+      "salt": 0,
+      "collateralCapForGt": "10000000000000000000000000",
+      "marketName": "USDT/satUSD@25DEC2025",
+      "marketSymbol": "USDT/satUSD@25DEC2025",
+      "marketConfig": {
+        "maturity": "1766628000",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "mintGtFeeRatio": "10000000",
+        "mintGtFeeRef": "6000000"
+      },
+      "loanConfig": {
+        "liquidationLtv": "91500000",
+        "maxLtv": "89500000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0x55d398326f99059fF775485246999027B3197955",
+        "priceFeedAddr": "0xB97Ad0E74fa7d920791E90258A6E2085088b4320",
+        "backupPriceFeedAddr": "0xf57bA29437C130e155Ca4b65128630777638F05D",
+        "heartBeat": "86400",
+        "name": "Tether USD",
+        "symbol": "USDT",
+        "decimals": "18",
+        "initialPrice": "100041039"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0xb4818BB69478730EF4e33Cc068dD94278e2766cB",
+        "priceFeedAddr": "0x1082679a55fB34B967a006080204b597CfA0605C",
+        "backupPriceFeedAddr": "0x0000000000000000000000000000000000000000",
+        "heartBeat": "86400",
+        "name": "Satoshi Stablecoin V2",
+        "symbol": "satUSD",
+        "decimals": "18",
+        "initialPrice": "99782402",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    }
+  }
+}
