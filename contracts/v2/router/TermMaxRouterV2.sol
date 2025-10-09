@@ -295,14 +295,12 @@ contract TermMaxRouterV2 is
         uint256 additionalAmt,
         bytes memory rolloverData
     ) external nonReentrant whenNotPaused returns (uint256 newGtId) {
-        return _rolloverGt(gtToken, gtId, 0, 0, additionalAsset, additionalAmt, rolloverData);
+        return _rolloverGt(gtToken, gtId, additionalAsset, additionalAmt, rolloverData);
     }
 
     function _rolloverGt(
         IGearingToken gtToken,
         uint256 gtId,
-        uint256 repayAmt,
-        uint256 removedCollateral,
         IERC20 additionalAsset,
         uint256 additionalAmt,
         bytes memory rolloverData
