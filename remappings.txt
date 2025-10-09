@@ -1,4 +1,4 @@
-@chainlink/contracts/=dependencies/@chainlink-contracts-1.2.0/
+@chainlink/=dependencies/@chainlink-contracts-v1.12.0/
 @morpho/=dependencies/metamorpho-1.0.0/
 @openzeppelin/contracts-upgradeable/=dependencies/@openzeppelin-contracts-upgradeable-5.2.0/
 @openzeppelin/contracts/=dependencies/@openzeppelin-contracts-5.2.0/

@@ -15,9 +15,20 @@ import {VersionV2} from "../VersionV2.sol";
  */
 contract AccessManagerV2 is AccessManager, VersionV2 {
     error CannotRenounceRole();
-    /// @notice Role to manage whitelist
 
+    /// @notice Role to manage whitelist
     bytes32 public constant WHITELIST_ROLE = keccak256("WHITELIST_ROLE");
+
+    /// @notice Role to upgrade contracts
+    bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
+
+    function upgradeSubContract(UUPSUpgradeable proxy, address newImplementation, bytes memory data)
+        external
+        override
+        onlyRole(UPGRADER_ROLE)
+    {
+        proxy.upgradeToAndCall(newImplementation, data);
+    }
 
     function batchSetWhitelist(
         IWhitelistManager whitelistManager,

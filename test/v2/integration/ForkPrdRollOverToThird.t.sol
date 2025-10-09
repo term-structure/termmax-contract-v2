@@ -2,7 +2,7 @@
 pragma solidity ^0.8.27;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
+import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import {ITermMaxMarket} from "contracts/v1/ITermMaxMarket.sol";
 import {ITermMaxOrder} from "contracts/v1/ITermMaxOrder.sol";
 import {
@@ -186,7 +186,7 @@ contract ForkPrdRollOverToThird is ForkBaseTestV2 {
                 abi.encode(collateral, aave, interestRateMode, referralCode, params, collateralPath)
             );
 
-            router.rolloverGtForV1(gt, gt1, additionalAsset, additionalAmt, rolloverData);
+            router.rolloverGt(gt, gt1, additionalAsset, additionalAmt, rolloverData);
         }
 
         vm.stopPrank();
@@ -245,7 +245,7 @@ contract ForkPrdRollOverToThird is ForkBaseTestV2 {
                 FlashRepayOptions.ROLLOVER_MORPHO,
                 abi.encode(collateral, morpho, marketId, authorization, sig, collateralPath)
             );
-            router.rolloverGtForV1(gt, gt1, additionalAsset, additionalAmt, rolloverData);
+            router.rolloverGt(gt, gt1, additionalAsset, additionalAmt, rolloverData);
         }
 
         vm.stopPrank();

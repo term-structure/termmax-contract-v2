@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
+import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ITermMaxMarket} from "contracts/v1/ITermMaxMarket.sol";
 import {ITermMaxOrder} from "contracts/v1/ITermMaxOrder.sol";
@@ -121,99 +121,99 @@ contract ForkPrdFlashRepay is ForkBaseTestV2 {
         vm.stopPrank();
     }
 
-    function testFlashRepayPtV2() public {
-        address borrower = vm.randomAddress();
-        vm.label(borrower, "borrower");
-        address admin = vm.randomAddress();
-        vm.label(admin, "admin");
+    // function testFlashRepayPtV2() public {
+    //     address borrower = vm.randomAddress();
+    //     vm.label(borrower, "borrower");
+    //     address admin = vm.randomAddress();
+    //     vm.label(admin, "admin");
 
-        vm.startPrank(admin);
-        ITermMaxMarket market;
-        uint256 gtId1;
-        uint128 oldDebt = 1000e6;
-        uint256 oldCollateral = 35012712455278300958037;
+    //     vm.startPrank(admin);
+    //     ITermMaxMarket market;
+    //     uint256 gtId1;
+    //     uint128 oldDebt = 1000e6;
+    //     uint256 oldCollateral = 35012712455278300958037;
 
-        deal(pt_susde_may_29, admin, oldCollateral);
+    //     deal(pt_susde_may_29, admin, oldCollateral);
 
-        // create new market support v2 flash repay
-        {
-            TermMaxFactoryV2 f2 = deployFactory(admin);
-            MarketConfig memory marketConfig = mmay_30.config();
-            (,, IGearingToken gt, address collateral, IERC20 debtToken) = mmay_30.tokens();
-            GtConfig memory gtConfig = gt.getGtConfig();
-            MarketInitialParams memory params = MarketInitialParams({
-                collateral: collateral,
-                debtToken: IERC20Metadata(address(debtToken)),
-                admin: admin,
-                gtImplementation: address(0),
-                marketConfig: marketConfig,
-                loanConfig: gtConfig.loanConfig,
-                gtInitalParams: abi.encode(type(uint128).max),
-                tokenName: "Test",
-                tokenSymbol: "TEST"
-            });
-            market = ITermMaxMarket(f2.createMarket(keccak256("GearingTokenWithERC20"), params, 1));
-            vm.label(address(market), "newMarket");
+    //     // create new market support v2 flash repay
+    //     {
+    //         TermMaxFactoryV2 f2 = deployFactory(admin);
+    //         MarketConfig memory marketConfig = mmay_30.config();
+    //         (,, IGearingToken gt, address collateral, IERC20 debtToken) = mmay_30.tokens();
+    //         GtConfig memory gtConfig = gt.getGtConfig();
+    //         MarketInitialParams memory params = MarketInitialParams({
+    //             collateral: collateral,
+    //             debtToken: IERC20Metadata(address(debtToken)),
+    //             admin: admin,
+    //             gtImplementation: address(0),
+    //             marketConfig: marketConfig,
+    //             loanConfig: gtConfig.loanConfig,
+    //             gtInitalParams: abi.encode(type(uint128).max),
+    //             tokenName: "Test",
+    //             tokenSymbol: "TEST"
+    //         });
+    //         market = ITermMaxMarket(f2.createMarket(keccak256("GearingTokenWithERC20"), params, 1));
+    //         vm.label(address(market), "newMarket");
 
-            (,, IGearingToken gt2,,) = market.tokens();
+    //         (,, IGearingToken gt2,,) = market.tokens();
 
-            IERC20(pt_susde_may_29).approve(address(gt2), oldCollateral);
-            (gtId1,) = market.issueFt(borrower, oldDebt, abi.encode(oldCollateral));
+    //         IERC20(pt_susde_may_29).approve(address(gt2), oldCollateral);
+    //         (gtId1,) = market.issueFt(borrower, oldDebt, abi.encode(oldCollateral));
 
-            vm.label(address(market), "market_may_30");
-            vm.label(address(gt2), "gt_may_30");
-        }
+    //         vm.label(address(market), "market_may_30");
+    //         vm.label(address(gt2), "gt_may_30");
+    //     }
 
-        vm.stopPrank();
-        vm.startPrank(borrower);
-        vm.warp(may_30 - 0.5 days);
-        uint128 repayAmount = 300e6;
-        uint256 removedCollateral = 25012712455278300958037;
-        // roll gt
-        {
-            ITermMaxOrder[] memory orders = new ITermMaxOrder[](0);
-            uint128[] memory amounts = new uint128[](0);
-            SwapUnit[] memory swapUnits = new SwapUnit[](2);
-            address pm1 = 0xB162B764044697cf03617C2EFbcB1f42e31E4766;
-            swapUnits[0] = SwapUnit({
-                adapter: pendleAdapter,
-                tokenIn: pt_susde_may_29,
-                tokenOut: susde,
-                swapData: abi.encode(pm1, removedCollateral, 0)
-            });
-            swapUnits[1] = SwapUnit({
-                adapter: odosAdapter,
-                tokenIn: susde,
-                tokenOut: usdc,
-                swapData: hex"0000000000000000000000009d39a5de30e57443bff2a8307a4256c8797a349700000000000000000000000000000000000000000000048103daed12389fbcc800000000000000000000000076edf8c155a1e0d9b2ad11b04d9671cbc25fee99000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb4800000000000000000000000000000000000000000000000000000005d443b21d00000000000000000000000000000000000000000000000000000005b66b4d45000000000000000000000000c47591f5c023e44931c78d5a993834875b79fb11000000000000000000000000000000000000000000000000000000000000014000000000000000000000000076edf8c155a1e0d9b2ad11b04d9671cbc25fee9900000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000084010206000d0100010201022700000304000d0101050400ff00000000000000007eb59373d63627be64b42406b108b602174b4ccc9d39a5de30e57443bff2a8307a4256c8797a3497dac17f958d2ee523a2206206994597c13d831ec7c02aaa39b223fe8d0a0e5c4f27ead9083c756cc288e6a0c2ddd26feeb64f039a2c41296fcb3f564000000000000000000000000000000000000000000000000000000000"
-            });
-            (IERC20 ft,, IGearingToken gt, address collateral,) = market.tokens();
-            console.log("usdc balance before:", IERC20(usdc).balanceOf(borrower));
-            gt.approve(address(router), gtId1);
+    //     vm.stopPrank();
+    //     vm.startPrank(borrower);
+    //     vm.warp(may_30 - 0.5 days);
+    //     uint128 repayAmount = 300e6;
+    //     uint256 removedCollateral = 25012712455278300958037;
+    //     // roll gt
+    //     {
+    //         ITermMaxOrder[] memory orders = new ITermMaxOrder[](0);
+    //         uint128[] memory amounts = new uint128[](0);
+    //         SwapUnit[] memory swapUnits = new SwapUnit[](2);
+    //         address pm1 = 0xB162B764044697cf03617C2EFbcB1f42e31E4766;
+    //         swapUnits[0] = SwapUnit({
+    //             adapter: pendleAdapter,
+    //             tokenIn: pt_susde_may_29,
+    //             tokenOut: susde,
+    //             swapData: abi.encode(pm1, removedCollateral, 0)
+    //         });
+    //         swapUnits[1] = SwapUnit({
+    //             adapter: odosAdapter,
+    //             tokenIn: susde,
+    //             tokenOut: usdc,
+    //             swapData: hex"0000000000000000000000009d39a5de30e57443bff2a8307a4256c8797a349700000000000000000000000000000000000000000000048103daed12389fbcc800000000000000000000000076edf8c155a1e0d9b2ad11b04d9671cbc25fee99000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb4800000000000000000000000000000000000000000000000000000005d443b21d00000000000000000000000000000000000000000000000000000005b66b4d45000000000000000000000000c47591f5c023e44931c78d5a993834875b79fb11000000000000000000000000000000000000000000000000000000000000014000000000000000000000000076edf8c155a1e0d9b2ad11b04d9671cbc25fee9900000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000084010206000d0100010201022700000304000d0101050400ff00000000000000007eb59373d63627be64b42406b108b602174b4ccc9d39a5de30e57443bff2a8307a4256c8797a3497dac17f958d2ee523a2206206994597c13d831ec7c02aaa39b223fe8d0a0e5c4f27ead9083c756cc288e6a0c2ddd26feeb64f039a2c41296fcb3f564000000000000000000000000000000000000000000000000000000000"
+    //         });
+    //         (IERC20 ft,, IGearingToken gt, address collateral,) = market.tokens();
+    //         console.log("usdc balance before:", IERC20(usdc).balanceOf(borrower));
+    //         gt.approve(address(router), gtId1);
 
-            SwapPath memory swapPath = SwapPath({
-                units: swapUnits,
-                recipient: address(router),
-                inputAmount: removedCollateral,
-                useBalanceOnchain: true
-            });
-            bytes memory data = abi.encode(FlashRepayOptions.REPAY, abi.encode(swapPath));
-            router.flashRepayFromCollForV2(borrower, market, gtId1, repayAmount, true, 0, removedCollateral, data);
-            console.log("usdc balance after:", IERC20(usdc).balanceOf(borrower));
+    //         SwapPath memory swapPath = SwapPath({
+    //             units: swapUnits,
+    //             recipient: address(router),
+    //             inputAmount: removedCollateral,
+    //             useBalanceOnchain: true
+    //         });
+    //         bytes memory data = abi.encode(FlashRepayOptions.REPAY, abi.encode(swapPath));
+    //         router.flashRepayFromCollForV2(borrower, market, gtId1, repayAmount, true, 0, removedCollateral, data);
+    //         console.log("usdc balance after:", IERC20(usdc).balanceOf(borrower));
 
-            (address owner, uint128 currentDebt, bytes memory currentCollateral) = gt.loanInfo(gtId1);
-            assertEq(owner, borrower, "borrower should be the same");
-            assertEq(currentDebt, oldDebt - repayAmount, "debt should be the same");
-            assertEq(
-                abi.decode(currentCollateral, (uint256)),
-                oldCollateral - removedCollateral,
-                "collateral should be the same"
-            );
-            vm.stopPrank();
-        }
+    //         (address owner, uint128 currentDebt, bytes memory currentCollateral) = gt.loanInfo(gtId1);
+    //         assertEq(owner, borrower, "borrower should be the same");
+    //         assertEq(currentDebt, oldDebt - repayAmount, "debt should be the same");
+    //         assertEq(
+    //             abi.decode(currentCollateral, (uint256)),
+    //             oldCollateral - removedCollateral,
+    //             "collateral should be the same"
+    //         );
+    //         vm.stopPrank();
+    //     }
 
-        vm.stopPrank();
-    }
+    //     vm.stopPrank();
+    // }
 
     function testFlashRepayPt() public {
         address borrower;
@@ -271,7 +271,7 @@ contract ForkPrdFlashRepay is ForkBaseTestV2 {
                 useBalanceOnchain: true
             });
             bytes memory data = abi.encode(FlashRepayOptions.REPAY, abi.encode(swapPath));
-            router2.flashRepayFromCollForV1(borrower, mmay_30, gt1, true, 0, data);
+            router2.flashRepayFromColl(borrower, mmay_30, gt1, true, 0, data);
             console.log("usdc balance after:", IERC20(usdc).balanceOf(borrower));
             vm.stopPrank();
         }

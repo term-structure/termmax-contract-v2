@@ -6,23 +6,11 @@ import {StakingBuffer} from "../tokens/StakingBuffer.sol";
 import {StableERC4626For4626} from "../tokens/StableERC4626For4626.sol";
 import {StableERC4626ForAave} from "../tokens/StableERC4626ForAave.sol";
 import {VariableERC4626ForAave} from "../tokens/VariableERC4626ForAave.sol";
+import {FactoryEventsV2} from "../events/FactoryEventsV2.sol";
+import {VersionV2} from "../VersionV2.sol";
 
-contract TermMax4626Factory {
+contract TermMax4626Factory is VersionV2 {
     using Clones for address;
-
-    event TermMax4626FactoryInitialized(
-        address aavePool,
-        uint16 aaveReferralCode,
-        address stableERC4626For4626Implementation,
-        address stableERC4626ForAaveImplementation,
-        address variableERC4626ForAaveImplementation
-    );
-
-    event StableERC4626For4626Created(address indexed caller, address stableERC4626For4626);
-
-    event StableERC4626ForAaveCreated(address indexed caller, address stableERC4626ForAave);
-
-    event VariableERC4626ForAaveCreated(address indexed caller, address variableERC4626ForAave);
 
     address public immutable stableERC4626For4626Implementation;
     address public immutable stableERC4626ForAaveImplementation;
@@ -32,7 +20,7 @@ contract TermMax4626Factory {
         stableERC4626For4626Implementation = address(new StableERC4626For4626());
         stableERC4626ForAaveImplementation = address(new StableERC4626ForAave(aavePool, aaveReferralCode));
         variableERC4626ForAaveImplementation = address(new VariableERC4626ForAave(aavePool, aaveReferralCode));
-        emit TermMax4626FactoryInitialized(
+        emit FactoryEventsV2.TermMax4626FactoryInitialized(
             aavePool,
             aaveReferralCode,
             stableERC4626For4626Implementation,
@@ -48,7 +36,7 @@ contract TermMax4626Factory {
     ) external returns (StableERC4626For4626) {
         StableERC4626For4626 instance = StableERC4626For4626(stableERC4626For4626Implementation.clone());
         instance.initialize(admin, thirdPool, bufferConfig);
-        emit StableERC4626For4626Created(msg.sender, address(instance));
+        emit FactoryEventsV2.StableERC4626For4626Created(msg.sender, address(instance));
         return instance;
     }
 
@@ -59,7 +47,7 @@ contract TermMax4626Factory {
     ) public returns (StableERC4626ForAave) {
         StableERC4626ForAave instance = StableERC4626ForAave(stableERC4626ForAaveImplementation.clone());
         instance.initialize(admin, underlying, bufferConfig);
-        emit StableERC4626ForAaveCreated(msg.sender, address(instance));
+        emit FactoryEventsV2.StableERC4626ForAaveCreated(msg.sender, address(instance));
         return instance;
     }
 
@@ -70,7 +58,7 @@ contract TermMax4626Factory {
     ) public returns (VariableERC4626ForAave) {
         VariableERC4626ForAave instance = VariableERC4626ForAave(variableERC4626ForAaveImplementation.clone());
         instance.initialize(admin, underlying, bufferConfig);
-        emit VariableERC4626ForAaveCreated(msg.sender, address(instance));
+        emit FactoryEventsV2.VariableERC4626ForAaveCreated(msg.sender, address(instance));
         return instance;
     }
 

@@ -19,6 +19,7 @@ import {OrderInitialParams} from "../ITermMaxOrderV2.sol";
 import {VersionV2} from "../VersionV2.sol";
 import {DelegateAble} from "../lib/DelegateAble.sol";
 import {MakerHelperEvents} from "../events/MakerHelperEvents.sol";
+import {MakerHelperErrors} from "../errors/MakerHelperErrors.sol";
 
 /**
  * @title MakerHelper
@@ -80,6 +81,7 @@ contract MakerHelper is UUPSUpgradeable, Ownable2StepUpgradeable, IERC721Receive
      * @notice Places an order and mints a GT token(the gt token will be linked to the order)
      * @dev This function is used to create a new order in the TermMax protocol
      * @param market The market to place the order in
+     * @param salt A unique salt for the order
      * @param collateralToMintGt Amount of collateral to mint GT tokens
      * @param debtTokenToDeposit Amount of debt tokens to deposit
      * @param ftToDeposit Amount of FT tokens to deposit
@@ -92,6 +94,7 @@ contract MakerHelper is UUPSUpgradeable, Ownable2StepUpgradeable, IERC721Receive
      */
     function placeOrderForV2(
         ITermMaxMarket market,
+        uint256 salt,
         uint256 collateralToMintGt,
         uint256 debtTokenToDeposit,
         uint128 ftToDeposit,
@@ -106,8 +109,11 @@ contract MakerHelper is UUPSUpgradeable, Ownable2StepUpgradeable, IERC721Receive
             IERC20(collateral).safeIncreaseAllowance(address(gt), collateralToMintGt);
             (initialParams.orderConfig.gtId,) = market.issueFt(initialParams.maker, 0, abi.encode(collateralToMintGt));
         }
-        ITermMaxOrder order = ITermMaxMarketV2(address(market)).createOrder(initialParams);
+        ITermMaxOrder order = ITermMaxMarketV2(address(market)).createOrder(initialParams, salt);
         if (delegateParams.delegator != address(0)) {
+            require(
+                delegateParams.delegatee == address(order), MakerHelperErrors.OrderAddressIsDifferentFromDelegatee()
+            );
             DelegateAble(address(gt)).setDelegateWithSignature(delegateParams, delegateSignature);
         }
 
