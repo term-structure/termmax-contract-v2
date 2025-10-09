@@ -183,9 +183,10 @@ contract TermMaxRouterV2 is
         assembly {
             tstore(T_CALLBACK_ADDRESS_STORE, market) // set callback address
         }
-        (, IERC20 xt, IGearingToken gt,,) = market.tokens();
+        (, IERC20 xt, IGearingToken gt,, IERC20 debtToken) = market.tokens();
         // transfer input tokens(may swap any token to debt token)
         _executeSwapPaths(inputPaths);
+        uint256 totalDebtToken = debtToken.balanceOf(address(this));
         // swap debt token to xt token if needed
         if (swapXtPath.units.length != 0) {
             netXtOut = _executeSwapUnits(address(this), swapXtPath.inputAmount, swapXtPath.units);
@@ -211,7 +212,7 @@ contract TermMaxRouterV2 is
             gtId,
             _msgSender(),
             recipient,
-            (swapXtPath.inputAmount).toUint128(),
+            (totalDebtToken).toUint128(),
             netXtOut.toUint128(),
             ltv,
             collateralData
