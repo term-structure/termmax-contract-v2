@@ -3,42 +3,42 @@
   "configs": {
     "configs_0": {
       "salt": 0,
-      "collateralCapForGt": "50000000000000000000000000",
-      "marketName": "USDT/wstETH@30NOV2025",
-      "marketSymbol": "USDT/wstETH@30NOV2025",
+      "collateralCapForGt": "3000000000000000000000",
+      "marketName": "WBTC/PT-tBTC-18DEC2025@18DEC2025",
+      "marketSymbol": "WBTC/PT-tBTC-18DEC2025@18DEC2025",
       "marketConfig": {
-        "maturity": "1764468000",
+        "maturity": "1766023200",
         "lendTakerFeeRatio": "2000000",
         "lendMakerFeeRatio": "2000000",
         "borrowTakerFeeRatio": "3000000",
         "borrowMakerFeeRatio": "3000000",
         "mintGtFeeRatio": "10000000",
-        "mintGtFeeRef": "6000000"
+        "mintGtFeeRef": "3000000"
       },
       "loanConfig": {
-        "liquidationLtv": "86000000",
-        "maxLtv": "80000000",
+        "liquidationLtv": "95000000",
+        "maxLtv": "93000000",
         "liquidatable": true
       },
       "underlyingConfig": {
-        "tokenAddr": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
-        "priceFeedAddr": "0x3E7d1eAB13ad0104d2750B8863b489D65364e32D",
-        "backupPriceFeedAddr": "0x0000000000000000000000000000000000000000",
+        "tokenAddr": "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+        "priceFeedAddr": "0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c",
+        "backupPriceFeedAddr": "0xAB7f623fb2F6fea6601D4350FA0E2290663C28Fc",
         "heartBeat": "86400",
-        "name": "Tether USD",
-        "symbol": "USDT",
-        "decimals": "6",
-        "initialPrice": "100045162"
+        "name": "Wrapped BTC",
+        "symbol": "WBTC",
+        "decimals": "8",
+        "initialPrice": "12245412787600"
       },
       "collateralConfig": {
-        "tokenAddr": "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0",
-        "priceFeedAddr": "0x164b276057258d81941e97B0a900D4C7B358bCe0",
-        "backupPriceFeedAddr": "0x164b276057258d81941e97B0a900D4C7B358bCe0",
+        "tokenAddr": "0x1C0c0dA2C46a36CE5537175477252E7909032710",
+        "priceFeedAddr": "0x42Dea152f6dA8F02498D93BcDDc0EE9d52e861F6",
+        "backupPriceFeedAddr": "0x0000000000000000000000000000000000000000",
         "heartBeat": "86400",
-        "name": "Wrapped liquid staked Ether 2.0",
-        "symbol": "wstETH",
+        "name": "PT Terminal WBTC 18DEC2025",
+        "symbol": "PT-tBTC-18DEC2025",
         "decimals": "18",
-        "initialPrice": "541105159542",
+        "initialPrice": "260000000000",
         "gtKeyIdentifier": "GearingTokenWithERC20"
       }
     }
