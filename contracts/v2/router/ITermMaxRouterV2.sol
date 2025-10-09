@@ -50,9 +50,10 @@ interface ITermMaxRouterV2 {
      * @notice Leverages a position
      * @dev Creates a leveraged position in the specified market
      *      input/output: =>, swap: ->
-     *      path0 (=> xt or => token -> xt) => router
-     *      case1 by debt token: path1 (=> debt token or => token -> debt token) => router
-     *      case2 by collateral token: path1 (=> collateral token or => token -> collateral token) => router
+     *      case1 by debt token: path0 (=> debt token or => token -> debt token) => router
+     *      case2 by collateral token: path0 (=> collateral token or => token -> collateral token) => router
+     *      optional path1: XT token => router (if you want to use existing XT)
+     *      swapXtPath XT token(optional) debt token -> xt token => router
      *      swapCollateralPath debt token -> collateral token => router
      * @param recipient Address to receive the leveraged position
      * @param market The market to leverage in
@@ -69,6 +70,7 @@ interface ITermMaxRouterV2 {
         uint128 maxLtv,
         bool isV1,
         SwapPath[] memory inputPaths,
+        SwapPath memory swapXtPath,
         SwapPath memory swapCollateralPath
     ) external returns (uint256 gtId, uint256 netXtOut);
 

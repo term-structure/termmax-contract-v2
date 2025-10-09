@@ -177,20 +177,27 @@ contract TermMaxRouterV2 is
         uint128 maxLtv,
         bool isV1,
         SwapPath[] memory inputPaths,
+        SwapPath memory swapXtPath,
         SwapPath memory swapCollateralPath
     ) external nonReentrant whenNotPaused returns (uint256 gtId, uint256 netXtOut) {
         assembly {
             tstore(T_CALLBACK_ADDRESS_STORE, market) // set callback address
         }
         (, IERC20 xt, IGearingToken gt,,) = market.tokens();
-        netXtOut = _executeSwapPaths(inputPaths)[0];
+        // transfer input tokens(may swap any token to debt token)
+        _executeSwapPaths(inputPaths);
+        // swap debt token to xt token if needed
+        if (swapXtPath.units.length != 0) {
+            netXtOut = _executeSwapUnits(address(this), swapXtPath.inputAmount, swapXtPath.units);
+        }
+        uint256 totalXt = xt.balanceOf(address(this));
         bytes memory callbackData = abi.encode(address(gt), swapCollateralPath.units);
         if (isV1) {
-            xt.safeIncreaseAllowance(address(market), netXtOut);
-            gtId = market.leverageByXt(recipient, netXtOut.toUint128(), callbackData);
+            xt.safeIncreaseAllowance(address(market), totalXt);
+            gtId = market.leverageByXt(recipient, totalXt.toUint128(), callbackData);
         } else {
             gtId = ITermMaxMarketV2(address(market)).leverageByXt(
-                address(this), recipient, netXtOut.toUint128(), callbackData
+                address(this), recipient, totalXt.toUint128(), callbackData
             );
         }
 
@@ -204,7 +211,7 @@ contract TermMaxRouterV2 is
             gtId,
             _msgSender(),
             recipient,
-            (inputPaths[1].inputAmount).toUint128(),
+            (swapXtPath.inputAmount).toUint128(),
             netXtOut.toUint128(),
             ltv,
             collateralData
