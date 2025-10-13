@@ -26,7 +26,7 @@ contract DeployMarketsScript is DeployBaseV2 {
     DeployedContracts coreContracts;
 
     address[] markets;
-    string configPath = "script/deploy/deploydata/eth-mainnet-markets-20251008-2.json";
+    string configPath = "script/deploy/deploydata/bnb-mainnet-markets-20251008-1.json";
 
     function setUp() public {
         // Load network from environment variable

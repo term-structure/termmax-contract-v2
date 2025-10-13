@@ -2,7 +2,7 @@
   "configNum": "7",
   "configs": {
     "configs_0": {
-      "salt": 0,
+      "salt": 1,
       "collateralCapForGt": "10000000000000000000000000",
       "marketName": "USDC/ARB@26DEC2025",
       "marketSymbol": "USDC/ARB@26DEC2025",
@@ -43,7 +43,7 @@
       }
     },
     "configs_1": {
-      "salt": 0,
+      "salt": 1,
       "collateralCapForGt": "5000000000000000000000000",
       "marketName": "USDC/PT-USDe-11DEC2025@18DEC2025",
       "marketSymbol": "USDC/PT-USDe-11DEC2025@18DEC2025",
@@ -84,7 +84,7 @@
       }
     },
     "configs_2": {
-      "salt": 0,
+      "salt": 1,
       "collateralCapForGt": "4400000000",
       "marketName": "USDC/WBTC@26DEC2025",
       "marketSymbol": "USDC/WBTC@26DEC2025",
@@ -125,7 +125,7 @@
       }
     },
     "configs_3": {
-      "salt": 0,
+      "salt": 1,
       "collateralCapForGt": "1100000000000000000000",
       "marketName": "USDC/WETH@26DEC2025",
       "marketSymbol": "USDC/WETH@26DEC2025",
@@ -166,7 +166,7 @@
       }
     },
     "configs_4": {
-      "salt": 0,
+      "salt": 1,
       "collateralCapForGt": "920000000000000000000",
       "marketName": "USDC/wstETH@26DEC2025",
       "marketSymbol": "USDC/wstETH@26DEC2025",
@@ -207,7 +207,7 @@
       }
     },
     "configs_5": {
-      "salt": 0,
+      "salt": 1,
       "collateralCapForGt": "1050000000000000000000",
       "marketName": "WETH/weETH@26DEC2025",
       "marketSymbol": "WETH/weETH@26DEC2025",
@@ -248,7 +248,7 @@
       }
     },
     "configs_6": {
-      "salt": 0,
+      "salt": 1,
       "collateralCapForGt": "930000000000000000000",
       "marketName": "WETH/wstETH@26DEC2025",
       "marketSymbol": "WETH/wstETH@26DEC2025",
