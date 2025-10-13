@@ -3,7 +3,6 @@
 # Check if required arguments are provided
 if [ "$#" -lt 2 ]; then
     echo "Usage: $0 <network> <command> [options]"
-    echo "Supported networks: eth-sepolia, arb-sepolia, eth-mainnet, arb-mainnet"
     echo ""
     echo "Commands:"
     echo "  1. Deployment Commands:"
@@ -22,14 +21,15 @@ if [ "$#" -lt 2 ]; then
     echo "Options:"
     echo "  --broadcast     Broadcast transactions (default: dry run)"
     echo "  --verify        Enable contract verification"
-    echo "  --tenderly      Enable verification on Tenderly"
     echo "  --debug         Show complete command with sensitive information (for debugging)"
+    echo "  --customverify  Use custom verifier URL and API key from env vars CUSTOM_VERIFIER_URL and CUSTOM_VERIFIER_API_KEY"
     exit 1
 fi
 
 NETWORK=$1
 COMMAND=$2
-shift 2  # Remove the first two arguments
+# get args from index 3
+ARGS=("${@:3}")
 
 # Parse the command to determine if it's a deployment or a script
 if [[ "$COMMAND" == deploy:* ]]; then
@@ -43,49 +43,7 @@ else
     exit 1
 fi
 
-# Default options (dry run without verification)
-BROADCAST=""
-VERIFY=""
-TENDERLY=""
-DEBUG=""
-
-# Parse remaining options
-while [[ $# -gt 0 ]]; do
-    case $1 in
-        --broadcast)
-            BROADCAST="--broadcast"
-            shift
-            ;;
-        --verify)
-            VERIFY="--verify"
-            shift
-            ;;
-        --tenderly)
-            TENDERLY="yes"
-            shift
-            ;;
-        --debug)
-            DEBUG="yes"
-            shift
-            ;;
-        *)
-            echo "Unknown option: $1"
-            exit 1
-            ;;
-    esac
-done
-
-# Validate network
-case $NETWORK in
-    "eth-sepolia"|"arb-sepolia"|"eth-mainnet"|"arb-mainnet"|"bnb-mainnet"|"bnb-testnet")
-        echo "Running on $NETWORK..."
-        ;;
-    *)
-        echo "Unsupported network: $NETWORK"
-        echo "Supported networks: eth-sepolia, arb-sepolia, eth-mainnet, arb-mainnet"
-        exit 1
-        ;;
-esac
+echo "Running on $NETWORK..."
 
 # If deploying, validate deployment type
 if [ "$OPERATION" = "deploy" ]; then
@@ -144,38 +102,24 @@ if [ -z "$ADMIN_ADDRESS" ]; then
     exit 1
 fi
 
-# Check Tenderly environment variables if --tenderly is specified
-if [ ! -z "$TENDERLY" ]; then
-    if [ -z "$TENDERLY_VERIFIER_URL" ]; then
-        echo "Error: Required environment variable TENDERLY_VERIFIER_URL is not set"
-        exit 1
-    fi
-    
-    if [ -z "$TENDERLY_ACCESS_KEY" ]; then
-        echo "Error: Required environment variable TENDERLY_ACCESS_KEY is not set"
-        exit 1
-    fi
-fi
 
+IS_L2=false
+IS_MAINNET=false
 # Check additional required variables for mainnet deployments
 if [[ $NETWORK == *"mainnet"* ]]; then
-    if [ -z "${!UNISWAP_V3_ROUTER_VAR}" ]; then
-        echo "Error: Required environment variable $UNISWAP_V3_ROUTER_VAR is not set"
-        exit 1
-    fi
-    if [ -z "${!ODOS_V2_ROUTER_VAR}" ]; then
-        echo "Error: Required environment variable $ODOS_V2_ROUTER_VAR is not set"
-        exit 1
-    fi
-    if [ -z "${!PENDLE_SWAP_V3_ROUTER_VAR}" ]; then
-        echo "Error: Required environment variable $PENDLE_SWAP_V3_ROUTER_VAR is not set"
-        exit 1
-    fi
+    IS_MAINNET=true
     if [ -z "${!ORACLE_TIMELOCK_VAR}" ]; then
         echo "Error: Required environment variable $ORACLE_TIMELOCK_VAR is not set"
         exit 1
     fi
 fi
+# Check whether L2 network
+if [[ $NETWORK == *"arb"* || $NETWORK == *"op"* ]]; then
+    IS_L2=true
+fi
+# set IS_L2 and IS_MAINNET to environment variables
+export IS_L2
+export IS_MAINNET
 
 # Determine the script path and name
 if [ "$OPERATION" = "deploy" ]; then
@@ -253,6 +197,27 @@ if [[ $NETWORK == *"mainnet"* ]]; then
 fi
 echo "==============================="
 
+VERIFY_PARAMS=()
+# Load custom verifier settings if specified
+if [[ " ${ARGS[*]} " == *" --customverify "* ]] && [[ " ${ARGS[*]} " == *" --verify "* ]]; then
+    # remove --customverify from ARGS
+    ARGS=("${ARGS[@]/--customverify}")
+    VERIFIER_URL_VAR="${NETWORK_UPPER}_VERIFIER_URL"
+    VERIFIER_API_KEY_VAR="${NETWORK_UPPER}_VERIFIER_API_KEY"
+    if [[ -z "${!VERIFIER_URL_VAR}" ]]; then
+        echo "Error: Custom verifier variables $VERIFIER_URL_VAR are not set"
+        exit 1
+    fi
+    VERIFIER_URL="${!VERIFIER_URL_VAR}"
+    # Add verifier URL and API key to arguments
+    VERIFY_PARAMS+=("--verifier-url" "$VERIFIER_URL")
+    echo "Using custom verifier URL: $VERIFIER_URL"
+    VERIFIER_API_KEY="${!VERIFIER_API_KEY_VAR}"
+    if [[ -n "$VERIFIER_API_KEY" ]]; then
+        VERIFY_PARAMS+=("--etherscan-api-key" "\"$VERIFIER_API_KEY\"")
+    fi
+fi
+
 # Export the network name for the Solidity script
 export NETWORK=$NETWORK
 
@@ -266,61 +231,12 @@ fi
 # Build the forge command
 # All scripts, including SubmitOracles and AcceptOracles, use the DEPLOYER_PRIVATE_KEY
 FORGE_CMD="forge script $SCRIPT_PATH --private-key $DEPLOYER_PRIVATE_KEY --rpc-url $RPC_URL"
+FORGE_CMD="$FORGE_CMD ${ARGS[@]} ${VERIFY_PARAMS[@]}"
 
-# Add optional flags if specified
-if [ ! -z "$BROADCAST" ]; then
-    FORGE_CMD="$FORGE_CMD $BROADCAST --slow"
-    
-    # Add Tenderly verification if specified
-    if [ ! -z "$TENDERLY" ]; then
-        FORGE_CMD="$FORGE_CMD --verifier-url $TENDERLY_VERIFIER_URL --etherscan-api-key $TENDERLY_ACCESS_KEY"
-    fi
-fi
-
-if [ ! -z "$VERIFY" ]; then
-    FORGE_CMD="$FORGE_CMD $VERIFY"
-fi
-
-# When printing the forge command, check if debug mode is enabled
-if [ ! -z "$DEBUG" ]; then
-    echo "WARNING: Debug mode enabled. Displaying complete command with sensitive information:"
-    echo "Executing: $FORGE_CMD"
-else
+if [[ "$FORGE_CMD" == *"--debug"* ]]; then
     # Mask sensitive information in normal mode
     MASKED_CMD=$(echo "$FORGE_CMD" | sed -E 's/(--private-key )[^ ]*/\1[MASKED]/g' | sed -E 's/(--rpc-url )[^ ]*/\1[MASKED]/g' | sed -E 's/(--verifier-url )[^ ]*/\1[MASKED]/g' | sed -E 's/(--etherscan-api-key )[^ ]*/\1[MASKED]/g')
     echo "Executing: $MASKED_CMD"
 fi
 
 eval $FORGE_CMD
-
-# Check if execution was successful
-if [ $? -eq 0 ]; then
-    if [ ! -z "$BROADCAST" ]; then
-        if [ "$OPERATION" = "deploy" ]; then
-            echo "[SUCCESS] ${TYPE} deployment to $NETWORK completed successfully!"
-        else
-            echo "[SUCCESS] Script $SCRIPT_NAME executed successfully on $NETWORK (Broadcast mode)!"
-        fi
-    else
-        if [ "$OPERATION" = "deploy" ]; then
-            echo "[SUCCESS] ${TYPE} dry run on $NETWORK completed successfully!"
-        else
-            echo "[SUCCESS] Script $SCRIPT_NAME dry run completed successfully on $NETWORK!"
-        fi
-    fi
-else
-    if [ ! -z "$BROADCAST" ]; then
-        if [ "$OPERATION" = "deploy" ]; then
-            echo "[ERROR] ${TYPE} deployment to $NETWORK failed!"
-        else
-            echo "[ERROR] Script $SCRIPT_NAME execution failed on $NETWORK (Broadcast mode)!"
-        fi
-    else
-        if [ "$OPERATION" = "deploy" ]; then
-            echo "[ERROR] ${TYPE} dry run on $NETWORK failed!"
-        else
-            echo "[ERROR] Script $SCRIPT_NAME dry run failed on $NETWORK!"
-        fi
-    fi
-    exit 1
-fi 
