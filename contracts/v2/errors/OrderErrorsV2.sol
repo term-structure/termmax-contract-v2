@@ -15,4 +15,8 @@ interface OrderErrorsV2 {
     /// @notice Error thrown when attempting to update fee config on an order
     /// The v2 orders call the fee config from the market and cannot be updated individually
     error FeeConfigCanNotBeUpdated();
+
+    /// @notice Error thrown when attempting to call updateOrder function on a v2 order
+    /// The v2 orders do not support the updateOrder function
+    error UpdateOrderFunctionDisabled();
 }

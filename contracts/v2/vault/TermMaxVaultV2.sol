@@ -130,10 +130,6 @@ contract TermMaxVaultV2 is
         return _marketWhitelist[market];
     }
 
-    function poolWhitelist(address pool_) external view virtual returns (bool) {
-        return _poolWhitelist[pool_];
-    }
-
     function timelock() external view virtual returns (uint256) {
         return _timelock;
     }
@@ -383,15 +379,13 @@ contract TermMaxVaultV2 is
         nonReentrant
         returns (uint256 shares)
     {
-        address caller = msg.sender;
         shares = previewWithdraw(amount);
         uint256 maxShares = maxRedeem(owner);
         if (shares > maxShares) {
             revert ERC4626ExceededMaxRedeem(owner, shares, maxShares);
         }
-
-        if (caller != owner) {
-            _spendAllowance(owner, caller, shares);
+        if (msg.sender != owner) {
+            _spendAllowance(owner, msg.sender, shares);
         }
 
         _delegateCall(abi.encodeCall(IOrderManagerV2.withdrawFts, (order, amount, recipient)));
@@ -419,15 +413,14 @@ contract TermMaxVaultV2 is
         returns (uint256 shares, uint256 collateralOut)
     {
         if (collateral == asset()) revert VaultErrorsV2.CollateralIsAsset();
-        address caller = msg.sender;
         shares = previewWithdraw(badDebtAmt);
         uint256 maxShares = maxRedeem(owner);
         if (shares > maxShares) {
             revert ERC4626ExceededMaxRedeem(recipient, shares, maxShares);
         }
 
-        if (caller != owner) {
-            _spendAllowance(owner, caller, shares);
+        if (msg.sender != owner) {
+            _spendAllowance(owner, msg.sender, shares);
         }
 
         _burn(owner, shares);
@@ -436,7 +429,7 @@ contract TermMaxVaultV2 is
             _delegateCall(abi.encodeCall(IOrderManager.dealBadDebt, (recipient, collateral, badDebtAmt))), (uint256)
         );
 
-        emit VaultEvents.DealBadDebt(caller, recipient, collateral, badDebtAmt, shares, collateralOut);
+        emit VaultEvents.DealBadDebt(msg.sender, recipient, collateral, badDebtAmt, shares, collateralOut);
     }
 
     // Guardian functions

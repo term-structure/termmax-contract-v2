@@ -94,7 +94,7 @@ contract OrderManagerV2 is VaultStorageV2, OnlyProxyCall, IOrderManagerV2 {
         _checkOrder(order);
         bytes memory deliveryData;
         (badDebt, deliveryData) = ITermMaxOrderV2(order).redeemAll(address(this));
-        deliveryCollateral = abi.decode(deliveryData, (uint256));
+        deliveryCollateral = deliveryData.length == 0 ? 0 : abi.decode(deliveryData, (uint256));
         if (badDebt != 0) {
             // store bad debt
             ITermMaxMarket market = ITermMaxOrder(order).market();
@@ -160,6 +160,7 @@ contract OrderManagerV2 is VaultStorageV2, OnlyProxyCall, IOrderManagerV2 {
     }
 
     function _depositToPoolOrNot(IERC20 asset, uint256 amount) internal {
+        if (amount == 0) return;
         IERC4626 pool = _pool;
         if (pool != IERC4626(address(0))) {
             // deposit to the pool
@@ -169,6 +170,7 @@ contract OrderManagerV2 is VaultStorageV2, OnlyProxyCall, IOrderManagerV2 {
     }
 
     function _withdrawFromPoolOrNot(IERC20 asset, address recipient, uint256 amount) internal {
+        if (amount == 0) return;
         IERC4626 pool = _pool;
         if (pool != IERC4626(address(0))) {
             // withdraw from the pool

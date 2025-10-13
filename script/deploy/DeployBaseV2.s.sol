@@ -7,7 +7,7 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
+import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import {TermMaxFactoryV2, ITermMaxFactory} from "contracts/v2/factory/TermMaxFactoryV2.sol";
 import {TermMaxRouterV2} from "contracts/v2/router/TermMaxRouterV2.sol";
 import {MakerHelper} from "contracts/v2/router/MakerHelper.sol";
@@ -41,6 +41,7 @@ import {OdosV2AdapterV2} from "contracts/v2/router/swapAdapters/OdosV2AdapterV2.
 import {PendleSwapV3AdapterV2} from "contracts/v2/router/swapAdapters/PendleSwapV3AdapterV2.sol";
 import {UniswapV3AdapterV2} from "contracts/v2/router/swapAdapters/UniswapV3AdapterV2.sol";
 import {TermMaxSwapAdapter} from "contracts/v2/router/swapAdapters/TermMaxSwapAdapter.sol";
+import {TerminalVaultAdapter} from "contracts/v2/router/swapAdapters/TerminalVaultAdapter.sol";
 import {AccessManagerV2, AccessManager} from "contracts/v2/access/AccessManagerV2.sol";
 import {StringHelper} from "../utils/StringHelper.sol";
 import {TermMaxPriceFeedFactoryV2} from "contracts/v2/factory/TermMaxPriceFeedFactoryV2.sol";
@@ -72,10 +73,12 @@ contract DeployBaseV2 is Script {
         PendleSwapV3AdapterV2 pendleSwapV3Adapter;
         ERC4626VaultAdapterV2 vaultAdapter;
         TermMaxSwapAdapter termMaxSwapAdapter;
+        TerminalVaultAdapter terminalVaultAdapter;
     }
 
     struct CoreParams {
         address deployerAddr;
+        address adminAddr;
         string network;
         bool isL2Network;
         bool isMainnet;
@@ -90,6 +93,197 @@ contract DeployBaseV2 is Script {
     }
 
     bytes32 constant GT_ERC20 = keccak256("GearingTokenWithERC20");
+
+    function readDeployData(string memory json) public view returns (DeployedContracts memory contracts) {
+        // read deployed contracts from json
+        // if (vm.keyExistsJson(json, ".contracts.accessManagerV2")) {
+        //     contracts.accessManager = AccessManagerV2(vm.parseJsonAddress(json, ".contracts.accessManagerV2"));
+        // }
+        if (vm.keyExistsJson(json, ".contracts.whitelistManager")) {
+            contracts.whitelistManager = WhitelistManager(vm.parseJsonAddress(json, ".contracts.whitelistManager"));
+        }
+        if (vm.keyExistsJson(json, ".contracts.factoryV2")) {
+            contracts.factory = TermMaxFactoryV2(vm.parseJsonAddress(json, ".contracts.factoryV2"));
+        }
+        if (vm.keyExistsJson(json, ".contracts.vaultFactoryV2")) {
+            contracts.vaultFactory = TermMaxVaultFactoryV2(vm.parseJsonAddress(json, ".contracts.vaultFactoryV2"));
+        }
+        if (vm.keyExistsJson(json, ".contracts.priceFeedFactoryV2")) {
+            contracts.priceFeedFactory =
+                TermMaxPriceFeedFactoryV2(vm.parseJsonAddress(json, ".contracts.priceFeedFactoryV2"));
+        }
+        if (vm.keyExistsJson(json, ".contracts.termMax4626Factory")) {
+            contracts.tmx4626Factory = TermMax4626Factory(vm.parseJsonAddress(json, ".contracts.termMax4626Factory"));
+        }
+        if (vm.keyExistsJson(json, ".contracts.oracleAggregatorV2")) {
+            contracts.oracle = IOracle(vm.parseJsonAddress(json, ".contracts.oracleAggregatorV2"));
+        }
+        if (vm.keyExistsJson(json, ".contracts.routerV2")) {
+            contracts.router = TermMaxRouterV2(vm.parseJsonAddress(json, ".contracts.routerV2"));
+        }
+        if (vm.keyExistsJson(json, ".contracts.makerHelper")) {
+            contracts.makerHelper = MakerHelper(vm.parseJsonAddress(json, ".contracts.makerHelper"));
+        }
+        if (vm.keyExistsJson(json, ".contracts.faucet")) {
+            contracts.faucet = Faucet(vm.parseJsonAddress(json, ".contracts.faucet"));
+        }
+        if (vm.keyExistsJson(json, ".contracts.marketViewer")) {
+            contracts.marketViewer = MarketViewer(vm.parseJsonAddress(json, ".contracts.marketViewer"));
+        }
+        if (vm.keyExistsJson(json, ".contracts.swapAdapterV2.swapAdapter")) {
+            contracts.swapAdapter = SwapAdapterV2(vm.parseJsonAddress(json, ".contracts.swapAdapterV2.swapAdapter"));
+        }
+        if (vm.keyExistsJson(json, ".contracts.swapAdapterV2.uniswapV3AdapterV2")) {
+            contracts.uniswapV3Adapter =
+                UniswapV3AdapterV2(vm.parseJsonAddress(json, ".contracts.swapAdapterV2.uniswapV3AdapterV2"));
+        }
+        if (vm.keyExistsJson(json, ".contracts.swapAdapterV2.odosV2AdapterV2")) {
+            contracts.odosV2Adapter =
+                OdosV2AdapterV2(vm.parseJsonAddress(json, ".contracts.swapAdapterV2.odosV2AdapterV2"));
+        }
+        if (vm.keyExistsJson(json, ".contracts.swapAdapterV2.pendleSwapV3AdapterV2")) {
+            contracts.pendleSwapV3Adapter =
+                PendleSwapV3AdapterV2(vm.parseJsonAddress(json, ".contracts.swapAdapterV2.pendleSwapV3AdapterV2"));
+        }
+        if (vm.keyExistsJson(json, ".contracts.swapAdapterV2.vaultAdapterV2")) {
+            contracts.vaultAdapter =
+                ERC4626VaultAdapterV2(vm.parseJsonAddress(json, ".contracts.swapAdapterV2.vaultAdapterV2"));
+        }
+        if (vm.keyExistsJson(json, ".contracts.swapAdapterV2.termMaxSwapAdapter")) {
+            contracts.termMaxSwapAdapter =
+                TermMaxSwapAdapter(vm.parseJsonAddress(json, ".contracts.swapAdapterV2.termMaxSwapAdapter"));
+        }
+        if (vm.keyExistsJson(json, ".contracts.swapAdapterV2.terminalVaultAdapter")) {
+            contracts.terminalVaultAdapter =
+                TerminalVaultAdapter(vm.parseJsonAddress(json, ".contracts.swapAdapterV2.terminalVaultAdapter"));
+        }
+    }
+
+    function writeAsJson(string memory filePath, CoreParams memory coreParams, DeployedContracts memory coreContracts)
+        internal
+    {
+        // Write deployment results to a JSON file with timestamp
+        string memory deploymentJson;
+
+        {
+            deploymentJson = string(
+                abi.encodePacked(
+                    "{\n",
+                    '  "network": "',
+                    coreParams.network,
+                    '",\n',
+                    '  "deployedAt": "',
+                    vm.toString(block.timestamp),
+                    '",\n',
+                    '  "gitBranch": "',
+                    getGitBranch(),
+                    '",\n',
+                    '  "gitCommitHash": "',
+                    vm.toString(getGitCommitHash()),
+                    '",\n',
+                    '  "blockInfo": {\n',
+                    '    "number": "',
+                    vm.toString(block.number),
+                    '",\n',
+                    '    "timestamp": "',
+                    vm.toString(block.timestamp),
+                    '"\n',
+                    "  },\n"
+                )
+            );
+        }
+        {
+            deploymentJson = string(
+                abi.encodePacked(
+                    deploymentJson,
+                    '  "deployer": "',
+                    vm.toString(coreParams.deployerAddr),
+                    '",\n',
+                    '  "admin": "',
+                    vm.toString(coreParams.adminAddr),
+                    '",\n',
+                    '  "contracts": {\n',
+                    '    "factoryV2": "',
+                    vm.toString(address(coreContracts.factory)),
+                    '",\n',
+                    '    "vaultFactoryV2": "',
+                    vm.toString(address(coreContracts.vaultFactory)),
+                    '",\n',
+                    '    "priceFeedFactoryV2": "',
+                    vm.toString(address(coreContracts.priceFeedFactory)),
+                    '",\n',
+                    '    "termMax4626Factory": "',
+                    vm.toString(address(coreContracts.tmx4626Factory)),
+                    '",\n',
+                    '    "whitelistManager": "',
+                    vm.toString(address(coreContracts.whitelistManager)),
+                    '",\n',
+                    '    "oracleAggregatorV2": "',
+                    vm.toString(address(coreContracts.oracle)),
+                    '",\n',
+                    '    "routerV2": "',
+                    vm.toString(address(coreContracts.router)),
+                    '",\n',
+                    '    "marketViewer": "',
+                    vm.toString(address(coreContracts.marketViewer)),
+                    '",\n',
+                    '    "makerHelper": "',
+                    vm.toString(address(coreContracts.makerHelper)),
+                    '",\n',
+                    '    "swapAdapterV2": '
+                )
+            );
+        }
+
+        {
+            deploymentJson = string(
+                abi.encodePacked(
+                    deploymentJson,
+                    coreParams.isMainnet
+                        ? string.concat(
+                            "{\n",
+                            '      "uniswapV3AdapterV2": "',
+                            vm.toString(address(coreContracts.uniswapV3Adapter)),
+                            '",\n',
+                            '      "odosV2AdapterV2": "',
+                            vm.toString(address(coreContracts.odosV2Adapter)),
+                            '",\n',
+                            '      "pendleSwapV3AdapterV2": "',
+                            vm.toString(address(coreContracts.pendleSwapV3Adapter)),
+                            '",\n',
+                            '      "vaultAdapterV2": "',
+                            vm.toString(address(coreContracts.vaultAdapter)),
+                            '",\n',
+                            '      "terminalVaultAdapter": "',
+                            vm.toString(address(coreContracts.terminalVaultAdapter)),
+                            '",\n',
+                            '      "termMaxSwapAdapter": "',
+                            vm.toString(address(coreContracts.termMaxSwapAdapter)),
+                            '"\n',
+                            "    }\n"
+                        )
+                        : string.concat(
+                            "{\n",
+                            '      "swapAdapter": "',
+                            vm.toString(address(coreContracts.swapAdapter)),
+                            '",\n',
+                            '      "termMaxSwapAdapter": "',
+                            vm.toString(address(coreContracts.termMaxSwapAdapter)),
+                            '"\n',
+                            "    },\n",
+                            '    "faucet": "',
+                            vm.toString(address(coreContracts.faucet)),
+                            '"\n'
+                        ),
+                    "  }\n",
+                    "}"
+                )
+            );
+        }
+
+        vm.writeFile(filePath, deploymentJson);
+        console.log("Deployment info written to:", filePath);
+    }
 
     function deployFactory(address admin) public returns (TermMaxFactoryV2 factory) {
         address tokenImplementation = address(new MintableERC20V2());
@@ -140,6 +334,16 @@ contract DeployBaseV2 is Script {
         bytes memory data = abi.encodeCall(MakerHelper.initialize, admin);
         address proxy = address(new ERC1967Proxy(address(implementation), data));
         makerHelper = MakerHelper(proxy);
+    }
+
+    function upgradeMakerHelper(AccessManagerV2 manager, address makerHelperProxy)
+        public
+        returns (MakerHelper makerHelper)
+    {
+        address implementation = address(new MakerHelper());
+        bytes memory data = bytes("");
+        manager.upgradeSubContract(UUPSUpgradeable(makerHelperProxy), address(implementation), data);
+        makerHelper = MakerHelper(makerHelperProxy);
     }
 
     function deployAccessManager(address admin) public returns (AccessManagerV2 accessManager) {
@@ -221,7 +425,8 @@ contract DeployBaseV2 is Script {
                 contracts.odosV2Adapter,
                 contracts.pendleSwapV3Adapter,
                 contracts.vaultAdapter,
-                contracts.termMaxSwapAdapter
+                contracts.termMaxSwapAdapter,
+                contracts.terminalVaultAdapter
             ) = deployAdapters(
                 address(contracts.accessManager),
                 address(contracts.whitelistManager),
@@ -232,12 +437,13 @@ contract DeployBaseV2 is Script {
                 // Pendle Swap V3 Router
                 params.pendleSwapV3Router
             );
-            adapters = new address[](5);
+            adapters = new address[](6);
             adapters[0] = address(contracts.uniswapV3Adapter);
             adapters[1] = address(contracts.odosV2Adapter);
             adapters[2] = address(contracts.pendleSwapV3Adapter);
             adapters[3] = address(contracts.vaultAdapter);
             adapters[4] = address(contracts.termMaxSwapAdapter);
+            adapters[5] = address(contracts.terminalVaultAdapter);
         } else {
             contracts.swapAdapter = new SwapAdapterV2(params.deployerAddr);
             contracts.termMaxSwapAdapter = new TermMaxSwapAdapter(address(contracts.whitelistManager));
@@ -267,7 +473,8 @@ contract DeployBaseV2 is Script {
             OdosV2AdapterV2 odosV2Adapter,
             PendleSwapV3AdapterV2 pendleSwapV3Adapter,
             ERC4626VaultAdapterV2 vaultAdapter,
-            TermMaxSwapAdapter termMaxSwapAdapter
+            TermMaxSwapAdapter termMaxSwapAdapter,
+            TerminalVaultAdapter terminalVaultAdapter
         )
     {
         // deploy access manager
@@ -279,6 +486,7 @@ contract DeployBaseV2 is Script {
         pendleSwapV3Adapter = new PendleSwapV3AdapterV2(address(pendleSwapV3Router));
         vaultAdapter = new ERC4626VaultAdapterV2();
         termMaxSwapAdapter = new TermMaxSwapAdapter(whitelistManagerAddr);
+        terminalVaultAdapter = new TerminalVaultAdapter();
     }
 
     function deployWhitelistManager(address admin) public returns (WhitelistManager whitelistManager) {

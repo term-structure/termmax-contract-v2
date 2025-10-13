@@ -394,22 +394,26 @@ abstract contract AbstractGearingTokenV2 is
         address collateralRecipient,
         bytes memory removedCollateral
     ) external virtual nonReentrant isOwnerOrDelegate(id, msg.sender) returns (bool repayAll, uint128 finalRepayAmt) {
+        GtConfig memory config = _config;
+        if (config.maturity <= block.timestamp) {
+            revert GearingTokenErrorsV2.GtIsExpired();
+        }
         LoanInfo memory loan;
         (loan, repayAll, finalRepayAmt) = _repay(id, repayAmt);
         loan.collateralData = _removeCollateral(loan, removedCollateral);
         if (!repayAll) {
-            ValueAndPrice memory valueAndPrice = _getValueAndPrice(_config, loan);
+            ValueAndPrice memory valueAndPrice = _getValueAndPrice(config, loan);
             uint128 ltv = _calculateLtv(valueAndPrice);
-            require(ltv <= _config.loanConfig.maxLtv, GtIsNotHealthy(id, ownerOf(id), ltv));
+            require(ltv <= config.loanConfig.maxLtv, GtIsNotHealthy(id, ownerOf(id), ltv));
         }
         loanMapping[id] = loan;
         // Transfer collateral to the recipient
         _transferCollateral(collateralRecipient, removedCollateral);
         // Transfer debt/ft tokens from caller to market
         if (byDebtToken) {
-            _config.debtToken.safeTransferFrom(msg.sender, marketAddr(), finalRepayAmt);
+            config.debtToken.safeTransferFrom(msg.sender, marketAddr(), finalRepayAmt);
         } else {
-            _config.ft.safeTransferFrom(msg.sender, marketAddr(), finalRepayAmt);
+            config.ft.safeTransferFrom(msg.sender, marketAddr(), finalRepayAmt);
         }
         emit GearingTokenEventsV2.RepayAndRemoveCollateral(id, finalRepayAmt, byDebtToken, removedCollateral);
     }

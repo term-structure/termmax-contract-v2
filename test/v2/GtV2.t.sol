@@ -113,9 +113,6 @@ contract GtTestV2 is Test {
         flashRepayer = new MockFlashRepayerV2(res.gt);
 
         vm.stopPrank();
-
-        vm.prank(maker);
-        res.order.updateOrder(orderConfig, 0, 0);
     }
 
     function testMintGtByIssueFt() public {
@@ -1869,6 +1866,29 @@ contract GtTestV2 is Test {
         assertEq(currentDebt, 0, "debt should remain zero");
         assertEq(
             abi.decode(currentCollateral, (uint256)), collateralAmt - removedCollateral, "collateral should be reduced"
+        );
+        vm.stopPrank();
+    }
+
+    function testRepayAndRemoveCollateralAfterMaturity() public {
+        uint128 debtAmt = 100e8;
+        uint256 collateralAmt = 1e18;
+        uint128 repayAmt = 50e8;
+        uint256 removedCollateral = 0.1e18;
+
+        vm.startPrank(sender);
+
+        (uint256 gtId,) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
+
+        res.debt.mint(sender, repayAmt);
+        res.debt.approve(address(res.gt), repayAmt);
+
+        vm.warp(marketConfig.maturity + 1);
+
+        bool byDebtToken = true;
+        vm.expectRevert(abi.encodeWithSelector(GearingTokenErrorsV2.GtIsExpired.selector));
+        (bool repayAll, uint128 finalRepayAmt) = GearingTokenWithERC20V2(address(res.gt)).repayAndRemoveCollateral(
+            gtId, repayAmt, byDebtToken, sender, abi.encode(removedCollateral)
         );
         vm.stopPrank();
     }

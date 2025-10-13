@@ -4,6 +4,8 @@ pragma solidity ^0.8.27;
 import "forge-std/Test.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 import {MarketConfig, FeeConfig, LoanConfig} from "contracts/v1/storage/TermMaxStorage.sol";
+import {VaultInitialParamsV2, IERC20, IERC4626} from "contracts/v2/storage/TermMaxStorageV2.sol";
+import {StakingBuffer} from "contracts/v2/tokens/StakingBuffer.sol";
 
 library JsonLoader {
     using stdJson for string;
@@ -40,6 +42,11 @@ library JsonLoader {
         UnderlyingConfig underlyingConfig;
         CollateralConfig collateralConfig;
         uint256 collateralCapForGt;
+    }
+
+    struct PoolConfig {
+        address asset;
+        StakingBuffer.BufferConfig bufferConfig;
     }
 
     Vm constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
@@ -136,5 +143,64 @@ library JsonLoader {
         config.loanConfig = loanConfig;
         config.underlyingConfig = underlyingConfig;
         config.collateralConfig = collateralConfig;
+    }
+
+    function getVaultConfigsFromJson(string memory jsonData)
+        internal
+        pure
+        returns (VaultInitialParamsV2[] memory initialParamsList)
+    {
+        uint256 configNum = uint256(vm.parseUint(vm.parseJsonString(jsonData, ".configNum")));
+        initialParamsList = new VaultInitialParamsV2[](configNum);
+        for (uint256 i; i < configNum; i++) {
+            VaultInitialParamsV2 memory initialParams = getVaultConfigFromJson(jsonData, i);
+            initialParamsList[i] = initialParams;
+        }
+    }
+
+    function getVaultConfigFromJson(string memory jsonData, uint256 index)
+        internal
+        pure
+        returns (VaultInitialParamsV2 memory initialParams)
+    {
+        string memory configPrefix = string.concat(".configs.configs_", vm.toString(index));
+        initialParams.curator = jsonData.readAddress(string.concat(configPrefix, ".curator"));
+        initialParams.guardian = jsonData.readAddress(string.concat(configPrefix, ".guardian"));
+        initialParams.timelock = uint64(vm.parseUint(jsonData.readString(string.concat(configPrefix, ".timelock"))));
+        initialParams.asset = IERC20(jsonData.readAddress(string.concat(configPrefix, ".asset")));
+        initialParams.pool = IERC4626(jsonData.readAddress(string.concat(configPrefix, ".pool")));
+        initialParams.maxCapacity =
+            uint256(vm.parseUint(jsonData.readString(string.concat(configPrefix, ".maxCapacity"))));
+        initialParams.name = jsonData.readString(string.concat(configPrefix, ".name"));
+        initialParams.symbol = jsonData.readString(string.concat(configPrefix, ".symbol"));
+        initialParams.performanceFeeRate =
+            uint32(vm.parseUint(jsonData.readString(string.concat(configPrefix, ".performanceFeeRate"))));
+        initialParams.minApy = uint32(vm.parseUint(jsonData.readString(string.concat(configPrefix, ".minApy"))));
+    }
+
+    function getPoolConfigsFromJson(string memory jsonData) internal pure returns (PoolConfig[] memory poolConfigs) {
+        uint256 configNum = uint256(vm.parseUint(vm.parseJsonString(jsonData, ".configNum")));
+        poolConfigs = new PoolConfig[](configNum);
+        for (uint256 i; i < configNum; i++) {
+            PoolConfig memory poolConfig = getPoolConfigFromJson(jsonData, i);
+            poolConfigs[i] = poolConfig;
+        }
+    }
+
+    function getPoolConfigFromJson(string memory jsonData, uint256 index)
+        internal
+        pure
+        returns (PoolConfig memory poolConfig)
+    {
+        string memory configPrefix = string.concat(".configs.configs_", vm.toString(index));
+        poolConfig.asset = jsonData.readAddress(string.concat(configPrefix, ".asset"));
+        StakingBuffer.BufferConfig memory bufferConfig;
+        bufferConfig.minimumBuffer =
+            uint256(vm.parseUint(jsonData.readString(string.concat(configPrefix, ".bufferConfig.minimumBuffer"))));
+        bufferConfig.maximumBuffer =
+            uint256(vm.parseUint(jsonData.readString(string.concat(configPrefix, ".bufferConfig.maximumBuffer"))));
+        bufferConfig.buffer =
+            uint256(vm.parseUint(jsonData.readString(string.concat(configPrefix, ".bufferConfig.buffer"))));
+        poolConfig.bufferConfig = bufferConfig;
     }
 }

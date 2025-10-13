@@ -1,0 +1,29 @@
+{
+  "configNum": 2,
+  "configs": {
+    "configs_0": {
+      "curator": "0x008c7dc790fa31e6ca19d8cb6d11c53f6a88df6c",
+      "guardian": "0x6383EDe871F8B0167905C2466505381CDcD9cC78",
+      "timelock": 86400,
+      "asset": "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+      "pool": "0x9d93F4994C35EF081B57CF83114c4a3dD270046a",
+      "maxCapacity": "50000000000000",
+      "name": "TermMax USDC Vault V2",
+      "symbol": "TermMax-USDC-Vault-V2",
+      "performanceFeeRate": 0,
+      "minApy": 0
+    },
+    "configs_1": {
+      "curator": "0x008c7dc790fa31e6ca19d8cb6d11c53f6a88df6c",
+      "guardian": "0x6383EDe871F8B0167905C2466505381CDcD9cC78",
+      "timelock": 86400,
+      "asset": "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1",
+      "pool": "0xBCd76D14dc50f2803BC9D93e4F9ECC00B8dAE38e",
+      "maxCapacity": "5000000000000000000000",
+      "name": "TermMax WETH Vault V2",
+      "symbol": "TermMax-WETH-Vault-V2",
+      "performanceFeeRate": 0,
+      "minApy": 0
+    }
+  }
+}

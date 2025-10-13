@@ -93,31 +93,29 @@ contract OrderTestV2 is Test {
 
     function testInvalidCurveCuts() public {
         vm.startPrank(maker);
+        uint256 virtualXtReserve = res.order.virtualXtReserve();
         {
             OrderConfig memory newOrderConfig = orderConfig;
             newOrderConfig.curveCuts.lendCurveCuts[0].offset = 0;
             vm.expectRevert(abi.encodeWithSelector(OrderErrors.InvalidCurveCuts.selector));
-            res.order.updateOrder(newOrderConfig, 0, 0);
+            res.order.setCurveAndPrice(virtualXtReserve, virtualXtReserve, type(uint128).max, newOrderConfig.curveCuts);
         }
 
         {
             OrderConfig memory newOrderConfig = orderConfig;
             newOrderConfig.curveCuts.borrowCurveCuts[0].offset = 0;
             vm.expectRevert(abi.encodeWithSelector(OrderErrors.InvalidCurveCuts.selector));
-            res.order.updateOrder(newOrderConfig, 0, 0);
+            res.order.setCurveAndPrice(virtualXtReserve, virtualXtReserve, type(uint128).max, newOrderConfig.curveCuts);
         }
 
         {
             OrderConfig memory newOrderConfig = orderConfig;
             newOrderConfig.curveCuts.borrowCurveCuts[1].offset = 0;
             vm.expectRevert(abi.encodeWithSelector(OrderErrors.InvalidCurveCuts.selector));
-            res.order.updateOrder(newOrderConfig, 0, 0);
+            res.order.setCurveAndPrice(virtualXtReserve, virtualXtReserve, type(uint128).max, newOrderConfig.curveCuts);
         }
 
         vm.stopPrank();
-
-        vm.prank(maker);
-        res.order.updateOrder(orderConfig, 0, 0);
     }
 
     function testBuyFt() public {
@@ -485,8 +483,9 @@ contract OrderTestV2 is Test {
         // Mint a GT
         (uint256 gtId,) = LoanUtils.fastMintGt(res, maker, 100e8, 1e18);
         DelegateAble(address(res.gt)).setDelegate(address(res.order), true);
-        orderConfig.gtId = gtId;
-        res.order.updateOrder(orderConfig, -150e8, 0);
+        res.order.setGeneralConfig(gtId, ISwapCallback(address(0)));
+
+        res.order.withdrawAssets(res.ft, maker, 150e8);
         vm.stopPrank();
 
         uint128 ftOutAmt = 151e8;
@@ -506,9 +505,10 @@ contract OrderTestV2 is Test {
         // Mint a GT
         (uint256 gtId,) = LoanUtils.fastMintGt(res, maker, 100e8, 1e18);
         DelegateAble(address(res.gt)).setDelegate(address(res.order), true);
+        res.order.setGeneralConfig(gtId, ISwapCallback(address(0)));
 
-        orderConfig.gtId = gtId;
-        res.order.updateOrder(orderConfig, -150e8, -150e8);
+        res.order.withdrawAssets(res.ft, maker, 150e8);
+        res.order.withdrawAssets(res.xt, maker, 150e8);
         assert(res.ft.balanceOf(address(res.order)) == 0);
         assert(res.xt.balanceOf(address(res.order)) == 0);
         vm.stopPrank();
@@ -527,7 +527,7 @@ contract OrderTestV2 is Test {
 
     function testRevertWhenIssueFt() public {
         vm.prank(maker);
-        res.order.updateOrder(orderConfig, -150e8, 0);
+        res.order.withdrawAssets(res.ft, maker, 150e8);
 
         uint128 ftOutAmt = 151e8;
         uint128 maxTokenIn = 150e8;
@@ -545,23 +545,10 @@ contract OrderTestV2 is Test {
 
         // Prepare new curve cuts
         OrderConfig memory newOrderConfig = JSONLoader.getOrderConfigFromJson(testdata, ".newOrderConfig");
-        int256 ftChangeAmt = 1e8;
-        int256 xtChangeAmt = -1e8;
 
-        deal(address(res.ft), maker, ftChangeAmt.toUint256());
-        res.ft.approve(address(res.order), ftChangeAmt.toUint256());
-
-        // Expect UpdateOrder event
-        vm.expectEmit();
-        emit OrderEvents.UpdateOrder(
-            newOrderConfig.curveCuts,
-            ftChangeAmt,
-            xtChangeAmt,
-            newOrderConfig.gtId,
-            newOrderConfig.maxXtReserve,
-            newOrderConfig.swapTrigger
+        res.order.setCurveAndPrice(
+            res.order.virtualXtReserve(), res.order.virtualXtReserve(), type(uint128).max, newOrderConfig.curveCuts
         );
-        res.order.updateOrder(newOrderConfig, ftChangeAmt, xtChangeAmt);
 
         // Verify curve was updated
         OrderConfig memory updatedConfig = res.order.orderConfig();
@@ -587,8 +574,6 @@ contract OrderTestV2 is Test {
                 updatedConfig.curveCuts.borrowCurveCuts[i].offset, newOrderConfig.curveCuts.borrowCurveCuts[i].offset
             );
         }
-        assertEq(res.xt.balanceOf(maker), (-xtChangeAmt).toUint256());
-        assertEq(res.ft.balanceOf(maker), 0);
 
         vm.stopPrank();
     }
@@ -597,7 +582,7 @@ contract OrderTestV2 is Test {
         vm.startPrank(sender);
 
         vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", sender));
-        res.order.updateOrder(orderConfig, 0, 0);
+        res.order.setCurveAndPrice(0, 0, type(uint128).max, orderConfig.curveCuts);
 
         vm.stopPrank();
     }
@@ -653,7 +638,7 @@ contract OrderTestV2 is Test {
 
         orderConfig.swapTrigger = callback;
         vm.startPrank(maker);
-        res.order.updateOrder(orderConfig, 0, 0);
+        res.order.setGeneralConfig(0, callback);
 
         res.debt.mint(maker, 150e8);
         res.debt.approve(address(res.market), 150e8);
@@ -727,16 +712,9 @@ contract OrderTestV2 is Test {
         OrderConfig memory testOrderConfig = res.order.orderConfig();
         testOrderConfig.curveCuts.borrowCurveCuts = new CurveCut[](0);
 
-        vm.expectEmit();
-        emit OrderEvents.UpdateOrder(
-            testOrderConfig.curveCuts,
-            0,
-            0,
-            testOrderConfig.gtId,
-            testOrderConfig.maxXtReserve,
-            ISwapCallback(address(0))
+        res.order.setCurveAndPrice(
+            res.order.virtualXtReserve(), res.order.virtualXtReserve(), type(uint128).max, testOrderConfig.curveCuts
         );
-        res.order.updateOrder(testOrderConfig, 0, 0);
         vm.stopPrank();
 
         vm.startPrank(sender);
@@ -759,16 +737,9 @@ contract OrderTestV2 is Test {
         OrderConfig memory testOrderConfig = res.order.orderConfig();
         testOrderConfig.curveCuts.lendCurveCuts = new CurveCut[](0);
 
-        vm.expectEmit();
-        emit OrderEvents.UpdateOrder(
-            testOrderConfig.curveCuts,
-            0,
-            0,
-            testOrderConfig.gtId,
-            testOrderConfig.maxXtReserve,
-            ISwapCallback(address(0))
+        res.order.setCurveAndPrice(
+            res.order.virtualXtReserve(), res.order.virtualXtReserve(), type(uint128).max, testOrderConfig.curveCuts
         );
-        res.order.updateOrder(testOrderConfig, 0, 0);
         vm.stopPrank();
 
         vm.startPrank(sender);
@@ -817,16 +788,9 @@ contract OrderTestV2 is Test {
         testOrderConfig.curveCuts.lendCurveCuts = new CurveCut[](0);
         testOrderConfig.curveCuts.borrowCurveCuts = new CurveCut[](0);
 
-        vm.expectEmit();
-        emit OrderEvents.UpdateOrder(
-            testOrderConfig.curveCuts,
-            0,
-            0,
-            testOrderConfig.gtId,
-            testOrderConfig.maxXtReserve,
-            ISwapCallback(address(0))
+        res.order.setCurveAndPrice(
+            res.order.virtualXtReserve(), res.order.virtualXtReserve(), type(uint128).max, testOrderConfig.curveCuts
         );
-        res.order.updateOrder(testOrderConfig, 0, 0);
         vm.stopPrank();
 
         (uint256 lendApr, uint256 borrowApr) = res.order.apr();
@@ -840,7 +804,9 @@ contract OrderTestV2 is Test {
         OrderConfig memory testOrderConfig = res.order.orderConfig();
         testOrderConfig.curveCuts.lendCurveCuts = new CurveCut[](0);
 
-        res.order.updateOrder(testOrderConfig, 0, 0);
+        res.order.setCurveAndPrice(
+            res.order.virtualXtReserve(), res.order.virtualXtReserve(), type(uint128).max, testOrderConfig.curveCuts
+        );
 
         (uint256 lendApr, uint256 borrowApr) = res.order.apr();
 
@@ -848,7 +814,9 @@ contract OrderTestV2 is Test {
 
         testOrderConfig = res.order.orderConfig();
         testOrderConfig.curveCuts.borrowCurveCuts = new CurveCut[](0);
-        res.order.updateOrder(testOrderConfig, 0, 0);
+        res.order.setCurveAndPrice(
+            res.order.virtualXtReserve(), res.order.virtualXtReserve(), type(uint128).max, testOrderConfig.curveCuts
+        );
 
         (lendApr, borrowApr) = res.order.apr();
 
@@ -1167,6 +1135,37 @@ contract OrderTestV2 is Test {
         }
     }
 
+    function testFuzz_Redeem(uint128 addDebt, uint128 addFt, uint128 addXt) public {
+        addDebt = uint128(bound(addDebt, 0, 1e30));
+        addFt = uint128(bound(addFt, 0, 1_000e8));
+        addXt = uint128(bound(addXt, 0, 1_000e8));
+
+        vm.startPrank(maker);
+        // Optionally leave residual FT on order
+        if (addFt > 0) {
+            // Mint FT/XT to maker, then transfer only FT to the order
+            res.debt.mint(maker, addFt);
+            res.debt.approve(address(res.market), addFt);
+            res.market.mint(maker, addFt);
+            res.ft.transfer(address(res.order), addFt);
+        }
+        // Optionally leave residual XT on order
+        if (addXt > 0) {
+            res.debt.mint(maker, addXt);
+            res.debt.approve(address(res.market), addXt);
+            res.market.mint(maker, addXt);
+            res.xt.transfer(address(res.order), addXt);
+        }
+        vm.stopPrank();
+        res.debt.mint(address(res.market), addDebt);
+
+        // Execute withdrawal as owner
+        vm.startPrank(maker);
+        vm.warp(marketConfig.maturity + 1 days); // move past maturity
+        res.order.redeemAll(maker);
+        vm.stopPrank();
+    }
+
     function testBorrowToken_SufficientBalances() public {
         address recipient = vm.randomAddress();
         uint256 amount = 10e8;
@@ -1198,10 +1197,9 @@ contract OrderTestV2 is Test {
         DelegateAble(address(res.gt)).setDelegate(address(res.order), true);
 
         // Update order to use this gtId and reduce FT so FT < amount while XT >= amount
-        OrderConfig memory cfg = orderConfig;
-        cfg.gtId = gtId;
         // Reduce FT by 70e8 so FT becomes 80e8 (given initial 150e8), keep XT unchanged (150e8)
-        res.order.updateOrder(cfg, -70e8, 0);
+        res.order.withdrawAssets(res.ft, maker, 70e8); // leave 70e8 FT on order
+        res.order.setGeneralConfig(gtId, ISwapCallback(address(0)));
 
         // Track GT debt before
         (, uint128 debtBefore,) = res.gt.loanInfo(gtId);

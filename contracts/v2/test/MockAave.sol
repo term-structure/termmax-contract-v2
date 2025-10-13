@@ -33,6 +33,9 @@ contract MockAave is ERC20, IAaveV3Pool {
     }
 
     function supply(address asset, uint256 amount, address onBehalfOf, uint16 /* referralCode */ ) external override {
+        if (amount == 0) {
+            revert("MockAave: amount 0");
+        }
         // Transfer tokens from sender to this contract
         IERC20(asset).transferFrom(msg.sender, address(this), amount);
         // Mint aTokens to the onBehalfOf address
@@ -40,6 +43,9 @@ contract MockAave is ERC20, IAaveV3Pool {
     }
 
     function withdraw(address asset, uint256 amount, address to) external override returns (uint256) {
+        if (amount == 0) {
+            revert("MockAave: amount 0");
+        }
         // Burn aTokens from sender
         _burn(msg.sender, amount);
         uint256 balance = IERC20(asset).balanceOf(address(this));

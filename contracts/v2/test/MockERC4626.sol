@@ -21,4 +21,30 @@ contract MockERC4626 is ERC4626, Pausable {
     function unpause() public {
         _unpause();
     }
+
+    function redeem(uint256 shares, address receiver, address owner) public override whenNotPaused returns (uint256) {
+        if (shares == 0) {
+            revert("MockERC4626: shares 0");
+        }
+        return super.redeem(shares, receiver, owner);
+    }
+
+    function withdraw(uint256 assets, address receiver, address owner)
+        public
+        override
+        whenNotPaused
+        returns (uint256)
+    {
+        if (assets == 0) {
+            revert("MockERC4626: assets 0");
+        }
+        return super.withdraw(assets, receiver, owner);
+    }
+
+    function deposit(uint256 assets, address receiver) public override whenNotPaused returns (uint256) {
+        if (assets == 0) {
+            revert("MockERC4626: assets 0");
+        }
+        return super.deposit(assets, receiver);
+    }
 }
