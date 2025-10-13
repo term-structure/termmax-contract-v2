@@ -329,6 +329,15 @@ contract DeployBaseV2 is Script {
         router = TermMaxRouterV2(routerProxy);
     }
 
+    function upgradeRouter(AccessManagerV2 manager, address routerProxy, bytes memory initData)
+        public
+        returns (TermMaxRouterV2 router)
+    {
+        TermMaxRouterV2 implementation = new TermMaxRouterV2();
+        manager.upgradeSubContract(UUPSUpgradeable(routerProxy), address(implementation), initData);
+        router = TermMaxRouterV2(routerProxy);
+    }
+
     function deployMakerHelper(address admin) public returns (MakerHelper makerHelper) {
         address implementation = address(new MakerHelper());
         bytes memory data = abi.encodeCall(MakerHelper.initialize, admin);
