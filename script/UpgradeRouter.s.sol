@@ -53,10 +53,10 @@ contract UpgradeRouter is DeployBaseV2 {
         }
         console.log("Using existing AccessManagerV2 at:", accessManagerAddr);
         coreContracts.accessManager = AccessManagerV2(accessManagerAddr);
-        if (address(coreContracts.router) == address(0)) {
-            revert("RouterV2 not deployed");
-        }
-        console.log("Using existing RouterV2 at:", address(coreContracts.router));
+        // if (address(coreContracts.router) == address(0)) {
+        //     revert("RouterV2 not deployed");
+        // }
+        // console.log("Using existing RouterV2 at:", address(coreContracts.router));
     }
 
     function run() public {
@@ -69,8 +69,8 @@ contract UpgradeRouter is DeployBaseV2 {
         // grant upgrade role to deployer
         coreContracts.accessManager.grantRole(coreContracts.accessManager.UPGRADER_ROLE(), coreParams.deployerAddr);
         console.log("Granted UPGRADE_ROLE to deployer:", coreParams.deployerAddr);
-        // Upgrade RouterV2 implementation
-        upgradeRouter(coreContracts.accessManager, address(coreContracts.router), "");
+        // // Upgrade RouterV2 implementation
+        // upgradeRouter(coreContracts.accessManager, address(coreContracts.router), "");
         vm.stopBroadcast();
 
         console.log("===== Git Info =====");
