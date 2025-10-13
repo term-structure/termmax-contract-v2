@@ -7,7 +7,7 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
+import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import {TermMaxFactoryV2, ITermMaxFactory} from "contracts/v2/factory/TermMaxFactoryV2.sol";
 import {TermMaxRouterV2} from "contracts/v2/router/TermMaxRouterV2.sol";
 import {MakerHelper} from "contracts/v2/router/MakerHelper.sol";
@@ -452,8 +452,6 @@ contract DeployBaseV2 is Script {
             adapters[1] = address(contracts.termMaxSwapAdapter);
         }
         // whitelist swap adapters
-        bytes32 whitelistRole = contracts.accessManager.WHITELIST_ROLE();
-        contracts.accessManager.grantRole(whitelistRole, params.deployerAddr);
         contracts.accessManager.batchSetWhitelist(
             contracts.whitelistManager, adapters, IWhitelistManager.ContractModule.ADAPTER, true
         );

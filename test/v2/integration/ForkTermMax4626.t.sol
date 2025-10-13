@@ -2,7 +2,7 @@
 pragma solidity ^0.8.27;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
+import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import {ITermMaxMarket} from "contracts/v1/ITermMaxMarket.sol";
 import {ITermMaxOrder} from "contracts/v1/ITermMaxOrder.sol";
 import {
