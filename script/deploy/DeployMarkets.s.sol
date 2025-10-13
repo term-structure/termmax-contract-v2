@@ -70,6 +70,9 @@ contract DeployMarketsScript is DeployBaseV2 {
         console.log("Price Feed Factory already deployed at:", address(coreContracts.priceFeedFactory));
 
         coreContracts.oracle = IOracle(vm.parseJsonAddress(json, ".contracts.oracleAggregatorV2"));
+        if (address(coreContracts.oracle) == address(0)) {
+            revert("Oracle not deployed");
+        }
         console.log("Oracle already deployed at:", address(coreContracts.oracle));
     }
 
