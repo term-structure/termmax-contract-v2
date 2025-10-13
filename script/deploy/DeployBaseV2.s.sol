@@ -452,8 +452,6 @@ contract DeployBaseV2 is Script {
             adapters[1] = address(contracts.termMaxSwapAdapter);
         }
         // whitelist swap adapters
-        bytes32 whitelistRole = contracts.accessManager.WHITELIST_ROLE();
-        contracts.accessManager.grantRole(whitelistRole, params.deployerAddr);
         contracts.accessManager.batchSetWhitelist(
             contracts.whitelistManager, adapters, IWhitelistManager.ContractModule.ADAPTER, true
         );
