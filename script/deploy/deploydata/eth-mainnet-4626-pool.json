@@ -1,14 +1,23 @@
 {
-    "configNum": 1,
+    "configNum": 2,
     "configs": {
         "configs_0": {
-            "asset": "0xdde3eC717f220Fc6A29D6a4Be73F91DA5b718e55",
-            "thirdPool": "0xcE22b5Fb17ccbc0C5d87DC2e0dF47DD71E3AdC0a",
+            "asset": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+            "thirdPool": "0x62fE596d59fB077c2Df736dF212E0AFfb522dC78",
             "bufferConfig": {
-                "minimumBuffer": 5000000000000000000000,
-                "maximumBuffer": 10000000000000000000000,
-                "buffer": 7000000000000000000000
-            }
+                "minimumBuffer": 5000000000,
+                "maximumBuffer": 10000000000,
+                "buffer": 7000000000
+                }
+        },
+        "configs_1": {
+            "asset": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+            "thirdPool": "0x6C26793c7F1e2785c09b460676e797b716f0Bc8E",
+            "bufferConfig": {
+                "minimumBuffer": 5000000000,
+                "maximumBuffer": 10000000000,
+                "buffer": 7000000000
+                }
         }
     }
 }
