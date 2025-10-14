@@ -1,0 +1,87 @@
+{
+  "configNum": "2",
+  "configs": {
+    "configs_0": {
+      "salt": 0,
+      "collateralCapForGt": "10000000000000",
+      "marketName": "USDU/wbravUSDC@19NOV2025",
+      "marketSymbol": "USDU/wbravUSDC@19NOV2025",
+      "marketConfig": {
+        "maturity": "1763517600",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "mintGtFeeRatio": "10000000",
+        "mintGtFeeRef": "6000000"
+      },
+      "loanConfig": {
+        "liquidationLtv": "86000000",
+        "maxLtv": "81700000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0xdde3eC717f220Fc6A29D6a4Be73F91DA5b718e55",
+        "priceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "backupPriceFeedAddr": "0x0000000000000000000000000000000000000000",
+        "heartBeat": "86400",
+        "name": "USDU",
+        "symbol": "USDU",
+        "decimals": "18",
+        "initialPrice": "99982000"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0x7309E1E2e74af170c69bdE8FCB30397f8697D5FF",
+        "priceFeedAddr": "0xeeF31c7d9F2E82e8A497b140cc60cc082Be4b94e",
+        "backupPriceFeedAddr": "0x0000000000000000000000000000000000000000",
+        "heartBeat": "86400",
+        "name": "Wrapped Avant+ DeFi Yield",
+        "symbol": "wbravUSDC",
+        "decimals": "6",
+        "initialPrice": "99995149",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    },
+    "configs_1": {
+      "salt": 0,
+      "collateralCapForGt": "3000000000000000000000",
+      "marketName": "USDU/wbrETH@19NOV2025",
+      "marketSymbol": "USDU/wbrETH@19NOV2025",
+      "marketConfig": {
+        "maturity": "1763517600",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "mintGtFeeRatio": "10000000",
+        "mintGtFeeRef": "6000000"
+      },
+      "loanConfig": {
+        "liquidationLtv": "91500000",
+        "maxLtv": "86920000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0xdde3eC717f220Fc6A29D6a4Be73F91DA5b718e55",
+        "priceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "backupPriceFeedAddr": "0x0000000000000000000000000000000000000000",
+        "heartBeat": "86400",
+        "name": "USDU",
+        "symbol": "USDU",
+        "decimals": "18",
+        "initialPrice": "99982000"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0x91094D333e018f81874D62E27522479BEC131b5f",
+        "priceFeedAddr": "0x67F6838e58859d612E4ddF04dA396d6DABB66Dc4",
+        "backupPriceFeedAddr": "0x0000000000000000000000000000000000000000",
+        "heartBeat": "86400",
+        "name": "Wrapped ETH+ Alpha Yield",
+        "symbol": "wbrETH",
+        "decimals": "18",
+        "initialPrice": "407426032995",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    }
+  }
+}
