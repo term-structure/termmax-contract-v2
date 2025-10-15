@@ -136,9 +136,7 @@ contract DeployOracle is DeployBaseV2 {
                 backupAggregator: config.oracleParams.backupAggregator
             });
             // submit to oracle aggregator v1
-            coreContracts.accessManager.submitPendingOracle(
-                coreContracts.oracle, config.asset, oracleParams
-            );
+            coreContracts.accessManager.submitPendingOracle(coreContracts.oracle, config.asset, oracleParams);
         }
 
         vm.stopBroadcast();
