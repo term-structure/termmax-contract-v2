@@ -14,4 +14,13 @@ interface IPancakeSwapV3Pool {
             uint32 feeProtocol,
             bool unlocked
         );
+    function observations(uint256 index)
+        external
+        view
+        returns (
+            uint32 blockTimestamp,
+            int56 tickCumulative,
+            uint160 secondsPerLiquidityCumulativeX128,
+            bool initialized
+        );
 }

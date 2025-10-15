@@ -13,11 +13,12 @@ contract TermMaxPancakeTWAPPriceFeed is TermMaxUniswapTWAPPriceFeed {
         (,, uint16 observationIndex, uint16 observationCardinality,,,) = IPancakeSwapV3Pool(_pool).slot0();
         if (observationCardinality <= 1) revert InsufficientObservationCardinality();
         uint16 oldestIndex = uint16((uint256(observationIndex) + 1) % observationCardinality);
-        (uint32 oldestTimestamp,,, bool oldestInitialized) = IUniswapV3Pool(_pool).observations(oldestIndex);
+        (uint32 oldestTimestamp,,, bool oldestInitialized) = IPancakeSwapV3Pool(_pool).observations(oldestIndex);
         uint256 currentTimestamp = block.timestamp;
 
         if (!oldestInitialized) {
-            (uint32 latestTimestamp,,, bool latestInitialized) = IUniswapV3Pool(_pool).observations(observationIndex);
+            (uint32 latestTimestamp,,, bool latestInitialized) =
+                IPancakeSwapV3Pool(_pool).observations(observationIndex);
             if (!latestInitialized) revert InsufficientObservationHistory();
             if (currentTimestamp - uint256(latestTimestamp) < _twapPeriod) revert InsufficientObservationHistory();
             return;

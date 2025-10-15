@@ -68,7 +68,7 @@ contract TermMaxUniswapTWAPPriceFeed is ITermMaxPriceFeed, VersionV2 {
         // Adjust the quoteAmount to have `decimals()` decimals
         uint256 standardizedPrice = (quoteAmount * 10 ** decimals()) / (10 ** quoteDecimals);
         answer = int256(standardizedPrice);
-        roundId = 1;
+        roundId = uint80(block.number);
         startedAt = block.timestamp - twapPeriod;
         updatedAt = block.timestamp;
         answeredInRound = 1;
