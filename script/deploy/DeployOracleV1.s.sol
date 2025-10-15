@@ -130,9 +130,14 @@ contract DeployOracle is DeployBaseV2 {
                 vm.toString(address(config.oracleParams.backupAggregator)),
                 "\n"
             );
-            // submit to oracle aggregator
+            IOracle.Oracle memory oracleParams = IOracle.Oracle({
+                aggregator: config.oracleParams.aggregator,
+                heartbeat: config.oracleParams.heartbeat,
+                backupAggregator: config.oracleParams.backupAggregator
+            });
+            // submit to oracle aggregator v1
             coreContracts.accessManager.submitPendingOracle(
-                IOracleV2(address(coreContracts.oracle)), config.asset, config.oracleParams
+                coreContracts.oracle, config.asset, oracleParams
             );
         }
 
