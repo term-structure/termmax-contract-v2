@@ -64,12 +64,11 @@ contract UpdateFeeConfig is DeployBaseV2 {
         coreContracts.accessManager = AccessManagerV2(accessManagerAddr);
 
         // Read markets from JSON file
-        string memory marketsPath = string.concat(
-            vm.projectRoot(), "/", coreParams.network, "-market-addresses.json"
-        );
+        string memory marketsPath =
+            string.concat(vm.projectRoot(), "/script/deploy/deploydata/", coreParams.network, "-market-addresses.json");
         if (vm.exists(marketsPath)) {
             string memory marketsJson = vm.readFile(marketsPath);
-            
+
             // Read stable markets
             uint256 stableTotal = vm.parseJsonUint(marketsJson, ".stable.total");
             for (uint256 i = 0; i < stableTotal; i++) {
@@ -78,7 +77,7 @@ contract UpdateFeeConfig is DeployBaseV2 {
                 stableMarkets.push(marketAddr);
             }
             console.log("Loaded", stableMarkets.length, "stable markets from JSON");
-            
+
             // Read other markets
             uint256 otherTotal = vm.parseJsonUint(marketsJson, ".others.total");
             for (uint256 i = 0; i < otherTotal; i++) {
@@ -97,7 +96,7 @@ contract UpdateFeeConfig is DeployBaseV2 {
         console.log("Deployer balance:", coreParams.deployerAddr.balance);
 
         vm.startBroadcast(deployerPrivateKey);
-        
+
         // Update stable markets fee config
         console.log("Updating fee config for", stableMarkets.length, "stable markets");
         for (uint256 i = 0; i < stableMarkets.length; i++) {
@@ -108,7 +107,7 @@ contract UpdateFeeConfig is DeployBaseV2 {
             config.feeConfig.mintGtFeeRef = stable_mintGtFeeRef;
             coreContracts.accessManager.updateMarketConfig(TermMaxMarketV2(market), config);
         }
-        
+
         // Update other markets fee config
         console.log("Updating fee config for", otherMarkets.length, "other markets");
         for (uint256 i = 0; i < otherMarkets.length; i++) {
@@ -119,7 +118,7 @@ contract UpdateFeeConfig is DeployBaseV2 {
             config.feeConfig.mintGtFeeRef = other_mintGtFeeRef;
             coreContracts.accessManager.updateMarketConfig(TermMaxMarketV2(market), config);
         }
-        
+
         vm.stopBroadcast();
 
         console.log("===== Git Info =====");
