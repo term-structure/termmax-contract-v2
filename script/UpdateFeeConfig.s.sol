@@ -83,8 +83,8 @@ contract UpdateFeeConfig is DeployBaseV2 {
             address market = markets[i];
             console.log("Update fee config for market:", market);
             MarketConfig memory config = TermMaxMarketV2(market).config();
-            config.feeConfig.mintGtFeeRatio = 0;
-            config.feeConfig.mintGtFeeRef = 0;
+            config.feeConfig.mintGtFeeRatio = 0.1e8;
+            config.feeConfig.mintGtFeeRef = 0.03e8; // 0.08e8 for USDC stables debt token; 0.03e8 for other debt tokens
             coreContracts.accessManager.updateMarketConfig(TermMaxMarketV2(market), config);
         }
         vm.stopBroadcast();
