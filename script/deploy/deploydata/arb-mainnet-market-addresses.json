@@ -40,7 +40,7 @@
     }
   },
   "others": {
-    "total": 4,
+    "total": 0,
     "market_0": {
       "address": "0x0ac485114f6a135dc10a731b859181c5f324fe55",
       "name": "WETH/wstETH@26DEC2025"
