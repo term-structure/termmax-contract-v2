@@ -1,0 +1,49 @@
+{
+  "total": 10,
+  "stable": {
+    "total": 5,
+    "market_0": {
+      "address": "0x3b51913b62bfdaf2ab22bd436059073324cf0aa0",
+      "name": "USDT/USD1@26DEC2025"
+    },
+    "market_1": {
+      "address": "0x3eed95f598ccd662c745f5a8dcde4bce18635a19",
+      "name": "USDT/satUSD@25DEC2025"
+    },
+    "market_2": {
+      "address": "0x8d8361466824163c381523321f09d10d7eaaabd4",
+      "name": "USDT/WBNB@26DEC2025"
+    },
+    "market_3": {
+      "address": "0x912943b1eaea9eafac6677e5abdba2de25ecd824",
+      "name": "USDT/PT-satUSD+-18DEC2025@25DEC2025"
+    },
+    "market_4": {
+      "address": "0xaff65c46565a42a38d832b76f7f2cbfdf2ede2ab",
+      "name": "USDT/BTCB@26DEC2025"
+    }
+  },
+  "others": {
+    "total": 5,
+    "market_0": {
+      "address": "0x339605fb36c1cf3091732043cd17be0932876c9f",
+      "name": "WBNB/ynBNBx@26DEC2025"
+    },
+    "market_1": {
+      "address": "0x35b096c502a530297d407cfc12b9e696d7b829f3",
+      "name": "WBNB/ynBNBx@26DEC2025"
+    },
+    "market_2": {
+      "address": "0x8e5ffef66e073f1d37df05c141f7bac1264cf27e",
+      "name": "WBNB/PT-ynBNBx-16OCT2025@17OCT2025"
+    },
+    "market_3": {
+      "address": "0x9d0745ecb0533c14873818aba4e6c14771567312",
+      "name": "WBNB/BTCB@26DEC2025"
+    },
+    "market_4": {
+      "address": "0x9f19da9dd2c6d74848e7bde249b267ce852762e1",
+      "name": "WBNB/BTCB@26DEC2025"
+    }
+  }
+}

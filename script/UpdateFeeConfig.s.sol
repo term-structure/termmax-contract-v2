@@ -14,7 +14,14 @@ contract UpdateFeeConfig is DeployBaseV2 {
     CoreParams coreParams;
     DeployedContracts coreContracts;
 
-    address[] markets;
+    address[] stableMarkets;
+    address[] otherMarkets;
+
+    // 0.08e8 for USDC/USDT/USDU stables debt token; 0.03e8 for other debt tokens
+    uint32 stable_mintGtFeeRatio = 0.1e8;
+    uint32 stable_mintGtFeeRef = 0.08e8;
+    uint32 other_mintGtFeeRatio = 0.1e8;
+    uint32 other_mintGtFeeRef = 0.03e8;
 
     function setUp() public {
         // Load network from environment variable
@@ -57,17 +64,29 @@ contract UpdateFeeConfig is DeployBaseV2 {
         coreContracts.accessManager = AccessManagerV2(accessManagerAddr);
 
         // Read markets from JSON file
-        string memory marketsPath =
-            string.concat(vm.projectRoot(), "/script/deploy/deploydata/", coreParams.network, "-market-addresses.json");
+        string memory marketsPath = string.concat(
+            vm.projectRoot(), "/", coreParams.network, "-market-addresses.json"
+        );
         if (vm.exists(marketsPath)) {
             string memory marketsJson = vm.readFile(marketsPath);
-            uint256 total = vm.parseJsonUint(marketsJson, ".total");
-            for (uint256 i = 0; i < total; i++) {
-                string memory key = string.concat(".market_", vm.toString(i));
+            
+            // Read stable markets
+            uint256 stableTotal = vm.parseJsonUint(marketsJson, ".stable.total");
+            for (uint256 i = 0; i < stableTotal; i++) {
+                string memory key = string.concat(".stable.market_", vm.toString(i), ".address");
                 address marketAddr = vm.parseJsonAddress(marketsJson, key);
-                markets.push(marketAddr);
+                stableMarkets.push(marketAddr);
             }
-            console.log("Loaded", markets.length, "markets from JSON");
+            console.log("Loaded", stableMarkets.length, "stable markets from JSON");
+            
+            // Read other markets
+            uint256 otherTotal = vm.parseJsonUint(marketsJson, ".others.total");
+            for (uint256 i = 0; i < otherTotal; i++) {
+                string memory key = string.concat(".others.market_", vm.toString(i), ".address");
+                address marketAddr = vm.parseJsonAddress(marketsJson, key);
+                otherMarkets.push(marketAddr);
+            }
+            console.log("Loaded", otherMarkets.length, "other markets from JSON");
         } else {
             console.log("Markets JSON file not found:", marketsPath);
         }
@@ -78,15 +97,29 @@ contract UpdateFeeConfig is DeployBaseV2 {
         console.log("Deployer balance:", coreParams.deployerAddr.balance);
 
         vm.startBroadcast(deployerPrivateKey);
-        // update market fee config
-        for (uint256 i = 0; i < markets.length; i++) {
-            address market = markets[i];
-            console.log("Update fee config for market:", market);
+        
+        // Update stable markets fee config
+        console.log("Updating fee config for", stableMarkets.length, "stable markets");
+        for (uint256 i = 0; i < stableMarkets.length; i++) {
+            address market = stableMarkets[i];
+            console.log("Update stable market:", market);
             MarketConfig memory config = TermMaxMarketV2(market).config();
-            config.feeConfig.mintGtFeeRatio = 0.1e8;
-            config.feeConfig.mintGtFeeRef = 0.03e8; // 0.08e8 for USDC stables debt token; 0.03e8 for other debt tokens
+            config.feeConfig.mintGtFeeRatio = stable_mintGtFeeRatio;
+            config.feeConfig.mintGtFeeRef = stable_mintGtFeeRef;
             coreContracts.accessManager.updateMarketConfig(TermMaxMarketV2(market), config);
         }
+        
+        // Update other markets fee config
+        console.log("Updating fee config for", otherMarkets.length, "other markets");
+        for (uint256 i = 0; i < otherMarkets.length; i++) {
+            address market = otherMarkets[i];
+            console.log("Update other market:", market);
+            MarketConfig memory config = TermMaxMarketV2(market).config();
+            config.feeConfig.mintGtFeeRatio = other_mintGtFeeRatio;
+            config.feeConfig.mintGtFeeRef = other_mintGtFeeRef;
+            coreContracts.accessManager.updateMarketConfig(TermMaxMarketV2(market), config);
+        }
+        
         vm.stopBroadcast();
 
         console.log("===== Git Info =====");

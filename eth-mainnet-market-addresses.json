@@ -1,0 +1,329 @@
+{
+  "total": 80,
+  "stable": {
+    "total": 55,
+    "market_0": {
+      "address": "0x02b34b833edc65fb9dd53546aee11179e1f43599",
+      "name": "USDC/PT-tUSDe-18DEC2025@25DEC2025"
+    },
+    "market_1": {
+      "address": "0x0416cd5a5ab81ecba4860f0f49a17b16ffc5f8f5",
+      "name": "USDC/PT-mMEV-30OCT2025@06NOV2025"
+    },
+    "market_2": {
+      "address": "0x059ae69950a7401943f64ecb4242ac0e88592841",
+      "name": "USDC/PT-sdeUSD-11DEC2025@12DEC2025"
+    },
+    "market_3": {
+      "address": "0x0d10e50ae374679a0fe7a542d8e47d0e5b54b37b",
+      "name": "USDC/yUSD@26DEC2025"
+    },
+    "market_4": {
+      "address": "0x15147b737bee000126632652a85d7a733b7505bc",
+      "name": "USDC/PT-stcUSD-29JAN2026@05FEB2026"
+    },
+    "market_5": {
+      "address": "0x17f5990eb5292559b1d612278534034e80214276",
+      "name": "USDC/PT-sUSDE-27NOV2025@03DEC2025"
+    },
+    "market_6": {
+      "address": "0x1991f7fe4aa16080a88f5296898ac39b4f86e77e",
+      "name": "USDC/mMEV@28NOV2025"
+    },
+    "market_7": {
+      "address": "0x1bf59d207a3feebb7a65a780ad24563908fb177c",
+      "name": "USDC/PT-ysUSDC-30OCT2025@31OCT2025"
+    },
+    "market_8": {
+      "address": "0x20a6ce844ded7cdfd34a5399276b1f71ba3e2fbd",
+      "name": "USDC/tUSDe@26DEC2025"
+    },
+    "market_9": {
+      "address": "0x22b4125cb0f2a87501b8897c23c3ecbe79bf6bc2",
+      "name": "USDC/PT-tUSDe-18DEC2025@25DEC2025"
+    },
+    "market_10": {
+      "address": "0x24b1ad574e4087bab86ce85af42cb4cb65d6ed82",
+      "name": "USDC/sdeUSD@26DEC2025"
+    },
+    "market_11": {
+      "address": "0x29bdce6673d974df3e9098bcfc9b5eafd03d1a1c",
+      "name": "USDC/PT-cUSD-29JAN2026@30JAN2026"
+    },
+    "market_12": {
+      "address": "0x2a93945bb136c0809f3066936a4b84d160d4f81d",
+      "name": "USDC/wsrUSD@26DEC2025"
+    },
+    "market_13": {
+      "address": "0x2b885440bfc0cc1356e36f663ea3cbce0f2a0135",
+      "name": "USDT/wstETH@30NOV2025"
+    },
+    "market_14": {
+      "address": "0x338f877385fd577a33c19c218c9ac7ad8ec15cf3",
+      "name": "USDC/Morpho PT@26DEC2025"
+    },
+    "market_15": {
+      "address": "0x3952f8a3771f60b07037892a9121f9f08f245e20",
+      "name": "USDC/PT-iUSD-4DEC2025@11DEC2025"
+    },
+    "market_16": {
+      "address": "0x3efd4b6cef1735e56f84acb3d617a894f3b5581e",
+      "name": "USDU/wbrETH@19NOV2025"
+    },
+    "market_17": {
+      "address": "0x40d2d385866398a77cdadeda209b232095ed925f",
+      "name": "USDC/WBTC@26DEC2025"
+    },
+    "market_18": {
+      "address": "0x41985aa97c6ab6176aec391393ee5ee0814e8df7",
+      "name": "USDC/mF-ONE@26DEC2025"
+    },
+    "market_19": {
+      "address": "0x49f24539e4407b6eb05b0a20afc3d862df8b8224",
+      "name": "USDC/PT-RLP-4DEC2025@05DEC2025"
+    },
+    "market_20": {
+      "address": "0x4ae5c9059a4c5e306e01d6adba08213f9308ebb2",
+      "name": "USDC/upUSDC@26DEC2025"
+    },
+    "market_21": {
+      "address": "0x5389d99d6f27a9be5930e9c97d4f7e958d086c70",
+      "name": "USDC/pUSDe@26DEC2025"
+    },
+    "market_22": {
+      "address": "0x59902e1f26ba8277803fac90b16fd5171b9a29e7",
+      "name": "USDC/sdeUSD@26DEC2025"
+    },
+    "market_23": {
+      "address": "0x63daf5b71ff2f9ddfae26c2cc2d66947c98a2c27",
+      "name": "USDC/mMEV@28NOV2025"
+    },
+    "market_24": {
+      "address": "0x663329aef2e702368c1fb86286944fbd0bdd8808",
+      "name": "USDC/upUSDC@26DEC2025"
+    },
+    "market_25": {
+      "address": "0x67811fa56b3142dc05def0a8449bb3218fc79e6a",
+      "name": "USDC/PT-stcUSD-29JAN2026@05FEB2026"
+    },
+    "market_26": {
+      "address": "0x6d547665768957fb481a30700cbd7ec35dacac18",
+      "name": "USDC/mEDGE@26DEC2025"
+    },
+    "market_27": {
+      "address": "0x71ef8b44013c5e45b0043d794ab57fdb8e9ac06c",
+      "name": "USDC/PT-sUSDE-27NOV2025@03DEC2025"
+    },
+    "market_28": {
+      "address": "0x73704413a1be86efa531c751a6b7c6a04de1522f",
+      "name": "USDC/PT-RLP-4DEC2025@11DEC2025"
+    },
+    "market_29": {
+      "address": "0x8670c753ba08caf010890798fdfceeb8fad96646",
+      "name": "USDU/wstETH@30NOV2025"
+    },
+    "market_30": {
+      "address": "0x91cfbffe825280e2eed995a17fe08c88635d7f0e",
+      "name": "USDC/PT-pUSDe-16OCT2025@17OCT2025"
+    },
+    "market_31": {
+      "address": "0x93eb5dd72bf0d3984c65caecd37f8d61d5d3e90b",
+      "name": "USDC/MC_PTs@26DEC2025"
+    },
+    "market_32": {
+      "address": "0x95d8867ccf8a64490dde3c4363147c53411691e8",
+      "name": "USDC/WBTC@26DEC2025"
+    },
+    "market_33": {
+      "address": "0x9bc1699deb08765da721f6691ef5933572dd5946",
+      "name": "USDC/tUSDe@18DEC2025"
+    },
+    "market_34": {
+      "address": "0xa15f4bb728b444fc74b6e9fa3ed5ac7a4f1cf919",
+      "name": "USDC/sUSDe@26DEC2025"
+    },
+    "market_35": {
+      "address": "0xaf0361fad6d7404b518323eade70d796cb5b4131",
+      "name": "USDC/yUSD@26DEC2025"
+    },
+    "market_36": {
+      "address": "0xb8d33503a851d2d44e02f14fb0321e900c7a89ac",
+      "name": "USDC/PT-cUSDO-20NOV2025@21NOV2025"
+    },
+    "market_37": {
+      "address": "0xbbf9b0a1d940c526c2b090b6d261508f2c790421",
+      "name": "USDC/PT-cUSD-29JAN2026@30JAN2026"
+    },
+    "market_38": {
+      "address": "0xc77622505ff4047076562695f275a508175e0130",
+      "name": "USDC/RLP@31OCT2025"
+    },
+    "market_39": {
+      "address": "0xc93ba4a5a7f6959c0a9aa24fa80a7393787ebcf1",
+      "name": "USDC/pUSDe@17OCT2025"
+    },
+    "market_40": {
+      "address": "0xc98f72cc892482dc79f3aaa9d5b97f5291cef79d",
+      "name": "USDC/liUSD-1w@31OCT2025"
+    },
+    "market_41": {
+      "address": "0xcbf4176b395a41cd4fa3a4b8584c96d01b819d13",
+      "name": "USDC/wsrUSD@26DEC2025"
+    },
+    "market_42": {
+      "address": "0xd3bad342fb73a01ce0d8af859b43e75e4bf9bad6",
+      "name": "USDC/PT-cUSDO-20NOV2025@27NOV2025"
+    },
+    "market_43": {
+      "address": "0xd5538e1ec675d20dacaf4b6b3805e7c58ec93d8c",
+      "name": "USDC/mBASIS@26DEC2025"
+    },
+    "market_44": {
+      "address": "0xd782a3e1aa90ec8f3f8dcb9f49701d5e07c2f806",
+      "name": "USDC/PT-mMEV-30OCT2025@06NOV2025"
+    },
+    "market_45": {
+      "address": "0xd88ac6110d2586bdda805117d3d92309fed0eb1b",
+      "name": "USDC/PT-RLP-4DEC2025@11DEC2025"
+    },
+    "market_46": {
+      "address": "0xe1a30e14625d617518cbbb15b47bdf94254cf6d0",
+      "name": "USDC/liUSD-1w@31OCT2025"
+    },
+    "market_47": {
+      "address": "0xe87f6fdc68594d921f9ead37c90f5ffbf6e7faba",
+      "name": "USDC/sUSDe@26DEC2025"
+    },
+    "market_48": {
+      "address": "0xebb58cc26309305456ecbeb58a0583d4db8e1583",
+      "name": "USDC/PT-iUSD-4DEC2025@11DEC2025"
+    },
+    "market_49": {
+      "address": "0xebf9095c04c59b2cb2f973bfff4361d8d60b0924",
+      "name": "USDC/cUSDO@26DEC2025"
+    },
+    "market_50": {
+      "address": "0xf2e6884a0520373bd92dfc49ce7d7ee69e6022bd",
+      "name": "USDC/pUSDe@17OCT2025"
+    },
+    "market_51": {
+      "address": "0xf5e0cf1da8abd93808bb489d2660b2cb4744c79e",
+      "name": "USDC/PT-sdeUSD-11DEC2025@12DEC2025"
+    },
+    "market_52": {
+      "address": "0xf8b740d3fbb217b7cbf9732c9dd39fbee8b933bb",
+      "name": "USDU/wbravUSDC@19NOV2025"
+    },
+    "market_53": {
+      "address": "0xf97b9e8dde69f8226cab1a35a61bc7fa6794b27c",
+      "name": "USDC/PT-ysUSDC-30OCT2025@31OCT2025"
+    },
+    "market_54": {
+      "address": "0xfdef4f8a278462605e0647ca0ad4bddfb57e32d3",
+      "name": "USDC/PT-pUSDe-16OCT2025@17OCT2025"
+    }
+  },
+  "others": {
+    "total": 25,
+    "market_0": {
+      "address": "0x041027907e3cfca29b657f2b96c96eee16d14396",
+      "name": "wstETH/ETH+@26DEC2025"
+    },
+    "market_1": {
+      "address": "0x04af5e9ca89113526cd486a93526eb821448d42f",
+      "name": "wstETH/PT-tETH-18DEC2025@25DEC2025"
+    },
+    "market_2": {
+      "address": "0x09dcf04ea52122bbd0d47f9b4f71f97ffc3b3534",
+      "name": "WETH/PT-tETH-18DEC2025@25DEC2025"
+    },
+    "market_3": {
+      "address": "0x0c31a313c054001a3a03513a44739bb1c3edb8fa",
+      "name": "WETH/PT-tETH-8JAN2026@30NOV2025"
+    },
+    "market_4": {
+      "address": "0x1efdf6b91ccdcc500aa30c89d758d92cdc716094",
+      "name": "WETH/PT-tETH-18DEC2025@25DEC2025"
+    },
+    "market_5": {
+      "address": "0x21b4acaa0307273c16665c431a387e2f8ccc063b",
+      "name": "WBTC/PT-tBTC-18DEC2025@18DEC2025"
+    },
+    "market_6": {
+      "address": "0x25ac84ea6fa6d837954492cfcfe7b5602ac7294a",
+      "name": "WETH/sUSDe@26DEC2025"
+    },
+    "market_7": {
+      "address": "0x2672bd427667d01b863f7737e775e0d6894aa59a",
+      "name": "WETH/ynETHx@26DEC2025"
+    },
+    "market_8": {
+      "address": "0x2a4a1c5e51d610d896a65bd58ea46125cfde066d",
+      "name": "WBTC/sUSDe@26DEC2025"
+    },
+    "market_9": {
+      "address": "0x2becb6ee585119a1872a39be38a248c71703ca5f",
+      "name": "WETH/weETH@26DEC2025"
+    },
+    "market_10": {
+      "address": "0x3cb36055f915957e9184e2f0a102f2459f17e409",
+      "name": "WETH/weETH@26DEC2025"
+    },
+    "market_11": {
+      "address": "0x491e8732642304996030d8669d708b3b3a5fa787",
+      "name": "wstETH/tETH@26DEC2025"
+    },
+    "market_12": {
+      "address": "0x4d86a8cecf8409266720b7d6a32f75c76e23868f",
+      "name": "WETH/tETH@26DEC2025"
+    },
+    "market_13": {
+      "address": "0x52a6ca734e708e9663d8a02825f131ae355561ba",
+      "name": "WETH/PT-tETH-18DEC2025@25DEC2025"
+    },
+    "market_14": {
+      "address": "0x54f20e70bc99e03bdf96b54b65d48d4689510288",
+      "name": "wstETH/ETH+@26DEC2025"
+    },
+    "market_15": {
+      "address": "0x57dd69467575fc22bbfecfd93da3e3fcfa9af04e",
+      "name": "WETH/wstETH@26DEC2025"
+    },
+    "market_16": {
+      "address": "0x5cd11fff7d131e5b4c61e3c6ee00a2d8a389aa12",
+      "name": "WETH/wstETH@26DEC2025"
+    },
+    "market_17": {
+      "address": "0x65f0a39337f34f85c95a7ebbd3be01604dec32f5",
+      "name": "WETH/amphrETH@28NOV2025"
+    },
+    "market_18": {
+      "address": "0x6cd1a19a8be20cf60d8df14ded29ed0ec635dc97",
+      "name": "wstETH/tETH@26DEC2025"
+    },
+    "market_19": {
+      "address": "0x8a13a2af707e7382a4a69b3c0e233d745c553cf7",
+      "name": "wstETH/PT-tETH-18DEC2025@25DEC2025"
+    },
+    "market_20": {
+      "address": "0x9de6683ec0ab1d2796f8fbd70127dbd6a64daadb",
+      "name": "WBTC/sUSDe@26DEC2025"
+    },
+    "market_21": {
+      "address": "0x9e0a93055f6e2e0b2c0d303759991c29eea17f82",
+      "name": "WETH/ETH+@26DEC2025"
+    },
+    "market_22": {
+      "address": "0xc1d1e9d2d3d6da50e099230081eb18d06e208bb9",
+      "name": "WETH/pufETH@26DEC2025"
+    },
+    "market_23": {
+      "address": "0xf51ae8810a5d821f3b695120eb5247af0620ec81",
+      "name": "WETH/amphrETH@28NOV2025"
+    },
+    "market_24": {
+      "address": "0xf57f3c578c04fcaffabc99b4766ccc4da3728895",
+      "name": "WETH/amphrETH@26DEC2025"
+    }
+  }
+}
