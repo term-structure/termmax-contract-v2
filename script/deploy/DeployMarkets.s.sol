@@ -26,7 +26,7 @@ contract DeployMarketsScript is DeployBaseV2 {
     DeployedContracts coreContracts;
 
     address[] markets;
-    string configPath = "script/deploy/deploydata/eth-mainnet-markets.json";
+    string configPath = "script/deploy/deploydata/hyperevm-mainnet-markets.json";
 
     function setUp() public {
         // Load network from environment variable
