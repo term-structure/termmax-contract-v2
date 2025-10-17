@@ -1,0 +1,32 @@
+{
+  "network": "bera-mainnet",
+  "deployedAt": "1759992520",
+  "gitBranch": "v2/deployment_v2_with_v1_router_and_adapters",
+  "gitCommitHash": "0x217e461dee56e46cd23cc198c90210ac78217fca",
+  "blockInfo": {
+    "number": "11541942",
+    "timestamp": "1759992520"
+  },
+  "deployer": "0x56E3665038C5F0b56Cc7D81aC66C86521274B251",
+  "admin": "0x8409a9C1A911CED491892c5694E43994c9d47E8f",
+  "contracts": {
+    "factoryV2": "0x4BC4F8f9B212B5a3F9f7Eeb35Ae1A91902670F7f",
+    "vaultFactoryV2": "0x65fC69DE62E11592E8Acf57a0c97535209090Ef1",
+    "priceFeedFactoryV2": "0x5832Cc589550CDc56e8880861b165fCfa3C10366",
+    "termMax4626Factory": "0x0000000000000000000000000000000000000000",
+    "whitelistManager": "0x6Cf2B79D1A2173339399a3ecB44086327c9ce308",
+    "oracleAggregatorV2": "0xf5c6664c5b33e3FC16afA43621650652FcD85d65",
+    "routerV2": "0xC7dE1A55758bDBa5CC6b6f7535006eE1349A6d37",
+    "routerV1_1_1": "0xb7634dB4f4710bb992118bC37d1F63e00e2704A4",
+    "marketViewer": "0xFa8BE638a78fa426C4228Df1002fD54fA48A6CAF",
+    "makerHelper": "0xbb35188CD8Ba0A85ED8C8406187cA6443203423d",
+    "swapAdapterV2": {
+      "uniswapV3AdapterV2": "0x0000000000000000000000000000000000000000",
+      "odosV2AdapterV2": "0x0000000000000000000000000000000000000000",
+      "pendleSwapV3AdapterV2": "0x0000000000000000000000000000000000000000",
+      "vaultAdapterV2": "0x0000000000000000000000000000000000000000",
+      "terminalVaultAdapter": "0x0000000000000000000000000000000000000000",
+      "termMaxSwapAdapter": "0x0000000000000000000000000000000000000000"
+    }
+  }
+}

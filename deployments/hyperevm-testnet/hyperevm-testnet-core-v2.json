@@ -1,0 +1,29 @@
+{
+  "network": "hyperevm-testnet",
+  "deployedAt": "1759914478",
+  "gitBranch": "v2/deployment_v2_with_v1_router_and_adapters",
+  "gitCommitHash": "0x37017ab104b14fa1fc7248c0913f2125abaae01c",
+  "blockInfo": {
+    "number": "34381179",
+    "timestamp": "1759914478"
+  },
+  "deployer": "0xE355d5D8aa52EF0FbbD037C4a3C5E6Fd659cf46B",
+  "admin": "0x81f314f70702Bbe89FEd0F2cFe6841950275E0b7",
+  "contracts": {
+    "factoryV2": "0x3b25e0b9AFff38620b7c070C0E21C49520F1933B",
+    "vaultFactoryV2": "0x8B212D2a4820d153e0Ee83402bCFC85cbE9E7f22",
+    "priceFeedFactoryV2": "0x1c15a7143944cb348C7B124234DD8837a8C18B0E",
+    "termMax4626Factory": "0x0000000000000000000000000000000000000000",
+    "whitelistManager": "0xd7eD0072B45ebdCB1CA181c0EA2a8Fc6D890F4DE",
+    "oracleAggregatorV2": "0x43D245c1106f38721A8bbd0022108DA02d8073a5",
+    "routerV2": "0xA9DDED0C8018e0bA8Ce7143B877ff05A021F5415",
+    "routerV1_1_1": "0x8e8c560e41F079CBB5b700A0848605BBCBe560D3",
+    "marketViewer": "0xA38B8b12d845338E7A87787cE7Fd751b3b9049E0",
+    "makerHelper": "0xeAfaCE42A57ecC25386e3F27AC5711CCc2433a09",
+    "swapAdapterV2": {
+      "swapAdapter": "0xaf6EE971A822A2dee53e1Fa4d97439330CEf1d69",
+      "termMaxSwapAdapter": "0x25eD29Fe93eb598e9a323643A7E127Ac570b030D"
+    },
+    "faucet": "0xc2573E2F2682B1b9C609B493ceA892EA8780Ccf8"
+  }
+}
