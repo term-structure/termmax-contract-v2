@@ -1,65 +1,229 @@
 {
-  "configNum": "2",
+  "configNum": "7",
   "configs": {
     "configs_0": {
       "salt": 0,
-      "collateralCapForGt": "10000000000000",
-      "marketName": "USDU/wbravUSDC@19NOV2025",
-      "marketSymbol": "USDU/wbravUSDC@19NOV2025",
+      "collateralCapForGt": "100000000000000000000",
+      "marketName": "WBTC/mevBTC@26DEC2025",
+      "marketSymbol": "WBTC/mevBTC@26DEC2025",
       "marketConfig": {
-        "maturity": "1763517600",
+        "maturity": "1766714400",
         "lendTakerFeeRatio": "2000000",
         "lendMakerFeeRatio": "2000000",
         "borrowTakerFeeRatio": "3000000",
         "borrowMakerFeeRatio": "3000000",
         "mintGtFeeRatio": "10000000",
-        "mintGtFeeRef": "6000000"
+        "mintGtFeeRef": "3000000"
       },
       "loanConfig": {
-        "liquidationLtv": "86000000",
-        "maxLtv": "81700000",
+        "liquidationLtv": "91500000",
+        "maxLtv": "87000000",
         "liquidatable": true
       },
       "underlyingConfig": {
-        "tokenAddr": "0xdde3eC717f220Fc6A29D6a4Be73F91DA5b718e55",
-        "priceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
-        "backupPriceFeedAddr": "0x0000000000000000000000000000000000000000",
+        "tokenAddr": "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+        "priceFeedAddr": "0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c",
+        "backupPriceFeedAddr": "0xAB7f623fb2F6fea6601D4350FA0E2290663C28Fc",
         "heartBeat": "86400",
-        "name": "USDU",
-        "symbol": "USDU",
-        "decimals": "18",
-        "initialPrice": "99982000"
+        "name": "Wrapped BTC",
+        "symbol": "WBTC",
+        "decimals": "8",
+        "initialPrice": "10902597000000"
       },
       "collateralConfig": {
-        "tokenAddr": "0x7309E1E2e74af170c69bdE8FCB30397f8697D5FF",
-        "priceFeedAddr": "0xeeF31c7d9F2E82e8A497b140cc60cc082Be4b94e",
+        "tokenAddr": "0xb64C014307622eB15046C66fF71D04258F5963DC",
+        "priceFeedAddr": "0x7f4223A5DB6e204Eb7306049AecAdC4A0C238E45",
         "backupPriceFeedAddr": "0x0000000000000000000000000000000000000000",
         "heartBeat": "86400",
-        "name": "Wrapped Avant+ DeFi Yield",
-        "symbol": "wbravUSDC",
-        "decimals": "6",
-        "initialPrice": "99995149",
+        "name": "Bitcoin MEV Capital",
+        "symbol": "mevBTC",
+        "decimals": "18",
+        "initialPrice": "10956491788079",
         "gtKeyIdentifier": "GearingTokenWithERC20"
       }
     },
     "configs_1": {
       "salt": 0,
-      "collateralCapForGt": "3000000000000000000000",
-      "marketName": "USDU/wbrETH@19NOV2025",
-      "marketSymbol": "USDU/wbrETH@19NOV2025",
+      "collateralCapForGt": "30000000000000000000000000",
+      "marketName": "USDC/PT-srUSDe-15JAN2026@22JAN2026",
+      "marketSymbol": "USDC/PT-srUSDe-15JAN2026@22JAN2026",
       "marketConfig": {
-        "maturity": "1763517600",
+        "maturity": "1769047200",
         "lendTakerFeeRatio": "2000000",
         "lendMakerFeeRatio": "2000000",
         "borrowTakerFeeRatio": "3000000",
         "borrowMakerFeeRatio": "3000000",
         "mintGtFeeRatio": "10000000",
-        "mintGtFeeRef": "6000000"
+        "mintGtFeeRef": "8000000"
       },
       "loanConfig": {
         "liquidationLtv": "91500000",
-        "maxLtv": "86920000",
+        "maxLtv": "87500000",
+        "liquidatable": false
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "priceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "backupPriceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "heartBeat": "86400",
+        "name": "USD Coin",
+        "symbol": "USDC",
+        "decimals": "6",
+        "initialPrice": "99989230"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0x1Fb3C5c35D95F48e48FFC8e36bCCe5CB5f29F57c",
+        "priceFeedAddr": "0xddBa815286BB102E660d0BfDcbD55c73aCdd6d03",
+        "backupPriceFeedAddr": "0x8320a3cE6Cb8B9cC9FfCA7baB88Ec73C189F3905",
+        "heartBeat": "86400",
+        "name": "PT Strata Senior USDe 15JAN2026",
+        "symbol": "PT-srUSDe-15JAN2026",
+        "decimals": "18",
+        "initialPrice": "99948435",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    },
+    "configs_2": {
+      "salt": 0,
+      "collateralCapForGt": "30000000000000000000000000",
+      "marketName": "USDC/PT-jrUSDe-15JAN2026@22JAN2026",
+      "marketSymbol": "USDC/PT-jrUSDe-15JAN2026@22JAN2026",
+      "marketConfig": {
+        "maturity": "1769047200",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "mintGtFeeRatio": "10000000",
+        "mintGtFeeRef": "8000000"
+      },
+      "loanConfig": {
+        "liquidationLtv": "91500000",
+        "maxLtv": "87500000",
+        "liquidatable": false
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "priceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "backupPriceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "heartBeat": "86400",
+        "name": "USD Coin",
+        "symbol": "USDC",
+        "decimals": "6",
+        "initialPrice": "10902597000000"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0x53F3373F0D811902405f91eB0d5cc3957887220D",
+        "priceFeedAddr": "0xdAe8fa4D565D8E7C803E75Bdf0F3fCb922E7299a",
+        "backupPriceFeedAddr": "0xe6E3B277bfEfd68D37B6D7b94070c78787626098",
+        "heartBeat": "86400",
+        "name": "PT Strata Junior USDe 15JAN2026",
+        "symbol": "PT-jrUSDe-15JAN2026",
+        "decimals": "18",
+        "initialPrice": "10956491788079",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    },
+    "configs_3": {
+      "salt": 0,
+      "collateralCapForGt": "30000000000000000000000000",
+      "marketName": "USDC/srUSDe@26DEC2025",
+      "marketSymbol": "USDC/srUSDe@26DEC2025",
+      "marketConfig": {
+        "maturity": "1766714400",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "mintGtFeeRatio": "10000000",
+        "mintGtFeeRef": "8000000"
+      },
+      "loanConfig": {
+        "liquidationLtv": "91500000",
+        "maxLtv": "87500000",
         "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "priceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "backupPriceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "heartBeat": "86400",
+        "name": "USD Coin",
+        "symbol": "USDC",
+        "decimals": "6",
+        "initialPrice": "99989230"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0x3d7d6fdf07EE548B939A80edbc9B2256d0cdc003",
+        "priceFeedAddr": "0xa569d910839Ae8865Da8F8e70FfFb0cBA869F961",
+        "backupPriceFeedAddr": "0xbC5FBcf58CeAEa19D523aBc76515b9AEFb5cfd58",
+        "heartBeat": "86400",
+        "name": "Strata Senior USDe",
+        "symbol": "srUSDe",
+        "decimals": "18",
+        "initialPrice": "99948435",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    },
+    "configs_4": {
+      "salt": 0,
+      "collateralCapForGt": "30000000000000000000000000",
+      "marketName": "USDC/jrUSDe@26DEC2025",
+      "marketSymbol": "USDC/jrUSDe@26DEC2025",
+      "marketConfig": {
+        "maturity": "1766714400",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "mintGtFeeRatio": "10000000",
+        "mintGtFeeRef": "8000000"
+      },
+      "loanConfig": {
+        "liquidationLtv": "91500000",
+        "maxLtv": "87500000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "priceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "backupPriceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
+        "heartBeat": "86400",
+        "name": "USD Coin",
+        "symbol": "USDC",
+        "decimals": "6",
+        "initialPrice": "99989230"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0xC58D044404d8B14e953C115E67823784dEA53d8F",
+        "priceFeedAddr": "0xa569d910839Ae8865Da8F8e70FfFb0cBA869F961",
+        "backupPriceFeedAddr": "0xbC5FBcf58CeAEa19D523aBc76515b9AEFb5cfd58",
+        "heartBeat": "86400",
+        "name": "Strata Junior USDe",
+        "symbol": "jrUSDe",
+        "decimals": "18",
+        "initialPrice": "99948435",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    },
+    "configs_5": {
+      "salt": 0,
+      "collateralCapForGt": "30000000000000000000000000",
+      "marketName": "USDU/srUSDe@14NOV2025",
+      "marketSymbol": "USDU/srUSDe@14NOV2025",
+      "marketConfig": {
+        "maturity": "1763085600",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "mintGtFeeRatio": "10000000",
+        "mintGtFeeRef": "8000000"
+      },
+      "loanConfig": {
+        "liquidationLtv": "91500000",
+        "maxLtv": "87500000",
+        "liquidatable": false
       },
       "underlyingConfig": {
         "tokenAddr": "0xdde3eC717f220Fc6A29D6a4Be73F91DA5b718e55",
@@ -69,17 +233,58 @@
         "name": "USDU",
         "symbol": "USDU",
         "decimals": "18",
-        "initialPrice": "99982000"
+        "initialPrice": "99989230"
       },
       "collateralConfig": {
-        "tokenAddr": "0x91094D333e018f81874D62E27522479BEC131b5f",
-        "priceFeedAddr": "0x67F6838e58859d612E4ddF04dA396d6DABB66Dc4",
+        "tokenAddr": "0x3d7d6fdf07EE548B939A80edbc9B2256d0cdc003",
+        "priceFeedAddr": "0xa569d910839Ae8865Da8F8e70FfFb0cBA869F961",
+        "backupPriceFeedAddr": "0xbC5FBcf58CeAEa19D523aBc76515b9AEFb5cfd58",
+        "heartBeat": "86400",
+        "name": "Strata Senior USDe",
+        "symbol": "srUSDe",
+        "decimals": "18",
+        "initialPrice": "99948435",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    },
+    "configs_6": {
+      "salt": 0,
+      "collateralCapForGt": "30000000000000000000000000",
+      "marketName": "USDU/jrUSDe@14NOV2025",
+      "marketSymbol": "USDU/jrUSDe@14NOV2025",
+      "marketConfig": {
+        "maturity": "1763085600",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "mintGtFeeRatio": "10000000",
+        "mintGtFeeRef": "8000000"
+      },
+      "loanConfig": {
+        "liquidationLtv": "91500000",
+        "maxLtv": "87500000",
+        "liquidatable": false
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0xdde3eC717f220Fc6A29D6a4Be73F91DA5b718e55",
+        "priceFeedAddr": "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6",
         "backupPriceFeedAddr": "0x0000000000000000000000000000000000000000",
         "heartBeat": "86400",
-        "name": "Wrapped ETH+ Alpha Yield",
-        "symbol": "wbrETH",
+        "name": "USDU",
+        "symbol": "USDU",
         "decimals": "18",
-        "initialPrice": "407426032995",
+        "initialPrice": "99989230"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0xC58D044404d8B14e953C115E67823784dEA53d8F",
+        "priceFeedAddr": "0xa569d910839Ae8865Da8F8e70FfFb0cBA869F961",
+        "backupPriceFeedAddr": "0xbC5FBcf58CeAEa19D523aBc76515b9AEFb5cfd58",
+        "heartBeat": "86400",
+        "name": "Strata Junior USDe",
+        "symbol": "jrUSDe",
+        "decimals": "18",
+        "initialPrice": "99948435",
         "gtKeyIdentifier": "GearingTokenWithERC20"
       }
     }
