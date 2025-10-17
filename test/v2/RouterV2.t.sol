@@ -781,6 +781,41 @@ contract RouterTestV2 is Test {
         vm.stopPrank();
     }
 
+    function testFlashRepayToGetCollateral() public {
+        vm.startPrank(sender);
+        uint128 debtAmt = 100e8;
+        (uint256 gtId,) = LoanUtils.fastMintGt(res, sender, debtAmt, 1e18);
+        (,, bytes memory collateralData) = res.gt.loanInfo(gtId);
+        uint256 collateralAmt = abi.decode(collateralData, (uint256));
+
+        uint256 mintTokenOut = 100e8;
+        SwapUnit[] memory units = new SwapUnit[](1);
+        units[0] = SwapUnit(address(adapter), address(res.collateral), address(res.debt), abi.encode(mintTokenOut));
+
+        SwapPath memory swapPaths = SwapPath({
+            units: units,
+            recipient: address(res.router),
+            inputAmount: collateralAmt / 2,
+            useBalanceOnchain: true
+        });
+        bytes memory callbackData = abi.encode(FlashRepayOptions.REPAY, abi.encode(swapPaths));
+        res.gt.approve(address(res.router), gtId);
+
+        // Check for FlashRepay event
+        vm.expectEmit(true, true, true, true);
+        emit RouterEventsV2.FlashRepay(address(res.gt), gtId, collateralAmt / 2);
+
+        res.router.flashRepayToGetCollateral(sender, res.market, gtId, 0, callbackData);
+
+        assertEq(res.collateral.balanceOf(sender), collateralAmt / 2);
+        assertEq(res.debt.balanceOf(sender), 0);
+
+        vm.expectRevert(abi.encodePacked(bytes4(keccak256("ERC721NonexistentToken(uint256)")), gtId));
+        res.gt.loanInfo(gtId);
+
+        vm.stopPrank();
+    }
+
     // function testFlashRepayFromCollateralPatrially() public {
     //     vm.startPrank(sender);
     //     uint128 debtAmt = 100e8;

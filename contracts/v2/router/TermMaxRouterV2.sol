@@ -281,19 +281,51 @@ contract TermMaxRouterV2 is
         uint256 expectedOutput,
         bytes memory callbackData
     ) external nonReentrant whenNotPaused returns (uint256 netTokenOut) {
-        (,, IGearingToken gtToken,, IERC20 debtToken) = market.tokens();
+        return _flashRepayFromCollateral(recipient, market, gtId, byDebtToken, expectedOutput, callbackData, false);
+    }
+
+    function _flashRepayFromCollateral(
+        address recipient,
+        ITermMaxMarket market,
+        uint256 gtId,
+        bool byDebtToken,
+        uint256 expectedOutput,
+        bytes memory callbackData,
+        bool collateralIsOutput
+    ) internal returns (uint256 netTokenOut) {
+        (,, IGearingToken gtToken, address collateral, IERC20 debtToken) = market.tokens();
         assembly {
             // set callback address
             tstore(T_CALLBACK_ADDRESS_STORE, gtToken)
         }
         gtToken.safeTransferFrom(_msgSender(), address(this), gtId, "");
         gtToken.flashRepay(gtId, byDebtToken, callbackData);
-        netTokenOut = debtToken.balanceOf(address(this));
+        IERC20 outputToken = collateralIsOutput ? IERC20(collateral) : debtToken;
+        netTokenOut = outputToken.balanceOf(address(this));
         if (netTokenOut < expectedOutput) {
-            revert InsufficientTokenOut(address(debtToken), expectedOutput, netTokenOut);
+            revert InsufficientTokenOut(address(outputToken), expectedOutput, netTokenOut);
         }
-        debtToken.safeTransfer(recipient, netTokenOut);
+        outputToken.safeTransfer(recipient, netTokenOut);
+        // check if there is any remaining token in the router if collateral is output token
+        if (collateralIsOutput) {
+            uint256 remainingDebtToken = debtToken.balanceOf(address(this));
+            if (remainingDebtToken != 0) {
+                debtToken.safeTransfer(recipient, remainingDebtToken);
+            }
+        }
         emit RouterEventsV2.FlashRepay(address(gtToken), gtId, netTokenOut);
+    }
+
+    function flashRepayToGetCollateral(
+        address recipient,
+        ITermMaxMarket market,
+        uint256 gtId,
+        uint256 expectedOutput,
+        bytes memory callbackData
+    ) external nonReentrant whenNotPaused returns (uint256 netTokenOut) {
+        /// @dev flashRepayToGetCollateral always repays by debt token
+        bool byDebtToken = true;
+        return _flashRepayFromCollateral(recipient, market, gtId, byDebtToken, expectedOutput, callbackData, true);
     }
 
     function rolloverGt(

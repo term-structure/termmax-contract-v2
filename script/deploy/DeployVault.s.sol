@@ -31,13 +31,8 @@ contract DeployVaults is DeployBaseV2 {
         coreParams.deployerAddr = vm.addr(deployerPrivateKey);
         adminAddr = vm.envAddress(adminVar);
 
-        coreParams.isMainnet = keccak256(abi.encodePacked(coreParams.network))
-            == keccak256(abi.encodePacked("eth-mainnet"))
-            || keccak256(abi.encodePacked(coreParams.network)) == keccak256(abi.encodePacked("arb-mainnet"))
-            || keccak256(abi.encodePacked(coreParams.network)) == keccak256(abi.encodePacked("bnb-mainnet"));
-        coreParams.isL2Network = (
-            keccak256(abi.encodePacked(toUpper(coreParams.network))) == keccak256(abi.encodePacked("arb-mainnet"))
-        ) || (keccak256(abi.encodePacked(toUpper(coreParams.network))) == keccak256(abi.encodePacked("arb-sepolia")));
+        coreParams.isMainnet = vm.envBool("IS_MAINNET");
+        coreParams.isL2Network = vm.envBool("IS_L2");
         if (coreParams.isMainnet) {
             string memory uniswapV3RouterVar = string.concat(networkUpper, "_UNISWAP_V3_ROUTER_ADDRESS");
             string memory odosV2RouterVar = string.concat(networkUpper, "_ODOS_V2_ROUTER_ADDRESS");

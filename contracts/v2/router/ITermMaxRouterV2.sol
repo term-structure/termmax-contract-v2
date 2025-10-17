@@ -135,6 +135,26 @@ interface ITermMaxRouterV2 {
     ) external returns (uint256 netTokenOut);
 
     /**
+     * @notice Repays debt from collateral and receives remaining collateral
+     * @dev Repays debt and closes a position
+     *      input/output: =>, swap: ->
+     *      swapPath: partial collateral -> (exact or not)debt token => router
+     * @param recipient Address to receive any remaining collateral
+     * @param market The market to repay debt in
+     * @param gtId ID of the GT token to repay
+     * @param expectedOutput The expect collateral token ouput amount after flashrepay
+     * @param callbackData The data for callback, abi.encode(FlashRepayOptions.FLASH_REPAY, abi.encode(swapPath))
+     * @return netTokenOut Actual amount of tokens received
+     */
+    function flashRepayToGetCollateral(
+        address recipient,
+        ITermMaxMarket market,
+        uint256 gtId,
+        uint256 expectedOutput,
+        bytes memory callbackData
+    ) external returns (uint256 netTokenOut);
+
+    /**
      * @notice Rollover GT position
      * @dev This function allows users to rollover their GT position to a new market or third-protocol
      * @param gtToken The GearingToken contract instance

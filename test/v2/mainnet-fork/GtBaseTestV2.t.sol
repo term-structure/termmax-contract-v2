@@ -150,8 +150,7 @@ abstract contract GtBaseTestV2 is ForkBaseTestV2 {
         res.order =
             res.market.createOrder(res.maker, res.maxXtReserve, ISwapCallback(address(0)), res.orderConfig.curveCuts);
 
-        res.swapAdapters.uniswapAdapter =
-            address(new UniswapV3AdapterV2(vm.parseJsonAddress(jsonData, ".routers.uniswapRouter")));
+        res.swapAdapters.uniswapAdapter = address(new UniswapV3AdapterV2());
         res.swapAdapters.pendleAdapter =
             address(new PendleSwapV3AdapterV2(vm.parseJsonAddress(jsonData, ".routers.pendleRouter")));
         res.swapAdapters.odosAdapter =

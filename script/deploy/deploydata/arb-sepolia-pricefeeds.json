@@ -1,0 +1,77 @@
+{
+    "configNum": 5,
+    "configs": {
+        "configs_0": {
+            "asset": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+            "needsDeployment": true,
+            "deployFeedParams": {
+                "_comment": "0 -> PriceFeedWithERC4626, 1 -> PriceFeedConverter, 2 -> PTWithPriceFeed, 3 -> ConstantPriceFeed",
+                "priceFeedType": 0, 
+                "underlyingPriceFeed": "0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612"
+            },
+            "oracleParams": {
+                "heartbeat": 86400,
+                "minPrice": 0,
+                "maxPrice": 0
+            }
+        },
+        "configs_1": {
+            "asset": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB49",
+            "needsDeployment": true,
+            "deployFeedParams": {
+                "_comment": "0 -> PriceFeedWithERC4626, 1 -> PriceFeedConverter, 2 -> PTWithPriceFeed, 3 -> ConstantPriceFeed",
+                "priceFeedType": 1, 
+                "priceFeed1": "0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612",
+                "priceFeed2": "0x694AA1769357215DE4FAC081bf1f309aDC325306"
+            },
+            "oracleParams": {
+                "heartbeat": 86400,
+                "minPrice": 1,
+                "maxPrice": 100
+            }
+        },
+        "configs_2": {
+            "asset": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB50",
+            "needsDeployment": true,
+            "deployFeedParams": {
+                "_comment": "0 -> PriceFeedWithERC4626, 1 -> PriceFeedConverter, 2 -> PTWithPriceFeed, 3 -> ConstantPriceFeed",
+                "priceFeedType": 2, 
+                "pendlePYLpOracle": "0x0000000000000000000000000000000000000001",
+                "market": "0x0000000000000000000000000000000000000002",
+                "duration": 900,
+                "underlyingPriceFeed": "0x0000000000000000000000000000000000000003"
+            },
+            "oracleParams": {
+                "heartbeat": 86400,
+                "minPrice": 0,
+                "maxPrice": 0
+            }
+        },
+        "configs_3": {
+            "asset": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB50",
+            "needsDeployment": true,
+            "deployFeedParams": {
+                "_comment": "0 -> PriceFeedWithERC4626, 1 -> PriceFeedConverter, 2 -> PTWithPriceFeed, 3 -> ConstantPriceFeed",
+                "priceFeedType": 3, 
+                "constantPrice": 100000000
+            },
+            "oracleParams": {
+                "heartbeat": 86400,
+                "minPrice": 0,
+                "maxPrice": 0
+            }
+        },
+        "configs_4": {
+            "asset": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+            "needsDeployment": false,
+            "oracleParams": {
+                "aggregator": "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
+                "heartbeat": 86400,
+                "backupAggregator": "0x1cA0d7E1fA7AFaC307180c2e0fBFe3b582A49cdA",
+                "backupHeartbeat": 86400,
+                "minPrice": 10,
+                "maxPrice": 2000
+            }
+        }
+    }
+}

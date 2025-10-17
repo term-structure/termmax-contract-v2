@@ -10,4 +10,15 @@ interface GearingTokenErrorsV2 {
     error GtIsExpired();
     /// @notice Error for Gearing Token id is duplicate when merging
     error DuplicateIdInMerge(uint256 id);
+
+    /// @notice The operation failed because the collateral capacity is exceeded
+    error CollateralCapacityExceeded();
+    /// @notice The operation failed because the collateral data is invalid
+    error InvalidCollateralData();
+    /// @notice The operation failed because cannot remove collateral with debt
+    error CannotRemoveCollateralWithDebt();
+    /// @notice The operation failed because gearing token do not support liquidation
+    error CannotAugmentDebtOnOnlyDeliveryGt();
+    /// @notice The operation failed because gearing token do not support liquidation
+    error OnlyFullRepaySupported();
 }
