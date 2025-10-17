@@ -55,4 +55,7 @@ interface GearingTokenEventsV2 {
         bool repayAll,
         bytes removedCollateral
     );
+
+    /// @notice Emitted when the collateral capacity is updated
+    event CollateralCapacityUpdated(uint256 newCapacity);
 }
