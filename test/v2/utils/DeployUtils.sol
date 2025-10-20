@@ -34,6 +34,7 @@ import {VaultInitialParamsV2} from "contracts/v2/storage/TermMaxStorageV2.sol";
 import {TermMaxVaultFactoryV2} from "contracts/v2/factory/TermMaxVaultFactoryV2.sol";
 import {MockAave} from "contracts/v2/test/MockAave.sol";
 import {WhitelistManager, IWhitelistManager} from "contracts/v2/access/WhitelistManager.sol";
+import {OnlyDeliveryGearingToken} from "contracts/v2/tokens/OnlyDeliveryGearingToken.sol";
 
 library DeployUtils {
     bytes32 constant GT_ERC20 = keccak256("GearingTokenWithERC20");
@@ -180,6 +181,66 @@ library DeployUtils {
 
         res.marketConfig = marketConfig;
         res.market = TermMaxMarketV2(res.factory.createMarket(GT_ERC20, initialParams, 0));
+
+        (res.ft, res.xt, res.gt,,) = res.market.tokens();
+    }
+
+    function deployOnlyDeliveryMarket(
+        address admin,
+        MarketConfig memory marketConfig,
+        uint32 maxLtv,
+        uint32 liquidationLtv
+    ) internal returns (Res memory res) {
+        res.factory = deployFactory(admin);
+        OnlyDeliveryGearingToken gtImplementation = new OnlyDeliveryGearingToken();
+        string memory name = "OnlyDeliveryGearingToken";
+        bytes32 key = keccak256(bytes(name));
+        res.factory.setGtImplement(name, address(gtImplementation));
+        res.collateral = new MockERC20("ETH", "ETH", 18);
+        res.debt = new MockERC20("DAI", "DAI", 8);
+
+        res.debtOracle = new MockPriceFeed(admin);
+        res.collateralOracle = new MockPriceFeed(admin);
+        res.oracle = deployOracle(admin, 0);
+
+        res.oracle.submitPendingOracle(
+            address(res.debt), IOracleV2.Oracle(res.debtOracle, res.debtOracle, 0, 0, 365 days, 0)
+        );
+        res.oracle.submitPendingOracle(
+            address(res.collateral), IOracleV2.Oracle(res.collateralOracle, res.collateralOracle, 0, 0, 365 days, 0)
+        );
+
+        res.oracle.acceptPendingOracle(address(res.debt));
+        res.oracle.acceptPendingOracle(address(res.collateral));
+
+        MockPriceFeed.RoundData memory roundData = MockPriceFeed.RoundData({
+            roundId: 1,
+            answer: int256(1e1 ** res.collateralOracle.decimals()),
+            startedAt: 0,
+            updatedAt: 0,
+            answeredInRound: 0
+        });
+        res.collateralOracle.updateRoundData(roundData);
+
+        MarketInitialParams memory initialParams = MarketInitialParams({
+            collateral: address(res.collateral),
+            debtToken: res.debt,
+            admin: admin,
+            gtImplementation: address(0),
+            marketConfig: marketConfig,
+            loanConfig: LoanConfig({
+                oracle: IOracle(address(res.oracle)),
+                liquidationLtv: liquidationLtv,
+                maxLtv: maxLtv,
+                liquidatable: false
+            }),
+            gtInitalParams: abi.encode(type(uint256).max),
+            tokenName: "DAI-ETH",
+            tokenSymbol: "DAI-ETH"
+        });
+
+        res.marketConfig = marketConfig;
+        res.market = TermMaxMarketV2(res.factory.createMarket(key, initialParams, 0));
 
         (res.ft, res.xt, res.gt,,) = res.market.tokens();
     }

@@ -439,8 +439,6 @@ contract DeployBaseV2 is Script {
             ) = deployAdapters(
                 address(contracts.accessManager),
                 address(contracts.whitelistManager),
-                // Uniswap V3 Router
-                params.uniswapV3Router,
                 // Odos V2 Router
                 params.odosV2Router,
                 // Pendle Swap V3 Router
@@ -470,7 +468,6 @@ contract DeployBaseV2 is Script {
     function deployAdapters(
         address accessManagerAddr,
         address whitelistManagerAddr,
-        address uniswapV3Router,
         address odosV2Router,
         address pendleSwapV3Router
     )
@@ -488,7 +485,7 @@ contract DeployBaseV2 is Script {
         AccessManagerV2 accessManager = AccessManagerV2(accessManagerAddr);
 
         // deploy and whitelist swap adapter
-        uniswapV3Adapter = new UniswapV3AdapterV2(address(uniswapV3Router));
+        uniswapV3Adapter = new UniswapV3AdapterV2();
         odosV2Adapter = new OdosV2AdapterV2(odosV2Router);
         pendleSwapV3Adapter = new PendleSwapV3AdapterV2(address(pendleSwapV3Router));
         vaultAdapter = new ERC4626VaultAdapterV2();

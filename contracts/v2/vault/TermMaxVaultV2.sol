@@ -138,10 +138,6 @@ contract TermMaxVaultV2 is
         return _pendingMarkets[market];
     }
 
-    function pendingPools() external view virtual returns (PendingAddress memory) {
-        return _pendingPool;
-    }
-
     function pendingTimelock() external view virtual returns (PendingUint192 memory) {
         return _pendingTimelock;
     }
