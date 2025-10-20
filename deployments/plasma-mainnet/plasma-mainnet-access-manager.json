@@ -1,0 +1,15 @@
+{
+  "network": "plasma-mainnet",
+  "deployedAt": "1759991077",
+  "gitBranch": "v2/deployment_v2_with_v1_router_and_adapters",
+  "gitCommitHash": "0x0x217e461dee56e46cd23cc198c90210ac78217fca",
+  "blockInfo": {
+    "number": "3061888",
+    "timestamp": "1759991077"
+  },
+  "deployer": "0x56E3665038C5F0b56Cc7D81aC66C86521274B251",
+  "admin": "0x8409a9C1A911CED491892c5694E43994c9d47E8f",
+  "contracts": {
+    "accessManager": "0xA76df00BB270F795DE4452c5478696A73A7b16e6"
+  }
+}

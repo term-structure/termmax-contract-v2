@@ -1,0 +1,13 @@
+{
+    "configNum": 1,
+    "configs": {
+        "configs_0": {
+            "thirdPool": "0xdAd5b746D0054d016D30A13C1B1a2e4C587c395d",
+            "bufferConfig": {
+                "minimumBuffer": 5000000000,
+                "maximumBuffer": 10000000000,
+                "buffer": 7000000000
+            }
+        }
+    }
+}

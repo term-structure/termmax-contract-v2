@@ -86,8 +86,7 @@ contract DeployCoreV2_20251002 is DeployBaseV2 {
         } else {
             console.log("Using existing WhitelistManager at:", address(coreContracts.whitelistManager));
         }
-        coreContracts.tmx4626Factory = new TermMax4626Factory(coreParams.AAVE_POOL, coreParams.AAVE_REFERRAL_CODE);
-        console.log("TermMax4626Factory deployed at:", address(coreContracts.tmx4626Factory));
+        console.log("Using existing TermMax4626Factory at:", address(coreContracts.tmx4626Factory));
 
         string memory configPath =
             string.concat(vm.projectRoot(), "/script/deploy/deploydata/", coreParams.network, "-aave-pool.json");
@@ -134,8 +133,6 @@ contract DeployCoreV2_20251002 is DeployBaseV2 {
         string memory deploymentPath = string.concat(
             vm.projectRoot(), "/deployments/", coreParams.network, "/", coreParams.network, "-core-v2.json"
         );
-
-        writeAsJson(deploymentPath, coreParams, coreContracts);
         writeToEnv();
     }
 
@@ -157,7 +154,8 @@ contract DeployCoreV2_20251002 is DeployBaseV2 {
                 "\nDEPLOYER_ADDRESS=",
                 vm.toString(vm.addr(deployerPrivateKey)),
                 "\nADMIN_ADDRESS=",
-                vm.toString(coreParams.adminAddr)
+                vm.toString(coreParams.adminAddr),
+                "\n"
             )
         );
         for (uint256 i = 0; i < aavePools.length; i++) {

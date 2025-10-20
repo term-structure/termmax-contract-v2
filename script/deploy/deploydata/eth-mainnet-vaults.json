@@ -1,0 +1,29 @@
+{
+  "configNum": 2,
+  "configs": {
+    "configs_0": {
+      "curator": "0x30988479C2E6a03E7fB65138b94762D41a733458",
+      "guardian": "0x72882eb5D27C7088DFA6DDE941DD42e5d184F0ef",
+      "timelock": 86400,
+      "asset": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "pool": "0x2FcAAbAAc3099FE1021AF6484fBA3D3ca8ab3E29",
+      "maxCapacity": "20000000000000",
+      "name": "TermMax USDC Reactor",
+      "symbol": "TMUR-USDC",
+      "performanceFeeRate": 5000000,
+      "minApy": 0
+    },
+    "configs_1": {
+      "curator": "0x67460001C991708c6A6BAFc511a60c2E414D7Ecf",
+      "guardian": "0xf1a9676B03Dd3B2066214D2aD8B4B59ED6642C53",
+      "timelock": 86400,
+      "asset": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "pool": "0x4605593D0aDA76786BEa026e7B62aF1c0619E833",
+      "maxCapacity": "100000000000000",
+      "name": "Keyrock USDC",
+      "symbol": "TMKR-USDC",
+      "performanceFeeRate": 10000000,
+      "minApy": 0
+    }
+  }
+}

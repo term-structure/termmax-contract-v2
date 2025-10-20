@@ -1,0 +1,15 @@
+{
+  "network": "hyperevm-mainnet",
+  "deployedAt": "1759982081",
+  "gitBranch": "v2/deployment_v2_with_v1_router_and_adapters",
+  "gitCommitHash": "0x0xf8e51e161b39daa93addcd89d771395b970e44f0",
+  "blockInfo": {
+    "number": "15991425",
+    "timestamp": "1759982081"
+  },
+  "deployer": "0x56E3665038C5F0b56Cc7D81aC66C86521274B251",
+  "admin": "0x586cD9E9D310e22D9f76c2447470A9D77d7935f1",
+  "contracts": {
+    "accessManager": "0x9498764f0c62257B83A04e2A757De30908EC793d"
+  }
+}

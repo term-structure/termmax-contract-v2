@@ -6,6 +6,7 @@ import {stdJson} from "forge-std/StdJson.sol";
 import {MarketConfig, FeeConfig, LoanConfig} from "contracts/v1/storage/TermMaxStorage.sol";
 import {VaultInitialParamsV2, IERC20, IERC4626} from "contracts/v2/storage/TermMaxStorageV2.sol";
 import {StakingBuffer} from "contracts/v2/tokens/StakingBuffer.sol";
+import {IOracleV2, AggregatorV3Interface} from "contracts/v2/oracle/OracleAggregatorV2.sol";
 
 library JsonLoader {
     using stdJson for string;
@@ -33,6 +34,31 @@ library JsonLoader {
         string gtKeyIdentifier;
     }
 
+    enum PriceFeedType {
+        PriceFeedWithERC4626,
+        PriceFeedConverter,
+        PTWithPriceFeed,
+        ConstantPriceFeed
+    }
+
+    struct PriceFeedDeployParams {
+        PriceFeedType priceFeedType;
+        address underlyingPriceFeed; // for PriceFeedWithERC4626 or PTWithPriceFeed
+        address priceFeed1; // for PriceFeedConverter
+        address priceFeed2; // for PriceFeedConverter
+        address pendlePYLpOracle; // for PTWithPriceFeed
+        address market; // for PTWithPriceFeed
+        uint32 duration; // for PTWithPriceFeed
+        int256 constantPrice; // for ConstantPriceFeed
+    }
+
+    struct OracleConfig {
+        address asset;
+        bool needsDeployment;
+        PriceFeedDeployParams deployFeedParams;
+        IOracleV2.Oracle oracleParams;
+    }
+
     struct Config {
         string marketName;
         string marketSymbol;
@@ -46,6 +72,7 @@ library JsonLoader {
 
     struct PoolConfig {
         address asset;
+        address thirdPool;
         StakingBuffer.BufferConfig bufferConfig;
     }
 
@@ -178,7 +205,7 @@ library JsonLoader {
         initialParams.minApy = uint32(vm.parseUint(jsonData.readString(string.concat(configPrefix, ".minApy"))));
     }
 
-    function getPoolConfigsFromJson(string memory jsonData) internal pure returns (PoolConfig[] memory poolConfigs) {
+    function getPoolConfigsFromJson(string memory jsonData) internal view returns (PoolConfig[] memory poolConfigs) {
         uint256 configNum = uint256(vm.parseUint(vm.parseJsonString(jsonData, ".configNum")));
         poolConfigs = new PoolConfig[](configNum);
         for (uint256 i; i < configNum; i++) {
@@ -189,11 +216,16 @@ library JsonLoader {
 
     function getPoolConfigFromJson(string memory jsonData, uint256 index)
         internal
-        pure
+        view
         returns (PoolConfig memory poolConfig)
     {
         string memory configPrefix = string.concat(".configs.configs_", vm.toString(index));
-        poolConfig.asset = jsonData.readAddress(string.concat(configPrefix, ".asset"));
+        if (vm.keyExistsJson(jsonData, string.concat(configPrefix, ".thirdPool"))) {
+            poolConfig.thirdPool = jsonData.readAddress(string.concat(configPrefix, ".thirdPool"));
+        }
+        if (vm.keyExistsJson(jsonData, string.concat(configPrefix, ".asset"))) {
+            poolConfig.asset = jsonData.readAddress(string.concat(configPrefix, ".asset"));
+        }
         StakingBuffer.BufferConfig memory bufferConfig;
         bufferConfig.minimumBuffer =
             uint256(vm.parseUint(jsonData.readString(string.concat(configPrefix, ".bufferConfig.minimumBuffer"))));
@@ -202,5 +234,70 @@ library JsonLoader {
         bufferConfig.buffer =
             uint256(vm.parseUint(jsonData.readString(string.concat(configPrefix, ".bufferConfig.buffer"))));
         poolConfig.bufferConfig = bufferConfig;
+    }
+
+    function getOracleConfigsFromJson(string memory jsonData)
+        internal
+        pure
+        returns (OracleConfig[] memory oracleConfigs)
+    {
+        uint256 configNum = uint256(vm.parseUint(vm.parseJsonString(jsonData, ".configNum")));
+        oracleConfigs = new OracleConfig[](configNum);
+        for (uint256 i; i < configNum; i++) {
+            OracleConfig memory oracleConfig = getOracleConfigFromJson(jsonData, i);
+            oracleConfigs[i] = oracleConfig;
+        }
+    }
+
+    function getOracleConfigFromJson(string memory jsonData, uint256 index)
+        internal
+        pure
+        returns (OracleConfig memory oracleConfig)
+    {
+        string memory configPrefix = string.concat(".configs.configs_", vm.toString(index));
+        oracleConfig.asset = jsonData.readAddress(string.concat(configPrefix, ".asset"));
+        oracleConfig.needsDeployment =
+            vm.parseBool(jsonData.readString(string.concat(configPrefix, ".needsDeployment")));
+        if (!oracleConfig.needsDeployment) {
+            oracleConfig.oracleParams.aggregator =
+                AggregatorV3Interface(jsonData.readAddress(string.concat(configPrefix, ".oracleParams.aggregator")));
+            oracleConfig.oracleParams.backupAggregator = AggregatorV3Interface(
+                jsonData.readAddress(string.concat(configPrefix, ".oracleParams.backupAggregator"))
+            );
+            oracleConfig.oracleParams.backupHeartbeat =
+                uint32(vm.parseUint(jsonData.readString(string.concat(configPrefix, ".oracleParams.backupHeartbeat"))));
+        } else {
+            oracleConfig.deployFeedParams.priceFeedType = PriceFeedType(
+                uint8(vm.parseUint(jsonData.readString(string.concat(configPrefix, ".deployFeedParams.priceFeedType"))))
+            );
+            if (oracleConfig.deployFeedParams.priceFeedType == PriceFeedType.PriceFeedWithERC4626) {
+                oracleConfig.deployFeedParams.underlyingPriceFeed =
+                    jsonData.readAddress(string.concat(configPrefix, ".deployFeedParams.underlyingPriceFeed"));
+            } else if (oracleConfig.deployFeedParams.priceFeedType == PriceFeedType.PriceFeedConverter) {
+                oracleConfig.deployFeedParams.priceFeed1 =
+                    jsonData.readAddress(string.concat(configPrefix, ".deployFeedParams.priceFeed1"));
+                oracleConfig.deployFeedParams.priceFeed2 =
+                    jsonData.readAddress(string.concat(configPrefix, ".deployFeedParams.priceFeed2"));
+            } else if (oracleConfig.deployFeedParams.priceFeedType == PriceFeedType.PTWithPriceFeed) {
+                oracleConfig.deployFeedParams.underlyingPriceFeed =
+                    jsonData.readAddress(string.concat(configPrefix, ".deployFeedParams.underlyingPriceFeed"));
+                oracleConfig.deployFeedParams.pendlePYLpOracle =
+                    jsonData.readAddress(string.concat(configPrefix, ".deployFeedParams.pendlePYLpOracle"));
+                oracleConfig.deployFeedParams.market =
+                    jsonData.readAddress(string.concat(configPrefix, ".deployFeedParams.market"));
+                oracleConfig.deployFeedParams.duration =
+                    uint32(vm.parseUint(jsonData.readString(string.concat(configPrefix, ".deployFeedParams.duration"))));
+            } else if (oracleConfig.deployFeedParams.priceFeedType == PriceFeedType.ConstantPriceFeed) {
+                oracleConfig.deployFeedParams.constantPrice =
+                    vm.parseInt(jsonData.readString(string.concat(configPrefix, ".deployFeedParams.constantPrice")));
+            }
+        }
+        oracleConfig.oracleParams.heartbeat =
+            uint32(vm.parseUint(jsonData.readString(string.concat(configPrefix, ".oracleParams.heartbeat"))));
+        oracleConfig.oracleParams.maxPrice =
+            vm.parseInt(jsonData.readString(string.concat(configPrefix, ".oracleParams.maxPrice")));
+        oracleConfig.oracleParams.minPrice =
+            vm.parseInt(jsonData.readString(string.concat(configPrefix, ".oracleParams.minPrice")));
+        return oracleConfig;
     }
 }

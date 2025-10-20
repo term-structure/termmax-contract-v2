@@ -1,0 +1,46 @@
+{
+  "configNum": "1",
+  "configs": {
+    "configs_0": {
+      "salt": 0,
+      "collateralCapForGt": "10000000000000000000000000",
+      "marketName": "USDC/WHYPE@30NOV2025",
+      "marketSymbol": "USDC/WHYPE@30NOV2025",
+      "marketConfig": {
+        "maturity": "1764468000",
+        "lendTakerFeeRatio": "2000000",
+        "lendMakerFeeRatio": "2000000",
+        "borrowTakerFeeRatio": "3000000",
+        "borrowMakerFeeRatio": "3000000",
+        "mintGtFeeRatio": "10000000",
+        "mintGtFeeRef": "8000000"
+      },
+      "loanConfig": {
+        "liquidationLtv": "75000000",
+        "maxLtv": "60000000",
+        "liquidatable": true
+      },
+      "underlyingConfig": {
+        "tokenAddr": "0xb88339CB7199b77E23DB6E890353E22632Ba630f",
+        "priceFeedAddr": "0x4C89968338b75551243C99B452c84a01888282fD",
+        "backupPriceFeedAddr": "0x4C89968338b75551243C99B452c84a01888282fD",
+        "heartBeat": "86400",
+        "name": "USDC",
+        "symbol": "USDC",
+        "decimals": "6",
+        "initialPrice": "100000000"
+      },
+      "collateralConfig": {
+        "tokenAddr": "0x5555555555555555555555555555555555555555",
+        "priceFeedAddr": "0x79B75B1C42B8620803467a66Fb73CaaC3323fE69",
+        "backupPriceFeedAddr": "0x79B75B1C42B8620803467a66Fb73CaaC3323fE69",
+        "heartBeat": "86400",
+        "name": "Wrapped HYPE",
+        "symbol": "WHYPE",
+        "decimals": "18",
+        "initialPrice": "3505022645",
+        "gtKeyIdentifier": "GearingTokenWithERC20"
+      }
+    }
+  }
+}
