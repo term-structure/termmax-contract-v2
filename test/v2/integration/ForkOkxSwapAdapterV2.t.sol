@@ -34,6 +34,7 @@ contract ForkOkxSwapAdapterV2 is ForkBaseTestV2 {
     string DATA_PATH = string.concat(vm.projectRoot(), "/test/testdata/fork/mainnet.json");
 
     address okxRouter = 0x2E1Dee213BA8d7af0934C49a23187BabEACa8764;
+    address okxApprovalAddress = 0x40aA958dd87FC8305b97f2BA922CDdCa374bcD7f;
     address constant WBTC = 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599;
     address constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
     uint256 blockNumber = 23616233;
@@ -55,7 +56,7 @@ contract ForkOkxSwapAdapterV2 is ForkBaseTestV2 {
     function _finishSetup() internal override {
         vm.roll(blockNumber);
         vm.warp(timestamp);
-        okxSwapAdapter = new OkxSwapAdapter(okxRouter, address(0));
+        okxSwapAdapter = new OkxSwapAdapter();
         vm.label(address(okxSwapAdapter), "OkxSwapAdapter");
         vm.label(WBTC, "WBTC");
         vm.label(USDC, "USDC");
@@ -70,6 +71,8 @@ contract ForkOkxSwapAdapterV2 is ForkBaseTestV2 {
         adapters[0] = address(okxSwapAdapter);
         whitelistManager.batchSetWhitelist(adapters, IWhitelistManager.ContractModule.ADAPTER, true);
         vm.stopPrank();
+        // prepare swap data
+        data = abi.encode(okxRouter, okxApprovalAddress, data);
     }
 
     function testSwapExactInToken() public {
