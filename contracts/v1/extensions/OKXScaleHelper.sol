@@ -22,13 +22,13 @@ abstract contract OKXScaleHelper {
             return 0x57df6092665eb6058DE53939612413ff4B09114E;
         }
 
-        revert("PendleSwap: OKX Chain not supported");
+        revert("OKX scale helper: OKX Chain not supported");
     }
 
-    function _okxScaling(bytes memory rawCallData, uint256 actualAmount)
+    function _okxScaling(bytes memory rawCallData, uint256 actualAmount, address receiver)
         internal
         pure
-        returns (bytes memory scaledCallData)
+        returns (bool needtoCheckBalance, bytes memory scaledCallData)
     {
         bytes4 selector;
         assembly {
@@ -46,17 +46,16 @@ abstract contract OKXScaleHelper {
         }
 
         if (selector == IOKXDexRouter.uniswapV3SwapTo.selector) {
-            (uint256 receiver, uint256 amount, uint256 minReturn, uint256[] memory pools) =
+            (, uint256 amount, uint256 minReturn, uint256[] memory pools) =
                 abi.decode(dataToDecode, (uint256, uint256, uint256, uint256[]));
 
             minReturn = (minReturn * actualAmount) / amount;
             amount = actualAmount;
-
-            return abi.encodeWithSelector(selector, receiver, amount, minReturn, pools);
+            scaledCallData = abi.encodeWithSelector(selector, uint160(receiver), amount, minReturn, pools);
         } else if (selector == IOKXDexRouter.smartSwapTo.selector) {
             (
                 uint256 orderId,
-                address receiver,
+                ,
                 IOKXDexRouter.BaseRequest memory baseRequest,
                 uint256[] memory batchesAmount,
                 IOKXDexRouter.RouterPath[][] memory batches,
@@ -77,15 +76,17 @@ abstract contract OKXScaleHelper {
             baseRequest.minReturnAmount = (baseRequest.minReturnAmount * actualAmount) / baseRequest.fromTokenAmount;
             baseRequest.fromTokenAmount = actualAmount;
 
-            return abi.encodeWithSelector(selector, orderId, receiver, baseRequest, batchesAmount, batches, extraData);
+            needtoCheckBalance = true;
+            scaledCallData =
+                abi.encodeWithSelector(selector, orderId, receiver, baseRequest, batchesAmount, batches, extraData);
         } else if (selector == IOKXDexRouter.unxswapTo.selector) {
-            (uint256 srcToken, uint256 amount, uint256 minReturn, address receiver, bytes32[] memory pools) =
+            (uint256 srcToken, uint256 amount, uint256 minReturn,, bytes32[] memory pools) =
                 abi.decode(dataToDecode, (uint256, uint256, uint256, address, bytes32[]));
 
             minReturn = (minReturn * actualAmount) / amount;
             amount = actualAmount;
 
-            return abi.encodeWithSelector(selector, srcToken, amount, minReturn, receiver, pools);
+            scaledCallData = abi.encodeWithSelector(selector, srcToken, amount, minReturn, receiver, pools);
         } else if (selector == IOKXDexRouter.unxswapByOrderId.selector) {
             (uint256 srcToken, uint256 amount, uint256 minReturn, bytes32[] memory pools) =
                 abi.decode(dataToDecode, (uint256, uint256, uint256, bytes32[]));
@@ -93,7 +94,7 @@ abstract contract OKXScaleHelper {
             minReturn = (minReturn * actualAmount) / amount;
             amount = actualAmount;
 
-            return abi.encodeWithSelector(selector, srcToken, amount, minReturn, pools);
+            scaledCallData = abi.encodeWithSelector(selector, srcToken, amount, minReturn, pools);
         } else if (selector == IOKXDexRouter.smartSwapByOrderId.selector) {
             (
                 uint256 orderId,
@@ -116,9 +117,9 @@ abstract contract OKXScaleHelper {
             baseRequest.minReturnAmount = (baseRequest.minReturnAmount * actualAmount) / baseRequest.fromTokenAmount;
             baseRequest.fromTokenAmount = actualAmount;
 
-            return abi.encodeWithSelector(selector, orderId, baseRequest, batchesAmount, batches, extraData);
+            scaledCallData = abi.encodeWithSelector(selector, orderId, baseRequest, batchesAmount, batches, extraData);
         } else {
-            revert("PendleSwap: OKX selector not supported");
+            revert("OKX scale helper: OKX selector not supported");
         }
     }
 
