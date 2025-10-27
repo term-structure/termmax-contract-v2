@@ -5,7 +5,7 @@ abstract contract OKXScaleHelper {
     function _okxScaling(bytes memory rawCallData, uint256 actualAmount, address receiver)
         internal
         pure
-        returns (bool needtoCheckBalance, bytes memory scaledCallData)
+        returns (bytes memory scaledCallData)
     {
         bytes4 selector;
         assembly {
@@ -53,7 +53,6 @@ abstract contract OKXScaleHelper {
             baseRequest.minReturnAmount = (baseRequest.minReturnAmount * actualAmount) / baseRequest.fromTokenAmount;
             baseRequest.fromTokenAmount = actualAmount;
 
-            needtoCheckBalance = true;
             scaledCallData =
                 abi.encodeWithSelector(selector, orderId, receiver, baseRequest, batchesAmount, batches, extraData);
         } else if (selector == IOKXDexRouter.unxswapTo.selector) {
@@ -167,7 +166,7 @@ interface IOKXDexRouter {
         uint256[] calldata batchesAmount,
         RouterPath[][] calldata batches,
         PMMSwapRequest[] calldata extraData
-    ) external payable;
+    ) external payable returns (uint256 returnAmount);
 
     function unxswapTo(
         uint256 srcToken,

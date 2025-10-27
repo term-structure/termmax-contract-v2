@@ -24,10 +24,8 @@ contract SimpleAggregatorTest is Test {
 
         // Deploy SimpleAggregator
         address[2] memory assets = [ASSET1, ASSET2];
-        AggregatorV3Interface[2] memory oracles = [
-            AggregatorV3Interface(address(feed1)),
-            AggregatorV3Interface(address(feed2))
-        ];
+        AggregatorV3Interface[2] memory oracles =
+            [AggregatorV3Interface(address(feed1)), AggregatorV3Interface(address(feed2))];
 
         aggregator = new SimpleAggregator(assets, oracles);
     }
@@ -111,10 +109,8 @@ contract SimpleAggregatorTest is Test {
         // Deploy new aggregator with fuzzed feed
         address fuzzAsset = address(0x3);
         address[2] memory assets = [fuzzAsset, ASSET2];
-        AggregatorV3Interface[2] memory oracles = [
-            AggregatorV3Interface(address(fuzzFeed)),
-            AggregatorV3Interface(address(feed2))
-        ];
+        AggregatorV3Interface[2] memory oracles =
+            [AggregatorV3Interface(address(fuzzFeed)), AggregatorV3Interface(address(feed2))];
 
         SimpleAggregator fuzzAggregator = new SimpleAggregator(assets, oracles);
 
@@ -131,10 +127,8 @@ contract SimpleAggregatorTest is Test {
 
         address zeroAsset = address(0x4);
         address[2] memory assets = [zeroAsset, ASSET2];
-        AggregatorV3Interface[2] memory oracles = [
-            AggregatorV3Interface(address(zeroFeed)),
-            AggregatorV3Interface(address(feed2))
-        ];
+        AggregatorV3Interface[2] memory oracles =
+            [AggregatorV3Interface(address(zeroFeed)), AggregatorV3Interface(address(feed2))];
 
         SimpleAggregator zeroAggregator = new SimpleAggregator(assets, oracles);
 
@@ -151,10 +145,8 @@ contract SimpleAggregatorTest is Test {
 
         address maxAsset = address(0x5);
         address[2] memory assets = [maxAsset, ASSET2];
-        AggregatorV3Interface[2] memory oracles = [
-            AggregatorV3Interface(address(maxFeed)),
-            AggregatorV3Interface(address(feed2))
-        ];
+        AggregatorV3Interface[2] memory oracles =
+            [AggregatorV3Interface(address(maxFeed)), AggregatorV3Interface(address(feed2))];
 
         SimpleAggregator maxAggregator = new SimpleAggregator(assets, oracles);
 
@@ -167,10 +159,8 @@ contract SimpleAggregatorTest is Test {
     function test_Constructor_WithSameAsset() public {
         // Test that both oracles can be set even if for same asset (constructor allows it)
         address[2] memory assets = [ASSET1, ASSET1];
-        AggregatorV3Interface[2] memory oracles = [
-            AggregatorV3Interface(address(feed1)),
-            AggregatorV3Interface(address(feed2))
-        ];
+        AggregatorV3Interface[2] memory oracles =
+            [AggregatorV3Interface(address(feed1)), AggregatorV3Interface(address(feed2))];
 
         SimpleAggregator duplicateAggregator = new SimpleAggregator(assets, oracles);
 

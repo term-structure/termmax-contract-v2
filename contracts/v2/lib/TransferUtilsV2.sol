@@ -21,6 +21,13 @@ library TransferUtilsV2 {
         token.safeIncreaseAllowance(spender, value);
     }
 
+    function safeApprove(IERC20 token, address spender, uint256 value) internal {
+        uint256 oldAllowance = token.allowance(address(this), spender);
+        if (value > oldAllowance) {
+            token.forceApprove(spender, value);
+        }
+    }
+
     function safeDecreaseAllowance(IERC20 token, address spender, uint256 value) internal {
         if (value == 0 || spender == address(this)) {
             return;

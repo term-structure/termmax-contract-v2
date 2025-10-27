@@ -33,7 +33,7 @@ contract TerminalVaultAdapter is ERC20SwapAdapterV2 {
         if (action == ERC4626VaultAdapterV2.Action.Redeem) {
             vault.redeemInstant(address(tokenOut), amount, minReceiveAmount);
         } else if (action == ERC4626VaultAdapterV2.Action.Deposit) {
-            tokenIn.safeIncreaseAllowance(address(vault), amount);
+            tokenIn.safeApprove(address(vault), amount);
             vault.depositInstant(address(tokenIn), amount, minReceiveAmount, referrerId);
         } else {
             revert ERC4626VaultAdapterV2.InvalidAction();

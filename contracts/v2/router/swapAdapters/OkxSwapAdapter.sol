@@ -20,14 +20,10 @@ contract OkxSwapAdapter is ERC20SwapAdapterV2, OKXScaleHelper {
     {
         (address router, address okxApproveAddress, bytes memory data) = abi.decode(swapData, (address, address, bytes));
 
-        IERC20(tokenIn).safeIncreaseAllowance(okxApproveAddress, amount);
+        IERC20(tokenIn).safeApprove(okxApproveAddress, amount);
         // scale the swapData and set the receiver to this contract(OkxDexRouter may not
         // support transferring to arbitrary address)
-        bool needtoCheckBalance;
-        (needtoCheckBalance, data) = _okxScaling(data, amount, address(this));
-        // some OKX swap functions return the output amount, some don't
-        uint256 balanceBefore = needtoCheckBalance ? tokenOut.balanceOf(address(this)) : 0;
-
+        data = _okxScaling(data, amount, address(this));
         (bool success, bytes memory returnData) = router.call(data);
         if (!success) {
             assembly {
@@ -36,8 +32,7 @@ contract OkxSwapAdapter is ERC20SwapAdapterV2, OKXScaleHelper {
                 revert(ptr, len)
             }
         }
-        tokenOutAmt =
-            needtoCheckBalance ? tokenOut.balanceOf(address(this)) - balanceBefore : abi.decode(returnData, (uint256));
+        tokenOutAmt = abi.decode(returnData, (uint256));
         if (recipient != address(this)) {
             tokenOut.safeTransfer(recipient, tokenOutAmt);
         }

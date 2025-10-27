@@ -30,7 +30,7 @@ contract UniswapV3AdapterV2 is ERC20SwapAdapterV2 {
             address refundAddress
         ) = abi.decode(swapData, (ISwapRouter, bytes, bool, uint256, uint256, uint256, address));
         if (isExactOut) {
-            IERC20(tokenIn).safeIncreaseAllowance(address(router), netAmount);
+            IERC20(tokenIn).safeApprove(address(router), netAmount);
             uint256 amountIn = router.exactOutput(
                 ISwapRouter.ExactOutputParams({
                     path: path,
@@ -50,7 +50,7 @@ contract UniswapV3AdapterV2 is ERC20SwapAdapterV2 {
             }
             tokenOutAmt = tradeAmount;
         } else {
-            IERC20(tokenIn).safeIncreaseAllowance(address(router), amount);
+            IERC20(tokenIn).safeApprove(address(router), amount);
             /**
              * Note: Scaling Input/Output amount
              */
