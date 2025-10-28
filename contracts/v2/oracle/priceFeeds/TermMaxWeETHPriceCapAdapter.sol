@@ -10,9 +10,11 @@ import {IPriceCapAdapter} from "contracts/v2/extensions/aave/IPriceCapAdapter.so
 
 contract TermMaxWeETHPriceCapAdapter {
     IPriceCapAdapter public immutable adapter;
+    uint8 private immutable _decimals;
 
     constructor(address _aaveWeETHPriceCapAdapter) {
         adapter = IPriceCapAdapter(_aaveWeETHPriceCapAdapter);
+        _decimals = adapter.decimals();
     }
 
     function latestRoundData()
@@ -26,7 +28,7 @@ contract TermMaxWeETHPriceCapAdapter {
     }
 
     function decimals() external view returns (uint8) {
-        return adapter.decimals();
+        return _decimals;
     }
 
     function description() external view returns (string memory) {
