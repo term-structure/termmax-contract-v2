@@ -615,7 +615,6 @@ contract TermMaxRouter_V1_1_2 is
             abi.decode(innerData, (address, IERC20, uint256, uint256, SwapUnit[]));
         if (units.length != 0) {
             _doSwap(abi.encode(debtTokenToSwap), units);
-            revert SwapUnitsIsEmpty();
         }
         collateral.safeIncreaseAllowance(gt, collateralAmount);
         collateralData = _encodeAmount(collateralAmount);
