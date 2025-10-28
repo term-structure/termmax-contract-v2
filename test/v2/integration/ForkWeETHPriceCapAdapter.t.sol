@@ -11,7 +11,7 @@ import {console} from "forge-std/console.sol";
  * @notice Fork test for TermMaxWeETHPriceCapAdapter that wraps Aave's WeETHPriceCapAdapter
  * @dev Tests the adapter against mainnet deployed Aave WeETHPriceCapAdapter
  */
-contract TermMaxWeETHPriceCapAdapterTest is Test {
+contract ForkWeETHPriceCapAdapterTest is Test {
     TermMaxWeETHPriceCapAdapter public adapter;
     IPriceCapAdapter public aaveWeETHPriceCapAdapter;
 
@@ -19,7 +19,7 @@ contract TermMaxWeETHPriceCapAdapterTest is Test {
     address constant AAVE_WEETH_PRICE_CAP_ADAPTER = 0x87625393534d5C102cADB66D37201dF24cc26d4C;
 
     // Fork configuration
-    string MAINNET_RPC_URL = vm.envString("ETH_MAINNET_RPC_URL");
+    string MAINNET_RPC_URL = vm.envString("MAINNET_RPC_URL");
     uint256 constant FORK_BLOCK = 23668976; // Block number used in Aave's test
 
     function setUp() public {
