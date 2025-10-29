@@ -329,7 +329,7 @@ contract TermMaxRouter_V1_1_2 is
 
         (,, bytes memory collateralData) = gt.loanInfo(gtId);
         (, uint128 ltv,) = gt.getLiquidationInfo(gtId);
-        emit IssueGt(market, gtId, msg.sender, recipient, xtInAmt, xtInAmt, ltv, collateralData);
+        emit IssueGt(market, gtId, msg.sender, recipient, 0, xtInAmt, ltv, collateralData);
     }
 
     /**
