@@ -19,17 +19,18 @@ contract StrataVaultAdapter is ERC20SwapAdapterV2 {
         override
         returns (uint256 tokenOutAmt)
     {
-        (Action action, uint256 inAmount, uint256 minTokenOut) = abi.decode(swapData, (Action, uint256, uint256));
+        (ERC4626VaultAdapterV2.Action action, uint256 inAmount, uint256 minTokenOut) =
+            abi.decode(swapData, (ERC4626VaultAdapterV2.Action, uint256, uint256));
         /**
          * Note: Scaling Input/Output amount (round up)
          */
         minTokenOut = minTokenOut.mulDiv(amount, inAmount, Math.Rounding.Ceil);
 
         if (action == ERC4626VaultAdapterV2.Action.Redeem) {
-            tokenOutAmt = vault.redeem(address(tokenOut), amount, recipient, address(this));
+            tokenOutAmt = IStrataVault(address(tokenIn)).redeem(address(tokenOut), amount, recipient, address(this));
         } else if (action == ERC4626VaultAdapterV2.Action.Deposit) {
-            tokenIn.safeApprove(address(vault), amount);
-            tokenOutAmt = vault.deposit(amount, recipient);
+            tokenIn.safeApprove(address(tokenOut), amount);
+            tokenOutAmt = IStrataVault(address(tokenOut)).deposit(amount, recipient);
         } else {
             revert ERC4626VaultAdapterV2.InvalidAction();
         }
