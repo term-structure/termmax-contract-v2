@@ -44,10 +44,7 @@ contract DeployTMX is DeployBaseV2 {
 
         vm.startBroadcast(deployerPrivateKey);
         UniversalFactory factory = UniversalFactory(factoryAddress);
-        bytes memory creationCode = abi.encodePacked(
-            type(TMX).creationCode,
-            abi.encode(tmxAdmin)
-        );
+        bytes memory creationCode = abi.encodePacked(type(TMX).creationCode, abi.encode(tmxAdmin));
         uint256 nonce = 550000000015519333;
         address predictAddress = factory.predictAddress(creationCode, nonce);
         address deployedAddress = factory.deploy(creationCode, nonce);
@@ -95,13 +92,7 @@ contract DeployTMX is DeployBaseV2 {
                 vm.toString(adminAddr)
             )
         );
-        deploymentEnv = string(
-            abi.encodePacked(
-                deploymentEnv,
-                "\nTMX_ADDRESS=",
-                vm.toString(deployedAddress)
-            )
-        );
+        deploymentEnv = string(abi.encodePacked(deploymentEnv, "\nTMX_ADDRESS=", vm.toString(deployedAddress)));
 
         string memory path = string.concat(
             vm.projectRoot(),

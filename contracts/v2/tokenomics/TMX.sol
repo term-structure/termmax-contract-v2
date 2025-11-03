@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-contract TMX is ERC20{
+contract TMX is ERC20 {
     /// The total supply of TMX token is 1 billion tokens (1,000,000,000)
     uint256 public constant maxSupply = 1e9 ether;
 
@@ -15,4 +15,3 @@ contract TMX is ERC20{
         return 18;
     }
 }
-

@@ -48,10 +48,7 @@ contract UniversalFactoryTest is Test {
     uint256 public constant MAX_SUPPLY = 1_000_000_000 ether;
 
     event ContractDeployed(
-        address indexed deployedAddress,
-        address indexed deployer,
-        bytes32 indexed salt,
-        uint256 nonce
+        address indexed deployedAddress, address indexed deployer, bytes32 indexed salt, uint256 nonce
     );
 
     function setUp() public {
@@ -66,10 +63,7 @@ contract UniversalFactoryTest is Test {
         uint256 nonce = 1;
 
         // Get creation code - TMX now only takes admin parameter
-        bytes memory creationCode = abi.encodePacked(
-            type(TMX).creationCode,
-            abi.encode(admin)
-        );
+        bytes memory creationCode = abi.encodePacked(type(TMX).creationCode, abi.encode(admin));
 
         // Predict address before deployment
         address predicted = factory.predictAddress(creationCode, nonce);
@@ -115,10 +109,7 @@ contract UniversalFactoryTest is Test {
         address owner = address(0xABCD);
         string memory name = "TestMock";
 
-        bytes memory creationCode = abi.encodePacked(
-            type(MockContract).creationCode,
-            abi.encode(value, owner, name)
-        );
+        bytes memory creationCode = abi.encodePacked(type(MockContract).creationCode, abi.encode(value, owner, name));
 
         address predicted = factory.predictAddress(creationCode, nonce);
         address deployed = factory.deploy(creationCode, nonce);
@@ -137,10 +128,7 @@ contract UniversalFactoryTest is Test {
     // ============================================
 
     function testDeployWithDifferentNonces() public {
-        bytes memory creationCode = abi.encodePacked(
-            type(TMX).creationCode,
-            abi.encode(admin)
-        );
+        bytes memory creationCode = abi.encodePacked(type(TMX).creationCode, abi.encode(admin));
 
         address deployed1 = factory.deploy(creationCode, 1);
         address deployed2 = factory.deploy(creationCode, 2);
@@ -165,10 +153,7 @@ contract UniversalFactoryTest is Test {
     function testCannotDeployTwiceWithSameNonce() public {
         uint256 nonce = 1;
 
-        bytes memory creationCode = abi.encodePacked(
-            type(TMX).creationCode,
-            abi.encode(admin)
-        );
+        bytes memory creationCode = abi.encodePacked(type(TMX).creationCode, abi.encode(admin));
 
         // First deployment should succeed
         factory.deploy(creationCode, nonce);
@@ -201,10 +186,7 @@ contract UniversalFactoryTest is Test {
     function testPredictAddressConsistency() public {
         uint256 nonce = 1;
 
-        bytes memory creationCode = abi.encodePacked(
-            type(TMX).creationCode,
-            abi.encode(admin)
-        );
+        bytes memory creationCode = abi.encodePacked(type(TMX).creationCode, abi.encode(admin));
 
         // Predict multiple times should give same result
         address predicted1 = factory.predictAddress(creationCode, nonce);
@@ -218,10 +200,7 @@ contract UniversalFactoryTest is Test {
     function testPredictAddressBeforeAndAfterDeployment() public {
         uint256 nonce = 1;
 
-        bytes memory creationCode = abi.encodePacked(
-            type(TMX).creationCode,
-            abi.encode(admin)
-        );
+        bytes memory creationCode = abi.encodePacked(type(TMX).creationCode, abi.encode(admin));
 
         // Predict before deployment
         address predictedBefore = factory.predictAddress(creationCode, nonce);
@@ -241,15 +220,9 @@ contract UniversalFactoryTest is Test {
         uint256 nonce = 1;
 
         // Use different admin addresses to create different creation codes
-        bytes memory creationCode1 = abi.encodePacked(
-            type(TMX).creationCode,
-            abi.encode(address(0x1111))
-        );
+        bytes memory creationCode1 = abi.encodePacked(type(TMX).creationCode, abi.encode(address(0x1111)));
 
-        bytes memory creationCode2 = abi.encodePacked(
-            type(TMX).creationCode,
-            abi.encode(address(0x2222))
-        );
+        bytes memory creationCode2 = abi.encodePacked(type(TMX).creationCode, abi.encode(address(0x2222)));
 
         address predicted1 = factory.predictAddress(creationCode1, nonce);
         address predicted2 = factory.predictAddress(creationCode2, nonce);
@@ -258,10 +231,7 @@ contract UniversalFactoryTest is Test {
     }
 
     function testPredictAddressWithDifferentNonces() public {
-        bytes memory creationCode = abi.encodePacked(
-            type(TMX).creationCode,
-            abi.encode(admin)
-        );
+        bytes memory creationCode = abi.encodePacked(type(TMX).creationCode, abi.encode(admin));
 
         address predicted1 = factory.predictAddress(creationCode, 1);
         address predicted2 = factory.predictAddress(creationCode, 2);
@@ -334,10 +304,7 @@ contract UniversalFactoryTest is Test {
     function testDeployEmitsEvent() public {
         uint256 nonce = 1;
 
-        bytes memory creationCode = abi.encodePacked(
-            type(TMX).creationCode,
-            abi.encode(admin)
-        );
+        bytes memory creationCode = abi.encodePacked(type(TMX).creationCode, abi.encode(admin));
 
         address predicted = factory.predictAddress(creationCode, nonce);
         bytes32 expectedSalt = factory.getSalt(nonce);
@@ -447,20 +414,11 @@ contract UniversalFactoryTest is Test {
         uint256 nonce2 = 101;
         uint256 nonce3 = 102;
 
-        bytes memory creationCode1 = abi.encodePacked(
-            type(TMX).creationCode,
-            abi.encode(address(0x1111))
-        );
+        bytes memory creationCode1 = abi.encodePacked(type(TMX).creationCode, abi.encode(address(0x1111)));
 
-        bytes memory creationCode2 = abi.encodePacked(
-            type(TMX).creationCode,
-            abi.encode(address(0x2222))
-        );
+        bytes memory creationCode2 = abi.encodePacked(type(TMX).creationCode, abi.encode(address(0x2222)));
 
-        bytes memory creationCode3 = abi.encodePacked(
-            type(TMX).creationCode,
-            abi.encode(address(0x3333))
-        );
+        bytes memory creationCode3 = abi.encodePacked(type(TMX).creationCode, abi.encode(address(0x3333)));
 
         address deployed1 = factory.deploy(creationCode1, nonce1);
         address deployed2 = factory.deploy(creationCode2, nonce2);
@@ -490,10 +448,7 @@ contract UniversalFactoryTest is Test {
         vm.assume(_admin != address(0));
         vm.assume(!factory.nonceUsed(nonce));
 
-        bytes memory creationCode = abi.encodePacked(
-            type(TMX).creationCode,
-            abi.encode(_admin)
-        );
+        bytes memory creationCode = abi.encodePacked(type(TMX).creationCode, abi.encode(_admin));
 
         // Predict address
         address predicted = factory.predictAddress(creationCode, nonce);
@@ -557,34 +512,28 @@ contract UniversalFactoryTest is Test {
         bytes memory creationCode = type(SimpleContract).creationCode;
         factory.deploy(creationCode, 1);
         uint256 gasUsed = gasBefore - gasleft();
-        
+
         emit log_named_uint("Gas used for simple contract deployment", gasUsed);
         // Just for visibility, no assertion
     }
 
     function testGasDeployTMXContract() public {
         uint256 gasBefore = gasleft();
-        bytes memory creationCode = abi.encodePacked(
-            type(TMX).creationCode,
-            abi.encode(admin)
-        );
+        bytes memory creationCode = abi.encodePacked(type(TMX).creationCode, abi.encode(admin));
         factory.deploy(creationCode, 1);
         uint256 gasUsed = gasBefore - gasleft();
-        
+
         emit log_named_uint("Gas used for TMX deployment", gasUsed);
         // Just for visibility, no assertion
     }
 
     function testGasPredictAddress() public {
-        bytes memory creationCode = abi.encodePacked(
-            type(TMX).creationCode,
-            abi.encode(admin)
-        );
-        
+        bytes memory creationCode = abi.encodePacked(type(TMX).creationCode, abi.encode(admin));
+
         uint256 gasBefore = gasleft();
         factory.predictAddress(creationCode, 1);
         uint256 gasUsed = gasBefore - gasleft();
-        
+
         emit log_named_uint("Gas used for address prediction", gasUsed);
         // Just for visibility, no assertion
     }
@@ -597,10 +546,7 @@ contract UniversalFactoryTest is Test {
         // Deploy 10 TMX contracts sequentially with different admins
         for (uint256 i = 0; i < 10; i++) {
             address currentAdmin = address(uint160(0x1000 + i));
-            bytes memory creationCode = abi.encodePacked(
-                type(TMX).creationCode,
-                abi.encode(currentAdmin)
-            );
+            bytes memory creationCode = abi.encodePacked(type(TMX).creationCode, abi.encode(currentAdmin));
 
             address predicted = factory.predictAddress(creationCode, i);
             address deployed = factory.deploy(creationCode, i);
@@ -625,18 +571,12 @@ contract UniversalFactoryTest is Test {
         assertTrue(factory.isDeployed(simple), "SimpleContract should be deployed");
 
         // Deploy TMX
-        bytes memory creationCode2 = abi.encodePacked(
-            type(TMX).creationCode,
-            abi.encode(admin)
-        );
+        bytes memory creationCode2 = abi.encodePacked(type(TMX).creationCode, abi.encode(admin));
         address tmx = factory.deploy(creationCode2, nonce++);
         assertTrue(factory.isDeployed(tmx), "TMX should be deployed");
 
         // Deploy MockContract
-        bytes memory creationCode3 = abi.encodePacked(
-            type(MockContract).creationCode,
-            abi.encode(12345, admin, "Test")
-        );
+        bytes memory creationCode3 = abi.encodePacked(type(MockContract).creationCode, abi.encode(12345, admin, "Test"));
         address mock = factory.deploy(creationCode3, nonce++);
         assertTrue(factory.isDeployed(mock), "MockContract should be deployed");
 

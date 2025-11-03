@@ -10,10 +10,7 @@ pragma solidity ^0.8.0;
 contract UniversalFactory {
     /// @notice Emitted when a new contract is deployed
     event ContractDeployed(
-        address indexed deployedAddress,
-        address indexed deployer,
-        bytes32 indexed salt,
-        uint256 nonce
+        address indexed deployedAddress, address indexed deployer, bytes32 indexed salt, uint256 nonce
     );
 
     /// @notice Mapping to track deployed contracts
@@ -28,12 +25,9 @@ contract UniversalFactory {
      * @param nonce A unique value used to generate the deployment salt
      * @return deployedAddress The address of the deployed contract
      */
-    function deploy(
-        bytes memory creationCode,
-        uint256 nonce
-    ) external returns (address deployedAddress) {
+    function deploy(bytes memory creationCode, uint256 nonce) external returns (address deployedAddress) {
         require(!nonceUsed[nonce], "UniversalFactory: nonce already used");
-        
+
         // Generate salt from nonce only
         bytes32 salt = bytes32(nonce);
 
@@ -59,22 +53,12 @@ contract UniversalFactory {
      * @param nonce The nonce value to use for salt generation
      * @return predicted The predicted address of the contract
      */
-    function predictAddress(
-        bytes memory creationCode,
-        uint256 nonce
-    ) public view returns (address predicted) {
+    function predictAddress(bytes memory creationCode, uint256 nonce) public view returns (address predicted) {
         // Generate the same salt that will be used in deployment
         bytes32 salt = bytes32(nonce);
 
         // Calculate the hash for CREATE2
-        bytes32 hash = keccak256(
-            abi.encodePacked(
-                bytes1(0xff),
-                address(this),
-                salt,
-                keccak256(creationCode)
-            )
-        );
+        bytes32 hash = keccak256(abi.encodePacked(bytes1(0xff), address(this), salt, keccak256(creationCode)));
 
         // Convert to address (take last 20 bytes)
         predicted = address(uint160(uint256(hash)));
@@ -98,10 +82,11 @@ contract UniversalFactory {
      * @param constructorArgs The ABI-encoded constructor arguments
      * @return creationCode The complete creation code
      */
-    function getCreationCode(
-        bytes memory contractBytecode,
-        bytes memory constructorArgs
-    ) external pure returns (bytes memory creationCode) {
+    function getCreationCode(bytes memory contractBytecode, bytes memory constructorArgs)
+        external
+        pure
+        returns (bytes memory creationCode)
+    {
         return abi.encodePacked(contractBytecode, constructorArgs);
     }
 }
