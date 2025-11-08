@@ -354,7 +354,8 @@ contract TermMaxViewerTest is Test {
         assertEq(totalBadDebt, badDebt);
         assertEq(totalCollateral, collateralBalance);
 
-        uint256 expectedMaxRedeem = collateralBalance.mulDiv(userAssets, badDebt);
+        // Calculate expected maxRedeem: min(userAssets, totalBadDebt) * totalCollateral / totalBadDebt
+        uint256 expectedMaxRedeem = collateralBalance.mulDiv(userAssets.min(badDebt), badDebt);
         assertEq(maxRedeem, expectedMaxRedeem);
     }
 
