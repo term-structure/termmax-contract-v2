@@ -133,6 +133,42 @@ contract TermMaxRouter_V1_1_2 is
         emit SwapExactTokenToToken(tokenIn, tokenOut, msg.sender, recipient, orders, tradingAmts, netTokenOut);
     }
 
+    /**
+     * @notice Swap exact input token to output token through dex first then TermMax order
+     * @param tokenIn input token
+     * @param inputAmt input token amount
+     * @param tokenOut output token
+     * @param recipient recipient of output token
+     * @param order TermMax order to swap after dex swap
+     * @param minTokenOut minimum output token amount
+     * @param deadline deadline timestamp
+     * @param units swap units to swap input token to trading token through dex
+     */
+    function swapExactTokenToTokenWithDex(
+        IERC20 tokenIn,
+        uint256 inputAmt,
+        IERC20 tokenOut,
+        address recipient,
+        ITermMaxOrder order,
+        uint128 minTokenOut,
+        uint256 deadline,
+        SwapUnit[] memory units
+    ) external nonReentrant whenNotPaused returns (uint256 netTokenOut) {
+        // transfer total input amount from user
+        tokenIn.safeTransferFrom(msg.sender, address(this), inputAmt);
+        IERC20 debtToken = IERC20(units[units.length - 1].tokenOut);
+        // swap input token to trading tokens through dex first
+        uint128 tokenToTrade = abi.decode(_doSwap(abi.encode(inputAmt), units), (uint256)).toUint128();
+
+        ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
+        orders[0] = order;
+        uint128[] memory tradingAmts = new uint128[](1);
+        tradingAmts[0] = tokenToTrade;
+
+        netTokenOut = _swapExactTokenToToken(debtToken, tokenOut, recipient, orders, tradingAmts, minTokenOut, deadline);
+        emit SwapExactTokenToToken(tokenIn, tokenOut, msg.sender, recipient, orders, tradingAmts, netTokenOut);
+    }
+
     function _swapExactTokenToToken(
         IERC20 tokenIn,
         IERC20 tokenOut,
