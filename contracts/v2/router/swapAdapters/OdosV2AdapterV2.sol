@@ -44,7 +44,7 @@ contract OdosV2AdapterV2 is ERC20SwapAdapterV2 {
         override
         returns (uint256 tokenOutAmt)
     {
-        tokenIn.safeIncreaseAllowance(address(router), amountIn);
+        tokenIn.safeApprove(address(router), amountIn);
 
         (
             IOdosRouterV2.SwapTokenInfo memory tokenInfo,

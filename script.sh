@@ -105,6 +105,7 @@ fi
 
 IS_L2=false
 IS_MAINNET=false
+IS_BROADCAST=false
 # Check additional required variables for mainnet deployments
 if [[ $NETWORK == *"mainnet"* ]]; then
     IS_MAINNET=true
@@ -117,9 +118,17 @@ fi
 if [[ $NETWORK == *"arb"* || $NETWORK == *"op"* ]]; then
     IS_L2=true
 fi
+# Check if --broadcast flag is present
+for arg in "${ARGS[@]}"; do
+    if [ "$arg" = "--broadcast" ]; then
+        IS_BROADCAST=true
+        break
+    fi
+done
 # set IS_L2 and IS_MAINNET to environment variables
 export IS_L2
 export IS_MAINNET
+export IS_BROADCAST
 
 # Determine the script path and name
 if [ "$OPERATION" = "deploy" ]; then

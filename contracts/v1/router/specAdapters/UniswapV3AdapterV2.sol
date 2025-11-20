@@ -12,34 +12,52 @@ contract UniswapV3AdapterV2 is ERC20SwapAdapterV2 {
     using TransferUtilsV2 for IERC20;
     using Math for uint256;
 
-    ISwapRouter public immutable router;
-
-    constructor(address router_) {
-        router = ISwapRouter(router_);
-    }
-
     function _swap(IERC20 tokenIn, IERC20, uint256 amount, bytes memory swapData)
         internal
         virtual
         override
         returns (uint256 tokenOutAmt)
     {
-        IERC20(tokenIn).safeIncreaseAllowance(address(router), amount);
-        (bytes memory path, uint256 deadline, uint256 inAmount, uint256 amountOutMinimum) =
-            abi.decode(swapData, (bytes, uint256, uint256, uint256));
-        /**
-         * Note: Scaling Input/Output amount
-         */
-        amountOutMinimum = amountOutMinimum.mulDiv(amount, inAmount, Math.Rounding.Ceil);
-
-        tokenOutAmt = router.exactInput(
-            ISwapRouter.ExactInputParams({
-                path: path,
-                recipient: address(this),
-                deadline: deadline,
-                amountIn: amount,
-                amountOutMinimum: amountOutMinimum
-            })
-        );
+        (
+            ISwapRouter router,
+            bytes memory path,
+            bool isExactOut,
+            uint256 deadline,
+            uint256 tradeAmount,
+            uint256 netAmount,
+            address refundAddress
+        ) = abi.decode(swapData, (ISwapRouter, bytes, bool, uint256, uint256, uint256, address));
+        if (isExactOut) {
+            IERC20(tokenIn).safeApprove(address(router), netAmount);
+            uint256 amountIn = router.exactOutput(
+                ISwapRouter.ExactOutputParams({
+                    path: path,
+                    recipient: address(this),
+                    deadline: deadline,
+                    amountOut: tradeAmount,
+                    amountInMaximum: netAmount
+                })
+            );
+            // refund remaining tokenIn to refundAddress
+            if (refundAddress != address(0) && refundAddress != address(this) && amount > amountIn) {
+                tokenIn.safeTransfer(refundAddress, amount - amountIn);
+            }
+            tokenOutAmt = tradeAmount;
+        } else {
+            IERC20(tokenIn).safeApprove(address(router), amount);
+            /**
+             * Note: Scaling Input/Output amount
+             */
+            tradeAmount = tradeAmount.mulDiv(amount, netAmount, Math.Rounding.Ceil);
+            tokenOutAmt = router.exactInput(
+                ISwapRouter.ExactInputParams({
+                    path: path,
+                    recipient: address(this),
+                    deadline: deadline,
+                    amountIn: amount,
+                    amountOutMinimum: tradeAmount
+                })
+            );
+        }
     }
 }

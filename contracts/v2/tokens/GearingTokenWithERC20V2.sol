@@ -23,6 +23,8 @@ contract GearingTokenWithERC20V2 is AbstractGearingTokenV2 {
     /// @notice Emitted when the collateral capacity is updated
     event CollateralCapacityUpdated(uint256 newCapacity);
 
+    uint256 constant UINT256_LENGTH = 32;
+
     /// @notice The max capacity of collateral token
     uint256 public collateralCapacity;
 
@@ -43,6 +45,9 @@ contract GearingTokenWithERC20V2 is AbstractGearingTokenV2 {
     }
 
     function _checkBeforeMint(uint128, bytes memory collateralData) internal virtual override {
+        if (collateralData.length > UINT256_LENGTH) {
+            revert GearingTokenErrorsV2.InvalidCollateralData();
+        }
         if (IERC20(_config.collateral).balanceOf(address(this)) + _decodeAmount(collateralData) > collateralCapacity) {
             revert CollateralCapacityExceeded();
         }

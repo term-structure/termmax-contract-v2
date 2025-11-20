@@ -1,0 +1,15 @@
+{
+  "network": "eth-mainnet",
+  "deployedAt": "1761742331",
+  "gitBranch": "feat/aave_like_oracles",
+  "gitCommitHash": "0x34936c7f6fd63e7f06eff143937ce64a6223b4ac",
+  "blockInfo": {
+    "number": "23683170",
+    "timestamp": "1761742331"
+  },
+  "deployer": "0x56E3665038C5F0b56Cc7D81aC66C86521274B251",
+  "contracts": {
+    "termMaxWeETHPriceCapAdapter": "0x9bBA8A86F2F9d237bFE5dF074478f19110AdC6a0",
+    "aaveWeETHPriceCapAdapter": "0x87625393534d5C102cADB66D37201dF24cc26d4C"
+  }
+}

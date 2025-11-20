@@ -67,7 +67,7 @@ contract TermMaxSwapAdapter is ERC20SwapAdapterV2 {
             for (uint256 i = 0; i < data.orders.length; ++i) {
                 address order = data.orders[i];
                 _checkOrderCallback(order);
-                tokenIn.safeIncreaseAllowance(order, data.tradingAmts[i]);
+                tokenIn.safeApprove(order, data.tradingAmts[i]);
                 netTokenOutOrIn += ITermMaxOrder(order).swapExactTokenToToken(
                     tokenIn, tokenOut, recipient, data.tradingAmts[i], 0, data.deadline
                 );
@@ -82,7 +82,7 @@ contract TermMaxSwapAdapter is ERC20SwapAdapterV2 {
                 address order = data.orders[i];
                 _checkOrderCallback(order);
                 // Use maximum allowance for the swap because the final input amount is unknown
-                tokenIn.safeIncreaseAllowance(order, data.netTokenAmt);
+                tokenIn.safeApprove(order, data.netTokenAmt);
                 netTokenOutOrIn += ITermMaxOrder(order).swapTokenToExactToken(
                     tokenIn, tokenOut, recipient, data.tradingAmts[i], data.netTokenAmt, data.deadline
                 );

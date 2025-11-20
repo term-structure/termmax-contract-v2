@@ -32,7 +32,7 @@ contract ERC4626VaultAdapterV2 is ERC20SwapAdapterV2 {
         minTokenOut = minTokenOut.mulDiv(amount, inAmount, Math.Rounding.Ceil);
 
         if (action == Action.Deposit) {
-            tokenIn.safeIncreaseAllowance(address(tokenOut), amount);
+            tokenIn.safeApprove(address(tokenOut), amount);
             tokenOutAmt = IERC4626(address(tokenOut)).deposit(amount, recipient);
             if (tokenOutAmt < minTokenOut) {
                 revert LessThanMinTokenOut(tokenOutAmt, minTokenOut);

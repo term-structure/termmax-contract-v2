@@ -4,32 +4,37 @@ pragma solidity ^0.8.27;
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 
+struct WhitelistConfig {
+    bool fromWhitelisted;
+    bool toWhitelisted;
+}
+
 contract PreTMX is ERC20, Ownable2Step {
-    bool public transferRestricted;
+    bool public transferEnabled;
 
-    mapping(address => bool) public isTransferredFromWhitelisted;
+    mapping(address => WhitelistConfig) public whitelistConfig;
 
-    error TransferFromNotWhitelisted(address from);
+    error TransferNotWhitelisted(address from, address to);
 
-    event TransferRestricted(bool restricted);
-    event TransferFromWhitelisted(address from, bool isWhitelisted);
+    event TransferEnabled(bool enabled);
+    event TransferWhitelisted(address wallet, bool isFromWhitelisted, bool isToWhitelisted);
 
     constructor(address admin) ERC20("Pre TermMax Token", "pTMX") Ownable(admin) {
         _mint(admin, 1e9 ether);
-        _setTransferRestricted(true);
-        _setTransferFromWhitelisted(admin, true);
+        _setTransferEnabled(false);
+        _setTransferWhitelisted(admin, true, true);
     }
 
     function enableTransfer() external onlyOwner {
-        _setTransferRestricted(false);
+        _setTransferEnabled(true);
     }
 
     function disableTransfer() external onlyOwner {
-        _setTransferRestricted(true);
+        _setTransferEnabled(false);
     }
 
-    function whitelistTransferFrom(address from, bool isWhitelisted) external onlyOwner {
-        _setTransferFromWhitelisted(from, isWhitelisted);
+    function whitelistTransfer(address wallet, bool isFromWhitelisted, bool isToWhitelisted) external onlyOwner {
+        _setTransferWhitelisted(wallet, isFromWhitelisted, isToWhitelisted);
     }
 
     function transfer(address to, uint256 amount) public override returns (bool) {
@@ -50,19 +55,21 @@ contract PreTMX is ERC20, Ownable2Step {
         _burn(msg.sender, amount);
     }
 
-    function _beforeTokenTransfer(address from, address) internal view {
-        if (transferRestricted && !isTransferredFromWhitelisted[from]) {
-            revert TransferFromNotWhitelisted(from);
+    function _beforeTokenTransfer(address from, address to) internal view {
+        if (!transferEnabled) {
+            if (!whitelistConfig[from].fromWhitelisted && !whitelistConfig[to].toWhitelisted) {
+                revert TransferNotWhitelisted(from, to);
+            }
         }
     }
 
-    function _setTransferRestricted(bool restricted) internal {
-        transferRestricted = restricted;
-        emit TransferRestricted(restricted);
+    function _setTransferEnabled(bool enabled) internal {
+        transferEnabled = enabled;
+        emit TransferEnabled(enabled);
     }
 
-    function _setTransferFromWhitelisted(address from, bool isWhitelisted) internal {
-        isTransferredFromWhitelisted[from] = isWhitelisted;
-        emit TransferFromWhitelisted(from, isWhitelisted);
+    function _setTransferWhitelisted(address wallet, bool isFromWhitelisted, bool isToWhitelisted) internal {
+        whitelistConfig[wallet] = WhitelistConfig({fromWhitelisted: isFromWhitelisted, toWhitelisted: isToWhitelisted});
+        emit TransferWhitelisted(wallet, isFromWhitelisted, isToWhitelisted);
     }
 }

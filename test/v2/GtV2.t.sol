@@ -236,6 +236,24 @@ contract GtTestV2 is Test {
         vm.stopPrank();
     }
 
+    function testMintGtWithInvalidCollateral() public {
+        uint128 debtAmt = 100e8;
+        uint256 collateralAmt = 1e18;
+        res.collateral.mint(sender, collateralAmt);
+
+        vm.startPrank(sender);
+
+        res.collateral.approve(address(res.gt), collateralAmt);
+        bytes memory collateralData = abi.encode(collateralAmt);
+        bytes memory byte12k = new bytes(12 * 1024); // 12KB
+        collateralData = abi.encodePacked(collateralData, byte12k);
+
+        vm.expectRevert(GearingTokenErrorsV2.InvalidCollateralData.selector);
+        res.market.issueFt(sender, debtAmt, collateralData);
+
+        vm.stopPrank();
+    }
+
     function testRevertByGtIsNotHealthyWhenIssueFt() public {
         // debt 1790 USD collaretal 2000USD ltv 0.891
         uint128 debtAmt = 1790e8;
@@ -1219,11 +1237,13 @@ contract GtTestV2 is Test {
 
     function testLiquidatable() public {
         uint128 debtAmt = 10000e8;
-        uint256 collateralAmt = 10e18;
+        uint256 collateralAmt = 11e18;
+        uint256 collateralAmt2 = 10e18;
 
         vm.startPrank(sender);
 
         (uint256 gtId,) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
+        (uint256 gtId2,) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt2);
         vm.stopPrank();
         vm.startPrank(deployer);
         // update oracle
@@ -1235,6 +1255,11 @@ contract GtTestV2 is Test {
         (bool isLiquidable,, uint128 maxRepayAmt) = res.gt.getLiquidationInfo(gtId);
         assert(isLiquidable);
         assert(maxRepayAmt == debtAmt / 2);
+
+        // ltv exceed 1 which means the collateral can not cover the debt
+        (isLiquidable,, maxRepayAmt) = res.gt.getLiquidationInfo(gtId2);
+        assert(isLiquidable);
+        assert(maxRepayAmt == debtAmt);
 
         vm.warp(marketConfig.maturity);
         (isLiquidable,, maxRepayAmt) = res.gt.getLiquidationInfo(gtId);

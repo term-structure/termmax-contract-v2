@@ -1,639 +1,513 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.27;
 
-import {Test, console} from "forge-std/Test.sol";
-import {PreTMX} from "contracts/v2/tokenomics/PreTMX.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {IERC20Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
+import {Test} from "forge-std/Test.sol";
+import {PreTMX, WhitelistConfig} from "../../../contracts/v2/tokenomics/PreTMX.sol";
 
 contract PreTMXTest is Test {
     PreTMX public preTMX;
+
     address public admin;
     address public user1;
     address public user2;
-    uint256 public initialSupply = 1e9 ether;
+    address public user3;
+
+    uint256 constant INITIAL_SUPPLY = 1e9 ether;
+    uint256 constant TRANSFER_AMOUNT = 100 ether;
+
+    event TransferEnabled(bool enabled);
+    event TransferWhitelisted(address wallet, bool isFromWhitelisted, bool isToWhitelisted);
 
     function setUp() public {
-        admin = address(1);
-        user1 = address(2);
-        user2 = address(3);
+        admin = makeAddr("admin");
+        user1 = makeAddr("user1");
+        user2 = makeAddr("user2");
+        user3 = makeAddr("user3");
 
-        vm.startPrank(admin);
+        vm.prank(admin);
         preTMX = new PreTMX(admin);
-        vm.stopPrank();
     }
 
-    function test_InitialState() public {
-        assertEq(preTMX.name(), "Pre TermMax Token");
-        assertEq(preTMX.symbol(), "pTMX");
-        assertEq(preTMX.totalSupply(), initialSupply);
-        assertEq(preTMX.balanceOf(admin), initialSupply);
-        assertTrue(preTMX.transferRestricted());
-        assertEq(preTMX.owner(), admin);
-        assertTrue(preTMX.isTransferredFromWhitelisted(admin));
+    // ========== Deployment & Initial State Tests ==========
+
+    function test_InitialState() public view {
+        assertEq(preTMX.totalSupply(), INITIAL_SUPPLY, "Initial supply should be 1B");
+        assertEq(preTMX.balanceOf(admin), INITIAL_SUPPLY, "Admin should have all initial tokens");
+        assertEq(preTMX.transferEnabled(), false, "Transfer should be disabled by default");
+        assertEq(preTMX.owner(), admin, "Owner should be admin");
+        assertEq(preTMX.name(), "Pre TermMax Token", "Token name should be correct");
+        assertEq(preTMX.symbol(), "pTMX", "Token symbol should be correct");
     }
 
-    function test_EnableTransfer() public {
+    function test_AdminWhitelistedOnDeployment() public view {
+        (bool fromWhitelisted, bool toWhitelisted) = preTMX.whitelistConfig(admin);
+        assertTrue(fromWhitelisted, "Admin should be fromWhitelisted");
+        assertTrue(toWhitelisted, "Admin should be toWhitelisted");
+    }
+
+    // ========== Transfer Enabled = true Tests ==========
+
+    function test_TransferEnabled_NonWhitelistedToNonWhitelisted() public {
+        // Setup: Give user1 some tokens and enable transfer
         vm.prank(admin);
+        preTMX.transfer(user1, TRANSFER_AMOUNT);
 
-        vm.expectEmit(true, true, true, true);
-        emit PreTMX.TransferRestricted(false);
-
+        vm.prank(admin);
         preTMX.enableTransfer();
-        assertFalse(preTMX.transferRestricted());
+
+        // Execute
+        vm.prank(user1);
+        preTMX.transfer(user2, TRANSFER_AMOUNT);
+
+        // Assert
+        assertEq(preTMX.balanceOf(user2), TRANSFER_AMOUNT);
+        assertEq(preTMX.balanceOf(user1), 0);
     }
 
-    function test_DisableTransfer() public {
+    function test_TransferEnabled_FromWhitelistedToNonWhitelisted() public {
+        // Setup
+        vm.startPrank(admin);
+        preTMX.whitelistTransfer(user1, true, false);
+        preTMX.transfer(user1, TRANSFER_AMOUNT);
+        preTMX.enableTransfer();
+        vm.stopPrank();
+
+        // Execute
+        vm.prank(user1);
+        preTMX.transfer(user2, TRANSFER_AMOUNT);
+
+        // Assert
+        assertEq(preTMX.balanceOf(user2), TRANSFER_AMOUNT);
+    }
+
+    function test_TransferEnabled_NonWhitelistedToToWhitelisted() public {
+        // Setup
+        vm.startPrank(admin);
+        preTMX.whitelistTransfer(user2, false, true);
+        preTMX.transfer(user1, TRANSFER_AMOUNT);
+        preTMX.enableTransfer();
+        vm.stopPrank();
+
+        // Execute
+        vm.prank(user1);
+        preTMX.transfer(user2, TRANSFER_AMOUNT);
+
+        // Assert
+        assertEq(preTMX.balanceOf(user2), TRANSFER_AMOUNT);
+    }
+
+    function test_TransferEnabled_BothWhitelisted() public {
+        // Setup
+        vm.startPrank(admin);
+        preTMX.whitelistTransfer(user1, true, true);
+        preTMX.whitelistTransfer(user2, true, true);
+        preTMX.transfer(user1, TRANSFER_AMOUNT);
+        preTMX.enableTransfer();
+        vm.stopPrank();
+
+        // Execute
+        vm.prank(user1);
+        preTMX.transfer(user2, TRANSFER_AMOUNT);
+
+        // Assert
+        assertEq(preTMX.balanceOf(user2), TRANSFER_AMOUNT);
+    }
+
+    // ========== Transfer Disabled = false Tests ==========
+
+    function test_TransferDisabled_NonWhitelistedToNonWhitelisted_Reverts() public {
+        // Setup: Give user1 some tokens (admin can transfer when disabled)
+        vm.prank(admin);
+        preTMX.transfer(user1, TRANSFER_AMOUNT);
+
+        // Execute & Assert
+        vm.prank(user1);
+        vm.expectRevert(abi.encodeWithSelector(PreTMX.TransferNotWhitelisted.selector, user1, user2));
+        preTMX.transfer(user2, TRANSFER_AMOUNT);
+    }
+
+    function test_TransferDisabled_FromWhitelistedToNonWhitelisted_Succeeds() public {
+        // Setup
+        vm.startPrank(admin);
+        preTMX.whitelistTransfer(user1, true, false);
+        preTMX.transfer(user1, TRANSFER_AMOUNT);
+        vm.stopPrank();
+
+        // Execute
+        vm.prank(user1);
+        preTMX.transfer(user2, TRANSFER_AMOUNT);
+
+        // Assert
+        assertEq(preTMX.balanceOf(user2), TRANSFER_AMOUNT);
+        assertEq(preTMX.balanceOf(user1), 0);
+    }
+
+    function test_TransferDisabled_NonWhitelistedToToWhitelisted_Succeeds() public {
+        // Setup
+        vm.startPrank(admin);
+        preTMX.whitelistTransfer(user2, false, true);
+        preTMX.transfer(user1, TRANSFER_AMOUNT);
+        vm.stopPrank();
+
+        // Execute
+        vm.prank(user1);
+        preTMX.transfer(user2, TRANSFER_AMOUNT);
+
+        // Assert
+        assertEq(preTMX.balanceOf(user2), TRANSFER_AMOUNT);
+    }
+
+    function test_TransferDisabled_FromWhitelistedToToWhitelisted_Succeeds() public {
+        // Setup
+        vm.startPrank(admin);
+        preTMX.whitelistTransfer(user1, true, false);
+        preTMX.whitelistTransfer(user2, false, true);
+        preTMX.transfer(user1, TRANSFER_AMOUNT);
+        vm.stopPrank();
+
+        // Execute
+        vm.prank(user1);
+        preTMX.transfer(user2, TRANSFER_AMOUNT);
+
+        // Assert
+        assertEq(preTMX.balanceOf(user2), TRANSFER_AMOUNT);
+    }
+
+    function test_TransferDisabled_BothWhitelistedToNonWhitelisted_Succeeds() public {
+        // Setup: user1 is whitelisted for both from and to
+        vm.startPrank(admin);
+        preTMX.whitelistTransfer(user1, true, true);
+        preTMX.transfer(user1, TRANSFER_AMOUNT);
+        vm.stopPrank();
+
+        // Execute: user1 (fromWhitelisted) can send to non-whitelisted user2
+        vm.prank(user1);
+        preTMX.transfer(user2, TRANSFER_AMOUNT);
+
+        // Assert
+        assertEq(preTMX.balanceOf(user2), TRANSFER_AMOUNT);
+    }
+
+    function test_TransferDisabled_NonWhitelistedToBothWhitelisted_Succeeds() public {
+        // Setup: user2 is whitelisted for both from and to
+        vm.startPrank(admin);
+        preTMX.whitelistTransfer(user2, true, true);
+        preTMX.transfer(user1, TRANSFER_AMOUNT);
+        vm.stopPrank();
+
+        // Execute: non-whitelisted user1 can send to user2 (toWhitelisted)
+        vm.prank(user1);
+        preTMX.transfer(user2, TRANSFER_AMOUNT);
+
+        // Assert
+        assertEq(preTMX.balanceOf(user2), TRANSFER_AMOUNT);
+    }
+
+    // ========== TransferFrom Tests ==========
+
+    function test_TransferFrom_WithApproval_FollowsWhitelistRules() public {
+        // Setup: user1 has tokens and approves user3 to spend
+        vm.prank(admin);
+        preTMX.transfer(user1, TRANSFER_AMOUNT);
+
+        vm.prank(user1);
+        preTMX.approve(user3, TRANSFER_AMOUNT);
+
+        // Execute & Assert: Should revert since user1 is not fromWhitelisted
+        vm.prank(user3);
+        vm.expectRevert(abi.encodeWithSelector(PreTMX.TransferNotWhitelisted.selector, user1, user2));
+        preTMX.transferFrom(user1, user2, TRANSFER_AMOUNT);
+    }
+
+    function test_TransferFrom_FromWhitelisted_Succeeds() public {
+        // Setup
+        vm.startPrank(admin);
+        preTMX.whitelistTransfer(user1, true, false);
+        preTMX.transfer(user1, TRANSFER_AMOUNT);
+        vm.stopPrank();
+
+        vm.prank(user1);
+        preTMX.approve(user3, TRANSFER_AMOUNT);
+
+        // Execute: user3 can transferFrom user1 (fromWhitelisted) to user2
+        vm.prank(user3);
+        preTMX.transferFrom(user1, user2, TRANSFER_AMOUNT);
+
+        // Assert
+        assertEq(preTMX.balanceOf(user2), TRANSFER_AMOUNT);
+    }
+
+    function test_TransferFrom_ToWhitelisted_Succeeds() public {
+        // Setup
+        vm.startPrank(admin);
+        preTMX.whitelistTransfer(user2, false, true);
+        preTMX.transfer(user1, TRANSFER_AMOUNT);
+        vm.stopPrank();
+
+        vm.prank(user1);
+        preTMX.approve(user3, TRANSFER_AMOUNT);
+
+        // Execute: user3 can transferFrom user1 to user2 (toWhitelisted)
+        vm.prank(user3);
+        preTMX.transferFrom(user1, user2, TRANSFER_AMOUNT);
+
+        // Assert
+        assertEq(preTMX.balanceOf(user2), TRANSFER_AMOUNT);
+    }
+
+    function test_TransferFrom_WhenEnabled_Succeeds() public {
+        // Setup
+        vm.startPrank(admin);
+        preTMX.transfer(user1, TRANSFER_AMOUNT);
+        preTMX.enableTransfer();
+        vm.stopPrank();
+
+        vm.prank(user1);
+        preTMX.approve(user3, TRANSFER_AMOUNT);
+
+        // Execute
+        vm.prank(user3);
+        preTMX.transferFrom(user1, user2, TRANSFER_AMOUNT);
+
+        // Assert
+        assertEq(preTMX.balanceOf(user2), TRANSFER_AMOUNT);
+    }
+
+    // ========== Owner Functions Tests ==========
+
+    function test_EnableTransfer_OnlyOwner() public {
+        vm.prank(admin);
+        preTMX.enableTransfer();
+
+        assertTrue(preTMX.transferEnabled());
+    }
+
+    function test_EnableTransfer_NonOwner_Reverts() public {
+        vm.prank(user1);
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", user1));
+        preTMX.enableTransfer();
+    }
+
+    function test_DisableTransfer_OnlyOwner() public {
         vm.startPrank(admin);
         preTMX.enableTransfer();
-        assertFalse(preTMX.transferRestricted());
-
-        vm.expectEmit(true, true, true, true);
-        emit PreTMX.TransferRestricted(true);
-
         preTMX.disableTransfer();
-        assertTrue(preTMX.transferRestricted());
-        vm.stopPrank();
-    }
-
-    function test_EnableTransfer_NotAdmin() public {
-        vm.prank(user1);
-        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, user1));
-        preTMX.enableTransfer();
-    }
-
-    function test_DisableTransfer_NotAdmin() public {
-        vm.prank(user1);
-        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, user1));
-        preTMX.disableTransfer();
-    }
-
-    function test_Transfer_WhenRestricted_AdminWhitelisted() public {
-        // Admin can transfer to another admin (both whitelisted)
-        vm.prank(admin);
-
-        vm.expectEmit(true, true, false, true);
-        emit IERC20.Transfer(admin, admin, 1000);
-
-        bool success = preTMX.transfer(admin, 1000);
-        assertTrue(success);
-        assertEq(preTMX.balanceOf(admin), initialSupply); // Same balance since transferring to self
-    }
-
-    function test_Transfer_WhenNotRestricted() public {
-        vm.startPrank(admin);
-        preTMX.enableTransfer();
-
-        vm.expectEmit(true, true, false, true);
-        emit IERC20.Transfer(admin, user1, 1000);
-
-        bool success = preTMX.transfer(user1, 1000);
-        assertTrue(success);
-        assertEq(preTMX.balanceOf(user1), 1000);
-        assertEq(preTMX.balanceOf(admin), initialSupply - 1000);
-        vm.stopPrank();
-    }
-
-    function test_TransferFrom_WhenNotRestricted() public {
-        vm.startPrank(admin);
-        preTMX.enableTransfer();
-        preTMX.approve(user1, 1000);
         vm.stopPrank();
 
+        assertFalse(preTMX.transferEnabled());
+    }
+
+    function test_DisableTransfer_NonOwner_Reverts() public {
         vm.prank(user1);
-        bool success = preTMX.transferFrom(admin, user2, 1000);
-
-        assertTrue(success);
-        assertEq(preTMX.balanceOf(user2), 1000);
-        assertEq(preTMX.balanceOf(admin), initialSupply - 1000);
-    }
-
-    function test_TransferFrom_WhenRestricted_AdminToAdmin() public {
-        vm.startPrank(admin);
-        preTMX.approve(admin, 1000);
-
-        bool success = preTMX.transferFrom(admin, admin, 1000);
-        assertTrue(success);
-        assertEq(preTMX.balanceOf(admin), initialSupply); // Same balance since transferring to self
-        vm.stopPrank();
-    }
-
-    function test_Mint_WhenRestricted() public {
-        // Minting should work even when transfers are restricted
-        vm.prank(admin);
-
-        vm.expectEmit(true, true, false, true);
-        emit IERC20.Transfer(address(0), user1, 5000);
-
-        preTMX.mint(user1, 5000);
-
-        assertEq(preTMX.balanceOf(user1), 5000);
-        assertEq(preTMX.totalSupply(), initialSupply + 5000);
-    }
-
-    function test_Mint_WhenNotRestricted() public {
-        vm.startPrank(admin);
-        preTMX.enableTransfer();
-
-        vm.expectEmit(true, true, false, true);
-        emit IERC20.Transfer(address(0), user1, 5000);
-
-        preTMX.mint(user1, 5000);
-
-        assertEq(preTMX.balanceOf(user1), 5000);
-        assertEq(preTMX.totalSupply(), initialSupply + 5000);
-        vm.stopPrank();
-    }
-
-    function test_Mint_NotAdmin() public {
-        vm.prank(user1);
-        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, user1));
-        preTMX.mint(user1, 5000);
-    }
-
-    function test_Burn_WhenRestricted() public {
-        // First give some tokens to user1 via minting (bypasses restrictions)
-        vm.prank(admin);
-        preTMX.mint(user1, 5000);
-
-        // Only admin (owner) can burn tokens, not user1
-        vm.prank(admin);
-
-        vm.expectEmit(true, true, false, true);
-        emit IERC20.Transfer(admin, address(0), 2000);
-
-        preTMX.burn(2000);
-
-        assertEq(preTMX.balanceOf(admin), initialSupply - 2000);
-        assertEq(preTMX.totalSupply(), initialSupply + 5000 - 2000);
-    }
-
-    function test_Burn_WhenNotRestricted() public {
-        // First transfer some tokens to user1
-        vm.startPrank(admin);
-        preTMX.enableTransfer();
-        preTMX.transfer(user1, 5000);
-
-        // Only admin (owner) can burn tokens
-        vm.expectEmit(true, true, false, true);
-        emit IERC20.Transfer(admin, address(0), 2000);
-
-        preTMX.burn(2000);
-
-        assertEq(preTMX.balanceOf(admin), initialSupply - 5000 - 2000);
-        assertEq(preTMX.totalSupply(), initialSupply - 2000);
-        vm.stopPrank();
-    }
-
-    function test_Burn_InsufficientBalance() public {
-        // Admin tries to burn more than they have
-        vm.prank(admin);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IERC20Errors.ERC20InsufficientBalance.selector, admin, initialSupply, initialSupply + 1
-            )
-        );
-        preTMX.burn(initialSupply + 1);
-    }
-
-    function test_Burn_NotOwner() public {
-        // Give tokens to user1 via minting
-        vm.prank(admin);
-        preTMX.mint(user1, 1000);
-
-        // user1 tries to burn but should fail because only owner can burn
-        vm.prank(user1);
-        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, user1));
-        preTMX.burn(500);
-    }
-
-    function test_FuzzTransfer_WhenNotRestricted(uint256 amount) public {
-        // Bound the amount to a reasonable range to avoid overflow issues
-        amount = bound(amount, 1, initialSupply);
-
-        vm.startPrank(admin);
-        preTMX.enableTransfer();
-        bool success = preTMX.transfer(user1, amount);
-        vm.stopPrank();
-
-        assertTrue(success);
-        assertEq(preTMX.balanceOf(user1), amount);
-        assertEq(preTMX.balanceOf(admin), initialSupply - amount);
-    }
-
-    function test_FuzzMint(address to, uint256 amount) public {
-        // Avoid minting to zero address and zero amount
-        vm.assume(to != address(0) && to != admin);
-        amount = bound(amount, 1, type(uint256).max - initialSupply);
-
-        vm.prank(admin);
-        preTMX.mint(to, amount);
-
-        assertEq(preTMX.balanceOf(to), amount);
-        assertEq(preTMX.totalSupply(), initialSupply + amount);
-    }
-
-    // Additional tests for whitelisting functionality
-    function test_WhitelistingState() public {
-        // Admin should be whitelisted by default
-        assertTrue(preTMX.isTransferredFromWhitelisted(admin));
-
-        // Other users should not be whitelisted
-        assertFalse(preTMX.isTransferredFromWhitelisted(user1));
-    }
-
-    function test_WhitelistTransferFrom() public {
-        // Initially user1 is not whitelisted
-        assertFalse(preTMX.isTransferredFromWhitelisted(user1));
-
-        // Admin whitelists user1 for sending
-        vm.prank(admin);
-
-        vm.expectEmit(true, true, true, true);
-        emit PreTMX.TransferFromWhitelisted(user1, true);
-
-        preTMX.whitelistTransferFrom(user1, true);
-
-        assertTrue(preTMX.isTransferredFromWhitelisted(user1));
-    }
-
-    function test_WhitelistTransferFrom_Unwhitelist() public {
-        // First whitelist user1
-        vm.startPrank(admin);
-        preTMX.whitelistTransferFrom(user1, true);
-        assertTrue(preTMX.isTransferredFromWhitelisted(user1));
-
-        // Then unwhitelist user1
-        vm.expectEmit(true, true, true, true);
-        emit PreTMX.TransferFromWhitelisted(user1, false);
-
-        preTMX.whitelistTransferFrom(user1, false);
-        assertFalse(preTMX.isTransferredFromWhitelisted(user1));
-        vm.stopPrank();
-    }
-
-    function test_WhitelistTransferFrom_NotAdmin() public {
-        vm.prank(user1);
-        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, user1));
-        preTMX.whitelistTransferFrom(user2, true);
-    }
-
-    function test_WhitelistTransferFrom_EnablesTransfer() public {
-        // Give tokens to user1 via minting and whitelist user1 to send
-        vm.startPrank(admin);
-        preTMX.mint(user1, 1000);
-
-        vm.expectEmit(true, true, true, true);
-        emit PreTMX.TransferFromWhitelisted(user1, true);
-
-        preTMX.whitelistTransferFrom(user1, true);
-        vm.stopPrank();
-
-        // Now user1 can transfer to admin
-        vm.prank(user1);
-        bool success = preTMX.transfer(admin, 500);
-        assertTrue(success);
-        assertEq(preTMX.balanceOf(user1), 500);
-        assertEq(preTMX.balanceOf(admin), initialSupply + 500);
-    }
-
-    function test_BothWhitelisted_EnablesTransfer() public {
-        // Whitelist both user1 and user2
-        vm.startPrank(admin);
-        preTMX.mint(user1, 1000);
-
-        vm.expectEmit(true, true, true, true);
-        emit PreTMX.TransferFromWhitelisted(user1, true);
-
-        preTMX.whitelistTransferFrom(user1, true);
-        vm.stopPrank();
-
-        // Now user1 can transfer to user2
-        vm.prank(user1);
-        bool success = preTMX.transfer(user2, 300);
-        assertTrue(success);
-        assertEq(preTMX.balanceOf(user1), 700);
-        assertEq(preTMX.balanceOf(user2), 300);
-    }
-
-    function test_WhitelistTransferFrom_WithTransferFrom() public {
-        // Test whitelisting with transferFrom function
-        vm.startPrank(admin);
-        preTMX.mint(user1, 1000);
-
-        vm.expectEmit(true, true, true, true);
-        emit PreTMX.TransferFromWhitelisted(user1, true);
-
-        preTMX.whitelistTransferFrom(user1, true);
-        vm.stopPrank();
-
-        // user1 approves admin to spend tokens
-        vm.prank(user1);
-        preTMX.approve(admin, 500);
-
-        // admin can transfer from user1 to user2
-        vm.prank(admin);
-        bool success = preTMX.transferFrom(user1, user2, 500);
-        assertTrue(success);
-        assertEq(preTMX.balanceOf(user1), 500);
-        assertEq(preTMX.balanceOf(user2), 500);
-    }
-
-    function test_UnwhitelistingBreaksTransfer() public {
-        // First set up a working scenario
-        vm.startPrank(admin);
-        preTMX.mint(user1, 1000);
-        preTMX.whitelistTransferFrom(user1, true);
-        vm.stopPrank();
-
-        // Verify transfer works
-        vm.prank(user1);
-        preTMX.transfer(user2, 100);
-        assertEq(preTMX.balanceOf(user2), 100);
-
-        // Now unwhitelist user1 from sending
-        vm.prank(admin);
-
-        vm.expectEmit(true, true, true, true);
-        emit PreTMX.TransferFromWhitelisted(user1, false);
-
-        preTMX.whitelistTransferFrom(user1, false);
-
-        // Transfer should now fail
-        vm.prank(user1);
-        vm.expectRevert(abi.encodeWithSelector(PreTMX.TransferFromNotWhitelisted.selector, user1));
-        preTMX.transfer(user2, 100);
-    }
-
-    function test_RestrictedTransfer_FromNotWhitelisted() public {
-        // Give tokens to user1 via minting (bypasses restrictions)
-        vm.prank(admin);
-        preTMX.mint(user1, 1000);
-
-        // user1 (not whitelisted) tries to transfer - should fail
-        vm.prank(user1);
-        vm.expectRevert(abi.encodeWithSelector(PreTMX.TransferFromNotWhitelisted.selector, user1));
-        preTMX.transfer(admin, 500);
-    }
-
-    function test_RestrictedTransferFrom_FromNotWhitelisted() public {
-        // Give tokens to user1 and approve user2
-        vm.prank(admin);
-        preTMX.mint(user1, 1000);
-
-        vm.prank(user1);
-        preTMX.approve(user2, 500);
-
-        // user2 tries to transfer from user1 (not whitelisted) - should fail
-        vm.prank(user2);
-        vm.expectRevert(abi.encodeWithSelector(PreTMX.TransferFromNotWhitelisted.selector, user1));
-        preTMX.transferFrom(user1, admin, 500);
-    }
-
-    function test_MintAndBurnBypassRestrictions() public {
-        // Verify that minting and burning work even when transfers are restricted
-        assertTrue(preTMX.transferRestricted());
-
-        // Mint to non-whitelisted user should work
-        vm.prank(admin);
-        preTMX.mint(user1, 1000);
-        assertEq(preTMX.balanceOf(user1), 1000);
-
-        // Only owner can burn tokens (admin in this case)
-        vm.prank(admin);
-        preTMX.burn(500);
-        assertEq(preTMX.balanceOf(admin), initialSupply - 500);
-        assertEq(preTMX.totalSupply(), initialSupply + 1000 - 500);
-    }
-
-    function test_FuzzWhitelisting(address user, bool fromWhitelisted, bool toWhitelisted) public {
-        vm.assume(user != address(0) && user != admin);
-
-        vm.startPrank(admin);
-        preTMX.whitelistTransferFrom(user, fromWhitelisted);
-        vm.stopPrank();
-
-        assertEq(preTMX.isTransferredFromWhitelisted(user), fromWhitelisted);
-    }
-
-    function test_WhitelistSelf() public {
-        // Test admin whitelisting themselves (should work but redundant since already whitelisted)
-        vm.startPrank(admin);
-
-        vm.expectEmit(true, true, true, true);
-        emit PreTMX.TransferFromWhitelisted(admin, false);
-
-        preTMX.whitelistTransferFrom(admin, false);
-
-        assertFalse(preTMX.isTransferredFromWhitelisted(admin));
-
-        // Re-whitelist admin
-        vm.expectEmit(true, true, true, true);
-        emit PreTMX.TransferFromWhitelisted(admin, true);
-
-        preTMX.whitelistTransferFrom(admin, true);
-
-        assertTrue(preTMX.isTransferredFromWhitelisted(admin));
-        vm.stopPrank();
-    }
-
-    // ============ Ownership Transfer Tests ============
-
-    function test_InitialOwnership() public {
-        assertEq(preTMX.owner(), admin);
-        assertEq(preTMX.pendingOwner(), address(0));
-    }
-
-    function test_TransferOwnership() public {
-        vm.prank(admin);
-
-        vm.expectEmit(true, true, true, true);
-        emit Ownable2Step.OwnershipTransferStarted(admin, user1);
-
-        preTMX.transferOwnership(user1);
-
-        // Ownership should not change until accepted
-        assertEq(preTMX.owner(), admin);
-        assertEq(preTMX.pendingOwner(), user1);
-    }
-
-    function test_TransferOwnership_NotOwner() public {
-        vm.prank(user1);
-        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, user1));
-        preTMX.transferOwnership(user2);
-    }
-
-    function test_AcceptOwnership() public {
-        // Start ownership transfer
-        vm.prank(admin);
-        preTMX.transferOwnership(user1);
-
-        // Accept ownership
-        vm.prank(user1);
-
-        vm.expectEmit(true, true, true, true);
-        emit Ownable.OwnershipTransferred(admin, user1);
-
-        preTMX.acceptOwnership();
-
-        // Verify ownership has changed
-        assertEq(preTMX.owner(), user1);
-        assertEq(preTMX.pendingOwner(), address(0));
-    }
-
-    function test_AcceptOwnership_NotPendingOwner() public {
-        // Start ownership transfer to user1
-        vm.prank(admin);
-        preTMX.transferOwnership(user1);
-
-        // user2 tries to accept (should fail)
-        vm.prank(user2);
-        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, user2));
-        preTMX.acceptOwnership();
-
-        // Ownership should remain unchanged
-        assertEq(preTMX.owner(), admin);
-        assertEq(preTMX.pendingOwner(), user1);
-    }
-
-    function test_AcceptOwnership_NoPendingTransfer() public {
-        // Try to accept ownership when no transfer is pending
-        vm.prank(user1);
-        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, user1));
-        preTMX.acceptOwnership();
-    }
-
-    function test_TransferOwnership_CancelPending() public {
-        // Start ownership transfer to user1
-        vm.prank(admin);
-        preTMX.transferOwnership(user1);
-        assertEq(preTMX.pendingOwner(), user1);
-
-        // Cancel by transferring to zero address
-        vm.prank(admin);
-
-        vm.expectEmit(true, true, true, true);
-        emit Ownable2Step.OwnershipTransferStarted(admin, address(0));
-
-        preTMX.transferOwnership(address(0));
-        assertEq(preTMX.pendingOwner(), address(0));
-
-        // user1 should no longer be able to accept
-        vm.prank(user1);
-        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, user1));
-        preTMX.acceptOwnership();
-    }
-
-    function test_TransferOwnership_ReplacePending() public {
-        // Start ownership transfer to user1
-        vm.prank(admin);
-        preTMX.transferOwnership(user1);
-        assertEq(preTMX.pendingOwner(), user1);
-
-        // Replace with transfer to user2
-        vm.prank(admin);
-
-        vm.expectEmit(true, true, true, true);
-        emit Ownable2Step.OwnershipTransferStarted(admin, user2);
-
-        preTMX.transferOwnership(user2);
-        assertEq(preTMX.pendingOwner(), user2);
-
-        // user1 should no longer be able to accept
-        vm.prank(user1);
-        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, user1));
-        preTMX.acceptOwnership();
-
-        // user2 should be able to accept
-        vm.prank(user2);
-        preTMX.acceptOwnership();
-        assertEq(preTMX.owner(), user2);
-    }
-
-    function test_RenounceOwnership() public {
-        vm.prank(admin);
-
-        vm.expectEmit(true, true, true, true);
-        emit Ownable.OwnershipTransferred(admin, address(0));
-
-        preTMX.renounceOwnership();
-
-        assertEq(preTMX.owner(), address(0));
-        assertEq(preTMX.pendingOwner(), address(0));
-    }
-
-    function test_RenounceOwnership_NotOwner() public {
-        vm.prank(user1);
-        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, user1));
-        preTMX.renounceOwnership();
-    }
-
-    function test_OwnershipTransfer_FunctionalityTransfers() public {
-        // Transfer ownership to user1
-        vm.prank(admin);
-        preTMX.transferOwnership(user1);
-
-        vm.prank(user1);
-        preTMX.acceptOwnership();
-
-        // Verify new owner can use onlyOwner functions
-        vm.prank(user1);
-        preTMX.enableTransfer();
-        assertFalse(preTMX.transferRestricted());
-
-        vm.prank(user1);
-        preTMX.mint(user2, 1000);
-        assertEq(preTMX.balanceOf(user2), 1000);
-
-        vm.prank(user1);
-        preTMX.whitelistTransferFrom(user2, true);
-        assertTrue(preTMX.isTransferredFromWhitelisted(user2));
-
-        // Verify old owner can no longer use onlyOwner functions
-        vm.prank(admin);
-        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, admin));
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", user1));
         preTMX.disableTransfer();
     }
 
-    function test_OwnershipTransfer_WithPendingTransfer() public {
-        // Start ownership transfer to user1
+    function test_WhitelistTransfer_OnlyOwner() public {
         vm.prank(admin);
-        preTMX.transferOwnership(user1);
+        preTMX.whitelistTransfer(user1, true, false);
 
-        // Verify admin can still use onlyOwner functions while transfer is pending
-        vm.prank(admin);
-        preTMX.enableTransfer();
-        assertFalse(preTMX.transferRestricted());
-
-        // Verify user1 cannot use onlyOwner functions yet
-        vm.prank(user1);
-        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, user1));
-        preTMX.disableTransfer();
-
-        // Complete the transfer
-        vm.prank(user1);
-        preTMX.acceptOwnership();
-
-        // Now user1 can use onlyOwner functions
-        vm.prank(user1);
-        preTMX.disableTransfer();
-        assertTrue(preTMX.transferRestricted());
+        (bool fromWhitelisted, bool toWhitelisted) = preTMX.whitelistConfig(user1);
+        assertTrue(fromWhitelisted);
+        assertFalse(toWhitelisted);
     }
 
-    function test_FuzzOwnershipTransfer(address newOwner) public {
-        vm.assume(newOwner != address(0) && newOwner != admin);
+    function test_WhitelistTransfer_NonOwner_Reverts() public {
+        vm.prank(user1);
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", user1));
+        preTMX.whitelistTransfer(user2, true, false);
+    }
 
-        // Transfer ownership
+    function test_Mint_OnlyOwner() public {
+        uint256 initialSupply = preTMX.totalSupply();
+
         vm.prank(admin);
-        preTMX.transferOwnership(newOwner);
-        assertEq(preTMX.pendingOwner(), newOwner);
+        preTMX.mint(user1, TRANSFER_AMOUNT);
 
-        // Accept ownership
-        vm.prank(newOwner);
-        preTMX.acceptOwnership();
-        assertEq(preTMX.owner(), newOwner);
-        assertEq(preTMX.pendingOwner(), address(0));
+        assertEq(preTMX.balanceOf(user1), TRANSFER_AMOUNT);
+        assertEq(preTMX.totalSupply(), initialSupply + TRANSFER_AMOUNT);
+    }
+
+    function test_Mint_NonOwner_Reverts() public {
+        vm.prank(user1);
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", user1));
+        preTMX.mint(user1, TRANSFER_AMOUNT);
+    }
+
+    function test_Burn_OnlyOwner() public {
+        uint256 initialSupply = preTMX.totalSupply();
+
+        vm.prank(admin);
+        preTMX.burn(TRANSFER_AMOUNT);
+
+        assertEq(preTMX.balanceOf(admin), initialSupply - TRANSFER_AMOUNT);
+        assertEq(preTMX.totalSupply(), initialSupply - TRANSFER_AMOUNT);
+    }
+
+    function test_Burn_NonOwner_Reverts() public {
+        vm.prank(user1);
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", user1));
+        preTMX.burn(TRANSFER_AMOUNT);
+    }
+
+    // ========== Whitelist Management Tests ==========
+
+    function test_WhitelistFromOnly() public {
+        vm.prank(admin);
+        preTMX.whitelistTransfer(user1, true, false);
+
+        (bool fromWhitelisted, bool toWhitelisted) = preTMX.whitelistConfig(user1);
+        assertTrue(fromWhitelisted);
+        assertFalse(toWhitelisted);
+    }
+
+    function test_WhitelistToOnly() public {
+        vm.prank(admin);
+        preTMX.whitelistTransfer(user1, false, true);
+
+        (bool fromWhitelisted, bool toWhitelisted) = preTMX.whitelistConfig(user1);
+        assertFalse(fromWhitelisted);
+        assertTrue(toWhitelisted);
+    }
+
+    function test_WhitelistBoth() public {
+        vm.prank(admin);
+        preTMX.whitelistTransfer(user1, true, true);
+
+        (bool fromWhitelisted, bool toWhitelisted) = preTMX.whitelistConfig(user1);
+        assertTrue(fromWhitelisted);
+        assertTrue(toWhitelisted);
+    }
+
+    function test_RemoveWhitelist() public {
+        // Setup: whitelist user1
+        vm.startPrank(admin);
+        preTMX.whitelistTransfer(user1, true, true);
+
+        // Execute: remove whitelist
+        preTMX.whitelistTransfer(user1, false, false);
+        vm.stopPrank();
+
+        // Assert
+        (bool fromWhitelisted, bool toWhitelisted) = preTMX.whitelistConfig(user1);
+        assertFalse(fromWhitelisted);
+        assertFalse(toWhitelisted);
+    }
+
+    function test_UpdateWhitelist() public {
+        // Setup: whitelist user1 for from only
+        vm.startPrank(admin);
+        preTMX.whitelistTransfer(user1, true, false);
+
+        // Execute: update to to only
+        preTMX.whitelistTransfer(user1, false, true);
+        vm.stopPrank();
+
+        // Assert
+        (bool fromWhitelisted, bool toWhitelisted) = preTMX.whitelistConfig(user1);
+        assertFalse(fromWhitelisted);
+        assertTrue(toWhitelisted);
+    }
+
+    // ========== Events Tests ==========
+
+    function test_TransferEnabledEvent() public {
+        vm.expectEmit(true, true, true, true);
+        emit TransferEnabled(true);
+
+        vm.prank(admin);
+        preTMX.enableTransfer();
+    }
+
+    function test_TransferDisabledEvent() public {
+        vm.startPrank(admin);
+        preTMX.enableTransfer();
+
+        vm.expectEmit(true, true, true, true);
+        emit TransferEnabled(false);
+
+        preTMX.disableTransfer();
+        vm.stopPrank();
+    }
+
+    function test_TransferWhitelistedEvent() public {
+        vm.expectEmit(true, true, true, true);
+        emit TransferWhitelisted(user1, true, false);
+
+        vm.prank(admin);
+        preTMX.whitelistTransfer(user1, true, false);
+    }
+
+    function test_TransferWhitelistedEvent_OnDeployment() public {
+        vm.expectEmit(true, true, true, true);
+        emit TransferWhitelisted(user1, true, true);
+
+        vm.prank(user1);
+        new PreTMX(user1);
+    }
+
+    // ========== Edge Cases ==========
+
+    function test_AdminCanAlwaysTransferWhenDisabled() public view {
+        // Admin is whitelisted by default, so can transfer even when disabled
+        assertEq(preTMX.transferEnabled(), false);
+        (bool fromWhitelisted, bool toWhitelisted) = preTMX.whitelistConfig(admin);
+        assertTrue(fromWhitelisted);
+        assertTrue(toWhitelisted);
+    }
+
+    function test_TransferToSelf_NonWhitelisted_WhenDisabled_Reverts() public {
+        // Setup: Give user1 some tokens
+        vm.prank(admin);
+        preTMX.transfer(user1, TRANSFER_AMOUNT);
+
+        // Execute & Assert: Even transfer to self should fail if not whitelisted
+        vm.prank(user1);
+        vm.expectRevert(abi.encodeWithSelector(PreTMX.TransferNotWhitelisted.selector, user1, user1));
+        preTMX.transfer(user1, TRANSFER_AMOUNT);
+    }
+
+    function test_TransferToSelf_Whitelisted_Succeeds() public {
+        // Setup
+        vm.startPrank(admin);
+        preTMX.whitelistTransfer(user1, true, false);
+        preTMX.transfer(user1, TRANSFER_AMOUNT);
+        vm.stopPrank();
+
+        // Execute: Transfer to self
+        vm.prank(user1);
+        preTMX.transfer(user1, TRANSFER_AMOUNT);
+
+        // Assert
+        assertEq(preTMX.balanceOf(user1), TRANSFER_AMOUNT);
+    }
+
+    function test_ZeroTransfer_FollowsWhitelistRules() public {
+        // Setup: Give user1 some tokens
+        vm.prank(admin);
+        preTMX.transfer(user1, TRANSFER_AMOUNT);
+
+        // Execute & Assert: Even 0 amount transfer should follow whitelist rules
+        vm.prank(user1);
+        vm.expectRevert(abi.encodeWithSelector(PreTMX.TransferNotWhitelisted.selector, user1, user2));
+        preTMX.transfer(user2, 0);
+    }
+
+    function test_MultipleEnableDisableCycles() public {
+        vm.startPrank(admin);
+
+        preTMX.enableTransfer();
+        assertTrue(preTMX.transferEnabled());
+
+        preTMX.disableTransfer();
+        assertFalse(preTMX.transferEnabled());
+
+        preTMX.enableTransfer();
+        assertTrue(preTMX.transferEnabled());
+
+        preTMX.disableTransfer();
+        assertFalse(preTMX.transferEnabled());
+
+        vm.stopPrank();
     }
 }
