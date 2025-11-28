@@ -15,6 +15,12 @@ contract PancakeSmartAdapter is ERC20SwapAdapterV2 {
 
     error InvalidTradeAmount();
 
+    address public immutable router;
+
+    constructor(address _pancakeRouter) {
+        router = _pancakeRouter;
+    }
+
     function _swap(address recipient, IERC20 tokenIn, IERC20 tokenOut, uint256 amount, bytes memory swapData)
         internal
         virtual
@@ -22,13 +28,12 @@ contract PancakeSmartAdapter is ERC20SwapAdapterV2 {
         returns (uint256 tokenOutAmt)
     {
         (
-            address router,
             bytes memory data,
             bool isExactOut,
             uint256 tradeAmount,
             uint256 netAmount,
             address refundAddress
-        ) = abi.decode(swapData, (address, bytes, bool, uint256, uint256, address));
+        ) = abi.decode(swapData, (bytes, bool, uint256, uint256, address));
         if (tradeAmount != amount && !isExactOut) {
             revert InvalidTradeAmount();
         }
