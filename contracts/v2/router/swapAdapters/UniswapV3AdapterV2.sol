@@ -12,8 +12,6 @@ contract UniswapV3AdapterV2 is ERC20SwapAdapterV2 {
     using TransferUtilsV2 for IERC20;
     using Math for uint256;
 
-    constructor() {}
-
     function _swap(address recipient, IERC20 tokenIn, IERC20, uint256 amount, bytes memory swapData)
         internal
         virtual
@@ -30,7 +28,7 @@ contract UniswapV3AdapterV2 is ERC20SwapAdapterV2 {
             address refundAddress
         ) = abi.decode(swapData, (ISwapRouter, bytes, bool, uint256, uint256, uint256, address));
         if (isExactOut) {
-            IERC20(tokenIn).safeIncreaseAllowance(address(router), netAmount);
+            IERC20(tokenIn).safeApprove(address(router), netAmount);
             uint256 amountIn = router.exactOutput(
                 ISwapRouter.ExactOutputParams({
                     path: path,
@@ -41,16 +39,12 @@ contract UniswapV3AdapterV2 is ERC20SwapAdapterV2 {
                 })
             );
             // refund remaining tokenIn to refundAddress
-            uint256 remainingBalance = 0;
-            if (amount >= amountIn) {
-                remainingBalance = amount - amountIn;
-            }
-            if (refundAddress != address(0) && remainingBalance != 0) {
-                tokenIn.safeTransfer(refundAddress, remainingBalance);
+            if (refundAddress != address(0) && refundAddress != address(this) && amount > amountIn) {
+                tokenIn.safeTransfer(refundAddress, amount - amountIn);
             }
             tokenOutAmt = tradeAmount;
         } else {
-            IERC20(tokenIn).safeIncreaseAllowance(address(router), amount);
+            IERC20(tokenIn).safeApprove(address(router), amount);
             /**
              * Note: Scaling Input/Output amount
              */

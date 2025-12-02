@@ -43,7 +43,7 @@ contract KyberswapV2AdapterV2 is ERC20SwapAdapterV2 {
         override
         returns (uint256)
     {
-        IERC20(tokenIn).safeIncreaseAllowance(address(router), amountIn);
+        IERC20(tokenIn).safeApprove(address(router), amountIn);
         (bool isSuccess, bytes memory newSwapData) =
             IKyberScalingHelper(KYBER_SCALING_HELPER).getScaledInputData(swapData, amountIn);
 

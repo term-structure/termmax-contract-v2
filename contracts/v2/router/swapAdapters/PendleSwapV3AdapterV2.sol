@@ -32,7 +32,7 @@ contract PendleSwapV3AdapterV2 is ERC20SwapAdapterV2, PendleHelper {
         IPMarket market = IPMarket(ptMarketAddr);
 
         (, IPPrincipalToken PT,) = market.readTokens();
-        IERC20(tokenIn).safeIncreaseAllowance(address(router), amount);
+        IERC20(tokenIn).safeApprove(address(router), amount);
 
         /**
          * Note: Scaling Input/Output amount
