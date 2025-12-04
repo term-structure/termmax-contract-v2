@@ -575,10 +575,10 @@ contract TermMaxRouter_V1_1_2 is
      * @notice Rollover a Gearing Token position to a new market.
      * @param gtToken The Gearing Token contract.
      * @param gtId The ID of the Gearing Token to rollover.
-     * @param rolloverData The encoded rollover parameters.
+     * @param rolloverData The rollover parameters.
      * @return newGtId The ID of the new Gearing Token after rollover.
      */
-    function rolloverGt(IGearingToken gtToken, uint256 gtId, bytes memory rolloverData)
+    function rolloverGt(IGearingToken gtToken, uint256 gtId, RolloverParams memory rolloverData)
         external
         nonReentrant
         whenNotPaused
@@ -590,7 +590,7 @@ contract TermMaxRouter_V1_1_2 is
         }
         gtToken.safeTransferFrom(msg.sender, address(this), gtId, "");
         // rollover always repay by debt token
-        gtToken.flashRepay(gtId, true, abi.encode(FlashRepayOptions.ROLLOVER, rolloverData));
+        gtToken.flashRepay(gtId, true, abi.encode(FlashRepayOptions.ROLLOVER, abi.encode(msg.sender, rolloverData)));
         assembly {
             newGtId := tload(T_ROLLOVER_GT_RESERVE_STORE)
         }
@@ -767,8 +767,7 @@ contract TermMaxRouter_V1_1_2 is
         bytes memory collateralData,
         bytes memory callbackData
     ) internal {
-        RolloverParams memory params = abi.decode(callbackData, (RolloverParams));
-
+        (address caller, RolloverParams memory params) = abi.decode(callbackData, (address, RolloverParams));
         (IERC20 ft,, IGearingToken newGt, address newCollateral,) = params.newMarket.tokens();
         if (newCollateral != collateralToken) {
             // swap collateral token to new collateral token
@@ -792,7 +791,7 @@ contract TermMaxRouter_V1_1_2 is
             tstore(T_ROLLOVER_GT_RESERVE_STORE, newGtId)
         }
         (, uint128 ltv,) = newGt.getLiquidationInfo(newGtId);
-        emit IssueGt(params.newMarket, newGtId, tx.origin, params.recipient, 0, 0, ltv, collateralData);
+        emit IssueGt(params.newMarket, newGtId, caller, params.recipient, 0, 0, ltv, collateralData);
     }
 
     function _flashRepay(IERC20 repayToken, uint128 debtAmt, bytes memory collateralData, bytes memory callbackData)
