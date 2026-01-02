@@ -177,7 +177,8 @@ contract RouterTestV2 is Test {
             orders: orders,
             tradingAmts: tradingAmts,
             netTokenAmt: mintTokenOut,
-            deadline: block.timestamp + 1 hours
+            deadline: block.timestamp + 1 hours,
+            refundAddress: address(0)
         });
 
         res.debt.mint(sender, amountIn);
@@ -241,7 +242,8 @@ contract RouterTestV2 is Test {
             orders: orders,
             tradingAmts: tradingAmts,
             netTokenAmt: mintTokenOut,
-            deadline: block.timestamp + 1 hours
+            deadline: block.timestamp + 1 hours,
+            refundAddress: address(0)
         });
 
         res.debt.mint(sender, amountIn);
@@ -285,7 +287,8 @@ contract RouterTestV2 is Test {
             orders: orders,
             tradingAmts: tradingAmts,
             netTokenAmt: mintTokenOut,
-            deadline: block.timestamp + 1 hours
+            deadline: block.timestamp + 1 hours,
+            refundAddress: address(0)
         });
 
         res.debt.mint(sender, amountIn);
@@ -323,13 +326,15 @@ contract RouterTestV2 is Test {
         orders[0] = address(res.order);
         orders[1] = address(res.order);
 
+        // set up swap data, refundAddress is sender to receive refund if any
         TermMaxSwapData memory swapData = TermMaxSwapData({
             swapExactTokenForToken: false,
             scalingFactor: 0,
             orders: orders,
             tradingAmts: tradingAmts,
             netTokenAmt: maxAmountIn,
-            deadline: block.timestamp + 1 hours
+            deadline: block.timestamp + 1 hours,
+            refundAddress: sender
         });
 
         res.debt.mint(sender, maxAmountIn);
@@ -342,15 +347,9 @@ contract RouterTestV2 is Test {
             tokenOut: address(res.ft),
             swapData: abi.encode(swapData)
         });
-        // directly send onchain balance to sender
-        SwapUnit[] memory swapUnits2 = new SwapUnit[](1);
-        swapUnits2[0] =
-            SwapUnit({adapter: address(0), tokenIn: address(res.debt), tokenOut: address(0), swapData: bytes("")});
-
-        SwapPath[] memory swapPaths = new SwapPath[](2);
+        SwapPath[] memory swapPaths = new SwapPath[](1);
         swapPaths[0] =
             SwapPath({units: swapUnits, recipient: sender, inputAmount: maxAmountIn, useBalanceOnchain: false});
-        swapPaths[1] = SwapPath({units: swapUnits2, recipient: sender, inputAmount: 0, useBalanceOnchain: true});
 
         uint256 balanceBefore = res.ft.balanceOf(sender);
         uint256[] memory netAmounts = res.router.swapTokens(swapPaths);
@@ -386,7 +385,8 @@ contract RouterTestV2 is Test {
             orders: orders,
             tradingAmts: amtsToBuyXt,
             netTokenAmt: minXtOut,
-            deadline: block.timestamp + 1 hours
+            deadline: block.timestamp + 1 hours,
+            refundAddress: address(0)
         });
 
         SwapPath[] memory inputPaths = new SwapPath[](1);
@@ -634,7 +634,8 @@ contract RouterTestV2 is Test {
             orders: orders,
             tradingAmts: tokenAmtsWantBuy,
             netTokenAmt: maxDebtAmt,
-            deadline: block.timestamp + 1 hours
+            deadline: block.timestamp + 1 hours,
+            refundAddress: address(0)
         });
 
         SwapUnit[] memory swapUnits = new SwapUnit[](1);
@@ -752,7 +753,8 @@ contract RouterTestV2 is Test {
             orders: orders,
             tradingAmts: amtsToBuyFt,
             netTokenAmt: mintTokenOut.toUint128(),
-            deadline: block.timestamp + 1 hours
+            deadline: block.timestamp + 1 hours,
+            refundAddress: address(0)
         });
         units[1] = SwapUnit({
             adapter: address(termMaxSwapAdapter),
@@ -902,7 +904,8 @@ contract RouterTestV2 is Test {
             orders: orders,
             tradingAmts: amtsToBuyFt,
             netTokenAmt: maxTokenIn,
-            deadline: block.timestamp + 1 hours
+            deadline: block.timestamp + 1 hours,
+            refundAddress: sender
         });
 
         SwapUnit[] memory swapUnits = new SwapUnit[](1);
@@ -913,15 +916,9 @@ contract RouterTestV2 is Test {
             swapData: abi.encode(swapData)
         });
 
-        SwapPath[] memory inputPaths = new SwapPath[](2);
+        SwapPath[] memory inputPaths = new SwapPath[](1);
         inputPaths[0] =
             SwapPath({units: swapUnits, recipient: address(res.router), inputAmount: debtAmt, useBalanceOnchain: false});
-
-        SwapUnit[] memory transferTokenUnits = new SwapUnit[](1);
-        transferTokenUnits[0] =
-            SwapUnit({adapter: address(0), tokenIn: address(res.debt), tokenOut: address(0), swapData: bytes("")});
-        inputPaths[1] =
-            SwapPath({units: transferTokenUnits, recipient: sender, inputAmount: 0, useBalanceOnchain: true});
 
         res.debt.mint(sender, maxTokenIn);
         res.debt.approve(address(res.router), maxTokenIn);
@@ -958,7 +955,8 @@ contract RouterTestV2 is Test {
             orders: orders,
             tradingAmts: amtsToBuyFt,
             netTokenAmt: maxTokenIn,
-            deadline: block.timestamp + 1 hours
+            deadline: block.timestamp + 1 hours,
+            refundAddress: sender
         });
 
         SwapUnit[] memory swapUnits = new SwapUnit[](1);
@@ -969,15 +967,9 @@ contract RouterTestV2 is Test {
             swapData: abi.encode(swapData)
         });
 
-        SwapPath[] memory inputPaths = new SwapPath[](2);
+        SwapPath[] memory inputPaths = new SwapPath[](1);
         inputPaths[0] =
             SwapPath({units: swapUnits, recipient: address(res.router), inputAmount: debtAmt, useBalanceOnchain: false});
-
-        SwapUnit[] memory transferTokenUnits = new SwapUnit[](1);
-        transferTokenUnits[0] =
-            SwapUnit({adapter: address(0), tokenIn: address(res.debt), tokenOut: address(0), swapData: bytes("")});
-        inputPaths[1] =
-            SwapPath({units: transferTokenUnits, recipient: sender, inputAmount: 0, useBalanceOnchain: true});
 
         res.debt.mint(sender, maxTokenIn);
         res.debt.approve(address(res.router), maxTokenIn);
@@ -1037,7 +1029,8 @@ contract RouterTestV2 is Test {
             orders: orders,
             tradingAmts: tradingAmts,
             netTokenAmt: 1e8,
-            deadline: block.timestamp + 1 hours
+            deadline: block.timestamp + 1 hours,
+            refundAddress: address(0)
         });
 
         res.debt.mint(sender, amountIn);
@@ -1084,7 +1077,8 @@ contract RouterTestV2 is Test {
             orders: orders,
             tradingAmts: tradingAmts,
             netTokenAmt: 1e8,
-            deadline: block.timestamp + 1 hours
+            deadline: block.timestamp + 1 hours,
+            refundAddress: address(0)
         });
 
         res.debt.mint(sender, amountIn);
@@ -1128,7 +1122,8 @@ contract RouterTestV2 is Test {
             orders: orders,
             tradingAmts: tradingAmts,
             netTokenAmt: mintTokenOut,
-            deadline: block.timestamp + 1 hours
+            deadline: block.timestamp + 1 hours,
+            refundAddress: address(0)
         });
 
         // fund sender and approve router to pull tokens
