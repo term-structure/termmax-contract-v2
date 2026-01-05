@@ -32,10 +32,15 @@ contract OndoSwapAdapter is ERC20SwapAdapterV2 {
         ///@dev make sure the recipient in swapdata is this contract
         tokenIn.safeApprove(address(ondoMarket), amountIn);
         uint256 tokenInBalBefore = tokenIn.balanceOf(address(this));
-        tokenOutAmt = quote.side == IGMTokenManager.QuoteSide.BUY
-            ? ondoMarket.mintWithAttestation(quote, signature, address(tokenIn), amountIn)
-            : ondoMarket.redeemWithAttestation(quote, signature, address(tokenIn), amountIn);
+        uint256 tokenOutBalBefore = tokenOut.balanceOf(address(this));
+        if (quote.side == IGMTokenManager.QuoteSide.BUY) {
+            ondoMarket.mintWithAttestation(quote, signature, address(tokenIn), amountIn);
+        } else {
+            ondoMarket.redeemWithAttestation(quote, signature, address(tokenIn), amountIn);
+        }
         uint256 realCost = tokenInBalBefore - tokenIn.balanceOf(address(this));
+        // calculate output amount because OndoMarket ouput amount is base ondo USD
+        tokenOutAmt = tokenOut.balanceOf(address(this)) - tokenOutBalBefore;
         // refund excess input tokens
         if (amount > realCost && refundAddress != address(0) && refundAddress != address(this)) {
             tokenIn.safeTransfer(refundAddress, amount - realCost);
