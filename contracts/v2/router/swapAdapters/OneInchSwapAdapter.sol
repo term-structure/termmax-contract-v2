@@ -5,7 +5,7 @@ import "./ERC20SwapAdapterV2.sol";
 import {IOneInchRouter} from "../../extensions/1inch/IOneInchRouter.sol";
 
 /**
- * @title TermMax OdosAdapterV2AdapterV2
+ * @title TermMax 1inch Swap Adapter
  * @author Term Structure Labs
  */
 contract OneInchSwapAdapter is ERC20SwapAdapterV2 {
