@@ -229,7 +229,8 @@ abstract contract GtBaseTestV2 is ForkBaseTestV2 {
             orders: orders,
             tradingAmts: tokenAmtsWantBuy,
             netTokenAmt: maxDebtAmt,
-            deadline: block.timestamp + 1 hours
+            deadline: block.timestamp + 1 hours,
+            refundAddress: address(0)
         });
 
         SwapUnit[] memory swapUnits = new SwapUnit[](1);
@@ -365,7 +366,8 @@ abstract contract GtBaseTestV2 is ForkBaseTestV2 {
             orders: orders,
             tradingAmts: amtsToBuyXt,
             netTokenAmt: minXtOut,
-            deadline: block.timestamp + 1 hours
+            deadline: block.timestamp + 1 hours,
+            refundAddress: address(0)
         });
         SwapUnit[] memory swapUnits = new SwapUnit[](1);
         swapUnits[0] = SwapUnit({
@@ -450,7 +452,8 @@ abstract contract GtBaseTestV2 is ForkBaseTestV2 {
             orders: orders,
             tradingAmts: amtsToBuyFt,
             netTokenAmt: type(uint128).max,
-            deadline: block.timestamp + 1 hours
+            deadline: block.timestamp + 1 hours,
+            refundAddress: address(0)
         });
 
         SwapUnit[] memory units2 = new SwapUnit[](2);

@@ -25,6 +25,8 @@ struct TermMaxSwapData {
     uint128 netTokenAmt;
     /// @notice The deadline for the swap.
     uint256 deadline;
+    /// @notice The refund address for excess input tokens (only for exact output swaps).
+    address refundAddress;
 }
 
 contract TermMaxSwapAdapter is ERC20SwapAdapterV2 {
@@ -97,6 +99,13 @@ contract TermMaxSwapAdapter is ERC20SwapAdapterV2 {
         uint256 actualOutput = tokenOut.balanceOf(recipient) - outputTokenBalanceBefore;
         if (actualInput != finalInput || actualOutput != finalOutput) {
             revert ActualTokenBalanceNotMatch();
+        }
+        // Refund excess input tokens for exact output swaps
+        if (
+            !data.swapExactTokenForToken && finalInput < tokenInAmt && data.refundAddress != address(0)
+                && data.refundAddress != address(this)
+        ) {
+            tokenIn.safeTransfer(data.refundAddress, tokenInAmt - finalInput);
         }
     }
 
