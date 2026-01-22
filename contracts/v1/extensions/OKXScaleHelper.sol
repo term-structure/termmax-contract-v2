@@ -94,6 +94,24 @@ abstract contract OKXScaleHelper {
             baseRequest.fromTokenAmount = actualAmount;
 
             scaledCallData = abi.encodeWithSelector(selector, orderId, baseRequest, batchesAmount, batches, extraData);
+        } else if (selector == IOKXDexRouter.unxswapToWithBaseRequest.selector) {
+            (uint256 orderId,, IOKXDexRouter.BaseRequest memory baseRequest, bytes32[] memory pools) =
+                abi.decode(dataToDecode, (uint256, address, IOKXDexRouter.BaseRequest, bytes32[]));
+            baseRequest.minReturnAmount = (baseRequest.minReturnAmount * actualAmount) / baseRequest.fromTokenAmount;
+            baseRequest.fromTokenAmount = actualAmount;
+            scaledCallData = abi.encodeWithSelector(selector, orderId, receiver, baseRequest, pools);
+        } else if (selector == IOKXDexRouter.dagSwapByOrderId.selector) {
+            (uint256 orderId, IOKXDexRouter.BaseRequest memory baseRequest, IOKXDexRouter.RouterPath[] memory paths) =
+                abi.decode(dataToDecode, (uint256, IOKXDexRouter.BaseRequest, IOKXDexRouter.RouterPath[]));
+            baseRequest.minReturnAmount = (baseRequest.minReturnAmount * actualAmount) / baseRequest.fromTokenAmount;
+            baseRequest.fromTokenAmount = actualAmount;
+            scaledCallData = abi.encodeWithSelector(selector, orderId, baseRequest, paths);
+        } else if (selector == IOKXDexRouter.dagSwapTo.selector) {
+            (uint256 orderId,, IOKXDexRouter.BaseRequest memory baseRequest, IOKXDexRouter.RouterPath[] memory paths) =
+                abi.decode(dataToDecode, (uint256, address, IOKXDexRouter.BaseRequest, IOKXDexRouter.RouterPath[]));
+            baseRequest.minReturnAmount = (baseRequest.minReturnAmount * actualAmount) / baseRequest.fromTokenAmount;
+            baseRequest.fromTokenAmount = actualAmount;
+            scaledCallData = abi.encodeWithSelector(selector, orderId, receiver, baseRequest, paths);
         } else {
             revert("OKX scale helper: OKX selector not supported");
         }
@@ -141,19 +159,6 @@ interface IOKXDexRouter {
         bytes extension;
     }
 
-    // // address marketMaker;
-    // // uint256 subIndex;
-    // // bytes signature;
-    // // uint256 source;  1byte type + 1byte bool（reverse） + 0...0 + 20 bytes address
-
-    // function smartSwapByInvest(
-    //     BaseRequest calldata baseRequest,
-    //     uint256[] calldata batchesAmount,
-    //     RouterPath[][] calldata batches,
-    //     PMMSwapRequest[] calldata extraData,
-    //     address to
-    // ) external payable;
-
     function uniswapV3SwapTo(uint256 receiver, uint256 amount, uint256 minReturn, uint256[] calldata pools)
         external
         payable
@@ -192,4 +197,21 @@ interface IOKXDexRouter {
         RouterPath[][] calldata batches,
         PMMSwapRequest[] calldata extraData
     ) external payable returns (uint256 returnAmount);
+
+    function unxswapToWithBaseRequest(
+        uint256 orderId,
+        address receiver,
+        BaseRequest calldata baseRequest,
+        bytes32[] calldata pools
+    ) external payable returns (uint256 returnAmount);
+
+    function dagSwapByOrderId(uint256 orderId, BaseRequest calldata baseRequest, RouterPath[] calldata paths)
+        external
+        payable
+        returns (uint256 returnAmount);
+
+    function dagSwapTo(uint256 orderId, address receiver, BaseRequest calldata baseRequest, RouterPath[] calldata paths)
+        external
+        payable
+        returns (uint256 returnAmount);
 }
