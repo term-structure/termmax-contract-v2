@@ -26,9 +26,11 @@ contract OndoSwapAdapter is ERC20SwapAdapterV2 {
         override
         returns (uint256 tokenOutAmt)
     {
-        (uint256 amountIn, address refundAddress, IGMTokenManager.Quote memory quote, bytes memory signature) =
+        (uint256 netAmt, address refundAddress, IGMTokenManager.Quote memory quote, bytes memory signature) =
             abi.decode(swapData, (uint256, address, IGMTokenManager.Quote, bytes));
 
+        (uint256 amountIn, uint256 expectAmt) =
+            quote.side == IGMTokenManager.QuoteSide.BUY ? (netAmt, quote.quantity) : (quote.quantity, netAmt);
         ///@dev make sure the recipient in swapdata is this contract
         tokenIn.safeApprove(address(ondoMarket), amountIn);
         uint256 tokenInBalBefore = tokenIn.balanceOf(address(this));
@@ -36,7 +38,7 @@ contract OndoSwapAdapter is ERC20SwapAdapterV2 {
         if (quote.side == IGMTokenManager.QuoteSide.BUY) {
             ondoMarket.mintWithAttestation(quote, signature, address(tokenIn), amountIn);
         } else {
-            ondoMarket.redeemWithAttestation(quote, signature, address(tokenIn), amountIn);
+            ondoMarket.redeemWithAttestation(quote, signature, address(tokenOut), expectAmt);
         }
         uint256 realCost = tokenInBalBefore - tokenIn.balanceOf(address(this));
         // calculate output amount because OndoMarket ouput amount is base ondo USD
