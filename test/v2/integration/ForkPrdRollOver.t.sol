@@ -201,7 +201,8 @@ contract ForkPrdRollover is ForkBaseTestV2 {
                 orders: orders,
                 tradingAmts: amounts,
                 netTokenAmt: debt,
-                deadline: aug_1
+                deadline: aug_1,
+                refundAddress: address(0)
             });
             SwapUnit[] memory swapUnits2 = new SwapUnit[](1);
             swapUnits2[0] = SwapUnit({
@@ -289,7 +290,8 @@ contract ForkPrdRollover is ForkBaseTestV2 {
                 orders: orders,
                 tradingAmts: amounts,
                 netTokenAmt: debt + debt / 15,
-                deadline: aug_1
+                deadline: aug_1,
+                refundAddress: address(0)
             });
             SwapUnit[] memory swapUnits2 = new SwapUnit[](1);
             swapUnits2[0] = SwapUnit({
@@ -382,7 +384,8 @@ contract ForkPrdRollover is ForkBaseTestV2 {
                 orders: orders,
                 tradingAmts: amounts,
                 netTokenAmt: debt + debt / 15,
-                deadline: aug_1
+                deadline: aug_1,
+                refundAddress: address(0)
             });
             SwapUnit[] memory swapUnits2 = new SwapUnit[](1);
             swapUnits2[0] = SwapUnit({

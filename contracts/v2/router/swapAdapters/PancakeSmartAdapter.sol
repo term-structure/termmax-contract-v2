@@ -29,6 +29,9 @@ contract PancakeSmartAdapter is ERC20SwapAdapterV2 {
     {
         (bytes memory data, bool isExactOut, uint256 tradeAmount, uint256 netAmount, address refundAddress) =
             abi.decode(swapData, (bytes, bool, uint256, uint256, address));
+        if (tradeAmount != amount && !isExactOut) {
+            revert InvalidTradeAmount();
+        }
         ///@dev make sure the recipient in swapdata is this contract
         uint256 tokenInBalBefore = tokenIn.balanceOf(address(this));
         uint256 tokenOutBalBefore = tokenOut.balanceOf(address(this));
