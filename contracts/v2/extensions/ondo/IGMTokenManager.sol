@@ -91,4 +91,8 @@ interface IGMTokenManager {
         address receiveToken,
         uint256 minimumReceiveAmount
     ) external returns (uint256 redemptionUSDonValue);
+
+    function usdon() external view returns (address);
+
+    function usdonManager() external view returns (address);
 }

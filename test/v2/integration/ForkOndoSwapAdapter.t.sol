@@ -35,6 +35,7 @@ contract ForkOndoSwapAdapter is ForkBaseTestV2 {
     string DATA_PATH = string.concat(vm.projectRoot(), "/test/testdata/fork/mainnet.json");
 
     address ondoMarket = 0x2c158BC456e027b2AfFCCadF1BDBD9f5fC4c5C8c;
+    address USDon = 0xAcE8E719899F6E91831B18AE746C9A965c2119F1;
 
     address stableAsset = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
     address stockAsset = 0xf6b1117ec07684D3958caD8BEb1b302bfD21103f;
@@ -94,6 +95,7 @@ contract ForkOndoSwapAdapter is ForkBaseTestV2 {
         // tokenIn value to USDC with 6 decimals
         uint256 maxTokenInAmt = quote.quantity * quote.price / 1e18 * 1e6 / 1e18;
         console.log("maxTokenInAmt", maxTokenInAmt);
+
         bytes memory signature =
             hex"490a61be83354210137df50a299745908f053e9b1170c643670fe3d6df38846b3c26a8319dbf399c7dfadde4a5589712e2168fe6fb0f7c3b1c3178b6518146761c";
         bytes memory swapData = abi.encode(maxTokenInAmt, user, quote, signature);
@@ -119,6 +121,8 @@ contract ForkOndoSwapAdapter is ForkBaseTestV2 {
         assertLe(tokenInBefore - tokenInAfter, maxTokenInAmt);
         console.log("tokenOut out", tokenOutAfter - tokenOutBefore);
         console.log("tokenIn in", tokenInBefore - tokenInAfter);
+        console.log("USDon balance of user", IERC20(USDon).balanceOf(user));
+        vm.stopPrank();
     }
 
     function testSellStock() public {
@@ -164,6 +168,7 @@ contract ForkOndoSwapAdapter is ForkBaseTestV2 {
         assertLe(tokenInBefore - tokenInAfter, tokenInAmt);
         console.log("tokenOut out", tokenOutAfter - tokenOutBefore);
         console.log("tokenIn in", tokenInBefore - tokenInAfter);
+        console.log("USDon balance of user", IERC20(USDon).balanceOf(user));
         vm.stopPrank();
     }
 }
