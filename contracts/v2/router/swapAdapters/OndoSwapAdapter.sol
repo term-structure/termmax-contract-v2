@@ -37,7 +37,9 @@ contract OndoSwapAdapter is ERC20SwapAdapterV2 {
         tokenIn.safeApprove(address(ondoMarket), amountIn);
         uint256 tokenInBalBefore = tokenIn.balanceOf(address(this));
         uint256 tokenOutBalBefore = tokenOut.balanceOf(address(this));
+        uint256 usdonBalanceBefore;
         if (quote.side == IGMTokenManager.QuoteSide.BUY) {
+            usdonBalanceBefore = USDon.balanceOf(address(this));
             ondoMarket.mintWithAttestation(quote, signature, address(tokenIn), amountIn);
         } else {
             ondoMarket.redeemWithAttestation(quote, signature, address(tokenOut), expectAmt);
@@ -51,10 +53,13 @@ contract OndoSwapAdapter is ERC20SwapAdapterV2 {
                 tokenIn.safeTransfer(refundAddress, amount - realCost);
             }
             // refund USDon if any(ondo market always use USDon as refund token)
-            if (quote.side == IGMTokenManager.QuoteSide.BUY) {
-                uint256 usdonBal = USDon.balanceOf(address(this));
-                if (usdonBal != 0) {
-                    USDon.safeTransfer(refundAddress, usdonBal);
+            if (
+                quote.side == IGMTokenManager.QuoteSide.BUY && address(tokenIn) != address(USDon)
+                    && address(tokenOut) != address(USDon)
+            ) {
+                uint256 usdonBalanceAfter = USDon.balanceOf(address(this));
+                if (usdonBalanceAfter > usdonBalanceBefore) {
+                    USDon.safeTransfer(refundAddress, usdonBalanceAfter - usdonBalanceBefore);
                 }
             }
         }

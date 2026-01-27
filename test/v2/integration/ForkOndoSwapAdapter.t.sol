@@ -95,6 +95,7 @@ contract ForkOndoSwapAdapter is ForkBaseTestV2 {
         // tokenIn value to USDC with 6 decimals
         uint256 maxTokenInAmt = quote.quantity * quote.price / 1e18 * 1e6 / 1e18;
         console.log("maxTokenInAmt", maxTokenInAmt);
+        maxTokenInAmt += 100e6; // add 100 USDC buffer
 
         bytes memory signature =
             hex"490a61be83354210137df50a299745908f053e9b1170c643670fe3d6df38846b3c26a8319dbf399c7dfadde4a5589712e2168fe6fb0f7c3b1c3178b6518146761c";
