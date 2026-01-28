@@ -40,4 +40,13 @@ interface ERC4626TokenEvents {
      * @param buffer The current buffer amount after the update
      */
     event UpdateBufferConfig(uint256 minimumBuffer, uint256 maximumBuffer, uint256 buffer);
+
+    /**
+     * @notice Emitted when a venus pool is initialized
+     * @dev Fired during the initial setup of a ERC4626ForVenus contract
+     * @param admin The address of the administrator managing the token
+     * @param underlying The address of the underlying asset (e.g., USDC for tmxUSDC)
+     * @param pool The address of the third pool
+     */
+    event ERC4626ForVenusInitialized(address indexed admin, address indexed underlying, address indexed pool);
 }
