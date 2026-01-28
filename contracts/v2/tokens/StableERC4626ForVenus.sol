@@ -131,6 +131,19 @@ contract StableERC4626ForVenus is
         }
     }
 
+    function currentIncomeAssets() external view returns (uint256) {
+        uint256 assetInPool = _assetInPool(address(0));
+        uint256 underlyingBalance = underlying.balanceOf(address(this));
+        uint256 totalSupply_ = totalSupply();
+        uint256 assetsWithIncome = assetInPool + underlyingBalance;
+        if (assetsWithIncome < totalSupply_) {
+            // If total assets with income is less than total supply, return 0
+            return 0;
+        } else {
+            return assetsWithIncome - totalSupply_;
+        }
+    }
+
     function withdrawIncomeAssets(address asset, address to, uint256 amount) external nonReentrant onlyOwner {
         // Update interest to ensure exchange rate is fresh before calculations
         uint256 error = thirdPool.accrueInterest();
