@@ -184,14 +184,17 @@ contract StableERC4626ForVenus is
     }
 
     function _convertShareToUnderlying(uint256 shares) internal view returns (uint256 amount) {
-        // The exchange rate from underlying to shares
+        // The exchange rate from shares to underlying
+        // vToken exchangeRate is scaled by 1e18.
+        // Formula: underlying = shares * exchangeRate / 1e18
         uint256 exchangeRateStored = thirdPool.exchangeRateStored();
-        amount = shares.mulDiv(PRECISION, exchangeRateStored);
+        amount = shares.mulDiv(exchangeRateStored, PRECISION);
     }
 
     function _convertUnderlyingToShare(uint256 amount) internal view returns (uint256 shares) {
-        // The exchange rate from underlying to shares
+        // The exchange rate from shares to underlying
+        // Formula: shares = underlying * 1e18 / exchangeRate
         uint256 exchangeRateStored = thirdPool.exchangeRateStored();
-        shares = amount.mulDiv(exchangeRateStored, PRECISION);
+        shares = amount.mulDiv(PRECISION, exchangeRateStored);
     }
 }
