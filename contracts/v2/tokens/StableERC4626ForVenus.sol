@@ -29,7 +29,7 @@ contract StableERC4626ForVenus is
     IVToken public thirdPool;
     IERC20 public underlying;
     BufferConfig public bufferConfig;
-    uint256 internal withdawedIncomeAssets;
+    uint256 internal withdrawnIncomeAssets;
 
     constructor() {
         _disableInitializers();
@@ -103,7 +103,7 @@ contract StableERC4626ForVenus is
         uint256 assetInPool = _assetInPool(address(0));
         uint256 underlyingBalance = underlying.balanceOf(address(this));
         uint256 totalSupply_ = totalSupply();
-        uint256 assetsWithIncome = assetInPool + underlyingBalance + withdawedIncomeAssets;
+        uint256 assetsWithIncome = assetInPool + underlyingBalance + withdrawnIncomeAssets;
         if (assetsWithIncome < totalSupply_) {
             // If total assets with income is less than total supply, return 0
             return 0;
@@ -126,11 +126,13 @@ contract StableERC4626ForVenus is
     }
 
     function withdrawIncomeAssets(address asset, address to, uint256 amount) external nonReentrant onlyOwner {
+        // Update interest to ensure exchange rate is fresh before calculations
+        thirdPool.accrueInterest();
         uint256 assetInPool = _assetInPool(address(0));
         uint256 underlyingBalance = underlying.balanceOf(address(this));
-        uint256 avaliableAmount = assetInPool + underlyingBalance - totalSupply();
-        require(avaliableAmount >= amount, ERC4626TokenErrors.InsufficientIncomeAmount(avaliableAmount, amount));
-        withdawedIncomeAssets += amount;
+        uint256 availableAmount = assetInPool + underlyingBalance - totalSupply();
+        require(availableAmount >= amount, ERC4626TokenErrors.InsufficientIncomeAmount(availableAmount, amount));
+        withdrawnIncomeAssets += amount;
         if (asset == address(underlying)) {
             _withdrawWithBuffer(address(underlying), to, amount);
         } else if (asset == address(thirdPool)) {
@@ -166,11 +168,13 @@ contract StableERC4626ForVenus is
 
     function _depositToPool(address assetAddr, uint256 amount) internal virtual override {
         IERC20(assetAddr).safeIncreaseAllowance(address(thirdPool), amount);
-        thirdPool.mint(amount);
+        uint256 err = thirdPool.mint(amount);
+        if (err != 0) revert ERC4626TokenErrors.VenusMintFailed(err);
     }
 
     function _withdrawFromPool(address, address to, uint256 amount) internal virtual override {
-        thirdPool.redeemUnderlying(amount);
+        uint256 err = thirdPool.redeemUnderlying(amount);
+        if (err != 0) revert ERC4626TokenErrors.VenusRedeemFailed(err);
         if (address(to) != address(this)) {
             underlying.safeTransfer(to, amount);
         }

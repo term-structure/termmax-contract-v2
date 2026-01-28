@@ -71,7 +71,7 @@ contract MockVToken is ERC20, IVToken {
 
     // --- VToken Implementation ---
 
-    function mint(uint256 mintAmount) external override returns (uint256) {
+    function mint(uint256 mintAmount) public virtual override returns (uint256) {
         IERC20(_underlying).transferFrom(msg.sender, address(this), mintAmount);
         // mintTokens = mintAmount / exchangeRate
         uint256 vTokenAmount = (mintAmount * 1e18) / exchangeRateMock;
@@ -105,7 +105,7 @@ contract MockVToken is ERC20, IVToken {
         return 0;
     }
 
-    function redeemUnderlying(uint256 redeemAmount) external override returns (uint256) {
+    function redeemUnderlying(uint256 redeemAmount) public virtual override returns (uint256) {
         uint256 redeemTokens = (redeemAmount * 1e18) / exchangeRateMock;
         _burn(msg.sender, redeemTokens);
         IERC20(_underlying).transfer(msg.sender, redeemAmount);
