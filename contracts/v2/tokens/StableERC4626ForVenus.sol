@@ -26,12 +26,10 @@ contract StableERC4626ForVenus is
     using TransferUtilsV2 for *;
 
     uint256 constant PRECISION = 1e18;
-    uint256 constant NO_ERROR = 0;
-
     IVToken public thirdPool;
     IERC20 public underlying;
     BufferConfig public bufferConfig;
-    uint256 internal withdrawnIncomeAssets;
+    uint256 internal withdawedIncomeAssets;
 
     constructor() {
         _disableInitializers();
@@ -64,8 +62,6 @@ contract StableERC4626ForVenus is
         override
         nonReentrant
     {
-        uint256 error = thirdPool.accrueInterest();
-        if (error != NO_ERROR) revert ERC4626TokenErrors.VenusAccrueInterestFailed(error);
         IERC20 assetToken = IERC20(asset());
         assetToken.safeTransferFrom(caller, address(this), assets);
         _depositWithBuffer(address(assetToken));
@@ -94,8 +90,6 @@ contract StableERC4626ForVenus is
         override
         nonReentrant
     {
-        uint256 error = thirdPool.accrueInterest();
-        if (error != NO_ERROR) revert ERC4626TokenErrors.VenusAccrueInterestFailed(error);
         if (caller != owner) {
             _spendAllowance(owner, caller, shares);
         }
@@ -109,20 +103,7 @@ contract StableERC4626ForVenus is
         uint256 assetInPool = _assetInPool(address(0));
         uint256 underlyingBalance = underlying.balanceOf(address(this));
         uint256 totalSupply_ = totalSupply();
-        uint256 assetsWithIncome = assetInPool + underlyingBalance + withdrawnIncomeAssets;
-        if (assetsWithIncome < totalSupply_) {
-            // If total assets with income is less than total supply, return 0
-            return 0;
-        } else {
-            return assetsWithIncome - totalSupply_;
-        }
-    }
-
-    function currentIncomeAssets() external view returns (uint256) {
-        uint256 assetInPool = _assetInPool(address(0));
-        uint256 underlyingBalance = underlying.balanceOf(address(this));
-        uint256 totalSupply_ = totalSupply();
-        uint256 assetsWithIncome = assetInPool + underlyingBalance;
+        uint256 assetsWithIncome = assetInPool + underlyingBalance + withdawedIncomeAssets;
         if (assetsWithIncome < totalSupply_) {
             // If total assets with income is less than total supply, return 0
             return 0;
@@ -145,14 +126,11 @@ contract StableERC4626ForVenus is
     }
 
     function withdrawIncomeAssets(address asset, address to, uint256 amount) external nonReentrant onlyOwner {
-        // Update interest to ensure exchange rate is fresh before calculations
-        uint256 error = thirdPool.accrueInterest();
-        if (error != NO_ERROR) revert ERC4626TokenErrors.VenusAccrueInterestFailed(error);
         uint256 assetInPool = _assetInPool(address(0));
         uint256 underlyingBalance = underlying.balanceOf(address(this));
-        uint256 availableAmount = assetInPool + underlyingBalance - totalSupply();
-        require(availableAmount >= amount, ERC4626TokenErrors.InsufficientIncomeAmount(availableAmount, amount));
-        withdrawnIncomeAssets += amount;
+        uint256 avaliableAmount = assetInPool + underlyingBalance - totalSupply();
+        require(avaliableAmount >= amount, ERC4626TokenErrors.InsufficientIncomeAmount(avaliableAmount, amount));
+        withdawedIncomeAssets += amount;
         if (asset == address(underlying)) {
             _withdrawWithBuffer(address(underlying), to, amount);
         } else if (asset == address(thirdPool)) {
@@ -188,13 +166,11 @@ contract StableERC4626ForVenus is
 
     function _depositToPool(address assetAddr, uint256 amount) internal virtual override {
         IERC20(assetAddr).safeIncreaseAllowance(address(thirdPool), amount);
-        uint256 err = thirdPool.mint(amount);
-        if (err != NO_ERROR) revert ERC4626TokenErrors.VenusMintFailed(err);
+        thirdPool.mint(amount);
     }
 
     function _withdrawFromPool(address, address to, uint256 amount) internal virtual override {
-        uint256 err = thirdPool.redeemUnderlying(amount);
-        if (err != NO_ERROR) revert ERC4626TokenErrors.VenusRedeemFailed(err);
+        thirdPool.redeemUnderlying(amount);
         if (address(to) != address(this)) {
             underlying.safeTransfer(to, amount);
         }
@@ -208,17 +184,14 @@ contract StableERC4626ForVenus is
     }
 
     function _convertShareToUnderlying(uint256 shares) internal view returns (uint256 amount) {
-        // The exchange rate from shares to underlying
-        // vToken exchangeRate is scaled by 1e18.
-        // Formula: underlying = shares * exchangeRate / 1e18
+        // The exchange rate from underlying to shares
         uint256 exchangeRateStored = thirdPool.exchangeRateStored();
-        amount = shares.mulDiv(exchangeRateStored, PRECISION);
+        amount = shares.mulDiv(PRECISION, exchangeRateStored);
     }
 
     function _convertUnderlyingToShare(uint256 amount) internal view returns (uint256 shares) {
-        // The exchange rate from shares to underlying
-        // Formula: shares = underlying * 1e18 / exchangeRate
+        // The exchange rate from underlying to shares
         uint256 exchangeRateStored = thirdPool.exchangeRateStored();
-        shares = amount.mulDiv(PRECISION, exchangeRateStored);
+        shares = amount.mulDiv(exchangeRateStored, PRECISION);
     }
 }
