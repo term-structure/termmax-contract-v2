@@ -49,7 +49,8 @@ interface FactoryEventsV2 {
         uint16 aaveReferralCode,
         address stableERC4626For4626Implementation,
         address stableERC4626ForAaveImplementation,
-        address variableERC4626ForAaveImplementation
+        address variableERC4626ForAaveImplementation,
+        address stableERC4626ForVenusImplementation
     );
 
     /**
@@ -72,4 +73,11 @@ interface FactoryEventsV2 {
      * @param variableERC4626ForAave The address of the created VariableERC4626ForAave
      */
     event VariableERC4626ForAaveCreated(address indexed caller, address indexed variableERC4626ForAave);
+
+    /**
+     * @notice Emitted when a new StableERC4626ForVenus is created
+     * @param caller The address that called the creation function
+     * @param stableERC4626ForVenus The address of the created StableERC4626ForVenus
+     */
+    event StableERC4626ForVenusCreated(address indexed caller, address indexed stableERC4626ForVenus);
 }

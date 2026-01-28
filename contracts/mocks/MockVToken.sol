@@ -17,8 +17,18 @@ contract MockVToken is ERC20, IVToken {
     uint256 public borrowRateMock;
     uint256 public cashMock;
 
+    uint8 private _decimals = 18;
+
     constructor(address underlying_, string memory name_, string memory symbol_) ERC20(name_, symbol_) {
         _underlying = underlying_;
+    }
+
+    function decimals() public view override(ERC20) returns (uint8) {
+        return _decimals;
+    }
+
+    function setDecimals(uint8 decimals_) external {
+        _decimals = decimals_;
     }
 
     function underlying() external view override returns (address) {

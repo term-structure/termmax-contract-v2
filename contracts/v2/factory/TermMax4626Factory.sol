@@ -5,6 +5,7 @@ import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 import {StakingBuffer} from "../tokens/StakingBuffer.sol";
 import {StableERC4626For4626} from "../tokens/StableERC4626For4626.sol";
 import {StableERC4626ForAave} from "../tokens/StableERC4626ForAave.sol";
+import {StableERC4626ForVenus} from "../tokens/StableERC4626ForVenus.sol";
 import {VariableERC4626ForAave} from "../tokens/VariableERC4626ForAave.sol";
 import {FactoryEventsV2} from "../events/FactoryEventsV2.sol";
 import {VersionV2} from "../VersionV2.sol";
@@ -14,18 +15,21 @@ contract TermMax4626Factory is VersionV2 {
 
     address public immutable stableERC4626For4626Implementation;
     address public immutable stableERC4626ForAaveImplementation;
+    address public immutable stableERC4626ForVenusImplementation;
     address public immutable variableERC4626ForAaveImplementation;
 
     constructor(address aavePool, uint16 aaveReferralCode) {
         stableERC4626For4626Implementation = address(new StableERC4626For4626());
         stableERC4626ForAaveImplementation = address(new StableERC4626ForAave(aavePool, aaveReferralCode));
+        stableERC4626ForVenusImplementation = address(new StableERC4626ForVenus());
         variableERC4626ForAaveImplementation = address(new VariableERC4626ForAave(aavePool, aaveReferralCode));
         emit FactoryEventsV2.TermMax4626FactoryInitialized(
             aavePool,
             aaveReferralCode,
             stableERC4626For4626Implementation,
             stableERC4626ForAaveImplementation,
-            variableERC4626ForAaveImplementation
+            variableERC4626ForAaveImplementation,
+            stableERC4626ForVenusImplementation
         );
     }
 
@@ -37,6 +41,17 @@ contract TermMax4626Factory is VersionV2 {
         StableERC4626For4626 instance = StableERC4626For4626(stableERC4626For4626Implementation.clone());
         instance.initialize(admin, thirdPool, bufferConfig);
         emit FactoryEventsV2.StableERC4626For4626Created(msg.sender, address(instance));
+        return instance;
+    }
+
+    function createStableERC4626ForVenus(
+        address admin,
+        address thirdPool,
+        StakingBuffer.BufferConfig memory bufferConfig
+    ) external returns (StableERC4626ForVenus) {
+        StableERC4626ForVenus instance = StableERC4626ForVenus(stableERC4626ForVenusImplementation.clone());
+        instance.initialize(admin, thirdPool, bufferConfig);
+        emit FactoryEventsV2.StableERC4626ForVenusCreated(msg.sender, address(instance));
         return instance;
     }
 
