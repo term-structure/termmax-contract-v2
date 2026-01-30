@@ -51,7 +51,9 @@ import {
     TermMax4626Factory,
     StableERC4626For4626,
     StableERC4626ForAave,
-    VariableERC4626ForAave
+    VariableERC4626ForAave,
+    StableERC4626ForVenus,
+    StableERC4626ForCustomize
 } from "contracts/v2/factory/TermMax4626Factory.sol";
 
 contract DeployBaseV2 is Script {
@@ -386,7 +388,27 @@ contract DeployBaseV2 is Script {
         contracts.vaultFactory = deployVaultFactory();
 
         // deploy 4626 factory
-        contracts.tmx4626Factory = new TermMax4626Factory(params.AAVE_POOL, params.AAVE_REFERRAL_CODE);
+        {
+            address stableERC4626ForAave;
+            address variableERC4626ForAave;
+            if (params.AAVE_POOL != address(0)) {
+                stableERC4626ForAave = address(new StableERC4626ForAave(params.AAVE_POOL, params.AAVE_REFERRAL_CODE));
+                variableERC4626ForAave =
+                    address(new VariableERC4626ForAave(params.AAVE_POOL, params.AAVE_REFERRAL_CODE));
+            }
+            StableERC4626For4626 stableERC4626For4626 = new StableERC4626For4626();
+            StableERC4626ForVenus stableERC4626ForVenus = new StableERC4626ForVenus();
+            StableERC4626ForCustomize stableERC4626ForCustomize = new StableERC4626ForCustomize();
+
+            contracts.tmx4626Factory = new TermMax4626Factory(
+                address(contracts.accessManager),
+                address(stableERC4626For4626),
+                stableERC4626ForAave,
+                address(stableERC4626ForVenus),
+                variableERC4626ForAave,
+                address(stableERC4626ForCustomize)
+            );
+        }
 
         //deploy price feed factory
         contracts.priceFeedFactory = new TermMaxPriceFeedFactoryV2();
