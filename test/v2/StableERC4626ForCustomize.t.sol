@@ -306,17 +306,17 @@ contract StableERC4626ForCustomizeTest is Test {
     function testWithdrawAssets() public {
         MockERC20 randomToken = new MockERC20("RAND", "RAND", 6);
         randomToken.mint(address(stableCustomize), 1000e6);
-        
+
         // 1. Owner can withdraw random tokens
         vm.prank(admin);
         stableCustomize.withdrawAssets(randomToken, admin, 1000e6);
         assertEq(randomToken.balanceOf(admin), 1000e6);
         assertEq(randomToken.balanceOf(address(stableCustomize)), 0);
-        
+
         // 2. Owner CANNOT withdraw underlying
         uint256 amount = 100e6;
         underlying.mint(address(stableCustomize), amount);
-        
+
         vm.prank(admin);
         vm.expectRevert(ERC4626TokenErrors.InvalidToken.selector);
         stableCustomize.withdrawAssets(underlying, admin, amount);
