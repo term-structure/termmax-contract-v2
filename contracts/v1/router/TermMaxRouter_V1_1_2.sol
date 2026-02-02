@@ -31,7 +31,7 @@ import {IGtRepayer} from "./IGtRepayer.sol";
 /**
  * @title TermMax Router V1.1.2
  * @author Term Structure Labs
- * @notice Add reentrancy guard and more checks
+ * @notice Support rollover gearing token to new market
  */
 contract TermMaxRouter_V1_1_2 is
     UUPSUpgradeable,
@@ -58,9 +58,26 @@ contract TermMaxRouter_V1_1_2 is
         EXACT_POSITION
     }
 
+    enum FlashRepayOptions {
+        REPAY,
+        ROLLOVER
+    }
+
+    struct RolloverParams {
+        uint128 newDebtAmt;
+        ITermMaxMarket newMarket;
+        address recipient;
+        ITermMaxOrder[] orders;
+        uint128[] tradingAmts;
+        uint128 maxTokenIn;
+        uint256 deadline;
+        SwapUnit[] swapCollateralUnits;
+    }
+
     /// @notice whitelist mapping of adapter
     mapping(address => bool) public adapterWhitelist;
 
+    uint256 private constant T_ROLLOVER_GT_RESERVE_STORE = 0;
     uint256 private constant T_CALLBACK_ADDRESS_STORE = 1;
 
     modifier onlyCallbackAddress() {
@@ -513,7 +530,9 @@ contract TermMaxRouter_V1_1_2 is
             tstore(T_CALLBACK_ADDRESS_STORE, gtToken)
         }
         gtToken.safeTransferFrom(msg.sender, address(this), gtId, "");
-        gtToken.flashRepay(gtId, byDebtToken, abi.encode(orders, amtsToBuyFt, ft, units, deadline));
+        gtToken.flashRepay(
+            gtId, byDebtToken, abi.encode(FlashRepayOptions.REPAY, abi.encode(orders, amtsToBuyFt, ft, units, deadline))
+        );
         netTokenOut = debtToken.balanceOf(address(this));
         if (netTokenOut < expectedOutput) {
             revert InsufficientTokenOut(address(debtToken), expectedOutput, netTokenOut);
@@ -537,7 +556,9 @@ contract TermMaxRouter_V1_1_2 is
         bool byDebtToken = true;
         ITermMaxOrder[] memory orders = new ITermMaxOrder[](0);
         uint128[] memory amtsToBuyFt = new uint128[](0);
-        gtToken.flashRepay(gtId, byDebtToken, abi.encode(orders, amtsToBuyFt, ft, units, 0));
+        gtToken.flashRepay(
+            gtId, byDebtToken, abi.encode(FlashRepayOptions.REPAY, abi.encode(orders, amtsToBuyFt, ft, units, 0))
+        );
         netTokenOut = IERC20(collateralAddr).balanceOf(address(this));
         if (netTokenOut < expectedOutput) {
             revert InsufficientTokenOut(collateralAddr, expectedOutput, netTokenOut);
@@ -547,6 +568,31 @@ contract TermMaxRouter_V1_1_2 is
         uint256 debtBalance = debtToken.balanceOf(address(this));
         if (debtBalance != 0) {
             debtToken.safeTransfer(recipient, debtBalance);
+        }
+    }
+
+    /**
+     * @notice Rollover a Gearing Token position to a new market.
+     * @param gtToken The Gearing Token contract.
+     * @param gtId The ID of the Gearing Token to rollover.
+     * @param rolloverData The rollover parameters.
+     * @return newGtId The ID of the new Gearing Token after rollover.
+     */
+    function rolloverGt(IGearingToken gtToken, uint256 gtId, RolloverParams memory rolloverData)
+        external
+        nonReentrant
+        whenNotPaused
+        returns (uint256 newGtId)
+    {
+        assembly {
+            // set callback address
+            tstore(T_CALLBACK_ADDRESS_STORE, gtToken)
+        }
+        gtToken.safeTransferFrom(msg.sender, address(this), gtId, "");
+        // rollover always repay by debt token
+        gtToken.flashRepay(gtId, true, abi.encode(FlashRepayOptions.ROLLOVER, abi.encode(msg.sender, rolloverData)));
+        assembly {
+            newGtId := tload(T_ROLLOVER_GT_RESERVE_STORE)
         }
     }
 
@@ -701,10 +747,56 @@ contract TermMaxRouter_V1_1_2 is
     function executeOperation(
         IERC20 repayToken,
         uint128 debtAmt,
-        address,
+        address collateralToken,
         bytes memory collateralData,
         bytes memory callbackData
     ) external override onlyCallbackAddress {
+        (FlashRepayOptions option, bytes memory innerData) = abi.decode(callbackData, (FlashRepayOptions, bytes));
+        if (option == FlashRepayOptions.REPAY) {
+            _flashRepay(repayToken, debtAmt, collateralData, innerData);
+        } else if (option == FlashRepayOptions.ROLLOVER) {
+            _rollover(repayToken, debtAmt, collateralToken, collateralData, innerData);
+        }
+        repayToken.safeIncreaseAllowance(msg.sender, debtAmt);
+    }
+
+    function _rollover(
+        IERC20 repayToken,
+        uint128 debtAmt,
+        address collateralToken,
+        bytes memory collateralData,
+        bytes memory callbackData
+    ) internal {
+        (address caller, RolloverParams memory params) = abi.decode(callbackData, (address, RolloverParams));
+        (IERC20 ft,, IGearingToken newGt, address newCollateral,) = params.newMarket.tokens();
+        if (newCollateral != collateralToken) {
+            // swap collateral token to new collateral token
+            collateralData = _doSwap(collateralData, params.swapCollateralUnits);
+        }
+        IERC20(newCollateral).safeIncreaseAllowance(address(newGt), _decodeAmount(collateralData));
+        (uint256 newGtId, uint128 ftAmt) = params.newMarket.issueFt(address(this), params.newDebtAmt, collateralData);
+        // transfer new Gt to recipient
+        newGt.safeTransferFrom(address(this), params.recipient, newGtId);
+        // swap ft to repayToken to repay flashloan
+        uint256 netTokenIn = _swapTokenToExactToken(
+            ft, repayToken, address(this), params.orders, params.tradingAmts, params.maxTokenIn, params.deadline
+        );
+        if (ftAmt > netTokenIn) {
+            // repay gt with remaining ft
+            uint128 remainingFt = ftAmt - netTokenIn.toUint128();
+            ft.safeIncreaseAllowance(address(newGt), remainingFt);
+            newGt.repay(newGtId, remainingFt, false);
+        }
+        assembly {
+            tstore(T_ROLLOVER_GT_RESERVE_STORE, newGtId)
+        }
+        (, uint128 ltv,) = newGt.getLiquidationInfo(newGtId);
+        emit IssueGt(params.newMarket, newGtId, caller, params.recipient, 0, 0, ltv, collateralData);
+    }
+
+    function _flashRepay(IERC20 repayToken, uint128 debtAmt, bytes memory collateralData, bytes memory callbackData)
+        internal
+    {
         (
             ITermMaxOrder[] memory orders,
             uint128[] memory amtsToBuyFt,
@@ -719,7 +811,6 @@ contract TermMaxRouter_V1_1_2 is
             uint256 amount = abi.decode(outData, (uint256));
             _swapTokenToExactToken(debtToken, ft, address(this), orders, amtsToBuyFt, amount.toUint128(), deadline);
         }
-        repayToken.safeIncreaseAllowance(msg.sender, debtAmt);
     }
 
     function _doSwap(bytes memory inputData, SwapUnit[] memory units) internal returns (bytes memory outData) {
