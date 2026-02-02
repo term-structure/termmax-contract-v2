@@ -26,6 +26,8 @@ contract StableERC4626ForVenus is
     using TransferUtilsV2 for *;
 
     uint256 constant PRECISION = 1e18;
+    uint256 constant NO_ERROR = 0;
+
     IVToken public thirdPool;
     IERC20 public underlying;
     BufferConfig public bufferConfig;
@@ -62,6 +64,8 @@ contract StableERC4626ForVenus is
         override
         nonReentrant
     {
+        uint256 error = thirdPool.accrueInterest();
+        if (error != NO_ERROR) revert ERC4626TokenErrors.VenusAccrueInterestFailed(error);
         IERC20 assetToken = IERC20(asset());
         assetToken.safeTransferFrom(caller, address(this), assets);
         _depositWithBuffer(address(assetToken));
@@ -90,6 +94,8 @@ contract StableERC4626ForVenus is
         override
         nonReentrant
     {
+        uint256 error = thirdPool.accrueInterest();
+        if (error != NO_ERROR) revert ERC4626TokenErrors.VenusAccrueInterestFailed(error);
         if (caller != owner) {
             _spendAllowance(owner, caller, shares);
         }
@@ -127,7 +133,8 @@ contract StableERC4626ForVenus is
 
     function withdrawIncomeAssets(address asset, address to, uint256 amount) external nonReentrant onlyOwner {
         // Update interest to ensure exchange rate is fresh before calculations
-        thirdPool.accrueInterest();
+        uint256 error = thirdPool.accrueInterest();
+        if (error != NO_ERROR) revert ERC4626TokenErrors.VenusAccrueInterestFailed(error);
         uint256 assetInPool = _assetInPool(address(0));
         uint256 underlyingBalance = underlying.balanceOf(address(this));
         uint256 availableAmount = assetInPool + underlyingBalance - totalSupply();
@@ -169,12 +176,12 @@ contract StableERC4626ForVenus is
     function _depositToPool(address assetAddr, uint256 amount) internal virtual override {
         IERC20(assetAddr).safeIncreaseAllowance(address(thirdPool), amount);
         uint256 err = thirdPool.mint(amount);
-        if (err != 0) revert ERC4626TokenErrors.VenusMintFailed(err);
+        if (err != NO_ERROR) revert ERC4626TokenErrors.VenusMintFailed(err);
     }
 
     function _withdrawFromPool(address, address to, uint256 amount) internal virtual override {
         uint256 err = thirdPool.redeemUnderlying(amount);
-        if (err != 0) revert ERC4626TokenErrors.VenusRedeemFailed(err);
+        if (err != NO_ERROR) revert ERC4626TokenErrors.VenusRedeemFailed(err);
         if (address(to) != address(this)) {
             underlying.safeTransfer(to, amount);
         }
