@@ -37,4 +37,10 @@ interface ERC4626TokenErrors {
      * @param errorCode The error code returned by the Venus protocol
      */
     error VenusRedeemFailed(uint256 errorCode);
+
+    /**
+     * @notice Error thrown when a Venus pool interest accrual fails
+     * @param errorCode The error code returned by the Venus protocol
+     */
+    error VenusAccrueInterestFailed(uint256 errorCode);
 }
