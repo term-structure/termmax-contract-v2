@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-
 /**
  * @title Events for ERC4626 Token Contract
  * @author Term Structure Labs
@@ -42,31 +40,4 @@ interface ERC4626TokenEvents {
      * @param buffer The current buffer amount after the update
      */
     event UpdateBufferConfig(uint256 minimumBuffer, uint256 maximumBuffer, uint256 buffer);
-
-    /**
-     * @notice Emitted when a customized ERC4626 token is initialized
-     * @param admin The address of the administrator managing the token
-     * @param underlying The address of the underlying asset (e.g., USDC)
-     * @param pool The address of the third pool
-     */
-    event ERC4626ForCustomizeInitialized(address indexed admin, address indexed underlying, address indexed pool);
-
-    /**
-     * @notice Emitted when assets (non-underlying) are withdrawn from the token contract
-     * @dev Allows the owner to recover tokens mistakenly sent to the contract
-     * @param token The address of the token being withdrawn
-     * @param operator The address initiating the withdrawal
-     * @param recipient The address receiving the withdrawn assets
-     * @param amount The amount of assets withdrawn
-     */
-    event WithdrawAssets(IERC20 indexed token, address indexed operator, address indexed recipient, uint256 amount);
-
-    /**
-     * @notice Emitted when a venus pool is initialized
-     * @dev Fired during the initial setup of a ERC4626ForVenus contract
-     * @param admin The address of the administrator managing the token
-     * @param underlying The address of the underlying asset (e.g., USDC for tmxUSDC)
-     * @param pool The address of the third pool
-     */
-    event ERC4626ForVenusInitialized(address indexed admin, address indexed underlying, address indexed pool);
 }

@@ -38,16 +38,18 @@ interface FactoryEventsV2 {
     // Events from TermMax4626Factory
     /**
      * @notice Emitted when TermMax4626Factory is initialized
+     * @param aavePool The Aave pool address
+     * @param aaveReferralCode The Aave referral code
      * @param stableERC4626For4626Implementation The stable ERC4626For4626 implementation address
      * @param stableERC4626ForAaveImplementation The stable ERC4626ForAave implementation address
      * @param variableERC4626ForAaveImplementation The variable ERC4626ForAave implementation address
      */
     event TermMax4626FactoryInitialized(
+        address indexed aavePool,
+        uint16 aaveReferralCode,
         address stableERC4626For4626Implementation,
         address stableERC4626ForAaveImplementation,
-        address variableERC4626ForAaveImplementation,
-        address stableERC4626ForVenusImplementation,
-        address stableERC4626ForCustomizeImplementation
+        address variableERC4626ForAaveImplementation
     );
 
     /**
@@ -70,22 +72,4 @@ interface FactoryEventsV2 {
      * @param variableERC4626ForAave The address of the created VariableERC4626ForAave
      */
     event VariableERC4626ForAaveCreated(address indexed caller, address indexed variableERC4626ForAave);
-
-    /**
-     * @notice Emitted when a new StableERC4626ForVenus is created
-     * @param caller The address that called the creation function
-     * @param stableERC4626ForVenus The address of the created StableERC4626ForVenus
-     */
-    event StableERC4626ForVenusCreated(address indexed caller, address indexed stableERC4626ForVenus);
-
-    /**
-     * @notice Emitted when a new StableERC4626ForCustomize is created
-     * @param caller The address that called the creation function
-     * @param stableERC4626ForCustomize The address of the created StableERC4626ForCustomize
-     */
-    event StableERC4626ForCustomizeCreated(address indexed caller, address indexed stableERC4626ForCustomize);
-
-    event ImplementationSet(string indexed key, address indexed implementation);
-
-    event TermMax4626Created(address indexed caller, string indexed key, address indexed instance);
 }
