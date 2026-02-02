@@ -417,8 +417,6 @@ contract TermMaxRouterV2 is
         (FlashRepayOptions option, bytes memory data) = abi.decode(callbackData, (FlashRepayOptions, bytes));
         if (option == FlashRepayOptions.REPAY) {
             _flashRepay(data);
-        } else if (option == FlashRepayOptions.ROLLOVER) {
-            _rollover(repayToken, repayAmt, removedCollateralData, data);
         } else {
             address firstCaller;
             assembly {
@@ -426,7 +424,9 @@ contract TermMaxRouterV2 is
                 //clear caller address after use
                 tstore(T_CALLER, 0)
             }
-            if (option == FlashRepayOptions.ROLLOVER_AAVE) {
+            if (option == FlashRepayOptions.ROLLOVER) {
+                _rollover(repayToken, repayAmt, removedCollateralData, data);
+            } else if (option == FlashRepayOptions.ROLLOVER_AAVE) {
                 _rolloverToAave(firstCaller, repayToken, repayAmt, removedCollateralData, data);
             } else if (option == FlashRepayOptions.ROLLOVER_MORPHO) {
                 _rolloverToMorpho(firstCaller, repayToken, repayAmt, removedCollateralData, data);
