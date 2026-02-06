@@ -48,7 +48,10 @@ contract OndoSwapAdapter is ERC20SwapAdapterV2 {
         // calculate output amount because OndoMarket ouput amount is base ondo USD
         tokenOutAmt = tokenOut.balanceOf(address(this)) - tokenOutBalBefore;
         // refund excess input tokens
-        if (refundAddress != address(0) && refundAddress != address(this)) {
+        if (refundAddress != address(this)) {
+            if (refundAddress == address(0)) {
+                refundAddress = msg.sender;
+            }
             if (amount > realCost) {
                 tokenIn.safeTransfer(refundAddress, amount - realCost);
             }
