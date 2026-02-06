@@ -25,4 +25,22 @@ interface ERC4626TokenErrors {
      * @param recieivedAmount The actual amount received from the withdrawal (likely misspelled 'received')
      */
     error AaveWithdrawFailed(uint256 aTokenAmount, uint256 recieivedAmount);
+
+    /**
+     * @notice Error thrown when a Venus pool mint fails
+     * @param errorCode The error code returned by the Venus protocol
+     */
+    error VenusMintFailed(uint256 errorCode);
+
+    /**
+     * @notice Error thrown when a Venus pool interaction fails
+     * @param errorCode The error code returned by the Venus protocol
+     */
+    error VenusRedeemFailed(uint256 errorCode);
+
+    /**
+     * @notice Error thrown when a Venus pool interest accrual fails
+     * @param errorCode The error code returned by the Venus protocol
+     */
+    error VenusAccrueInterestFailed(uint256 errorCode);
 }
