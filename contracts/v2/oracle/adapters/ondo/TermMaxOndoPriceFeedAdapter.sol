@@ -42,7 +42,7 @@ contract TermMaxOndoPriceFeedAdapter is ITermMaxPriceFeed {
      * @notice Returns description of the adapter
      */
     function description() external view override returns (string memory) {
-        return string(abi.encodePacked(IERC20Metadata(asset).symbol(), "/USD"));
+        return string(abi.encodePacked(IERC20Metadata(asset).symbol(), "/Unserlying Stock"));
     }
 
     /**
