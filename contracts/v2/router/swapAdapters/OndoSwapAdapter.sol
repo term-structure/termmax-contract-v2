@@ -39,9 +39,11 @@ contract OndoSwapAdapter is ERC20SwapAdapterV2 {
         uint256 tokenOutBalBefore = tokenOut.balanceOf(address(this));
         uint256 usdonBalanceBefore;
         if (quote.side == IGMTokenManager.QuoteSide.BUY) {
+            require(address(tokenOut) == quote.asset, "OndoSwapAdapter: tokenOut mismatch with quote");
             usdonBalanceBefore = USDon.balanceOf(address(this));
             ondoMarket.mintWithAttestation(quote, signature, address(tokenIn), amountIn);
         } else {
+            require(address(tokenIn) == quote.asset, "OndoSwapAdapter: tokenIn mismatch with quote");
             ondoMarket.redeemWithAttestation(quote, signature, address(tokenOut), expectAmt);
         }
         uint256 realCost = tokenInBalBefore - tokenIn.balanceOf(address(this));
