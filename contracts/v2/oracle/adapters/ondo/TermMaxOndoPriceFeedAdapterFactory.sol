@@ -29,9 +29,6 @@ contract TermMaxOndoPriceFeedAdapterFactory {
     /// @notice Mapping of asset address to deployed adapter address
     mapping(address => address) public adapters;
 
-    /// @notice Mapping of asset address to deployed converter address (asset/USD)
-    mapping(address => address) public converters;
-
     /// @notice Emitted when a new adapter is deployed
     event AdapterDeployed(address indexed asset, address indexed adapter);
 
@@ -85,7 +82,6 @@ contract TermMaxOndoPriceFeedAdapterFactory {
 
         // Deploy converter: adapter (sValue) × assetUSDPriceFeed (e.g., TSLA/USD) = asset/USD
         converter = priceFeedFactory.createPriceFeedConverter(adapter, assetUSDPriceFeed, asset);
-        converters[asset] = converter;
 
         emit ConverterDeployed(asset, converter);
     }
@@ -97,14 +93,5 @@ contract TermMaxOndoPriceFeedAdapterFactory {
      */
     function getAdapter(address asset) external view returns (address) {
         return adapters[asset];
-    }
-
-    /**
-     * @notice Get the converter address for a given asset
-     * @param asset The GM asset address
-     * @return The converter address, or address(0) if not deployed
-     */
-    function getConverter(address asset) external view returns (address) {
-        return converters[asset];
     }
 }

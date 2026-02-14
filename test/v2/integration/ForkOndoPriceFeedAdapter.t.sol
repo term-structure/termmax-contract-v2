@@ -81,7 +81,6 @@ contract ForkOndoPriceFeedAdapterTest is Test {
     function testFactoryDeploymentTracking() public view {
         assertEq(factory.getAdapter(TSLAON), address(tslaonAdapter), "TSLAON adapter should be tracked");
         assertEq(factory.getAdapter(NVDAON), address(nvdaonAdapter), "NVDAON adapter should be tracked");
-        assertEq(factory.getConverter(TSLAON), address(tslaonUSDConverter), "TSLAON converter should be tracked");
     }
 
     /**
@@ -96,14 +95,13 @@ contract ForkOndoPriceFeedAdapterTest is Test {
      * @notice Test factory allows redeploying converter (overwrite)
      */
     function testFactoryAllowsConverterRedeploy() public {
-        address oldConverter = factory.getConverter(TSLAON);
+        address oldConverter = factory.deployConverter(TSLAON, TSLA_USD_PRICE_FEED);
 
         // Redeploy converter (e.g., when underlying TSLA/USD price feed changes)
         address newConverter = factory.deployConverter(TSLAON, TSLA_USD_PRICE_FEED);
 
         assertTrue(newConverter != address(0), "New converter should be deployed");
         assertTrue(newConverter != oldConverter, "Converter should be overwritten with new address");
-        assertEq(factory.getConverter(TSLAON), newConverter, "Factory should track latest converter");
     }
 
     /**
