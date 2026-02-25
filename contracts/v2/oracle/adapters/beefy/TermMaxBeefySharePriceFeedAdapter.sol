@@ -63,8 +63,8 @@ contract TermMaxBeefySharePriceFeedAdapter is ITermMaxPriceFeed {
         return string(abi.encodePacked("TermMax price feed: ", symbol, "/USD"));
     }
 
-    function version() external view override returns (uint256) {
-        return token0PriceFeed.version().min(token1PriceFeed.version());
+    function version() external pure override returns (uint256) {
+        return 1;
     }
 
     function getRoundData(uint80 /* _roundId */ )
@@ -93,19 +93,15 @@ contract TermMaxBeefySharePriceFeedAdapter is ITermMaxPriceFeed {
             revert InvalidWantAddress(address(lpToken), currentWant);
         }
 
-        (uint80 roundId0, int256 answer0, uint256 startedAt0, uint256 updatedAt0, uint80 answeredInRound0) =
-            token0PriceFeed.latestRoundData();
+        (, int256 answer0, uint256 startedAt0, uint256 updatedAt0,) = token0PriceFeed.latestRoundData();
         (, int256 answer1, uint256 startedAt1, uint256 updatedAt1,) = token1PriceFeed.latestRoundData();
-
-        roundId = roundId0;
-        answeredInRound = answeredInRound0;
 
         if (answer0 <= 0) revert InvalidPrice(answer0);
         if (answer1 <= 0) revert InvalidPrice(answer1);
-
+        roundId = uint80(block.timestamp);
+        answeredInRound = uint80(block.timestamp);
         startedAt = startedAt0.min(startedAt1);
         updatedAt = updatedAt0.min(updatedAt1);
-
         // Calculate a "fair" price for the LP using the underlying token prices, to prevent manipulation when vault is very imbalanced.
         uint160 fairSqrtPriceX96 = _computeFairSqrtPriceX96(answer0, answer1);
         answer = _computeFairValue(answer0, answer1, fairSqrtPriceX96).toInt256();
@@ -153,8 +149,8 @@ contract TermMaxBeefySharePriceFeedAdapter is ITermMaxPriceFeed {
         view
         returns (uint160 fairSqrtPriceX96)
     {
-        uint256 priceNum = uint256(answer0) * 10 ** (token0Decimals + token1PriceDecimals);
-        uint256 priceDen = uint256(answer1) * 10 ** (token1Decimals + token0PriceDecimals);
+        uint256 priceNum = uint256(answer0) * 10 ** (token1Decimals + token1PriceDecimals);
+        uint256 priceDen = uint256(answer1) * 10 ** (token0Decimals + token0PriceDecimals);
         // mulDiv handles 512-bit intermediate product, avoiding overflow from (priceNum * 2^192)
         fairSqrtPriceX96 = uint160(Math.sqrt(priceNum.mulDiv(uint256(1) << 192, priceDen)));
     }
