@@ -1,0 +1,28 @@
+{
+  "network": "bera-mainnet",
+  "deployedAt": "1772434332",
+  "gitBranch": "v2/deployment",
+  "gitCommitHash": "0x8391e1d77a7046cc9b702659695461ce23e375d0",
+  "blockInfo": {
+    "number": "17709808",
+    "timestamp": "1772434332"
+  },
+  "deployer": "0x56E3665038C5F0b56Cc7D81aC66C86521274B251",
+  "adapterCount": "2",
+  "contracts": [
+    {
+      "index": "0",
+      "termMaxBeefySharePriceFeedAdapter": "0xde7bF8CE4db31c0773e26328b1c5245A30935785",
+      "beefyVault": "0xAf92a4C7FCBc0Af09CfFf66d36C615fB40Ac1eEE",
+      "token0PriceFeed": "0xbbF121624c3b85C929Ac83872bf6c86b0976A55e",
+      "token1PriceFeed": "0x2D4f3199a80b848F3d094745F3Bbd4224892654e"
+    },
+    {
+      "index": "1",
+      "termMaxBeefySharePriceFeedAdapter": "0x349E28fb4C0C3577151dFb874EeFa66E8aE885b7",
+      "beefyVault": "0x64606Bee7e4F5f67414765C4290315d3830ae0e2",
+      "token0PriceFeed": "0xEC352BC99BD444E0AC7f00e9B7D581B4b100CA3e",
+      "token1PriceFeed": "0x2D4f3199a80b848F3d094745F3Bbd4224892654e"
+    }
+  ]
+}

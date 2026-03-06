@@ -1,0 +1,16 @@
+{
+  "network": "b2-mainnet",
+  "deployedAt": "1771489124",
+  "gitBranch": "v2/deployment",
+  "gitCommitHash": "0x26e2527f3c8e77ecf8955464c6557a07342079b3",
+  "blockInfo": {
+    "number": "29162669",
+    "timestamp": "1771489124"
+  },
+  "deployer": "0x56E3665038C5F0b56Cc7D81aC66C86521274B251",
+  "contracts": {
+    "termMaxB2BTCUSDOracle": "0x48bCd27e208dC973C3F56812F762077A90E88Cea",
+    "supraSValueFeed": "0xD02cc7a670047b6b012556A88e275c685d25e0c9",
+    "pairIndex": "18"
+  }
+}

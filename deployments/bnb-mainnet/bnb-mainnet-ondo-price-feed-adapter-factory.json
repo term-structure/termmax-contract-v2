@@ -1,0 +1,16 @@
+{
+  "network": "bnb-mainnet",
+  "deployedAt": "1772434668",
+  "gitBranch": "v2/deployment",
+  "gitCommitHash": "0x8391e1d77a7046cc9b702659695461ce23e375d0",
+  "blockInfo": {
+    "number": "84196922",
+    "timestamp": "1772434668"
+  },
+  "deployer": "0x56E3665038C5F0b56Cc7D81aC66C86521274B251",
+  "contracts": {
+    "termMaxOndoPriceFeedAdapterFactory": "0xe0655f8AFC130964A7f88597B0eC160B6d3EaFD6",
+    "ondoOracle": "0xF4Fd8a1B412633e10527454137A29Db7Aa35F15e",
+    "priceFeedFactoryV2": "0x353E129d2A949173E06eb0eE64557Dc37B3F68FD"
+  }
+}

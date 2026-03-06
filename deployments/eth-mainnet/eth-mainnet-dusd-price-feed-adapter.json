@@ -1,0 +1,16 @@
+{
+  "network": "eth-mainnet",
+  "deployedAt": "1765444595",
+  "gitBranch": "v2/deployment",
+  "gitCommitHash": "0x089e9dc60c0f40dd108da84579200f9a4854746d",
+  "blockInfo": {
+    "number": "23988486",
+    "timestamp": "1765444595"
+  },
+  "deployer": "0xAeBC56B6f15B863667Ed61FdB4687ea3e22176cd",
+  "contracts": {
+    "termMaxDUSDPriceFeedAdapter": "0x458e718fF8687b6eBF2dE22AeBa13f2d2d50a537",
+    "dusdOracle": "0xFFCBc7A7eEF2796C277095C66067aC749f4cA078",
+    "dusdAsset": "0x1e33E98aF620F1D563fcD3cfd3C75acE841204ef"
+  }
+}
