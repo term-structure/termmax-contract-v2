@@ -1,0 +1,15 @@
+{
+  "network": "b2-mainnet",
+  "deployedAt": "1771046378",
+  "gitBranch": "v2/deployment",
+  "gitCommitHash": "0x0x48f8611d007ae22f03172daaab7e08de3aa9d248",
+  "blockInfo": {
+    "number": "28941296",
+    "timestamp": "1771046378"
+  },
+  "deployer": "0x56E3665038C5F0b56Cc7D81aC66C86521274B251",
+  "admin": "0x0b379224A669a09dF8B028A2b41960f432Fae2A2",
+  "contracts": {
+    "accessManager": "0x90C72fa3b55E4Bd00afc0a6c4419E2DF99f6D95a"
+  }
+}

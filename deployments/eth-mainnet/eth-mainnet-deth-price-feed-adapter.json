@@ -1,0 +1,16 @@
+{
+  "network": "eth-mainnet",
+  "deployedAt": "1766735747",
+  "gitBranch": "v2/deployment",
+  "gitCommitHash": "0x26954aa71f3a5a3f0c30ec2a907853c9a8db8a12",
+  "blockInfo": {
+    "number": "24095448",
+    "timestamp": "1766735747"
+  },
+  "deployer": "0xAeBC56B6f15B863667Ed61FdB4687ea3e22176cd",
+  "contracts": {
+    "termMaxDETHPriceFeedAdapter": "0xE809eeB84796fBd86ABFFb0292fC4fD19877C866",
+    "dethOracle": "0x49fba73738461835fefB19351b161Bde4BcD6b5A",
+    "dethAsset": "0x871aB8E36CaE9AF35c6A3488B049965233DeB7ed"
+  }
+}
