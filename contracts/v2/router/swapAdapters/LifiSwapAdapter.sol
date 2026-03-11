@@ -1,0 +1,58 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "./ERC20SwapAdapterV2.sol";
+
+/**
+ * @title TermMax LifiSwapAdapter
+ * @notice This adapter enables swaps via the LiFi router.
+ * @author Term Structure Labs
+ */
+contract LifiSwapAdapter is ERC20SwapAdapterV2 {
+    using TransferUtilsV2 for IERC20;
+
+    error InvalidTradeAmount();
+
+    address public immutable router;
+
+    constructor(address _lifiRouter) {
+        router = _lifiRouter;
+    }
+
+    function _swap(address recipient, IERC20 tokenIn, IERC20 tokenOut, uint256 amount, bytes memory swapData)
+        internal
+        virtual
+        override
+        returns (uint256 tokenOutAmt)
+    {
+        (bytes memory data, uint256 tradeAmount, uint256 netAmount, address refundAddress) =
+            abi.decode(swapData, (bytes, uint256, uint256, address));
+        if (tradeAmount < amount) {
+            if (refundAddress == address(0)) {
+                refundAddress = msg.sender;
+            }
+            uint256 refundAmount = amount - tradeAmount;
+            tokenIn.safeTransfer(refundAddress, refundAmount);
+        } else if (tradeAmount > amount) {
+            revert InvalidTradeAmount();
+        }
+        ///@dev make sure the recipient in swapdata is this contract
+        uint256 tokenOutBalBefore = tokenOut.balanceOf(address(this));
+        tokenIn.safeIncreaseAllowance(address(router), tradeAmount);
+
+        (bool success, bytes memory returnData) = router.call{value: 0}(data);
+        if (!success) {
+            assembly {
+                let ptr := add(returnData, 0x20)
+                let len := mload(returnData)
+                revert(ptr, len)
+            }
+        }
+        tokenOutAmt = tokenOut.balanceOf(address(this)) - tokenOutBalBefore;
+
+        if (tokenOutAmt < netAmount) revert LessThanMinTokenOut(tokenOutAmt, netAmount);
+        if (recipient != address(this)) {
+            tokenOut.safeTransfer(recipient, tokenOutAmt);
+        }
+    }
+}
