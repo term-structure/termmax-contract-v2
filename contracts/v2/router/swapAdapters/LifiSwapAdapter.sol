@@ -34,7 +34,7 @@ contract LifiSwapAdapter is ERC20SwapAdapterV2 {
         }
         ///@dev make sure the recipient in swapdata is this contract
         uint256 tokenOutBalBefore = tokenOut.balanceOf(address(this));
-        tokenIn.safeIncreaseAllowance(address(router), tradeAmount);
+        tokenIn.safeApprove(address(router), tradeAmount);
 
         (bool success, bytes memory returnData) = router.call{value: 0}(data);
         if (!success) {
