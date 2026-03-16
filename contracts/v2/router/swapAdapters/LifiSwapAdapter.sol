@@ -28,11 +28,7 @@ contract LifiSwapAdapter is ERC20SwapAdapterV2 {
         (bytes memory data, uint256 tradeAmount, uint256 netAmount, address refundAddress) =
             abi.decode(swapData, (bytes, uint256, uint256, address));
         if (tradeAmount < amount) {
-            if (refundAddress == address(0)) {
-                refundAddress = msg.sender;
-            }
-            uint256 refundAmount = amount - tradeAmount;
-            tokenIn.safeTransfer(refundAddress, refundAmount);
+            _refund(refundAddress, tokenIn, amount - tradeAmount);
         } else if (tradeAmount > amount) {
             revert InvalidTradeAmount();
         }

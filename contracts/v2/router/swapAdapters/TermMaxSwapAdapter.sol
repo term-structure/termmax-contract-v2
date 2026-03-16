@@ -101,11 +101,8 @@ contract TermMaxSwapAdapter is ERC20SwapAdapterV2 {
             revert ActualTokenBalanceNotMatch();
         }
         // Refund excess input tokens for exact output swaps
-        if (
-            !data.swapExactTokenForToken && finalInput < tokenInAmt && data.refundAddress != address(0)
-                && data.refundAddress != address(this)
-        ) {
-            tokenIn.safeTransfer(data.refundAddress, tokenInAmt - finalInput);
+        if (!data.swapExactTokenForToken && finalInput < tokenInAmt) {
+            _refund(data.refundAddress, tokenIn, tokenInAmt - finalInput);
         }
     }
 

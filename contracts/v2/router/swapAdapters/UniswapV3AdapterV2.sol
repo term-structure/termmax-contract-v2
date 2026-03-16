@@ -39,8 +39,8 @@ contract UniswapV3AdapterV2 is ERC20SwapAdapterV2 {
                 })
             );
             // refund remaining tokenIn to refundAddress
-            if (refundAddress != address(0) && refundAddress != address(this) && amount > amountIn) {
-                tokenIn.safeTransfer(refundAddress, amount - amountIn);
+            if (amount > amountIn) {
+                _refund(refundAddress, tokenIn, amount - amountIn);
             }
             tokenOutAmt = tradeAmount;
         } else {
