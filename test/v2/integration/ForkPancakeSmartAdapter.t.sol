@@ -12,7 +12,7 @@ import {
     AbstractGearingToken,
     GtConfig
 } from "contracts/v1/tokens/AbstractGearingToken.sol";
-import {PendleSwapV3AdapterV2} from "contracts/v2/router/swapAdapters/PendleSwapV3AdapterV2.sol";
+import {PendleSwapV3AdapterV2, ERC20SwapAdapterV2} from "contracts/v2/router/swapAdapters/PendleSwapV3AdapterV2.sol";
 import {OdosV2AdapterV2} from "contracts/v2/router/swapAdapters/OdosV2AdapterV2.sol";
 import {IOracle} from "contracts/v1/oracle/IOracle.sol";
 import {
@@ -142,6 +142,36 @@ contract ForkPancakeSmartAdapter is ForkBaseTestV2 {
         assertEq(tokenOutAfter - tokenOutBefore, exactOutputAmount);
         console.log("token in spent", actualInputSpent);
         console.log("token out received", tokenOutAfter - tokenOutBefore);
+    }
+
+    function testRevertWhenRefundAddressIsZero() public {
+        uint256 blockNumber = 69655494;
+        vm.roll(blockNumber);
+        address user = vm.addr(2);
+        vm.deal(user, 1 ether);
+        address tokenIn = USDT;
+        address tokenOut = WBNB;
+        uint256 maxInputAmount = 10000e18;
+        uint256 exactOutputAmount = 10e18;
+        deal(tokenIn, user, maxInputAmount);
+
+        bytes memory data =
+            hex"ac9650d8000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000016000000000000000000000000000000000000000000000000000000000000000e45023b4df00000000000000000000000055d398326f99059ff775485246999027b3197955000000000000000000000000bb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c0000000000000000000000000000000000000000000000000000000000000064000000000000000000000000c7183455a4c133ae270771860664b6b7ec320bb10000000000000000000000000000000000000000000000007ce66c50e28400000000000000000000000000000000000000000000000012af39b2a93f15c3f041000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000012409b8134600000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000080000000000000000000000000c7183455a4c133ae270771860664b6b7ec320bb10000000000000000000000000000000000000000000000000de0b6b3a76400000000000000000000000000000000000000000000000002137d3660e1c6962bf90000000000000000000000000000000000000000000000000000000000000042bb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c0000648ac76a51cc950d9822d68b83fe1ad97b32cd580d00006455d398326f99059ff775485246999027b319795500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
+        bool isExactOut = true;
+        bytes memory swapData = abi.encode(data, isExactOut, exactOutputAmount, maxInputAmount, address(0));
+
+        vm.startPrank(user);
+        IERC20(tokenIn).approve(address(router), maxInputAmount);
+
+        SwapUnit[] memory swapUnits = new SwapUnit[](1);
+        swapUnits[0] =
+            SwapUnit({adapter: address(pancakeSmartAdapter), tokenIn: tokenIn, tokenOut: tokenOut, swapData: swapData});
+        SwapPath[] memory swapPaths = new SwapPath[](1);
+        swapPaths[0] =
+            SwapPath({units: swapUnits, recipient: user, inputAmount: maxInputAmount, useBalanceOnchain: false});
+
+        vm.expectRevert();
+        router.swapTokens(swapPaths);
     }
 
     function testRevertWhenSlippageTooHigh() public {

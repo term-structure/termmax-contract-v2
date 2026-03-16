@@ -54,8 +54,8 @@ contract PancakeSmartAdapter is ERC20SwapAdapterV2 {
         uint256 realReceived = tokenOut.balanceOf(address(this)) - tokenOutBalBefore;
         if (isExactOut) {
             //refund excess input tokens
-            if (amount > realCost && refundAddress != address(0) && refundAddress != address(this)) {
-                tokenIn.safeTransfer(refundAddress, amount - realCost);
+            if (amount > realCost) {
+                _refund(refundAddress, tokenIn, amount - realCost);
             }
             if (realCost > netAmount) revert ExceedMaxTokenIn(realCost, netAmount);
             tokenOutAmt = realReceived;

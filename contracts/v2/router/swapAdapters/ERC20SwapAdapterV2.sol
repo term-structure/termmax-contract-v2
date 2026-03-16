@@ -19,6 +19,8 @@ abstract contract ERC20SwapAdapterV2 is IERC20SwapAdapter, OnlyProxyCall, ERC20S
     /// @notice Error for exceeding max token in
     /// @dev Revert when the actual required input token amount exceeds the expected maximum
     error ExceedMaxTokenIn(uint256 actual, uint256 expected);
+    /// @notice Error for zero address refund
+    error RefundAddressIsZeroAddress();
 
     /**
      * @inheritdoc IERC20SwapAdapter
@@ -49,5 +51,15 @@ abstract contract ERC20SwapAdapterV2 is IERC20SwapAdapter, OnlyProxyCall, ERC20S
     {
         // using address(this) as recipient since this function is only used for router V1
         tokenOutAmt = _swap(address(this), tokenIn, tokenOut, tokenInAmt, swapData);
+    }
+
+
+    function _refund(address recipient, IERC20 token, uint256 amount) internal {
+        if (recipient == address(0)) {
+            revert RefundAddressIsZeroAddress();
+        }
+        if (recipient != address(this)) {
+            token.safeTransfer(recipient, amount);
+        }
     }
 }
