@@ -19,6 +19,13 @@ contract LifiSwapAdapter is ERC20SwapAdapterV2 {
         router = _lifiRouter;
     }
 
+    function _isSelectorWhitelisted(bytes4 selector) internal pure override returns (bool) {
+        //swapTokensGeneric (0x4630a0d8)
+        //swapTokensMultipleV3ERC20ToERC20 (0x5fd9ae2e)
+        //swapTokensSingleV3ERC20ToERC20 (0x4666fc80)
+        return selector == 0x4630a0d8 || selector == 0x5fd9ae2e || selector == 0x4666fc80;
+    }
+
     function _swap(address recipient, IERC20 tokenIn, IERC20 tokenOut, uint256 amount, bytes memory swapData)
         internal
         virtual
@@ -27,6 +34,7 @@ contract LifiSwapAdapter is ERC20SwapAdapterV2 {
     {
         (bytes memory data, uint256 tradeAmount, uint256 netAmount, address refundAddress) =
             abi.decode(swapData, (bytes, uint256, uint256, address));
+        _validateSelector(data);
         if (tradeAmount < amount) {
             _refund(refundAddress, tokenIn, amount - tradeAmount);
         } else if (tradeAmount > amount) {

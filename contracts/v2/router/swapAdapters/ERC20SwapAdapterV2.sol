@@ -23,6 +23,33 @@ abstract contract ERC20SwapAdapterV2 is IERC20SwapAdapter, OnlyProxyCall {
     error ExceedMaxTokenIn(uint256 actual, uint256 expected);
     /// @notice Error for zero address refund
     error RefundAddressIsZeroAddress();
+    /// @notice Error for invalid selector-encoded calldata
+    error InvalidSelectorData();
+    /// @notice Error for selectors that are not allowed by the adapter
+    error SelectorNotWhitelisted(bytes4 selector);
+
+    function selectorWhitelist(bytes4 selector) public pure virtual returns (bool) {
+        return _isSelectorWhitelisted(selector);
+    }
+
+    function _isSelectorWhitelisted(bytes4) internal pure virtual returns (bool) {
+        return false;
+    }
+
+    function _validateSelector(bytes memory data) internal pure {
+        if (data.length < 4) {
+            revert InvalidSelectorData();
+        }
+
+        bytes4 selector;
+        assembly {
+            selector := mload(add(data, 0x20))
+        }
+
+        if (!_isSelectorWhitelisted(selector)) {
+            revert SelectorNotWhitelisted(selector);
+        }
+    }
 
     /**
      * @inheritdoc IERC20SwapAdapter

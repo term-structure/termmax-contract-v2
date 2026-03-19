@@ -32,7 +32,7 @@ import {
     RouterErrors
 } from "contracts/v2/router/TermMaxRouterV2.sol";
 import {IWhitelistManager} from "contracts/v2/access/IWhitelistManager.sol";
-import {LifiSwapAdapter} from "contracts/v2/router/swapAdapters/LifiSwapAdapter.sol";
+import {LifiSwapAdapter, ERC20SwapAdapterV2} from "contracts/v2/router/swapAdapters/LifiSwapAdapter.sol";
 import {ERC4626VaultAdapterV2} from "contracts/v2/router/swapAdapters/ERC4626VaultAdapterV2.sol";
 import {console} from "forge-std/console.sol";
 
@@ -157,6 +157,32 @@ contract ForkLifiSwapAdapter is ForkBaseTestV2 {
             SwapPath({units: swapUnits, recipient: user, inputAmount: invalidTradeAmt, useBalanceOnchain: false});
 
         bytes memory errorData = abi.encodeWithSelector(LifiSwapAdapter.InvalidTradeAmount.selector);
+        vm.expectRevert(abi.encodeWithSelector(RouterErrors.SwapFailed.selector, address(lifiSwapAdapter), errorData));
+        router.swapTokens(swapPaths);
+    }
+
+    function testInvalidSelector() public {
+        address user = vm.addr(2);
+        uint256 invalidTradeAmt = tradeAmt - 1000;
+        deal(tokenIn, user, invalidTradeAmt);
+        swapData[0] = 0x00; // invalid selector
+        bytes memory data = swapData;
+        bytes4 invalidSelector;
+        assembly {
+            invalidSelector := mload(add(data, 0x20))
+        }
+        bytes memory swapData = abi.encode(swapData, tradeAmt, netAmt, user);
+        vm.startPrank(user);
+        IERC20(tokenIn).approve(address(router), invalidTradeAmt);
+
+        SwapUnit[] memory swapUnits = new SwapUnit[](1);
+        swapUnits[0] =
+            SwapUnit({adapter: address(lifiSwapAdapter), tokenIn: tokenIn, tokenOut: tokenOut, swapData: swapData});
+        SwapPath[] memory swapPaths = new SwapPath[](1);
+        swapPaths[0] =
+            SwapPath({units: swapUnits, recipient: user, inputAmount: invalidTradeAmt, useBalanceOnchain: false});
+        bytes memory errorData =
+            abi.encodeWithSelector(ERC20SwapAdapterV2.SelectorNotWhitelisted.selector, invalidSelector);
         vm.expectRevert(abi.encodeWithSelector(RouterErrors.SwapFailed.selector, address(lifiSwapAdapter), errorData));
         router.swapTokens(swapPaths);
     }
