@@ -80,7 +80,6 @@ abstract contract ERC20SwapAdapterV2 is IERC20SwapAdapter, OnlyProxyCall, ERC20S
         tokenOutAmt = _swap(address(this), tokenIn, tokenOut, tokenInAmt, swapData);
     }
 
-
     function _refund(address recipient, IERC20 token, uint256 amount) internal {
         if (recipient == address(0)) {
             revert RefundAddressIsZeroAddress();
