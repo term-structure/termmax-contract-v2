@@ -60,7 +60,7 @@ import {
 } from "contracts/v2/router/TermMaxRouterV2.sol";
 import {RouterEventsV2} from "contracts/v2/events/RouterEventsV2.sol";
 import {RouterErrorsV2} from "contracts/v2/errors/RouterErrorsV2.sol";
-import {ITermMaxRouter} from "contracts/v1/router/ITermMaxRouter.sol";
+import {ITermMaxRouter, TermMaxRouter} from "contracts/v1/router/TermMaxRouter.sol";
 import {MockSwapAdapterV2} from "contracts/v2/test/MockSwapAdapterV2.sol";
 import {ITermMaxOrder} from "contracts/v1/ITermMaxOrder.sol";
 import {TermMaxSwapData, TermMaxSwapAdapter} from "contracts/v2/router/swapAdapters/TermMaxSwapAdapter.sol";
@@ -1149,6 +1149,40 @@ contract RouterTestV2 is Test {
         assertEq(netOutputs[0], amountIn);
         // Sender's debt balance should be zero
         assertEq(res.debt.balanceOf(sender), 0);
+
+        vm.stopPrank();
+    }
+
+    function testRouterV1UsingV2Adapter() public {
+        TermMaxRouter routerV1 = new TermMaxRouter();
+        routerV1 = TermMaxRouter(
+            address(
+                new ERC1967Proxy(address(routerV1), abi.encodeWithSelector(TermMaxRouter.initialize.selector, sender))
+            )
+        );
+        vm.startPrank(sender);
+        routerV1.setAdapterWhitelist(address(adapter), true);
+        uint128 xtAmt = 10e8;
+        uint128 tokenToSwap = 100e8;
+        uint128 maxLtv = 0.8e8;
+        uint256 minCollAmt = 1e18;
+
+        deal(address(res.xt), sender, xtAmt);
+
+        SwapUnit[] memory units = new SwapUnit[](1);
+        units[0] = SwapUnit(address(adapter), address(res.debt), address(res.collateral), abi.encode(minCollAmt));
+
+        res.xt.approve(address(routerV1), xtAmt);
+        res.debt.mint(sender, tokenToSwap);
+        res.debt.approve(address(routerV1), tokenToSwap);
+
+        uint256 gtId = routerV1.leverageFromXt(sender, res.market, xtAmt, tokenToSwap, maxLtv, units);
+        (address owner, uint128 debtAmt, bytes memory collateralData) = res.gt.loanInfo(gtId);
+        assertEq(owner, sender);
+        assertEq(minCollAmt, abi.decode(collateralData, (uint256)));
+        assertEq(
+            uint128(xtAmt * Constants.DECIMAL_BASE / (Constants.DECIMAL_BASE - res.market.mintGtFeeRatio())), debtAmt
+        );
 
         vm.stopPrank();
     }

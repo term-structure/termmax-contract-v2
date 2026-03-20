@@ -36,6 +36,7 @@ contract ForkOndoPriceFeedAdapterTest is Test {
     address constant TSLAON = 0x2494b603319d4D9F9715c9f4496d9E0364B59d93;
     address constant NVDAON = 0xA9eE28C80f960B889dFbd1902055218cBa016F75;
     address constant TSLA_USD_PRICE_FEED = 0xEEA2ae9c074E87596A85ABE698B2Afebc9B57893;
+    uint256 constant DEFAULT_MAX_UPDATE_INTERVAL = 0;
 
     // Fork configuration
     string MAINNET_RPC_URL = vm.envString("MAINNET_RPC_URL");
@@ -54,14 +55,14 @@ contract ForkOndoPriceFeedAdapterTest is Test {
         ondoOracleExtended = ISyntheticSharesOracleExtended(ONDO_ORACLE);
 
         // Deploy adapters for TSLAON and NVDAON
-        address tslaonAdapterAddr = factory.deployAdapter(TSLAON);
-        address nvdaonAdapterAddr = factory.deployAdapter(NVDAON);
+        address tslaonAdapterAddr = factory.deployAdapter(TSLAON, DEFAULT_MAX_UPDATE_INTERVAL);
+        address nvdaonAdapterAddr = factory.deployAdapter(NVDAON, DEFAULT_MAX_UPDATE_INTERVAL);
 
         tslaonAdapter = TermMaxOndoPriceFeedAdapter(tslaonAdapterAddr);
         nvdaonAdapter = TermMaxOndoPriceFeedAdapter(nvdaonAdapterAddr);
 
         // Deploy converter for TSLAON/USD using factory's deployConverter method
-        address converterAddr = factory.deployConverter(TSLAON, TSLA_USD_PRICE_FEED);
+        address converterAddr = factory.deployConverter(TSLAON, TSLA_USD_PRICE_FEED, DEFAULT_MAX_UPDATE_INTERVAL);
         tslaonUSDConverter = ITermMaxPriceFeed(converterAddr);
     }
 
@@ -79,8 +80,16 @@ contract ForkOndoPriceFeedAdapterTest is Test {
      * @notice Test factory deployment tracking
      */
     function testFactoryDeploymentTracking() public view {
-        assertEq(factory.getAdapter(TSLAON), address(tslaonAdapter), "TSLAON adapter should be tracked");
-        assertEq(factory.getAdapter(NVDAON), address(nvdaonAdapter), "NVDAON adapter should be tracked");
+        assertEq(
+            factory.getAdapter(TSLAON, DEFAULT_MAX_UPDATE_INTERVAL),
+            address(tslaonAdapter),
+            "TSLAON adapter should be tracked"
+        );
+        assertEq(
+            factory.getAdapter(NVDAON, DEFAULT_MAX_UPDATE_INTERVAL),
+            address(nvdaonAdapter),
+            "NVDAON adapter should be tracked"
+        );
     }
 
     /**
@@ -88,17 +97,17 @@ contract ForkOndoPriceFeedAdapterTest is Test {
      */
     function testFactoryPreventsDuplicateDeployment() public {
         vm.expectRevert(TermMaxOndoPriceFeedAdapterFactory.AdapterAlreadyExists.selector);
-        factory.deployAdapter(TSLAON);
+        factory.deployAdapter(TSLAON, DEFAULT_MAX_UPDATE_INTERVAL);
     }
 
     /**
      * @notice Test factory allows redeploying converter (overwrite)
      */
     function testFactoryAllowsConverterRedeploy() public {
-        address oldConverter = factory.deployConverter(TSLAON, TSLA_USD_PRICE_FEED);
+        address oldConverter = factory.deployConverter(TSLAON, TSLA_USD_PRICE_FEED, DEFAULT_MAX_UPDATE_INTERVAL);
 
         // Redeploy converter (e.g., when underlying TSLA/USD price feed changes)
-        address newConverter = factory.deployConverter(TSLAON, TSLA_USD_PRICE_FEED);
+        address newConverter = factory.deployConverter(TSLAON, TSLA_USD_PRICE_FEED, DEFAULT_MAX_UPDATE_INTERVAL);
 
         assertTrue(newConverter != address(0), "New converter should be deployed");
         assertTrue(newConverter != oldConverter, "Converter should be overwritten with new address");
@@ -118,6 +127,41 @@ contract ForkOndoPriceFeedAdapterTest is Test {
     function testNVDAONAdapterInitialization() public view {
         assertEq(address(nvdaonAdapter.ondoOracle()), ONDO_ORACLE, "NVDAON adapter oracle address should match");
         assertEq(nvdaonAdapter.asset(), NVDAON, "NVDAON adapter asset address should match");
+    }
+
+    /**
+     * @notice Test adapter maxUpdateInterval initialization
+     */
+    function testAdapterMaxUpdateIntervalInitialization() public view {
+        assertEq(
+            tslaonAdapter.maxUpdateInterval(),
+            DEFAULT_MAX_UPDATE_INTERVAL,
+            "TSLAON adapter maxUpdateInterval should match"
+        );
+        assertEq(
+            nvdaonAdapter.maxUpdateInterval(),
+            DEFAULT_MAX_UPDATE_INTERVAL,
+            "NVDAON adapter maxUpdateInterval should match"
+        );
+    }
+
+    /**
+     * @notice Test adapter reverts when last update exceeds maxUpdateInterval
+     */
+    function testTSLAONRevertIfLastUpdateTooOld() public {
+        uint256 strictMaxUpdateInterval = 1;
+        address strictAdapterAddr = factory.deployAdapter(TSLAON, strictMaxUpdateInterval);
+        TermMaxOndoPriceFeedAdapter strictAdapter = TermMaxOndoPriceFeedAdapter(strictAdapterAddr);
+
+        (,, uint256 lastUpdate,,,) = ondoOracle.assetData(TSLAON);
+
+        // Ensure we are beyond the strict interval even if fork timestamp equals lastUpdate.
+        if (block.timestamp <= lastUpdate + strictMaxUpdateInterval) {
+            vm.warp(lastUpdate + strictMaxUpdateInterval + 1);
+        }
+
+        vm.expectRevert(TermMaxOndoPriceFeedAdapter.LastUpdateTooOld.selector);
+        strictAdapter.latestRoundData();
     }
 
     /**
@@ -248,22 +292,28 @@ contract ForkOndoPriceFeedAdapterTest is Test {
      * @notice Test that adapter uses lastUpdate from oracle
      */
     function testTSLAONTimestampMatchesOracle() public view {
-        (,, uint256 lastUpdate,,,) = ondoOracle.assetData(TSLAON);
         (,, uint256 startedAt, uint256 updatedAt,) = tslaonAdapter.latestRoundData();
 
-        assertEq(startedAt, lastUpdate, "startedAt should match oracle lastUpdate");
-        assertEq(updatedAt, lastUpdate, "updatedAt should match oracle lastUpdate");
+        assertEq(
+            startedAt, block.timestamp, "startedAt should match block timestamp since dividends are rarely updated"
+        );
+        assertEq(
+            updatedAt, block.timestamp, "updatedAt should match block timestamp since dividends are rarely updated"
+        );
     }
 
     /**
      * @notice Test that adapter uses lastUpdate from oracle for NVDAON
      */
     function testNVDAONTimestampMatchesOracle() public view {
-        (,, uint256 lastUpdate,,,) = ondoOracle.assetData(NVDAON);
         (,, uint256 startedAt, uint256 updatedAt,) = nvdaonAdapter.latestRoundData();
 
-        assertEq(startedAt, lastUpdate, "startedAt should match oracle lastUpdate");
-        assertEq(updatedAt, lastUpdate, "updatedAt should match oracle lastUpdate");
+        assertEq(
+            startedAt, block.timestamp, "startedAt should match block timestamp since dividends are rarely updated"
+        );
+        assertEq(
+            updatedAt, block.timestamp, "updatedAt should match block timestamp since dividends are rarely updated"
+        );
     }
 
     /**
@@ -332,8 +382,19 @@ contract ForkOndoPriceFeedAdapterTest is Test {
         // Verify answer is positive
         assertGt(answer, 0, "TSLAON/USD price should be positive");
 
+        (,, uint256 tslaUpdatedAt, uint256 tslaUpdatedAt2,) = ITermMaxPriceFeed(TSLA_USD_PRICE_FEED).latestRoundData();
+
         // Verify timestamps are reasonable
-        assertGt(updatedAt, 0, "updatedAt should be greater than 0");
+        assertEq(
+            startedAt,
+            tslaUpdatedAt,
+            "startedAt should match original TSLA/USD price feed since dividends are rarely updated"
+        );
+        assertEq(
+            updatedAt,
+            tslaUpdatedAt2,
+            "updatedAt should match original TSLA/USD price feed since dividends are rarely updated"
+        );
 
         console.log("TSLAON/USD Price:", uint256(answer));
         console.log("TSLAON/USD Price (human readable, 8 decimals):", uint256(answer) / 1e8);

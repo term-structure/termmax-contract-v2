@@ -39,8 +39,8 @@ contract UniswapV3AdapterV2 is ERC20SwapAdapterV2 {
                 })
             );
             // refund remaining tokenIn to refundAddress
-            if (refundAddress != address(0) && refundAddress != address(this) && amount > amountIn) {
-                tokenIn.safeTransfer(refundAddress, amount - amountIn);
+            if (amount > amountIn) {
+                _refund(refundAddress, tokenIn, amount - amountIn);
             }
             tokenOutAmt = tradeAmount;
         } else {
@@ -48,14 +48,14 @@ contract UniswapV3AdapterV2 is ERC20SwapAdapterV2 {
             /**
              * Note: Scaling Input/Output amount
              */
-            tradeAmount = tradeAmount.mulDiv(amount, netAmount, Math.Rounding.Ceil);
+            netAmount = netAmount.mulDiv(amount, tradeAmount, Math.Rounding.Ceil);
             tokenOutAmt = router.exactInput(
                 ISwapRouter.ExactInputParams({
                     path: path,
                     recipient: recipient,
                     deadline: deadline,
                     amountIn: amount,
-                    amountOutMinimum: tradeAmount
+                    amountOutMinimum: netAmount
                 })
             );
         }
