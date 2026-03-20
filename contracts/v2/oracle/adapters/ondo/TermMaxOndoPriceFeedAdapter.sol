@@ -17,18 +17,23 @@ contract TermMaxOndoPriceFeedAdapter is ITermMaxPriceFeed {
 
     error GetRoundDataNotSupported();
     error OraclePaused();
+    error LastUpdateTooOld();
 
     ISyntheticSharesOracle public immutable ondoOracle;
     address public immutable override asset;
+    uint256 public immutable maxUpdateInterval;
 
     /**
      * @notice Construct the Ondo price feed adapter
      * @param _ondoOracle The Ondo SyntheticSharesOracle contract address
      * @param _asset The GM asset address to query sValue for
+     * @param _maxUpdateInterval The maximum allowed update interval for the oracle
+     *        set to 0 for no max update interval check(some stock will never update dividends)
      */
-    constructor(address _ondoOracle, address _asset) {
+    constructor(address _ondoOracle, address _asset, uint256 _maxUpdateInterval) {
         ondoOracle = ISyntheticSharesOracle(_ondoOracle);
         asset = _asset;
+        maxUpdateInterval = _maxUpdateInterval;
     }
 
     /**
@@ -42,7 +47,7 @@ contract TermMaxOndoPriceFeedAdapter is ITermMaxPriceFeed {
      * @notice Returns description of the adapter
      */
     function description() external view override returns (string memory) {
-        return string(abi.encodePacked(IERC20Metadata(asset).symbol(), "/Unserlying Stock"));
+        return string(abi.encodePacked(IERC20Metadata(asset).symbol(), "/Underlying Stock"));
     }
 
     /**
@@ -74,8 +79,8 @@ contract TermMaxOndoPriceFeedAdapter is ITermMaxPriceFeed {
      * @notice Get the latest sValue data from Ondo oracle
      * @return roundId Always 1 (not supported by Ondo oracle)
      * @return answer The sValue (synthetic shares multiplier) with 18 decimals
-     * @return startedAt The last update timestamp from Ondo oracle
-     * @return updatedAt The last update timestamp from Ondo oracle
+     * @return startedAt The block timestamp
+     * @return updatedAt The block timestamp
      * @return answeredInRound Always 1 (not supported by Ondo oracle)
      * @dev Reverts if the oracle is paused for corporate action
      */
@@ -87,6 +92,10 @@ contract TermMaxOndoPriceFeedAdapter is ITermMaxPriceFeed {
     {
         // Get all data from Ondo oracle
         (uint128 sValue,, uint256 lastUpdate, uint256 pauseStartTime,,) = ondoOracle.assetData(asset);
+        // Check if the last update is within the max update interval
+        if (maxUpdateInterval != 0 && block.timestamp > lastUpdate + maxUpdateInterval) {
+            revert LastUpdateTooOld();
+        }
 
         // Check if oracle is paused for corporate action
         bool isPaused = pauseStartTime > 0 && block.timestamp >= pauseStartTime;
@@ -96,9 +105,9 @@ contract TermMaxOndoPriceFeedAdapter is ITermMaxPriceFeed {
 
         answer = uint256(sValue).toInt256();
 
-        // Use lastUpdate from oracle as timestamps
-        startedAt = lastUpdate;
-        updatedAt = lastUpdate;
+        // Use block timestamp as timestamps since dividends are updated very rarely, or may never be updated.
+        startedAt = block.timestamp;
+        updatedAt = block.timestamp;
 
         return (1, answer, startedAt, updatedAt, 1);
     }
