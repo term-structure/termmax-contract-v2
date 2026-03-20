@@ -1,11 +1,11 @@
 {
   "network": "bera-mainnet",
-  "deployedAt": "1767925294",
+  "deployedAt": "1773993316",
   "gitBranch": "v2/deployment",
-  "gitCommitHash": "0x53ada7c16de41b404f36b559e1d5e3309406a91a",
+  "gitCommitHash": "0xfc747779202343432677f7a48bcc768721d6cc83",
   "blockInfo": {
-    "number": "15455289",
-    "timestamp": "1767925294"
+    "number": "18489300",
+    "timestamp": "1773993316"
   },
   "deployer": "0x56E3665038C5F0b56Cc7D81aC66C86521274B251",
   "admin": "0x8409a9C1A911CED491892c5694E43994c9d47E8f",
@@ -26,10 +26,10 @@
     "swapAdapterV2": {
       "uniswapV3AdapterV2": "0x0000000000000000000000000000000000000000",
       "odosV2AdapterV2": "0x0000000000000000000000000000000000000000",
-      "pendleSwapV3AdapterV2": "0xd8Ca160A42bC951fb7Bd436C35f35d18e122E06c",
-      "vaultAdapterV2": "0xAA44f1DA35f6d98a956C1A1E5a015041201e6BC6",
+      "pendleSwapV3AdapterV2": "0x93002b4E4894eDDB2fDdE5545f4C792624251b6E",
+      "vaultAdapterV2": "0x8Cf5139144b3B472d5A914E2aCe5Ae5c06dB11eE",
       "terminalVaultAdapter": "0x0000000000000000000000000000000000000000",
-      "termMaxSwapAdapter": "0x270b5381AE31ddBE793921E29312F7b66d7D8bEb"
+      "termMaxSwapAdapter": "0xFfa110A6b661f6a434DeD132168f6fa9f394B7cF"
     }
   }
 }

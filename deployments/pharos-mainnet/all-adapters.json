@@ -1,0 +1,25 @@
+{
+  "network": "pharos-mainnet",
+  "deployedAt": "1773994360",
+  "gitBranch": "v2/deployment",
+  "gitCommitHash": "0xfc747779202343432677f7a48bcc768721d6cc83",
+  "blockInfo": {
+    "number": "4299840",
+    "timestamp": "1773994360"
+  },
+  "contracts": {
+    "routerV1": "0x503F0828157F088420DEB26338f33c270C8E95f1",
+    "router": "0xc56cF74254C5aDd64fa1198476233BEC1878145B",
+    "accessManager": "0x9498764f0c62257B83A04e2A757De30908EC793d",
+    "adapters": [
+      {
+        "name": "termMaxSwapAdapter",
+        "address": "0xdE91aA25C3555be729a751eFcC836dd7F3446EFc"
+      },
+      {
+        "name": "erc4626VaultAdapterV2",
+        "address": "0x5B5788881d5f291c1c6b48C5231f4AA64635e5Bd"
+      }
+    ]
+  }
+}

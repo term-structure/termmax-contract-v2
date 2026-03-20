@@ -1,0 +1,29 @@
+{
+  "network": "b2-mainnet",
+  "deployedAt": "1773993798",
+  "gitBranch": "v2/deployment",
+  "gitCommitHash": "0xfc747779202343432677f7a48bcc768721d6cc83",
+  "blockInfo": {
+    "number": "30415006",
+    "timestamp": "1773993798"
+  },
+  "contracts": {
+    "routerV1": "0x3cb5fa87703c7165cc5f2087B3e80b58fb6d8CE8",
+    "router": "0x830fBad7Cd1c3Cc5B693Dc64b985f2901B253C5B",
+    "accessManager": "0x90C72fa3b55E4Bd00afc0a6c4419E2DF99f6D95a",
+    "adapters": [
+      {
+        "name": "termMaxSwapAdapter",
+        "address": "0x4dF00b86ceB111dD727c14942b5Fdab8A695cCD3"
+      },
+      {
+        "name": "erc4626VaultAdapterV2",
+        "address": "0x4C6b0fA7f63383466fBa3466B7AF3ca91Ec815Ea"
+      },
+      {
+        "name": "uniswapV3AdapterV2",
+        "address": "0xBd795F755dbB5A5358D6c60AED53ceB486Fa8517"
+      }
+    ]
+  }
+}

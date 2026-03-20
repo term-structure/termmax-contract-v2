@@ -1,0 +1,45 @@
+{
+  "network": "arb-mainnet",
+  "deployedAt": "1773979834",
+  "gitBranch": "v2/deployment",
+  "gitCommitHash": "0x97ed59ee0da152b83b17cc8311a6d8e8f93fd0b1",
+  "blockInfo": {
+    "number": "443652520",
+    "timestamp": "1773979834"
+  },
+  "contracts": {
+    "routerV1": "0x7fa333b184868d88aC78a82eC06d5e87d4B0322E",
+    "router": "0xCAa5689bfe6E1B9c79D7C44D9E4410f6BFb6c4b5",
+    "accessManager": "0xFaD175CAf9B0Ac0EBca3B1816ec799884EB04B9c",
+    "adapters": [
+      {
+        "name": "termMaxSwapAdapter",
+        "address": "0x6Aa7148411001217f31d5AE96053E17A7f8ecE6A"
+      },
+      {
+        "name": "erc4626VaultAdapterV2",
+        "address": "0x4961bC8E4B0b2be8c6dBE99d2d4647C27F62E4Cd"
+      },
+      {
+        "name": "lifiSwapAdapter",
+        "address": "0xbaC506e0EAE9F05Ce9cEEEa7B0C9660C279b8B05"
+      },
+      {
+        "name": "odosV2AdapterV2",
+        "address": "0x242CB48c78591058bB278008d96f6c1dd0f7a8c6"
+      },
+      {
+        "name": "okxSwapAdapter",
+        "address": "0x9BB1A564A6d01aEB9268f7162b537bDf958126d6"
+      },
+      {
+        "name": "oneInchSwapAdapter",
+        "address": "0xe9AD9a916b3555C310e206a4fA116e174da97Dd8"
+      },
+      {
+        "name": "pendleSwapV3AdapterV2",
+        "address": "0xC7cdaD93bDcAFCC7b8f30c20B23b13E17147300D"
+      }
+    ]
+  }
+}

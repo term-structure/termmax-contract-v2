@@ -1,15 +1,15 @@
 {
   "network": "eth-mainnet",
-  "deployedAt": "1772434763",
+  "deployedAt": "1773715859",
   "gitBranch": "v2/deployment",
-  "gitCommitHash": "0x8391e1d77a7046cc9b702659695461ce23e375d0",
+  "gitCommitHash": "0x0e8d9da2101e9ad223bddb48362d447976f23d2b",
   "blockInfo": {
-    "number": "24568124",
-    "timestamp": "1772434763"
+    "number": "24674347",
+    "timestamp": "1773715859"
   },
   "deployer": "0x56E3665038C5F0b56Cc7D81aC66C86521274B251",
   "contracts": {
-    "termMaxOndoPriceFeedAdapterFactory": "0x03301CFcE4A91533103c7DFb1FE323f4437a031C",
+    "termMaxOndoPriceFeedAdapterFactory": "0x621D84e47cEb6818C6c0e38EDf9efD5c1c92b339",
     "ondoOracle": "0x9BC39DB6fbB44B91a48b8D5A6C208B82B1741bE6",
     "priceFeedFactoryV2": "0xFD9B5ee419C56f5ED3E86ba70953342906a7dE2B"
   }

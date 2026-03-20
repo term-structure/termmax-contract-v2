@@ -1,0 +1,33 @@
+{
+  "network": "bera-mainnet",
+  "deployedAt": "1773993316",
+  "gitBranch": "v2/deployment",
+  "gitCommitHash": "0xfc747779202343432677f7a48bcc768721d6cc83",
+  "blockInfo": {
+    "number": "18489300",
+    "timestamp": "1773993316"
+  },
+  "contracts": {
+    "routerV1": "0xb7634dB4f4710bb992118bC37d1F63e00e2704A4",
+    "router": "0x0B30251FA697A39Fd41813b267b50F03414E82da",
+    "accessManager": "0x9498764f0c62257B83A04e2A757De30908EC793d",
+    "adapters": [
+      {
+        "name": "termMaxSwapAdapter",
+        "address": "0xFfa110A6b661f6a434DeD132168f6fa9f394B7cF"
+      },
+      {
+        "name": "erc4626VaultAdapterV2",
+        "address": "0x8Cf5139144b3B472d5A914E2aCe5Ae5c06dB11eE"
+      },
+      {
+        "name": "kodiakSwapAdapter",
+        "address": "0x5036017067A141726AEE407dbD07949Bc8BeBD2B"
+      },
+      {
+        "name": "pendleSwapV3AdapterV2",
+        "address": "0x93002b4E4894eDDB2fDdE5545f4C792624251b6E"
+      }
+    ]
+  }
+}

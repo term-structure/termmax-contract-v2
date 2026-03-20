@@ -1,11 +1,11 @@
 {
   "network": "arb-mainnet",
-  "deployedAt": "1767924878",
+  "deployedAt": "1773996351",
   "gitBranch": "v2/deployment",
-  "gitCommitHash": "0x53ada7c16de41b404f36b559e1d5e3309406a91a",
+  "gitCommitHash": "0xf79b4c8338a3af37438f955858b8e65f6d59fe39",
   "blockInfo": {
-    "number": "419393812",
-    "timestamp": "1767924878"
+    "number": "443718623",
+    "timestamp": "1773996351"
   },
   "deployer": "0x56E3665038C5F0b56Cc7D81aC66C86521274B251",
   "admin": "0x8409a9C1A911CED491892c5694E43994c9d47E8f",
@@ -17,7 +17,7 @@
     "priceFeedFactoryV2": "0x4aCDD5277c0B907Dd08025d922c50e94217560B9",
     "termMax4626Factory": "0xe306A0A5Ac675dab1CD77aA7873D241715aEB217",
     "whitelistManager": "0x7a571901687E7F30431B4E86bdd1baB6caE51D43",
-    "oracleAggregatorV2": "0x2e1c769A9BA8248C7c8128c2BEBa11331ebF98Aa",
+    "oracleAggregatorV2": "0xDF020051fc6f3378459bc9269372AA46fEEa77CA",
     "routerV1": "0x7fa333b184868d88aC78a82eC06d5e87d4B0322E",
     "routerV2": "0xCAa5689bfe6E1B9c79D7C44D9E4410f6BFb6c4b5",
     "marketViewer": "0x0000000000000000000000000000000000000000",
@@ -25,11 +25,11 @@
     "makerHelper": "0x1EE3fAc93F08F84107ce21FF5380314B5473Bf5c",
     "swapAdapterV2": {
       "uniswapV3AdapterV2": "0x0000000000000000000000000000000000000000",
-      "odosV2AdapterV2": "0xBA279eFBFB82C40D4fb4F215406B43C16Fe20EE8",
-      "pendleSwapV3AdapterV2": "0x2BdD82f276D8b35728bd49948b045Df8F42f4517",
-      "vaultAdapterV2": "0x9c1ad910257bb3cCE5281b24970f1E7987769F83",
+      "odosV2AdapterV2": "0x242CB48c78591058bB278008d96f6c1dd0f7a8c6",
+      "pendleSwapV3AdapterV2": "0xC7cdaD93bDcAFCC7b8f30c20B23b13E17147300D",
+      "vaultAdapterV2": "0x4961bC8E4B0b2be8c6dBE99d2d4647C27F62E4Cd",
       "terminalVaultAdapter": "0x0000000000000000000000000000000000000000",
-      "termMaxSwapAdapter": "0x9D73db2D14c2dFEDAE69C541FA45962f4ae3D165"
+      "termMaxSwapAdapter": "0x6Aa7148411001217f31d5AE96053E17A7f8ecE6A"
     }
   }
 }
