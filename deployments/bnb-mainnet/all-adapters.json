@@ -1,0 +1,53 @@
+{
+  "network": "bnb-mainnet",
+  "deployedAt": "1773992877",
+  "gitBranch": "v2/deployment",
+  "gitCommitHash": "0xfc747779202343432677f7a48bcc768721d6cc83",
+  "blockInfo": {
+    "number": "87654021",
+    "timestamp": "1773992877"
+  },
+  "contracts": {
+    "routerV1": "0xb7634dB4f4710bb992118bC37d1F63e00e2704A4",
+    "router": "0xFB0c46985d937C755265f697BC10AD3387Ae801a",
+    "accessManager": "0x9498764f0c62257B83A04e2A757De30908EC793d",
+    "adapters": [
+      {
+        "name": "termMaxSwapAdapter",
+        "address": "0x9a3fAdF7a1F7e897BA33BD48802cDDa446c4508E"
+      },
+      {
+        "name": "erc4626VaultAdapterV2",
+        "address": "0x6ece47d0606428b46b0CfED2E33Fab806Cc888dc"
+      },
+      {
+        "name": "lifiSwapAdapter",
+        "address": "0x89ed60510b1E98F80F977B2c33C0601ec955695c"
+      },
+      {
+        "name": "odosV2AdapterV2",
+        "address": "0x8DA157f56E279acc6d2CA897E8B1d7FFA8Cc2270"
+      },
+      {
+        "name": "okxSwapAdapter",
+        "address": "0x9BfAd67747e4430945a223D991bC01e0ABD26F5e"
+      },
+      {
+        "name": "ondoSwapAdapter",
+        "address": "0xeD2Af062189Fc331805B186634Aae58b61D77be4"
+      },
+      {
+        "name": "oneInchSwapAdapter",
+        "address": "0x286427fB95948374B755b716CFEE94935956491E"
+      },
+      {
+        "name": "pancakeSmartAdapter",
+        "address": "0x32aCd5ba1235841c320BbE95994781945dE55170"
+      },
+      {
+        "name": "pendleSwapV3AdapterV2",
+        "address": "0x5cd23AEF6850af95b039e17baA8C13788DC6FE88"
+      }
+    ]
+  }
+}

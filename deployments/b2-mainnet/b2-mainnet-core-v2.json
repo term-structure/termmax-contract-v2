@@ -1,11 +1,11 @@
 {
   "network": "b2-mainnet",
-  "deployedAt": "1771126094",
+  "deployedAt": "1773993798",
   "gitBranch": "v2/deployment",
-  "gitCommitHash": "0x48f8611d007ae22f03172daaab7e08de3aa9d248",
+  "gitCommitHash": "0xfc747779202343432677f7a48bcc768721d6cc83",
   "blockInfo": {
-    "number": "28981154",
-    "timestamp": "1771126094"
+    "number": "30415006",
+    "timestamp": "1773993798"
   },
   "deployer": "0x56E3665038C5F0b56Cc7D81aC66C86521274B251",
   "admin": "0x0b379224A669a09dF8B028A2b41960f432Fae2A2",
@@ -24,12 +24,12 @@
     "termMaxViewer": "0x0d64B9feF3E1f599B88d29Edb54D2F9152CBE496",
     "makerHelper": "0x2c5d576681d625ea9b6E9EE5d6A9159147328292",
     "swapAdapterV2": {
-      "uniswapV3AdapterV2": "0x0000000000000000000000000000000000000000",
+      "uniswapV3AdapterV2": "0xBd795F755dbB5A5358D6c60AED53ceB486Fa8517",
       "odosV2AdapterV2": "0x0000000000000000000000000000000000000000",
       "pendleSwapV3AdapterV2": "0x0000000000000000000000000000000000000000",
-      "vaultAdapterV2": "0x8e3283CDAaFd88012E3Ef53d788cb5B9c396cE71",
+      "vaultAdapterV2": "0x4C6b0fA7f63383466fBa3466B7AF3ca91Ec815Ea",
       "terminalVaultAdapter": "0x0000000000000000000000000000000000000000",
-      "termMaxSwapAdapter": "0x09F2f93a38802AEA233dA3E5835Bf9975C5125Ba"
+      "termMaxSwapAdapter": "0x4dF00b86ceB111dD727c14942b5Fdab8A695cCD3"
     }
   }
 }

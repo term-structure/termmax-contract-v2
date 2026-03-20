@@ -1,0 +1,15 @@
+{
+  "network": "base-mainnet",
+  "deployedAt": "1773368193",
+  "gitBranch": "v2/deployment",
+  "gitCommitHash": "0x0x87836fbd4cc4e26f1fa7755cff3aa0db80bff870",
+  "blockInfo": {
+    "number": "43289423",
+    "timestamp": "1773368193"
+  },
+  "deployer": "0x56E3665038C5F0b56Cc7D81aC66C86521274B251",
+  "admin": "0x8409a9C1A911CED491892c5694E43994c9d47E8f",
+  "contracts": {
+    "accessManager": "0x90C72fa3b55E4Bd00afc0a6c4419E2DF99f6D95a"
+  }
+}

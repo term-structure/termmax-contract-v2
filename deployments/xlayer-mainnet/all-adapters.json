@@ -1,0 +1,29 @@
+{
+  "network": "xlayer-mainnet",
+  "deployedAt": "1773993665",
+  "gitBranch": "v2/deployment",
+  "gitCommitHash": "0xfc747779202343432677f7a48bcc768721d6cc83",
+  "blockInfo": {
+    "number": "55224629",
+    "timestamp": "1773993665"
+  },
+  "contracts": {
+    "routerV1": "0xb0eCCbaD4b4cc190261c29C6E8d85bcF04284a8b",
+    "router": "0xa50929A67daF9Ff3567e2Bb3411204A134f72546",
+    "accessManager": "0x9498764f0c62257B83A04e2A757De30908EC793d",
+    "adapters": [
+      {
+        "name": "termMaxSwapAdapter",
+        "address": "0x48bCd27e208dC973C3F56812F762077A90E88Cea"
+      },
+      {
+        "name": "erc4626VaultAdapterV2",
+        "address": "0xC7dE1A55758bDBa5CC6b6f7535006eE1349A6d37"
+      },
+      {
+        "name": "okxSwapAdapter",
+        "address": "0xA0E0702b701cCaC329732Bb409681612f43E41AD"
+      }
+    ]
+  }
+}

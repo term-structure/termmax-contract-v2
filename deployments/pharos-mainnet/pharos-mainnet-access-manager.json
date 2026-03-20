@@ -1,0 +1,15 @@
+{
+  "network": "pharos-mainnet",
+  "deployedAt": "1773819199",
+  "gitBranch": "v2/deployment",
+  "gitCommitHash": "0x0x678e8a65b12314cd6c640a397def9e4a6d1f59a3",
+  "blockInfo": {
+    "number": "4226465",
+    "timestamp": "1773819199"
+  },
+  "deployer": "0x56E3665038C5F0b56Cc7D81aC66C86521274B251",
+  "admin": "0x96604e7D0961CB0B074101A2f720F78b06BCc7c3",
+  "contracts": {
+    "accessManager": "0x9498764f0c62257B83A04e2A757De30908EC793d"
+  }
+}
