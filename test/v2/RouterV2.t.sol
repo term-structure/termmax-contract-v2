@@ -131,8 +131,7 @@ contract RouterTestV2 is Test {
         res.ft.transfer(address(res.order), amount);
         res.xt.transfer(address(res.order), amount);
 
-        (res.router, res.whitelistManager) = DeployUtils.deployRouter(deployer);
-        res.router.setWhitelistManager(address(res.whitelistManager));
+        res.router = DeployUtils.deployRouter(deployer, res.whitelistManager);
         adapter = new MockSwapAdapterV2(pool);
         termMaxSwapAdapter = new TermMaxSwapAdapter(address(res.whitelistManager));
 
@@ -146,13 +145,13 @@ contract RouterTestV2 is Test {
     }
 
     function testUpgradeRouterToV2() public {
-        TermMaxRouterV2 impl = new TermMaxRouterV2();
+        TermMaxRouterV2 impl = new TermMaxRouterV2(address(res.whitelistManager));
         address admin = vm.randomAddress();
-        bytes memory data = abi.encodeCall(TermMaxRouterV2.initialize, (admin, vm.randomAddress()));
+        bytes memory data = abi.encodeCall(TermMaxRouterV2.initialize, (admin));
         ERC1967Proxy proxy = new ERC1967Proxy(address(impl), data);
         TermMaxRouterV2 router_tmp = TermMaxRouterV2(address(proxy));
-        TermMaxRouterV2 impl2 = new TermMaxRouterV2();
-        data = abi.encodeCall(TermMaxRouterV2.initializeV2, (vm.randomAddress()));
+        TermMaxRouterV2 impl2 = new TermMaxRouterV2(address(res.whitelistManager));
+        data = abi.encodeCall(TermMaxRouterV2.initializeV2, ());
 
         vm.prank(admin);
         router_tmp.upgradeToAndCall(address(impl2), data);

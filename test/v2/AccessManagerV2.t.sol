@@ -457,7 +457,7 @@ contract AccessManagerTestV2 is Test {
         vm.startPrank(deployer);
 
         // Deploy a new router implementation
-        TermMaxRouterV2 routerV2 = new TermMaxRouterV2();
+        TermMaxRouterV2 routerV2 = new TermMaxRouterV2(address(res.whitelistManager));
 
         // Test upgrade with UPDATER_ROLE
         manager.upgradeSubContract(UUPSUpgradeable(address(res.router)), address(routerV2), "");

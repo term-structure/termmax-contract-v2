@@ -63,7 +63,6 @@ contract ForkKodiakSwapAdapter is ForkBaseTestV2 {
         vm.startPrank(admin);
         IWhitelistManager whitelistManager;
         (router, whitelistManager) = deployRouter(admin);
-        router.setWhitelistManager(address(whitelistManager));
 
         address[] memory adapters = new address[](1);
         adapters[0] = address(kodiakSwapAdapter);

@@ -120,7 +120,6 @@ contract ForkPrdRollover is ForkBaseTestV2 {
         vm.startPrank(admin);
         IWhitelistManager whitelistManager;
         (router, whitelistManager) = deployRouter(admin);
-        router.setWhitelistManager(address(whitelistManager));
 
         TermMaxSwapAdapter tmx = new TermMaxSwapAdapter(address(whitelistManager));
         tmxAdapter = address(tmx);

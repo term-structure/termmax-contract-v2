@@ -27,6 +27,7 @@ import {ISwapCallback} from "../ISwapCallback.sol";
 import {Constants} from "../lib/Constants.sol";
 import {MathLib} from "../lib/MathLib.sol";
 import {IGtRepayer} from "./IGtRepayer.sol";
+import {WithWhitelistCheck, IWhitelistManager} from "../../v2/access/WithWhitelistCheck.sol";
 
 /**
  * @title TermMax Router V1.1.2
@@ -44,7 +45,8 @@ contract TermMaxRouter_V1_1_2 is
     RouterErrors,
     RouterEvents,
     IGtRepayer,
-    ReentrancyGuardUpgradeable
+    ReentrancyGuardUpgradeable,
+    WithWhitelistCheck
 {
     using SafeCast for *;
     using TransferUtils for IERC20;
@@ -77,6 +79,10 @@ contract TermMaxRouter_V1_1_2 is
     }
 
     function _authorizeUpgrade(address newImplementation) internal virtual override onlyOwner {}
+
+    constructor(address _whitelistManager)
+        WithWhitelistCheck(_whitelistManager, IWhitelistManager.ContractModule.MARKET)
+    {}
 
     function initialize(address admin) public initializer {
         __ReentrancyGuard_init_unchained();
@@ -237,7 +243,7 @@ contract TermMaxRouter_V1_1_2 is
         uint128 maxLtv,
         SwapUnit[] memory units,
         uint256 deadline
-    ) external nonReentrant whenNotPaused returns (uint256 gtId, uint256 netXtOut) {
+    ) external nonReentrant whenNotPaused onlyWhitelisted(address(market)) returns (uint256 gtId, uint256 netXtOut) {
         assembly {
             tstore(T_CALLBACK_ADDRESS_STORE, market) // set callback address
         }
@@ -268,7 +274,7 @@ contract TermMaxRouter_V1_1_2 is
         uint128 tokenInAmt,
         uint128 maxLtv,
         SwapUnit[] memory units
-    ) external nonReentrant whenNotPaused returns (uint256 gtId) {
+    ) external nonReentrant whenNotPaused onlyWhitelisted(address(market)) returns (uint256 gtId) {
         assembly {
             tstore(T_CALLBACK_ADDRESS_STORE, market) // set callback address
         }
@@ -312,7 +318,7 @@ contract TermMaxRouter_V1_1_2 is
         uint128 xtInAmt,
         uint128 minTokenOutAmt,
         SwapUnit[] memory units
-    ) external nonReentrant whenNotPaused returns (uint256 gtId) {
+    ) external nonReentrant whenNotPaused onlyWhitelisted(address(market)) returns (uint256 gtId) {
         assembly {
             tstore(T_CALLBACK_ADDRESS_STORE, market) // set callback address
         }
@@ -354,7 +360,7 @@ contract TermMaxRouter_V1_1_2 is
         uint128 collateralInAmt,
         uint128 maxLtv,
         SwapUnit[] memory units
-    ) external nonReentrant whenNotPaused returns (uint256 gtId) {
+    ) external nonReentrant whenNotPaused onlyWhitelisted(address(market)) returns (uint256 gtId) {
         assembly {
             tstore(T_CALLBACK_ADDRESS_STORE, market) // set callback address
         }
@@ -387,7 +393,7 @@ contract TermMaxRouter_V1_1_2 is
         uint128[] memory tokenAmtsWantBuy,
         uint128 maxDebtAmt,
         uint256 deadline
-    ) external nonReentrant whenNotPaused returns (uint256) {
+    ) external nonReentrant whenNotPaused onlyWhitelisted(address(market)) returns (uint256) {
         (IERC20 ft,, IGearingToken gt, address collateralAddr, IERC20 debtToken) = market.tokens();
         IERC20(collateralAddr).safeTransferFrom(msg.sender, address(this), collInAmt);
         IERC20(collateralAddr).safeIncreaseAllowance(address(gt), collInAmt);
@@ -410,6 +416,7 @@ contract TermMaxRouter_V1_1_2 is
         external
         nonReentrant
         whenNotPaused
+        onlyWhitelisted(address(market))
         returns (uint256)
     {
         (IERC20 ft, IERC20 xt, IGearingToken gt, address collateralAddr,) = market.tokens();
@@ -438,6 +445,7 @@ contract TermMaxRouter_V1_1_2 is
         external
         nonReentrant
         whenNotPaused
+        onlyWhitelisted(address(market))
     {
         (IERC20 ft, IERC20 xt, IGearingToken gt,,) = market.tokens();
 
@@ -468,7 +476,7 @@ contract TermMaxRouter_V1_1_2 is
         bool byDebtToken,
         SwapUnit[] memory units,
         uint256 deadline
-    ) external nonReentrant whenNotPaused returns (uint256 netTokenOut) {
+    ) external nonReentrant whenNotPaused onlyWhitelisted(address(market)) returns (uint256 netTokenOut) {
         revert("Use flashRepayFromColl with expectedOutput param");
     }
 
@@ -482,7 +490,7 @@ contract TermMaxRouter_V1_1_2 is
         uint256 expectedOutput,
         SwapUnit[] memory units,
         uint256 deadline
-    ) external nonReentrant whenNotPaused returns (uint256 netTokenOut) {
+    ) external nonReentrant whenNotPaused onlyWhitelisted(address(market)) returns (uint256 netTokenOut) {
         (IERC20 ft,, IGearingToken gtToken,, IERC20 debtToken) = market.tokens();
         assembly {
             // set callback address
@@ -508,7 +516,7 @@ contract TermMaxRouter_V1_1_2 is
         uint128[] memory ftAmtsWantBuy,
         uint128 maxTokenIn,
         uint256 deadline
-    ) external nonReentrant whenNotPaused returns (uint256 returnAmt) {
+    ) external nonReentrant whenNotPaused onlyWhitelisted(address(market)) returns (uint256 returnAmt) {
         (IERC20 ft,, IGearingToken gt,, IERC20 debtToken) = market.tokens();
 
         debtToken.safeTransferFrom(msg.sender, address(this), maxTokenIn);
@@ -538,7 +546,7 @@ contract TermMaxRouter_V1_1_2 is
         uint256 ftAmount,
         SwapUnit[] memory units,
         uint256 minTokenOut
-    ) external nonReentrant whenNotPaused returns (uint256) {
+    ) external nonReentrant whenNotPaused onlyWhitelisted(address(market)) returns (uint256) {
         (IERC20 ft,,, address collateralAddr, IERC20 debtToken) = market.tokens();
         ft.safeTransferFrom(msg.sender, address(this), ftAmount);
         ft.safeIncreaseAllowance(address(market), ftAmount);
@@ -585,9 +593,7 @@ contract TermMaxRouter_V1_1_2 is
         uint256 totalAmount = amount + tokenInAmt;
         collateralData = _doSwap(abi.encode(totalAmount), units);
         SwapUnit memory lastUnit = units[units.length - 1];
-        if (!adapterWhitelist[lastUnit.adapter]) {
-            revert AdapterNotWhitelisted(lastUnit.adapter);
-        }
+        _checkWhitelisted(lastUnit.adapter, IWhitelistManager.ContractModule.ADAPTER);
 
         if (flashLoanType == FlashLoanType.COLLATERAL) {
             IERC20 collateral = IERC20(lastUnit.tokenOut);
@@ -647,9 +653,8 @@ contract TermMaxRouter_V1_1_2 is
             revert SwapUnitsIsEmpty();
         }
         for (uint256 i = 0; i < units.length; ++i) {
-            if (!adapterWhitelist[units[i].adapter]) {
-                revert AdapterNotWhitelisted(units[i].adapter);
-            }
+            _checkWhitelisted(units[i].adapter, IWhitelistManager.ContractModule.ADAPTER);
+
             bytes memory dataToSwap =
                 abi.encodeCall(ISwapAdapter.swap, (units[i].tokenIn, units[i].tokenOut, inputData, units[i].swapData));
 
@@ -679,6 +684,7 @@ contract TermMaxRouter_V1_1_2 is
         override
         nonReentrant
         whenNotPaused
+        onlyWhitelisted(address(market))
         returns (uint128 repayAmt)
     {
         (IERC20 ft,, IGearingToken gt,, IERC20 debtToken) = market.tokens();

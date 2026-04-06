@@ -314,9 +314,9 @@ contract DeployBaseV2 is Script {
     }
 
     function deployRouter(address admin, address whitelistManager) public returns (TermMaxRouterV2 router) {
-        TermMaxRouterV2 implementation = new TermMaxRouterV2();
+        TermMaxRouterV2 implementation = new TermMaxRouterV2(whitelistManager);
 
-        bytes memory data = abi.encodeCall(TermMaxRouterV2.initialize, (admin, whitelistManager));
+        bytes memory data = abi.encodeCall(TermMaxRouterV2.initialize, (admin));
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), data);
         router = TermMaxRouterV2(address(proxy));
     }
@@ -325,24 +325,26 @@ contract DeployBaseV2 is Script {
         public
         returns (TermMaxRouterV2 router)
     {
-        TermMaxRouterV2 implementation = new TermMaxRouterV2();
-        bytes memory data = abi.encodeCall(TermMaxRouterV2.initializeV2, whitelistManager);
+        TermMaxRouterV2 implementation = new TermMaxRouterV2(whitelistManager);
+        bytes memory data = abi.encodeCall(TermMaxRouterV2.initializeV2, ());
         manager.upgradeSubContract(UUPSUpgradeable(routerProxy), address(implementation), data);
         router = TermMaxRouterV2(routerProxy);
     }
 
-    function upgradeRouter(AccessManagerV2 manager, address routerProxy, bytes memory initData)
-        public
-        returns (TermMaxRouterV2 router)
-    {
-        TermMaxRouterV2 implementation = new TermMaxRouterV2();
+    function upgradeRouter(
+        AccessManagerV2 manager,
+        address routerProxy,
+        address whitelistManager,
+        bytes memory initData
+    ) public returns (TermMaxRouterV2 router) {
+        TermMaxRouterV2 implementation = new TermMaxRouterV2(whitelistManager);
         manager.upgradeSubContract(UUPSUpgradeable(routerProxy), address(implementation), initData);
         router = TermMaxRouterV2(routerProxy);
     }
 
     function deployMakerHelper(address admin) public returns (MakerHelper makerHelper) {
         address implementation = address(new MakerHelper());
-        bytes memory data = abi.encodeCall(MakerHelper.initialize, admin);
+        bytes memory data = abi.encodeCall(MakerHelper.initialize, (admin));
         address proxy = address(new ERC1967Proxy(address(implementation), data));
         makerHelper = MakerHelper(proxy);
     }

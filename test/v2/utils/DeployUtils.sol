@@ -412,15 +412,15 @@ library DeployUtils {
 
     function deployRouter(address admin) public returns (TermMaxRouterV2 router, IWhitelistManager whitelistManager) {
         whitelistManager = deployWhitelistManager();
-        TermMaxRouterV2 implementation = new TermMaxRouterV2();
-        bytes memory data = abi.encodeCall(TermMaxRouterV2.initialize, (admin, address(whitelistManager)));
+        TermMaxRouterV2 implementation = new TermMaxRouterV2(address(whitelistManager));
+        bytes memory data = abi.encodeCall(TermMaxRouterV2.initialize, (admin));
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), data);
         router = TermMaxRouterV2(address(proxy));
     }
 
     function deployRouter(address admin, IWhitelistManager whitelistManager) public returns (TermMaxRouterV2 router) {
-        TermMaxRouterV2 implementation = new TermMaxRouterV2();
-        bytes memory data = abi.encodeCall(TermMaxRouterV2.initialize, (admin, address(whitelistManager)));
+        TermMaxRouterV2 implementation = new TermMaxRouterV2(address(whitelistManager));
+        bytes memory data = abi.encodeCall(TermMaxRouterV2.initialize, (admin));
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), data);
         router = TermMaxRouterV2(address(proxy));
     }

@@ -60,7 +60,6 @@ contract ForkPancakeSmartAdapter is ForkBaseTestV2 {
         vm.startPrank(admin);
         IWhitelistManager whitelistManager;
         (router, whitelistManager) = deployRouter(admin);
-        router.setWhitelistManager(address(whitelistManager));
         console.log("router", address(router));
         console.log("whitelistManager", address(whitelistManager));
 
