@@ -287,17 +287,17 @@ contract DeployBaseV2 is Script {
         console.log("Deployment info written to:", filePath);
     }
 
-    function deployFactory(address admin) public returns (TermMaxFactoryV2 factory) {
+    function deployFactory(address admin, address whitelistManager) public returns (TermMaxFactoryV2 factory) {
         address tokenImplementation = address(new MintableERC20V2());
         address orderImplementation = address(new TermMaxOrderV2());
         TermMaxMarketV2 m = new TermMaxMarketV2(tokenImplementation, orderImplementation);
-        factory = new TermMaxFactoryV2(admin, address(m));
+        factory = new TermMaxFactoryV2(admin, address(m), whitelistManager);
     }
 
-    function deployVaultFactory() public returns (TermMaxVaultFactoryV2 vaultFactory) {
+    function deployVaultFactory(address whitelistManager) public returns (TermMaxVaultFactoryV2 vaultFactory) {
         OrderManagerV2 orderManager = new OrderManagerV2();
         TermMaxVaultV2 implementation = new TermMaxVaultV2(address(orderManager));
-        vaultFactory = new TermMaxVaultFactoryV2(address(implementation));
+        vaultFactory = new TermMaxVaultFactoryV2(address(implementation), whitelistManager);
     }
 
     function deployOracleAggregator(address admin, uint256 oracleTimelock) public returns (OracleAggregatorV2 oracle) {
@@ -376,16 +376,16 @@ contract DeployBaseV2 is Script {
         public
         returns (DeployedContracts memory)
     {
-        // deploy factory
-        contracts.factory = deployFactory(address(contracts.accessManager));
-
         // deploy whitelist manager
         contracts.whitelistManager = deployWhitelistManager(address(contracts.accessManager));
 
-        contracts.vaultFactory = deployVaultFactory();
+        // deploy factory
+        contracts.factory = deployFactory(address(contracts.accessManager), address(contracts.whitelistManager));
+
+        contracts.vaultFactory = deployVaultFactory(address(contracts.whitelistManager));
 
         // deploy vault factory
-        contracts.vaultFactory = deployVaultFactory();
+        contracts.vaultFactory = deployVaultFactory(address(contracts.whitelistManager));
 
         // deploy 4626 factory
         {
@@ -406,7 +406,8 @@ contract DeployBaseV2 is Script {
                 stableERC4626ForAave,
                 address(stableERC4626ForVenus),
                 variableERC4626ForAave,
-                address(stableERC4626ForCustomize)
+                address(stableERC4626ForCustomize),
+                address(contracts.whitelistManager)
             );
         }
 

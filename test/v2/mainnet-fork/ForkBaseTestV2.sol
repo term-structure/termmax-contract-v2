@@ -26,7 +26,7 @@ import {
     LoanConfig,
     VaultInitialParams
 } from "contracts/v1/storage/TermMaxStorage.sol";
-import {IWhitelistManager} from "contracts/v2/access/IWhitelistManager.sol";
+import {WhitelistManager, IWhitelistManager} from "contracts/v2/access/WhitelistManager.sol";
 import {DeployUtils} from "../utils/DeployUtils.sol";
 import {JSONLoader} from "../utils/JSONLoader.sol";
 import "forge-std/Test.sol";
@@ -143,20 +143,23 @@ abstract contract ForkBaseTestV2 is Test {
         address tokenImplementation = address(new MintableERC20V2());
         address orderImplementation = address(new TermMaxOrderV2());
         TermMaxMarketV2 m = new TermMaxMarketV2(tokenImplementation, orderImplementation);
-        factory = new TermMaxFactoryV2(admin, address(m));
+        IWhitelistManager whitelistManager = deployWhitelistManager(admin);
+        factory = new TermMaxFactoryV2(admin, address(m), address(whitelistManager));
     }
 
     function deployFactoryWithMockOrder(address admin) public returns (TermMaxFactoryV2 factory) {
         address tokenImplementation = address(new MintableERC20V2());
         address orderImplementation = address(new MockOrderV2());
         TermMaxMarketV2 m = new TermMaxMarketV2(tokenImplementation, orderImplementation);
-        factory = new TermMaxFactoryV2(admin, address(m));
+        IWhitelistManager whitelistManager = deployWhitelistManager(admin);
+        factory = new TermMaxFactoryV2(admin, address(m), address(whitelistManager));
     }
 
-    function deployVaultFactory() public returns (TermMaxVaultFactoryV2 vaultFactory) {
+    function deployVaultFactory(address admin) public returns (TermMaxVaultFactoryV2 vaultFactory) {
         OrderManagerV2 orderManager = new OrderManagerV2();
         TermMaxVaultV2 implementation = new TermMaxVaultV2(address(orderManager));
-        vaultFactory = new TermMaxVaultFactoryV2(address(implementation));
+        IWhitelistManager whitelistManager = deployWhitelistManager(admin);
+        vaultFactory = new TermMaxVaultFactoryV2(address(implementation), address(whitelistManager));
     }
 
     function deployOracleAggregator(address admin) public returns (OracleAggregatorV2 oracle) {
@@ -169,5 +172,12 @@ abstract contract ForkBaseTestV2 is Test {
 
     function deployRouter(address admin) public returns (TermMaxRouterV2, IWhitelistManager) {
         return DeployUtils.deployRouter(admin);
+    }
+
+    function deployWhitelistManager(address admin) internal returns (IWhitelistManager whitelistManager) {
+        WhitelistManager implementation = new WhitelistManager();
+        bytes memory data = abi.encodeCall(WhitelistManager.initialize, admin);
+        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), data);
+        whitelistManager = IWhitelistManager(address(proxy));
     }
 }

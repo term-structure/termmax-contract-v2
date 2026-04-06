@@ -373,14 +373,23 @@ library DeployUtils {
         address tokenImplementation = address(new MintableERC20V2());
         address orderImplementation = address(new TermMaxOrderV2());
         TermMaxMarketV2 m = new TermMaxMarketV2(tokenImplementation, orderImplementation);
-        factory = new TermMaxFactoryV2(admin, address(m));
+        IWhitelistManager whitelistManager = deployWhitelistManager(admin);
+        factory = new TermMaxFactoryV2(admin, address(m), address(whitelistManager));
     }
 
     function deployFactoryWithMockOrder(address admin) public returns (TermMaxFactoryV2 factory) {
         address tokenImplementation = address(new MintableERC20V2());
         address orderImplementation = address(new MockOrderV2());
         TermMaxMarketV2 m = new TermMaxMarketV2(tokenImplementation, orderImplementation);
-        factory = new TermMaxFactoryV2(admin, address(m));
+        IWhitelistManager whitelistManager = deployWhitelistManager(admin);
+        factory = new TermMaxFactoryV2(admin, address(m), address(whitelistManager));
+    }
+
+    function deployVaultFactory() public returns (TermMaxVaultFactoryV2 vaultFactory) {
+        OrderManagerV2 orderManager = new OrderManagerV2();
+        TermMaxVaultV2 implementation = new TermMaxVaultV2(address(orderManager));
+        IWhitelistManager whitelistManager = deployWhitelistManager(msg.sender);
+        vaultFactory = new TermMaxVaultFactoryV2(address(implementation), address(whitelistManager));
     }
 
     function deployOracle(address admin, uint256 timeLock) public returns (OracleAggregatorV2 oracle) {
@@ -398,7 +407,9 @@ library DeployUtils {
     function deployVault(VaultInitialParamsV2 memory initialParams) public returns (TermMaxVaultV2 vault) {
         OrderManagerV2 orderManager = new OrderManagerV2();
         TermMaxVaultV2 implementation = new TermMaxVaultV2(address(orderManager));
-        TermMaxVaultFactoryV2 vaultFactory = new TermMaxVaultFactoryV2(address(implementation));
+        IWhitelistManager whitelistManager = deployWhitelistManager(initialParams.admin);
+        TermMaxVaultFactoryV2 vaultFactory =
+            new TermMaxVaultFactoryV2(address(implementation), address(whitelistManager));
 
         vault = TermMaxVaultV2(vaultFactory.createVault(initialParams, 0));
     }

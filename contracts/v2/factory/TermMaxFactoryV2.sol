@@ -10,6 +10,7 @@ import {FactoryEvents} from "../../v1/events/FactoryEvents.sol";
 import {ITermMaxMarket} from "../../v1/ITermMaxMarket.sol";
 import {ITermMaxFactory} from "../../v1/factory/ITermMaxFactory.sol";
 import {FactoryEventsV2} from "../events/FactoryEventsV2.sol";
+import {WithWhitelistCheck, IWhitelistManager} from "../access/WithWhitelistCheck.sol";
 import {VersionV2} from "../VersionV2.sol";
 
 /**
@@ -19,7 +20,7 @@ import {VersionV2} from "../VersionV2.sol";
  * @dev Manages market deployment, gearing token implementations, and market configuration validation
  * Inherits from V1 factory interface while adding V2-specific features for improved market creation
  */
-contract TermMaxFactoryV2 is Ownable2Step, ITermMaxFactory, FactoryEventsV2, VersionV2 {
+contract TermMaxFactoryV2 is Ownable2Step, ITermMaxFactory, FactoryEventsV2, VersionV2, WithWhitelistCheck {
     /// @notice Constant key for the default ERC20 gearing token implementation
     bytes32 constant GT_ERC20 = keccak256("GearingTokenWithERC20");
 
@@ -40,7 +41,10 @@ contract TermMaxFactoryV2 is Ownable2Step, ITermMaxFactory, FactoryEventsV2, Ver
      * @param TERMMAX_MARKET_IMPLEMENTATION_ The address of the TermMax market implementation contract
      * @custom:security Only the admin can create markets and manage gearing token implementations
      */
-    constructor(address admin, address TERMMAX_MARKET_IMPLEMENTATION_) Ownable(admin) {
+    constructor(address admin, address TERMMAX_MARKET_IMPLEMENTATION_, address _whitelistManager)
+        Ownable(admin)
+        WithWhitelistCheck(_whitelistManager, IWhitelistManager.ContractModule.MARKET)
+    {
         if (TERMMAX_MARKET_IMPLEMENTATION_ == address(0)) {
             revert FactoryErrors.InvalidImplementation();
         }
@@ -117,6 +121,7 @@ contract TermMaxFactoryV2 is Ownable2Step, ITermMaxFactory, FactoryEventsV2, Ver
 
         // Initialize the newly deployed market with provided parameters
         ITermMaxMarket(market).initialize(params);
+        _registerAddress(market);
 
         // Emit event for market creation tracking
         emit FactoryEventsV2.MarketCreated(market, params.collateral, params.debtToken, params);

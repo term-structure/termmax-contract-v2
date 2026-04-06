@@ -16,6 +16,7 @@ import {MockVToken} from "contracts/mocks/MockVToken.sol";
 import {IAaveV3Pool} from "contracts/v2/extensions/aave/IAaveV3Pool.sol";
 import {ERC4626TokenEvents} from "contracts/v2/events/ERC4626TokenEvents.sol";
 import {FactoryEventsV2} from "contracts/v2/events/FactoryEventsV2.sol";
+import {WhitelistManager} from "contracts/v2/access/WhitelistManager.sol";
 
 contract TermMax4626FactoryTest is Test {
     TermMax4626Factory public factory;
@@ -37,6 +38,7 @@ contract TermMax4626FactoryTest is Test {
     StableERC4626ForVenus public implVenus;
     VariableERC4626ForAave public implVariableAave;
     StableERC4626ForCustomize public implCustomize;
+    WhitelistManager public whitelistManager;
 
     StakingBuffer.BufferConfig public defaultBufferConfig;
 
@@ -62,6 +64,8 @@ contract TermMax4626FactoryTest is Test {
         implVariableAave = new VariableERC4626ForAave(address(aavePool), 100);
         implVenus = new StableERC4626ForVenus();
         implCustomize = new StableERC4626ForCustomize();
+        whitelistManager = new WhitelistManager();
+        whitelistManager.initialize(admin);
 
         // Deploy factory
         factory = new TermMax4626Factory(
@@ -70,7 +74,8 @@ contract TermMax4626FactoryTest is Test {
             address(implStableAave),
             address(implVenus),
             address(implVariableAave),
-            address(implCustomize)
+            address(implCustomize),
+            address(whitelistManager)
         );
 
         // Setup default buffer config

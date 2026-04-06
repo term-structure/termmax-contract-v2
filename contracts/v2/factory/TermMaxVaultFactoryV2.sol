@@ -6,19 +6,22 @@ import {ITermMaxVaultV2} from "../vault/ITermMaxVaultV2.sol";
 import {FactoryEventsV2} from "../events/FactoryEventsV2.sol";
 import {ITermMaxVaultFactoryV2} from "./ITermMaxVaultFactoryV2.sol";
 import {VaultInitialParamsV2} from "../storage/TermMaxStorageV2.sol";
+import {WithWhitelistCheck, IWhitelistManager} from "../access/WithWhitelistCheck.sol";
 import {VersionV2} from "../VersionV2.sol";
 
 /**
  * @title The TermMax vault factory v2
  * @author Term Structure Labs
  */
-contract TermMaxVaultFactoryV2 is ITermMaxVaultFactoryV2, VersionV2 {
+contract TermMaxVaultFactoryV2 is ITermMaxVaultFactoryV2, VersionV2, WithWhitelistCheck {
     /**
      * @notice The implementation of TermMax Vault contract v2
      */
     address public immutable TERMMAX_VAULT_IMPLEMENTATION;
 
-    constructor(address TERMMAX_VAULT_IMPLEMENTATION_) {
+    constructor(address TERMMAX_VAULT_IMPLEMENTATION_, address _whitelistManager)
+        WithWhitelistCheck(_whitelistManager, IWhitelistManager.ContractModule.ORDER_CALLBACK)
+    {
         TERMMAX_VAULT_IMPLEMENTATION = TERMMAX_VAULT_IMPLEMENTATION_;
     }
 
@@ -46,6 +49,7 @@ contract TermMaxVaultFactoryV2 is ITermMaxVaultFactoryV2, VersionV2 {
             keccak256(abi.encode(msg.sender, initialParams.asset, initialParams.name, initialParams.symbol, salt))
         );
         ITermMaxVaultV2(vault).initialize(initialParams);
+        _registerAddress(vault);
         emit FactoryEventsV2.VaultCreated(vault, msg.sender, initialParams);
     }
 }

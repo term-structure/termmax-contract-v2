@@ -277,6 +277,6 @@ contract FactoryTestV2 is Test {
 
     function testInvalidMarketImplementation() public {
         vm.expectRevert(abi.encodeWithSelector(FactoryErrors.InvalidImplementation.selector));
-        new TermMaxFactoryV2(deployer, address(0));
+        new TermMaxFactoryV2(deployer, address(0), address(1));
     }
 }
