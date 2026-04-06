@@ -387,10 +387,12 @@ contract DeployBaseV2 is Script {
         // deploy factory
         contracts.factory = deployFactory(address(contracts.accessManager), address(contracts.whitelistManager));
 
-        contracts.vaultFactory = deployVaultFactory(address(contracts.accessManager), address(contracts.whitelistManager));
+        contracts.vaultFactory =
+            deployVaultFactory(address(contracts.accessManager), address(contracts.whitelistManager));
 
         // deploy vault factory
-        contracts.vaultFactory = deployVaultFactory(address(contracts.accessManager), address(contracts.whitelistManager));
+        contracts.vaultFactory =
+            deployVaultFactory(address(contracts.accessManager), address(contracts.whitelistManager));
 
         // deploy 4626 factory
         {

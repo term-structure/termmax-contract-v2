@@ -11,22 +11,22 @@ contract MockWhitelistManager is IWhitelistManager, IWhitelistRegistry {
         whitelist[_user][_module] = _approved;
     }
 
-    function batchSetWhitelist(address[] memory _users, ContractModule _module, bool _approved) external {
-        for (uint256 i = 0; i < _users.length; i++) {
-            whitelist[_users[i]][_module] = _approved;
+    function batchSetWhitelist(address[] memory _addresses, ContractModule _module, bool _approved) external {
+        for (uint256 i = 0; i < _addresses.length; i++) {
+            whitelist[_addresses[i]][_module] = _approved;
         }
 
-        emit WhitelistUpdated(_users, _module, _approved);
+        emit WhitelistUpdated(_addresses, _module, _approved);
     }
 
     /// @dev IWhitelistRegistry implementation - forwards to the actual whitelist manager
     function batchSetWhitelist(
         IWhitelistManager _whitelistManager,
-        address[] calldata _users,
+        address[] calldata _addresses,
         ContractModule _module,
         bool _approved
     ) external override {
-        _whitelistManager.batchSetWhitelist(_users, _module, _approved);
+        _whitelistManager.batchSetWhitelist(_addresses, _module, _approved);
     }
 
     function isWhitelisted(address _user, ContractModule _module) external view returns (bool) {

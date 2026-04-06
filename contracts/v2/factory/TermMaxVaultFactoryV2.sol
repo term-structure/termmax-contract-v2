@@ -2,11 +2,11 @@
 pragma solidity ^0.8.27;
 
 import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
-import {Ownable, Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {ITermMaxVaultV2} from "../vault/ITermMaxVaultV2.sol";
 import {FactoryEventsV2} from "../events/FactoryEventsV2.sol";
 import {ITermMaxVaultFactoryV2} from "./ITermMaxVaultFactoryV2.sol";
 import {VaultInitialParamsV2} from "../storage/TermMaxStorageV2.sol";
+import {WithAccessManagerRole} from "../access/WithAccessManagerRole.sol";
 import {WithWhitelistCheck, IWhitelistManager} from "../access/WithWhitelistCheck.sol";
 import {VersionV2} from "../VersionV2.sol";
 
@@ -14,14 +14,14 @@ import {VersionV2} from "../VersionV2.sol";
  * @title The TermMax vault factory v2
  * @author Term Structure Labs
  */
-contract TermMaxVaultFactoryV2 is Ownable2Step, ITermMaxVaultFactoryV2, VersionV2, WithWhitelistCheck {
+contract TermMaxVaultFactoryV2 is ITermMaxVaultFactoryV2, VersionV2, WithWhitelistCheck, WithAccessManagerRole {
     /**
      * @notice The implementation of TermMax Vault contract v2
      */
     address public immutable TERMMAX_VAULT_IMPLEMENTATION;
 
-    constructor(address admin, address TERMMAX_VAULT_IMPLEMENTATION_, address _whitelistManager)
-        Ownable(admin)
+    constructor(address accessManager, address TERMMAX_VAULT_IMPLEMENTATION_, address _whitelistManager)
+        WithAccessManagerRole(accessManager)
         WithWhitelistCheck(_whitelistManager, IWhitelistManager.ContractModule.ORDER_CALLBACK)
     {
         TERMMAX_VAULT_IMPLEMENTATION = TERMMAX_VAULT_IMPLEMENTATION_;
@@ -43,13 +43,17 @@ contract TermMaxVaultFactoryV2 is Ownable2Step, ITermMaxVaultFactoryV2, VersionV
     }
 
     function _getRegistry() internal view override returns (address) {
-        return owner();
+        return ACCESS_MANAGER;
     }
 
     /**
      * @inheritdoc ITermMaxVaultFactoryV2
      */
-    function createVault(VaultInitialParamsV2 memory initialParams, uint256 salt) public onlyOwner returns (address vault) {
+    function createVault(VaultInitialParamsV2 memory initialParams, uint256 salt)
+        public
+        onlyRole(VAULT_DEPLOYER_ROLE)
+        returns (address vault)
+    {
         vault = Clones.cloneDeterministic(
             TERMMAX_VAULT_IMPLEMENTATION,
             keccak256(abi.encode(msg.sender, initialParams.asset, initialParams.name, initialParams.symbol, salt))
