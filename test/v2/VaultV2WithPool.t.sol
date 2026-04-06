@@ -53,6 +53,7 @@ import {VaultEventsV2} from "contracts/v2/events/VaultEventsV2.sol";
 import {VaultInitialParamsV2} from "contracts/v2/storage/TermMaxStorageV2.sol";
 import {MockERC4626} from "contracts/v2/test/MockERC4626.sol";
 import {TermMaxFactoryV2} from "contracts/v2/factory/TermMaxFactoryV2.sol";
+import {MockWhitelistManager, IWhitelistManager} from "contracts/v2/test/MockWhitelistManager.sol";
 
 /// @dev use --isolate to run this tests
 contract VaultV2WithPoolTest is Test {
@@ -99,11 +100,14 @@ contract VaultV2WithPoolTest is Test {
         vm.label(address(res.market), "market");
 
         pool = new MockERC4626(res.debt);
+        MockWhitelistManager(address(res.whitelistManager)).setWhitelist(
+            address(pool), IWhitelistManager.ContractModule.POOL, true
+        );
         vm.label(address(pool), "pool");
         {
             MarketConfig memory marketConfig2 = JSONLoader.getMarketConfigFromJson(treasurer, testdata, ".marketConfig");
             marketConfig2.maturity = uint64(currentTime + 180 days);
-            TermMaxFactoryV2 factory = DeployUtils.deployFactory(deployer);
+            TermMaxFactoryV2 factory = DeployUtils.deployFactory(deployer, res.whitelistManager);
             market2 = TermMaxMarketV2(
                 factory.createMarket(
                     DeployUtils.GT_ERC20,
@@ -150,7 +154,7 @@ contract VaultV2WithPoolTest is Test {
             0
         );
 
-        vault = DeployUtils.deployVault(initialParams);
+        vault = DeployUtils.deployVault(initialParams, res.whitelistManager);
 
         vm.label(address(vault), "vault");
         vm.label(guardian, "guardian");
@@ -207,7 +211,7 @@ contract VaultV2WithPoolTest is Test {
     function testDepositWhenNoOrders() public {
         initialParams.name = "Vault-DAI2";
         initialParams.symbol = "Vault-DAI2";
-        TermMaxVaultV2 vault2 = DeployUtils.deployVault(initialParams);
+        TermMaxVaultV2 vault2 = DeployUtils.deployVault(initialParams, res.whitelistManager);
         vm.startPrank(deployer);
         uint256 amount = 10000e8;
         res.debt.mint(deployer, amount);
@@ -592,6 +596,10 @@ contract VaultV2WithPoolTest is Test {
         MockERC4626 newPool = new MockERC4626(res.debt);
         address newPoolAddress = address(newPool);
 
+        MockWhitelistManager(address(res.whitelistManager)).setWhitelist(
+            newPoolAddress, IWhitelistManager.ContractModule.POOL, true
+        );
+
         // Test unauthorized access
         vm.prank(vm.randomAddress());
         vm.expectRevert(VaultErrors.NotCuratorRole.selector);
@@ -615,6 +623,9 @@ contract VaultV2WithPoolTest is Test {
 
         // Test submitting another pool while one is pending should revert
         MockERC4626 anotherPool = new MockERC4626(res.debt);
+        MockWhitelistManager(address(res.whitelistManager)).setWhitelist(
+            address(anotherPool), IWhitelistManager.ContractModule.POOL, true
+        );
         vm.prank(curator);
         vm.expectRevert(VaultErrors.AlreadyPending.selector);
         vaultV2.submitPendingPool(address(anotherPool));
@@ -627,6 +638,10 @@ contract VaultV2WithPoolTest is Test {
         MockERC4626 newPool = new MockERC4626(res.debt);
         address newPoolAddress = address(newPool);
 
+        MockWhitelistManager(address(res.whitelistManager)).setWhitelist(
+            newPoolAddress, IWhitelistManager.ContractModule.POOL, true
+        );
+
         // Submit pending pool
         vm.prank(curator);
         vaultV2.submitPendingPool(newPoolAddress);
@@ -637,6 +652,17 @@ contract VaultV2WithPoolTest is Test {
 
         // Move time forward past timelock
         vm.warp(currentTime + timelock + 1);
+
+        MockWhitelistManager(address(res.whitelistManager)).setWhitelist(
+            newPoolAddress, IWhitelistManager.ContractModule.POOL, false
+        );
+
+        vm.expectRevert(abi.encodeWithSignature("TargetNotWhitelisted()"));
+        vaultV2.acceptPool();
+
+        MockWhitelistManager(address(res.whitelistManager)).setWhitelist(
+            newPoolAddress, IWhitelistManager.ContractModule.POOL, true
+        );
 
         // Get initial balances
         uint256 oldPoolBalance = pool.balanceOf(address(vault));
@@ -668,8 +694,16 @@ contract VaultV2WithPoolTest is Test {
         address newPoolAddress = address(newPool);
 
         // Submit pending pool
-        vm.prank(curator);
+        vm.startPrank(curator);
+        vm.expectRevert(abi.encodeWithSignature("TargetNotWhitelisted()"));
         vaultV2.submitPendingPool(newPoolAddress);
+
+        MockWhitelistManager(address(res.whitelistManager)).setWhitelist(
+            newPoolAddress, IWhitelistManager.ContractModule.POOL, true
+        );
+        vaultV2.submitPendingPool(newPoolAddress);
+
+        vm.stopPrank();
 
         // Verify pending state
         assertEq(vault.pendingPool().value, newPoolAddress);
@@ -699,19 +733,14 @@ contract VaultV2WithPoolTest is Test {
         ITermMaxVaultV2 vaultV2 = ITermMaxVaultV2(address(vault));
 
         // Test submitting zero address as pool (should disable pool)
-        vm.prank(curator);
-        vaultV2.submitPendingPool(address(0));
-
-        // Move time forward and accept
-        vm.warp(currentTime + timelock + 1);
+        vm.startPrank(curator);
 
         uint256 oldPoolBalance = pool.balanceOf(address(vault));
         uint256 expectedAssetBalance = pool.convertToAssets(oldPoolBalance);
 
-        vm.expectEmit(true, true, false, false);
-        emit VaultEventsV2.SetPool(address(this), address(0));
-
-        vaultV2.acceptPool();
+        vm.expectEmit();
+        emit VaultEventsV2.SetPool(curator, address(0));
+        vaultV2.submitPendingPool(address(0));
 
         // Verify pool was set to zero address
         assertEq(address(vault.pool()), address(0));
@@ -719,6 +748,8 @@ contract VaultV2WithPoolTest is Test {
         // Verify assets were withdrawn from old pool
         assertEq(pool.balanceOf(address(vault)), 0);
         assertEq(res.debt.balanceOf(address(vault)), expectedAssetBalance);
+
+        vm.stopPrank();
     }
 
     function testPoolManagementAccessControl() public {
@@ -726,6 +757,10 @@ contract VaultV2WithPoolTest is Test {
 
         // Create a new pool
         MockERC4626 newPool = new MockERC4626(res.debt);
+
+        MockWhitelistManager(address(res.whitelistManager)).setWhitelist(
+            address(newPool), IWhitelistManager.ContractModule.POOL, true
+        );
 
         // Test that only curator can submit
         vm.prank(guardian);

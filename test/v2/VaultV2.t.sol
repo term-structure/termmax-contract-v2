@@ -52,6 +52,7 @@ import {IPausable} from "contracts/v1/access/AccessManager.sol";
 import {VaultEventsV2} from "contracts/v2/events/VaultEventsV2.sol";
 import {VaultInitialParamsV2} from "contracts/v2/storage/TermMaxStorageV2.sol";
 import {TermMaxFactoryV2} from "contracts/v2/factory/TermMaxFactoryV2.sol";
+import {MockWhitelistManager, IWhitelistManager} from "contracts/v2/test/MockWhitelistManager.sol";
 
 /// @dev use --isolate to run this tests
 contract VaultTestV2 is Test {
@@ -97,7 +98,7 @@ contract VaultTestV2 is Test {
         vm.label(address(res.market), "market");
         MarketConfig memory marketConfig2 = JSONLoader.getMarketConfigFromJson(treasurer, testdata, ".marketConfig");
         marketConfig2.maturity = uint64(currentTime + 180 days);
-        TermMaxFactoryV2 factory = DeployUtils.deployFactory(deployer);
+        TermMaxFactoryV2 factory = DeployUtils.deployFactory(deployer, res.whitelistManager);
         market2 = TermMaxMarketV2(
             factory.createMarket(
                 DeployUtils.GT_ERC20,
@@ -142,7 +143,7 @@ contract VaultTestV2 is Test {
             0
         );
 
-        vault = DeployUtils.deployVault(initialParams);
+        vault = DeployUtils.deployVault(initialParams, res.whitelistManager);
 
         vm.label(address(vault), "vault");
         vm.label(guardian, "guardian");
@@ -246,6 +247,9 @@ contract VaultTestV2 is Test {
         // submit market
         vm.startPrank(curator);
         address market = address(0x123);
+        MockWhitelistManager(address(res.whitelistManager)).setWhitelist(
+            market, IWhitelistManager.ContractModule.MARKET, true
+        );
         vault.submitMarket(market, false);
 
         assertEq(vault.marketWhitelist(market), false);
@@ -261,12 +265,18 @@ contract VaultTestV2 is Test {
         vault.acceptMarket(market);
         assertEq(vault.marketWhitelist(market), true);
 
+        MockWhitelistManager(address(res.whitelistManager)).setWhitelist(
+            market, IWhitelistManager.ContractModule.MARKET, false
+        );
         vault.submitMarket(market, false);
         assertEq(vault.marketWhitelist(market), false);
         vm.stopPrank();
 
         // Test revoke market
         address newMarket = address(0x456);
+        MockWhitelistManager(address(res.whitelistManager)).setWhitelist(
+            newMarket, IWhitelistManager.ContractModule.MARKET, true
+        );
         vm.prank(curator);
         vault.submitMarket(newMarket, true);
 
@@ -279,10 +289,17 @@ contract VaultTestV2 is Test {
         address market = address(0x123);
 
         vm.prank(vm.randomAddress());
+
         vm.expectRevert(VaultErrors.NotCuratorRole.selector);
         vault.submitMarket(market, true);
 
         vm.startPrank(curator);
+        vm.expectRevert(abi.encodeWithSignature("TargetNotWhitelisted()"));
+        vault.submitMarket(market, true);
+
+        MockWhitelistManager(address(res.whitelistManager)).setWhitelist(
+            market, IWhitelistManager.ContractModule.MARKET, true
+        );
         vault.submitMarket(market, true);
 
         vm.expectRevert(VaultErrors.AlreadyPending.selector);

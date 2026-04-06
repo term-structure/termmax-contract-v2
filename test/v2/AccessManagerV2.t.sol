@@ -32,6 +32,7 @@ import {TermMaxOrderV2} from "contracts/v2/TermMaxOrderV2.sol";
 import {ITermMaxVaultV2, OrderV2ConfigurationParams, CurveCuts} from "contracts/v2/vault/ITermMaxVaultV2.sol";
 import {VaultEventsV2} from "contracts/v2/events/VaultEventsV2.sol";
 import {IWhitelistManager} from "contracts/v2/access/IWhitelistManager.sol";
+import {MockWhitelistManager} from "contracts/v2/test/MockWhitelistManager.sol";
 
 contract AccessManagerTestV2 is Test {
     using JSONLoader for *;
@@ -83,8 +84,7 @@ contract AccessManagerTestV2 is Test {
         res.ft.transfer(address(res.order), amount);
         res.xt.transfer(address(res.order), amount);
 
-        (res.router, res.whitelistManager) = DeployUtils.deployRouter(deployer);
-        res.router.setWhitelistManager(address(res.whitelistManager));
+        res.router = DeployUtils.deployRouter(deployer, res.whitelistManager);
 
         AccessManagerV2 implementation = new AccessManagerV2();
         bytes memory data = abi.encodeCall(AccessManager.initialize, deployer);
@@ -126,7 +126,7 @@ contract AccessManagerTestV2 is Test {
         });
 
         // Deploy vault
-        res.vault = DeployUtils.deployVault(params);
+        res.vault = DeployUtils.deployVault(params, res.whitelistManager);
         vm.stopPrank();
 
         vm.startPrank(curator);
@@ -390,6 +390,10 @@ contract AccessManagerTestV2 is Test {
         address newMarket = vm.randomAddress();
         address newGuardian = vm.randomAddress();
         address vaultManager = vm.randomAddress();
+
+        MockWhitelistManager(address(res.whitelistManager)).setWhitelist(
+            newMarket, IWhitelistManager.ContractModule.MARKET, true
+        );
 
         // Grant VAULT_ROLE to the vault manager and set curator
         vm.startPrank(deployer);
@@ -724,11 +728,14 @@ contract AccessManagerTestV2 is Test {
             minApy: 0
         });
 
-        TermMaxVaultV2 poolVault = DeployUtils.deployVault(poolParams);
+        TermMaxVaultV2 poolVault = DeployUtils.deployVault(poolParams, res.whitelistManager);
         ITermMaxVaultV2 poolVaultV2 = ITermMaxVaultV2(address(poolVault));
 
         address vaultManager = vm.randomAddress();
         address newPoolAddress = vm.randomAddress(); // Mock pool address
+        MockWhitelistManager(address(res.whitelistManager)).setWhitelist(
+            newPoolAddress, IWhitelistManager.ContractModule.POOL, true
+        );
 
         // Grant VAULT_ROLE to the vault manager
         vm.startPrank(deployer);

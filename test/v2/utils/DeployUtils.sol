@@ -77,6 +77,7 @@ library DeployUtils {
         returns (Res memory res)
     {
         res.factory = deployFactory(admin);
+        res.whitelistManager = res.factory.whitelistManager();
 
         res.collateral = new MockERC20("ETH", "ETH", 18);
         res.debt = new MockERC20("DAI", "DAI", 8);
@@ -253,7 +254,7 @@ library DeployUtils {
         uint32 maxLtv,
         uint32 liquidationLtv
     ) internal returns (Res memory res) {
-        res.factory = deployFactoryWithMockOrder(admin);
+        (res.factory, res.whitelistManager) = deployFactoryWithMockOrder(admin);
         res.debt = MockERC20(address(debt));
         MarketConfig memory marketConfig = mc;
         marketConfig.maturity += uint64(duration * 1 days);
@@ -309,7 +310,7 @@ library DeployUtils {
         internal
         returns (Res memory res)
     {
-        res.factory = deployFactoryWithMockOrder(admin);
+        (res.factory, res.whitelistManager) = deployFactoryWithMockOrder(admin);
 
         res.collateral = new MockERC20("ETH", "ETH", 18);
         res.debt = new MockERC20("DAI", "DAI", 8);
@@ -377,18 +378,31 @@ library DeployUtils {
         factory = new TermMaxFactoryV2(admin, address(m), address(whitelistManager));
     }
 
-    function deployFactoryWithMockOrder(address admin) public returns (TermMaxFactoryV2 factory) {
+    function deployFactory(address admin, IWhitelistManager whitelistManager)
+        public
+        returns (TermMaxFactoryV2 factory)
+    {
+        address tokenImplementation = address(new MintableERC20V2());
+        address orderImplementation = address(new TermMaxOrderV2());
+        TermMaxMarketV2 m = new TermMaxMarketV2(tokenImplementation, orderImplementation);
+        factory = new TermMaxFactoryV2(admin, address(m), address(whitelistManager));
+    }
+
+    function deployFactoryWithMockOrder(address admin)
+        public
+        returns (TermMaxFactoryV2 factory, IWhitelistManager whitelistManager)
+    {
         address tokenImplementation = address(new MintableERC20V2());
         address orderImplementation = address(new MockOrderV2());
         TermMaxMarketV2 m = new TermMaxMarketV2(tokenImplementation, orderImplementation);
-        IWhitelistManager whitelistManager = deployWhitelistManager();
+        whitelistManager = deployWhitelistManager();
         factory = new TermMaxFactoryV2(admin, address(m), address(whitelistManager));
     }
 
     function deployVaultFactory() public returns (TermMaxVaultFactoryV2 vaultFactory) {
         OrderManagerV2 orderManager = new OrderManagerV2();
-        TermMaxVaultV2 implementation = new TermMaxVaultV2(address(orderManager));
         IWhitelistManager whitelistManager = deployWhitelistManager();
+        TermMaxVaultV2 implementation = new TermMaxVaultV2(address(orderManager), address(whitelistManager));
         vaultFactory = new TermMaxVaultFactoryV2(address(implementation), address(whitelistManager));
     }
 
@@ -404,10 +418,29 @@ library DeployUtils {
         router = TermMaxRouterV2(address(proxy));
     }
 
+    function deployRouter(address admin, IWhitelistManager whitelistManager) public returns (TermMaxRouterV2 router) {
+        TermMaxRouterV2 implementation = new TermMaxRouterV2();
+        bytes memory data = abi.encodeCall(TermMaxRouterV2.initialize, (admin, address(whitelistManager)));
+        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), data);
+        router = TermMaxRouterV2(address(proxy));
+    }
+
     function deployVault(VaultInitialParamsV2 memory initialParams) public returns (TermMaxVaultV2 vault) {
         OrderManagerV2 orderManager = new OrderManagerV2();
-        TermMaxVaultV2 implementation = new TermMaxVaultV2(address(orderManager));
         IWhitelistManager whitelistManager = deployWhitelistManager();
+        TermMaxVaultV2 implementation = new TermMaxVaultV2(address(orderManager), address(whitelistManager));
+        TermMaxVaultFactoryV2 vaultFactory =
+            new TermMaxVaultFactoryV2(address(implementation), address(whitelistManager));
+
+        vault = TermMaxVaultV2(vaultFactory.createVault(initialParams, 0));
+    }
+
+    function deployVault(VaultInitialParamsV2 memory initialParams, IWhitelistManager whitelistManager)
+        public
+        returns (TermMaxVaultV2 vault)
+    {
+        OrderManagerV2 orderManager = new OrderManagerV2();
+        TermMaxVaultV2 implementation = new TermMaxVaultV2(address(orderManager), address(whitelistManager));
         TermMaxVaultFactoryV2 vaultFactory =
             new TermMaxVaultFactoryV2(address(implementation), address(whitelistManager));
 

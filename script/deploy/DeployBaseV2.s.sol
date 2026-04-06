@@ -296,7 +296,7 @@ contract DeployBaseV2 is Script {
 
     function deployVaultFactory(address whitelistManager) public returns (TermMaxVaultFactoryV2 vaultFactory) {
         OrderManagerV2 orderManager = new OrderManagerV2();
-        TermMaxVaultV2 implementation = new TermMaxVaultV2(address(orderManager));
+        TermMaxVaultV2 implementation = new TermMaxVaultV2(address(orderManager), whitelistManager);
         vaultFactory = new TermMaxVaultFactoryV2(address(implementation), whitelistManager);
     }
 

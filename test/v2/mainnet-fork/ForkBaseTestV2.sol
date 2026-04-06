@@ -157,8 +157,8 @@ abstract contract ForkBaseTestV2 is Test {
 
     function deployVaultFactory(address admin) public returns (TermMaxVaultFactoryV2 vaultFactory) {
         OrderManagerV2 orderManager = new OrderManagerV2();
-        TermMaxVaultV2 implementation = new TermMaxVaultV2(address(orderManager));
         IWhitelistManager whitelistManager = deployWhitelistManager(admin);
+        TermMaxVaultV2 implementation = new TermMaxVaultV2(address(orderManager), address(whitelistManager));
         vaultFactory = new TermMaxVaultFactoryV2(address(implementation), address(whitelistManager));
     }
 
