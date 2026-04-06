@@ -102,29 +102,6 @@ interface ITermMaxRouter {
         uint256 deadline
     ) external returns (uint256 netTokenIn);
 
-    /**
-     * @notice Sells FT and XT tokens for underlying tokens
-     * @dev Executes multiple orders to sell tokens
-     * @param recipient Address to receive the output tokens
-     * @param market The market to sell tokens in
-     * @param ftInAmt Amount of FT tokens to sell
-     * @param xtInAmt Amount of XT tokens to sell
-     * @param orders Array of orders to execute
-     * @param amtsToSellTokens Array of amounts to sell for each order
-     * @param minTokenOut Minimum amount of output tokens to receive
-     * @param deadline The deadline timestamp for the transaction
-     * @return netTokenOut Actual amount of output tokens received
-     */
-    function sellTokens(
-        address recipient,
-        ITermMaxMarket market,
-        uint128 ftInAmt,
-        uint128 xtInAmt,
-        ITermMaxOrder[] memory orders,
-        uint128[] memory amtsToSellTokens,
-        uint128 minTokenOut,
-        uint256 deadline
-    ) external returns (uint256 netTokenOut);
 
     /**
      * @notice Creates a leveraged position from input tokens
@@ -291,27 +268,4 @@ interface ITermMaxRouter {
         uint256 minTokenOut
     ) external returns (uint256 redeemedAmt);
 
-    /**
-     * @notice Creates an order and deposits tokens
-     * @dev Creates a new order and deposits tokens to the market
-     * @param market The market to create order in
-     * @param maker Address of the order maker
-     * @param maxXtReserve Maximum amount of XT to reserve
-     * @param swapTrigger Swap trigger callback
-     * @param debtTokenToDeposit Amount of debt tokens to deposit
-     * @param ftToDeposit Amount of FT tokens to deposit
-     * @param xtToDeposit Amount of XT tokens to deposit
-     * @param curveCuts Curve cuts for the order
-     * @return order The created order
-     */
-    function createOrderAndDeposit(
-        ITermMaxMarket market,
-        address maker,
-        uint256 maxXtReserve,
-        ISwapCallback swapTrigger,
-        uint256 debtTokenToDeposit,
-        uint128 ftToDeposit,
-        uint128 xtToDeposit,
-        CurveCuts memory curveCuts
-    ) external returns (ITermMaxOrder order);
 }

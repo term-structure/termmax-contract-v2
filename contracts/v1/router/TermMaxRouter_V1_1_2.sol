@@ -227,30 +227,6 @@ contract TermMaxRouter_V1_1_2 is
         }
     }
 
-    function sellTokens(
-        address recipient,
-        ITermMaxMarket market,
-        uint128 ftInAmt,
-        uint128 xtInAmt,
-        ITermMaxOrder[] memory orders,
-        uint128[] memory amtsToSellTokens,
-        uint128 minTokenOut,
-        uint256 deadline
-    ) external nonReentrant whenNotPaused returns (uint256 netTokenOut) {
-        (IERC20 ft, IERC20 xt,,, IERC20 debtToken) = market.tokens();
-        (uint256 maxBurn, IERC20 toenToSell) = ftInAmt > xtInAmt ? (xtInAmt, ft) : (ftInAmt, xt);
-
-        ft.safeTransferFrom(msg.sender, address(this), ftInAmt);
-        ft.safeIncreaseAllowance(address(market), maxBurn);
-        xt.safeTransferFrom(msg.sender, address(this), xtInAmt);
-        xt.safeIncreaseAllowance(address(market), maxBurn);
-        market.burn(recipient, maxBurn);
-        netTokenOut = _swapExactTokenToToken(toenToSell, debtToken, recipient, orders, amtsToSellTokens, 0, deadline);
-        netTokenOut += maxBurn;
-        if (netTokenOut < minTokenOut) revert InsufficientTokenOut(address(debtToken), netTokenOut, minTokenOut);
-        emit SellTokens(market, msg.sender, recipient, ftInAmt, xtInAmt, orders, amtsToSellTokens, netTokenOut);
-    }
-
     function leverageFromToken(
         address recipient,
         ITermMaxMarket market,
@@ -521,35 +497,6 @@ contract TermMaxRouter_V1_1_2 is
         debtToken.safeTransfer(recipient, netTokenOut);
     }
 
-    function flashRepayToGetCollateral(
-        address recipient,
-        ITermMaxMarket market,
-        uint256 gtId,
-        uint256 expectedOutput,
-        SwapUnit[] memory units
-    ) external nonReentrant whenNotPaused returns (uint256 netTokenOut) {
-        (IERC20 ft,, IGearingToken gtToken, address collateralAddr, IERC20 debtToken) = market.tokens();
-        assembly {
-            // set callback address
-            tstore(T_CALLBACK_ADDRESS_STORE, gtToken)
-        }
-        gtToken.safeTransferFrom(msg.sender, address(this), gtId, "");
-        bool byDebtToken = true;
-        ITermMaxOrder[] memory orders = new ITermMaxOrder[](0);
-        uint128[] memory amtsToBuyFt = new uint128[](0);
-        gtToken.flashRepay(gtId, byDebtToken, abi.encode(orders, amtsToBuyFt, ft, units, 0));
-        netTokenOut = IERC20(collateralAddr).balanceOf(address(this));
-        if (netTokenOut < expectedOutput) {
-            revert InsufficientTokenOut(collateralAddr, expectedOutput, netTokenOut);
-        }
-        IERC20(collateralAddr).safeTransfer(recipient, netTokenOut);
-        // transfer remaining debt token to recipient
-        uint256 debtBalance = debtToken.balanceOf(address(this));
-        if (debtBalance != 0) {
-            debtToken.safeTransfer(recipient, debtBalance);
-        }
-    }
-
     /**
      * @inheritdoc ITermMaxRouter
      */
@@ -603,33 +550,6 @@ contract TermMaxRouter_V1_1_2 is
         debtToken.safeTransfer(recipient, redeemedAmt);
         emit RedeemAndSwap(market, ftAmount, msg.sender, recipient, redeemedAmt);
         return redeemedAmt;
-    }
-
-    function createOrderAndDeposit(
-        ITermMaxMarket market,
-        address maker,
-        uint256 maxXtReserve,
-        ISwapCallback swapTrigger,
-        uint256 debtTokenToDeposit,
-        uint128 ftToDeposit,
-        uint128 xtToDeposit,
-        CurveCuts memory curveCuts
-    ) external nonReentrant whenNotPaused returns (ITermMaxOrder order) {
-        (IERC20 ft, IERC20 xt,,, IERC20 debtToken) = market.tokens();
-        order = market.createOrder(maker, maxXtReserve, swapTrigger, curveCuts);
-        if (debtTokenToDeposit > 0) {
-            debtToken.safeTransferFrom(msg.sender, address(this), debtTokenToDeposit);
-            debtToken.safeIncreaseAllowance(address(market), debtTokenToDeposit);
-            market.mint(address(order), debtTokenToDeposit);
-        }
-        if (ftToDeposit > 0) {
-            ft.safeTransferFrom(msg.sender, address(order), ftToDeposit);
-        }
-        if (xtToDeposit > 0) {
-            xt.safeTransferFrom(msg.sender, address(order), xtToDeposit);
-        }
-
-        emit CreateOrderAndDeposit(market, order, maker, debtTokenToDeposit, ftToDeposit, xtToDeposit, curveCuts);
     }
 
     /// @dev Market flash leverage flashloan callback
