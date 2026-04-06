@@ -78,6 +78,10 @@ contract TermMaxRouter_V1_1_2 is
         _;
     }
 
+    function _getRegistry() internal view override returns (address) {
+        return owner();
+    }
+
     function _authorizeUpgrade(address newImplementation) internal virtual override onlyOwner {}
 
     constructor(address _whitelistManager)

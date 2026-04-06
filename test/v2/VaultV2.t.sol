@@ -143,7 +143,8 @@ contract VaultTestV2 is Test {
             0
         );
 
-        vault = DeployUtils.deployVault(initialParams, res.whitelistManager);
+        vault = DeployUtils.deployVault(deployer, initialParams, res.whitelistManager);
+        vm.startPrank(deployer);
 
         vm.label(address(vault), "vault");
         vm.label(guardian, "guardian");
@@ -489,7 +490,7 @@ contract VaultTestV2 is Test {
     function testDepositWhenNoOrders() public {
         initialParams.name = "Vault-DAI2";
         initialParams.symbol = "Vault-DAI2";
-        TermMaxVaultV2 vault2 = DeployUtils.deployVault(initialParams);
+        TermMaxVaultV2 vault2 = DeployUtils.deployVault(deployer, initialParams);
         vm.startPrank(deployer);
         uint256 amount = 10000e8;
         res.debt.mint(deployer, amount);

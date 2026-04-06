@@ -50,6 +50,10 @@ contract TermMax4626Factory is VersionV2, Ownable2Step, WithWhitelistCheck {
         );
     }
 
+    function _getRegistry() internal view override returns (address) {
+        return owner();
+    }
+
     function getImplementations(string memory key) external view returns (address) {
         return implementations[keccak256(abi.encodePacked(key))];
     }
@@ -83,7 +87,7 @@ contract TermMax4626Factory is VersionV2, Ownable2Step, WithWhitelistCheck {
         address admin,
         address thirdPool,
         StakingBuffer.BufferConfig memory bufferConfig
-    ) external returns (StableERC4626For4626) {
+    ) external onlyOwner returns (StableERC4626For4626) {
         StableERC4626For4626 instance = StableERC4626For4626(implementations[STABLE_ERC4626_FOR_4626].clone());
         instance.initialize(admin, thirdPool, bufferConfig);
         _registerAddress(address(instance));
@@ -95,7 +99,7 @@ contract TermMax4626Factory is VersionV2, Ownable2Step, WithWhitelistCheck {
         address admin,
         address thirdPool,
         StakingBuffer.BufferConfig memory bufferConfig
-    ) external returns (StableERC4626ForVenus) {
+    ) external onlyOwner returns (StableERC4626ForVenus) {
         StableERC4626ForVenus instance = StableERC4626ForVenus(implementations[STABLE_ERC4626_FOR_VENUS].clone());
         instance.initialize(admin, thirdPool, bufferConfig);
         _registerAddress(address(instance));
@@ -108,7 +112,7 @@ contract TermMax4626Factory is VersionV2, Ownable2Step, WithWhitelistCheck {
         address thirdPool,
         address underlying,
         StakingBuffer.BufferConfig memory bufferConfig
-    ) external returns (StableERC4626ForCustomize) {
+    ) external onlyOwner returns (StableERC4626ForCustomize) {
         StableERC4626ForCustomize instance =
             StableERC4626ForCustomize(implementations[STABLE_ERC4626_FOR_CUSTOMIZE].clone());
         instance.initialize(admin, thirdPool, underlying, bufferConfig);
@@ -121,7 +125,7 @@ contract TermMax4626Factory is VersionV2, Ownable2Step, WithWhitelistCheck {
         address admin,
         address underlying,
         StakingBuffer.BufferConfig memory bufferConfig
-    ) public returns (StableERC4626ForAave) {
+    ) public onlyOwner returns (StableERC4626ForAave) {
         StableERC4626ForAave instance = StableERC4626ForAave(implementations[STABLE_ERC4626_FOR_AAVE].clone());
         instance.initialize(admin, underlying, bufferConfig);
         _registerAddress(address(instance));
@@ -133,7 +137,7 @@ contract TermMax4626Factory is VersionV2, Ownable2Step, WithWhitelistCheck {
         address admin,
         address underlying,
         StakingBuffer.BufferConfig memory bufferConfig
-    ) public returns (VariableERC4626ForAave) {
+    ) public onlyOwner returns (VariableERC4626ForAave) {
         VariableERC4626ForAave instance = VariableERC4626ForAave(implementations[VARIABLE_ERC4626_FOR_AAVE].clone());
         instance.initialize(admin, underlying, bufferConfig);
         _registerAddress(address(instance));
@@ -141,7 +145,7 @@ contract TermMax4626Factory is VersionV2, Ownable2Step, WithWhitelistCheck {
         return instance;
     }
 
-    function create(string memory key, bytes memory initialData) external returns (address) {
+    function create(string memory key, bytes memory initialData) external onlyOwner returns (address) {
         address implementation = implementations[keccak256(abi.encodePacked(key))];
         if (implementation == address(0)) revert FactoryErrorsV2.ImplementationNotFound(key);
         address instance = implementation.clone();
@@ -156,7 +160,7 @@ contract TermMax4626Factory is VersionV2, Ownable2Step, WithWhitelistCheck {
         address admin,
         address underlying,
         StakingBuffer.BufferConfig memory bufferConfig
-    ) external returns (VariableERC4626ForAave, StableERC4626ForAave) {
+    ) external onlyOwner returns (VariableERC4626ForAave, StableERC4626ForAave) {
         VariableERC4626ForAave variableInstance = createVariableERC4626ForAave(admin, underlying, bufferConfig);
         StableERC4626ForAave stableInstance = createStableERC4626ForAave(admin, underlying, bufferConfig);
         return (variableInstance, stableInstance);

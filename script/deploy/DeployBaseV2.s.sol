@@ -294,10 +294,13 @@ contract DeployBaseV2 is Script {
         factory = new TermMaxFactoryV2(admin, address(m), whitelistManager);
     }
 
-    function deployVaultFactory(address whitelistManager) public returns (TermMaxVaultFactoryV2 vaultFactory) {
+    function deployVaultFactory(address admin, address whitelistManager)
+        public
+        returns (TermMaxVaultFactoryV2 vaultFactory)
+    {
         OrderManagerV2 orderManager = new OrderManagerV2();
         TermMaxVaultV2 implementation = new TermMaxVaultV2(address(orderManager), whitelistManager);
-        vaultFactory = new TermMaxVaultFactoryV2(address(implementation), whitelistManager);
+        vaultFactory = new TermMaxVaultFactoryV2(admin, address(implementation), whitelistManager);
     }
 
     function deployOracleAggregator(address admin, uint256 oracleTimelock) public returns (OracleAggregatorV2 oracle) {
@@ -384,10 +387,10 @@ contract DeployBaseV2 is Script {
         // deploy factory
         contracts.factory = deployFactory(address(contracts.accessManager), address(contracts.whitelistManager));
 
-        contracts.vaultFactory = deployVaultFactory(address(contracts.whitelistManager));
+        contracts.vaultFactory = deployVaultFactory(address(contracts.accessManager), address(contracts.whitelistManager));
 
         // deploy vault factory
-        contracts.vaultFactory = deployVaultFactory(address(contracts.whitelistManager));
+        contracts.vaultFactory = deployVaultFactory(address(contracts.accessManager), address(contracts.whitelistManager));
 
         // deploy 4626 factory
         {

@@ -92,6 +92,10 @@ contract TermMaxVaultV2 is
         _disableInitializers();
     }
 
+    function _getRegistry() internal view override returns (address) {
+        return owner();
+    }
+
     function initialize(VaultInitialParamsV2 memory params) external virtual initializer {
         __ERC20_init_unchained(params.name, params.symbol);
         __Ownable_init_unchained(params.admin);

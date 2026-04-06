@@ -16,7 +16,8 @@ import {MockVToken} from "contracts/mocks/MockVToken.sol";
 import {IAaveV3Pool} from "contracts/v2/extensions/aave/IAaveV3Pool.sol";
 import {ERC4626TokenEvents} from "contracts/v2/events/ERC4626TokenEvents.sol";
 import {FactoryEventsV2} from "contracts/v2/events/FactoryEventsV2.sol";
-import {WhitelistManager} from "contracts/v2/access/WhitelistManager.sol";
+import {MockWhitelistManager} from "contracts/v2/test/MockWhitelistManager.sol";
+import {IWhitelistManager} from "contracts/v2/access/IWhitelistManager.sol";
 
 contract TermMax4626FactoryTest is Test {
     TermMax4626Factory public factory;
@@ -38,7 +39,7 @@ contract TermMax4626FactoryTest is Test {
     StableERC4626ForVenus public implVenus;
     VariableERC4626ForAave public implVariableAave;
     StableERC4626ForCustomize public implCustomize;
-    WhitelistManager public whitelistManager;
+    MockWhitelistManager public whitelistManager;
 
     StakingBuffer.BufferConfig public defaultBufferConfig;
 
@@ -64,7 +65,11 @@ contract TermMax4626FactoryTest is Test {
         implVariableAave = new VariableERC4626ForAave(address(aavePool), 100);
         implVenus = new StableERC4626ForVenus();
         implCustomize = new StableERC4626ForCustomize();
-        whitelistManager = new WhitelistManager();
+        whitelistManager = new MockWhitelistManager();
+
+        // Give admin the MockWhitelistManager code so factory._getRegistry() (which returns owner() == admin)
+        // can satisfy IWhitelistRegistry calls
+        vm.etch(admin, address(whitelistManager).code);
 
         // Deploy factory
         factory = new TermMax4626Factory(
@@ -76,8 +81,6 @@ contract TermMax4626FactoryTest is Test {
             address(implCustomize),
             address(whitelistManager)
         );
-
-        whitelistManager.initialize(address(factory));
 
         // Setup default buffer config
         defaultBufferConfig =
@@ -103,8 +106,9 @@ contract TermMax4626FactoryTest is Test {
 
     function testCreateStableERC4626For4626() public {
         vm.expectEmit(true, false, false, false);
-        emit FactoryEventsV2.StableERC4626For4626Created(address(this), address(0));
+        emit FactoryEventsV2.StableERC4626For4626Created(admin, address(0));
 
+        vm.prank(admin);
         StableERC4626For4626 vault = factory.createStableERC4626For4626(admin, address(thirdPool), defaultBufferConfig);
 
         assertTrue(address(vault) != address(0));
@@ -126,8 +130,9 @@ contract TermMax4626FactoryTest is Test {
 
     function testCreateStableERC4626ForAave() public {
         vm.expectEmit(true, false, false, false);
-        emit FactoryEventsV2.StableERC4626ForAaveCreated(address(this), address(0));
+        emit FactoryEventsV2.StableERC4626ForAaveCreated(admin, address(0));
 
+        vm.prank(admin);
         StableERC4626ForAave vault = factory.createStableERC4626ForAave(admin, address(underlying), defaultBufferConfig);
 
         assertTrue(address(vault) != address(0));
@@ -149,8 +154,9 @@ contract TermMax4626FactoryTest is Test {
 
     function testCreateVariableERC4626ForAave() public {
         vm.expectEmit(true, false, false, false);
-        emit FactoryEventsV2.VariableERC4626ForAaveCreated(address(this), address(0));
+        emit FactoryEventsV2.VariableERC4626ForAaveCreated(admin, address(0));
 
+        vm.prank(admin);
         VariableERC4626ForAave vault =
             factory.createVariableERC4626ForAave(admin, address(underlying), defaultBufferConfig);
 
@@ -173,9 +179,11 @@ contract TermMax4626FactoryTest is Test {
 
     function testCreateMultipleVaultsWithSameParameters() public {
         // Create first vault
+        vm.prank(admin);
         StableERC4626For4626 vault1 = factory.createStableERC4626For4626(admin, address(thirdPool), defaultBufferConfig);
 
         // Create second vault with same parameters
+        vm.prank(admin);
         StableERC4626For4626 vault2 = factory.createStableERC4626For4626(admin, address(thirdPool), defaultBufferConfig);
 
         // Should create different addresses
@@ -191,8 +199,10 @@ contract TermMax4626FactoryTest is Test {
     }
 
     function testCreateVaultsWithDifferentAdmins() public {
+        vm.prank(admin);
         StableERC4626For4626 vault1 = factory.createStableERC4626For4626(admin, address(thirdPool), defaultBufferConfig);
 
+        vm.prank(admin);
         StableERC4626For4626 vault2 = factory.createStableERC4626For4626(user1, address(thirdPool), defaultBufferConfig);
 
         assertEq(vault1.owner(), admin);
@@ -206,7 +216,9 @@ contract TermMax4626FactoryTest is Test {
         StakingBuffer.BufferConfig memory config2 =
             StakingBuffer.BufferConfig({minimumBuffer: 2000e18, maximumBuffer: 20000e18, buffer: 10000e18});
 
+        vm.prank(admin);
         StableERC4626For4626 vault1 = factory.createStableERC4626For4626(admin, address(thirdPool), config1);
+        vm.prank(admin);
         StableERC4626For4626 vault2 = factory.createStableERC4626For4626(admin, address(thirdPool), config2);
 
         (uint256 min1, uint256 max1, uint256 buf1) = vault1.bufferConfig();
@@ -223,21 +235,25 @@ contract TermMax4626FactoryTest is Test {
 
     function testCreateWithZeroAddressAdmin() public {
         vm.expectRevert();
+        vm.prank(admin);
         factory.createStableERC4626For4626(address(0), address(thirdPool), defaultBufferConfig);
     }
 
     function testCreateStableERC4626For4626WithZeroThirdPool() public {
         vm.expectRevert();
+        vm.prank(admin);
         factory.createStableERC4626For4626(admin, address(0), defaultBufferConfig);
     }
 
     function testCreateStableERC4626ForAaveWithZeroUnderlying() public {
         vm.expectRevert();
+        vm.prank(admin);
         factory.createStableERC4626ForAave(admin, address(0), defaultBufferConfig);
     }
 
     function testCreateVariableERC4626ForAaveWithZeroUnderlying() public {
         vm.expectRevert();
+        vm.prank(admin);
         factory.createVariableERC4626ForAave(admin, address(0), defaultBufferConfig);
     }
 
@@ -247,36 +263,42 @@ contract TermMax4626FactoryTest is Test {
             StakingBuffer.BufferConfig({minimumBuffer: 10000e18, maximumBuffer: 5000e18, buffer: 7500e18});
 
         vm.expectRevert();
+        vm.prank(admin);
         factory.createStableERC4626For4626(admin, address(thirdPool), invalidConfig);
 
         // Test buffer outside min/max range (below minimum)
         invalidConfig = StakingBuffer.BufferConfig({minimumBuffer: 5000e18, maximumBuffer: 10000e18, buffer: 4000e18});
 
         vm.expectRevert();
+        vm.prank(admin);
         factory.createStableERC4626For4626(admin, address(thirdPool), invalidConfig);
 
         // Test buffer outside min/max range (above maximum)
         invalidConfig = StakingBuffer.BufferConfig({minimumBuffer: 5000e18, maximumBuffer: 10000e18, buffer: 11000e18});
 
         vm.expectRevert();
+        vm.prank(admin);
         factory.createStableERC4626For4626(admin, address(thirdPool), invalidConfig);
     }
 
     function testEventEmissions() public {
         // Test StableERC4626For4626Created event
         vm.expectEmit(true, false, false, false);
-        emit FactoryEventsV2.StableERC4626For4626Created(address(this), address(0));
+        emit FactoryEventsV2.StableERC4626For4626Created(admin, address(0));
+        vm.prank(admin);
         StableERC4626For4626 vault1 = factory.createStableERC4626For4626(admin, address(thirdPool), defaultBufferConfig);
 
         // Test StableERC4626ForAaveCreated event
         vm.expectEmit(true, false, false, false);
-        emit FactoryEventsV2.StableERC4626ForAaveCreated(address(this), address(0));
+        emit FactoryEventsV2.StableERC4626ForAaveCreated(admin, address(0));
+        vm.prank(admin);
         StableERC4626ForAave vault2 =
             factory.createStableERC4626ForAave(admin, address(underlying), defaultBufferConfig);
 
         // Test VariableERC4626ForAaveCreated event
         vm.expectEmit(true, false, false, false);
-        emit FactoryEventsV2.VariableERC4626ForAaveCreated(address(this), address(0));
+        emit FactoryEventsV2.VariableERC4626ForAaveCreated(admin, address(0));
+        vm.prank(admin);
         VariableERC4626ForAave vault3 =
             factory.createVariableERC4626ForAave(admin, address(underlying), defaultBufferConfig);
 
@@ -310,6 +332,7 @@ contract TermMax4626FactoryTest is Test {
 
     function testVaultFunctionality() public {
         // Create a vault and test basic functionality
+        vm.prank(admin);
         StableERC4626For4626 stableVault =
             factory.createStableERC4626For4626(admin, address(thirdPool), defaultBufferConfig);
 
@@ -339,6 +362,7 @@ contract TermMax4626FactoryTest is Test {
 
     function testGasUsage() public {
         uint256 gasBefore = gasleft();
+        vm.prank(admin);
         factory.createStableERC4626For4626(admin, address(thirdPool), defaultBufferConfig);
         uint256 gasUsed = gasBefore - gasleft();
 
@@ -347,6 +371,7 @@ contract TermMax4626FactoryTest is Test {
         emit log_named_uint("Gas used for createStableERC4626For4626", gasUsed);
 
         gasBefore = gasleft();
+        vm.prank(admin);
         factory.createStableERC4626ForAave(admin, address(underlying), defaultBufferConfig);
         gasUsed = gasBefore - gasleft();
 
@@ -354,6 +379,7 @@ contract TermMax4626FactoryTest is Test {
         emit log_named_uint("Gas used for createStableERC4626ForAave", gasUsed);
 
         gasBefore = gasleft();
+        vm.prank(admin);
         factory.createVariableERC4626ForAave(admin, address(underlying), defaultBufferConfig);
         gasUsed = gasBefore - gasleft();
 
@@ -377,8 +403,10 @@ contract TermMax4626FactoryTest is Test {
             StakingBuffer.BufferConfig({minimumBuffer: 1000e18, maximumBuffer: 10000e18, buffer: 5000e18});
 
         // Should still be able to create vaults
+        vm.prank(admin);
         StableERC4626For4626 vault1 =
             factory.createStableERC4626For4626(admin, address(extremePool), extremeBufferConfig);
+        vm.prank(admin);
         StableERC4626ForAave vault2 =
             factory.createStableERC4626ForAave(admin, address(extremeToken), extremeBufferConfig);
 
@@ -388,8 +416,9 @@ contract TermMax4626FactoryTest is Test {
 
     function testCreateStableERC4626ForVenus() public {
         vm.expectEmit(true, false, false, false);
-        emit FactoryEventsV2.StableERC4626ForVenusCreated(address(this), address(0));
+        emit FactoryEventsV2.StableERC4626ForVenusCreated(admin, address(0));
 
+        vm.prank(admin);
         StableERC4626ForVenus vault =
             factory.createStableERC4626ForVenus(admin, address(venusPool), defaultBufferConfig);
 
@@ -401,8 +430,9 @@ contract TermMax4626FactoryTest is Test {
 
     function testCreateStableERC4626ForCustomize() public {
         vm.expectEmit(true, false, false, false);
-        emit FactoryEventsV2.StableERC4626ForCustomizeCreated(address(this), address(0));
+        emit FactoryEventsV2.StableERC4626ForCustomizeCreated(admin, address(0));
 
+        vm.prank(admin);
         StableERC4626ForCustomize vault =
             factory.createStableERC4626ForCustomize(admin, customizePool, address(underlying), defaultBufferConfig);
 
@@ -414,10 +444,11 @@ contract TermMax4626FactoryTest is Test {
 
     function testCreateVariableAndStableERC4626ForAave() public {
         vm.expectEmit(true, false, false, false);
-        emit FactoryEventsV2.VariableERC4626ForAaveCreated(address(this), address(0));
+        emit FactoryEventsV2.VariableERC4626ForAaveCreated(admin, address(0));
         vm.expectEmit(true, false, false, false);
-        emit FactoryEventsV2.StableERC4626ForAaveCreated(address(this), address(0));
+        emit FactoryEventsV2.StableERC4626ForAaveCreated(admin, address(0));
 
+        vm.prank(admin);
         (VariableERC4626ForAave vImpl, StableERC4626ForAave sImpl) =
             factory.createVariableAndStableERC4626ForAave(admin, address(underlying), defaultBufferConfig);
 

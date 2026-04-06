@@ -91,6 +91,10 @@ contract TermMaxFactoryV2 is Ownable2Step, ITermMaxFactory, FactoryEventsV2, Ver
         );
     }
 
+    function _getRegistry() internal view override returns (address) {
+        return owner();
+    }
+
     /**
      * @notice Creates a new TermMax market with specified parameters
      * @dev Clones the market implementation and initializes it with the provided parameters

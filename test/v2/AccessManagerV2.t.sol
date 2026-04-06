@@ -126,7 +126,7 @@ contract AccessManagerTestV2 is Test {
         });
 
         // Deploy vault
-        res.vault = DeployUtils.deployVault(params, res.whitelistManager);
+        res.vault = DeployUtils.deployVault(address(manager), params, res.whitelistManager);
         vm.stopPrank();
 
         vm.startPrank(curator);
@@ -348,7 +348,7 @@ contract AccessManagerTestV2 is Test {
         });
 
         // Deploy vault
-        TermMaxVaultV2 vault = DeployUtils.deployVault(params);
+        TermMaxVaultV2 vault = DeployUtils.deployVault(address(manager), params);
 
         // Grant VAULT_ROLE to the vault manager
         vm.startPrank(deployer);
@@ -728,7 +728,7 @@ contract AccessManagerTestV2 is Test {
             minApy: 0
         });
 
-        TermMaxVaultV2 poolVault = DeployUtils.deployVault(poolParams, res.whitelistManager);
+        TermMaxVaultV2 poolVault = DeployUtils.deployVault(address(manager), poolParams, res.whitelistManager);
         ITermMaxVaultV2 poolVaultV2 = ITermMaxVaultV2(address(poolVault));
 
         address vaultManager = vm.randomAddress();

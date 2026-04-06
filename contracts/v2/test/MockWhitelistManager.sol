@@ -2,8 +2,9 @@
 pragma solidity ^0.8.0;
 
 import {IWhitelistManager} from "../access/IWhitelistManager.sol";
+import {IWhitelistRegistry} from "../access/WithWhitelistCheck.sol";
 
-contract MockWhitelistManager is IWhitelistManager {
+contract MockWhitelistManager is IWhitelistManager, IWhitelistRegistry {
     mapping(address => mapping(ContractModule => bool)) public whitelist;
 
     function setWhitelist(address _user, ContractModule _module, bool _approved) external {
@@ -16,6 +17,16 @@ contract MockWhitelistManager is IWhitelistManager {
         }
 
         emit WhitelistUpdated(_users, _module, _approved);
+    }
+
+    /// @dev IWhitelistRegistry implementation - forwards to the actual whitelist manager
+    function batchSetWhitelist(
+        IWhitelistManager _whitelistManager,
+        address[] calldata _users,
+        ContractModule _module,
+        bool _approved
+    ) external override {
+        _whitelistManager.batchSetWhitelist(_users, _module, _approved);
     }
 
     function isWhitelisted(address _user, ContractModule _module) external view returns (bool) {

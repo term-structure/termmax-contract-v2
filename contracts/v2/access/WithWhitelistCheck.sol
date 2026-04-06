@@ -3,6 +3,16 @@ pragma solidity ^0.8.0;
 
 import {IWhitelistManager} from "./IWhitelistManager.sol";
 
+/// @notice Minimal interface for the registry (e.g. AccessManagerV2) that can set whitelists
+interface IWhitelistRegistry {
+    function batchSetWhitelist(
+        IWhitelistManager whitelistManager,
+        address[] calldata contractAddresses,
+        IWhitelistManager.ContractModule module,
+        bool approved
+    ) external;
+}
+
 abstract contract WithWhitelistCheck {
     error WhitelistManagerNotSet();
     error NoWhitelistModuleConfigured();
@@ -17,14 +27,17 @@ abstract contract WithWhitelistCheck {
         defaultWhitelistModule = _defaultWhitelistModule;
     }
 
+    /// @notice Returns the address of the registry (e.g. AccessManagerV2) that has permission to set whitelists
+    function _getRegistry() internal view virtual returns (address);
+
     function _registerAddress(address target) internal {
-        _registerAddressWithMoudle(target, defaultWhitelistModule);
+        _registerAddressWithModule(target, defaultWhitelistModule);
     }
 
-    function _registerAddressWithMoudle(address target, IWhitelistManager.ContractModule module) internal {
+    function _registerAddressWithModule(address target, IWhitelistManager.ContractModule module) internal {
         address[] memory targets = new address[](1);
         targets[0] = target;
-        whitelistManager.batchSetWhitelist(targets, module, true);
+        IWhitelistRegistry(_getRegistry()).batchSetWhitelist(whitelistManager, targets, module, true);
     }
 
     function _checkWhitelisted(address target, IWhitelistManager.ContractModule module) internal view {
