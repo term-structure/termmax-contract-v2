@@ -51,7 +51,7 @@ contract TermMaxVaultFactoryV2 is ITermMaxVaultFactoryV2, VersionV2, WithWhiteli
      */
     function createVault(VaultInitialParamsV2 memory initialParams, uint256 salt)
         public
-        onlyRole(VAULT_DEPLOYER_ROLE)
+        hasRole(VAULT_DEPLOYER_ROLE)
         returns (address vault)
     {
         vault = Clones.cloneDeterministic(

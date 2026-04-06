@@ -60,10 +60,7 @@ contract TermMax4626Factory is VersionV2, WithWhitelistCheck, WithAccessManagerR
         return implementations[keccak256(abi.encodePacked(key))];
     }
 
-    function setImplementation(string memory key, address implementation)
-        external
-        onlyRole(TERMMAX_4626_FACTORY_ROLE)
-    {
+    function setImplementation(string memory key, address implementation) external hasRole(TERMMAX_4626_FACTORY_ROLE) {
         implementations[keccak256(abi.encodePacked(key))] = implementation;
         emit FactoryEventsV2.ImplementationSet(key, implementation);
     }
@@ -92,7 +89,7 @@ contract TermMax4626Factory is VersionV2, WithWhitelistCheck, WithAccessManagerR
         address admin,
         address thirdPool,
         StakingBuffer.BufferConfig memory bufferConfig
-    ) external onlyRole(POOL_DEPLOYER_ROLE) returns (StableERC4626For4626) {
+    ) external hasRole(POOL_DEPLOYER_ROLE) returns (StableERC4626For4626) {
         StableERC4626For4626 instance = StableERC4626For4626(implementations[STABLE_ERC4626_FOR_4626].clone());
         instance.initialize(admin, thirdPool, bufferConfig);
         _registerAddress(address(instance));
@@ -104,7 +101,7 @@ contract TermMax4626Factory is VersionV2, WithWhitelistCheck, WithAccessManagerR
         address admin,
         address thirdPool,
         StakingBuffer.BufferConfig memory bufferConfig
-    ) external onlyRole(POOL_DEPLOYER_ROLE) returns (StableERC4626ForVenus) {
+    ) external hasRole(POOL_DEPLOYER_ROLE) returns (StableERC4626ForVenus) {
         StableERC4626ForVenus instance = StableERC4626ForVenus(implementations[STABLE_ERC4626_FOR_VENUS].clone());
         instance.initialize(admin, thirdPool, bufferConfig);
         _registerAddress(address(instance));
@@ -117,7 +114,7 @@ contract TermMax4626Factory is VersionV2, WithWhitelistCheck, WithAccessManagerR
         address thirdPool,
         address underlying,
         StakingBuffer.BufferConfig memory bufferConfig
-    ) external onlyRole(POOL_DEPLOYER_ROLE) returns (StableERC4626ForCustomize) {
+    ) external hasRole(POOL_DEPLOYER_ROLE) returns (StableERC4626ForCustomize) {
         StableERC4626ForCustomize instance =
             StableERC4626ForCustomize(implementations[STABLE_ERC4626_FOR_CUSTOMIZE].clone());
         instance.initialize(admin, thirdPool, underlying, bufferConfig);
@@ -130,7 +127,7 @@ contract TermMax4626Factory is VersionV2, WithWhitelistCheck, WithAccessManagerR
         address admin,
         address underlying,
         StakingBuffer.BufferConfig memory bufferConfig
-    ) public onlyRole(POOL_DEPLOYER_ROLE) returns (StableERC4626ForAave) {
+    ) public hasRole(POOL_DEPLOYER_ROLE) returns (StableERC4626ForAave) {
         StableERC4626ForAave instance = StableERC4626ForAave(implementations[STABLE_ERC4626_FOR_AAVE].clone());
         instance.initialize(admin, underlying, bufferConfig);
         _registerAddress(address(instance));
@@ -142,7 +139,7 @@ contract TermMax4626Factory is VersionV2, WithWhitelistCheck, WithAccessManagerR
         address admin,
         address underlying,
         StakingBuffer.BufferConfig memory bufferConfig
-    ) public onlyRole(POOL_DEPLOYER_ROLE) returns (VariableERC4626ForAave) {
+    ) public hasRole(POOL_DEPLOYER_ROLE) returns (VariableERC4626ForAave) {
         VariableERC4626ForAave instance = VariableERC4626ForAave(implementations[VARIABLE_ERC4626_FOR_AAVE].clone());
         instance.initialize(admin, underlying, bufferConfig);
         _registerAddress(address(instance));
@@ -152,7 +149,7 @@ contract TermMax4626Factory is VersionV2, WithWhitelistCheck, WithAccessManagerR
 
     function create(string memory key, bytes memory initialData)
         external
-        onlyRole(POOL_DEPLOYER_ROLE)
+        hasRole(POOL_DEPLOYER_ROLE)
         returns (address)
     {
         address implementation = implementations[keccak256(abi.encodePacked(key))];
@@ -169,7 +166,7 @@ contract TermMax4626Factory is VersionV2, WithWhitelistCheck, WithAccessManagerR
         address admin,
         address underlying,
         StakingBuffer.BufferConfig memory bufferConfig
-    ) external onlyRole(POOL_DEPLOYER_ROLE) returns (VariableERC4626ForAave, StableERC4626ForAave) {
+    ) external hasRole(POOL_DEPLOYER_ROLE) returns (VariableERC4626ForAave, StableERC4626ForAave) {
         VariableERC4626ForAave variableInstance = createVariableERC4626ForAave(admin, underlying, bufferConfig);
         StableERC4626ForAave stableInstance = createStableERC4626ForAave(admin, underlying, bufferConfig);
         return (variableInstance, stableInstance);

@@ -64,7 +64,7 @@ contract TermMaxFactoryV2 is ITermMaxFactory, FactoryEventsV2, VersionV2, WithWh
      */
     function setGtImplement(string memory gtImplementName, address gtImplement)
         external
-        onlyRole(TERMMAX_4626_FACTORY_ROLE)
+        hasRole(TERMMAX_MARKET_FACTORY_ROLE)
     {
         bytes32 key = keccak256(abi.encodePacked(gtImplementName));
         gtImplements[key] = gtImplement;
@@ -111,7 +111,7 @@ contract TermMaxFactoryV2 is ITermMaxFactory, FactoryEventsV2, VersionV2, WithWh
      */
     function createMarket(bytes32 gtKey, MarketInitialParams memory params, uint256 salt)
         external
-        onlyRole(MARKET_ROLE)
+        hasRole(MARKET_ROLE)
         returns (address market)
     {
         // Retrieve the gearing token implementation for the requested key
