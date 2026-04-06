@@ -96,13 +96,11 @@ contract AccessManagerTestV2 is Test {
         IOwnable(address(res.market)).transferOwnership(address(manager));
         IOwnable(address(res.router)).transferOwnership(address(manager));
         IOwnable(address(res.oracle)).transferOwnership(address(manager));
-        IOwnable(address(res.whitelistManager)).transferOwnership(address(manager));
 
         manager.acceptOwnership(IOwnable(address(res.factory)));
         manager.acceptOwnership(IOwnable(address(res.market)));
         manager.acceptOwnership(IOwnable(address(res.router)));
         manager.acceptOwnership(IOwnable(address(res.oracle)));
-        manager.acceptOwnership(IOwnable(address(res.whitelistManager)));
 
         manager.grantRole(manager.CONFIGURATOR_ROLE(), deployer);
         manager.grantRole(manager.PAUSER_ROLE(), deployer);

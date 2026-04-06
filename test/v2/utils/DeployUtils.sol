@@ -33,7 +33,7 @@ import {
 import {VaultInitialParamsV2} from "contracts/v2/storage/TermMaxStorageV2.sol";
 import {TermMaxVaultFactoryV2} from "contracts/v2/factory/TermMaxVaultFactoryV2.sol";
 import {MockAave} from "contracts/v2/test/MockAave.sol";
-import {WhitelistManager, IWhitelistManager} from "contracts/v2/access/WhitelistManager.sol";
+import {MockWhitelistManager, IWhitelistManager} from "contracts/v2/test/MockWhitelistManager.sol";
 import {OnlyDeliveryGearingToken} from "contracts/v2/tokens/OnlyDeliveryGearingToken.sol";
 
 library DeployUtils {
@@ -373,7 +373,7 @@ library DeployUtils {
         address tokenImplementation = address(new MintableERC20V2());
         address orderImplementation = address(new TermMaxOrderV2());
         TermMaxMarketV2 m = new TermMaxMarketV2(tokenImplementation, orderImplementation);
-        IWhitelistManager whitelistManager = deployWhitelistManager(admin);
+        IWhitelistManager whitelistManager = deployWhitelistManager();
         factory = new TermMaxFactoryV2(admin, address(m), address(whitelistManager));
     }
 
@@ -381,14 +381,14 @@ library DeployUtils {
         address tokenImplementation = address(new MintableERC20V2());
         address orderImplementation = address(new MockOrderV2());
         TermMaxMarketV2 m = new TermMaxMarketV2(tokenImplementation, orderImplementation);
-        IWhitelistManager whitelistManager = deployWhitelistManager(admin);
+        IWhitelistManager whitelistManager = deployWhitelistManager();
         factory = new TermMaxFactoryV2(admin, address(m), address(whitelistManager));
     }
 
     function deployVaultFactory() public returns (TermMaxVaultFactoryV2 vaultFactory) {
         OrderManagerV2 orderManager = new OrderManagerV2();
         TermMaxVaultV2 implementation = new TermMaxVaultV2(address(orderManager));
-        IWhitelistManager whitelistManager = deployWhitelistManager(msg.sender);
+        IWhitelistManager whitelistManager = deployWhitelistManager();
         vaultFactory = new TermMaxVaultFactoryV2(address(implementation), address(whitelistManager));
     }
 
@@ -397,7 +397,7 @@ library DeployUtils {
     }
 
     function deployRouter(address admin) public returns (TermMaxRouterV2 router, IWhitelistManager whitelistManager) {
-        whitelistManager = deployWhitelistManager(admin);
+        whitelistManager = deployWhitelistManager();
         TermMaxRouterV2 implementation = new TermMaxRouterV2();
         bytes memory data = abi.encodeCall(TermMaxRouterV2.initialize, (admin, address(whitelistManager)));
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), data);
@@ -407,7 +407,7 @@ library DeployUtils {
     function deployVault(VaultInitialParamsV2 memory initialParams) public returns (TermMaxVaultV2 vault) {
         OrderManagerV2 orderManager = new OrderManagerV2();
         TermMaxVaultV2 implementation = new TermMaxVaultV2(address(orderManager));
-        IWhitelistManager whitelistManager = deployWhitelistManager(initialParams.admin);
+        IWhitelistManager whitelistManager = deployWhitelistManager();
         TermMaxVaultFactoryV2 vaultFactory =
             new TermMaxVaultFactoryV2(address(implementation), address(whitelistManager));
 
@@ -421,10 +421,7 @@ library DeployUtils {
         accessManager = AccessManager(address(proxy));
     }
 
-    function deployWhitelistManager(address admin) internal returns (IWhitelistManager whitelistManager) {
-        WhitelistManager implementation = new WhitelistManager();
-        bytes memory data = abi.encodeCall(WhitelistManager.initialize, admin);
-        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), data);
-        whitelistManager = IWhitelistManager(address(proxy));
+    function deployWhitelistManager() internal returns (IWhitelistManager whitelistManager) {
+        whitelistManager = new MockWhitelistManager();
     }
 }

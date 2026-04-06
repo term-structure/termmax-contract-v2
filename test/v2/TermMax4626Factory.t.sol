@@ -65,7 +65,6 @@ contract TermMax4626FactoryTest is Test {
         implVenus = new StableERC4626ForVenus();
         implCustomize = new StableERC4626ForCustomize();
         whitelistManager = new WhitelistManager();
-        whitelistManager.initialize(admin);
 
         // Deploy factory
         factory = new TermMax4626Factory(
@@ -77,6 +76,8 @@ contract TermMax4626FactoryTest is Test {
             address(implCustomize),
             address(whitelistManager)
         );
+
+        whitelistManager.initialize(address(factory));
 
         // Setup default buffer config
         defaultBufferConfig =

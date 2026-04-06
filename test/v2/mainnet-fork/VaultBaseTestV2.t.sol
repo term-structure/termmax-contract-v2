@@ -135,7 +135,8 @@ abstract contract VaultBaseTestV2 is ForkBaseTestV2 {
             MockPriceFeed.RoundData(1, 1e8, block.timestamp, block.timestamp, 0)
         );
 
-        res.vault = ITermMaxVault(deployVaultFactory(res.marketInitialParams.admin).createVault(res.vaultInitialParams, 0));
+        res.vault =
+            ITermMaxVault(deployVaultFactory(res.marketInitialParams.admin).createVault(res.vaultInitialParams, 0));
 
         res.vault.submitMarket(address(res.market), true);
         vm.warp(res.currentTime + res.vaultInitialParams.timelock + 1);

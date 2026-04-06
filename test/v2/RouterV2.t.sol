@@ -243,7 +243,7 @@ contract RouterTestV2 is Test {
             tradingAmts: tradingAmts,
             netTokenAmt: mintTokenOut,
             deadline: block.timestamp + 1 hours,
-            refundAddress: address(0)
+            refundAddress: address(res.router)
         });
 
         res.debt.mint(sender, amountIn);
@@ -635,7 +635,7 @@ contract RouterTestV2 is Test {
             tradingAmts: tokenAmtsWantBuy,
             netTokenAmt: maxDebtAmt,
             deadline: block.timestamp + 1 hours,
-            refundAddress: address(0)
+            refundAddress: address(res.router)
         });
 
         SwapUnit[] memory swapUnits = new SwapUnit[](1);
@@ -754,7 +754,7 @@ contract RouterTestV2 is Test {
             tradingAmts: amtsToBuyFt,
             netTokenAmt: mintTokenOut.toUint128(),
             deadline: block.timestamp + 1 hours,
-            refundAddress: address(0)
+            refundAddress: address(res.router)
         });
         units[1] = SwapUnit({
             adapter: address(termMaxSwapAdapter),
