@@ -102,7 +102,6 @@ interface ITermMaxRouter {
         uint256 deadline
     ) external returns (uint256 netTokenIn);
 
-
     /**
      * @notice Creates a leveraged position from input tokens
      * @dev Swaps tokens for XT and creates a leveraged position
@@ -267,5 +266,4 @@ interface ITermMaxRouter {
         SwapUnit[] memory units,
         uint256 minTokenOut
     ) external returns (uint256 redeemedAmt);
-
 }

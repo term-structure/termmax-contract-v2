@@ -329,12 +329,13 @@ contract TermMaxRouterV2 is
     }
 
     function rolloverGt(
-        IGearingToken gtToken,
+        ITermMaxMarket market,
         uint256 gtId,
         IERC20 additionalAsset,
         uint256 additionalAmt,
         bytes memory rolloverData
     ) external nonReentrant whenNotPaused returns (uint256 newGtId) {
+        (,, IGearingToken gtToken,,) = market.tokens();
         return _rolloverGt(gtToken, gtId, additionalAsset, additionalAmt, rolloverData);
     }
 
@@ -369,14 +370,14 @@ contract TermMaxRouterV2 is
     /**
      * @inheritdoc ITermMaxRouterV2
      */
-    function swapAndRepay(IGearingToken gt, uint256 gtId, uint128 repayAmt, bool byDebtToken, SwapPath[] memory paths)
-        external
-        override
-        nonReentrant
-        whenNotPaused
-        checkSwapPaths(paths)
-        returns (uint256[] memory netOutOrIns)
-    {
+    function swapAndRepay(
+        ITermMaxMarket market,
+        uint256 gtId,
+        uint128 repayAmt,
+        bool byDebtToken,
+        SwapPath[] memory paths
+    ) external override nonReentrant whenNotPaused checkSwapPaths(paths) returns (uint256[] memory netOutOrIns) {
+        (,, IGearingToken gt,,) = market.tokens();
         netOutOrIns = _executeSwapPaths(paths);
         IERC20 repayToken = IERC20(paths[0].units[paths[0].units.length - 1].tokenOut);
         repayToken.safeIncreaseAllowance(address(gt), repayAmt);
