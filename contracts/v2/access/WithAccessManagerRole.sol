@@ -15,10 +15,12 @@ abstract contract WithAccessManagerRole is Roles {
     }
 
     modifier hasRole(bytes32 role) {
-        require(
-            IAccessControl(ACCESS_MANAGER).hasRole(role, msg.sender),
-            IAccessControl.AccessControlUnauthorizedAccount(msg.sender, role)
-        );
+        if (msg.sender != ACCESS_MANAGER) {
+            require(
+                IAccessControl(ACCESS_MANAGER).hasRole(role, msg.sender),
+                IAccessControl.AccessControlUnauthorizedAccount(msg.sender, role)
+            );
+        }
         _;
     }
 }

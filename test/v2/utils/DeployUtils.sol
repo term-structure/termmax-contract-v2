@@ -2,7 +2,7 @@
 pragma solidity ^0.8.27;
 
 import {console} from "forge-std/Script.sol";
-import {Vm} from "forge-std/Vm.sol";
+import {Vm, VmSafe} from "forge-std/Vm.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -36,6 +36,7 @@ import {TermMaxVaultFactoryV2} from "contracts/v2/factory/TermMaxVaultFactoryV2.
 import {MockAave} from "contracts/v2/test/MockAave.sol";
 import {MockWhitelistManager, IWhitelistManager} from "contracts/v2/test/MockWhitelistManager.sol";
 import {OnlyDeliveryGearingToken} from "contracts/v2/tokens/OnlyDeliveryGearingToken.sol";
+import {AccessManagerV2} from "contracts/v2/access/AccessManagerV2.sol";
 
 library DeployUtils {
     Vm private constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
@@ -75,20 +76,72 @@ library DeployUtils {
         IWhitelistManager whitelistManager;
     }
 
-    /// @dev Etch MockWhitelistManager code onto an EOA address so it can serve as IWhitelistRegistry
-    function _etchRegistry(address target) internal {
-        if (target.code.length == 0) {
-            MockWhitelistManager mock = new MockWhitelistManager();
-            vm.etch(target, address(mock).code);
-        }
-    }
-
     function deployMarket(address admin, MarketConfig memory marketConfig, uint32 maxLtv, uint32 liquidationLtv)
         internal
         returns (Res memory res)
     {
         res.factory = deployFactory(admin);
         res.whitelistManager = res.factory.whitelistManager();
+
+        res.collateral = new MockERC20("ETH", "ETH", 18);
+        res.debt = new MockERC20("DAI", "DAI", 8);
+
+        res.debtOracle = new MockPriceFeed(admin);
+        res.collateralOracle = new MockPriceFeed(admin);
+        res.oracle = deployOracle(admin, 0);
+
+        res.oracle.submitPendingOracle(
+            address(res.debt), IOracleV2.Oracle(res.debtOracle, res.debtOracle, 0, 0, 365 days, 0)
+        );
+        res.oracle.submitPendingOracle(
+            address(res.collateral), IOracleV2.Oracle(res.collateralOracle, res.collateralOracle, 0, 0, 365 days, 0)
+        );
+
+        res.oracle.acceptPendingOracle(address(res.debt));
+        res.oracle.acceptPendingOracle(address(res.collateral));
+
+        MockPriceFeed.RoundData memory roundData = MockPriceFeed.RoundData({
+            roundId: 1,
+            answer: int256(1e1 ** res.collateralOracle.decimals()),
+            startedAt: 0,
+            updatedAt: 0,
+            answeredInRound: 0
+        });
+        res.collateralOracle.updateRoundData(roundData);
+
+        MarketInitialParams memory initialParams = MarketInitialParams({
+            collateral: address(res.collateral),
+            debtToken: res.debt,
+            admin: admin,
+            gtImplementation: address(0),
+            marketConfig: marketConfig,
+            loanConfig: LoanConfig({
+                oracle: IOracle(address(res.oracle)),
+                liquidationLtv: liquidationLtv,
+                maxLtv: maxLtv,
+                liquidatable: true
+            }),
+            gtInitalParams: abi.encode(type(uint256).max),
+            tokenName: "DAI-ETH",
+            tokenSymbol: "DAI-ETH"
+        });
+
+        res.marketConfig = marketConfig;
+        res.market = TermMaxMarketV2(res.factory.createMarket(GT_ERC20, initialParams, 0));
+
+        (res.ft, res.xt, res.gt,,) = res.market.tokens();
+    }
+
+    function deployMarket(
+        address admin,
+        AccessManagerV2 accessManager,
+        MarketConfig memory marketConfig,
+        uint32 maxLtv,
+        uint32 liquidationLtv,
+        IWhitelistManager whitelistManager
+    ) internal returns (Res memory res) {
+        res.factory = deployFactory(admin, accessManager, whitelistManager);
+        res.whitelistManager = whitelistManager;
 
         res.collateral = new MockERC20("ETH", "ETH", 18);
         res.debt = new MockERC20("DAI", "DAI", 8);
@@ -382,53 +435,82 @@ library DeployUtils {
     }
 
     function deployFactory(address admin) public returns (TermMaxFactoryV2 factory) {
+        AccessManagerV2 accessManager = deployAccessManagerV2(admin);
         address tokenImplementation = address(new MintableERC20V2());
         address orderImplementation = address(new TermMaxOrderV2());
         TermMaxMarketV2 m = new TermMaxMarketV2(tokenImplementation, orderImplementation);
         IWhitelistManager whitelistManager = deployWhitelistManager();
-        _etchRegistry(admin);
-        factory = new TermMaxFactoryV2(admin, address(m), address(whitelistManager));
+        factory = new TermMaxFactoryV2(address(accessManager), address(m), address(whitelistManager));
+        _grantFactoryRoles(accessManager, admin, factory);
     }
 
     function deployFactory(address admin, IWhitelistManager whitelistManager)
         public
         returns (TermMaxFactoryV2 factory)
     {
+        AccessManagerV2 accessManager = deployAccessManagerV2(admin);
         address tokenImplementation = address(new MintableERC20V2());
         address orderImplementation = address(new TermMaxOrderV2());
         TermMaxMarketV2 m = new TermMaxMarketV2(tokenImplementation, orderImplementation);
-        _etchRegistry(admin);
-        factory = new TermMaxFactoryV2(admin, address(m), address(whitelistManager));
+        factory = new TermMaxFactoryV2(address(accessManager), address(m), address(whitelistManager));
+        _grantFactoryRoles(accessManager, admin, factory);
+    }
+
+    function deployFactory(address admin, AccessManagerV2 accessManager, IWhitelistManager whitelistManager)
+        public
+        returns (TermMaxFactoryV2 factory)
+    {
+        address tokenImplementation = address(new MintableERC20V2());
+        address orderImplementation = address(new TermMaxOrderV2());
+        TermMaxMarketV2 m = new TermMaxMarketV2(tokenImplementation, orderImplementation);
+        factory = new TermMaxFactoryV2(address(accessManager), address(m), address(whitelistManager));
+        _grantFactoryRoles(accessManager, admin, factory);
     }
 
     function deployFactoryWithMockOrder(address admin)
         public
         returns (TermMaxFactoryV2 factory, IWhitelistManager whitelistManager)
     {
+        AccessManagerV2 accessManager = deployAccessManagerV2(admin);
         address tokenImplementation = address(new MintableERC20V2());
         address orderImplementation = address(new MockOrderV2());
         TermMaxMarketV2 m = new TermMaxMarketV2(tokenImplementation, orderImplementation);
         whitelistManager = deployWhitelistManager();
-        _etchRegistry(admin);
-        factory = new TermMaxFactoryV2(admin, address(m), address(whitelistManager));
+        factory = new TermMaxFactoryV2(address(accessManager), address(m), address(whitelistManager));
+        _grantFactoryRoles(accessManager, admin, factory);
     }
 
     function deployVaultFactory(address admin) public returns (TermMaxVaultFactoryV2 vaultFactory) {
+        AccessManagerV2 accessManager = deployAccessManagerV2(admin);
         OrderManagerV2 orderManager = new OrderManagerV2();
         IWhitelistManager whitelistManager = deployWhitelistManager();
         TermMaxVaultV2 implementation = new TermMaxVaultV2(address(orderManager), address(whitelistManager));
-        _etchRegistry(admin);
-        vaultFactory = new TermMaxVaultFactoryV2(admin, address(implementation), address(whitelistManager));
+        vaultFactory =
+            new TermMaxVaultFactoryV2(address(accessManager), address(implementation), address(whitelistManager));
+        _grantVaultFactoryRoles(accessManager, admin, vaultFactory);
     }
 
     function deployVaultFactory(address admin, IWhitelistManager whitelistManager)
         public
         returns (TermMaxVaultFactoryV2 vaultFactory)
     {
+        AccessManagerV2 accessManager = deployAccessManagerV2(admin);
         OrderManagerV2 orderManager = new OrderManagerV2();
         TermMaxVaultV2 implementation = new TermMaxVaultV2(address(orderManager), address(whitelistManager));
-        _etchRegistry(admin);
-        vaultFactory = new TermMaxVaultFactoryV2(admin, address(implementation), address(whitelistManager));
+        vaultFactory =
+            new TermMaxVaultFactoryV2(address(accessManager), address(implementation), address(whitelistManager));
+        _grantVaultFactoryRoles(accessManager, admin, vaultFactory);
+    }
+
+    function deployVaultFactory(address admin, AccessManagerV2 accessManager, IWhitelistManager whitelistManager)
+        public
+        returns (TermMaxVaultFactoryV2 vaultFactory)
+    {
+        OrderManagerV2 orderManager = new OrderManagerV2();
+        TermMaxVaultV2 implementation = new TermMaxVaultV2(address(orderManager), address(whitelistManager));
+        vaultFactory =
+            new TermMaxVaultFactoryV2(address(accessManager), address(implementation), address(whitelistManager));
+        _grantVaultFactoryRoles(accessManager, admin, vaultFactory);
     }
 
     function deployOracle(address admin, uint256 timeLock) public returns (OracleAggregatorV2 oracle) {
@@ -455,9 +537,14 @@ library DeployUtils {
         returns (TermMaxVaultV2 vault)
     {
         TermMaxVaultFactoryV2 vaultFactory = deployVaultFactory(admin);
-        vm.startPrank(admin);
-        vault = TermMaxVaultV2(vaultFactory.createVault(initialParams, 0));
-        vm.stopPrank();
+        (VmSafe.CallerMode callerMode,,) = vm.readCallers();
+        if (callerMode == VmSafe.CallerMode.None) {
+            vm.startPrank(admin);
+            vault = TermMaxVaultV2(vaultFactory.createVault(initialParams, 0));
+            vm.stopPrank();
+        } else {
+            vault = TermMaxVaultV2(vaultFactory.createVault(initialParams, 0));
+        }
     }
 
     function deployVault(address admin, VaultInitialParamsV2 memory initialParams, IWhitelistManager whitelistManager)
@@ -465,9 +552,31 @@ library DeployUtils {
         returns (TermMaxVaultV2 vault)
     {
         TermMaxVaultFactoryV2 vaultFactory = deployVaultFactory(admin, whitelistManager);
-        vm.startPrank(admin);
-        vault = TermMaxVaultV2(vaultFactory.createVault(initialParams, 0));
-        vm.stopPrank();
+        (VmSafe.CallerMode callerMode,,) = vm.readCallers();
+        if (callerMode == VmSafe.CallerMode.None) {
+            vm.startPrank(admin);
+            vault = TermMaxVaultV2(vaultFactory.createVault(initialParams, 0));
+            vm.stopPrank();
+        } else {
+            vault = TermMaxVaultV2(vaultFactory.createVault(initialParams, 0));
+        }
+    }
+
+    function deployVault(
+        address admin,
+        AccessManagerV2 accessManager,
+        VaultInitialParamsV2 memory initialParams,
+        IWhitelistManager whitelistManager
+    ) public returns (TermMaxVaultV2 vault) {
+        TermMaxVaultFactoryV2 vaultFactory = deployVaultFactory(admin, accessManager, whitelistManager);
+        (VmSafe.CallerMode callerMode,,) = vm.readCallers();
+        if (callerMode == VmSafe.CallerMode.None) {
+            vm.startPrank(admin);
+            vault = TermMaxVaultV2(vaultFactory.createVault(initialParams, 0));
+            vm.stopPrank();
+        } else {
+            vault = TermMaxVaultV2(vaultFactory.createVault(initialParams, 0));
+        }
     }
 
     function deployAccessManager(address admin) internal returns (AccessManager accessManager) {
@@ -475,6 +584,43 @@ library DeployUtils {
         bytes memory data = abi.encodeCall(AccessManager.initialize, admin);
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), data);
         accessManager = AccessManager(address(proxy));
+    }
+
+    function deployAccessManagerV2(address admin) internal returns (AccessManagerV2 accessManager) {
+        AccessManagerV2 implementation = new AccessManagerV2();
+        bytes memory data = abi.encodeCall(AccessManager.initialize, admin);
+        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), data);
+        accessManager = AccessManagerV2(address(proxy));
+    }
+
+    function _grantFactoryRoles(AccessManagerV2 accessManager, address admin, TermMaxFactoryV2 factory) private {
+        (VmSafe.CallerMode callerMode,,) = vm.readCallers();
+        if (callerMode == VmSafe.CallerMode.None) {
+            vm.startPrank(admin);
+            accessManager.grantRole(accessManager.MARKET_ROLE(), admin);
+            accessManager.grantRole(accessManager.TERMMAX_MARKET_FACTORY_ROLE(), admin);
+            accessManager.grantRole(accessManager.WHITELIST_ROLE(), address(factory));
+            vm.stopPrank();
+        } else {
+            accessManager.grantRole(accessManager.MARKET_ROLE(), admin);
+            accessManager.grantRole(accessManager.TERMMAX_MARKET_FACTORY_ROLE(), admin);
+            accessManager.grantRole(accessManager.WHITELIST_ROLE(), address(factory));
+        }
+    }
+
+    function _grantVaultFactoryRoles(AccessManagerV2 accessManager, address admin, TermMaxVaultFactoryV2 vaultFactory)
+        private
+    {
+        (VmSafe.CallerMode callerMode,,) = vm.readCallers();
+        if (callerMode == VmSafe.CallerMode.None) {
+            vm.startPrank(admin);
+            accessManager.grantRole(accessManager.VAULT_DEPLOYER_ROLE(), admin);
+            accessManager.grantRole(accessManager.WHITELIST_ROLE(), address(vaultFactory));
+            vm.stopPrank();
+        } else {
+            accessManager.grantRole(accessManager.VAULT_DEPLOYER_ROLE(), admin);
+            accessManager.grantRole(accessManager.WHITELIST_ROLE(), address(vaultFactory));
+        }
     }
 
     function deployWhitelistManager() internal returns (IWhitelistManager whitelistManager) {

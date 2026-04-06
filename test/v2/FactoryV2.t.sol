@@ -5,6 +5,7 @@ import "forge-std/Test.sol";
 import {console} from "forge-std/console.sol";
 import {DeployUtils} from "./utils/DeployUtils.sol";
 import {JSONLoader} from "./utils/JSONLoader.sol";
+import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 
 import {ITermMaxMarketV2, TermMaxMarketV2, Constants, MarketErrors} from "contracts/v2/TermMaxMarketV2.sol";
 import {MockERC20, ERC20} from "contracts/v1/test/MockERC20.sol";
@@ -269,7 +270,11 @@ contract FactoryTestV2 is Test {
         GearingTokenWithERC20V2 gt = new GearingTokenWithERC20V2();
         string memory key = "gt-test";
 
-        vm.expectRevert(abi.encodePacked(bytes4(keccak256("OwnableUnauthorizedAccount(address)")), abi.encode(sender)));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector, sender, factory.TERMMAX_MARKET_FACTORY_ROLE()
+            )
+        );
         factory.setGtImplement(key, address(gt));
 
         vm.stopPrank();

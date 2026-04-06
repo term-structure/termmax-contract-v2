@@ -18,6 +18,8 @@ import {ERC4626TokenEvents} from "contracts/v2/events/ERC4626TokenEvents.sol";
 import {FactoryEventsV2} from "contracts/v2/events/FactoryEventsV2.sol";
 import {MockWhitelistManager} from "contracts/v2/test/MockWhitelistManager.sol";
 import {IWhitelistManager} from "contracts/v2/access/IWhitelistManager.sol";
+import {AccessManagerV2, AccessManager} from "contracts/v2/access/AccessManagerV2.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract TermMax4626FactoryTest is Test {
     TermMax4626Factory public factory;
@@ -40,6 +42,7 @@ contract TermMax4626FactoryTest is Test {
     VariableERC4626ForAave public implVariableAave;
     StableERC4626ForCustomize public implCustomize;
     MockWhitelistManager public whitelistManager;
+    AccessManagerV2 public accessManager;
 
     StakingBuffer.BufferConfig public defaultBufferConfig;
 
@@ -67,13 +70,13 @@ contract TermMax4626FactoryTest is Test {
         implCustomize = new StableERC4626ForCustomize();
         whitelistManager = new MockWhitelistManager();
 
-        // Give admin the MockWhitelistManager code so factory._getRegistry() (which returns owner() == admin)
-        // can satisfy IWhitelistRegistry calls
-        vm.etch(admin, address(whitelistManager).code);
+        AccessManagerV2 implementation = new AccessManagerV2();
+        bytes memory data = abi.encodeCall(AccessManager.initialize, admin);
+        accessManager = AccessManagerV2(address(new ERC1967Proxy(address(implementation), data)));
 
         // Deploy factory
         factory = new TermMax4626Factory(
-            admin,
+            address(accessManager),
             address(impl4626),
             address(implStableAave),
             address(implVenus),
@@ -86,8 +89,15 @@ contract TermMax4626FactoryTest is Test {
         defaultBufferConfig =
             StakingBuffer.BufferConfig({minimumBuffer: 1000e18, maximumBuffer: 10000e18, buffer: 5000e18});
 
+        vm.startPrank(admin);
+        accessManager.grantRole(accessManager.POOL_DEPLOYER_ROLE(), admin);
+        accessManager.grantRole(accessManager.TERMMAX_4626_FACTORY_ROLE(), admin);
+        accessManager.grantRole(accessManager.WHITELIST_ROLE(), address(factory));
+        vm.stopPrank();
+
         // Labels for better test output
         vm.label(address(factory), "TermMax4626Factory");
+        vm.label(address(accessManager), "AccessManagerV2");
         vm.label(address(underlying), "USDC");
         vm.label(address(thirdPool), "ThirdPool");
         vm.label(address(aavePool), "AavePool");
