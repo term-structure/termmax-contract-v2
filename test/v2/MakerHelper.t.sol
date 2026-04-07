@@ -228,6 +228,7 @@ contract MakerHelperTest is Test {
         initialParams.maker = delegator;
         initialParams.orderConfig = orderConfig;
         initialParams.virtualXtReserve = 1e8;
+        initialParams.orderConfig.gtId = res.gt.totalSupply() + 1; // Set gtId to be the next minted GT ID
 
         // Set up proper delegation parameters
         uint256 nonce = DelegateAble(address(res.gt)).nonces(delegator);

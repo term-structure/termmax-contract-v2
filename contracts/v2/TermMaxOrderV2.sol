@@ -22,7 +22,7 @@ import {TransferUtils} from "../v1/lib/TransferUtils.sol";
 import {ITermMaxOrderV2, OrderInitialParams} from "./ITermMaxOrderV2.sol";
 import {OrderEventsV2} from "./events/OrderEventsV2.sol";
 import {OrderErrorsV2} from "./errors/OrderErrorsV2.sol";
-import {VersionV2} from "./VersionV2.sol";
+import {VersionV2_0_1} from "./VersionV2_0_1.sol";
 
 /**
  * @title TermMax Order V2
@@ -37,7 +37,7 @@ contract TermMaxOrderV2 is
     PausableUpgradeable,
     OrderErrors,
     OrderEvents,
-    VersionV2
+    VersionV2_0_1
 {
     using SafeCast for uint256;
     using SafeCast for int256;
@@ -58,11 +58,24 @@ contract TermMaxOrderV2 is
 
     OrderConfig private _orderConfig;
 
-    uint64 private maturity;
+    /// @notice The timestamp when the order expires
+    uint64 public orderExpiryTimestamp;
 
     /// @notice The virtual xt reserve can present current price, which only changed when swap happens
     uint256 public virtualXtReserve;
     IERC4626 public pool;
+
+    // =============================================================================
+    // TRANSIENT STORAGE
+    // =============================================================================
+
+    /// @notice Transient storage slot for caching treasurer address during swap
+    /// @dev Using EIP-1153 transient storage to save gas on repeated market.config().treasurer calls
+    bytes32 private constant TREASURER_CACHE_SLOT = keccak256("termmax.order.v2.treasurer_cache");
+
+    /// @notice Transient storage slot for caching maturity during swap
+    /// @dev Using EIP-1153 transient storage to save gas on repeated market.config().maturity calls
+    bytes32 private constant MATURITY_CACHE_SLOT = keccak256("termmax.order.v2.maturity_cache");
 
     // =============================================================================
     // MODIFIERS
@@ -87,7 +100,7 @@ contract TermMaxOrderV2 is
     /// @notice Check if the order is tradable
     modifier onlyOpen() {
         _requireNotPaused();
-        if (block.timestamp >= maturity) {
+        if (block.timestamp >= orderExpiryTimestamp) {
             revert TermIsNotOpen();
         }
         _;
@@ -132,7 +145,6 @@ contract TermMaxOrderV2 is
         __Pausable_init_unchained();
         address _market = _msgSender();
         market = ITermMaxMarket(_market);
-        maturity = params.maturity;
         ft = params.ft;
         xt = params.xt;
         debtToken = params.debtToken;
@@ -140,6 +152,7 @@ contract TermMaxOrderV2 is
         _setPool(params.pool);
         _setCurveAndPrice(params.virtualXtReserve, params.orderConfig.maxXtReserve, params.orderConfig.curveCuts);
         _updateGeneralConfig(params.orderConfig.gtId, params.orderConfig.swapTrigger);
+        _setExpiryTimestamp(params.maturity);
         emit OrderEventsV2.OrderInitialized(params.maker, _market);
     }
 
@@ -162,7 +175,7 @@ contract TermMaxOrderV2 is
      */
     function orderConfig() external view virtual returns (OrderConfig memory orderConfig_) {
         orderConfig_ = _orderConfig;
-        orderConfig_.feeConfig = market.config().feeConfig;
+        orderConfig_.feeConfig = _getMarketConfig().feeConfig;
     }
 
     /**
@@ -241,7 +254,53 @@ contract TermMaxOrderV2 is
      * @return daysToMaturity Number of days to maturity
      */
     function _daysToMaturity() internal view returns (uint256 daysToMaturity) {
-        daysToMaturity = (maturity - block.timestamp + Constants.SECONDS_IN_DAY - 1) / Constants.SECONDS_IN_DAY;
+        uint256 maturity_ = _getMaturityCached();
+        if (maturity_ == 0) {
+            maturity_ = _getMarketConfig().maturity;
+        }
+        daysToMaturity = (maturity_ - block.timestamp + Constants.SECONDS_IN_DAY - 1) / Constants.SECONDS_IN_DAY;
+    }
+
+    // =============================================================================
+    // TRANSIENT STORAGE HELPERS
+    // =============================================================================
+
+    function _getTreasurerCached() internal view returns (address treasurer) {
+        bytes32 slot = TREASURER_CACHE_SLOT;
+        assembly {
+            treasurer := tload(slot)
+        }
+    }
+
+    function _cacheTreasurer(address treasurer) internal {
+        bytes32 slot = TREASURER_CACHE_SLOT;
+        assembly {
+            tstore(slot, treasurer)
+        }
+    }
+
+    function _cacheMaturity(uint256 maturity_) internal {
+        bytes32 slot = MATURITY_CACHE_SLOT;
+        assembly {
+            tstore(slot, maturity_)
+        }
+    }
+
+    function _getMaturityCached() internal view returns (uint256 maturity_) {
+        bytes32 slot = MATURITY_CACHE_SLOT;
+        assembly {
+            maturity_ := tload(slot)
+        }
+    }
+
+    function _getMarketConfig() internal view returns (MarketConfig memory config) {
+        config = market.config();
+    }
+
+    function _getMarketConfigAndCache() internal returns (MarketConfig memory config) {
+        config = _getMarketConfig();
+        _cacheTreasurer(config.treasurer);
+        _cacheMaturity(config.maturity);
     }
 
     // =============================================================================
@@ -340,6 +399,16 @@ contract TermMaxOrderV2 is
 
     function setGeneralConfig(uint256 gtId, ISwapCallback swapTrigger) external virtual onlyOwner {
         _updateGeneralConfig(gtId, swapTrigger);
+    }
+
+    function setExpiryTimestamp(uint64 newExpiryTimestamp) external virtual onlyOwner {
+        _setExpiryTimestamp(newExpiryTimestamp);
+    }
+
+    function _setExpiryTimestamp(uint64 newExpiryTimestamp) internal {
+        require(newExpiryTimestamp <= _getMarketConfig().maturity, OrderErrorsV2.InvalidExpiryTimestamp());
+        orderExpiryTimestamp = newExpiryTimestamp;
+        emit OrderEventsV2.ExpiryTimestampUpdated(newExpiryTimestamp);
     }
 
     function setPool(IERC4626 newPool) external virtual onlyOwner {
@@ -610,7 +679,7 @@ contract TermMaxOrderV2 is
             IERC20 _ft = ft;
             IERC20 _xt = xt;
             OrderConfig memory orderConfig_ = _orderConfig;
-            orderConfig_.feeConfig = market.config().feeConfig;
+            orderConfig_.feeConfig = _getMarketConfigAndCache().feeConfig;
             int256 deltaFt;
             int256 deltaXt;
             if (tokenIn == _ft && tokenOut == _debtToken) {
@@ -680,7 +749,7 @@ contract TermMaxOrderV2 is
             int256 deltaFt;
             int256 deltaXt;
             OrderConfig memory orderConfig_ = _orderConfig;
-            orderConfig_.feeConfig = market.config().feeConfig;
+            orderConfig_.feeConfig = _getMarketConfigAndCache().feeConfig;
             if (tokenIn == _debtToken && tokenOut == _ft) {
                 (netTokenIn, feeAmt, deltaFt, deltaXt) =
                     _swapAndUpdateReserves(tokenAmtOut, maxTokenIn, orderConfig_, _buyExactFt);
@@ -770,7 +839,7 @@ contract TermMaxOrderV2 is
         }
 
         // Pay fee
-        _ft.safeTransfer(_market.config().treasurer, feeAmt);
+        _ft.safeTransfer(_getTreasurerCached(), feeAmt);
     }
 
     // =============================================================================
