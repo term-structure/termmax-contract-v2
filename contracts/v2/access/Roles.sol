@@ -26,4 +26,8 @@ abstract contract Roles {
     bytes32 public constant POOL_DEPLOYER_ROLE = keccak256("POOL_DEPLOYER_ROLE");
     /// @notice Role to deploy vaults
     bytes32 public constant VAULT_DEPLOYER_ROLE = keccak256("VAULT_DEPLOYER_ROLE");
+    /// @notice Role to update stable ERC4626 buffer config and add reserves
+    bytes32 public constant STABLE_ERC4626_BUFFER_ROLE = keccak256("STABLE_ERC4626_BUFFER_ROLE");
+    /// @notice Role to withdraw stable ERC4626 income assets
+    bytes32 public constant STABLE_ERC4626_INCOME_WITHDRAW_ROLE = keccak256("STABLE_ERC4626_INCOME_WITHDRAW_ROLE");
 }

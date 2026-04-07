@@ -33,6 +33,9 @@ import {ITermMaxVaultV2, OrderV2ConfigurationParams, CurveCuts} from "contracts/
 import {VaultEventsV2} from "contracts/v2/events/VaultEventsV2.sol";
 import {IWhitelistManager} from "contracts/v2/access/IWhitelistManager.sol";
 import {WhitelistManager} from "contracts/v2/access/WhitelistManager.sol";
+import {IStableERC4626For4626} from "contracts/v2/tokens/IStableERC4626For4626.sol";
+import {StakingBuffer} from "contracts/v2/tokens/StakingBuffer.sol";
+import {MockStableERC4626For4626} from "contracts/v2/test/MockStableERC4626For4626.sol";
 
 contract AccessManagerTestV2 is Test {
     using JSONLoader for *;
@@ -820,6 +823,85 @@ contract AccessManagerTestV2 is Test {
         // State should remain unchanged
         assertEq(vaultV2.pendingPool().value, address(0));
         assertEq(vaultV2.pendingPool().validAt, 0);
+    }
+
+    function testUpdateBufferConfigAndAddReservesAccessControl() public {
+        MockStableERC4626For4626 stable4626 = new MockStableERC4626For4626();
+        address operator = vm.randomAddress();
+        StakingBuffer.BufferConfig memory newConfig =
+            StakingBuffer.BufferConfig({minimumBuffer: 100e6, maximumBuffer: 500e6, buffer: 300e6});
+        uint256 additionalReserves = 42e6;
+
+        vm.prank(deployer);
+        manager.grantRole(manager.STABLE_ERC4626_BUFFER_ROLE(), operator);
+
+        stable4626.mint(operator, additionalReserves);
+        vm.prank(operator);
+        stable4626.approve(address(manager), additionalReserves);
+
+        vm.prank(operator);
+        manager.updateBufferConfigAndAddReserves(
+            IStableERC4626For4626(address(stable4626)), additionalReserves, newConfig
+        );
+
+        assertTrue(stable4626.updateCalled());
+        assertEq(stable4626.lastAdditionalReserves(), additionalReserves);
+        assertEq(stable4626.lastMinimumBuffer(), newConfig.minimumBuffer);
+        assertEq(stable4626.lastMaximumBuffer(), newConfig.maximumBuffer);
+        assertEq(stable4626.lastBuffer(), newConfig.buffer);
+    }
+
+    function testUpdateBufferConfigAndAddReservesWithoutRole() public {
+        MockStableERC4626For4626 stable4626 = new MockStableERC4626For4626();
+        address unauthorized = vm.randomAddress();
+        StakingBuffer.BufferConfig memory newConfig =
+            StakingBuffer.BufferConfig({minimumBuffer: 100e6, maximumBuffer: 500e6, buffer: 300e6});
+
+        vm.startPrank(unauthorized);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector,
+                unauthorized,
+                manager.STABLE_ERC4626_BUFFER_ROLE()
+            )
+        );
+        manager.updateBufferConfigAndAddReserves(IStableERC4626For4626(address(stable4626)), 1e6, newConfig);
+        vm.stopPrank();
+    }
+
+    function testWithdrawIncomeAssetsAccessControl() public {
+        MockStableERC4626For4626 stable4626 = new MockStableERC4626For4626();
+        address operator = vm.randomAddress();
+        address asset = vm.randomAddress();
+        address to = vm.randomAddress();
+        uint256 amount = 99e6;
+
+        vm.prank(deployer);
+        manager.grantRole(manager.STABLE_ERC4626_INCOME_WITHDRAW_ROLE(), operator);
+
+        vm.prank(operator);
+        manager.withdrawIncomeAssets(IStableERC4626For4626(address(stable4626)), asset, to, amount);
+
+        assertTrue(stable4626.withdrawCalled());
+        assertEq(stable4626.lastAsset(), asset);
+        assertEq(stable4626.lastTo(), to);
+        assertEq(stable4626.lastAmount(), amount);
+    }
+
+    function testWithdrawIncomeAssetsWithoutRole() public {
+        MockStableERC4626For4626 stable4626 = new MockStableERC4626For4626();
+        address unauthorized = vm.randomAddress();
+
+        vm.startPrank(unauthorized);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector,
+                unauthorized,
+                manager.STABLE_ERC4626_INCOME_WITHDRAW_ROLE()
+            )
+        );
+        manager.withdrawIncomeAssets(IStableERC4626For4626(address(stable4626)), address(1), address(2), 1e6);
+        vm.stopPrank();
     }
 
     // Import the events for testing

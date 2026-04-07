@@ -5,6 +5,8 @@ import "../../v1/access/AccessManager.sol";
 import {IOracleV2} from "../oracle/IOracleV2.sol";
 import {ITermMaxVaultV2, OrderV2ConfigurationParams, CurveCuts} from "../vault/ITermMaxVaultV2.sol";
 import {IWhitelistManager} from "./IWhitelistManager.sol";
+import {IStableERC4626For4626, StakingBuffer} from "../tokens/IStableERC4626For4626.sol";
+import {TransferUtilsV2} from "../lib/TransferUtilsV2.sol";
 import {VersionV2} from "../VersionV2.sol";
 
 /**
@@ -14,6 +16,8 @@ import {VersionV2} from "../VersionV2.sol";
  * @dev Inherits from AccessManager V1 and adds V2-specific functionality for managing oracles and batch operations
  */
 contract AccessManagerV2 is AccessManager, VersionV2 {
+    using TransferUtilsV2 for *;
+
     error CannotRenounceRole();
 
     function upgradeSubContract(UUPSUpgradeable proxy, address newImplementation, bytes memory data)
@@ -99,6 +103,40 @@ contract AccessManagerV2 is AccessManager, VersionV2 {
      */
     function revokePendingPool(ITermMaxVaultV2 vault) external onlyRole(VAULT_ROLE) {
         vault.revokePendingPool();
+    }
+
+    /**
+     * @notice Update stable ERC4626 buffer config and add reserves
+     * @param stableERC4626 The stable ERC4626 contract to update
+     * @param additionalReserves Additional reserves transferred into the stable ERC4626 contract
+     * @param bufferConfig_ New buffer configuration
+     * @custom:access Requires STABLE_ERC4626_BUFFER_ROLE
+     */
+    function updateBufferConfigAndAddReserves(
+        IStableERC4626For4626 stableERC4626,
+        uint256 additionalReserves,
+        StakingBuffer.BufferConfig memory bufferConfig_
+    ) external onlyRole(STABLE_ERC4626_BUFFER_ROLE) {
+        if (additionalReserves != 0) {
+            stableERC4626.safeTransferFrom(msg.sender, address(this), additionalReserves);
+            stableERC4626.safeApprove(address(stableERC4626), additionalReserves);
+        }
+        stableERC4626.updateBufferConfigAndAddReserves(additionalReserves, bufferConfig_);
+    }
+
+    /**
+     * @notice Withdraw stable ERC4626 income assets
+     * @param stableERC4626 The stable ERC4626 contract to withdraw from
+     * @param asset Asset address to withdraw (underlying or thirdPool token)
+     * @param to Recipient address
+     * @param amount Amount of income assets to withdraw
+     * @custom:access Requires STABLE_ERC4626_INCOME_WITHDRAW_ROLE
+     */
+    function withdrawIncomeAssets(IStableERC4626For4626 stableERC4626, address asset, address to, uint256 amount)
+        external
+        onlyRole(STABLE_ERC4626_INCOME_WITHDRAW_ROLE)
+    {
+        stableERC4626.withdrawIncomeAssets(asset, to, amount);
     }
 
     /// @notice Forbid renouncing roles
