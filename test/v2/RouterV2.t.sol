@@ -131,7 +131,7 @@ contract RouterTestV2 is Test {
         res.ft.transfer(address(res.order), amount);
         res.xt.transfer(address(res.order), amount);
 
-        res.router = DeployUtils.deployRouter(deployer, res.whitelistManager);
+        res.router = DeployUtils.deployRouter(deployer, address(res.whitelistManager));
         adapter = new MockSwapAdapterV2(pool);
         termMaxSwapAdapter = new TermMaxSwapAdapter(address(res.whitelistManager));
 

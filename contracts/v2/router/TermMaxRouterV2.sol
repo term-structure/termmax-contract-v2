@@ -88,10 +88,6 @@ contract TermMaxRouterV2 is
         WithWhitelistCheck(_whitelistManager, IWhitelistManager.ContractModule.MARKET)
     {}
 
-    function _getRegistry() internal view override returns (address) {
-        return owner();
-    }
-
     function _authorizeUpgrade(address newImplementation) internal virtual override onlyOwner {}
 
     function initialize(address admin) external initializer {

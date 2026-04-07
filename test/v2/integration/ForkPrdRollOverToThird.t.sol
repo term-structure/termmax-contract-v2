@@ -36,6 +36,7 @@ import {IAaveV3Pool} from "contracts/v2/extensions/aave/IAaveV3Pool.sol";
 import {ICreditDelegationToken} from "contracts/v2/extensions/aave/ICreditDelegationToken.sol";
 import {IMorpho, Id, MarketParams, Authorization, Signature} from "contracts/v2/extensions/morpho/IMorpho.sol";
 import {IWhitelistManager} from "contracts/v2/access/IWhitelistManager.sol";
+import {DeployUtils} from "test/v2/utils/DeployUtils.sol";
 
 interface TestOracle is IOracle {
     function acceptPendingOracle(address asset) external;
@@ -100,10 +101,10 @@ contract ForkPrdRollOverToThird is ForkBaseTestV2 {
         address admin = vm.randomAddress();
 
         vm.startPrank(admin);
-        IWhitelistManager whitelistManager;
-        (router, whitelistManager) = deployRouter(admin);
+        DeployUtils.Res memory res = DeployUtils.deployRes(admin);
+        router = res.router;
 
-        TermMaxSwapAdapter tmx = new TermMaxSwapAdapter(address(whitelistManager));
+        TermMaxSwapAdapter tmx = new TermMaxSwapAdapter(address(res.whitelistManager));
         tmxAdapter = address(tmx);
         vm.label(tmxAdapter, "TermMaxAdapter");
 
@@ -112,7 +113,7 @@ contract ForkPrdRollOverToThird is ForkBaseTestV2 {
         adapters[1] = odosAdapter;
         adapters[2] = tmxAdapter;
         adapters[3] = vaultAdapter;
-        whitelistManager.batchSetWhitelist(adapters, IWhitelistManager.ContractModule.ADAPTER, true);
+        res.whitelistManager.batchSetWhitelist(adapters, IWhitelistManager.ContractModule.ADAPTER, true);
         vm.stopPrank();
 
         IAaveV3Pool.ReserveData memory rd = IAaveV3Pool(address(aave)).getReserveData(usdc);

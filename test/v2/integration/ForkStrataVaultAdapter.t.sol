@@ -29,6 +29,7 @@ import {IWhitelistManager} from "contracts/v2/access/IWhitelistManager.sol";
 import {ERC4626VaultAdapterV2} from "contracts/v2/router/swapAdapters/ERC4626VaultAdapterV2.sol";
 import {StrataVaultAdapter} from "contracts/v2/router/swapAdapters/StrataVaultAdapter.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
+import {DeployUtils} from "test/v2/utils/DeployUtils.sol";
 import {console} from "forge-std/console.sol";
 
 contract ForkStrataVaultAdapter is ForkBaseTestV2 {
@@ -61,12 +62,13 @@ contract ForkStrataVaultAdapter is ForkBaseTestV2 {
         address admin = vm.randomAddress();
 
         vm.startPrank(admin);
-        IWhitelistManager whitelistManager;
-        (router, whitelistManager) = deployRouter(admin);
+        DeployUtils.Res memory res = DeployUtils.deployRes(admin);
 
         address[] memory adapters = new address[](1);
         adapters[0] = address(strataAdapter);
-        whitelistManager.batchSetWhitelist(adapters, IWhitelistManager.ContractModule.ADAPTER, true);
+        res.whitelistManager.batchSetWhitelist(adapters, IWhitelistManager.ContractModule.ADAPTER, true);
+
+        router = res.router;
         vm.stopPrank();
     }
 

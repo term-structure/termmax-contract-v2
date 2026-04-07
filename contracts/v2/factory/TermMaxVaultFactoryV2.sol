@@ -42,10 +42,6 @@ contract TermMaxVaultFactoryV2 is ITermMaxVaultFactoryV2, VersionV2, WithWhiteli
         );
     }
 
-    function _getRegistry() internal view override returns (address) {
-        return ACCESS_MANAGER;
-    }
-
     /**
      * @inheritdoc ITermMaxVaultFactoryV2
      */

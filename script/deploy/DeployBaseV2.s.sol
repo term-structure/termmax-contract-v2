@@ -523,9 +523,9 @@ contract DeployBaseV2 is Script {
         terminalVaultAdapter = new TerminalVaultAdapter();
     }
 
-    function deployWhitelistManager(address admin) public returns (WhitelistManager whitelistManager) {
-        address implementation = address(new WhitelistManager());
-        bytes memory data = abi.encodeCall(WhitelistManager.initialize, admin);
+    function deployWhitelistManager(address accessManager) public returns (WhitelistManager whitelistManager) {
+        address implementation = address(new WhitelistManager(accessManager));
+        bytes memory data = abi.encodeCall(WhitelistManager.initialize, accessManager);
         address proxy = address(new ERC1967Proxy(address(implementation), data));
         whitelistManager = WhitelistManager(proxy);
     }

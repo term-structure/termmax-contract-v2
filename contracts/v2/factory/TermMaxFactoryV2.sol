@@ -94,10 +94,6 @@ contract TermMaxFactoryV2 is ITermMaxFactory, FactoryEventsV2, VersionV2, WithWh
         );
     }
 
-    function _getRegistry() internal view override returns (address) {
-        return ACCESS_MANAGER;
-    }
-
     /**
      * @notice Creates a new TermMax market with specified parameters
      * @dev Clones the market implementation and initializes it with the provided parameters

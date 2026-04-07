@@ -262,17 +262,16 @@ contract MakerHelperTest is Test {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(delegatorPrivateKey, digest);
         DelegateAble.Signature memory delegateSignature = DelegateAble.Signature({v: v, r: r, s: s});
 
-        // Switch to delegatee to call the function (as required by setDelegateWithSignature)
+        // Switch to delegator to call the function (as required by setDelegateWithSignature)
         vm.stopPrank();
-        vm.startPrank(delegatee);
-
-        // Also need to approve tokens for delegatee
-        res.debt.mint(delegatee, debtTokenToDeposit);
-        deal(address(res.ft), delegatee, ftToDeposit);
+        vm.startPrank(delegator);
+        // Also need to approve tokens for delegator
+        res.debt.mint(delegator, debtTokenToDeposit);
+        deal(address(res.ft), delegator, ftToDeposit);
         res.debt.approve(address(makerHelper), debtTokenToDeposit);
         res.ft.approve(address(makerHelper), ftToDeposit);
         res.xt.approve(address(makerHelper), xtToDeposit);
-        res.collateral.mint(delegatee, collateralToMintGt);
+        res.collateral.mint(delegator, collateralToMintGt);
         res.collateral.approve(address(makerHelper), collateralToMintGt);
         if (salt % 2 == 0) {
             vm.expectRevert(MakerHelperErrors.OrderAddressIsDifferentFromDelegatee.selector);

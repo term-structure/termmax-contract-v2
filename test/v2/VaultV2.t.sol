@@ -98,7 +98,8 @@ contract VaultTestV2 is Test {
         vm.label(address(res.market), "market");
         MarketConfig memory marketConfig2 = JSONLoader.getMarketConfigFromJson(treasurer, testdata, ".marketConfig");
         marketConfig2.maturity = uint64(currentTime + 180 days);
-        TermMaxFactoryV2 factory = DeployUtils.deployFactory(deployer, res.whitelistManager);
+        TermMaxFactoryV2 factory =
+            DeployUtils.deployMarketFactory(address(res.accessManager), address(res.whitelistManager));
         market2 = TermMaxMarketV2(
             factory.createMarket(
                 DeployUtils.GT_ERC20,
@@ -143,7 +144,7 @@ contract VaultTestV2 is Test {
             0
         );
 
-        vault = DeployUtils.deployVault(deployer, initialParams, res.whitelistManager);
+        vault = DeployUtils.deployVault(res.vaultFactory, initialParams);
         vm.startPrank(deployer);
 
         vm.label(address(vault), "vault");
@@ -241,16 +242,22 @@ contract VaultTestV2 is Test {
         vm.stopPrank();
     }
 
+    function _setWhitelist(address c, IWhitelistManager.ContractModule module, bool isWhitelist) internal {
+        address[] memory targets = new address[](1);
+        targets[0] = c;
+        res.whitelistManager.batchSetWhitelist(targets, module, isWhitelist);
+    }
+
     function testMarketWhitelist() public {
         // check current timelock value
         assertEq(vault.timelock(), 86400);
 
+        res.accessManager.grantRole(res.accessManager.WHITELIST_ROLE(), curator);
+
         // submit market
         vm.startPrank(curator);
         address market = address(0x123);
-        MockWhitelistManager(address(res.whitelistManager)).setWhitelist(
-            market, IWhitelistManager.ContractModule.MARKET, true
-        );
+        _setWhitelist(market, IWhitelistManager.ContractModule.MARKET, true);
         vault.submitMarket(market, false);
 
         assertEq(vault.marketWhitelist(market), false);
@@ -266,18 +273,14 @@ contract VaultTestV2 is Test {
         vault.acceptMarket(market);
         assertEq(vault.marketWhitelist(market), true);
 
-        MockWhitelistManager(address(res.whitelistManager)).setWhitelist(
-            market, IWhitelistManager.ContractModule.MARKET, false
-        );
+        _setWhitelist(market, IWhitelistManager.ContractModule.MARKET, false);
         vault.submitMarket(market, false);
         assertEq(vault.marketWhitelist(market), false);
         vm.stopPrank();
 
         // Test revoke market
         address newMarket = address(0x456);
-        MockWhitelistManager(address(res.whitelistManager)).setWhitelist(
-            newMarket, IWhitelistManager.ContractModule.MARKET, true
-        );
+        _setWhitelist(newMarket, IWhitelistManager.ContractModule.MARKET, true);
         vm.prank(curator);
         vault.submitMarket(newMarket, true);
 
@@ -289,6 +292,8 @@ contract VaultTestV2 is Test {
     function test_RevertSetMarketWhitelist() public {
         address market = address(0x123);
 
+        res.accessManager.grantRole(res.accessManager.WHITELIST_ROLE(), curator);
+
         vm.prank(vm.randomAddress());
 
         vm.expectRevert(VaultErrors.NotCuratorRole.selector);
@@ -298,9 +303,7 @@ contract VaultTestV2 is Test {
         vm.expectRevert(abi.encodeWithSignature("TargetNotWhitelisted()"));
         vault.submitMarket(market, true);
 
-        MockWhitelistManager(address(res.whitelistManager)).setWhitelist(
-            market, IWhitelistManager.ContractModule.MARKET, true
-        );
+        _setWhitelist(market, IWhitelistManager.ContractModule.MARKET, true);
         vault.submitMarket(market, true);
 
         vm.expectRevert(VaultErrors.AlreadyPending.selector);
@@ -490,7 +493,7 @@ contract VaultTestV2 is Test {
     function testDepositWhenNoOrders() public {
         initialParams.name = "Vault-DAI2";
         initialParams.symbol = "Vault-DAI2";
-        TermMaxVaultV2 vault2 = DeployUtils.deployVault(deployer, initialParams);
+        TermMaxVaultV2 vault2 = DeployUtils.deployVault(res.vaultFactory, initialParams);
         vm.startPrank(deployer);
         uint256 amount = 10000e8;
         res.debt.mint(deployer, amount);

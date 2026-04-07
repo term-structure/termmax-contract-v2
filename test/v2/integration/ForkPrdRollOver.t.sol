@@ -32,6 +32,7 @@ import {
 import {TermMaxSwapData, TermMaxSwapAdapter} from "contracts/v2/router/swapAdapters/TermMaxSwapAdapter.sol";
 import {IWhitelistManager} from "contracts/v2/access/IWhitelistManager.sol";
 import {console} from "forge-std/console.sol";
+import {DeployUtils} from "test/v2/utils/DeployUtils.sol";
 import {RouterErrorsV2} from "contracts/v2/errors/RouterErrorsV2.sol";
 
 interface TestOracle is IOracle {
@@ -118,10 +119,10 @@ contract ForkPrdRollover is ForkBaseTestV2 {
         address admin = vm.randomAddress();
 
         vm.startPrank(admin);
-        IWhitelistManager whitelistManager;
-        (router, whitelistManager) = deployRouter(admin);
+        DeployUtils.Res memory res = DeployUtils.deployRes(admin);
+        router = res.router;
 
-        TermMaxSwapAdapter tmx = new TermMaxSwapAdapter(address(whitelistManager));
+        TermMaxSwapAdapter tmx = new TermMaxSwapAdapter(address(res.whitelistManager));
         tmxAdapter = address(tmx);
         vm.label(tmxAdapter, "TermMaxAdapter");
 
@@ -129,12 +130,12 @@ contract ForkPrdRollover is ForkBaseTestV2 {
         adapters[0] = pendleAdapter;
         adapters[1] = odosAdapter;
         adapters[2] = tmxAdapter;
-        whitelistManager.batchSetWhitelist(adapters, IWhitelistManager.ContractModule.ADAPTER, true);
+        res.whitelistManager.batchSetWhitelist(adapters, IWhitelistManager.ContractModule.ADAPTER, true);
 
         address[] memory callbacks = new address[](2);
         callbacks[0] = address(ITermMaxOrder(o_may_30).orderConfig().swapTrigger);
         callbacks[1] = address(ITermMaxOrder(o_aug_1).orderConfig().swapTrigger);
-        whitelistManager.batchSetWhitelist(callbacks, IWhitelistManager.ContractModule.ORDER_CALLBACK, true);
+        res.whitelistManager.batchSetWhitelist(callbacks, IWhitelistManager.ContractModule.ORDER_CALLBACK, true);
         vm.stopPrank();
     }
 

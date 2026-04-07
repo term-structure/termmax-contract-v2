@@ -32,7 +32,7 @@ import {TermMaxOrderV2} from "contracts/v2/TermMaxOrderV2.sol";
 import {ITermMaxVaultV2, OrderV2ConfigurationParams, CurveCuts} from "contracts/v2/vault/ITermMaxVaultV2.sol";
 import {VaultEventsV2} from "contracts/v2/events/VaultEventsV2.sol";
 import {IWhitelistManager} from "contracts/v2/access/IWhitelistManager.sol";
-import {MockWhitelistManager} from "contracts/v2/test/MockWhitelistManager.sol";
+import {WhitelistManager} from "contracts/v2/access/WhitelistManager.sol";
 
 contract AccessManagerTestV2 is Test {
     using JSONLoader for *;
@@ -50,7 +50,7 @@ contract AccessManagerTestV2 is Test {
     AccessManagerV2 manager;
     address curator = vm.randomAddress();
     TermMaxOrderV2 vaultOrder;
-    MockWhitelistManager whitelistManager;
+    WhitelistManager whitelistManager;
 
     function setUp() public {
         vm.startPrank(deployer);
@@ -62,16 +62,9 @@ contract AccessManagerTestV2 is Test {
         marketConfig = JSONLoader.getMarketConfigFromJson(treasurer, testdata, ".marketConfig");
         orderConfig = JSONLoader.getOrderConfigFromJson(testdata, ".orderConfig");
 
-        whitelistManager = new MockWhitelistManager();
-
-        AccessManagerV2 implementation = new AccessManagerV2();
-        bytes memory data = abi.encodeCall(AccessManager.initialize, deployer);
-        address proxy = address(new ERC1967Proxy(address(implementation), data));
-
-        manager = AccessManagerV2(proxy);
-
-        res = DeployUtils.deployMarket(deployer, manager, marketConfig, maxLtv, liquidationLtv, whitelistManager);
-
+        res = DeployUtils.deployMarket(deployer, marketConfig, maxLtv, liquidationLtv);
+        whitelistManager = res.whitelistManager;
+        manager = res.accessManager;
         res.order = TermMaxOrderV2(
             address(
                 res.market.createOrder(
@@ -93,25 +86,14 @@ contract AccessManagerTestV2 is Test {
         res.ft.transfer(address(res.order), amount);
         res.xt.transfer(address(res.order), amount);
 
-        res.router = DeployUtils.deployRouter(deployer, res.whitelistManager);
+        res.router = DeployUtils.deployRouter(deployer, address(res.whitelistManager));
 
-        IOwnable(address(res.factory)).transferOwnership(address(manager));
-        IOwnable(address(res.market)).transferOwnership(address(manager));
-        IOwnable(address(res.router)).transferOwnership(address(manager));
-        IOwnable(address(res.oracle)).transferOwnership(address(manager));
-
-        manager.acceptOwnership(IOwnable(address(res.factory)));
-        manager.acceptOwnership(IOwnable(address(res.market)));
+        res.router.transferOwnership(address(manager));
         manager.acceptOwnership(IOwnable(address(res.router)));
+        res.oracle.transferOwnership(address(manager));
         manager.acceptOwnership(IOwnable(address(res.oracle)));
-
-        manager.grantRole(manager.CONFIGURATOR_ROLE(), deployer);
-        manager.grantRole(manager.PAUSER_ROLE(), deployer);
-        manager.grantRole(manager.VAULT_ROLE(), deployer);
-        manager.grantRole(manager.MARKET_ROLE(), deployer);
-        manager.grantRole(manager.ORACLE_ROLE(), deployer);
-        manager.grantRole(manager.WHITELIST_ROLE(), deployer);
-        manager.grantRole(manager.UPGRADER_ROLE(), deployer);
+        res.market.transferOwnership(address(manager));
+        manager.acceptOwnership(IOwnable(address(res.market)));
 
         // Create vault initialization parameters
         VaultInitialParamsV2 memory params = VaultInitialParamsV2({
@@ -129,7 +111,7 @@ contract AccessManagerTestV2 is Test {
         });
 
         // Deploy vault
-        res.vault = DeployUtils.deployVault(deployer, manager, params, res.whitelistManager);
+        res.vault = DeployUtils.deployVault(res.vaultFactory, params);
         vm.stopPrank();
 
         vm.startPrank(curator);
@@ -351,7 +333,7 @@ contract AccessManagerTestV2 is Test {
         });
 
         // Deploy vault
-        TermMaxVaultV2 vault = DeployUtils.deployVault(address(manager), params);
+        TermMaxVaultV2 vault = DeployUtils.deployVault(res.vaultFactory, params, 1);
 
         // Grant VAULT_ROLE to the vault manager
         vm.startPrank(deployer);
@@ -389,14 +371,19 @@ contract AccessManagerTestV2 is Test {
         vm.stopPrank();
     }
 
+    function _setWhitelist(address addr, IWhitelistManager.ContractModule module, bool status) internal {
+        address[] memory addrArray = new address[](1);
+        addrArray[0] = addr;
+        manager.batchSetWhitelist(IWhitelistManager(address(res.whitelistManager)), addrArray, module, status);
+    }
+
     function testRevokeVaultPendingValues() public {
         address newMarket = vm.randomAddress();
         address newGuardian = vm.randomAddress();
         address vaultManager = vm.randomAddress();
 
-        MockWhitelistManager(address(res.whitelistManager)).setWhitelist(
-            newMarket, IWhitelistManager.ContractModule.MARKET, true
-        );
+        vm.prank(deployer);
+        _setWhitelist(newMarket, IWhitelistManager.ContractModule.MARKET, true);
 
         // Grant VAULT_ROLE to the vault manager and set curator
         vm.startPrank(deployer);
@@ -731,14 +718,13 @@ contract AccessManagerTestV2 is Test {
             minApy: 0
         });
 
-        TermMaxVaultV2 poolVault = DeployUtils.deployVault(deployer, manager, poolParams, res.whitelistManager);
+        TermMaxVaultV2 poolVault = DeployUtils.deployVault(res.vaultFactory, poolParams);
         ITermMaxVaultV2 poolVaultV2 = ITermMaxVaultV2(address(poolVault));
 
         address vaultManager = vm.randomAddress();
         address newPoolAddress = vm.randomAddress(); // Mock pool address
-        MockWhitelistManager(address(res.whitelistManager)).setWhitelist(
-            newPoolAddress, IWhitelistManager.ContractModule.POOL, true
-        );
+        vm.prank(deployer);
+        _setWhitelist(newPoolAddress, IWhitelistManager.ContractModule.POOL, true);
 
         // Grant VAULT_ROLE to the vault manager
         vm.startPrank(deployer);

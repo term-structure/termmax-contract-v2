@@ -141,56 +141,7 @@ abstract contract ForkBaseTestV2 is Test {
         priceFeed.updateRoundData(roundData);
     }
 
-    /// @dev Etches MockWhitelistManager bytecode onto `admin` if it has no code,
-    ///      so the address can serve as an IWhitelistRegistry implementation.
-    function _etchMockWhitelistManager(address admin) internal {
-        if (admin.code.length == 0) {
-            vm.etch(admin, address(new MockWhitelistManager()).code);
-        }
-    }
-
-    function deployFactory(address admin) public returns (TermMaxFactoryV2 factory) {
-        _etchMockWhitelistManager(admin);
-        address tokenImplementation = address(new MintableERC20V2());
-        address orderImplementation = address(new TermMaxOrderV2());
-        TermMaxMarketV2 m = new TermMaxMarketV2(tokenImplementation, orderImplementation);
-        IWhitelistManager whitelistManager = deployWhitelistManager(admin);
-        factory = new TermMaxFactoryV2(admin, address(m), address(whitelistManager));
-    }
-
-    function deployFactoryWithMockOrder(address admin) public returns (TermMaxFactoryV2 factory) {
-        _etchMockWhitelistManager(admin);
-        address tokenImplementation = address(new MintableERC20V2());
-        address orderImplementation = address(new MockOrderV2());
-        TermMaxMarketV2 m = new TermMaxMarketV2(tokenImplementation, orderImplementation);
-        IWhitelistManager whitelistManager = deployWhitelistManager(admin);
-        factory = new TermMaxFactoryV2(admin, address(m), address(whitelistManager));
-    }
-
-    function deployVaultFactory(address admin) public returns (TermMaxVaultFactoryV2 vaultFactory) {
-        _etchMockWhitelistManager(admin);
-        OrderManagerV2 orderManager = new OrderManagerV2();
-        IWhitelistManager whitelistManager = deployWhitelistManager(admin);
-        TermMaxVaultV2 implementation = new TermMaxVaultV2(address(orderManager), address(whitelistManager));
-        vaultFactory = new TermMaxVaultFactoryV2(admin, address(implementation), address(whitelistManager));
-    }
-
-    function deployOracleAggregator(address admin) public returns (OracleAggregatorV2 oracle) {
-        oracle = new OracleAggregatorV2(admin, 0);
-    }
-
     function deployMockPriceFeed(address admin) public returns (MockPriceFeed priceFeed) {
         priceFeed = new MockPriceFeed(admin);
-    }
-
-    function deployRouter(address admin) public returns (TermMaxRouterV2, IWhitelistManager) {
-        return DeployUtils.deployRouter(admin);
-    }
-
-    function deployWhitelistManager(address admin) internal returns (IWhitelistManager whitelistManager) {
-        WhitelistManager implementation = new WhitelistManager();
-        bytes memory data = abi.encodeCall(WhitelistManager.initialize, admin);
-        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), data);
-        whitelistManager = IWhitelistManager(address(proxy));
     }
 }

@@ -52,10 +52,6 @@ contract TermMax4626Factory is VersionV2, WithWhitelistCheck, WithAccessManagerR
         );
     }
 
-    function _getRegistry() internal view override returns (address) {
-        return ACCESS_MANAGER;
-    }
-
     function getImplementations(string memory key) external view returns (address) {
         return implementations[keccak256(abi.encodePacked(key))];
     }
