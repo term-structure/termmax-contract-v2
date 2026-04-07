@@ -22,7 +22,7 @@ import {TransferUtils} from "../v1/lib/TransferUtils.sol";
 import {ITermMaxOrderV2, OrderInitialParams} from "./ITermMaxOrderV2.sol";
 import {OrderEventsV2} from "./events/OrderEventsV2.sol";
 import {OrderErrorsV2} from "./errors/OrderErrorsV2.sol";
-import {VersionV2} from "./VersionV2.sol";
+import {VersionV2_0_1} from "./VersionV2_0_1.sol";
 
 /**
  * @title TermMax Order V2
@@ -37,7 +37,7 @@ contract TermMaxOrderV2 is
     PausableUpgradeable,
     OrderErrors,
     OrderEvents,
-    VersionV2
+    VersionV2_0_1
 {
     using SafeCast for uint256;
     using SafeCast for int256;
