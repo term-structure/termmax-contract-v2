@@ -11,7 +11,6 @@ import {WithAccessManagerRole} from "./WithAccessManagerRole.sol";
 import {VersionV2_0_1} from "../VersionV2_0_1.sol";
 
 /**
- * TODO add with access manager role and whitelist check
  * @title WhitelistManager
  * @author Term Structure Labs
  * @notice Manages whitelists for different contract modules such as adapters, order callbacks, and markets
