@@ -486,7 +486,10 @@ contract TermMaxMarketV2 is
     }
 
     function _initalizeOrder(OrderInitialParams memory params, address order) internal {
-        params.maturity = _config.maturity;
+        if (params.maturity == 0) {
+            params.maturity = _config.maturity;
+        }
+
         params.ft = ft;
         params.xt = xt;
         params.gt = gt;

@@ -19,4 +19,7 @@ interface OrderErrorsV2 {
     /// @notice Error thrown when attempting to call updateOrder function on a v2 order
     /// The v2 orders do not support the updateOrder function
     error UpdateOrderFunctionDisabled();
+
+    /// @notice Error thrown when setting an expiry timestamp that is after the market maturity
+    error InvalidExpiryTimestamp();
 }
