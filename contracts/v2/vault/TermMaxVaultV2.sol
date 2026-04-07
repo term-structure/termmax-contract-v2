@@ -35,7 +35,7 @@ import {Constants} from "../../v1/lib/Constants.sol";
 import {ITermMaxVaultV2} from "./ITermMaxVaultV2.sol";
 import {VaultErrorsV2} from "../errors/VaultErrorsV2.sol";
 import {TransactionReentrancyGuard} from "../lib/TransactionReentrancyGuard.sol";
-import {VersionV2} from "../VersionV2.sol";
+import {VersionV2_0_1} from "../VersionV2_0_1.sol";
 import {WithWhitelistCheck, IWhitelistManager} from "../access/WithWhitelistCheck.sol";
 
 contract TermMaxVaultV2 is
@@ -47,7 +47,7 @@ contract TermMaxVaultV2 is
     ISwapCallback,
     ITermMaxVaultV2,
     TransactionReentrancyGuard,
-    VersionV2,
+    VersionV2_0_1,
     WithWhitelistCheck
 {
     using SafeCast for uint256;

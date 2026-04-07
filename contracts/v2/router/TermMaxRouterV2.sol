@@ -32,7 +32,7 @@ import {RouterErrorsV2} from "../errors/RouterErrorsV2.sol";
 import {RouterEventsV2} from "../events/RouterEventsV2.sol";
 import {ArrayUtilsV2} from "../lib/ArrayUtilsV2.sol";
 import {WithWhitelistCheck, IWhitelistManager} from "../access/WithWhitelistCheck.sol";
-import {VersionV2} from "../VersionV2.sol";
+import {VersionV2_0_1} from "../VersionV2_0_1.sol";
 
 /**
  * @title TermMax Router V2
@@ -48,7 +48,7 @@ contract TermMaxRouterV2 is
     ITermMaxRouterV2,
     RouterErrors,
     RouterEvents,
-    VersionV2,
+    VersionV2_0_1,
     ReentrancyGuardUpgradeable,
     WithWhitelistCheck
 {

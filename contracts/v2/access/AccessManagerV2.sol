@@ -7,7 +7,7 @@ import {ITermMaxVaultV2, OrderV2ConfigurationParams, CurveCuts} from "../vault/I
 import {IWhitelistManager} from "./IWhitelistManager.sol";
 import {IStableERC4626For4626, StakingBuffer} from "../tokens/IStableERC4626For4626.sol";
 import {TransferUtilsV2} from "../lib/TransferUtilsV2.sol";
-import {VersionV2} from "../VersionV2.sol";
+import {VersionV2_0_1} from "../VersionV2_0_1.sol";
 
 /**
  * @title TermMax Access Manager V2
@@ -15,7 +15,7 @@ import {VersionV2} from "../VersionV2.sol";
  * @notice Extended access manager for TermMax V2 protocol with additional oracle and batch operations
  * @dev Inherits from AccessManager V1 and adds V2-specific functionality for managing oracles and batch operations
  */
-contract AccessManagerV2 is AccessManager, VersionV2 {
+contract AccessManagerV2 is AccessManager, VersionV2_0_1 {
     using TransferUtilsV2 for *;
 
     error CannotRenounceRole();

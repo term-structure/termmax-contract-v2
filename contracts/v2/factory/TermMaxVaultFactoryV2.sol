@@ -8,13 +8,13 @@ import {ITermMaxVaultFactoryV2} from "./ITermMaxVaultFactoryV2.sol";
 import {VaultInitialParamsV2} from "../storage/TermMaxStorageV2.sol";
 import {WithAccessManagerRole} from "../access/WithAccessManagerRole.sol";
 import {WithWhitelistCheck, IWhitelistManager} from "../access/WithWhitelistCheck.sol";
-import {VersionV2} from "../VersionV2.sol";
+import {VersionV2_0_1} from "../VersionV2_0_1.sol";
 
 /**
  * @title The TermMax vault factory v2
  * @author Term Structure Labs
  */
-contract TermMaxVaultFactoryV2 is ITermMaxVaultFactoryV2, VersionV2, WithWhitelistCheck, WithAccessManagerRole {
+contract TermMaxVaultFactoryV2 is ITermMaxVaultFactoryV2, VersionV2_0_1, WithWhitelistCheck, WithAccessManagerRole {
     /**
      * @notice The implementation of TermMax Vault contract v2
      */

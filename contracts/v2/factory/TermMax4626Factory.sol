@@ -12,9 +12,9 @@ import {FactoryEventsV2} from "../events/FactoryEventsV2.sol";
 import {FactoryErrorsV2} from "../errors/FactoryErrorsV2.sol";
 import {WithAccessManagerRole} from "../access/WithAccessManagerRole.sol";
 import {WithWhitelistCheck, IWhitelistManager} from "../access/WithWhitelistCheck.sol";
-import {VersionV2} from "../VersionV2.sol";
+import {VersionV2_0_1} from "../VersionV2_0_1.sol";
 
-contract TermMax4626Factory is VersionV2, WithWhitelistCheck, WithAccessManagerRole {
+contract TermMax4626Factory is VersionV2_0_1, WithWhitelistCheck, WithAccessManagerRole {
     using Clones for address;
 
     bytes32 public constant STABLE_ERC4626_FOR_4626 = keccak256("StableERC4626For4626");

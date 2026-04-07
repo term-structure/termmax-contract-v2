@@ -8,7 +8,7 @@ import {
 } from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {IWhitelistManager} from "./IWhitelistManager.sol";
 import {WithAccessManagerRole} from "./WithAccessManagerRole.sol";
-import {VersionV2} from "../VersionV2.sol";
+import {VersionV2_0_1} from "../VersionV2_0_1.sol";
 
 /**
  * TODO add with access manager role and whitelist check
@@ -22,7 +22,7 @@ contract WhitelistManager is
     UUPSUpgradeable,
     Ownable2StepUpgradeable,
     WithAccessManagerRole,
-    VersionV2
+    VersionV2_0_1
 {
     mapping(ContractModule => mapping(address => bool)) private whitelists;
 
