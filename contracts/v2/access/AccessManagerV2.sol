@@ -3,9 +3,9 @@ pragma solidity ^0.8.27;
 
 import "../../v1/access/AccessManager.sol";
 import {IOracleV2} from "../oracle/IOracleV2.sol";
-import {ITermMaxVaultV2, OrderV2ConfigurationParams, CurveCuts} from "../vault/ITermMaxVaultV2.sol";
+import {ITermMaxVaultV2, OrderV2ConfigurationParams, CurveCuts, IERC4626} from "../vault/ITermMaxVaultV2.sol";
 import {IWhitelistManager} from "./IWhitelistManager.sol";
-import {IStableERC4626For4626, StakingBuffer} from "../tokens/IStableERC4626For4626.sol";
+import {IStableERC4626For4626, StakingBuffer, IERC20} from "../tokens/IStableERC4626For4626.sol";
 import {TransferUtilsV2} from "../lib/TransferUtilsV2.sol";
 import {VersionV2_0_1} from "../VersionV2_0_1.sol";
 
@@ -118,8 +118,9 @@ contract AccessManagerV2 is AccessManager, VersionV2_0_1 {
         StakingBuffer.BufferConfig memory bufferConfig_
     ) external onlyRole(STABLE_ERC4626_BUFFER_ROLE) {
         if (additionalReserves != 0) {
-            stableERC4626.safeTransferFrom(msg.sender, address(this), additionalReserves);
-            stableERC4626.safeApprove(address(stableERC4626), additionalReserves);
+            IERC20 asset = IERC20(IERC4626(address(stableERC4626)).asset());
+            asset.safeTransferFrom(msg.sender, address(this), additionalReserves);
+            asset.safeApprove(address(stableERC4626), additionalReserves);
         }
         stableERC4626.updateBufferConfigAndAddReserves(additionalReserves, bufferConfig_);
     }

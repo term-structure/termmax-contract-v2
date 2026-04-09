@@ -40,7 +40,7 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable, Roles {
     /// @notice Set GT implementation to the factory
     function setGtImplement(ITermMaxFactory factory, string memory gtImplementName, address gtImplement)
         external
-        onlyRole(MARKET_ROLE)
+        onlyRole(TERMMAX_MARKET_FACTORY_ROLE)
     {
         factory.setGtImplement(gtImplementName, gtImplement);
     }

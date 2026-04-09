@@ -2,7 +2,6 @@
 pragma solidity ^0.8.27;
 
 import "forge-std/Test.sol";
-import {console} from "forge-std/console.sol";
 import {DeployUtils} from "./utils/DeployUtils.sol";
 import {JSONLoader} from "./utils/JSONLoader.sol";
 import {IAccessControl} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
@@ -15,7 +14,6 @@ import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/acces
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import {GearingTokenWithERC20} from "contracts/v1/tokens/GearingTokenWithERC20.sol";
 import {ITermMaxMarket} from "contracts/v1/ITermMaxMarket.sol";
-import {MockERC20} from "contracts/v1/test/MockERC20.sol";
 import {MockPriceFeed} from "contracts/v1/test/MockPriceFeed.sol";
 import {ITermMaxFactory} from "contracts/v1/factory/ITermMaxFactory.sol";
 import {MarketConfig, FeeConfig, MarketInitialParams} from "contracts/v1/storage/TermMaxStorage.sol";
@@ -31,11 +29,10 @@ import {VaultInitialParamsV2} from "contracts/v2/storage/TermMaxStorageV2.sol";
 import {TermMaxOrderV2} from "contracts/v2/TermMaxOrderV2.sol";
 import {ITermMaxVaultV2, OrderV2ConfigurationParams, CurveCuts} from "contracts/v2/vault/ITermMaxVaultV2.sol";
 import {VaultEventsV2} from "contracts/v2/events/VaultEventsV2.sol";
-import {IWhitelistManager} from "contracts/v2/access/IWhitelistManager.sol";
-import {WhitelistManager} from "contracts/v2/access/WhitelistManager.sol";
+import {IWhitelistManager, WhitelistManager} from "contracts/v2/access/WhitelistManager.sol";
 import {IStableERC4626For4626} from "contracts/v2/tokens/IStableERC4626For4626.sol";
-import {StakingBuffer} from "contracts/v2/tokens/StakingBuffer.sol";
-import {MockStableERC4626For4626} from "contracts/v2/test/MockStableERC4626For4626.sol";
+import {StableERC4626For4626, StakingBuffer} from "contracts/v2/tokens/StableERC4626For4626.sol";
+import {MockERC4626} from "contracts/v2/test/MockERC4626.sol";
 
 contract AccessManagerTestV2 is Test {
     using JSONLoader for *;
@@ -55,6 +52,8 @@ contract AccessManagerTestV2 is Test {
     TermMaxOrderV2 vaultOrder;
     WhitelistManager whitelistManager;
 
+    IStableERC4626For4626 stable4626;
+
     function setUp() public {
         vm.startPrank(deployer);
         testdata = vm.readFile(string.concat(vm.projectRoot(), "/test/testdata/testdata.json"));
@@ -66,6 +65,15 @@ contract AccessManagerTestV2 is Test {
         orderConfig = JSONLoader.getOrderConfigFromJson(testdata, ".orderConfig");
 
         res = DeployUtils.deployMarket(deployer, marketConfig, maxLtv, liquidationLtv);
+        stable4626 = IStableERC4626For4626(
+            address(
+                res.poolFactory.createStableERC4626For4626(
+                    address(res.accessManager),
+                    address(new MockERC4626(res.debt)),
+                    StakingBuffer.BufferConfig({minimumBuffer: 100e6, maximumBuffer: 500e6, buffer: 300e6})
+                )
+            )
+        );
         whitelistManager = res.whitelistManager;
         manager = res.accessManager;
         res.order = TermMaxOrderV2(
@@ -477,7 +485,7 @@ contract AccessManagerTestV2 is Test {
         vm.startPrank(sender);
         vm.expectRevert(
             abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector, sender, manager.MARKET_ROLE()
+                IAccessControl.AccessControlUnauthorizedAccount.selector, sender, manager.TERMMAX_MARKET_FACTORY_ROLE()
             )
         );
         manager.setGtImplement(ITermMaxFactory(address(res.factory)), gtImplementName, newImplement);
@@ -826,7 +834,6 @@ contract AccessManagerTestV2 is Test {
     }
 
     function testUpdateBufferConfigAndAddReservesAccessControl() public {
-        MockStableERC4626For4626 stable4626 = new MockStableERC4626For4626();
         address operator = vm.randomAddress();
         StakingBuffer.BufferConfig memory newConfig =
             StakingBuffer.BufferConfig({minimumBuffer: 100e6, maximumBuffer: 500e6, buffer: 300e6});
@@ -835,28 +842,29 @@ contract AccessManagerTestV2 is Test {
         vm.prank(deployer);
         manager.grantRole(manager.STABLE_ERC4626_BUFFER_ROLE(), operator);
 
-        stable4626.mint(operator, additionalReserves);
+        res.debt.mint(operator, additionalReserves);
         vm.prank(operator);
-        stable4626.approve(address(manager), additionalReserves);
+        res.debt.approve(address(manager), additionalReserves);
 
+        uint256 initialReserves = res.debt.balanceOf(address(stable4626));
         vm.prank(operator);
         manager.updateBufferConfigAndAddReserves(
             IStableERC4626For4626(address(stable4626)), additionalReserves, newConfig
         );
 
-        assertTrue(stable4626.updateCalled());
-        assertEq(stable4626.lastAdditionalReserves(), additionalReserves);
-        assertEq(stable4626.lastMinimumBuffer(), newConfig.minimumBuffer);
-        assertEq(stable4626.lastMaximumBuffer(), newConfig.maximumBuffer);
-        assertEq(stable4626.lastBuffer(), newConfig.buffer);
-    }
+        StableERC4626For4626 stc = StableERC4626For4626(address(stable4626));
+        (uint256 minimumBuffer, uint256 maximumBuffer, uint256 buffer) = stc.bufferConfig();
+        assertEq(minimumBuffer, newConfig.minimumBuffer, "Minimum buffer should be updated in the vault");
+        assertEq(maximumBuffer, newConfig.maximumBuffer, "Maximum buffer should be updated in the vault");
+        assertEq(buffer, newConfig.buffer, "Buffer should be updated in the vault");
+        uint256 expectedTotalReserves = initialReserves + additionalReserves;
+        assertEq(
+            res.debt.balanceOf(address(stable4626)),
+            expectedTotalReserves,
+            "Additional reserves should be added to the vault"
+        );
 
-    function testUpdateBufferConfigAndAddReservesWithoutRole() public {
-        MockStableERC4626For4626 stable4626 = new MockStableERC4626For4626();
         address unauthorized = vm.randomAddress();
-        StakingBuffer.BufferConfig memory newConfig =
-            StakingBuffer.BufferConfig({minimumBuffer: 100e6, maximumBuffer: 500e6, buffer: 300e6});
-
         vm.startPrank(unauthorized);
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -870,26 +878,25 @@ contract AccessManagerTestV2 is Test {
     }
 
     function testWithdrawIncomeAssetsAccessControl() public {
-        MockStableERC4626For4626 stable4626 = new MockStableERC4626For4626();
         address operator = vm.randomAddress();
-        address asset = vm.randomAddress();
-        address to = vm.randomAddress();
         uint256 amount = 99e6;
+
+        res.debt.mint(address(stable4626), amount);
 
         vm.prank(deployer);
         manager.grantRole(manager.STABLE_ERC4626_INCOME_WITHDRAW_ROLE(), operator);
 
         vm.prank(operator);
-        manager.withdrawIncomeAssets(IStableERC4626For4626(address(stable4626)), asset, to, amount);
+        manager.withdrawIncomeAssets(IStableERC4626For4626(address(stable4626)), address(res.debt), operator, amount);
 
-        assertTrue(stable4626.withdrawCalled());
-        assertEq(stable4626.lastAsset(), asset);
-        assertEq(stable4626.lastTo(), to);
-        assertEq(stable4626.lastAmount(), amount);
-    }
+        // Verify the asset was transferred to the recipient
+        assertEq(res.debt.balanceOf(operator), amount, "Income asset should be transferred to the recipient");
+        assertEq(
+            res.debt.balanceOf(address(stable4626)),
+            0,
+            "The withdrawn amount should be deducted from the vault's balance"
+        );
 
-    function testWithdrawIncomeAssetsWithoutRole() public {
-        MockStableERC4626For4626 stable4626 = new MockStableERC4626For4626();
         address unauthorized = vm.randomAddress();
 
         vm.startPrank(unauthorized);
@@ -903,8 +910,4 @@ contract AccessManagerTestV2 is Test {
         manager.withdrawIncomeAssets(IStableERC4626For4626(address(stable4626)), address(1), address(2), 1e6);
         vm.stopPrank();
     }
-
-    // Import the events for testing
-    event RevokePendingMinApy(address indexed caller);
-    event RevokePendingPool(address indexed caller);
 }
