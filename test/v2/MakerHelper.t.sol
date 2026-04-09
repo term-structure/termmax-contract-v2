@@ -9,6 +9,7 @@ import {StateChecker} from "./utils/StateChecker.sol";
 import {SwapUtils} from "./utils/SwapUtils.sol";
 import {LoanUtils} from "./utils/LoanUtils.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
@@ -59,6 +60,7 @@ import {
 import {ITermMaxRouter} from "contracts/v1/router/ITermMaxRouter.sol";
 import {MockSwapAdapterV2} from "contracts/v2/test/MockSwapAdapterV2.sol";
 import {ITermMaxOrder} from "contracts/v1/ITermMaxOrder.sol";
+import {ITermMaxMarket} from "contracts/v1/ITermMaxMarket.sol";
 import {TermMaxSwapData, TermMaxSwapAdapter} from "contracts/v2/router/swapAdapters/TermMaxSwapAdapter.sol";
 import {TermMaxOrderV2, OrderInitialParams} from "contracts/v2/TermMaxOrderV2.sol";
 import {MakerHelper, MakerHelperErrors} from "contracts/v2/router/MakerHelper.sol";
@@ -124,7 +126,7 @@ contract MakerHelperTest is Test {
         res.ft.transfer(address(res.order), amount);
         res.xt.transfer(address(res.order), amount);
 
-        address implementation = address(new MakerHelper());
+        address implementation = address(new MakerHelper(address(res.whitelistManager)));
         bytes memory data = abi.encodeCall(MakerHelper.initialize, deployer);
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), data);
         makerHelper = MakerHelper(address(proxy));
@@ -200,6 +202,53 @@ contract MakerHelperTest is Test {
         assertEq(order.maker(), sender);
         assertEq(res.ft.balanceOf(address(order)), ftToDeposit + debtTokenToDeposit);
         assertEq(res.xt.balanceOf(address(order)), xtToDeposit + debtTokenToDeposit);
+
+        vm.stopPrank();
+    }
+
+    function testPlaceOrderForV1RevertIfMarketNotWhitelisted() public {
+        vm.startPrank(sender);
+
+        vm.expectRevert(abi.encodeWithSignature("TargetNotWhitelisted()"));
+        makerHelper.placeOrderForV1(ITermMaxMarket(vm.randomAddress()), sender, 0, 0, 0, 0, orderConfig);
+
+        vm.stopPrank();
+    }
+
+    function testPlaceOrderForV2RevertIfPoolNotWhitelisted(uint256 salt) public {
+        vm.startPrank(sender);
+
+        OrderInitialParams memory initialParams;
+        initialParams.maker = sender;
+        initialParams.orderConfig = orderConfig;
+        initialParams.orderConfig.gtId = 1;
+        initialParams.virtualXtReserve = 1e8;
+        initialParams.pool = IERC4626(vm.randomAddress());
+
+        DelegateAble.DelegateParameters memory delegateParams;
+        DelegateAble.Signature memory delegateSignature;
+
+        vm.expectRevert(abi.encodeWithSignature("TargetNotWhitelisted()"));
+        makerHelper.placeOrderForV2(res.market, salt, 0, 0, 0, 0, initialParams, delegateParams, delegateSignature);
+
+        vm.stopPrank();
+    }
+
+    function testPlaceOrderForV2RevertIfSwapTriggerNotWhitelisted(uint256 salt) public {
+        vm.startPrank(sender);
+
+        OrderInitialParams memory initialParams;
+        initialParams.maker = sender;
+        initialParams.orderConfig = orderConfig;
+        initialParams.orderConfig.gtId = 1;
+        initialParams.orderConfig.swapTrigger = ISwapCallback(vm.randomAddress());
+        initialParams.virtualXtReserve = 1e8;
+
+        DelegateAble.DelegateParameters memory delegateParams;
+        DelegateAble.Signature memory delegateSignature;
+
+        vm.expectRevert(abi.encodeWithSignature("TargetNotWhitelisted()"));
+        makerHelper.placeOrderForV2(res.market, salt, 0, 0, 0, 0, initialParams, delegateParams, delegateSignature);
 
         vm.stopPrank();
     }

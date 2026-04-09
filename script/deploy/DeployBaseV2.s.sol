@@ -345,18 +345,21 @@ contract DeployBaseV2 is Script {
         router = TermMaxRouterV2(routerProxy);
     }
 
-    function deployMakerHelper(address admin) public returns (MakerHelper makerHelper) {
-        address implementation = address(new MakerHelper());
-        bytes memory data = abi.encodeCall(MakerHelper.initialize, (admin));
+    function deployMakerHelper(address accessManager, address whitelistManager)
+        public
+        returns (MakerHelper makerHelper)
+    {
+        address implementation = address(new MakerHelper(whitelistManager));
+        bytes memory data = abi.encodeCall(MakerHelper.initialize, (accessManager));
         address proxy = address(new ERC1967Proxy(address(implementation), data));
         makerHelper = MakerHelper(proxy);
     }
 
-    function upgradeMakerHelper(AccessManagerV2 manager, address makerHelperProxy)
+    function upgradeMakerHelper(AccessManagerV2 manager, address makerHelperProxy, address whitelistManager)
         public
         returns (MakerHelper makerHelper)
     {
-        address implementation = address(new MakerHelper());
+        address implementation = address(new MakerHelper(whitelistManager));
         bytes memory data = bytes("");
         manager.upgradeSubContract(UUPSUpgradeable(makerHelperProxy), address(implementation), data);
         makerHelper = MakerHelper(makerHelperProxy);
@@ -447,7 +450,7 @@ contract DeployBaseV2 is Script {
                 upgradeRouter(contracts.accessManager, address(contracts.router), address(contracts.whitelistManager));
         }
         // deploy maker helper
-        contracts.makerHelper = deployMakerHelper(address(contracts.accessManager));
+        contracts.makerHelper = deployMakerHelper(address(contracts.accessManager), address(contracts.whitelistManager));
         // deploy faucet
         if (address(contracts.faucet) == address(0)) {
             contracts.faucet = new Faucet(params.deployerAddr);
