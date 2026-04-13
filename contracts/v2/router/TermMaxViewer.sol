@@ -165,6 +165,16 @@ contract TermMaxViewer is UUPSUpgradeable, Ownable2StepUpgradeable {
         for (uint256 i = 0; i < pools.length; i++) {
             ITermMax4626Pool pool = pools[i];
             asset[i] = pool.asset();
+            bool incomeSuccess = false;
+            try pool.currentIncomeAssets() returns (uint256 incomeAssets) {
+                amount[i] = incomeAssets;
+                incomeSuccess = true;
+            } catch {
+                // If currentIncomeAssets is unavailable, fall back to balance-based calculation
+            }
+            if (incomeSuccess) {
+                continue;
+            }
             uint256 totalAssets = pool.totalAssets();
             uint256 totalFunds = IERC20(asset[i]).balanceOf(address(pool));
             try pool.aToken() returns (IERC20 aToken) {
