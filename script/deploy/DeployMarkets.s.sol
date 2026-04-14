@@ -26,11 +26,12 @@ contract DeployMarketsScript is DeployBaseV2 {
     DeployedContracts coreContracts;
 
     address[] markets;
-    string configPath = "script/deploy/deploydata/hyperevm-mainnet-markets.json";
+    string configPath = "-markets.json";
 
     function setUp() public {
         // Load network from environment variable
         network = vm.envString("NETWORK");
+        configPath = string.concat(vm.projectRoot(), "/script/deploy/deploydata/", network, configPath);
         // Load network-specific configuration
         {
             string memory networkUpper = toUpper(network);

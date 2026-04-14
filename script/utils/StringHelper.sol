@@ -23,6 +23,25 @@ library StringHelper {
         return string(bUpper);
     }
 
+    function toLower(string memory str) internal pure returns (string memory) {
+        bytes memory bStr = bytes(str);
+        bytes memory bLower = new bytes(bStr.length);
+        for (uint256 i = 0; i < bStr.length; i++) {
+            // Convert underscore to hyphen
+            if (bStr[i] == 0x5F) {
+                bLower[i] = 0x2D; // '-'
+                continue;
+            }
+            // Convert uppercase to lowercase
+            if ((uint8(bStr[i]) >= 65) && (uint8(bStr[i]) <= 90)) {
+                bLower[i] = bytes1(uint8(bStr[i]) + 32);
+            } else {
+                bLower[i] = bStr[i];
+            }
+        }
+        return string(bLower);
+    }
+
     // Format options:
     // 'YYYYMMDD' = YYYYMMDD (e.g., 20250626)
     // 'DDMMMYYYY' = DDMMMYYYY (e.g., 26JUN2025)
