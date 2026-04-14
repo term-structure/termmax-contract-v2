@@ -287,17 +287,20 @@ contract DeployBaseV2 is Script {
         console.log("Deployment info written to:", filePath);
     }
 
-    function deployFactory(address admin) public returns (TermMaxFactoryV2 factory) {
+    function deployFactory(address admin, address whitelistManager) public returns (TermMaxFactoryV2 factory) {
         address tokenImplementation = address(new MintableERC20V2());
         address orderImplementation = address(new TermMaxOrderV2());
         TermMaxMarketV2 m = new TermMaxMarketV2(tokenImplementation, orderImplementation);
-        factory = new TermMaxFactoryV2(admin, address(m));
+        factory = new TermMaxFactoryV2(admin, address(m), whitelistManager);
     }
 
-    function deployVaultFactory() public returns (TermMaxVaultFactoryV2 vaultFactory) {
+    function deployVaultFactory(address admin, address whitelistManager)
+        public
+        returns (TermMaxVaultFactoryV2 vaultFactory)
+    {
         OrderManagerV2 orderManager = new OrderManagerV2();
-        TermMaxVaultV2 implementation = new TermMaxVaultV2(address(orderManager));
-        vaultFactory = new TermMaxVaultFactoryV2(address(implementation));
+        TermMaxVaultV2 implementation = new TermMaxVaultV2(address(orderManager), whitelistManager);
+        vaultFactory = new TermMaxVaultFactoryV2(admin, address(implementation), whitelistManager);
     }
 
     function deployOracleAggregator(address admin, uint256 oracleTimelock) public returns (OracleAggregatorV2 oracle) {
@@ -314,9 +317,9 @@ contract DeployBaseV2 is Script {
     }
 
     function deployRouter(address admin, address whitelistManager) public returns (TermMaxRouterV2 router) {
-        TermMaxRouterV2 implementation = new TermMaxRouterV2();
+        TermMaxRouterV2 implementation = new TermMaxRouterV2(whitelistManager);
 
-        bytes memory data = abi.encodeCall(TermMaxRouterV2.initialize, (admin, whitelistManager));
+        bytes memory data = abi.encodeCall(TermMaxRouterV2.initialize, (admin));
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), data);
         router = TermMaxRouterV2(address(proxy));
     }
@@ -325,33 +328,38 @@ contract DeployBaseV2 is Script {
         public
         returns (TermMaxRouterV2 router)
     {
-        TermMaxRouterV2 implementation = new TermMaxRouterV2();
-        bytes memory data = abi.encodeCall(TermMaxRouterV2.initializeV2, whitelistManager);
+        TermMaxRouterV2 implementation = new TermMaxRouterV2(whitelistManager);
+        bytes memory data = abi.encodeCall(TermMaxRouterV2.initializeV2, ());
         manager.upgradeSubContract(UUPSUpgradeable(routerProxy), address(implementation), data);
         router = TermMaxRouterV2(routerProxy);
     }
 
-    function upgradeRouter(AccessManagerV2 manager, address routerProxy, bytes memory initData)
-        public
-        returns (TermMaxRouterV2 router)
-    {
-        TermMaxRouterV2 implementation = new TermMaxRouterV2();
+    function upgradeRouter(
+        AccessManagerV2 manager,
+        address routerProxy,
+        address whitelistManager,
+        bytes memory initData
+    ) public returns (TermMaxRouterV2 router) {
+        TermMaxRouterV2 implementation = new TermMaxRouterV2(whitelistManager);
         manager.upgradeSubContract(UUPSUpgradeable(routerProxy), address(implementation), initData);
         router = TermMaxRouterV2(routerProxy);
     }
 
-    function deployMakerHelper(address admin) public returns (MakerHelper makerHelper) {
-        address implementation = address(new MakerHelper());
-        bytes memory data = abi.encodeCall(MakerHelper.initialize, admin);
+    function deployMakerHelper(address accessManager, address whitelistManager)
+        public
+        returns (MakerHelper makerHelper)
+    {
+        address implementation = address(new MakerHelper(whitelistManager));
+        bytes memory data = abi.encodeCall(MakerHelper.initialize, (accessManager));
         address proxy = address(new ERC1967Proxy(address(implementation), data));
         makerHelper = MakerHelper(proxy);
     }
 
-    function upgradeMakerHelper(AccessManagerV2 manager, address makerHelperProxy)
+    function upgradeMakerHelper(AccessManagerV2 manager, address makerHelperProxy, address whitelistManager)
         public
         returns (MakerHelper makerHelper)
     {
-        address implementation = address(new MakerHelper());
+        address implementation = address(new MakerHelper(whitelistManager));
         bytes memory data = bytes("");
         manager.upgradeSubContract(UUPSUpgradeable(makerHelperProxy), address(implementation), data);
         makerHelper = MakerHelper(makerHelperProxy);
@@ -376,16 +384,18 @@ contract DeployBaseV2 is Script {
         public
         returns (DeployedContracts memory)
     {
-        // deploy factory
-        contracts.factory = deployFactory(address(contracts.accessManager));
-
         // deploy whitelist manager
         contracts.whitelistManager = deployWhitelistManager(address(contracts.accessManager));
 
-        contracts.vaultFactory = deployVaultFactory();
+        // deploy factory
+        contracts.factory = deployFactory(address(contracts.accessManager), address(contracts.whitelistManager));
+
+        contracts.vaultFactory =
+            deployVaultFactory(address(contracts.accessManager), address(contracts.whitelistManager));
 
         // deploy vault factory
-        contracts.vaultFactory = deployVaultFactory();
+        contracts.vaultFactory =
+            deployVaultFactory(address(contracts.accessManager), address(contracts.whitelistManager));
 
         // deploy 4626 factory
         {
@@ -406,7 +416,8 @@ contract DeployBaseV2 is Script {
                 stableERC4626ForAave,
                 address(stableERC4626ForVenus),
                 variableERC4626ForAave,
-                address(stableERC4626ForCustomize)
+                address(stableERC4626ForCustomize),
+                address(contracts.whitelistManager)
             );
         }
 
@@ -439,7 +450,7 @@ contract DeployBaseV2 is Script {
                 upgradeRouter(contracts.accessManager, address(contracts.router), address(contracts.whitelistManager));
         }
         // deploy maker helper
-        contracts.makerHelper = deployMakerHelper(address(contracts.accessManager));
+        contracts.makerHelper = deployMakerHelper(address(contracts.accessManager), address(contracts.whitelistManager));
         // deploy faucet
         if (address(contracts.faucet) == address(0)) {
             contracts.faucet = new Faucet(params.deployerAddr);
@@ -515,9 +526,9 @@ contract DeployBaseV2 is Script {
         terminalVaultAdapter = new TerminalVaultAdapter();
     }
 
-    function deployWhitelistManager(address admin) public returns (WhitelistManager whitelistManager) {
-        address implementation = address(new WhitelistManager());
-        bytes memory data = abi.encodeCall(WhitelistManager.initialize, admin);
+    function deployWhitelistManager(address accessManager) public returns (WhitelistManager whitelistManager) {
+        address implementation = address(new WhitelistManager(accessManager));
+        bytes memory data = abi.encodeCall(WhitelistManager.initialize, accessManager);
         address proxy = address(new ERC1967Proxy(address(implementation), data));
         whitelistManager = WhitelistManager(proxy);
     }

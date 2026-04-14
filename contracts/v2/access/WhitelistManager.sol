@@ -7,7 +7,8 @@ import {
     OwnableUpgradeable
 } from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {IWhitelistManager} from "./IWhitelistManager.sol";
-import {VersionV2} from "../VersionV2.sol";
+import {WithAccessManagerRole} from "./WithAccessManagerRole.sol";
+import {VersionV2_0_1} from "../VersionV2_0_1.sol";
 
 /**
  * @title WhitelistManager
@@ -15,8 +16,16 @@ import {VersionV2} from "../VersionV2.sol";
  * @notice Manages whitelists for different contract modules such as adapters, order callbacks, and markets
  * @dev This contract uses UUPS upgradeability and Ownable2Step for ownership management
  */
-contract WhitelistManager is IWhitelistManager, UUPSUpgradeable, Ownable2StepUpgradeable, VersionV2 {
+contract WhitelistManager is
+    IWhitelistManager,
+    UUPSUpgradeable,
+    Ownable2StepUpgradeable,
+    WithAccessManagerRole,
+    VersionV2_0_1
+{
     mapping(ContractModule => mapping(address => bool)) private whitelists;
+
+    constructor(address accessManager) WithAccessManagerRole(accessManager) {}
 
     function _authorizeUpgrade(address newImplementation) internal virtual override onlyOwner {}
 
@@ -35,7 +44,7 @@ contract WhitelistManager is IWhitelistManager, UUPSUpgradeable, Ownable2StepUpg
 
     function batchSetWhitelist(address[] memory contractAddresses, ContractModule module, bool approved)
         external
-        onlyOwner
+        hasRole(WHITELIST_ROLE)
     {
         _setWhitelist(contractAddresses, module, approved);
     }

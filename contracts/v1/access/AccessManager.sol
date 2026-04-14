@@ -10,6 +10,7 @@ import {ITermMaxOrder} from "../ITermMaxOrder.sol";
 import {IOracle} from "../oracle/IOracle.sol";
 import {ITermMaxVault} from "../vault/ITermMaxVault.sol";
 import {MarketConfig, FeeConfig, MarketInitialParams} from "../storage/TermMaxStorage.sol";
+import {Roles} from "../../v2/access/Roles.sol";
 
 interface IOwnable {
     function transferOwnership(address newOwner) external;
@@ -27,19 +28,8 @@ interface IPausable {
  * @title TermMax Access Manager
  * @author Term Structure Labs
  */
-contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
+contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable, Roles {
     error CannotRevokeDefaultAdminRole();
-
-    /// @notice Role to manage switch
-    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
-    /// @notice Role to manage configuration items
-    bytes32 public constant CONFIGURATOR_ROLE = keccak256("CONFIGURATOR_ROLE");
-    /// @notice Role to manage vault
-    bytes32 public constant VAULT_ROLE = keccak256("VAULT_ROLE");
-    /// @notice Role to manage oracle
-    bytes32 public constant ORACLE_ROLE = keccak256("ORACLE_ROLE");
-    /// @notice Role to manage market
-    bytes32 public constant MARKET_ROLE = keccak256("MARKET_ROLE");
 
     function initialize(address admin) public initializer {
         __UUPSUpgradeable_init();
@@ -50,7 +40,7 @@ contract AccessManager is AccessControlUpgradeable, UUPSUpgradeable {
     /// @notice Set GT implementation to the factory
     function setGtImplement(ITermMaxFactory factory, string memory gtImplementName, address gtImplement)
         external
-        onlyRole(MARKET_ROLE)
+        onlyRole(TERMMAX_MARKET_FACTORY_ROLE)
     {
         factory.setGtImplement(gtImplementName, gtImplement);
     }

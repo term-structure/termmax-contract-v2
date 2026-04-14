@@ -2,8 +2,6 @@
 pragma solidity ^0.8.27;
 
 import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {StakingBuffer} from "../tokens/StakingBuffer.sol";
 import {StableERC4626For4626} from "../tokens/StableERC4626For4626.sol";
 import {StableERC4626ForAave} from "../tokens/StableERC4626ForAave.sol";
@@ -12,9 +10,11 @@ import {StableERC4626ForCustomize} from "../tokens/StableERC4626ForCustomize.sol
 import {VariableERC4626ForAave} from "../tokens/VariableERC4626ForAave.sol";
 import {FactoryEventsV2} from "../events/FactoryEventsV2.sol";
 import {FactoryErrorsV2} from "../errors/FactoryErrorsV2.sol";
-import {VersionV2} from "../VersionV2.sol";
+import {WithAccessManagerRole} from "../access/WithAccessManagerRole.sol";
+import {WithWhitelistCheck, IWhitelistManager} from "../access/WithWhitelistCheck.sol";
+import {VersionV2_0_1} from "../VersionV2_0_1.sol";
 
-contract TermMax4626Factory is VersionV2, Ownable2Step {
+contract TermMax4626Factory is VersionV2_0_1, WithWhitelistCheck, WithAccessManagerRole {
     using Clones for address;
 
     bytes32 public constant STABLE_ERC4626_FOR_4626 = keccak256("StableERC4626For4626");
@@ -26,13 +26,17 @@ contract TermMax4626Factory is VersionV2, Ownable2Step {
     mapping(bytes32 => address) internal implementations;
 
     constructor(
-        address owner,
+        address accessManager,
         address _stableERC4626For4626Implementation,
         address _stableERC4626ForAaveImplementation,
         address _stableERC4626ForVenusImplementation,
         address _variableERC4626ForAaveImplementation,
-        address _stableERC4626ForCustomizeImplementation
-    ) Ownable(owner) {
+        address _stableERC4626ForCustomizeImplementation,
+        address _whitelistManager
+    )
+        WithAccessManagerRole(accessManager)
+        WithWhitelistCheck(_whitelistManager, IWhitelistManager.ContractModule.POOL)
+    {
         implementations[STABLE_ERC4626_FOR_4626] = _stableERC4626For4626Implementation;
         implementations[STABLE_ERC4626_FOR_AAVE] = _stableERC4626ForAaveImplementation;
         implementations[STABLE_ERC4626_FOR_VENUS] = _stableERC4626ForVenusImplementation;
@@ -52,7 +56,7 @@ contract TermMax4626Factory is VersionV2, Ownable2Step {
         return implementations[keccak256(abi.encodePacked(key))];
     }
 
-    function setImplementation(string memory key, address implementation) external onlyOwner {
+    function setImplementation(string memory key, address implementation) external hasRole(TERMMAX_4626_FACTORY_ROLE) {
         implementations[keccak256(abi.encodePacked(key))] = implementation;
         emit FactoryEventsV2.ImplementationSet(key, implementation);
     }
@@ -81,9 +85,10 @@ contract TermMax4626Factory is VersionV2, Ownable2Step {
         address admin,
         address thirdPool,
         StakingBuffer.BufferConfig memory bufferConfig
-    ) external returns (StableERC4626For4626) {
+    ) external hasRole(POOL_DEPLOYER_ROLE) returns (StableERC4626For4626) {
         StableERC4626For4626 instance = StableERC4626For4626(implementations[STABLE_ERC4626_FOR_4626].clone());
         instance.initialize(admin, thirdPool, bufferConfig);
+        _registerAddress(address(instance));
         emit FactoryEventsV2.StableERC4626For4626Created(msg.sender, address(instance));
         return instance;
     }
@@ -92,9 +97,10 @@ contract TermMax4626Factory is VersionV2, Ownable2Step {
         address admin,
         address thirdPool,
         StakingBuffer.BufferConfig memory bufferConfig
-    ) external returns (StableERC4626ForVenus) {
+    ) external hasRole(POOL_DEPLOYER_ROLE) returns (StableERC4626ForVenus) {
         StableERC4626ForVenus instance = StableERC4626ForVenus(implementations[STABLE_ERC4626_FOR_VENUS].clone());
         instance.initialize(admin, thirdPool, bufferConfig);
+        _registerAddress(address(instance));
         emit FactoryEventsV2.StableERC4626ForVenusCreated(msg.sender, address(instance));
         return instance;
     }
@@ -104,10 +110,11 @@ contract TermMax4626Factory is VersionV2, Ownable2Step {
         address thirdPool,
         address underlying,
         StakingBuffer.BufferConfig memory bufferConfig
-    ) external returns (StableERC4626ForCustomize) {
+    ) external hasRole(POOL_DEPLOYER_ROLE) returns (StableERC4626ForCustomize) {
         StableERC4626ForCustomize instance =
             StableERC4626ForCustomize(implementations[STABLE_ERC4626_FOR_CUSTOMIZE].clone());
         instance.initialize(admin, thirdPool, underlying, bufferConfig);
+        _registerAddress(address(instance));
         emit FactoryEventsV2.StableERC4626ForCustomizeCreated(msg.sender, address(instance));
         return instance;
     }
@@ -116,9 +123,10 @@ contract TermMax4626Factory is VersionV2, Ownable2Step {
         address admin,
         address underlying,
         StakingBuffer.BufferConfig memory bufferConfig
-    ) public returns (StableERC4626ForAave) {
+    ) public hasRole(POOL_DEPLOYER_ROLE) returns (StableERC4626ForAave) {
         StableERC4626ForAave instance = StableERC4626ForAave(implementations[STABLE_ERC4626_FOR_AAVE].clone());
         instance.initialize(admin, underlying, bufferConfig);
+        _registerAddress(address(instance));
         emit FactoryEventsV2.StableERC4626ForAaveCreated(msg.sender, address(instance));
         return instance;
     }
@@ -127,19 +135,25 @@ contract TermMax4626Factory is VersionV2, Ownable2Step {
         address admin,
         address underlying,
         StakingBuffer.BufferConfig memory bufferConfig
-    ) public returns (VariableERC4626ForAave) {
+    ) public hasRole(POOL_DEPLOYER_ROLE) returns (VariableERC4626ForAave) {
         VariableERC4626ForAave instance = VariableERC4626ForAave(implementations[VARIABLE_ERC4626_FOR_AAVE].clone());
         instance.initialize(admin, underlying, bufferConfig);
+        _registerAddress(address(instance));
         emit FactoryEventsV2.VariableERC4626ForAaveCreated(msg.sender, address(instance));
         return instance;
     }
 
-    function create(string memory key, bytes memory initialData) external returns (address) {
+    function create(string memory key, bytes memory initialData)
+        external
+        hasRole(POOL_DEPLOYER_ROLE)
+        returns (address)
+    {
         address implementation = implementations[keccak256(abi.encodePacked(key))];
         if (implementation == address(0)) revert FactoryErrorsV2.ImplementationNotFound(key);
         address instance = implementation.clone();
         (bool success,) = instance.call(initialData);
         if (!success) revert FactoryErrorsV2.InitializationFailed();
+        _registerAddress(instance);
         emit FactoryEventsV2.TermMax4626Created(msg.sender, key, instance);
         return instance;
     }
@@ -148,7 +162,7 @@ contract TermMax4626Factory is VersionV2, Ownable2Step {
         address admin,
         address underlying,
         StakingBuffer.BufferConfig memory bufferConfig
-    ) external returns (VariableERC4626ForAave, StableERC4626ForAave) {
+    ) external hasRole(POOL_DEPLOYER_ROLE) returns (VariableERC4626ForAave, StableERC4626ForAave) {
         VariableERC4626ForAave variableInstance = createVariableERC4626ForAave(admin, underlying, bufferConfig);
         StableERC4626ForAave stableInstance = createStableERC4626ForAave(admin, underlying, bufferConfig);
         return (variableInstance, stableInstance);

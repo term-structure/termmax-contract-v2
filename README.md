@@ -76,5 +76,5 @@ Add configurations to your .vscode/settings.json
 ```
 
 ```shell
-$ yarn
+$ npm ci
 ```

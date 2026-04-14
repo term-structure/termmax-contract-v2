@@ -31,8 +31,8 @@ import {IMorpho, Id, MarketParams, Authorization, Signature} from "../extensions
 import {RouterErrorsV2} from "../errors/RouterErrorsV2.sol";
 import {RouterEventsV2} from "../events/RouterEventsV2.sol";
 import {ArrayUtilsV2} from "../lib/ArrayUtilsV2.sol";
-import {IWhitelistManager} from "../access/IWhitelistManager.sol";
-import {VersionV2} from "../VersionV2.sol";
+import {WithWhitelistCheck, IWhitelistManager} from "../access/WithWhitelistCheck.sol";
+import {VersionV2_0_1} from "../VersionV2_0_1.sol";
 
 /**
  * @title TermMax Router V2
@@ -48,8 +48,9 @@ contract TermMaxRouterV2 is
     ITermMaxRouterV2,
     RouterErrors,
     RouterEvents,
-    VersionV2,
-    ReentrancyGuardUpgradeable
+    VersionV2_0_1,
+    ReentrancyGuardUpgradeable,
+    WithWhitelistCheck
 {
     using SafeCast for *;
     using TransferUtilsV2 for IERC20;
@@ -58,7 +59,8 @@ contract TermMaxRouterV2 is
 
     /// @notice whitelist mapping of adapter
     mapping(address => bool) public adapterWhitelist;
-    IWhitelistManager internal whitelistManager;
+    /// @dev deprecated: whitelistManager moved to immutable via WithWhitelistCheck
+    IWhitelistManager internal __deprecated_whitelistManager;
 
     uint256 private constant T_ROLLOVER_GT_RESERVE_STORE = 0;
     uint256 private constant T_CALLBACK_ADDRESS_STORE = 1;
@@ -82,28 +84,21 @@ contract TermMaxRouterV2 is
         _;
     }
 
+    constructor(address _whitelistManager)
+        WithWhitelistCheck(_whitelistManager, IWhitelistManager.ContractModule.MARKET)
+    {}
+
     function _authorizeUpgrade(address newImplementation) internal virtual override onlyOwner {}
 
-    function initialize(address admin, address whitelistManager_) external initializer {
+    function initialize(address admin) external initializer {
         __ReentrancyGuard_init_unchained();
         __UUPSUpgradeable_init_unchained();
         __Pausable_init_unchained();
         __Ownable_init_unchained(admin);
-        _setWhitelistManager(whitelistManager_);
     }
 
-    function initializeV2(address whitelistManager_) external reinitializer(2) {
+    function initializeV2() external reinitializer(2) {
         __ReentrancyGuard_init_unchained();
-        _setWhitelistManager(whitelistManager_);
-    }
-
-    function setWhitelistManager(address whitelistManager_) external onlyOwner {
-        _setWhitelistManager(whitelistManager_);
-    }
-
-    function _setWhitelistManager(address whitelistManager_) internal {
-        whitelistManager = IWhitelistManager(whitelistManager_);
-        emit RouterEventsV2.WhitelistManagerUpdated(whitelistManager_);
     }
 
     /**
@@ -179,7 +174,7 @@ contract TermMaxRouterV2 is
         SwapPath[] memory inputPaths,
         SwapPath memory swapXtPath,
         SwapPath memory swapCollateralPath
-    ) external nonReentrant whenNotPaused returns (uint256 gtId, uint256 netXtOut) {
+    ) external nonReentrant whenNotPaused onlyWhitelisted(address(market)) returns (uint256 gtId, uint256 netXtOut) {
         assembly {
             tstore(T_CALLBACK_ADDRESS_STORE, market) // set callback address
         }
@@ -225,7 +220,7 @@ contract TermMaxRouterV2 is
         uint256 collInAmt,
         uint128 maxDebtAmt,
         SwapPath memory swapFtPath
-    ) external nonReentrant whenNotPaused returns (uint256) {
+    ) external nonReentrant whenNotPaused onlyWhitelisted(address(market)) returns (uint256) {
         (IERC20 ft,, IGearingToken gt, address collateralAddr,) = market.tokens();
         IERC20(collateralAddr).safeTransferFrom(_msgSender(), address(this), collInAmt);
         IERC20(collateralAddr).safeIncreaseAllowance(address(gt), collInAmt);
@@ -249,7 +244,7 @@ contract TermMaxRouterV2 is
         uint256 collInAmt,
         uint256 borrowAmt,
         bool isV1
-    ) external nonReentrant whenNotPaused returns (uint256) {
+    ) external nonReentrant whenNotPaused onlyWhitelisted(address(market)) returns (uint256) {
         (IERC20 ft, IERC20 xt, IGearingToken gt, address collateralAddr,) = market.tokens();
 
         IERC20(collateralAddr).safeTransferFrom(_msgSender(), address(this), collInAmt);
@@ -280,7 +275,7 @@ contract TermMaxRouterV2 is
         bool byDebtToken,
         uint256 expectedOutput,
         bytes memory callbackData
-    ) external nonReentrant whenNotPaused returns (uint256 netTokenOut) {
+    ) external nonReentrant whenNotPaused onlyWhitelisted(address(market)) returns (uint256 netTokenOut) {
         return _flashRepayFromCollateral(recipient, market, gtId, byDebtToken, expectedOutput, callbackData, false);
     }
 
@@ -322,19 +317,20 @@ contract TermMaxRouterV2 is
         uint256 gtId,
         uint256 expectedOutput,
         bytes memory callbackData
-    ) external nonReentrant whenNotPaused returns (uint256 netTokenOut) {
+    ) external nonReentrant whenNotPaused onlyWhitelisted(address(market)) returns (uint256 netTokenOut) {
         /// @dev flashRepayToGetCollateral always repays by debt token
         bool byDebtToken = true;
         return _flashRepayFromCollateral(recipient, market, gtId, byDebtToken, expectedOutput, callbackData, true);
     }
 
     function rolloverGt(
-        IGearingToken gtToken,
+        ITermMaxMarket market,
         uint256 gtId,
         IERC20 additionalAsset,
         uint256 additionalAmt,
         bytes memory rolloverData
-    ) external nonReentrant whenNotPaused returns (uint256 newGtId) {
+    ) external nonReentrant whenNotPaused onlyWhitelisted(address(market)) returns (uint256 newGtId) {
+        (,, IGearingToken gtToken,,) = market.tokens();
         return _rolloverGt(gtToken, gtId, additionalAsset, additionalAmt, rolloverData);
     }
 
@@ -369,14 +365,22 @@ contract TermMaxRouterV2 is
     /**
      * @inheritdoc ITermMaxRouterV2
      */
-    function swapAndRepay(IGearingToken gt, uint256 gtId, uint128 repayAmt, bool byDebtToken, SwapPath[] memory paths)
+    function swapAndRepay(
+        ITermMaxMarket market,
+        uint256 gtId,
+        uint128 repayAmt,
+        bool byDebtToken,
+        SwapPath[] memory paths
+    )
         external
         override
         nonReentrant
         whenNotPaused
+        onlyWhitelisted(address(market))
         checkSwapPaths(paths)
         returns (uint256[] memory netOutOrIns)
     {
+        (,, IGearingToken gt,,) = market.tokens();
         netOutOrIns = _executeSwapPaths(paths);
         IERC20 repayToken = IERC20(paths[0].units[paths[0].units.length - 1].tokenOut);
         repayToken.safeIncreaseAllowance(address(gt), repayAmt);
@@ -450,6 +454,7 @@ contract TermMaxRouterV2 is
             SwapPath memory collateralPath,
             SwapPath memory debtTokenPath
         ) = abi.decode(callbackData, (address, ITermMaxMarket, uint128, SwapPath, SwapPath));
+        _checkWhitelisted(address(market));
 
         // Do swap to get the new collateral,(the inpput amount may contains additional old collateral)
         if (collateralPath.units.length != 0) {
@@ -575,9 +580,7 @@ contract TermMaxRouterV2 is
     }
 
     function _checkAdapterWhitelist(address adapter) internal view {
-        if (!whitelistManager.isWhitelisted(adapter, IWhitelistManager.ContractModule.ADAPTER)) {
-            revert AdapterNotWhitelisted(adapter);
-        }
+        _checkWhitelisted(adapter, IWhitelistManager.ContractModule.ADAPTER);
     }
 
     function onERC721Received(address, address, uint256, bytes memory) external pure override returns (bytes4) {

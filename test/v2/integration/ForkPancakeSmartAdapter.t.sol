@@ -28,6 +28,7 @@ import {ITermMaxRouterV2, TermMaxRouterV2, SwapPath, FlashRepayOptions} from "co
 import {IWhitelistManager} from "contracts/v2/access/IWhitelistManager.sol";
 import {PancakeSmartAdapter} from "contracts/v2/router/swapAdapters/PancakeSmartAdapter.sol";
 import {ERC4626VaultAdapterV2} from "contracts/v2/router/swapAdapters/ERC4626VaultAdapterV2.sol";
+import {DeployUtils} from "test/v2/utils/DeployUtils.sol";
 import {console} from "forge-std/console.sol";
 
 contract ForkPancakeSmartAdapter is ForkBaseTestV2 {
@@ -58,15 +59,13 @@ contract ForkPancakeSmartAdapter is ForkBaseTestV2 {
         vm.label(USDT, "USDT");
 
         vm.startPrank(admin);
-        IWhitelistManager whitelistManager;
-        (router, whitelistManager) = deployRouter(admin);
-        router.setWhitelistManager(address(whitelistManager));
-        console.log("router", address(router));
-        console.log("whitelistManager", address(whitelistManager));
+        DeployUtils.Res memory res = DeployUtils.deployRes(admin);
 
         address[] memory adapters = new address[](1);
         adapters[0] = address(pancakeSmartAdapter);
-        whitelistManager.batchSetWhitelist(adapters, IWhitelistManager.ContractModule.ADAPTER, true);
+        res.whitelistManager.batchSetWhitelist(adapters, IWhitelistManager.ContractModule.ADAPTER, true);
+
+        router = res.router;
         vm.stopPrank();
     }
 
