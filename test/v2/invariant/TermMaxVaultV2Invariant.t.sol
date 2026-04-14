@@ -590,7 +590,7 @@ contract TermMaxVaultV2InvariantTest is StdInvariant, Test {
         });
 
         // Use DeployUtils to properly create the vault
-        vault = DeployUtils.deployVault(vaultParams);
+        vault = DeployUtils.deployVault(res.vaultFactory, vaultParams);
 
         // Setup initial liquidity by depositing assets
         uint256 initialAmount = 100_000e18;

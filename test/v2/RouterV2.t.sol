@@ -131,8 +131,7 @@ contract RouterTestV2 is Test {
         res.ft.transfer(address(res.order), amount);
         res.xt.transfer(address(res.order), amount);
 
-        (res.router, res.whitelistManager) = DeployUtils.deployRouter(deployer);
-        res.router.setWhitelistManager(address(res.whitelistManager));
+        res.router = DeployUtils.deployRouter(deployer, address(res.whitelistManager));
         adapter = new MockSwapAdapterV2(pool);
         termMaxSwapAdapter = new TermMaxSwapAdapter(address(res.whitelistManager));
 
@@ -146,13 +145,13 @@ contract RouterTestV2 is Test {
     }
 
     function testUpgradeRouterToV2() public {
-        TermMaxRouterV2 impl = new TermMaxRouterV2();
+        TermMaxRouterV2 impl = new TermMaxRouterV2(address(res.whitelistManager));
         address admin = vm.randomAddress();
-        bytes memory data = abi.encodeCall(TermMaxRouterV2.initialize, (admin, vm.randomAddress()));
+        bytes memory data = abi.encodeCall(TermMaxRouterV2.initialize, (admin));
         ERC1967Proxy proxy = new ERC1967Proxy(address(impl), data);
         TermMaxRouterV2 router_tmp = TermMaxRouterV2(address(proxy));
-        TermMaxRouterV2 impl2 = new TermMaxRouterV2();
-        data = abi.encodeCall(TermMaxRouterV2.initializeV2, (vm.randomAddress()));
+        TermMaxRouterV2 impl2 = new TermMaxRouterV2(address(res.whitelistManager));
+        data = abi.encodeCall(TermMaxRouterV2.initializeV2, ());
 
         vm.prank(admin);
         router_tmp.upgradeToAndCall(address(impl2), data);
@@ -243,7 +242,7 @@ contract RouterTestV2 is Test {
             tradingAmts: tradingAmts,
             netTokenAmt: mintTokenOut,
             deadline: block.timestamp + 1 hours,
-            refundAddress: address(0)
+            refundAddress: address(res.router)
         });
 
         res.debt.mint(sender, amountIn);
@@ -635,7 +634,7 @@ contract RouterTestV2 is Test {
             tradingAmts: tokenAmtsWantBuy,
             netTokenAmt: maxDebtAmt,
             deadline: block.timestamp + 1 hours,
-            refundAddress: address(0)
+            refundAddress: address(res.router)
         });
 
         SwapUnit[] memory swapUnits = new SwapUnit[](1);
@@ -754,7 +753,7 @@ contract RouterTestV2 is Test {
             tradingAmts: amtsToBuyFt,
             netTokenAmt: mintTokenOut.toUint128(),
             deadline: block.timestamp + 1 hours,
-            refundAddress: address(0)
+            refundAddress: address(res.router)
         });
         units[1] = SwapUnit({
             adapter: address(termMaxSwapAdapter),
@@ -927,7 +926,7 @@ contract RouterTestV2 is Test {
         vm.expectEmit(true, true, true, true);
         emit RouterEventsV2.SwapAndRepay(address(res.gt), gtId, debtAmt, 0);
 
-        uint256 netCost = res.router.swapAndRepay(res.gt, gtId, debtAmt, false, inputPaths)[0];
+        uint256 netCost = res.router.swapAndRepay(res.market, gtId, debtAmt, false, inputPaths)[0];
         assertEq(res.debt.balanceOf(sender), maxTokenIn - netCost);
         assertEq(res.collateral.balanceOf(sender), collateralAmt);
 
@@ -974,7 +973,7 @@ contract RouterTestV2 is Test {
         res.debt.mint(sender, maxTokenIn);
         res.debt.approve(address(res.router), maxTokenIn);
 
-        uint256 netCost = res.router.swapAndRepay(res.gt, gtId, debtAmt / 2, false, inputPaths)[0];
+        uint256 netCost = res.router.swapAndRepay(res.market, gtId, debtAmt / 2, false, inputPaths)[0];
         assertEq(res.debt.balanceOf(sender), maxTokenIn - netCost);
         assertEq(res.collateral.balanceOf(sender), 0);
 

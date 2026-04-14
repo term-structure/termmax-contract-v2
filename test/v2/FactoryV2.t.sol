@@ -5,6 +5,7 @@ import "forge-std/Test.sol";
 import {console} from "forge-std/console.sol";
 import {DeployUtils} from "./utils/DeployUtils.sol";
 import {JSONLoader} from "./utils/JSONLoader.sol";
+import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 
 import {ITermMaxMarketV2, TermMaxMarketV2, Constants, MarketErrors} from "contracts/v2/TermMaxMarketV2.sol";
 import {MockERC20, ERC20} from "contracts/v1/test/MockERC20.sol";
@@ -44,15 +45,19 @@ contract FactoryTestV2 is Test {
     uint32 liquidationLtv = 0.9e8;
     MarketConfig marketConfig;
 
+    DeployUtils.Res res;
+
     function setUp() public {
         string memory testdata = vm.readFile(string.concat(vm.projectRoot(), "/test/testdata/testdata.json"));
 
         marketConfig = JSONLoader.getMarketConfigFromJson(treasurer, testdata, ".marketConfig");
+        vm.startPrank(deployer);
+        res = DeployUtils.deployMarket(deployer, marketConfig, maxLtv, liquidationLtv);
+        vm.stopPrank();
     }
 
     function testDeploy() public {
         vm.startPrank(deployer);
-        DeployUtils.Res memory res = DeployUtils.deployMarket(deployer, marketConfig, maxLtv, liquidationLtv);
 
         address predictedMarketAddress = res.factory.predictMarketAddress(
             deployer, address(res.collateral), address(res.debt), marketConfig.maturity, 0
@@ -103,7 +108,8 @@ contract FactoryTestV2 is Test {
 
     function testDeployMarketWithInvalidParams() public {
         vm.startPrank(deployer);
-        TermMaxFactoryV2 factory = DeployUtils.deployFactory(deployer);
+
+        TermMaxFactoryV2 factory = res.factory;
 
         MockERC20 collateral = new MockERC20("ETH", "ETH", 18);
         MockERC20 debt = new MockERC20("DAI", "DAI", 8);
@@ -154,7 +160,7 @@ contract FactoryTestV2 is Test {
 
     function testLiquidationLtvMustBeGreaterThanMaxLtv() public {
         vm.startPrank(deployer);
-        TermMaxFactoryV2 factory = DeployUtils.deployFactory(deployer);
+        TermMaxFactoryV2 factory = res.factory;
 
         MockERC20 collateral = new MockERC20("ETH", "ETH", 18);
         MockERC20 debt = new MockERC20("DAI", "DAI", 8);
@@ -187,7 +193,7 @@ contract FactoryTestV2 is Test {
 
     function testInvalidLiquidationLtv() public {
         vm.startPrank(deployer);
-        TermMaxFactoryV2 factory = DeployUtils.deployFactory(deployer);
+        TermMaxFactoryV2 factory = res.factory;
 
         MockERC20 collateral = new MockERC20("ETH", "ETH", 18);
         MockERC20 debt = new MockERC20("DAI", "DAI", 8);
@@ -220,7 +226,7 @@ contract FactoryTestV2 is Test {
 
     function testRevertByCantNotFindGtImplementation() public {
         vm.startPrank(deployer);
-        TermMaxFactoryV2 factory = DeployUtils.deployFactory(deployer);
+        TermMaxFactoryV2 factory = res.factory;
 
         MockERC20 collateral = new MockERC20("ETH", "ETH", 18);
         MockERC20 debt = new MockERC20("DAI", "DAI", 8);
@@ -251,7 +257,7 @@ contract FactoryTestV2 is Test {
 
     function testSetGtImplement() public {
         vm.startPrank(deployer);
-        TermMaxFactoryV2 factory = DeployUtils.deployFactory(deployer);
+        TermMaxFactoryV2 factory = res.factory;
         GearingTokenWithERC20V2 gt = new GearingTokenWithERC20V2();
         string memory gtImplemtName = "gt-test";
         bytes32 key = keccak256(abi.encodePacked(gtImplemtName));
@@ -265,11 +271,15 @@ contract FactoryTestV2 is Test {
     function testSetGtImplementWithoutAuth() public {
         address sender = vm.randomAddress();
         vm.startPrank(sender);
-        TermMaxFactoryV2 factory = DeployUtils.deployFactory(deployer);
+        TermMaxFactoryV2 factory = res.factory;
         GearingTokenWithERC20V2 gt = new GearingTokenWithERC20V2();
         string memory key = "gt-test";
 
-        vm.expectRevert(abi.encodePacked(bytes4(keccak256("OwnableUnauthorizedAccount(address)")), abi.encode(sender)));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector, sender, factory.TERMMAX_MARKET_FACTORY_ROLE()
+            )
+        );
         factory.setGtImplement(key, address(gt));
 
         vm.stopPrank();
@@ -277,6 +287,6 @@ contract FactoryTestV2 is Test {
 
     function testInvalidMarketImplementation() public {
         vm.expectRevert(abi.encodeWithSelector(FactoryErrors.InvalidImplementation.selector));
-        new TermMaxFactoryV2(deployer, address(0));
+        new TermMaxFactoryV2(deployer, address(0), address(1));
     }
 }

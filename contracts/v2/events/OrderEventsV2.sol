@@ -14,6 +14,10 @@ interface OrderEventsV2 {
     /// @param market The address of the market associated with the order
     event OrderInitialized(address indexed maker, address indexed market);
 
+    /// @notice Emitted when the expiry timestamp of the order is updated
+    /// @param newExpiryTimestamp The new expiry timestamp set for the order
+    event ExpiryTimestampUpdated(uint64 newExpiryTimestamp);
+
     /// @notice Emitted when the staking or reward pool associated with the order is changed
     /// @param pool The address of the new staking/reward pool contract
     event PoolUpdated(address indexed pool);

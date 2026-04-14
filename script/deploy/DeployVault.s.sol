@@ -34,13 +34,7 @@ contract DeployVaults is DeployBaseV2 {
         coreParams.isMainnet = vm.envBool("IS_MAINNET");
         coreParams.isL2Network = vm.envBool("IS_L2");
         if (coreParams.isMainnet) {
-            string memory uniswapV3RouterVar = string.concat(networkUpper, "_UNISWAP_V3_ROUTER_ADDRESS");
-            string memory odosV2RouterVar = string.concat(networkUpper, "_ODOS_V2_ROUTER_ADDRESS");
-            string memory pendleSwapV3RouterVar = string.concat(networkUpper, "_PENDLE_SWAP_V3_ROUTER_ADDRESS");
             string memory oracleTimelockVar = string.concat(networkUpper, "_ORACLE_TIMELOCK");
-            coreParams.uniswapV3Router = vm.envAddress(uniswapV3RouterVar);
-            coreParams.odosV2Router = vm.envAddress(odosV2RouterVar);
-            coreParams.pendleSwapV3Router = vm.envAddress(pendleSwapV3RouterVar);
             coreParams.oracleTimelock = vm.envUint(oracleTimelockVar);
         }
         if (coreParams.isL2Network) {
@@ -100,7 +94,7 @@ contract DeployVaults is DeployBaseV2 {
             console.log("  Vault maxCapacity:", params.maxCapacity);
             console.log("  Vault minimal apy:", params.minApy);
 
-            address vault = coreContracts.vaultFactory.createVault(params, 0);
+            address vault = coreContracts.vaultFactory.createVault(params, 1);
             console.log("Deployed TermMaxVaultV2 at:", vault);
             vaults.push(vault);
         }
