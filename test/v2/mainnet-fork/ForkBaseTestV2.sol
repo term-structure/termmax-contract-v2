@@ -26,10 +26,12 @@ import {
     LoanConfig,
     VaultInitialParams
 } from "contracts/v1/storage/TermMaxStorage.sol";
-import {IWhitelistManager} from "contracts/v2/access/IWhitelistManager.sol";
+import {WhitelistManager, IWhitelistManager} from "contracts/v2/access/WhitelistManager.sol";
+import {MockWhitelistManager} from "contracts/v2/test/MockWhitelistManager.sol";
 import {DeployUtils} from "../utils/DeployUtils.sol";
 import {JSONLoader} from "../utils/JSONLoader.sol";
 import "forge-std/Test.sol";
+import {Vm} from "forge-std/Vm.sol";
 
 abstract contract ForkBaseTestV2 is Test {
     using SafeCast for *;
@@ -139,35 +141,7 @@ abstract contract ForkBaseTestV2 is Test {
         priceFeed.updateRoundData(roundData);
     }
 
-    function deployFactory(address admin) public returns (TermMaxFactoryV2 factory) {
-        address tokenImplementation = address(new MintableERC20V2());
-        address orderImplementation = address(new TermMaxOrderV2());
-        TermMaxMarketV2 m = new TermMaxMarketV2(tokenImplementation, orderImplementation);
-        factory = new TermMaxFactoryV2(admin, address(m));
-    }
-
-    function deployFactoryWithMockOrder(address admin) public returns (TermMaxFactoryV2 factory) {
-        address tokenImplementation = address(new MintableERC20V2());
-        address orderImplementation = address(new MockOrderV2());
-        TermMaxMarketV2 m = new TermMaxMarketV2(tokenImplementation, orderImplementation);
-        factory = new TermMaxFactoryV2(admin, address(m));
-    }
-
-    function deployVaultFactory() public returns (TermMaxVaultFactoryV2 vaultFactory) {
-        OrderManagerV2 orderManager = new OrderManagerV2();
-        TermMaxVaultV2 implementation = new TermMaxVaultV2(address(orderManager));
-        vaultFactory = new TermMaxVaultFactoryV2(address(implementation));
-    }
-
-    function deployOracleAggregator(address admin) public returns (OracleAggregatorV2 oracle) {
-        oracle = new OracleAggregatorV2(admin, 0);
-    }
-
     function deployMockPriceFeed(address admin) public returns (MockPriceFeed priceFeed) {
         priceFeed = new MockPriceFeed(admin);
-    }
-
-    function deployRouter(address admin) public returns (TermMaxRouterV2, IWhitelistManager) {
-        return DeployUtils.deployRouter(admin);
     }
 }

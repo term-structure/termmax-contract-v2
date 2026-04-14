@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import {Ownable, Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 import {GearingTokenWithERC20V2} from "../tokens/GearingTokenWithERC20V2.sol";
 import {MarketInitialParams} from "../../v1/storage/TermMaxStorage.sol";
@@ -10,7 +9,9 @@ import {FactoryEvents} from "../../v1/events/FactoryEvents.sol";
 import {ITermMaxMarket} from "../../v1/ITermMaxMarket.sol";
 import {ITermMaxFactory} from "../../v1/factory/ITermMaxFactory.sol";
 import {FactoryEventsV2} from "../events/FactoryEventsV2.sol";
-import {VersionV2} from "../VersionV2.sol";
+import {WithAccessManagerRole} from "../access/WithAccessManagerRole.sol";
+import {WithWhitelistCheck, IWhitelistManager} from "../access/WithWhitelistCheck.sol";
+import {VersionV2_0_1} from "../VersionV2_0_1.sol";
 
 /**
  * @title TermMax Factory V2
@@ -19,7 +20,7 @@ import {VersionV2} from "../VersionV2.sol";
  * @dev Manages market deployment, gearing token implementations, and market configuration validation
  * Inherits from V1 factory interface while adding V2-specific features for improved market creation
  */
-contract TermMaxFactoryV2 is Ownable2Step, ITermMaxFactory, FactoryEventsV2, VersionV2 {
+contract TermMaxFactoryV2 is ITermMaxFactory, FactoryEventsV2, VersionV2_0_1, WithWhitelistCheck, WithAccessManagerRole {
     /// @notice Constant key for the default ERC20 gearing token implementation
     bytes32 constant GT_ERC20 = keccak256("GearingTokenWithERC20");
 
@@ -36,11 +37,14 @@ contract TermMaxFactoryV2 is Ownable2Step, ITermMaxFactory, FactoryEventsV2, Ver
     /**
      * @notice Constructs the TermMax Factory V2 with initial configurations
      * @dev Sets up the factory with a market implementation and deploys the default ERC20 gearing token
-     * @param admin The address that will have administrative privileges over the factory
+     * @param accessManager The address of the access manager contract for role-based access control
      * @param TERMMAX_MARKET_IMPLEMENTATION_ The address of the TermMax market implementation contract
      * @custom:security Only the admin can create markets and manage gearing token implementations
      */
-    constructor(address admin, address TERMMAX_MARKET_IMPLEMENTATION_) Ownable(admin) {
+    constructor(address accessManager, address TERMMAX_MARKET_IMPLEMENTATION_, address _whitelistManager)
+        WithAccessManagerRole(accessManager)
+        WithWhitelistCheck(_whitelistManager, IWhitelistManager.ContractModule.MARKET)
+    {
         if (TERMMAX_MARKET_IMPLEMENTATION_ == address(0)) {
             revert FactoryErrors.InvalidImplementation();
         }
@@ -58,7 +62,10 @@ contract TermMaxFactoryV2 is Ownable2Step, ITermMaxFactory, FactoryEventsV2, Ver
      * @custom:access Only the factory owner can register new implementations
      * @custom:events Emits SetGtImplement event for tracking implementation changes
      */
-    function setGtImplement(string memory gtImplementName, address gtImplement) external onlyOwner {
+    function setGtImplement(string memory gtImplementName, address gtImplement)
+        external
+        hasRole(TERMMAX_MARKET_FACTORY_ROLE)
+    {
         bytes32 key = keccak256(abi.encodePacked(gtImplementName));
         gtImplements[key] = gtImplement;
         emit FactoryEvents.SetGtImplement(key, gtImplement);
@@ -100,7 +107,7 @@ contract TermMaxFactoryV2 is Ownable2Step, ITermMaxFactory, FactoryEventsV2, Ver
      */
     function createMarket(bytes32 gtKey, MarketInitialParams memory params, uint256 salt)
         external
-        onlyOwner
+        hasRole(MARKET_ROLE)
         returns (address market)
     {
         // Retrieve the gearing token implementation for the requested key
@@ -117,6 +124,7 @@ contract TermMaxFactoryV2 is Ownable2Step, ITermMaxFactory, FactoryEventsV2, Ver
 
         // Initialize the newly deployed market with provided parameters
         ITermMaxMarket(market).initialize(params);
+        _registerAddress(market);
 
         // Emit event for market creation tracking
         emit FactoryEventsV2.MarketCreated(market, params.collateral, params.debtToken, params);
