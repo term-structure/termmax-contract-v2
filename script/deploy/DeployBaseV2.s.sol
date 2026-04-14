@@ -10,6 +10,7 @@ import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IER
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import {TermMaxFactoryV2, ITermMaxFactory} from "contracts/v2/factory/TermMaxFactoryV2.sol";
 import {TermMaxRouterV2} from "contracts/v2/router/TermMaxRouterV2.sol";
+import {TermMaxRouter_V1_1_2} from "contracts/v1/router/TermMaxRouter_V1_1_2.sol";
 import {MakerHelper} from "contracts/v2/router/MakerHelper.sol";
 import {MarketViewer} from "contracts/v1/router/MarketViewer.sol";
 import {ITermMaxRouter} from "contracts/v1/router/ITermMaxRouter.sol";
@@ -55,6 +56,7 @@ import {
     StableERC4626ForVenus,
     StableERC4626ForCustomize
 } from "contracts/v2/factory/TermMax4626Factory.sol";
+import {TermMaxViewer} from "contracts/v2/router/TermMaxViewer.sol";
 
 contract DeployBaseV2 is Script {
     struct DeployedContracts {
@@ -62,6 +64,8 @@ contract DeployBaseV2 is Script {
         WhitelistManager whitelistManager;
         TermMaxFactoryV2 factory;
         TermMaxVaultFactoryV2 vaultFactory;
+        TermMaxFactoryV2 alphaFactory;
+        TermMaxVaultFactoryV2 alphaVaultFactory;
         TermMaxPriceFeedFactoryV2 priceFeedFactory;
         TermMax4626Factory tmx4626Factory;
         IOracle oracle;
@@ -76,6 +80,8 @@ contract DeployBaseV2 is Script {
         ERC4626VaultAdapterV2 vaultAdapter;
         TermMaxSwapAdapter termMaxSwapAdapter;
         TerminalVaultAdapter terminalVaultAdapter;
+        TermMaxViewer termMaxViewer;
+        TermMaxRouter_V1_1_2 routerV1;
     }
 
     struct CoreParams {
@@ -110,6 +116,13 @@ contract DeployBaseV2 is Script {
         if (vm.keyExistsJson(json, ".contracts.vaultFactoryV2")) {
             contracts.vaultFactory = TermMaxVaultFactoryV2(vm.parseJsonAddress(json, ".contracts.vaultFactoryV2"));
         }
+        if (vm.keyExistsJson(json, ".contracts.alphaFactory")) {
+            contracts.alphaFactory = TermMaxFactoryV2(vm.parseJsonAddress(json, ".contracts.alphaFactory"));
+        }
+        if (vm.keyExistsJson(json, ".contracts.alphaVaultFactory")) {
+            contracts.alphaVaultFactory =
+                TermMaxVaultFactoryV2(vm.parseJsonAddress(json, ".contracts.alphaVaultFactory"));
+        }
         if (vm.keyExistsJson(json, ".contracts.priceFeedFactoryV2")) {
             contracts.priceFeedFactory =
                 TermMaxPriceFeedFactoryV2(vm.parseJsonAddress(json, ".contracts.priceFeedFactoryV2"));
@@ -119,6 +132,9 @@ contract DeployBaseV2 is Script {
         }
         if (vm.keyExistsJson(json, ".contracts.oracleAggregatorV2")) {
             contracts.oracle = IOracle(vm.parseJsonAddress(json, ".contracts.oracleAggregatorV2"));
+        }
+        if (vm.keyExistsJson(json, ".contracts.routerV1")) {
+            contracts.routerV1 = TermMaxRouter_V1_1_2(vm.parseJsonAddress(json, ".contracts.routerV1"));
         }
         if (vm.keyExistsJson(json, ".contracts.routerV2")) {
             contracts.router = TermMaxRouterV2(vm.parseJsonAddress(json, ".contracts.routerV2"));
@@ -158,6 +174,9 @@ contract DeployBaseV2 is Script {
         if (vm.keyExistsJson(json, ".contracts.swapAdapterV2.terminalVaultAdapter")) {
             contracts.terminalVaultAdapter =
                 TerminalVaultAdapter(vm.parseJsonAddress(json, ".contracts.swapAdapterV2.terminalVaultAdapter"));
+        }
+        if (vm.keyExistsJson(json, ".contracts.termMaxViewer")) {
+            contracts.termMaxViewer = TermMaxViewer(vm.parseJsonAddress(json, ".contracts.termMaxViewer"));
         }
     }
 
@@ -211,11 +230,25 @@ contract DeployBaseV2 is Script {
                     '    "vaultFactoryV2": "',
                     vm.toString(address(coreContracts.vaultFactory)),
                     '",\n',
+                    '    "alphaFactory": "',
+                    vm.toString(address(coreContracts.alphaFactory)),
+                    '",\n',
+                    '    "alphaVaultFactory": "',
+                    vm.toString(address(coreContracts.alphaVaultFactory)),
+                    '",\n',
                     '    "priceFeedFactoryV2": "',
                     vm.toString(address(coreContracts.priceFeedFactory)),
                     '",\n',
                     '    "termMax4626Factory": "',
-                    vm.toString(address(coreContracts.tmx4626Factory)),
+                    vm.toString(address(coreContracts.tmx4626Factory))
+                )
+            );
+        }
+
+        {
+            deploymentJson = string(
+                abi.encodePacked(
+                    deploymentJson,
                     '",\n',
                     '    "whitelistManager": "',
                     vm.toString(address(coreContracts.whitelistManager)),
@@ -223,11 +256,17 @@ contract DeployBaseV2 is Script {
                     '    "oracleAggregatorV2": "',
                     vm.toString(address(coreContracts.oracle)),
                     '",\n',
+                    '    "routerV1": "',
+                    vm.toString(address(coreContracts.routerV1)),
+                    '",\n',
                     '    "routerV2": "',
                     vm.toString(address(coreContracts.router)),
                     '",\n',
                     '    "marketViewer": "',
                     vm.toString(address(coreContracts.marketViewer)),
+                    '",\n',
+                    '    "termMaxViewer": "',
+                    vm.toString(address(coreContracts.termMaxViewer)),
                     '",\n',
                     '    "makerHelper": "',
                     vm.toString(address(coreContracts.makerHelper)),
@@ -294,6 +333,17 @@ contract DeployBaseV2 is Script {
         factory = new TermMaxFactoryV2(admin, address(m), whitelistManager);
     }
 
+    function deployMarketFactories(address admin, address whitelistManager)
+        public
+        returns (TermMaxFactoryV2 factory, TermMaxFactoryV2 alphaFactory)
+    {
+        address tokenImplementation = address(new MintableERC20V2());
+        address orderImplementation = address(new TermMaxOrderV2());
+        TermMaxMarketV2 m = new TermMaxMarketV2(tokenImplementation, orderImplementation);
+        factory = new TermMaxFactoryV2(admin, address(m), whitelistManager);
+        alphaFactory = new TermMaxFactoryV2(admin, address(m), whitelistManager);
+    }
+
     function deployVaultFactory(address admin, address whitelistManager)
         public
         returns (TermMaxVaultFactoryV2 vaultFactory)
@@ -316,12 +366,35 @@ contract DeployBaseV2 is Script {
         oracle = new OracleAggregatorWithSequencerV2(admin, oracleTimelock, sequencerUpPriceFeed, gracePeriod);
     }
 
-    function deployRouter(address admin, address whitelistManager) public returns (TermMaxRouterV2 router) {
+    function deployRouter(address admin, address whitelistManager, bool onlyV2)
+        public
+        returns (TermMaxRouter_V1_1_2 routerV1, TermMaxRouterV2 router)
+    {
+        if (!onlyV2) {
+            TermMaxRouter_V1_1_2 implementationV1 = new TermMaxRouter_V1_1_2(whitelistManager);
+            bytes memory dataV1 = abi.encodeCall(TermMaxRouter_V1_1_2.initialize, (admin));
+            ERC1967Proxy proxyV1 = new ERC1967Proxy(address(implementationV1), dataV1);
+            routerV1 = TermMaxRouter_V1_1_2(address(proxyV1));
+        }
         TermMaxRouterV2 implementation = new TermMaxRouterV2(whitelistManager);
 
         bytes memory data = abi.encodeCall(TermMaxRouterV2.initialize, (admin));
+        ERC1967Proxy proxyV2 = new ERC1967Proxy(address(implementation), data);
+        router = TermMaxRouterV2(address(proxyV2));
+    }
+
+    function deployMarketViewer(address admin) public returns (TermMaxViewer marketViewer) {
+        TermMaxViewer implementation = new TermMaxViewer();
+
+        bytes memory data = abi.encodeCall(TermMaxViewer.initialize, (admin));
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), data);
-        router = TermMaxRouterV2(address(proxy));
+        marketViewer = TermMaxViewer(address(proxy));
+    }
+
+    function upgradeMarketViewer(AccessManagerV2 manager, address proxy) public returns (TermMaxViewer viewer) {
+        TermMaxViewer implementation = new TermMaxViewer();
+        manager.upgradeSubContract(UUPSUpgradeable(proxy), address(implementation), "");
+        viewer = TermMaxViewer(proxy);
     }
 
     function upgradeRouter(AccessManagerV2 manager, address routerProxy, address whitelistManager)
@@ -442,13 +515,20 @@ contract DeployBaseV2 is Script {
         // deploy price feed factory
         contracts.priceFeedFactory = new TermMaxPriceFeedFactoryV2();
 
-        // deploy or upgrade router
-        if (address(contracts.router) == address(0)) {
-            contracts.router = deployRouter(address(contracts.accessManager), address(contracts.whitelistManager));
+        bool onlyV2 = address(contracts.routerV1) != address(0);
+        if (onlyV2) {
+            (, contracts.router) =
+                deployRouter(address(contracts.accessManager), address(contracts.whitelistManager), onlyV2);
         } else {
-            contracts.router =
-                upgradeRouter(contracts.accessManager, address(contracts.router), address(contracts.whitelistManager));
+            (contracts.routerV1, contracts.router) =
+                deployRouter(address(contracts.accessManager), address(contracts.whitelistManager), onlyV2);
         }
+
+        if (contracts.termMaxViewer == TermMaxViewer(address(0))) {
+            TermMaxViewer termMaxViewer = deployMarketViewer(address(contracts.accessManager));
+            contracts.termMaxViewer = termMaxViewer;
+        }
+
         // deploy maker helper
         contracts.makerHelper = deployMakerHelper(address(contracts.accessManager), address(contracts.whitelistManager));
         // deploy faucet
@@ -492,9 +572,30 @@ contract DeployBaseV2 is Script {
             adapters[1] = address(contracts.termMaxSwapAdapter);
         }
         // whitelist swap adapters
+        // filter address 0
+        uint256 validAdapterCount;
+        for (uint256 i = 0; i < adapters.length; i++) {
+            if (adapters[i] != address(0)) {
+                validAdapterCount++;
+            }
+        }
+        address[] memory validAdapters = new address[](validAdapterCount);
+        uint256 index;
+        for (uint256 i = 0; i < adapters.length; i++) {
+            if (adapters[i] != address(0)) {
+                validAdapters[index] = adapters[i];
+                index++;
+            }
+        }
+        console.log("Whitelisting adapters for router v2...");
         contracts.accessManager.batchSetWhitelist(
-            contracts.whitelistManager, adapters, IWhitelistManager.ContractModule.ADAPTER, true
+            contracts.whitelistManager, validAdapters, IWhitelistManager.ContractModule.ADAPTER, true
         );
+        console.log("Whitelisting adapters for router v1...");
+        for (uint256 i = 0; i < validAdapters.length; i++) {
+            contracts.accessManager.setAdapterWhitelist(contracts.routerV1, validAdapters[i], true);
+        }
+        console.log("Adapters whitelisted");
         return contracts;
     }
 
@@ -514,16 +615,20 @@ contract DeployBaseV2 is Script {
             TerminalVaultAdapter terminalVaultAdapter
         )
     {
-        // deploy access manager
+        // access manager
         AccessManagerV2 accessManager = AccessManagerV2(accessManagerAddr);
 
         // deploy and whitelist swap adapter
-        uniswapV3Adapter = new UniswapV3AdapterV2();
-        odosV2Adapter = new OdosV2AdapterV2(odosV2Router);
-        pendleSwapV3Adapter = new PendleSwapV3AdapterV2(address(pendleSwapV3Router));
+        // uniswapV3Adapter = new UniswapV3AdapterV2();
+        if (odosV2Router != address(0)) {
+            odosV2Adapter = new OdosV2AdapterV2(odosV2Router);
+        }
+        if (pendleSwapV3Router != address(0)) {
+            pendleSwapV3Adapter = new PendleSwapV3AdapterV2(address(pendleSwapV3Router));
+        }
         vaultAdapter = new ERC4626VaultAdapterV2();
         termMaxSwapAdapter = new TermMaxSwapAdapter(whitelistManagerAddr);
-        terminalVaultAdapter = new TerminalVaultAdapter();
+        // terminalVaultAdapter = new TerminalVaultAdapter();
     }
 
     function deployWhitelistManager(address accessManager) public returns (WhitelistManager whitelistManager) {

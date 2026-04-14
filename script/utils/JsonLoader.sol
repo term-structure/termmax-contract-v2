@@ -7,6 +7,7 @@ import {MarketConfig, FeeConfig, LoanConfig} from "contracts/v1/storage/TermMaxS
 import {VaultInitialParamsV2, IERC20, IERC4626} from "contracts/v2/storage/TermMaxStorageV2.sol";
 import {StakingBuffer} from "contracts/v2/tokens/StakingBuffer.sol";
 import {IOracleV2, AggregatorV3Interface} from "contracts/v2/oracle/OracleAggregatorV2.sol";
+import {OrderConfig, CurveCut} from "contracts/v1/storage/TermMaxStorage.sol";
 
 library JsonLoader {
     using stdJson for string;
@@ -299,5 +300,46 @@ library JsonLoader {
         oracleConfig.oracleParams.minPrice =
             vm.parseInt(jsonData.readString(string.concat(configPrefix, ".oracleParams.minPrice")));
         return oracleConfig;
+    }
+
+    function getOrderConfigFromJson(string memory testdataJSON, string memory key)
+        internal
+        pure
+        returns (OrderConfig memory orderConfig)
+    {
+        orderConfig.maxXtReserve = vm.parseUint(vm.parseJsonString(testdataJSON, string.concat(key, ".maxXtReserve")));
+        orderConfig.gtId = vm.parseUint(vm.parseJsonString(testdataJSON, string.concat(key, ".gtId")));
+
+        {
+            string memory curveCutsPath = string.concat(key, ".borrowCurveCuts");
+            uint256 length =
+                vm.parseUint(vm.parseJsonString(testdataJSON, string.concat(key, ".borrowCurveCuts.length")));
+            orderConfig.curveCuts.borrowCurveCuts = new CurveCut[](length);
+
+            for (uint256 i = 0; i < length; i++) {
+                string memory indexPath = string.concat(curveCutsPath, ".", vm.toString(i));
+                orderConfig.curveCuts.borrowCurveCuts[i].xtReserve =
+                    vm.parseUint(vm.parseJsonString(testdataJSON, string.concat(indexPath, ".xtReserve")));
+                orderConfig.curveCuts.borrowCurveCuts[i].liqSquare =
+                    vm.parseUint(vm.parseJsonString(testdataJSON, string.concat(indexPath, ".liqSquare")));
+                orderConfig.curveCuts.borrowCurveCuts[i].offset =
+                    vm.parseInt(vm.parseJsonString(testdataJSON, string.concat(indexPath, ".offset")));
+            }
+        }
+        {
+            string memory curveCutsPath = string.concat(key, ".lendCurveCuts");
+            uint256 length = vm.parseUint(vm.parseJsonString(testdataJSON, string.concat(key, ".lendCurveCuts.length")));
+            orderConfig.curveCuts.lendCurveCuts = new CurveCut[](length);
+
+            for (uint256 i = 0; i < length; i++) {
+                string memory indexPath = string.concat(curveCutsPath, ".", vm.toString(i));
+                orderConfig.curveCuts.lendCurveCuts[i].xtReserve =
+                    vm.parseUint(vm.parseJsonString(testdataJSON, string.concat(indexPath, ".xtReserve")));
+                orderConfig.curveCuts.lendCurveCuts[i].liqSquare =
+                    vm.parseUint(vm.parseJsonString(testdataJSON, string.concat(indexPath, ".liqSquare")));
+                orderConfig.curveCuts.lendCurveCuts[i].offset =
+                    vm.parseInt(vm.parseJsonString(testdataJSON, string.concat(indexPath, ".offset")));
+            }
+        }
     }
 }

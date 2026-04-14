@@ -20,7 +20,13 @@ import {VersionV2_0_1} from "../VersionV2_0_1.sol";
  * @dev Manages market deployment, gearing token implementations, and market configuration validation
  * Inherits from V1 factory interface while adding V2-specific features for improved market creation
  */
-contract TermMaxFactoryV2 is ITermMaxFactory, FactoryEventsV2, VersionV2_0_1, WithWhitelistCheck, WithAccessManagerRole {
+contract TermMaxFactoryV2 is
+    ITermMaxFactory,
+    FactoryEventsV2,
+    VersionV2_0_1,
+    WithWhitelistCheck,
+    WithAccessManagerRole
+{
     /// @notice Constant key for the default ERC20 gearing token implementation
     bytes32 constant GT_ERC20 = keccak256("GearingTokenWithERC20");
 
