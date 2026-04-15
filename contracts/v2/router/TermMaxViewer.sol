@@ -273,7 +273,7 @@ contract TermMaxViewer is UUPSUpgradeable, Ownable2StepUpgradeable {
                 loanPositionsTmp[validPositions].owner = owner;
                 try gtNft.getLiquidationInfo(loanId) returns (bool isLiquidable, uint128 ltv, uint128 maxRepayAmt) {
                     loanPositionsTmp[validPositions].ltv = ltv;
-                    loanPositionsTmp[validPositions].isHealthy = ltv >= config.loanConfig.liquidationLtv;
+                    loanPositionsTmp[validPositions].isHealthy = ltv < config.loanConfig.liquidationLtv;
                     loanPositionsTmp[validPositions].isLiquidable = isLiquidable;
                     loanPositionsTmp[validPositions].maxRepayAmt = maxRepayAmt;
                 } catch {
