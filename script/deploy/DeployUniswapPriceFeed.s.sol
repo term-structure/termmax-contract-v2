@@ -3,12 +3,14 @@ pragma solidity ^0.8.27;
 
 import {Script} from "forge-std/Script.sol";
 import {VmSafe} from "forge-std/Vm.sol";
-import {TermMaxPancakeTWAPPriceFeed} from "contracts/v2/oracle/priceFeeds/TermMaxPancakeTWAPPriceFeed.sol";
-import {IUniswapV3Factory} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 import "forge-std/console.sol";
 import "./DeployBaseV2.s.sol";
+import {
+    TermMaxPancakeTWAPPriceFeed,
+    TermMaxUniswapTWAPPriceFeed
+} from "contracts/v2/oracle/priceFeeds/TermMaxPancakeTWAPPriceFeed.sol";
 
-contract DeployOracle is DeployBaseV2 {
+contract DeployUniswapPriceFeed is DeployBaseV2 {
     uint256 deployerPrivateKey;
     address adminAddr;
     address accessManagerAddr;
@@ -17,11 +19,13 @@ contract DeployOracle is DeployBaseV2 {
     DeployedContracts coreContracts;
 
     string oracleEnvs;
+    string configPath = "-uniswap-pairs.json";
 
     function setUp() public {
         // Load network from environment variable
         coreParams.network = vm.envString("NETWORK");
         string memory networkUpper = toUpper(coreParams.network);
+        configPath = string.concat(vm.projectRoot(), "/script/deploy/deploydata/", coreParams.network, configPath);
 
         // Load network-specific configuration
         string memory privateKeyVar = string.concat(networkUpper, "_DEPLOYER_PRIVATE_KEY");
@@ -64,33 +68,42 @@ contract DeployOracle is DeployBaseV2 {
         console.log("Deployer balance:", coreParams.deployerAddr.balance);
 
         vm.startBroadcast(deployerPrivateKey);
+        string memory json = vm.readFile(configPath);
+        uint256 totalPairs = vm.parseJsonUint(json, ".configNum");
+        for (uint256 i = 0; i < totalPairs; i++) {
+            address pool = vm.parseJsonAddress(json, string.concat(".configs.configs_", vm.toString(i), ".pool"));
+            address baseToken =
+                vm.parseJsonAddress(json, string.concat(".configs.configs_", vm.toString(i), ".baseToken"));
+            address quoteToken =
+                vm.parseJsonAddress(json, string.concat(".configs.configs_", vm.toString(i), ".quoteToken"));
+            bool isPancake = vm.parseJsonBool(json, string.concat(".configs.configs_", vm.toString(i), ".isPancake"));
+            uint256 duration = vm.parseJsonUint(json, string.concat(".configs.configs_", vm.toString(i), ".duration"));
+            console.log("Pool:", pool);
+            console.log("Base Token:", baseToken);
+            console.log("Quote Token:", quoteToken);
+            console.log("Is Pancake:", isPancake);
+            console.log("Duration:", duration);
+            TermMaxUniswapTWAPPriceFeed priceFeed;
+            if (isPancake) {
+                priceFeed = new TermMaxPancakeTWAPPriceFeed(pool, uint32(duration), baseToken, quoteToken);
+            } else {
+                priceFeed = new TermMaxUniswapTWAPPriceFeed(pool, uint32(duration), baseToken, quoteToken);
+            }
+            console.log(
+                "Deployed TermMax", isPancake ? "Pancake" : "Uniswap", "TWAP Price Feed at:", address(priceFeed)
+            );
+            oracleEnvs = string.concat(
+                oracleEnvs,
+                "TERM_MAX_",
+                toUpper(vm.toString(baseToken)),
+                "_",
+                toUpper(vm.toString(quoteToken)),
+                "_PRICE_FEED_ADDRESS=",
+                vm.toString(address(priceFeed)),
+                "\n"
+            );
+        }
 
-        address pancakeFactory = 0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865;
-        // B2/WBNB Pool
-        address baseToken = 0x783c3f003f172c6Ac5AC700218a357d2D66Ee2a2;
-        address quoteToken = 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c;
-        uint32 _twapPeriod = 180;
-        uint24 fee = 100;
-        address pool = IUniswapV3Factory(pancakeFactory).getPool(baseToken, quoteToken, fee);
-        require(pool != address(0), "Pool doesn't exist");
-        TermMaxPancakeTWAPPriceFeed priceFeed =
-            new TermMaxPancakeTWAPPriceFeed(pool, _twapPeriod, baseToken, quoteToken);
-        console.log("Deployed TermMaxPancakeTWAPPriceFeed at:", address(priceFeed));
-        (uint80 roundId, int256 price, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound) =
-            priceFeed.latestRoundData();
-        console.log("Price: ", price);
-        console.log("Started at: ", startedAt);
-        console.log("Updated at: ", updatedAt);
-        console.log("Round ID: ", roundId);
-
-        oracleEnvs = string.concat(
-            "BASE_TOKEN=",
-            toUpper(vm.toString(baseToken)),
-            "\nQUOTE_TOKEN=",
-            toUpper(vm.toString(quoteToken)),
-            "\nPRICE_FEED_ADDRESS=",
-            vm.toString(address(priceFeed))
-        );
         vm.stopBroadcast();
 
         console.log("===== Git Info =====");
@@ -136,7 +149,7 @@ contract DeployOracle is DeployBaseV2 {
             coreParams.network,
             "/",
             coreParams.network,
-            "-v2-oracles-",
+            "-v2-uniswap-priceFeeds-",
             vm.toString(block.timestamp),
             ".env"
         );

@@ -3,37 +3,35 @@ pragma solidity ^0.8.27;
 
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
-import {TermMaxSparkLinearOracleAdapter} from "contracts/v2/oracle/priceFeeds/TermMaxSparkLinearOracleAdapter.sol";
 import {StringHelper} from "script/utils/StringHelper.sol";
+import {TermMaxDUSDPriceFeedAdapter} from "contracts/v2/oracle/priceFeeds/TermMaxDUSDPriceFeedAdapter.sol";
 import {DeployBaseV2} from "script/deploy/DeployBaseV2.s.sol";
 
 /**
- * @title DeploySrUSDeAdapter
- * @notice Script to deploy TermMaxSparkLinearOracleAdapter for srUSDe on Ethereum mainnet
- * @dev This script deploys an adapter that wraps Spark/Pendle Linear Oracle for srUSDe
+ * @title DeployDUSDPriceFeedAdapter
+ * @notice Script to deploy TermMaxDUSDPriceFeedAdapter on Ethereum mainnet
+ * @dev This script deploys an adapter that wraps the DUSD oracle
  *
  * Usage:
- *   forge script script/deploy/DeploySrUSDeAdapter.s.sol:DeploySrUSDeAdapter \
+ *   forge script script/deploy/DeployDUSDPriceFeedAdapter.s.sol:DeployDUSDPriceFeedAdapter \
  *     --rpc-url $ETH_MAINNET_RPC_URL \
  *     --private-key $ETH_MAINNET_DEPLOYER_PRIVATE_KEY \
  *     --broadcast \
  *     --verify
  */
-contract DeploySrUSDeAdapter is DeployBaseV2 {
-    // Spark/Pendle Linear Oracle for srUSDe on Ethereum mainnet
-    // This oracle is already deployed and being used in the markets configuration
-    address constant SPARK_SRUSDE_LINEAR_ORACLE = 0xeD2b85Df608fa9FBe95371D01566e12fb005EDeE;
+contract DeployDUSDPriceFeedAdapter is DeployBaseV2 {
+    // Mainnet DUSD oracle + asset addresses (matching fork test)
+    address constant DUSD_ORACLE = 0x49fba73738461835fefB19351b161Bde4BcD6b5A;
+    address constant DUSD_ASSET = 0x871aB8E36CaE9AF35c6A3488B049965233DeB7ed;
 
     // Network configuration
     string network;
     address deployerAddr;
     uint256 deployerPrivateKey;
-    bool isBroadcast;
 
     function setUp() public {
         // Load network configuration from environment variables
         network = vm.envOr("NETWORK", string("eth-mainnet"));
-        isBroadcast = vm.envBool("IS_BROADCAST");
         string memory networkUpper = StringHelper.toUpper(network);
 
         // Load deployer private key
@@ -51,7 +49,8 @@ contract DeploySrUSDeAdapter is DeployBaseV2 {
         console.log("Network:", network);
         console.log("Deployer:", deployerAddr);
         console.log("Deployer balance:", deployerAddr.balance);
-        console.log("Spark srUSDe Linear Oracle:", SPARK_SRUSDE_LINEAR_ORACLE);
+        console.log("DUSD Oracle:", DUSD_ORACLE);
+        console.log("DUSD Asset:", DUSD_ASSET);
     }
 
     function run() public {
@@ -59,36 +58,34 @@ contract DeploySrUSDeAdapter is DeployBaseV2 {
 
         vm.startBroadcast(deployerPrivateKey);
 
-        // Deploy TermMaxSparkLinearOracleAdapter
-        TermMaxSparkLinearOracleAdapter adapter = new TermMaxSparkLinearOracleAdapter(SPARK_SRUSDE_LINEAR_ORACLE);
+        // Deploy TermMaxDUSDPriceFeedAdapter
+        TermMaxDUSDPriceFeedAdapter adapter = new TermMaxDUSDPriceFeedAdapter(DUSD_ORACLE, DUSD_ASSET);
 
         vm.stopBroadcast();
 
         console.log("\n===== Deployment Successful =====");
-        console.log("TermMaxSparkLinearOracleAdapter deployed at:", address(adapter));
-        console.log("Wrapping Spark Linear Oracle at:", SPARK_SRUSDE_LINEAR_ORACLE);
+        console.log("TermMaxDUSDPriceFeedAdapter deployed at:", address(adapter));
+        console.log("Wrapped DUSD oracle:", DUSD_ORACLE);
+        console.log("Asset tracked:", DUSD_ASSET);
 
         // Verify adapter configuration
         console.log("\n===== Verifying Adapter Configuration =====");
         console.log("Decimals:", adapter.decimals());
         console.log("Description:", adapter.description());
-        console.log("Asset:", adapter.asset());
 
         // Get price data
         (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound) =
             adapter.latestRoundData();
         console.log("\n===== Price Data =====");
         console.log("Round ID:", roundId);
-        console.log("Answer (srUSDe/USD):", answer);
-        console.log("Price in USD:", uint256(answer) * 1e8 / (10 ** adapter.decimals()));
+        console.log("Answer (DUSD/USDC with 18 decimals):", answer);
+        console.log("Price (human readable):", uint256(answer) / 1e18);
         console.log("Started At:", startedAt);
         console.log("Updated At:", updatedAt);
         console.log("Answered In Round:", answeredInRound);
 
-        if (isBroadcast) {
-            // Save deployment info
-            saveDeploymentInfo(address(adapter));
-        }
+        // Save deployment info
+        saveDeploymentInfo(address(adapter));
     }
 
     function saveDeploymentInfo(address adapterAddress) internal {
@@ -126,11 +123,14 @@ contract DeploySrUSDeAdapter is DeployBaseV2 {
                 vm.toString(deployerAddr),
                 '",\n',
                 '  "contracts": {\n',
-                '    "termMaxSparkLinearOracleAdapter": "',
+                '    "termMaxDETHPriceFeedAdapter": "',
                 vm.toString(adapterAddress),
                 '",\n',
-                '    "sparkSrUSDeLinearOracle": "',
-                vm.toString(SPARK_SRUSDE_LINEAR_ORACLE),
+                '    "dethOracle": "',
+                vm.toString(DUSD_ORACLE),
+                '",\n',
+                '    "dethAsset": "',
+                vm.toString(DUSD_ASSET),
                 '"\n',
                 "  }\n",
                 "}"
@@ -138,16 +138,8 @@ contract DeploySrUSDeAdapter is DeployBaseV2 {
         );
 
         // Save to JSON file
-        string memory jsonPath = string.concat(
-            vm.projectRoot(),
-            "/deployments/",
-            network,
-            "/",
-            network,
-            "-srusde-spark-linear-adapter-",
-            vm.toString(block.timestamp),
-            ".json"
-        );
+        string memory jsonPath =
+            string.concat(vm.projectRoot(), "/deployments/", network, "/", network, "-deth-price-feed-adapter" ".json");
         vm.writeFile(jsonPath, json);
         console.log("Deployment info saved to:", jsonPath);
     }

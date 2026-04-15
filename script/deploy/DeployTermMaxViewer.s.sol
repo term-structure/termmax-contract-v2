@@ -3,24 +3,23 @@ pragma solidity ^0.8.27;
 
 import {Script} from "forge-std/Script.sol";
 import {VmSafe} from "forge-std/Vm.sol";
-import {TermMaxPancakeTWAPPriceFeed} from "contracts/v2/oracle/priceFeeds/TermMaxPancakeTWAPPriceFeed.sol";
-import {IUniswapV3Factory} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 import "forge-std/console.sol";
 import "./DeployBaseV2.s.sol";
+import {UniversalFactory} from "contracts/v2/tokenomics/UniversalFactory.sol";
 
-contract DeployOracle is DeployBaseV2 {
+contract DeployTermMaxViewer is DeployBaseV2 {
     uint256 deployerPrivateKey;
     address adminAddr;
     address accessManagerAddr;
 
     CoreParams coreParams;
     DeployedContracts coreContracts;
-
-    string oracleEnvs;
+    bool isBroadcast;
 
     function setUp() public {
         // Load network from environment variable
         coreParams.network = vm.envString("NETWORK");
+        isBroadcast = vm.envBool("IS_BROADCAST");
         string memory networkUpper = toUpper(coreParams.network);
 
         // Load network-specific configuration
@@ -30,9 +29,7 @@ contract DeployOracle is DeployBaseV2 {
         deployerPrivateKey = vm.envUint(privateKeyVar);
         coreParams.deployerAddr = vm.addr(deployerPrivateKey);
         adminAddr = vm.envAddress(adminVar);
-
-        coreParams.isMainnet = vm.envBool("IS_MAINNET");
-        coreParams.isL2Network = vm.envBool("IS_L2");
+        coreParams.adminAddr = adminAddr;
         {
             // Create deployments directory if it doesn't exist
             string memory deploymentsDir = string.concat(vm.projectRoot(), "/deployments/", coreParams.network);
@@ -41,6 +38,8 @@ contract DeployOracle is DeployBaseV2 {
                 vm.createDir(deploymentsDir, true);
             }
         }
+        coreParams.isMainnet = vm.envBool("IS_MAINNET");
+        coreParams.isL2Network = vm.envBool("IS_L2");
 
         string memory deploymentPath = string.concat(
             vm.projectRoot(), "/deployments/", coreParams.network, "/", coreParams.network, "-access-manager.json"
@@ -64,33 +63,15 @@ contract DeployOracle is DeployBaseV2 {
         console.log("Deployer balance:", coreParams.deployerAddr.balance);
 
         vm.startBroadcast(deployerPrivateKey);
+        if (coreContracts.termMaxViewer == TermMaxViewer(address(0))) {
+            TermMaxViewer termMaxViewer = deployMarketViewer(address(coreContracts.accessManager));
+            coreContracts.termMaxViewer = termMaxViewer;
+            console.log("Deployed TermMaxViewer at:", address(termMaxViewer));
+        } else {
+            upgradeMarketViewer(coreContracts.accessManager, address(coreContracts.termMaxViewer));
+            console.log("Upgraded TermMaxViewer at:", address(coreContracts.termMaxViewer));
+        }
 
-        address pancakeFactory = 0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865;
-        // B2/WBNB Pool
-        address baseToken = 0x783c3f003f172c6Ac5AC700218a357d2D66Ee2a2;
-        address quoteToken = 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c;
-        uint32 _twapPeriod = 180;
-        uint24 fee = 100;
-        address pool = IUniswapV3Factory(pancakeFactory).getPool(baseToken, quoteToken, fee);
-        require(pool != address(0), "Pool doesn't exist");
-        TermMaxPancakeTWAPPriceFeed priceFeed =
-            new TermMaxPancakeTWAPPriceFeed(pool, _twapPeriod, baseToken, quoteToken);
-        console.log("Deployed TermMaxPancakeTWAPPriceFeed at:", address(priceFeed));
-        (uint80 roundId, int256 price, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound) =
-            priceFeed.latestRoundData();
-        console.log("Price: ", price);
-        console.log("Started at: ", startedAt);
-        console.log("Updated at: ", updatedAt);
-        console.log("Round ID: ", roundId);
-
-        oracleEnvs = string.concat(
-            "BASE_TOKEN=",
-            toUpper(vm.toString(baseToken)),
-            "\nQUOTE_TOKEN=",
-            toUpper(vm.toString(quoteToken)),
-            "\nPRICE_FEED_ADDRESS=",
-            vm.toString(address(priceFeed))
-        );
         vm.stopBroadcast();
 
         console.log("===== Git Info =====");
@@ -108,38 +89,11 @@ contract DeployOracle is DeployBaseV2 {
         console.log("Deployer:", coreParams.deployerAddr);
         console.log("Admin:", adminAddr);
 
-        string memory deploymentEnv = string(
-            abi.encodePacked(
-                "NETWORK=",
-                coreParams.network,
-                "\nDEPLOYED_AT=",
-                vm.toString(block.timestamp),
-                "\nGIT_BRANCH=",
-                getGitBranch(),
-                "\nGIT_COMMIT_HASH=",
-                vm.toString(getGitCommitHash()),
-                "\nBLOCK_NUMBER=",
-                vm.toString(block.number),
-                "\nBLOCK_TIMESTAMP=",
-                vm.toString(block.timestamp),
-                "\nDEPLOYER_ADDRESS=",
-                vm.toString(vm.addr(deployerPrivateKey)),
-                "\nADMIN_ADDRESS=",
-                vm.toString(adminAddr)
-            )
-        );
-        deploymentEnv = string(abi.encodePacked(deploymentEnv, "\n", oracleEnvs));
-
-        string memory path = string.concat(
-            vm.projectRoot(),
-            "/deployments/",
-            coreParams.network,
-            "/",
-            coreParams.network,
-            "-v2-oracles-",
-            vm.toString(block.timestamp),
-            ".env"
-        );
-        vm.writeFile(path, deploymentEnv);
+        if (isBroadcast) {
+            string memory deploymentPath = string.concat(
+                vm.projectRoot(), "/deployments/", coreParams.network, "/", coreParams.network, "-core-v2.json"
+            );
+            writeAsJson(deploymentPath, coreParams, coreContracts);
+        }
     }
 }
