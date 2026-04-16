@@ -73,7 +73,7 @@ contract DeployCoreV2 is DeployBaseV2 {
             if (vm.keyExistsJson(json, ".contracts.router")) {
                 address routerAddr = vm.parseJsonAddress(json, ".contracts.router");
                 console.log("Router already deployed at:", routerAddr);
-                coreContracts.router = TermMaxRouterV2(routerAddr);
+                coreContracts.routerV1 = TermMaxRouter_V1_1_2(routerAddr);
             }
             if (vm.keyExistsJson(json, ".contracts.faucet")) {
                 address faucetAddr = vm.parseJsonAddress(json, ".contracts.faucet");
@@ -120,6 +120,8 @@ contract DeployCoreV2 is DeployBaseV2 {
         console.log("RouterV2 deployed at:", address(coreContracts.router));
         console.log("MakerHelper deployed at:", address(coreContracts.makerHelper));
         console.log("MarketViewer deployed at:", address(coreContracts.marketViewer));
+        console.log("TermMaxRouterV1.1.2 deployed at:", address(coreContracts.routerV1));
+        console.log("TermMaxViewer deployed at:", address(coreContracts.termMaxViewer));
         if (coreParams.isMainnet) {
             console.log("UniswapV3AdapterV2 deployed at:", address(coreContracts.uniswapV3Adapter));
             console.log("OdosV2AdapterV2 deployed at:", address(coreContracts.odosV2Adapter));

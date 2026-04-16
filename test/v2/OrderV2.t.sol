@@ -1249,6 +1249,159 @@ contract OrderTestV2 is Test {
         vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", sender));
         res.order.borrowToken(recipient, 1e8);
     }
+
+    // =============================================================================
+    // ORDER EXPIRY TIMESTAMP TESTS
+    // =============================================================================
+
+    function testOrderExpiryTimestamp_InitializedWithMaturity() public {
+        // The order should be initialized with maturity as the expiry timestamp
+        uint64 maturity = res.market.config().maturity;
+        assertEq(res.order.orderExpiryTimestamp(), maturity, "Order expiry timestamp should equal maturity");
+    }
+
+    function testOrderExpiryTimestamp_SetExpiryTimestamp() public {
+        vm.startPrank(maker);
+
+        uint64 maturity = res.market.config().maturity;
+        uint64 newExpiryTimestamp = maturity - 1 days;
+
+        vm.expectEmit();
+        emit OrderEventsV2.ExpiryTimestampUpdated(newExpiryTimestamp);
+        res.order.setExpiryTimestamp(newExpiryTimestamp);
+
+        assertEq(res.order.orderExpiryTimestamp(), newExpiryTimestamp, "Order expiry timestamp not updated");
+
+        vm.stopPrank();
+    }
+
+    function testOrderExpiryTimestamp_SetExpiryTimestampToMaturity() public {
+        vm.startPrank(maker);
+
+        // First set it to a lower value
+        uint64 maturity = res.market.config().maturity;
+        uint64 lowerTimestamp = maturity - 1 days;
+        res.order.setExpiryTimestamp(lowerTimestamp);
+
+        // Then set it back to maturity (boundary condition)
+        vm.expectEmit();
+        emit OrderEventsV2.ExpiryTimestampUpdated(maturity);
+        res.order.setExpiryTimestamp(maturity);
+
+        assertEq(res.order.orderExpiryTimestamp(), maturity, "Order expiry timestamp should equal maturity");
+
+        vm.stopPrank();
+    }
+
+    function testOrderExpiryTimestamp_RevertWhenExceedsMaturity() public {
+        vm.startPrank(maker);
+
+        uint64 maturity = res.market.config().maturity;
+        uint64 invalidExpiryTimestamp = maturity + 1;
+
+        vm.expectRevert(abi.encodeWithSelector(OrderErrorsV2.InvalidExpiryTimestamp.selector));
+        res.order.setExpiryTimestamp(invalidExpiryTimestamp);
+
+        vm.stopPrank();
+    }
+
+    function testOrderExpiryTimestamp_SwapRevertsAfterExpiry() public {
+        vm.startPrank(maker);
+
+        // Set expiry timestamp to 1 day from now
+        uint64 expiryTimestamp = uint64(block.timestamp + 1 days);
+        res.order.setExpiryTimestamp(expiryTimestamp);
+
+        vm.stopPrank();
+
+        // Warp time to after expiry
+        vm.warp(expiryTimestamp);
+
+        vm.startPrank(sender);
+
+        uint128 underlyingAmtIn = 100e8;
+        uint128 minTokenOut = 0e8;
+        res.debt.mint(sender, underlyingAmtIn);
+        res.debt.approve(address(res.order), underlyingAmtIn);
+
+        // Should revert because order has expired
+        vm.expectRevert(abi.encodeWithSelector(OrderErrors.TermIsNotOpen.selector));
+        res.order.swapExactTokenToToken(
+            res.debt, res.ft, sender, underlyingAmtIn, minTokenOut, block.timestamp + 1 hours
+        );
+
+        vm.stopPrank();
+    }
+
+    function testOrderExpiryTimestamp_SwapWorksBeforeExpiry() public {
+        vm.startPrank(maker);
+
+        // Set expiry timestamp to 1 day from now
+        uint64 expiryTimestamp = uint64(block.timestamp + 1 days);
+        res.order.setExpiryTimestamp(expiryTimestamp);
+
+        vm.stopPrank();
+
+        // Warp time to just before expiry
+        vm.warp(expiryTimestamp - 1);
+
+        vm.startPrank(sender);
+
+        uint128 underlyingAmtIn = 100e8;
+        uint128 minTokenOut = 0e8;
+        res.debt.mint(sender, underlyingAmtIn);
+        res.debt.approve(address(res.order), underlyingAmtIn);
+
+        // Should work because we're still before expiry
+        uint256 netOut = res.order.swapExactTokenToToken(
+            res.debt, res.ft, sender, underlyingAmtIn, minTokenOut, block.timestamp + 1 hours
+        );
+
+        assertGt(netOut, 0, "Should receive tokens");
+
+        vm.stopPrank();
+    }
+
+    function testOrderExpiryTimestamp_OnlyOwnerCanSet() public {
+        vm.startPrank(sender);
+
+        uint64 maturity = res.market.config().maturity;
+        uint64 newExpiryTimestamp = maturity - 1 days;
+
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", sender));
+        res.order.setExpiryTimestamp(newExpiryTimestamp);
+
+        vm.stopPrank();
+    }
+
+    function testOrderExpiryTimestamp_MultipleUpdates() public {
+        vm.startPrank(maker);
+
+        uint64 maturity = res.market.config().maturity;
+
+        // Update 1
+        uint64 timestamp1 = maturity - 3 days;
+        vm.expectEmit();
+        emit OrderEventsV2.ExpiryTimestampUpdated(timestamp1);
+        res.order.setExpiryTimestamp(timestamp1);
+        assertEq(res.order.orderExpiryTimestamp(), timestamp1, "First update failed");
+
+        // Update 2
+        uint64 timestamp2 = maturity - 2 days;
+        vm.expectEmit();
+        emit OrderEventsV2.ExpiryTimestampUpdated(timestamp2);
+        res.order.setExpiryTimestamp(timestamp2);
+        assertEq(res.order.orderExpiryTimestamp(), timestamp2, "Second update failed");
+
+        // Update 3 - back to lower value
+        uint64 timestamp3 = maturity - 4 days;
+        vm.expectEmit();
+        emit OrderEventsV2.ExpiryTimestampUpdated(timestamp3);
+        res.order.setExpiryTimestamp(timestamp3);
+        assertEq(res.order.orderExpiryTimestamp(), timestamp3, "Third update failed");
+
+        vm.stopPrank();
+    }
 }
 
 // Mock contracts for testing

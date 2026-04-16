@@ -1,21 +1,21 @@
 {
   "network": "bnb-mainnet",
-  "deployedAt": "1773992877",
+  "deployedAt": "1776234144",
   "gitBranch": "v2/deployment",
-  "gitCommitHash": "0xfc747779202343432677f7a48bcc768721d6cc83",
+  "gitCommitHash": "0x82afc5cf998559008bd5fc339dff30cbdf7d2e1f",
   "blockInfo": {
-    "number": "87654021",
-    "timestamp": "1773992877"
+    "number": "92629573",
+    "timestamp": "1776234144"
   },
   "deployer": "0x56E3665038C5F0b56Cc7D81aC66C86521274B251",
   "admin": "0x8409a9C1A911CED491892c5694E43994c9d47E8f",
   "contracts": {
-    "factoryV2": "0xdffE6De6de1dB8e1B5Ce77D3222eba401C2573b5",
-    "vaultFactoryV2": "0x1401049368eD6AD8194f8bb7E41732c4620F170b",
-    "alphaFactory": "0x96839e9B0482BfFA7e129Ce9FEEFCeb1e895fC2B",
-    "alphaVaultFactory": "0xC63858D1eFa377f94392Ba5dEb521233Ec1548eb",
+    "factoryV2": "0x4a34b4cAaA6AD23B95d6ec6394472fbB857eB064",
+    "vaultFactoryV2": "0x310ec798C59894c0eC6ce5c18060f63a37592BC7",
+    "alphaFactory": "0x22105089AFC8F35D55a9Efb19785fd350ADdd7C3",
+    "alphaVaultFactory": "0x34bF74BA2534fC80b52e8C8F2C6b2B9FBc01d3B8",
     "priceFeedFactoryV2": "0x353E129d2A949173E06eb0eE64557Dc37B3F68FD",
-    "termMax4626Factory": "0xbe6f455123f6cdea1352d4510cCDe3D71D139ae7",
+    "termMax4626Factory": "0x68B6bD575cc2Aae19603Fa5609d8411ffa4B4aC3",
     "whitelistManager": "0x6119E236d3798777A3f2553926070958DF5704F1",
     "oracleAggregatorV2": "0x3e3C07Fa1e5255AAab334d5E9ABc61AbF0057F2C",
     "routerV1": "0xb7634dB4f4710bb992118bC37d1F63e00e2704A4",

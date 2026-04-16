@@ -35,7 +35,8 @@ import {Constants} from "../../v1/lib/Constants.sol";
 import {ITermMaxVaultV2} from "./ITermMaxVaultV2.sol";
 import {VaultErrorsV2} from "../errors/VaultErrorsV2.sol";
 import {TransactionReentrancyGuard} from "../lib/TransactionReentrancyGuard.sol";
-import {VersionV2} from "../VersionV2.sol";
+import {VersionV2_0_1} from "../VersionV2_0_1.sol";
+import {WithWhitelistCheck, IWhitelistManager} from "../access/WithWhitelistCheck.sol";
 
 contract TermMaxVaultV2 is
     VaultStorageV2,
@@ -46,7 +47,8 @@ contract TermMaxVaultV2 is
     ISwapCallback,
     ITermMaxVaultV2,
     TransactionReentrancyGuard,
-    VersionV2
+    VersionV2_0_1,
+    WithWhitelistCheck
 {
     using SafeCast for uint256;
     using TransferUtils for IERC20;
@@ -83,7 +85,9 @@ contract TermMaxVaultV2 is
         _;
     }
 
-    constructor(address ORDER_MANAGER_SINGLETON_) {
+    constructor(address ORDER_MANAGER_SINGLETON_, address _whitelistManager)
+        WithWhitelistCheck(_whitelistManager, IWhitelistManager.ContractModule.MARKET)
+    {
         ORDER_MANAGER_SINGLETON = ORDER_MANAGER_SINGLETON_;
         _disableInitializers();
     }
@@ -508,6 +512,10 @@ contract TermMaxVaultV2 is
     }
 
     function submitMarket(address market, bool isWhitelisted) external virtual onlyCuratorRole {
+        if (isWhitelisted) {
+            _checkWhitelisted(market);
+        }
+
         if (!_submitPendingWhitelist(_marketWhitelist, _pendingMarkets, _setMarketWhitelist, market, isWhitelisted)) {
             emit VaultEvents.SubmitMarketToWhitelist(market, _pendingMarkets[market].validAt);
         }
@@ -523,9 +531,13 @@ contract TermMaxVaultV2 is
         if (pool_ == address(_pool)) revert VaultErrors.AlreadySet();
         if (_pendingPool.validAt != 0) revert VaultErrors.AlreadyPending();
 
-        _pendingPool.update(pool_, _timelock);
-
-        emit VaultEventsV2.SubmitPendingPool(pool_, _pendingPool.validAt);
+        if (pool_ != address(0)) {
+            _checkWhitelisted(pool_, IWhitelistManager.ContractModule.POOL);
+            _pendingPool.update(pool_, _timelock);
+            emit VaultEventsV2.SubmitPendingPool(pool_, _pendingPool.validAt);
+        } else {
+            _setPool(pool_);
+        }
     }
 
     function _setPool(address pool_) internal {
@@ -534,6 +546,7 @@ contract TermMaxVaultV2 is
             oldPool.redeem(oldPool.balanceOf(address(this)), address(this), address(this));
         }
         if (pool_ != address(0)) {
+            _checkWhitelisted(pool_, IWhitelistManager.ContractModule.POOL);
             IERC20 asset_ = IERC20(asset());
             uint256 balance = asset_.balanceOf(address(this));
             if (balance > 0) {
@@ -626,6 +639,7 @@ contract TermMaxVaultV2 is
     }
 
     function acceptMarket(address market) external virtual afterTimelock(_pendingMarkets[market].validAt) {
+        _checkWhitelisted(market);
         _setMarketWhitelist(market, true);
     }
 

@@ -96,7 +96,9 @@ abstract contract VaultBaseTestV2 is ForkBaseTestV2 {
 
         vm.startPrank(res.marketInitialParams.admin);
 
-        res.oracle = deployOracleAggregator(res.marketInitialParams.admin);
+        DeployUtils.Res memory deployRes = DeployUtils.deployRes(res.marketInitialParams.admin);
+        res.oracle = deployRes.oracle;
+
         res.collateralPriceFeed = deployMockPriceFeed(res.marketInitialParams.admin);
         res.debtPriceFeed = deployMockPriceFeed(res.marketInitialParams.admin);
         res.oracle.submitPendingOracle(
@@ -114,9 +116,7 @@ abstract contract VaultBaseTestV2 is ForkBaseTestV2 {
         res.marketInitialParams.loanConfig.oracle = IOracle(address(res.oracle));
 
         res.market = TermMaxMarketV2(
-            deployFactoryWithMockOrder(res.marketInitialParams.admin).createMarket(
-                keccak256("GearingTokenWithERC20"), res.marketInitialParams, 0
-            )
+            deployRes.factory.createMarket(keccak256("GearingTokenWithERC20"), res.marketInitialParams, 0)
         );
 
         (res.ft, res.xt, res.gt,,) = res.market.tokens();
@@ -135,7 +135,7 @@ abstract contract VaultBaseTestV2 is ForkBaseTestV2 {
             MockPriceFeed.RoundData(1, 1e8, block.timestamp, block.timestamp, 0)
         );
 
-        res.vault = ITermMaxVault(deployVaultFactory().createVault(res.vaultInitialParams, 0));
+        res.vault = ITermMaxVault(deployRes.vaultFactory.createVault(res.vaultInitialParams, 0));
 
         res.vault.submitMarket(address(res.market), true);
         vm.warp(res.currentTime + res.vaultInitialParams.timelock + 1);

@@ -9,6 +9,7 @@ import {StateChecker} from "./utils/StateChecker.sol";
 import {SwapUtils} from "./utils/SwapUtils.sol";
 import {LoanUtils} from "./utils/LoanUtils.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
@@ -59,6 +60,7 @@ import {
 import {ITermMaxRouter} from "contracts/v1/router/ITermMaxRouter.sol";
 import {MockSwapAdapterV2} from "contracts/v2/test/MockSwapAdapterV2.sol";
 import {ITermMaxOrder} from "contracts/v1/ITermMaxOrder.sol";
+import {ITermMaxMarket} from "contracts/v1/ITermMaxMarket.sol";
 import {TermMaxSwapData, TermMaxSwapAdapter} from "contracts/v2/router/swapAdapters/TermMaxSwapAdapter.sol";
 import {TermMaxOrderV2, OrderInitialParams} from "contracts/v2/TermMaxOrderV2.sol";
 import {MakerHelper, MakerHelperErrors} from "contracts/v2/router/MakerHelper.sol";
@@ -124,7 +126,7 @@ contract MakerHelperTest is Test {
         res.ft.transfer(address(res.order), amount);
         res.xt.transfer(address(res.order), amount);
 
-        address implementation = address(new MakerHelper());
+        address implementation = address(new MakerHelper(address(res.whitelistManager)));
         bytes memory data = abi.encodeCall(MakerHelper.initialize, deployer);
         ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), data);
         makerHelper = MakerHelper(address(proxy));
@@ -204,6 +206,53 @@ contract MakerHelperTest is Test {
         vm.stopPrank();
     }
 
+    function testPlaceOrderForV1RevertIfMarketNotWhitelisted() public {
+        vm.startPrank(sender);
+
+        vm.expectRevert(abi.encodeWithSignature("TargetNotWhitelisted()"));
+        makerHelper.placeOrderForV1(ITermMaxMarket(vm.randomAddress()), sender, 0, 0, 0, 0, orderConfig);
+
+        vm.stopPrank();
+    }
+
+    function testPlaceOrderForV2RevertIfPoolNotWhitelisted(uint256 salt) public {
+        vm.startPrank(sender);
+
+        OrderInitialParams memory initialParams;
+        initialParams.maker = sender;
+        initialParams.orderConfig = orderConfig;
+        initialParams.orderConfig.gtId = 1;
+        initialParams.virtualXtReserve = 1e8;
+        initialParams.pool = IERC4626(vm.randomAddress());
+
+        DelegateAble.DelegateParameters memory delegateParams;
+        DelegateAble.Signature memory delegateSignature;
+
+        vm.expectRevert(abi.encodeWithSignature("TargetNotWhitelisted()"));
+        makerHelper.placeOrderForV2(res.market, salt, 0, 0, 0, 0, initialParams, delegateParams, delegateSignature);
+
+        vm.stopPrank();
+    }
+
+    function testPlaceOrderForV2RevertIfSwapTriggerNotWhitelisted(uint256 salt) public {
+        vm.startPrank(sender);
+
+        OrderInitialParams memory initialParams;
+        initialParams.maker = sender;
+        initialParams.orderConfig = orderConfig;
+        initialParams.orderConfig.gtId = 1;
+        initialParams.orderConfig.swapTrigger = ISwapCallback(vm.randomAddress());
+        initialParams.virtualXtReserve = 1e8;
+
+        DelegateAble.DelegateParameters memory delegateParams;
+        DelegateAble.Signature memory delegateSignature;
+
+        vm.expectRevert(abi.encodeWithSignature("TargetNotWhitelisted()"));
+        makerHelper.placeOrderForV2(res.market, salt, 0, 0, 0, 0, initialParams, delegateParams, delegateSignature);
+
+        vm.stopPrank();
+    }
+
     function testPlaceOrderForV2AndDelegateWithSignature(uint256 salt) public {
         // Set up delegator and delegatee
         uint256 delegatorPrivateKey = 0x1234567890123456789012345678901234567890123456789012345678901234;
@@ -228,6 +277,7 @@ contract MakerHelperTest is Test {
         initialParams.maker = delegator;
         initialParams.orderConfig = orderConfig;
         initialParams.virtualXtReserve = 1e8;
+        initialParams.orderConfig.gtId = res.gt.totalSupply() + 1; // Set gtId to be the next minted GT ID
 
         // Set up proper delegation parameters
         uint256 nonce = DelegateAble(address(res.gt)).nonces(delegator);
@@ -261,17 +311,16 @@ contract MakerHelperTest is Test {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(delegatorPrivateKey, digest);
         DelegateAble.Signature memory delegateSignature = DelegateAble.Signature({v: v, r: r, s: s});
 
-        // Switch to delegatee to call the function (as required by setDelegateWithSignature)
+        // Switch to delegator to call the function (as required by setDelegateWithSignature)
         vm.stopPrank();
-        vm.startPrank(delegatee);
-
-        // Also need to approve tokens for delegatee
-        res.debt.mint(delegatee, debtTokenToDeposit);
-        deal(address(res.ft), delegatee, ftToDeposit);
+        vm.startPrank(delegator);
+        // Also need to approve tokens for delegator
+        res.debt.mint(delegator, debtTokenToDeposit);
+        deal(address(res.ft), delegator, ftToDeposit);
         res.debt.approve(address(makerHelper), debtTokenToDeposit);
         res.ft.approve(address(makerHelper), ftToDeposit);
         res.xt.approve(address(makerHelper), xtToDeposit);
-        res.collateral.mint(delegatee, collateralToMintGt);
+        res.collateral.mint(delegator, collateralToMintGt);
         res.collateral.approve(address(makerHelper), collateralToMintGt);
         if (salt % 2 == 0) {
             vm.expectRevert(MakerHelperErrors.OrderAddressIsDifferentFromDelegatee.selector);

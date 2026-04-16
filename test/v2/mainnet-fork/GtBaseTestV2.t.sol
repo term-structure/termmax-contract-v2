@@ -107,9 +107,10 @@ abstract contract GtBaseTestV2 is ForkBaseTestV2 {
 
         vm.startPrank(res.marketInitialParams.admin);
 
-        res.oracle = deployOracleAggregator(res.marketInitialParams.admin);
-        res.collateralPriceFeed = deployMockPriceFeed(res.marketInitialParams.admin);
-        res.debtPriceFeed = deployMockPriceFeed(res.marketInitialParams.admin);
+        DeployUtils.Res memory deployRes = DeployUtils.deployRes(res.marketInitialParams.admin);
+        res.oracle = deployRes.oracle;
+        res.router = deployRes.router;
+
         res.oracle.submitPendingOracle(
             address(res.marketInitialParams.collateral),
             IOracleV2.Oracle(res.collateralPriceFeed, res.collateralPriceFeed, 0, 0, 0, 0)
@@ -126,9 +127,7 @@ abstract contract GtBaseTestV2 is ForkBaseTestV2 {
         res.marketInitialParams.loanConfig.oracle = IOracle(address(res.oracle));
 
         res.market = TermMaxMarketV2(
-            deployFactory(res.marketInitialParams.admin).createMarket(
-                keccak256("GearingTokenWithERC20"), res.marketInitialParams, 0
-            )
+            deployRes.factory.createMarket(keccak256("GearingTokenWithERC20"), res.marketInitialParams, 0)
         );
 
         (res.ft, res.xt, res.gt,,) = res.market.tokens();
@@ -156,16 +155,15 @@ abstract contract GtBaseTestV2 is ForkBaseTestV2 {
         res.swapAdapters.odosAdapter =
             address(new OdosV2AdapterV2(vm.parseJsonAddress(jsonData, ".routers.odosRouter")));
         res.swapAdapters.vaultAdapter = address(new ERC4626VaultAdapterV2());
-        IWhitelistManager whitelistManager;
-        (res.router, whitelistManager) = deployRouter(res.marketInitialParams.admin);
+
         address[] memory adapters = new address[](5);
         adapters[0] = res.swapAdapters.uniswapAdapter;
         adapters[1] = res.swapAdapters.pendleAdapter;
         adapters[2] = res.swapAdapters.odosAdapter;
         adapters[3] = res.swapAdapters.vaultAdapter;
-        res.termMaxSwapAdapter = new TermMaxSwapAdapter(address(whitelistManager));
+        res.termMaxSwapAdapter = new TermMaxSwapAdapter(address(deployRes.whitelistManager));
         adapters[4] = address(res.termMaxSwapAdapter);
-        whitelistManager.batchSetWhitelist(adapters, IWhitelistManager.ContractModule.ADAPTER, true);
+        deployRes.whitelistManager.batchSetWhitelist(adapters, IWhitelistManager.ContractModule.ADAPTER, true);
         res.swapData = _readSwapData(key);
 
         res.orderInitialAmount = vm.parseJsonUint(jsonData, string.concat(key, ".orderInitialAmount"));

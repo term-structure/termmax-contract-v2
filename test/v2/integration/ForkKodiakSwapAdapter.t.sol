@@ -27,6 +27,7 @@ import {ITermMaxMarketV2} from "contracts/v2/ITermMaxMarketV2.sol";
 import {ITermMaxRouterV2, TermMaxRouterV2, SwapPath, FlashRepayOptions} from "contracts/v2/router/TermMaxRouterV2.sol";
 import {IWhitelistManager} from "contracts/v2/access/IWhitelistManager.sol";
 import {KodiakSwapAdapter, IKodiakRouter} from "contracts/v2/router/swapAdapters/KodiakSwapAdapter.sol";
+import {DeployUtils} from "test/v2/utils/DeployUtils.sol";
 import {console} from "forge-std/console.sol";
 
 contract ForkKodiakSwapAdapter is ForkBaseTestV2 {
@@ -61,13 +62,13 @@ contract ForkKodiakSwapAdapter is ForkBaseTestV2 {
         address admin = vm.randomAddress();
 
         vm.startPrank(admin);
-        IWhitelistManager whitelistManager;
-        (router, whitelistManager) = deployRouter(admin);
-        router.setWhitelistManager(address(whitelistManager));
+        DeployUtils.Res memory res = DeployUtils.deployRes(admin);
 
         address[] memory adapters = new address[](1);
         adapters[0] = address(kodiakSwapAdapter);
-        whitelistManager.batchSetWhitelist(adapters, IWhitelistManager.ContractModule.ADAPTER, true);
+        res.whitelistManager.batchSetWhitelist(adapters, IWhitelistManager.ContractModule.ADAPTER, true);
+
+        router = res.router;
         vm.stopPrank();
     }
 

@@ -1,23 +1,24 @@
 {
   "network": "eth-sepolia",
-  "deployedAt": "1762591500",
+  "deployedAt": "1776242748",
   "gitBranch": "v2/deployment",
-  "gitCommitHash": "0x2999196e5b03afc949f49cc868f599a57267d563",
+  "gitCommitHash": "0xef6aac99c8482c03ebc7ae94adf1838eae01d671",
   "blockInfo": {
-    "number": "9585121",
-    "timestamp": "1762591500"
+    "number": "10663732",
+    "timestamp": "1776242748"
   },
   "deployer": "0xE355d5D8aa52EF0FbbD037C4a3C5E6Fd659cf46B",
   "admin": "0x81f314f70702Bbe89FEd0F2cFe6841950275E0b7",
   "contracts": {
-    "factoryV2": "0xb68B95f743E88cF92A8F3Ae6cc25C067CF5A4697",
-    "vaultFactoryV2": "0x06520075a327E31C17B55524e47924beA21b45Fa",
+    "factoryV2": "0x13cDDe670F74d5027F01eDde07de24eee74bbe0F",
+    "vaultFactoryV2": "0x7523760d616e6733e4152b20C53a757F5b623f76",
     "alphaFactory": "0x0000000000000000000000000000000000000000",
     "alphaVaultFactory": "0x0000000000000000000000000000000000000000",
     "priceFeedFactoryV2": "0x10472bFB7De778C9806CfBf6722359ae2285865c",
-    "termMax4626Factory": "0xFF69A2b53aD891d26D706BB18C44B7079Ce78958",
+    "termMax4626Factory": "0x407bCCee888215F2e60F5e1c40646C1568755113",
     "whitelistManager": "0xC4128E226e1d309C80D1841da4FFEBb0a92Eb6AA",
     "oracleAggregatorV2": "0x8e0eF9E4532DC6B5D8eA75E4366001fed6fDcB30",
+    "routerV1": "0x2F68071baC2bE3332c8107Dd15a76f7230F34013",
     "routerV2": "0x2F68071baC2bE3332c8107Dd15a76f7230F34013",
     "marketViewer": "0x0000000000000000000000000000000000000000",
     "termMaxViewer": "0xA15F1317022971B4FEb9A981CCc77C06A24a0A7A",

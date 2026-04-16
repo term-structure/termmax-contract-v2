@@ -1,21 +1,21 @@
 {
   "network": "base-mainnet",
-  "deployedAt": "1773996537",
+  "deployedAt": "1776234229",
   "gitBranch": "v2/deployment",
-  "gitCommitHash": "0xf79b4c8338a3af37438f955858b8e65f6d59fe39",
+  "gitCommitHash": "0x82afc5cf998559008bd5fc339dff30cbdf7d2e1f",
   "blockInfo": {
-    "number": "43603595",
-    "timestamp": "1773996537"
+    "number": "44722441",
+    "timestamp": "1776234229"
   },
   "deployer": "0x56E3665038C5F0b56Cc7D81aC66C86521274B251",
   "admin": "0x8409a9C1A911CED491892c5694E43994c9d47E8f",
   "contracts": {
-    "factoryV2": "0xa6875Af7a45BEf941e484b59C149E5C1772DE643",
-    "vaultFactoryV2": "0xDA4aAF85Bb924B53DCc2DFFa9e1A9C2Ef97aCFDF",
+    "factoryV2": "0x08c50Bd46992d35694208eC3Cf1f1EDcE38f5fd1",
+    "vaultFactoryV2": "0x28e47A7d7E710d796DBAFd8081c052444deEcF10",
     "alphaFactory": "0x0000000000000000000000000000000000000000",
     "alphaVaultFactory": "0x0000000000000000000000000000000000000000",
     "priceFeedFactoryV2": "0x502D706e01DE46C93CD4052c1402cd5151A589a3",
-    "termMax4626Factory": "0xa50929A67daF9Ff3567e2Bb3411204A134f72546",
+    "termMax4626Factory": "0x29a21589EFe51C6501D80e153d2DBE31e32D4940",
     "whitelistManager": "0x33931f3898EfB9A42B0D7CFfa9bb50A566A6b421",
     "oracleAggregatorV2": "0xC1114E635661d13137E642828f1Da71948B2CaaD",
     "routerV1": "0x3cb5fa87703c7165cc5f2087B3e80b58fb6d8CE8",

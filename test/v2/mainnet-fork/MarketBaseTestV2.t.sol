@@ -81,7 +81,10 @@ abstract contract MarketBaseTestV2 is ForkBaseTestV2 {
 
         vm.startPrank(res.marketInitialParams.admin);
 
-        res.oracle = deployOracleAggregator(res.marketInitialParams.admin);
+        DeployUtils.Res memory deployRes = DeployUtils.deployRes(res.marketInitialParams.admin);
+        res.oracle = deployRes.oracle;
+        res.router = deployRes.router;
+
         res.collateralPriceFeed = deployMockPriceFeed(res.marketInitialParams.admin);
         res.debtPriceFeed = deployMockPriceFeed(res.marketInitialParams.admin);
         res.oracle.submitPendingOracle(
@@ -99,9 +102,7 @@ abstract contract MarketBaseTestV2 is ForkBaseTestV2 {
         res.marketInitialParams.loanConfig.oracle = IOracle(address(res.oracle));
 
         res.market = TermMaxMarketV2(
-            deployFactory(res.marketInitialParams.admin).createMarket(
-                keccak256("GearingTokenWithERC20"), res.marketInitialParams, 0
-            )
+            deployRes.factory.createMarket(keccak256("GearingTokenWithERC20"), res.marketInitialParams, 0)
         );
 
         (res.ft, res.xt, res.gt,,) = res.market.tokens();
@@ -122,8 +123,6 @@ abstract contract MarketBaseTestV2 is ForkBaseTestV2 {
 
         res.order =
             res.market.createOrder(res.maker, res.maxXtReserve, ISwapCallback(address(0)), res.orderConfig.curveCuts);
-
-        (res.router,) = deployRouter(res.marketInitialParams.admin);
 
         res.orderInitialAmount = vm.parseJsonUint(jsonData, string.concat(key, ".orderInitialAmount"));
         deal(address(res.debtToken), res.marketInitialParams.admin, res.orderInitialAmount);

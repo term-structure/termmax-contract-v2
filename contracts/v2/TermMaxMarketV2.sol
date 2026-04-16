@@ -32,7 +32,7 @@ import {TransferUtilsV2} from "./lib/TransferUtilsV2.sol";
 import {ITermMaxMarket, IMintableERC20, IERC20} from "../v1/ITermMaxMarket.sol";
 import {IMintableERC20V2} from "./tokens/IMintableERC20V2.sol";
 import {ITermMaxOrderV2} from "./ITermMaxOrderV2.sol";
-import {VersionV2} from "./VersionV2.sol";
+import {VersionV2_0_1} from "./VersionV2_0_1.sol";
 
 /**
  * @title TermMax Market V2
@@ -45,7 +45,7 @@ contract TermMaxMarketV2 is
     Ownable2StepUpgradeable,
     MarketErrors,
     MarketEvents,
-    VersionV2
+    VersionV2_0_1
 {
     using SafeCast for uint256;
     using SafeCast for int256;
@@ -467,10 +467,7 @@ contract TermMaxMarketV2 is
         returns (ITermMaxOrder order)
     {
         order = ITermMaxOrder(
-            Clones.cloneDeterministic(
-                TERMMAX_ORDER_IMPLEMENT,
-                keccak256(abi.encode(params.maker, params.pool, params.orderConfig.swapTrigger, address(this), salt))
-            )
+            Clones.cloneDeterministic(TERMMAX_ORDER_IMPLEMENT, keccak256(abi.encode(params, address(this), salt)))
         );
         _initalizeOrder(params, address(order));
     }
@@ -484,13 +481,15 @@ contract TermMaxMarketV2 is
         returns (address orderAddress)
     {
         return Clones.predictDeterministicAddress(
-            TERMMAX_ORDER_IMPLEMENT,
-            keccak256(abi.encode(params.maker, params.pool, params.orderConfig.swapTrigger, address(this), salt))
+            TERMMAX_ORDER_IMPLEMENT, keccak256(abi.encode(params, address(this), salt))
         );
     }
 
     function _initalizeOrder(OrderInitialParams memory params, address order) internal {
-        params.maturity = _config.maturity;
+        if (params.maturity == 0) {
+            params.maturity = _config.maturity;
+        }
+
         params.ft = ft;
         params.xt = xt;
         params.gt = gt;

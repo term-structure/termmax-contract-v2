@@ -66,15 +66,22 @@ contract DeployOracle is DeployBaseV2 {
         vm.startBroadcast(deployerPrivateKey);
 
         address pancakeFactory = 0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865;
-        address baseToken;
-        address quoteToken;
-        uint32 _twapPeriod = 900;
-        uint24 fee = 500;
+        // B2/WBNB Pool
+        address baseToken = 0x783c3f003f172c6Ac5AC700218a357d2D66Ee2a2;
+        address quoteToken = 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c;
+        uint32 _twapPeriod = 180;
+        uint24 fee = 100;
         address pool = IUniswapV3Factory(pancakeFactory).getPool(baseToken, quoteToken, fee);
         require(pool != address(0), "Pool doesn't exist");
         TermMaxPancakeTWAPPriceFeed priceFeed =
             new TermMaxPancakeTWAPPriceFeed(pool, _twapPeriod, baseToken, quoteToken);
         console.log("Deployed TermMaxPancakeTWAPPriceFeed at:", address(priceFeed));
+        (uint80 roundId, int256 price, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound) =
+            priceFeed.latestRoundData();
+        console.log("Price: ", price);
+        console.log("Started at: ", startedAt);
+        console.log("Updated at: ", updatedAt);
+        console.log("Round ID: ", roundId);
 
         oracleEnvs = string.concat(
             "BASE_TOKEN=",

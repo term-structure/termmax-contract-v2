@@ -157,7 +157,7 @@ interface ITermMaxRouterV2 {
     /**
      * @notice Rollover GT position
      * @dev This function allows users to rollover their GT position to a new market or third-protocol
-     * @param gtToken The GearingToken contract instance
+     * @param market The current market of the GT position
      * @param gtId The ID of the GT token being rolled over
      * @param additionalAsset The additional asset(debt token, old collateral token, new collateral token) to reduce the LTV
      * @param additionalAmt Amount of the additional asset
@@ -170,7 +170,7 @@ interface ITermMaxRouterV2 {
      * @return newGtId The ID of the newly created GT token in the next market, newGtId is zero if rollover to Aave or Morpho
      */
     function rolloverGt(
-        IGearingToken gtToken,
+        ITermMaxMarket market,
         uint256 gtId,
         IERC20 additionalAsset,
         uint256 additionalAmt,
@@ -183,14 +183,18 @@ interface ITermMaxRouterV2 {
      * @dev input/output: =>, swap: ->
      *      path 0: => any token -> debt token/ft token => router
      *      path 1(optional): remaining debt token => recipient
-     * @param gt The GearingToken contract instance
+     * @param market The market to repay debt in
      * @param gtId The ID of the GearingToken position to repay
      * @param repayAmt The amount to repay
      * @param byDebtToken Indicates if the repayment is by debt token
      * @param paths The SwapPath struct defining the swap operations
      * @return netOutOrIns The net amounts of tokens received or cost when swapping
      */
-    function swapAndRepay(IGearingToken gt, uint256 gtId, uint128 repayAmt, bool byDebtToken, SwapPath[] memory paths)
-        external
-        returns (uint256[] memory netOutOrIns);
+    function swapAndRepay(
+        ITermMaxMarket market,
+        uint256 gtId,
+        uint128 repayAmt,
+        bool byDebtToken,
+        SwapPath[] memory paths
+    ) external returns (uint256[] memory netOutOrIns);
 }

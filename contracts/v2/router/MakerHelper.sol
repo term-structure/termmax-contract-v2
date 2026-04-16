@@ -16,17 +16,22 @@ import {TransferUtilsV2} from "../lib/TransferUtilsV2.sol";
 import {IGearingToken} from "../../v1/tokens/IGearingToken.sol";
 import {CurveCuts, OrderConfig} from "../../v1/storage/TermMaxStorage.sol";
 import {OrderInitialParams} from "../ITermMaxOrderV2.sol";
-import {VersionV2} from "../VersionV2.sol";
+import {VersionV2_0_1} from "../VersionV2_0_1.sol";
 import {DelegateAble} from "../lib/DelegateAble.sol";
 import {MakerHelperEvents} from "../events/MakerHelperEvents.sol";
 import {MakerHelperErrors} from "../errors/MakerHelperErrors.sol";
+import {WithWhitelistCheck, IWhitelistManager} from "../access/WithWhitelistCheck.sol";
 
 /**
  * @title MakerHelper
  * @notice Helper contract for placing orders and other operations for the maker in the TermMax protocol
  */
-contract MakerHelper is UUPSUpgradeable, Ownable2StepUpgradeable, IERC721Receiver, VersionV2 {
+contract MakerHelper is UUPSUpgradeable, Ownable2StepUpgradeable, IERC721Receiver, WithWhitelistCheck, VersionV2_0_1 {
     using TransferUtilsV2 for IERC20;
+
+    constructor(address _whitelistManager)
+        WithWhitelistCheck(_whitelistManager, IWhitelistManager.ContractModule.MARKET)
+    {}
 
     function _authorizeUpgrade(address newImplementation) internal virtual override onlyOwner {}
 
@@ -56,7 +61,7 @@ contract MakerHelper is UUPSUpgradeable, Ownable2StepUpgradeable, IERC721Receive
         uint128 ftToDeposit,
         uint128 xtToDeposit,
         OrderConfig memory orderConfig
-    ) external returns (ITermMaxOrder order, uint256 gtId) {
+    ) external onlyWhitelisted(address(market)) returns (ITermMaxOrder order, uint256 gtId) {
         (IERC20 ft, IERC20 xt, IGearingToken gt, address collateral, IERC20 debtToken) = market.tokens();
         if (collateralToMintGt > 0) {
             IERC20(collateral).safeTransferFrom(msg.sender, address(this), collateralToMintGt);
@@ -102,7 +107,16 @@ contract MakerHelper is UUPSUpgradeable, Ownable2StepUpgradeable, IERC721Receive
         OrderInitialParams memory initialParams,
         DelegateAble.DelegateParameters memory delegateParams,
         DelegateAble.Signature memory delegateSignature
-    ) external returns (ITermMaxOrder, uint256) {
+    ) external onlyWhitelisted(address(market)) returns (ITermMaxOrder, uint256) {
+        if (address(initialParams.pool) != address(0)) {
+            _checkWhitelisted(address(initialParams.pool), IWhitelistManager.ContractModule.POOL);
+        }
+        if (address(initialParams.orderConfig.swapTrigger) != address(0)) {
+            _checkWhitelisted(
+                address(initialParams.orderConfig.swapTrigger), IWhitelistManager.ContractModule.ORDER_CALLBACK
+            );
+        }
+
         (IERC20 ft, IERC20 xt, IGearingToken gt, address collateral, IERC20 debtToken) = market.tokens();
         if (collateralToMintGt > 0) {
             IERC20(collateral).safeTransferFrom(msg.sender, address(this), collateralToMintGt);
