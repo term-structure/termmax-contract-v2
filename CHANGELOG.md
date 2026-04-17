@@ -2,6 +2,31 @@
 
 All notable changes to this project are documented in this file.
 
+## 2026-04-16 - dev
+
+### Added
+- Extended `ITermMax4626Pool` with `currentIncomeAssets()` and updated `TermMaxViewer` to use current income asset data.
+
+### Fixed
+- Fixed a logic issue in `TermMaxViewer`.
+
+## 2026-04-16 - PR #25 (feat/pharos_oracle_adapter)
+
+### Added
+- Added `IPharosOracle`, `TermMaxPharosPriceFeedAdapter`, `TermMaxPharosPriceFeedAdapterFactory`, and integration test coverage for the Pharos oracle adapter.
+
+
+## 2026-04-14 - PR #24 (feat/whitelist_check)
+
+### Added
+- Added market and pool whitelist checks to `TermMaxRouterV2`, `MakerHelper`, `TermMaxVaultV2`.
+- Added automatic whitelist register to factories.
+- Added order expiry timestamp management with related errors, events, and tests.
+- Added stable ERC4626 access-control support and related test coverage.
+
+### Fixed
+- Fixed predict order address issue.
+
 ## 2026-03-20 - PR #21 (from dev)
 
 ### Deployments
