@@ -18,6 +18,7 @@ import {
 import {MockERC20, ERC20} from "contracts/v1/test/MockERC20.sol";
 
 import {MockPriceFeed} from "contracts/v1/test/MockPriceFeed.sol";
+import {MockPriceFeedV2} from "contracts/v2/test/MockPriceFeedV2.sol";
 import {IMintableERC20} from "contracts/v1/tokens/MintableERC20.sol";
 import {IGearingToken} from "contracts/v1/tokens/IGearingToken.sol";
 import {
@@ -1182,6 +1183,90 @@ contract GtTestV2 is Test {
         assert(ltv < liquidationLtv);
         assert(!isLiquidable);
         assert(maxRepayAmt == 0);
+    }
+
+    /// @dev Swap the debt oracle to one reporting 18 decimals (mirrors USPC / DUSD adapters).
+    ///      Returns the new oracle so callers can update its price further if needed.
+    function _swapDebtOracleTo18Decimals(int256 priceIn18Decimals) internal returns (MockPriceFeedV2 oracle18) {
+        vm.startPrank(deployer);
+        oracle18 = new MockPriceFeedV2(deployer);
+        oracle18.setDecimals(18);
+        oracle18.updateRoundData(
+            MockPriceFeedV2.RoundData({
+                roundId: 1,
+                answer: priceIn18Decimals,
+                startedAt: block.timestamp,
+                updatedAt: block.timestamp,
+                answeredInRound: 0
+            })
+        );
+
+        res.oracle.submitPendingOracle(
+            address(res.debt),
+            IOracleV2.Oracle(
+                AggregatorV3Interface(address(oracle18)),
+                AggregatorV3Interface(address(oracle18)),
+                0,
+                0,
+                365 days,
+                0
+            )
+        );
+        res.oracle.acceptPendingOracle(address(res.debt));
+        vm.stopPrank();
+    }
+
+    /// @notice Regression test: half-liquidation must engage when the debt oracle reports 18 decimals.
+    /// @dev Mirrors `testHalfLiquidate` but swaps the debt oracle to 18 decimals. Before the fix,
+    ///      `collateralValue * 1e8 / 1e18` collapsed to 0 and full liquidation was returned for
+    ///      any realistic position size. After the fix, the comparison is against the base-decimal
+    ///      threshold directly and half-liquidation engages as designed.
+    function testHalfLiquidateWith18DecimalDebtOracle() public {
+        // $1 reported as 1e18 — matches the shape of TermMaxUSPCPriceFeedAdapter / DUSD adapter.
+        _swapDebtOracleTo18Decimals(int256(1e18));
+
+        uint128 debtAmt = 9000e8;
+        uint256 collateralAmt = 10e18;
+
+        vm.startPrank(sender);
+        (uint256 gtId,) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
+        vm.stopPrank();
+
+        // Drop ETH so the position becomes liquidatable. Collateral value
+        // = 10 ETH * $1000 = $10K -> equals HALF_LIQUIDATION_THRESHOLD.
+        vm.startPrank(deployer);
+        res.collateralOracle.updateRoundData(JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_1000_DAI_1.eth"));
+        vm.stopPrank();
+
+        (bool isLiquidable,, uint128 maxRepayAmt) = res.gt.getLiquidationInfo(gtId);
+        assertTrue(isLiquidable, "position should be liquidatable");
+        // Before the fix this would be `debtAmt` (full liquidation). After the fix it must
+        // be `debtAmt / 2` (half liquidation), matching the 8-decimal-oracle behaviour.
+        assertEq(maxRepayAmt, debtAmt / 2, "half-liquidation must engage with 18-decimal debt oracle");
+    }
+
+    /// @notice Companion to `testHalfLiquidateWith18DecimalDebtOracle`: a small position whose
+    ///         collateral value sits below `HALF_LIQUIDATION_THRESHOLD` must still allow full
+    ///         liquidation, even with an 18-decimal debt oracle. This guards against an
+    ///         over-correction that disables the threshold entirely.
+    function testFullLiquidateBelowThresholdWith18DecimalDebtOracle() public {
+        _swapDebtOracleTo18Decimals(int256(1e18));
+
+        // Position worth ~$1K — well below the $10K half-liquidation threshold.
+        uint128 debtAmt = 900e8;
+        uint256 collateralAmt = 1e18;
+
+        vm.startPrank(sender);
+        (uint256 gtId,) = LoanUtils.fastMintGt(res, sender, debtAmt, collateralAmt);
+        vm.stopPrank();
+
+        vm.startPrank(deployer);
+        res.collateralOracle.updateRoundData(JSONLoader.getRoundDataFromJson(testdata, ".priceData.ETH_1000_DAI_1.eth"));
+        vm.stopPrank();
+
+        (bool isLiquidable,, uint128 maxRepayAmt) = res.gt.getLiquidationInfo(gtId);
+        assertTrue(isLiquidable, "small position should be liquidatable");
+        assertEq(maxRepayAmt, debtAmt, "position below threshold must allow full liquidation");
     }
 
     function testLiquidateInWindowTime(uint16 exceedTime) public {
