@@ -361,6 +361,84 @@ contract RouterTestV2 is Test {
         vm.stopPrank();
     }
 
+    function testSwapTokensCannotDrainPrefundedRouterBalance() public {
+        address recipient = vm.randomAddress();
+        uint256 prefundedBalance = 100e8;
+        res.debt.mint(address(res.router), prefundedBalance);
+
+        SwapUnit[] memory swapUnits = new SwapUnit[](1);
+        swapUnits[0] =
+            SwapUnit({adapter: address(0), tokenIn: address(res.debt), tokenOut: address(0), swapData: bytes("")});
+
+        SwapPath[] memory swapPaths = new SwapPath[](1);
+        swapPaths[0] =
+            SwapPath({units: swapUnits, recipient: recipient, inputAmount: 0, useBalanceOnchain: true});
+
+        uint256[] memory netOutputs = res.router.swapTokens(swapPaths);
+
+        assertEq(netOutputs[0], 0);
+        assertEq(res.debt.balanceOf(recipient), 0);
+        assertEq(res.debt.balanceOf(address(res.router)), prefundedBalance);
+    }
+
+    function testSwapTokensCanUseBalanceFromCurrentCall() public {
+        uint256 amount = 100e8;
+        res.debt.mint(sender, amount);
+
+        vm.startPrank(sender);
+        res.debt.approve(address(res.router), amount);
+
+        SwapPath[] memory swapPaths = new SwapPath[](2);
+        SwapUnit[] memory depositUnits = new SwapUnit[](1);
+        depositUnits[0] = SwapUnit({
+            adapter: address(0),
+            tokenIn: address(res.debt),
+            tokenOut: address(res.debt),
+            swapData: bytes("")
+        });
+        swapPaths[0] =
+            SwapPath({units: depositUnits, recipient: address(res.router), inputAmount: amount, useBalanceOnchain: false});
+
+        SwapUnit[] memory withdrawUnits = new SwapUnit[](1);
+        withdrawUnits[0] =
+            SwapUnit({adapter: address(0), tokenIn: address(res.debt), tokenOut: address(0), swapData: bytes("")});
+        swapPaths[1] = SwapPath({units: withdrawUnits, recipient: sender, inputAmount: 0, useBalanceOnchain: true});
+
+        uint256[] memory netOutputs = res.router.swapTokens(swapPaths);
+
+        assertEq(netOutputs[0], amount);
+        assertEq(netOutputs[1], amount);
+        assertEq(res.debt.balanceOf(sender), amount);
+        assertEq(res.debt.balanceOf(address(res.router)), 0);
+        vm.stopPrank();
+    }
+
+    function testSameTokenSwapSendsFinalAmountToRecipient() public {
+        uint256 amount = 100e8;
+        res.debt.mint(sender, amount);
+
+        vm.startPrank(sender);
+        res.debt.approve(address(res.router), amount);
+
+        SwapUnit[] memory swapUnits = new SwapUnit[](1);
+        swapUnits[0] = SwapUnit({
+            adapter: address(0),
+            tokenIn: address(res.debt),
+            tokenOut: address(res.debt),
+            swapData: bytes("")
+        });
+
+        SwapPath[] memory swapPaths = new SwapPath[](1);
+        swapPaths[0] = SwapPath({units: swapUnits, recipient: sender, inputAmount: amount, useBalanceOnchain: false});
+
+        uint256[] memory netOutputs = res.router.swapTokens(swapPaths);
+
+        assertEq(netOutputs[0], amount);
+        assertEq(res.debt.balanceOf(sender), amount);
+        assertEq(res.debt.balanceOf(address(res.router)), 0);
+        vm.stopPrank();
+    }
+
     function testLeverageFromToken(bool isV1) public {
         vm.startPrank(sender);
 
@@ -1146,8 +1224,7 @@ contract RouterTestV2 is Test {
 
         // Because our mock simply transfers tokenIn to recipient, netOutputs[0] should equal amountIn
         assertEq(netOutputs[0], amountIn);
-        // Sender's debt balance should be zero
-        assertEq(res.debt.balanceOf(sender), 0);
+        assertEq(res.debt.balanceOf(sender), amountIn);
 
         vm.stopPrank();
     }

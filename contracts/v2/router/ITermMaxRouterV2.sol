@@ -15,7 +15,7 @@ struct SwapPath {
     /// @notice If true, input amount will using balance onchain, otherwise using the input amount from sender
     bool useBalanceOnchain;
     /// @notice If uint's adapter is address(0), it means transfer the input token to recipient directly
-    /// @notice If uint's adapter token in equals to token out, the unit will be skipped
+    /// @notice If uint's adapter token in equals to token out, the unit will be skipped unless it is the final unit
     SwapUnit[] units;
 }
 

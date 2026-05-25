@@ -116,17 +116,76 @@ contract TermMaxRouterV2 is
 
     function _executeSwapPaths(SwapPath[] memory paths) internal returns (uint256[] memory netTokenOuts) {
         netTokenOuts = new uint256[](paths.length);
+        uint256 maxTrackedTokens;
+        for (uint256 i = 0; i < paths.length; ++i) {
+            maxTrackedTokens += paths[i].units.length * 2;
+        }
+        address[] memory trackedTokens = new address[](maxTrackedTokens);
+        uint256[] memory initialBalances = new uint256[](maxTrackedTokens);
+        uint256 trackedTokenCount;
+
         for (uint256 i = 0; i < paths.length; ++i) {
             SwapPath memory path = paths[i];
+            trackedTokenCount = _trackSwapUnitBalances(path.units, trackedTokens, initialBalances, trackedTokenCount);
             if (path.useBalanceOnchain) {
                 uint256 balanceOnChain = IERC20(path.units[0].tokenIn).balanceOf(address(this));
-                netTokenOuts[i] = _executeSwapUnits(path.recipient, balanceOnChain, path.units);
+                uint256 initialBalance =
+                    _getTrackedInitialBalance(path.units[0].tokenIn, trackedTokens, initialBalances, trackedTokenCount);
+                netTokenOuts[i] = _executeSwapUnits(path.recipient, balanceOnChain - initialBalance, path.units);
             } else {
                 IERC20(path.units[0].tokenIn).safeTransferFrom(_msgSender(), address(this), path.inputAmount);
                 netTokenOuts[i] = _executeSwapUnits(path.recipient, path.inputAmount, path.units);
             }
         }
         return netTokenOuts;
+    }
+
+    function _trackSwapUnitBalances(
+        SwapUnit[] memory units,
+        address[] memory trackedTokens,
+        uint256[] memory initialBalances,
+        uint256 trackedTokenCount
+    ) internal view returns (uint256) {
+        for (uint256 i = 0; i < units.length; ++i) {
+            trackedTokenCount =
+                _trackTokenBalance(units[i].tokenIn, trackedTokens, initialBalances, trackedTokenCount);
+            trackedTokenCount =
+                _trackTokenBalance(units[i].tokenOut, trackedTokens, initialBalances, trackedTokenCount);
+        }
+        return trackedTokenCount;
+    }
+
+    function _trackTokenBalance(
+        address token,
+        address[] memory trackedTokens,
+        uint256[] memory initialBalances,
+        uint256 trackedTokenCount
+    ) internal view returns (uint256) {
+        if (token == address(0)) {
+            return trackedTokenCount;
+        }
+        for (uint256 i = 0; i < trackedTokenCount; ++i) {
+            if (trackedTokens[i] == token) {
+                return trackedTokenCount;
+            }
+        }
+        trackedTokens[trackedTokenCount] = token;
+        initialBalances[trackedTokenCount] = IERC20(token).balanceOf(address(this));
+        return trackedTokenCount + 1;
+    }
+
+    function _getTrackedInitialBalance(
+        address token,
+        address[] memory trackedTokens,
+        uint256[] memory initialBalances,
+        uint256 trackedTokenCount
+    ) internal pure returns (uint256) {
+        for (uint256 i = 0; i < trackedTokenCount; ++i) {
+            if (trackedTokens[i] == token) {
+                return initialBalances[i];
+            }
+        }
+        return 0;
     }
 
     function _executeSwapUnits(address recipient, uint256 inputAmt, SwapUnit[] memory units)
@@ -138,6 +197,9 @@ contract TermMaxRouterV2 is
         }
         for (uint256 i = 0; i < units.length; ++i) {
             if (units[i].tokenIn == units[i].tokenOut) {
+                if (i == units.length - 1) {
+                    IERC20(units[i].tokenIn).safeTransfer(recipient, inputAmt);
+                }
                 continue;
             }
             if (units[i].adapter == address(0)) {
