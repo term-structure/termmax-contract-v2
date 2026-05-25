@@ -680,12 +680,13 @@ contract TermMaxVaultV2 is
         }
         uint64 recentMaturity = _maturityMapping[0];
         uint256 previewAnnualizedInterest = _annualizedInterest;
+        uint256 performanceFeeRate_ = _performanceFeeRate;
         previewPrincipal = _accretingPrincipal;
         previewPerformanceFee = _performanceFee;
 
         while (currentTime >= recentMaturity && recentMaturity != 0) {
             (uint256 previewInterest, uint256 previewPerformanceFeeToCurator) =
-                _previewAccruedPeriodInterest(lastTime, recentMaturity, previewAnnualizedInterest);
+                _previewAccruedPeriodInterest(lastTime, recentMaturity, previewAnnualizedInterest, performanceFeeRate_);
             lastTime = recentMaturity;
             uint64 nextMaturity = _maturityMapping[recentMaturity];
             // update annualized interest
@@ -698,19 +699,20 @@ contract TermMaxVaultV2 is
         }
         if (recentMaturity > 0) {
             (uint256 previewInterest, uint256 previewPerformanceFeeToCurator) =
-                _previewAccruedPeriodInterest(lastTime, currentTime, previewAnnualizedInterest);
+                _previewAccruedPeriodInterest(lastTime, currentTime, previewAnnualizedInterest, performanceFeeRate_);
             previewPerformanceFee += previewPerformanceFeeToCurator;
             previewPrincipal += previewInterest;
         }
     }
 
-    function _previewAccruedPeriodInterest(uint256 startTime, uint256 endTime, uint256 previewAnnualizedInterest)
-        internal
-        view
-        returns (uint256, uint256)
-    {
+    function _previewAccruedPeriodInterest(
+        uint256 startTime,
+        uint256 endTime,
+        uint256 previewAnnualizedInterest,
+        uint256 performanceFeeRate_
+    ) internal pure returns (uint256, uint256) {
         uint256 interest = (previewAnnualizedInterest * (endTime - startTime)) / 365 days;
-        uint256 performanceFeeToCurator = (interest * _performanceFeeRate) / Constants.DECIMAL_BASE;
+        uint256 performanceFeeToCurator = (interest * performanceFeeRate_) / Constants.DECIMAL_BASE;
         return (interest - performanceFeeToCurator, performanceFeeToCurator);
     }
 
