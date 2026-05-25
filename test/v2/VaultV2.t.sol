@@ -207,6 +207,11 @@ contract VaultTestV2 is Test {
         vault.submitGuardian(nextGuardian);
 
         vm.prank(newGuardian);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, newGuardian));
+        vault.revokePendingGuardian();
+        assertEq(vault.pendingGuardian().value, nextGuardian);
+
+        vm.prank(deployer);
         vault.revokePendingGuardian();
         assertEq(vault.pendingGuardian().value, address(0));
 

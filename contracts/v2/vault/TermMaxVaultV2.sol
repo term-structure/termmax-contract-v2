@@ -597,7 +597,7 @@ contract TermMaxVaultV2 is
         emit VaultEvents.RevokePendingTimelock(_msgSender());
     }
 
-    function revokePendingGuardian() external virtual onlyGuardianRole {
+    function revokePendingGuardian() external virtual onlyOwner {
         delete _pendingGuardian;
 
         emit VaultEvents.RevokePendingGuardian(_msgSender());
