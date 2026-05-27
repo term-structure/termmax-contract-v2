@@ -13,4 +13,6 @@ interface ITermMax4626Pool is IERC4626 {
     function bufferConfig() external view returns (StakingBuffer.BufferConfig memory);
 
     function aToken() external view returns (IERC20);
+
+    function currentIncomeAssets() external view returns (uint256);
 }

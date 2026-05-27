@@ -1,21 +1,21 @@
 {
   "network": "pharos-mainnet",
-  "deployedAt": "1773994360",
+  "deployedAt": "1776234559",
   "gitBranch": "v2/deployment",
-  "gitCommitHash": "0xfc747779202343432677f7a48bcc768721d6cc83",
+  "gitCommitHash": "0x82afc5cf998559008bd5fc339dff30cbdf7d2e1f",
   "blockInfo": {
-    "number": "4299840",
-    "timestamp": "1773994360"
+    "number": "5278169",
+    "timestamp": "1776234559"
   },
   "deployer": "0x56E3665038C5F0b56Cc7D81aC66C86521274B251",
   "admin": "0x96604e7D0961CB0B074101A2f720F78b06BCc7c3",
   "contracts": {
-    "factoryV2": "0xdAA73082785Df7B489e46f7f1782B3A213CC7A15",
-    "vaultFactoryV2": "0x178816290Db1107f587204e2F67a17Cb9F954aFb",
+    "factoryV2": "0xEDC206E67eAc5C949c0a90A02E29B4b2791c8395",
+    "vaultFactoryV2": "0x5316b0d2Ee13C81E243226D6BB93CF29FBf95837",
     "alphaFactory": "0x0000000000000000000000000000000000000000",
     "alphaVaultFactory": "0x0000000000000000000000000000000000000000",
     "priceFeedFactoryV2": "0xb8682CCabbC7e14726b698e70396D2016b0EEFc0",
-    "termMax4626Factory": "0x477CD510B22851977D958102614C08ED995192A4",
+    "termMax4626Factory": "0xBa38C4D39ECf8401d90e7469dc6eB438547caC81",
     "whitelistManager": "0x145c46b7a1cEE0b44b816a15c2D6EB5c2A9D5adc",
     "oracleAggregatorV2": "0x490df22f542e778fAfAB441beB19d358bE048A20",
     "routerV1": "0x503F0828157F088420DEB26338f33c270C8E95f1",

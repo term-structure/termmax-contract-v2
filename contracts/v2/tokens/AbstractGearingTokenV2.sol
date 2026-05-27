@@ -514,10 +514,10 @@ abstract contract AbstractGearingTokenV2 is
                 if (ltv >= Constants.DECIMAL_BASE) {
                     maxRepayAmt = loan.debtAmt;
                 } else {
-                    // collateralValue(price decimals) and HALF_LIQUIDATION_THRESHOLD(base decimals 1e8)
-                    maxRepayAmt = valueAndPrice.collateralValue.mulDiv(
-                        Constants.DECIMAL_BASE, valueAndPrice.priceDenominator
-                    ) < GearingTokenConstants.HALF_LIQUIDATION_THRESHOLD ? loan.debtAmt : loan.debtAmt / 2;
+                    // collateralValue(in base decimals) and HALF_LIQUIDATION_THRESHOLD(in base decimals)
+                    maxRepayAmt = valueAndPrice.collateralValue < GearingTokenConstants.HALF_LIQUIDATION_THRESHOLD
+                        ? loan.debtAmt
+                        : loan.debtAmt / 2;
                 }
             }
         }
