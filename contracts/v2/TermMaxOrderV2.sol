@@ -207,7 +207,7 @@ contract TermMaxOrderV2 is
      */
     function apr() external view virtual override returns (uint256 lendApr_, uint256 borrowApr_) {
         uint256 daysToMaturity = _daysToMaturity();
-        uint256 oriXtReserve = xt.balanceOf(address(this));
+        uint256 oriXtReserve = virtualXtReserve;
 
         CurveCuts memory curveCuts = _orderConfig.curveCuts;
         if (curveCuts.lendCurveCuts.length == 0) {

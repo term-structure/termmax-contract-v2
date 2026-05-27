@@ -825,6 +825,51 @@ contract OrderTestV2 is Test {
         vm.stopPrank();
     }
 
+    /// @notice Regression test: `apr()` must be driven by `virtualXtReserve`, not the order's
+    ///         raw XT balance. The two diverge whenever XT is moved into the order outside of a
+    ///         swap (e.g. a direct transfer/donation, or `mint` callbacks that pre-fund the order).
+    ///         Before the fix, `apr()` used `xt.balanceOf(address(this))`, which silently
+    ///         drifted from the curve's current price point and returned a misleading APR.
+    function testAprUsesVirtualXtReserveNotBalance() public {
+        // Baseline apr() — driven by the configured virtualXtReserve.
+        uint256 virtualBefore = res.order.virtualXtReserve();
+        (uint256 lendAprBefore, uint256 borrowAprBefore) = res.order.apr();
+
+        // Sanity: apr() should be non-trivial so that a balance-based formula would
+        // produce a different result. (The default curve is two-sided with finite APR.)
+        assertGt(lendAprBefore, 0, "lend APR must be > 0 to make this test meaningful");
+        assertLt(borrowAprBefore, type(uint256).max, "borrow APR must be < max to make this test meaningful");
+
+        // Donate XT to the order without going through a swap. virtualXtReserve must
+        // not move (it is only updated on swaps); xt.balanceOf will.
+        uint256 donateAmount = 50e8;
+        address donor = vm.randomAddress();
+        vm.startPrank(deployer);
+        res.debt.mint(deployer, donateAmount);
+        res.debt.approve(address(res.market), donateAmount);
+        res.market.mint(donor, donateAmount);
+        vm.stopPrank();
+
+        uint256 xtBalBefore = res.xt.balanceOf(address(res.order));
+
+        vm.prank(donor);
+        res.xt.transfer(address(res.order), donateAmount);
+
+        // virtualXtReserve unchanged (only changes on swaps).
+        assertEq(res.order.virtualXtReserve(), virtualBefore, "virtualXtReserve must not change on direct XT transfer");
+        // ...but the raw XT balance has grown.
+        assertEq(
+            res.xt.balanceOf(address(res.order)),
+            xtBalBefore + donateAmount,
+            "XT balance should reflect the donation"
+        );
+
+        // apr() must remain unchanged because it now reads virtualXtReserve, not balanceOf.
+        (uint256 lendAprAfter, uint256 borrowAprAfter) = res.order.apr();
+        assertEq(lendAprAfter, lendAprBefore, "lend APR must depend on virtualXtReserve, not raw balance");
+        assertEq(borrowAprAfter, borrowAprBefore, "borrow APR must depend on virtualXtReserve, not raw balance");
+    }
+
     function testSetGeneralConfig(uint256 newGtId, ISwapCallback newTrigger) public {
         vm.startPrank(maker);
 
