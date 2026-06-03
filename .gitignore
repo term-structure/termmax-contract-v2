@@ -19,6 +19,8 @@ env/*
 .env.*
 
 node_modules
+indexer/distribution-output
+indexer/config.yaml
 
 # Hardhat files
 /cache
