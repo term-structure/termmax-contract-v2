@@ -5,7 +5,7 @@ import "../../v1/access/AccessManager.sol";
 import {IOracleV2} from "../oracle/IOracleV2.sol";
 import {ITermMaxVaultV2, OrderV2ConfigurationParams, CurveCuts, IERC4626} from "../vault/ITermMaxVaultV2.sol";
 import {IWhitelistManager} from "./IWhitelistManager.sol";
-import {IStableERC4626For4626, StakingBuffer, IERC20} from "../tokens/IStableERC4626For4626.sol";
+import {IStableERC4626For4626, StakingBuffer, IERC20} from "../pool/IStableERC4626For4626.sol";
 import {TransferUtilsV2} from "../lib/TransferUtilsV2.sol";
 import {VersionV2_0_1} from "../VersionV2_0_1.sol";
 

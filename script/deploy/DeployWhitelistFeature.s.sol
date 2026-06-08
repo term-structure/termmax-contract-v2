@@ -12,7 +12,7 @@ import {JsonLoader} from "script/utils/JsonLoader.sol";
 import {OrderV2ConfigurationParams} from "contracts/v2/vault/VaultStorageV2.sol";
 import {ITermMaxOrderV2} from "contracts/v2/ITermMaxOrderV2.sol";
 import {ITermMaxMarketV2} from "contracts/v2/ITermMaxMarketV2.sol";
-import {StakingBuffer} from "contracts/v2/tokens/StakingBuffer.sol";
+import {StakingBuffer} from "contracts/v2/pool/StakingBuffer.sol";
 import {SimpleAggregator} from "contracts/v2/oracle/SimpleAggregator.sol";
 import {StringHelper} from "script/utils/StringHelper.sol";
 import {ITermMaxMarket} from "contracts/v1/ITermMaxMarket.sol";

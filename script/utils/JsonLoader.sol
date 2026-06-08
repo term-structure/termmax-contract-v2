@@ -5,7 +5,7 @@ import "forge-std/Test.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 import {MarketConfig, FeeConfig, LoanConfig} from "contracts/v1/storage/TermMaxStorage.sol";
 import {VaultInitialParamsV2, IERC20, IERC4626} from "contracts/v2/storage/TermMaxStorageV2.sol";
-import {StakingBuffer} from "contracts/v2/tokens/StakingBuffer.sol";
+import {StakingBuffer} from "contracts/v2/pool/StakingBuffer.sol";
 import {IOracleV2, AggregatorV3Interface} from "contracts/v2/oracle/OracleAggregatorV2.sol";
 import {OrderConfig, CurveCut} from "contracts/v1/storage/TermMaxStorage.sol";
 

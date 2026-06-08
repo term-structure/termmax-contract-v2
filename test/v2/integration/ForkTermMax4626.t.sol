@@ -22,8 +22,8 @@ import {
 } from "test/v2/mainnet-fork/ForkBaseTestV2.sol";
 import {console} from "forge-std/console.sol";
 import {IAaveV3Pool} from "contracts/v2/extensions/aave/IAaveV3Pool.sol";
-import {StableERC4626ForAave} from "contracts/v2/tokens/StableERC4626ForAave.sol";
-import {StakingBuffer} from "contracts/v2/tokens/StakingBuffer.sol";
+import {StableERC4626ForAave} from "contracts/v2/pool/StableERC4626ForAave.sol";
+import {StakingBuffer} from "contracts/v2/pool/StakingBuffer.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract ForkTermMax4626 is ForkBaseTestV2 {

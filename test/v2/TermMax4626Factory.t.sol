@@ -3,12 +3,12 @@ pragma solidity ^0.8.27;
 
 import {Test} from "forge-std/Test.sol";
 import {TermMax4626Factory} from "contracts/v2/factory/TermMax4626Factory.sol";
-import {StableERC4626For4626} from "contracts/v2/tokens/StableERC4626For4626.sol";
-import {StableERC4626ForAave} from "contracts/v2/tokens/StableERC4626ForAave.sol";
-import {VariableERC4626ForAave} from "contracts/v2/tokens/VariableERC4626ForAave.sol";
-import {StableERC4626ForVenus} from "contracts/v2/tokens/StableERC4626ForVenus.sol";
-import {StableERC4626ForCustomize} from "contracts/v2/tokens/StableERC4626ForCustomize.sol";
-import {StakingBuffer} from "contracts/v2/tokens/StakingBuffer.sol";
+import {StableERC4626For4626} from "contracts/v2/pool/StableERC4626For4626.sol";
+import {StableERC4626ForAave} from "contracts/v2/pool/StableERC4626ForAave.sol";
+import {VariableERC4626ForAave} from "contracts/v2/pool/VariableERC4626ForAave.sol";
+import {StableERC4626ForVenus} from "contracts/v2/pool/StableERC4626ForVenus.sol";
+import {StableERC4626ForCustomize} from "contracts/v2/pool/StableERC4626ForCustomize.sol";
+import {StakingBuffer} from "contracts/v2/pool/StakingBuffer.sol";
 import {MockERC4626} from "contracts/v2/test/MockERC4626.sol";
 import {MockERC20} from "contracts/v1/test/MockERC20.sol";
 import {MockAave} from "contracts/v2/test/MockAave.sol";

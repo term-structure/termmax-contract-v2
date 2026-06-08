@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import {StableERC4626ForAave} from "contracts/v2/tokens/StableERC4626ForAave.sol";
-import {StakingBuffer} from "contracts/v2/tokens/StakingBuffer.sol";
+import {StableERC4626ForAave} from "contracts/v2/pool/StableERC4626ForAave.sol";
+import {StakingBuffer} from "contracts/v2/pool/StakingBuffer.sol";
 import {Test} from "forge-std/Test.sol";
 import {StdInvariant} from "forge-std/StdInvariant.sol";
 import {MockAave} from "contracts/v2/test/MockAave.sol";

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import {StableERC4626ForCustomize} from "contracts/v2/tokens/StableERC4626ForCustomize.sol";
-import {StakingBuffer} from "contracts/v2/tokens/StakingBuffer.sol";
+import {StableERC4626ForCustomize} from "contracts/v2/pool/StableERC4626ForCustomize.sol";
+import {StakingBuffer} from "contracts/v2/pool/StakingBuffer.sol";
 import {Test} from "forge-std/Test.sol";
 import {MockERC20} from "contracts/v1/test/MockERC20.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";

@@ -30,8 +30,8 @@ import {TermMaxOrderV2} from "contracts/v2/TermMaxOrderV2.sol";
 import {ITermMaxVaultV2, OrderV2ConfigurationParams, CurveCuts} from "contracts/v2/vault/ITermMaxVaultV2.sol";
 import {VaultEventsV2} from "contracts/v2/events/VaultEventsV2.sol";
 import {IWhitelistManager, WhitelistManager} from "contracts/v2/access/WhitelistManager.sol";
-import {IStableERC4626For4626} from "contracts/v2/tokens/IStableERC4626For4626.sol";
-import {StableERC4626For4626, StakingBuffer} from "contracts/v2/tokens/StableERC4626For4626.sol";
+import {IStableERC4626For4626} from "contracts/v2/pool/IStableERC4626For4626.sol";
+import {StableERC4626For4626, StakingBuffer} from "contracts/v2/pool/StableERC4626For4626.sol";
 import {MockERC4626} from "contracts/v2/test/MockERC4626.sol";
 
 contract AccessManagerTestV2 is Test {

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier:  BUSL-1.1
 pragma solidity ^0.8.27;
 
-import {StableERC4626ForVenus, IVToken} from "contracts/v2/tokens/StableERC4626ForVenus.sol";
-import {StakingBuffer} from "contracts/v2/tokens/StakingBuffer.sol";
+import {StableERC4626ForVenus, IVToken} from "contracts/v2/pool/StableERC4626ForVenus.sol";
+import {StakingBuffer} from "contracts/v2/pool/StakingBuffer.sol";
 import {Test} from "forge-std/Test.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {ERC4626TokenErrors} from "contracts/v2/errors/ERC4626TokenErrors.sol";

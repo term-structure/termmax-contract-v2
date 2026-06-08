@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import {StableERC4626ForVenus} from "contracts/v2/tokens/StableERC4626ForVenus.sol";
-import {StakingBuffer} from "contracts/v2/tokens/StakingBuffer.sol";
+import {StableERC4626ForVenus} from "contracts/v2/pool/StableERC4626ForVenus.sol";
+import {StakingBuffer} from "contracts/v2/pool/StakingBuffer.sol";
 import {Test} from "forge-std/Test.sol";
 import {MockVToken} from "contracts/mocks/MockVToken.sol";
 import {MockERC20} from "contracts/v1/test/MockERC20.sol";
