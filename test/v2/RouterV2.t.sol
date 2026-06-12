@@ -202,6 +202,31 @@ contract RouterTestV2 is Test {
         vm.stopPrank();
     }
 
+    function testSwapTokensEmitEvent() public {
+        vm.startPrank(sender);
+
+        uint256 amountIn = 100e8;
+        uint256 tokenOut = 80e18;
+        res.debt.mint(sender, amountIn);
+        res.debt.approve(address(res.router), amountIn);
+
+        SwapUnit[] memory swapUnits = new SwapUnit[](1);
+        swapUnits[0] = SwapUnit(address(adapter), address(res.debt), address(res.collateral), abi.encode(tokenOut));
+
+        SwapPath[] memory swapPaths = new SwapPath[](1);
+        swapPaths[0] = SwapPath({units: swapUnits, recipient: sender, inputAmount: amountIn, useBalanceOnchain: false});
+
+        uint256[] memory expectedNetOutputs = new uint256[](1);
+        expectedNetOutputs[0] = tokenOut;
+        vm.expectEmit(true, false, false, true, address(res.router));
+        emit RouterEventsV2.SwapTokens(sender, expectedNetOutputs);
+
+        uint256[] memory netOutputs = res.router.swapTokens(swapPaths);
+        assertEq(netOutputs, expectedNetOutputs);
+
+        vm.stopPrank();
+    }
+
     function testSwapExactTokenToTokenWithWhitelistedCallbackAdnPool() public {
         {
             // deploy a mock callback and set it on the order as swapTrigger

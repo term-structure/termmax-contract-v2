@@ -12,6 +12,8 @@ import {OrderInitialParams} from "../storage/TermMaxStorageV2.sol";
 interface RouterEventsV2 {
     event WhitelistManagerUpdated(address whitelistManager);
 
+    event SwapTokens(address indexed caller, uint256[] netTokenOuts);
+
     event SwapAndRepay(address indexed gt, uint256 indexed gtId, uint256 repayAmt, uint256 remainingRepayToken);
 
     event FlashRepay(address indexed gt, uint256 indexed gtId, uint256 netTokenOut);

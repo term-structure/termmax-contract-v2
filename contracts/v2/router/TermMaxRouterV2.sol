@@ -109,9 +109,10 @@ contract TermMaxRouterV2 is
         nonReentrant
         whenNotPaused
         checkSwapPaths(paths)
-        returns (uint256[] memory)
+        returns (uint256[] memory netTokenOuts)
     {
-        return _executeSwapPaths(paths);
+        netTokenOuts = _executeSwapPaths(paths);
+        emit RouterEventsV2.SwapTokens(msg.sender, netTokenOuts);
     }
 
     function _executeSwapPaths(SwapPath[] memory paths) internal returns (uint256[] memory netTokenOuts) {
