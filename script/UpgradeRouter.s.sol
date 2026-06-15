@@ -53,10 +53,11 @@ contract UpgradeRouter is DeployBaseV2 {
         }
         console.log("Using existing AccessManagerV2 at:", accessManagerAddr);
         coreContracts.accessManager = AccessManagerV2(accessManagerAddr);
-        // if (address(coreContracts.router) == address(0)) {
-        //     revert("RouterV2 not deployed");
-        // }
-        // console.log("Using existing RouterV2 at:", address(coreContracts.router));
+        if (address(coreContracts.router) == address(0)) {
+            revert("RouterV2 not deployed");
+        }
+        console.log("Using existing RouterV2 at:", address(coreContracts.router));
+        console.log("Using existing WhitelistManager at:", address(coreContracts.whitelistManager));
     }
 
     function run() public {
@@ -64,13 +65,36 @@ contract UpgradeRouter is DeployBaseV2 {
         console.log("Deployer balance:", coreParams.deployerAddr.balance);
 
         vm.startBroadcast(deployerPrivateKey);
-        // upgrade access manager to latest version
-        upgradeAccessManager(address(coreContracts.accessManager));
-        // grant upgrade role to deployer
-        coreContracts.accessManager.grantRole(coreContracts.accessManager.UPGRADER_ROLE(), coreParams.deployerAddr);
-        console.log("Granted UPGRADE_ROLE to deployer:", coreParams.deployerAddr);
-        // // Upgrade RouterV2 implementation
-        // upgradeRouter(coreContracts.accessManager, address(coreContracts.router), "");
+        TermMaxRouterV2 routerV2 = new TermMaxRouterV2(address(coreContracts.whitelistManager));
+        console.log("Deployed new RouterV2 implementation at:", address(routerV2));
+
+        // Generate router upgrade data for the Safe wallet.
+        bytes memory upgradeData = "";
+        bytes memory upgradeCalldata = abi.encodeCall(
+            AccessManagerV2.upgradeSubContract,
+            (UUPSUpgradeable(address(coreContracts.router)), address(routerV2), upgradeData)
+        );
+        string memory upgradeAbi = string.concat(
+            "{\"inputs\":[",
+            "{\"internalType\":\"contract UUPSUpgradeable\",\"name\":\"proxy\",\"type\":\"address\"},",
+            "{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"},",
+            "{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}",
+            "],\"name\":\"upgradeSubContract\",\"outputs\":[],\"stateMutability\":\"nonpayable\",",
+            "\"type\":\"function\"}"
+        );
+
+        console.log("===== Safe Wallet Router Upgrade Data =====");
+        console.log("To (AccessManagerV2):", address(coreContracts.accessManager));
+        console.log("Value: 0");
+        console.log("ABI:");
+        console.log(upgradeAbi);
+        console.log("Router proxy:", address(coreContracts.router));
+        console.log("New implementation:", address(routerV2));
+        console.log("Upgrade data:");
+        console.logBytes(upgradeData);
+        console.log("Calldata:");
+        console.logBytes(upgradeCalldata);
+
         vm.stopBroadcast();
 
         console.log("===== Git Info =====");
