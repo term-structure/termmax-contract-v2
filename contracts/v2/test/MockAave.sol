@@ -2,7 +2,7 @@
 pragma solidity ^0.8.27;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {IAaveV3Pool} from "../extensions/aave/IAaveV3Pool.sol";
+import {IAaveV3Pool, IFlashLoanSimpleReceiver} from "../extensions/aave/IAaveV3Pool.sol";
 import {IMintableERC20, IERC20} from "../../v1/tokens/IMintableERC20.sol";
 
 contract MockAave is ERC20, IAaveV3Pool {
@@ -67,5 +67,22 @@ contract MockAave is ERC20, IAaveV3Pool {
         override
     {
         revert("MockAave: Borrow not implemented");
+    }
+
+    /// @dev Mimics Aave V3 flashLoanSimple with a 0.05% premium
+    function flashLoanSimple(
+        address receiverAddress,
+        address asset,
+        uint256 amount,
+        bytes calldata params,
+        uint16 /* referralCode */
+    ) external override {
+        uint256 premium = amount * 5 / 10000;
+        IERC20(asset).transfer(receiverAddress, amount);
+        require(
+            IFlashLoanSimpleReceiver(receiverAddress).executeOperation(asset, amount, premium, msg.sender, params),
+            "MockAave: invalid flash loan executor return"
+        );
+        IERC20(asset).transferFrom(receiverAddress, address(this), amount + premium);
     }
 }

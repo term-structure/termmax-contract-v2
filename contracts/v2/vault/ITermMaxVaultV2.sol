@@ -177,4 +177,23 @@ interface ITermMaxVaultV2 {
     function createOrder(ITermMaxMarketV2 market, OrderV2ConfigurationParams memory params)
         external
         returns (ITermMaxOrderV2 order);
+
+    // ============================================
+    // SHARE REDEMPTION IN FT
+    // ============================================
+
+    /**
+     * @notice Burns `owner`'s shares worth `amount` assets and withdraws `amount` FT tokens
+     *         of the market of `order` from that order to `recipient`
+     * @dev The shares burned are `previewWithdraw(amount)`. The caller must be the owner or
+     *      have sufficient allowance over the owner's shares.
+     * @param order The vault order to withdraw the FT tokens from
+     * @param amount The amount of FT tokens to withdraw (equals the assets' worth of shares burned)
+     * @param recipient The address receiving the FT tokens
+     * @param owner The owner of the shares to burn
+     * @return shares The amount of shares burned
+     */
+    function withdrawFts(address order, uint256 amount, address recipient, address owner)
+        external
+        returns (uint256 shares);
 }

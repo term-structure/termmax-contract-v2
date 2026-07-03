@@ -10,4 +10,6 @@ interface RouterErrorsV2 {
     error SwapPathsIsEmpty();
     /// @notice Error when rollover fails
     error RolloverFailed(uint256 expectedRepayAmt, uint256 actualRepayAmt);
+    /// @notice Error when the flash loan initiator is not the router itself
+    error InvalidFlashLoanInitiator();
 }
