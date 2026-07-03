@@ -2,7 +2,6 @@
 pragma solidity ^0.8.0;
 
 import {ITermMaxMarket} from "../../v1/ITermMaxMarket.sol";
-import {SwapPath} from "./ITermMaxRouterV2.sol";
 import {ITermMaxVaultV2} from "../vault/ITermMaxVaultV2.sol";
 
 /// @notice External flash loan liquidity source used by `flashRolloverGt`
@@ -16,7 +15,8 @@ enum FlashLoanProvider {
  * @author Term Structure Labs
  * @notice Rolls a GT position (fully or partially) into a new market using an external
  *         flash loan as temporary vault liquidity. Deployed as a standalone periphery
- *         contract so that TermMaxRouterV2 stays within the EIP-170 bytecode limit.
+ *         contract so that TermMaxRouterV2 stays within the EIP-170 bytecode limit; the
+ *         new-position borrow flow is delegated to TermMaxRouterV2 itself.
  */
 interface ITermMaxRouterV2_02 {
     /**
@@ -30,14 +30,15 @@ interface ITermMaxRouterV2_02 {
      *      4. `repayAndRemoveCollateral(repayAmt, removedCollateral)` on the old GT in FT —
      *         supports PARTIAL rollover; the GT is never burned and the leftover position
      *         stays intact
-     *      5. issue `newDebtAmt` FT on the new market against the removed collateral
-     *      6. sell the new FT for the debt token through `sellFtPath` (provided by the backend)
-     *      7. repay the flash loan with the sale proceeds plus the caller's `additionalAmt` buffer
+     *      5. call TermMaxRouterV2 with the backend-built `borrowCalldata` — issues the new FT
+     *         against the removed collateral and sells it; RouterV2 enforces its own market and
+     *         adapter whitelists
+     *      6. repay the flash loan with the sale proceeds plus the caller's `additionalAmt` buffer
      *      After the flash loan settles, the old GT is transferred back to the caller, any
      *      rounding-dust shares are redeemed to the caller as debt token (reverts if the vault
-     *      forbids it within this transaction — dust is wei-level), and any debt token left is
-     *      refunded to the caller. The old and new market must share the same collateral and
-     *      debt token.
+     *      forbids it within this transaction — dust is wei-level), and any collateral or debt
+     *      token left is refunded to the caller. The old and new market must share the same
+     *      collateral and debt token.
      * @param market The current market of the GT position
      * @param gtId The ID of the GT token being rolled over
      * @param repayAmt The debt amount to roll (capped to the current debt; pass the full debt
@@ -48,14 +49,17 @@ interface ITermMaxRouterV2_02 {
      * @param flashLender The Morpho core or Aave v3 pool address to borrow from
      * @param vault The ITermMaxVaultV2 used to source the old market's FT
      * @param ftOrder The vault order the old market's FT is withdrawn from
-     * @param rolloverData abi.encode(recipient, removedCollateral, newMarket, newDebtAmt, maxLtv, sellFtPath)
-     *  - recipient(address): address receiving the new GT
-     *  - removedCollateral(bytes): collateral data moved to the new position, e.g. abi.encode(amount)
-     *        for ERC20 collateral; the leftover position must stay healthy (checked by the GT)
-     *  - newMarket(ITermMaxMarket): the market of the new position
-     *  - newDebtAmt(uint128): debt of the new position
-     *  - maxLtv(uint128): max accepted LTV of the new position
-     *  - sellFtPath(SwapPath): new ft -> debt token => router
+     * @param rolloverData abi.encode(routerV2, removedCollateral, borrowCalldata)
+     *  - routerV2(address): the TermMaxRouterV2 the borrow flow is delegated to
+     *  - removedCollateral(uint256): ERC20 collateral amount moved to the new position (encoded
+     *        internally for the GT); the leftover position must stay healthy (checked by the GT)
+     *  - borrowCalldata(bytes): backend-built calldata for TermMaxRouterV2.borrowTokenFromCollateral
+     *        (selector enforced). Backend requirements versus a plain borrow:
+     *        - `collInAmt` must equal the removed collateral amount
+     *        - `swapFtPath.recipient` must be THIS contract (sale proceeds repay the flash loan)
+     *        - the swap must be exact-output style with `refundAddress` = routerV2, so the
+     *          unsold FT stays in routerV2 and automatically repays (reduces) the new debt
+     *        - `recipient` (the new GT receiver) is the end user
      * @return newGtId The ID of the newly created GT token in the new market
      */
     function flashRolloverGt(

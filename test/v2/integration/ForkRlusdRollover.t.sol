@@ -13,6 +13,7 @@ import {OrderV2ConfigurationParams} from "contracts/v2/vault/VaultStorageV2.sol"
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {SwapUnit} from "contracts/v1/router/ISwapAdapter.sol";
 import {SwapPath} from "contracts/v2/router/ITermMaxRouterV2.sol";
+import {TermMaxRouterV2} from "contracts/v2/router/TermMaxRouterV2.sol";
 import {TermMaxRouterV2_02} from "contracts/v2/router/TermMaxRouterV2_02.sol";
 import {FlashLoanProvider} from "contracts/v2/router/ITermMaxRouterV2_02.sol";
 import {ITermMaxVaultV2 as IVaultV2} from "contracts/v2/vault/ITermMaxVaultV2.sol";
@@ -85,6 +86,7 @@ contract ForkRlusdRollover is Test {
     // aave v3 mainnet pool (flash lender for the AAVE path)
     address aavePool = 0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2;
 
+    TermMaxRouterV2 routerV2;
     TermMaxRouterV2_02 router02;
     address tmxAdapter;
 
@@ -95,9 +97,14 @@ contract ForkRlusdRollover is Test {
 
         executor = new RolloverExecutor(morpho, vault, oldMarket, newMarket, oldOrder, newOrder);
 
-        // deploy the flash-rollover periphery router (V2_02) with a permissionless
-        // whitelist manager and register everything the flow touches
+        // deploy the main router (stand-in for the audited production RouterV2) and the
+        // flash-rollover periphery (V2_02) that delegates the borrow flow to it, with a
+        // permissionless whitelist manager registering everything the flow touches
         MockWhitelistManager wm = new MockWhitelistManager();
+        TermMaxRouterV2 rv2Impl = new TermMaxRouterV2(address(wm));
+        routerV2 = TermMaxRouterV2(
+            address(new ERC1967Proxy(address(rv2Impl), abi.encodeCall(TermMaxRouterV2.initialize, (address(this)))))
+        );
         TermMaxRouterV2_02 impl = new TermMaxRouterV2_02(address(wm));
         router02 = TermMaxRouterV2_02(
             address(new ERC1967Proxy(address(impl), abi.encodeCall(TermMaxRouterV2_02.initialize, (address(this)))))
@@ -232,49 +239,46 @@ contract ForkRlusdRollover is Test {
 
         deal(address(rlusd), borrower, PREPARED_RLUSD);
 
-        // backend-provided swap data: sell the expected ft output for RLUSD, minOut = 0
+        // backend-built borrowTokenFromCollateral calldata: issue newDebtAmt against the
+        // removed collateral and sell the ft for an exact RLUSD output that goes back to
+        // router02 (to repay the flash loan); the unsold ft stays in routerV2 (refundAddress)
+        // and automatically repays (reduces) the new debt
+        uint128 newDebtAmt = repayAmt; // mirror the rolled debt
         bytes memory rolloverData;
         {
-            uint128 newDebtAmt = repayAmt; // mirror the rolled debt
-            uint128 expectedFtOut =
-                newDebtAmt - uint128(uint256(newDebtAmt) * newMarket.mintGtFeeRatio() / 1e8);
+            uint128 expectedFtOut = newDebtAmt - uint128(uint256(newDebtAmt) * newMarket.mintGtFeeRatio() / 1e8);
+            // exact RLUSD output target: rolled debt minus the ~0.65% cost (backend quotes this)
+            uint128 sellTarget = uint128(uint256(repayAmt) * 9935 / 10000);
             (IERC20 newFt,,,,) = newMarket.tokens();
 
             address[] memory orders = new address[](1);
             orders[0] = address(newOrder);
             uint128[] memory tradingAmts = new uint128[](1);
-            tradingAmts[0] = expectedFtOut;
+            tradingAmts[0] = sellTarget;
             TermMaxSwapData memory swapData = TermMaxSwapData({
-                swapExactTokenForToken: true,
+                swapExactTokenForToken: false, // exact output: sell just enough ft
                 scalingFactor: 0,
                 orders: orders,
                 tradingAmts: tradingAmts,
-                netTokenAmt: 0, // minOut = 0 for the test, backend sets real slippage
+                netTokenAmt: expectedFtOut, // max ft input
                 deadline: block.timestamp,
-                refundAddress: address(0)
+                refundAddress: address(routerV2) // unsold ft stays in routerV2 -> repays new debt
             });
             SwapUnit[] memory units = new SwapUnit[](1);
             units[0] = SwapUnit({
-                adapter: tmxAdapter,
-                tokenIn: address(newFt),
-                tokenOut: address(rlusd),
-                swapData: abi.encode(swapData)
+                adapter: tmxAdapter, tokenIn: address(newFt), tokenOut: address(rlusd), swapData: abi.encode(swapData)
             });
             SwapPath memory sellFtPath = SwapPath({
                 inputAmount: expectedFtOut,
-                recipient: address(router02),
+                recipient: address(router02), // sale proceeds repay the flash loan
                 useBalanceOnchain: true,
                 units: units
             });
 
-            rolloverData = abi.encode(
-                borrower, // recipient of the new gt
-                abi.encode(removedColl), // collateral moved to the new position
-                newMarket,
-                newDebtAmt,
-                uint128(0.9e8), // maxLtv
-                sellFtPath
+            bytes memory borrowCalldata = abi.encodeCall(
+                routerV2.borrowTokenFromCollateral, (borrower, newMarket, removedColl, newDebtAmt, sellFtPath)
             );
+            rolloverData = abi.encode(address(routerV2), removedColl, borrowCalldata);
         }
 
         uint256 rlusdBefore = rlusd.balanceOf(borrower);
@@ -282,8 +286,17 @@ contract ForkRlusdRollover is Test {
         vm.startPrank(borrower);
         rlusd.approve(address(router02), PREPARED_RLUSD);
         IERC721(address(gt)).approve(address(router02), gtId);
-        uint256 newGtId =
-            router02.flashRolloverGt(oldMarket, gtId, repayAmt, PREPARED_RLUSD, provider, lender, IVaultV2(address(vault)), oldOrder, rolloverData);
+        uint256 newGtId = router02.flashRolloverGt(
+            oldMarket,
+            gtId,
+            repayAmt,
+            PREPARED_RLUSD,
+            provider,
+            lender,
+            IVaultV2(address(vault)),
+            oldOrder,
+            rolloverData
+        );
         vm.stopPrank();
 
         // ---- old position: reduced and RETURNED to the borrower ----
@@ -293,15 +306,19 @@ contract ForkRlusdRollover is Test {
         assertEq(abi.decode(collAfter, (uint256)), collAmt - removedColl, "old collateral should be reduced");
 
         // ---- new position: opened for the borrower with the removed collateral ----
-        (,, IGearingToken newGt,,) = newMarket.tokens();
+        (IERC20 newFt_,, IGearingToken newGt,,) = newMarket.tokens();
         (address newOwner, uint128 newDebt, bytes memory newCollData) = newGt.loanInfo(newGtId);
         assertEq(newOwner, borrower, "borrower should own the new gt");
-        assertEq(newDebt, repayAmt, "new debt should mirror the rolled debt");
+        // the unsold ft automatically repaid part of the new debt, so newDebt <= newDebtAmt
+        assertLe(newDebt, newDebtAmt, "new debt should not exceed the issued debt");
+        assertGe(newDebt, uint256(newDebtAmt) * 99 / 100, "auto-repaid part should be small");
         assertEq(abi.decode(newCollData, (uint256)), removedColl, "new collateral should equal the removed one");
 
-        // ---- router holds nothing ----
+        // ---- routers hold nothing ----
         assertEq(rlusd.balanceOf(address(router02)), 0, "router02 should hold no debt token");
         assertEq(IERC20(address(vault)).balanceOf(address(router02)), 0, "router02 should hold no shares");
+        assertEq(newFt_.balanceOf(address(routerV2)), 0, "routerV2 should hold no ft");
+        assertEq(rlusd.balanceOf(address(routerV2)), 0, "routerV2 should hold no debt token");
 
         console.log("old debt after:", debtAfter);
         console.log("new gtId:", newGtId);
