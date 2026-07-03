@@ -11,12 +11,14 @@ enum FlashLoanProvider {
 }
 
 /**
- * @title TermMax Router V2.0.2 interface — flash rollover periphery
+ * @title TermMax Router V2_02 interface
  * @author Term Structure Labs
- * @notice Rolls a GT position (fully or partially) into a new market using an external
- *         flash loan as temporary vault liquidity. Deployed as a standalone periphery
- *         contract so that TermMaxRouterV2 stays within the EIP-170 bytecode limit; the
- *         new-position borrow flow is delegated to TermMaxRouterV2 itself.
+ * @notice Extension of TermMaxRouterV2, deployed as a standalone contract because the
+ *         main router is close to the EIP-170 bytecode limit. New router features land
+ *         here, composing the existing TermMaxRouterV2 functions where possible.
+ *         Current features:
+ *         - flashRolloverGt: roll a GT position (fully or partially) into a new market,
+ *           using an external flash loan (Morpho / Aave) as temporary vault liquidity
  */
 interface ITermMaxRouterV2_02 {
     /**

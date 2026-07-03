@@ -26,20 +26,15 @@ import {WithWhitelistCheck, IWhitelistManager} from "../access/WithWhitelistChec
 import {VersionV2_0_2} from "../VersionV2_0_2.sol";
 
 /**
- * @title TermMax Router V2.0.2 — flash rollover periphery
+ * @title TermMax Router V2_02
  * @author Term Structure Labs
- * @notice Standalone periphery that rolls a GT position (fully or partially) into a new
- *         market, using an external flash loan (Morpho / Aave) as temporary vault
- *         liquidity. It only orchestrates: issuing and selling the new FT is delegated
- *         to the already-audited TermMaxRouterV2 `borrowTokenFromCollateral`, invoked
- *         with backend-built calldata. Kept separate from TermMaxRouterV2 so both stay
- *         within the EIP-170 bytecode limit.
- * @notice Applicable scenario: rolling between two markets of the SAME token pair (same
- *         collateral and debt token) that differ only in maturity, where both markets
- *         are quoted by the SAME TermMax vault (the vault holds the old market's FT and
- *         makes markets for the new one). Designed for the LOW-LIQUIDITY case: the vault
- *         has no idle liquidity to fund a regular rollover, so the flash loan is
- *         deposited as temporary vault liquidity and recycled back within one transaction.
+ * @notice Extension of TermMaxRouterV2, deployed as a standalone contract because the
+ *         main router is close to the EIP-170 bytecode limit. New router features land
+ *         here, composing the existing TermMaxRouterV2 functions where possible — this
+ *         contract only orchestrates and holds no swap or whitelist logic of its own.
+ *         Current features:
+ *         - flashRolloverGt: roll a GT position (fully or partially) into a new market,
+ *           using an external flash loan (Morpho / Aave) as temporary vault liquidity
  */
 contract TermMaxRouterV2_02 is
     UUPSUpgradeable,
