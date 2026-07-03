@@ -4,7 +4,6 @@ pragma solidity ^0.8.27;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts/interfaces/IERC721Receiver.sol";
-import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
@@ -15,7 +14,7 @@ import {
 import {ITermMaxMarket} from "../../v1/ITermMaxMarket.sol";
 import {IGearingToken} from "../../v1/tokens/IGearingToken.sol";
 import {IGearingTokenV2} from "../tokens/IGearingTokenV2.sol";
-import {ITermMaxRouterV2} from "./ITermMaxRouterV2.sol";
+import {ITermMaxRouterV2, SwapPath} from "./ITermMaxRouterV2.sol";
 import {ITermMaxRouterV2_02, FlashLoanProvider} from "./ITermMaxRouterV2_02.sol";
 import {ITermMaxVaultV2} from "../vault/ITermMaxVaultV2.sol";
 import {IMorpho} from "../extensions/morpho/IMorpho.sol";
@@ -35,6 +34,12 @@ import {VersionV2_0_2} from "../VersionV2_0_2.sol";
  *         to the already-audited TermMaxRouterV2 `borrowTokenFromCollateral`, invoked
  *         with backend-built calldata. Kept separate from TermMaxRouterV2 so both stay
  *         within the EIP-170 bytecode limit.
+ * @notice Applicable scenario: rolling between two markets of the SAME token pair (same
+ *         collateral and debt token) that differ only in maturity, where both markets
+ *         are quoted by the SAME TermMax vault (the vault holds the old market's FT and
+ *         makes markets for the new one). Designed for the LOW-LIQUIDITY case: the vault
+ *         has no idle liquidity to fund a regular rollover, so the flash loan is
+ *         deposited as temporary vault liquidity and recycled back within one transaction.
  */
 contract TermMaxRouterV2_02 is
     UUPSUpgradeable,
@@ -113,7 +118,7 @@ contract TermMaxRouterV2_02 is
         }
         // the exact assets required to mint just enough shares to redeem `repayAmt` of ft
         uint256 flashLoanAmt = IERC4626(address(vault)).previewMint(IERC4626(address(vault)).previewWithdraw(repayAmt));
-        bytes memory data = abi.encode(market, gtId, repayAmt, vault, ftOrder, rolloverData);
+        bytes memory data = abi.encode(market, gtId, repayAmt, vault, ftOrder, firstCaller, rolloverData);
         if (provider == FlashLoanProvider.MORPHO) {
             IMorpho(flashLender).flashLoan(address(debtToken), flashLoanAmt, data);
         } else {
@@ -166,14 +171,16 @@ contract TermMaxRouterV2_02 is
             uint128 repayAmt,
             ITermMaxVaultV2 vault,
             address ftOrder,
+            address firstCaller,
             bytes memory rolloverData
-        ) = abi.decode(data, (ITermMaxMarket, uint256, uint128, ITermMaxVaultV2, address, bytes));
-        (address routerV2, uint256 removedCollateral, bytes memory borrowCalldata) =
-            abi.decode(rolloverData, (address, uint256, bytes));
-        /// @dev Only the borrow function of router v2 can be composed here
-        if (bytes4(borrowCalldata) != ITermMaxRouterV2.borrowTokenFromCollateral.selector) {
-            revert RouterErrorsV2.InvalidBorrowCalldata();
-        }
+        ) = abi.decode(data, (ITermMaxMarket, uint256, uint128, ITermMaxVaultV2, address, address, bytes));
+        (
+            address routerV2,
+            uint256 removedCollateral,
+            ITermMaxMarket newMarket,
+            uint128 maxDebtAmt,
+            SwapPath memory swapFtPath
+        ) = abi.decode(rolloverData, (address, uint256, ITermMaxMarket, uint128, SwapPath));
 
         (IERC20 ft,, IGearingToken gt, address collateral, IERC20 debtToken) = market.tokens();
         {
@@ -189,13 +196,18 @@ contract TermMaxRouterV2_02 is
             IGearingTokenV2(address(gt))
                 .repayAndRemoveCollateral(gtId, repayAmt, false, address(this), abi.encode(removedCollateral));
         }
-        /// @dev Delegate issuing and selling the new ft to router v2 with the backend-built
-        /// calldata. The backend must set the sell path recipient to this contract so the
-        /// sale proceeds come back here to repay the flash loan.
-        uint256 collateralAmt = IERC20(collateral).balanceOf(address(this));
-        IERC20(collateral).safeIncreaseAllowance(routerV2, collateralAmt);
-        bytes memory returnData = Address.functionCall(routerV2, borrowCalldata);
-        uint256 newGtId = abi.decode(returnData, (uint256));
+        /// @dev Delegate issuing and selling the new ft to router v2. The collateral input
+        /// is exactly the removed collateral and the new gt recipient is enforced to this
+        /// contract, so neither can be hijacked by malicious parameters. The backend must
+        /// set the sell path recipient to this contract so the sale proceeds come back
+        /// here to repay the flash loan.
+        IERC20(collateral).safeIncreaseAllowance(routerV2, removedCollateral);
+        uint256 newGtId = ITermMaxRouterV2(routerV2).borrowTokenFromCollateral(
+            address(this), newMarket, removedCollateral, maxDebtAmt, swapFtPath
+        );
+        // forward the new gt to the caller
+        (,, IGearingToken newGt,,) = newMarket.tokens();
+        newGt.safeTransferFrom(address(this), firstCaller, newGtId, "");
         assembly {
             tstore(T_NEW_GT_STORE, newGtId)
         }

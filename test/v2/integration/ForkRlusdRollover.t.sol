@@ -275,10 +275,7 @@ contract ForkRlusdRollover is Test {
                 units: units
             });
 
-            bytes memory borrowCalldata = abi.encodeCall(
-                routerV2.borrowTokenFromCollateral, (borrower, newMarket, removedColl, newDebtAmt, sellFtPath)
-            );
-            rolloverData = abi.encode(address(routerV2), removedColl, borrowCalldata);
+            rolloverData = abi.encode(address(routerV2), removedColl, newMarket, newDebtAmt, sellFtPath);
         }
 
         uint256 rlusdBefore = rlusd.balanceOf(borrower);

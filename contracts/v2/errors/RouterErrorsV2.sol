@@ -12,6 +12,4 @@ interface RouterErrorsV2 {
     error RolloverFailed(uint256 expectedRepayAmt, uint256 actualRepayAmt);
     /// @notice Error when the flash loan initiator is not the router itself
     error InvalidFlashLoanInitiator();
-    /// @notice Error when the composed borrow calldata does not target the expected function
-    error InvalidBorrowCalldata();
 }
