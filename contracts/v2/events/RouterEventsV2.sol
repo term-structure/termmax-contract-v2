@@ -25,4 +25,13 @@ interface RouterEventsV2 {
         address additionalAsset,
         uint256 additionalAmt
     );
+
+    event FlashRolloverGt(
+        address indexed gt,
+        uint256 indexed gtId,
+        uint256 indexed newGtId,
+        address flashLender,
+        uint256 flashLoanAmt,
+        uint256 additionalAmt
+    );
 }
