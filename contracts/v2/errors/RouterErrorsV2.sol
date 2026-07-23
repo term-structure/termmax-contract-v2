@@ -12,4 +12,8 @@ interface RouterErrorsV2 {
     error RolloverFailed(uint256 expectedRepayAmt, uint256 actualRepayAmt);
     /// @notice Error when the flash loan initiator is not the router itself
     error InvalidFlashLoanInitiator();
+    /// @notice Error when the FT amounts withdrawn from vault orders do not equal the repayment amount
+    error InvalidFtAmount(uint256 expected, uint256 actual);
+    /// @notice Error when the additional asset is neither the market debt token nor collateral token
+    error InvalidAdditionalAsset();
 }
