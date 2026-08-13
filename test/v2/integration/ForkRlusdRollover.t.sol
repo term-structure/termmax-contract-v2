@@ -202,14 +202,31 @@ contract ForkRlusdRollover is Test {
     // ---------------------------------------------------------------------
 
     function testFlashRolloverGtFullViaMorpho() public {
-        _routerRollover(type(uint128).max, type(uint256).max, FlashLoanProvider.MORPHO, address(morpho));
+        _routerRollover(type(uint128).max, type(uint256).max, 0, false, FlashLoanProvider.MORPHO, address(morpho));
     }
 
     function testFlashRolloverGtPartialViaMorpho() public {
         (,, IGearingToken gt,,) = oldMarket.tokens();
         (, uint128 debt, bytes memory collData) = gt.loanInfo(gtId);
         uint256 collAmt = abi.decode(collData, (uint256));
-        _routerRollover(debt / 2, collAmt / 2, FlashLoanProvider.MORPHO, address(morpho));
+        _routerRollover(debt / 2, collAmt / 2, 0, false, FlashLoanProvider.MORPHO, address(morpho));
+    }
+
+    function testFlashRolloverGtFromMultipleOrders() public {
+        (,, IGearingToken gt,,) = oldMarket.tokens();
+        (, uint128 debt, bytes memory collData) = gt.loanInfo(gtId);
+        _routerRollover(
+            debt / 2, abi.decode(collData, (uint256)) / 2, 0, true, FlashLoanProvider.MORPHO, address(morpho)
+        );
+    }
+
+    function testFlashRolloverGtWithAdditionalCollateral() public {
+        (,, IGearingToken gt,,) = oldMarket.tokens();
+        (, uint128 debt, bytes memory collData) = gt.loanInfo(gtId);
+        uint256 collAmt = abi.decode(collData, (uint256));
+        _routerRollover(
+            debt / 2, collAmt / 2, collAmt / 10, false, FlashLoanProvider.MORPHO, address(morpho)
+        );
     }
 
     /// @dev Aave mainnet only holds ~1.98M RLUSD at this block — not enough for a 4.39M
@@ -220,15 +237,20 @@ contract ForkRlusdRollover is Test {
         MockAave mockAave = new MockAave(address(rlusd));
         deal(address(rlusd), address(mockAave), 5_000_000e18);
         vm.label(address(mockAave), "mockAave");
-        _routerRollover(type(uint128).max, type(uint256).max, FlashLoanProvider.AAVE, address(mockAave));
+        _routerRollover(type(uint128).max, type(uint256).max, 0, false, FlashLoanProvider.AAVE, address(mockAave));
     }
 
     /// @dev Run a (partial) flash rollover of GT `gtId` through the V2_02 router and assert
     ///      the old position is reduced and returned, and the mirrored new position is opened.
-    function _routerRollover(uint128 repayAmt, uint256 removedColl, FlashLoanProvider provider, address lender)
-        internal
-    {
-        (,, IGearingToken gt,, IERC20 rlusd) = oldMarket.tokens();
+    function _routerRollover(
+        uint128 repayAmt,
+        uint256 removedColl,
+        uint256 additionalCollateral,
+        bool splitFtOrders,
+        FlashLoanProvider provider,
+        address lender
+    ) internal {
+        (,, IGearingToken gt, address collateral, IERC20 rlusd) = oldMarket.tokens();
         (address borrower, uint128 debt, bytes memory collData) = gt.loanInfo(gtId);
         uint256 collAmt = abi.decode(collData, (uint256));
         if (repayAmt > debt) repayAmt = debt;
@@ -243,12 +265,18 @@ contract ForkRlusdRollover is Test {
         // removed collateral and sell the ft for an exact RLUSD output that goes back to
         // router02 (to repay the flash loan); the unsold ft stays in routerV2 (refundAddress)
         // and automatically repays (reduces) the new debt
-        uint128 newDebtAmt = repayAmt; // mirror the rolled debt
+        // With additional collateral, slightly over-issue the new debt so the FT sale itself
+        // can fully fund the flash repayment; otherwise the caller supplies a debt-token buffer.
+        uint128 newDebtAmt =
+            additionalCollateral == 0 ? repayAmt : uint128(uint256(repayAmt) * 101 / 100);
         bytes memory rolloverData;
         {
             uint128 expectedFtOut = newDebtAmt - uint128(uint256(newDebtAmt) * newMarket.mintGtFeeRatio() / 1e8);
             // exact RLUSD output target: rolled debt minus the ~0.65% cost (backend quotes this)
-            uint128 sellTarget = uint128(uint256(repayAmt) * 9935 / 10000);
+            uint128 sellTarget = additionalCollateral == 0
+                ? uint128(uint256(repayAmt) * 9935 / 10000)
+                // previewMint can round the flash principal one wei above repayAmt.
+                : repayAmt + 1;
             (IERC20 newFt,,,,) = newMarket.tokens();
 
             address[] memory orders = new address[](1);
@@ -279,19 +307,34 @@ contract ForkRlusdRollover is Test {
         }
 
         uint256 rlusdBefore = rlusd.balanceOf(borrower);
+        if (additionalCollateral != 0) deal(collateral, borrower, additionalCollateral);
 
         vm.startPrank(borrower);
-        rlusd.approve(address(router02), PREPARED_RLUSD);
+        IERC20 additionalAsset = additionalCollateral == 0 ? rlusd : IERC20(collateral);
+        uint256 additionalAmt = additionalCollateral == 0 ? PREPARED_RLUSD : additionalCollateral;
+        additionalAsset.approve(address(router02), additionalAmt);
         IERC721(address(gt)).approve(address(router02), gtId);
+        address[] memory ftOrders = new address[](splitFtOrders ? 2 : 1);
+        ftOrders[0] = oldOrder;
+        uint256[] memory ftAmounts = new uint256[](splitFtOrders ? 2 : 1);
+        if (splitFtOrders) {
+            ftOrders[1] = oldOrderAlt;
+            ftAmounts[0] = repayAmt / 2;
+            ftAmounts[1] = repayAmt - ftAmounts[0];
+        } else {
+            ftAmounts[0] = repayAmt;
+        }
         uint256 newGtId = router02.flashRolloverGt(
             oldMarket,
             gtId,
             repayAmt,
-            PREPARED_RLUSD,
+            additionalAsset,
+            additionalAmt,
             provider,
             lender,
             IVaultV2(address(vault)),
-            oldOrder,
+            ftOrders,
+            ftAmounts,
             rolloverData
         );
         vm.stopPrank();
@@ -309,7 +352,11 @@ contract ForkRlusdRollover is Test {
         // the unsold ft automatically repaid part of the new debt, so newDebt <= newDebtAmt
         assertLe(newDebt, newDebtAmt, "new debt should not exceed the issued debt");
         assertGe(newDebt, uint256(newDebtAmt) * 99 / 100, "auto-repaid part should be small");
-        assertEq(abi.decode(newCollData, (uint256)), removedColl, "new collateral should equal the removed one");
+        assertEq(
+            abi.decode(newCollData, (uint256)),
+            removedColl + additionalCollateral,
+            "new collateral should include the additional collateral"
+        );
 
         // ---- routers hold nothing ----
         assertEq(rlusd.balanceOf(address(router02)), 0, "router02 should hold no debt token");

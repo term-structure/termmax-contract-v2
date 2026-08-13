@@ -19,6 +19,7 @@ import {ITermMaxRouterV2_02, FlashLoanProvider} from "./ITermMaxRouterV2_02.sol"
 import {ITermMaxVaultV2} from "../vault/ITermMaxVaultV2.sol";
 import {IMorpho} from "../extensions/morpho/IMorpho.sol";
 import {IAaveV3Pool} from "../extensions/aave/IAaveV3Pool.sol";
+import {RouterErrors} from "../../v1/errors/RouterErrors.sol";
 import {RouterErrorsV2} from "../errors/RouterErrorsV2.sol";
 import {RouterEventsV2} from "../events/RouterEventsV2.sol";
 import {TransferUtilsV2} from "../lib/TransferUtilsV2.sol";
@@ -84,24 +85,31 @@ contract TermMaxRouterV2_02 is
         ITermMaxMarket market,
         uint256 gtId,
         uint128 repayAmt,
+        IERC20 additionalAsset,
         uint256 additionalAmt,
         FlashLoanProvider provider,
         address flashLender,
         ITermMaxVaultV2 vault,
-        address ftOrder,
+        address[] memory ftOrders,
+        uint256[] memory ftAmounts,
         bytes memory rolloverData
     ) external nonReentrant whenNotPaused onlyWhitelisted(address(market)) returns (uint256 newGtId) {
         (,, IGearingToken gtToken, address collateral, IERC20 debtToken) = market.tokens();
         address firstCaller = _msgSender();
+        if (ftOrders.length != ftAmounts.length) revert RouterErrors.OrdersAndAmtsLengthNotMatch();
+        if (additionalAmt != 0 && address(additionalAsset) != address(debtToken) && address(additionalAsset) != collateral)
+        {
+            revert RouterErrorsV2.InvalidAdditionalAsset();
+        }
         assembly {
             // the flash lender is the only address allowed to call back
             tstore(T_CALLBACK_ADDRESS_STORE, flashLender)
             // clear ts stograge
             tstore(T_NEW_GT_STORE, 0)
         }
-        // additional debt token to cover the rollover cost(ft discount, issue fee, flash loan premium)
+        // Optional debt token to cover rollover cost, or collateral to strengthen the new position.
         if (additionalAmt != 0) {
-            debtToken.safeTransferFrom(firstCaller, address(this), additionalAmt);
+            additionalAsset.safeTransferFrom(firstCaller, address(this), additionalAmt);
         }
         // pull the gt to act as its owner, it is returned to the caller at the end
         gtToken.safeTransferFrom(firstCaller, address(this), gtId, "");
@@ -111,9 +119,19 @@ contract TermMaxRouterV2_02 is
                 repayAmt = debtAmt;
             }
         }
+        uint256 totalFtAmount;
+        uint256 sharesToMint;
+        for (uint256 i = 0; i < ftAmounts.length; ++i) {
+            totalFtAmount += ftAmounts[i];
+            // Each withdrawFts call rounds its share burn independently, so the required
+            // shares must be calculated per order rather than from the aggregate FT amount.
+            sharesToMint += IERC4626(address(vault)).previewWithdraw(ftAmounts[i]);
+        }
+        if (totalFtAmount != repayAmt) revert RouterErrorsV2.InvalidFtAmount(repayAmt, totalFtAmount);
         // the exact assets required to mint just enough shares to redeem `repayAmt` of ft
-        uint256 flashLoanAmt = IERC4626(address(vault)).previewMint(IERC4626(address(vault)).previewWithdraw(repayAmt));
-        bytes memory data = abi.encode(market, gtId, repayAmt, vault, ftOrder, firstCaller, rolloverData);
+        uint256 flashLoanAmt = IERC4626(address(vault)).previewMint(sharesToMint);
+        bytes memory data =
+            abi.encode(market, gtId, repayAmt, sharesToMint, vault, ftOrders, ftAmounts, firstCaller, rolloverData);
         if (provider == FlashLoanProvider.MORPHO) {
             IMorpho(flashLender).flashLoan(address(debtToken), flashLoanAmt, data);
         } else {
@@ -164,11 +182,15 @@ contract TermMaxRouterV2_02 is
             ITermMaxMarket market,
             uint256 gtId,
             uint128 repayAmt,
+            uint256 sharesToMint,
             ITermMaxVaultV2 vault,
-            address ftOrder,
+            address[] memory ftOrders,
+            uint256[] memory ftAmounts,
             address firstCaller,
             bytes memory rolloverData
-        ) = abi.decode(data, (ITermMaxMarket, uint256, uint128, ITermMaxVaultV2, address, address, bytes));
+        ) = abi.decode(
+            data, (ITermMaxMarket, uint256, uint128, uint256, ITermMaxVaultV2, address[], uint256[], address, bytes)
+        );
         (
             address routerV2,
             uint256 removedCollateral,
@@ -181,9 +203,11 @@ contract TermMaxRouterV2_02 is
         {
             // mint the exact shares needed to redeem `repayAmt` of the old market's ft
             debtToken.safeIncreaseAllowance(address(vault), flashLoanAmt);
-            IERC4626(address(vault)).mint(IERC4626(address(vault)).previewWithdraw(repayAmt), address(this));
-            // burn the shares to redeem the old market's ft from the vault order
-            vault.withdrawFts(ftOrder, repayAmt, address(this), address(this));
+            IERC4626(address(vault)).mint(sharesToMint, address(this));
+            // burn the shares to redeem the old market's ft from the vault orders
+            for (uint256 i = 0; i < ftOrders.length; i++) {
+                vault.withdrawFts(ftOrders[i], ftAmounts[i], address(this), address(this));
+            }
             // repay(maybe partially) the old gt in ft and move the freed collateral here,
             // the gt is not burned and the leftover position stays healthy(checked by the gt)
             ft.safeIncreaseAllowance(address(gt), repayAmt);
@@ -196,9 +220,10 @@ contract TermMaxRouterV2_02 is
         /// contract, so neither can be hijacked by malicious parameters. The backend must
         /// set the sell path recipient to this contract so the sale proceeds come back
         /// here to repay the flash loan.
-        IERC20(collateral).safeIncreaseAllowance(routerV2, removedCollateral);
+        uint256 newCollateralAmt = IERC20(collateral).balanceOf(address(this));
+        IERC20(collateral).safeIncreaseAllowance(routerV2, newCollateralAmt);
         uint256 newGtId = ITermMaxRouterV2(routerV2).borrowTokenFromCollateral(
-            address(this), newMarket, removedCollateral, maxDebtAmt, swapFtPath
+            address(this), newMarket, newCollateralAmt, maxDebtAmt, swapFtPath
         );
         // forward the new gt to the caller
         (,, IGearingToken newGt,,) = newMarket.tokens();
