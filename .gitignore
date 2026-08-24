@@ -47,3 +47,4 @@ ignition/deployments/chain-31337
 # Soldeer
 /dependencies
 .DS_Store
+outputs
