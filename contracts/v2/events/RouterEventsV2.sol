@@ -34,4 +34,13 @@ interface RouterEventsV2 {
         uint256 flashLoanAmt,
         uint256 additionalAmt
     );
+
+    event RolloverFromLendingProtocol(
+        address indexed owner,
+        address indexed lendingPool,
+        uint256 indexed newGtId,
+        uint256 flashAmt,
+        uint256 collateralAmt,
+        uint256 additionalAmt
+    );
 }

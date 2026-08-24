@@ -84,6 +84,41 @@ interface IMorphoBase {
         address receiver
     ) external returns (uint256 assetsBorrowed, uint256 sharesBorrowed);
 
+    /// @notice Repays `assets` or `shares` on behalf of `onBehalf`, optionally calling back the caller's
+    /// `onMorphoRepay` function with the given `data`.
+    /// @dev Either `assets` or `shares` should be zero. To repay max, pass the `shares`'s balance of `onBehalf`.
+    /// @dev Anyone is able to repay a position on behalf of any address.
+    /// @dev An attacker can front-run a repay with a repay of 1 asset making the transaction revert for underflow.
+    /// @dev It is advised to use the `shares` input when repaying the full position to avoid reverts due to conversion
+    /// roundings between shares and assets.
+    /// @param marketParams The market to repay assets to.
+    /// @param assets The amount of assets to repay.
+    /// @param shares The amount of shares to burn.
+    /// @param onBehalf The address of the owner of the debt.
+    /// @param data Arbitrary data to pass to the `onMorphoRepay` callback. Pass empty data if not needed.
+    /// @return assetsRepaid The amount of assets repaid.
+    /// @return sharesRepaid The amount of shares burned.
+    function repay(
+        MarketParams memory marketParams,
+        uint256 assets,
+        uint256 shares,
+        address onBehalf,
+        bytes memory data
+    ) external returns (uint256 assetsRepaid, uint256 sharesRepaid);
+
+    /// @notice Withdraws `assets` of collateral on behalf of `onBehalf` and sends the assets to `receiver`.
+    /// @dev `msg.sender` must be authorized to manage `onBehalf`'s positions.
+    /// @dev Withdrawing an amount corresponding to more collateral than supplied will revert for underflow.
+    /// @param marketParams The market to withdraw collateral from.
+    /// @param assets The amount of collateral to withdraw.
+    /// @param onBehalf The address of the owner of the collateral.
+    /// @param receiver The address that will receive the collateral assets.
+    function withdrawCollateral(MarketParams memory marketParams, uint256 assets, address onBehalf, address receiver)
+        external;
+
+    /// @notice Accrues interest for the given market `marketParams`.
+    function accrueInterest(MarketParams memory marketParams) external;
+
     /// @notice Supplies `assets` of collateral on behalf of `onBehalf`, optionally calling back the caller's
     /// `onMorphoSupplyCollateral` function with the given `data`.
     /// @dev Interest are not accrued since it's not required and it saves gas.
@@ -137,4 +172,27 @@ interface IMorpho is IMorphoBase {
     /// @dev This mapping is not used in Morpho. It is there to enable reducing the cost associated to calldata on layer
     /// 2s by creating a wrapper contract with functions that take `id` as input instead of `marketParams`.
     function idToMarketParams(Id id) external view returns (MarketParams memory);
+
+    /// @notice The state of the position of `user` on the market corresponding to `id`.
+    /// @dev Warning: For `feeRecipient`, `supplyShares` does not contain the accrued shares since the last interest
+    /// accrual.
+    function position(Id id, address user)
+        external
+        view
+        returns (uint256 supplyShares, uint128 borrowShares, uint128 collateral);
+
+    /// @notice The state of the market corresponding to `id`.
+    /// @dev Warning: `totalSupplyAssets` does not contain the accrued interest since the last interest accrual.
+    /// @dev Warning: `totalBorrowAssets` does not contain the accrued interest since the last interest accrual.
+    function market(Id id)
+        external
+        view
+        returns (
+            uint128 totalSupplyAssets,
+            uint128 totalSupplyShares,
+            uint128 totalBorrowAssets,
+            uint128 totalBorrowShares,
+            uint128 lastUpdate,
+            uint128 fee
+        );
 }

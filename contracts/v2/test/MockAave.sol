@@ -69,6 +69,15 @@ contract MockAave is ERC20, IAaveV3Pool {
         revert("MockAave: Borrow not implemented");
     }
 
+    /// @dev This mock only models the supply side and the flash loan, it has no debt to repay
+    function repay(address asset, uint256 amount, uint256 interestRateMode, address onBehalfOf)
+        external
+        override
+        returns (uint256)
+    {
+        revert("MockAave: Repay not implemented");
+    }
+
     /// @dev Mimics Aave V3 flashLoanSimple with a 0.05% premium
     function flashLoanSimple(
         address receiverAddress,
