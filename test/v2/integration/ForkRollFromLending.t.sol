@@ -255,6 +255,41 @@ contract ForkRollFromLending is Test {
         _call(params);
     }
 
+    /// @dev When the caller holds none of the new market's collateral in the third party protocol,
+    ///      the collateral leg is skipped entirely — no zero amount ever reaches aave's aToken
+    ///      transfer or its withdraw, both of which reject zero. Here the caller's aave debt is
+    ///      backed by WETH and they roll it onto TermMax against wstETH they bring themselves,
+    ///      leaving the WETH where it is.
+    function testRollFromAaveWithoutMovingCollateral() public {
+        address weth = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+        address aWeth = aave.getReserveData(weth).aTokenAddress;
+        deal(weth, user, 1e18);
+        vm.startPrank(user);
+        IERC20(weth).approve(address(aave), 1e18);
+        aave.supply(weth, 1e18, user, 0);
+        aave.borrow(usdc, DEBT, 2, 0, user);
+        vm.stopPrank();
+
+        assertEq(IERC20(aWstEth).balanceOf(user), 0, "no wstETH supplied to aave");
+
+        // the collateral of the new position comes from the caller, not out of aave
+        deal(wstEth, user, COLLATERAL);
+        vm.startPrank(user);
+        IERC20(wstEth).approve(address(router02), COLLATERAL);
+        IERC20(aWstEth).approve(address(router02), type(uint256).max);
+        vm.stopPrank();
+
+        RollCase memory params = _aaveCase(DEBT, type(uint256).max);
+        params.additionalAsset = IERC20(wstEth);
+        params.additionalAmt = COLLATERAL;
+        uint256 newGtId = _roll(params);
+
+        assertEq(IERC20(usdcVariableDebt).balanceOf(user), 0, "the aave debt is repaid");
+        assertApproxEqAbs(IERC20(aWeth).balanceOf(user), 1e18, 1e12, "the aave collateral is untouched");
+        _assertNewPosition(newGtId, COLLATERAL, DEBT);
+        _assertRoutersEmpty();
+    }
+
     // ------------------------------------------------------------------
     // Morpho -> TermMax
     // ------------------------------------------------------------------

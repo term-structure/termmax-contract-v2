@@ -229,6 +229,29 @@ contract ForkRlusdRollover is Test {
         );
     }
 
+    /// @dev A single wei of vault shares sitting on the router is enough to brick every rollover
+    ///      that goes through it: the flow mints shares inside the flash loan, and the vault's
+    ///      TransactionReentrancyGuard rejects a withdraw-side action after a deposit-side one in
+    ///      the same transaction. Anyone can put that wei there with a plain ERC20 transfer, so the
+    ///      leftover shares have to be handed back by transfer rather than redeemed.
+    function testFlashRolloverGtSurvivesDonatedVaultShares() public {
+        (,, IGearingToken gt,,) = oldMarket.tokens();
+        (address borrower,,) = gt.loanInfo(gtId);
+        uint256 borrowerSharesBefore = IERC20(address(vault)).balanceOf(borrower);
+
+        deal(address(vault), address(router02), 1);
+        assertEq(IERC20(address(vault)).balanceOf(address(router02)), 1, "a wei of shares is parked here");
+
+        _routerRollover(type(uint128).max, type(uint256).max, 0, false, FlashLoanProvider.MORPHO, address(morpho));
+
+        // the helper already checks the router kept none, and the wei went to the caller
+        assertEq(
+            IERC20(address(vault)).balanceOf(borrower) - borrowerSharesBefore,
+            1,
+            "the parked share is handed to the caller"
+        );
+    }
+
     /// @dev Aave mainnet only holds ~1.98M RLUSD at this block — not enough for a 4.39M
     ///      flash loan — so the AAVE callback path (executeOperation + 5bps premium) is
     ///      exercised against a funded MockAave instead.

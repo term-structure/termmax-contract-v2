@@ -168,12 +168,15 @@ contract TermMaxRouterV2_02 is
         }
         // return the (partially repaid) old position to the caller
         gtToken.safeTransferFrom(address(this), firstCaller, gtId, "");
-        /// @dev Redeem the rounding-dust shares(if any) to the caller as debt token.
-        /// The vault reverts if that is not allowed within this transaction — the dust
-        /// is wei-level so it is not worth further handling.
+        /// @dev Hand the rounding-dust shares(if any) to the caller as shares, NOT by redeeming
+        /// them: this flow minted shares inside the flash loan, and the vault's transaction guard
+        /// rejects a withdraw-side action after a deposit-side one in the same transaction. A
+        /// redeem here would let anyone brick every rollover through this router by transferring
+        /// it a single wei of vault shares, which a plain ERC20 transfer can do and nothing can
+        /// undo. A share transfer is not a vault action, so it always goes through.
         uint256 remainingShares = IERC4626(address(vault)).balanceOf(address(this));
         if (remainingShares != 0) {
-            IERC4626(address(vault)).redeem(remainingShares, firstCaller, address(this));
+            IERC20(address(vault)).safeTransfer(firstCaller, remainingShares);
         }
         // refund the unconsumed collateral(if any) and debt token buffer
         uint256 remainingCollateral = IERC20(collateral).balanceOf(address(this));
