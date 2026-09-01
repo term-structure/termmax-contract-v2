@@ -7,6 +7,7 @@ import {ITermMaxVaultV2, OrderV2ConfigurationParams, CurveCuts, IERC4626} from "
 import {IWhitelistManager} from "./IWhitelistManager.sol";
 import {IStableERC4626For4626, StakingBuffer, IERC20} from "../pool/IStableERC4626For4626.sol";
 import {TransferUtilsV2} from "../lib/TransferUtilsV2.sol";
+import {VaultErrorsV2} from "../errors/VaultErrorsV2.sol";
 import {VersionV2_0_1} from "../VersionV2_0_1.sol";
 
 /**
@@ -103,6 +104,24 @@ contract AccessManagerV2 is AccessManager, VersionV2_0_1 {
      */
     function revokePendingPool(ITermMaxVaultV2 vault) external onlyRole(VAULT_ROLE) {
         vault.revokePendingPool();
+    }
+
+    /**
+     * @notice Batch redeem matured orders from multiple vaults
+     * @dev `orders[i]` is redeemed from `vaults[i]`, so redeeming several orders of the same
+     *      vault means repeating that vault in `vaults`
+     * @param vaults The vault holding each order to redeem
+     * @param orders The orders to redeem, paired one-to-one with `vaults`
+     * @custom:access Requires CONFIGURATOR_ROLE
+     */
+    function batchRedeemOrders(ITermMaxVault[] calldata vaults, ITermMaxOrder[] calldata orders)
+        external
+        onlyRole(CONFIGURATOR_ROLE)
+    {
+        require(vaults.length == orders.length, VaultErrorsV2.ArrayLengthMismatch());
+        for (uint256 i = 0; i < vaults.length; ++i) {
+            vaults[i].redeemOrder(orders[i]);
+        }
     }
 
     /**
