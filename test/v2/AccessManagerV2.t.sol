@@ -33,6 +33,9 @@ import {IWhitelistManager, WhitelistManager} from "contracts/v2/access/Whitelist
 import {IStableERC4626For4626} from "contracts/v2/pool/IStableERC4626For4626.sol";
 import {StableERC4626For4626, StakingBuffer} from "contracts/v2/pool/StableERC4626For4626.sol";
 import {MockERC4626} from "contracts/v2/test/MockERC4626.sol";
+import {ITermMaxOrder} from "contracts/v1/ITermMaxOrder.sol";
+import {VaultErrors} from "contracts/v1/errors/VaultErrors.sol";
+import {VaultErrorsV2} from "contracts/v2/errors/VaultErrorsV2.sol";
 
 contract AccessManagerTestV2 is Test {
     using JSONLoader for *;
@@ -67,20 +70,20 @@ contract AccessManagerTestV2 is Test {
         res = DeployUtils.deployMarket(deployer, marketConfig, maxLtv, liquidationLtv);
         stable4626 = IStableERC4626For4626(
             address(
-                res.poolFactory.createStableERC4626For4626(
-                    address(res.accessManager),
-                    address(new MockERC4626(res.debt)),
-                    StakingBuffer.BufferConfig({minimumBuffer: 100e6, maximumBuffer: 500e6, buffer: 300e6})
-                )
+                res.poolFactory
+                    .createStableERC4626For4626(
+                        address(res.accessManager),
+                        address(new MockERC4626(res.debt)),
+                        StakingBuffer.BufferConfig({minimumBuffer: 100e6, maximumBuffer: 500e6, buffer: 300e6})
+                    )
             )
         );
         whitelistManager = res.whitelistManager;
         manager = res.accessManager;
         res.order = TermMaxOrderV2(
             address(
-                res.market.createOrder(
-                    maker, orderConfig.maxXtReserve, ISwapCallback(address(0)), orderConfig.curveCuts
-                )
+                res.market
+                .createOrder(maker, orderConfig.maxXtReserve, ISwapCallback(address(0)), orderConfig.curveCuts)
             )
         );
 
@@ -506,7 +509,9 @@ contract AccessManagerTestV2 is Test {
             admin: address(manager),
             gtImplementation: address(0),
             marketConfig: marketConfig,
-            loanConfig: LoanConfig({oracle: IOracle(address(0)), liquidatable: true, liquidationLtv: 0.9e8, maxLtv: 0.85e8}),
+            loanConfig: LoanConfig({
+                oracle: IOracle(address(0)), liquidatable: true, liquidationLtv: 0.9e8, maxLtv: 0.85e8
+            }),
             gtInitalParams: abi.encode(1e18),
             tokenName: "Test Market",
             tokenSymbol: "Test"
@@ -908,6 +913,99 @@ contract AccessManagerTestV2 is Test {
             )
         );
         manager.withdrawIncomeAssets(IStableERC4626For4626(address(stable4626)), address(1), address(2), 1e6);
+        vm.stopPrank();
+    }
+
+    function _deploySecondVaultWithOrder() internal returns (TermMaxVaultV2 vault2, TermMaxOrderV2 order2) {
+        VaultInitialParamsV2 memory params = VaultInitialParamsV2({
+            admin: address(manager),
+            curator: curator,
+            guardian: address(0),
+            timelock: 1 days,
+            asset: IERC20(address(res.debt)),
+            pool: IERC4626(address(0)),
+            maxCapacity: 1000000e18,
+            name: "Test Vault 2",
+            symbol: "tVAULT2",
+            performanceFeeRate: 0.2e8,
+            minApy: 0
+        });
+
+        vm.prank(deployer);
+        vault2 = DeployUtils.deployVault(res.vaultFactory, params, 1);
+
+        vm.startPrank(curator);
+        vault2.submitMarket(address(res.market), true);
+        vm.warp(block.timestamp + 1 days);
+        vault2.acceptMarket(address(res.market));
+        order2 = TermMaxOrderV2(address(vault2.createOrder(res.market, _orderConfigParams())));
+        vm.stopPrank();
+    }
+
+    function _orderConfigParams() internal view returns (OrderV2ConfigurationParams memory) {
+        return OrderV2ConfigurationParams({
+            maxXtReserve: 1000e18,
+            originalVirtualXtReserve: 0,
+            virtualXtReserve: 100e18,
+            curveCuts: orderConfig.curveCuts
+        });
+    }
+
+    function testBatchRedeemOrders() public {
+        (TermMaxVaultV2 vault2, TermMaxOrderV2 order2) = _deploySecondVaultWithOrder();
+
+        // A second order in the first vault, so that vault appears twice in `vaults`
+        vm.prank(curator);
+        TermMaxOrderV2 vaultOrder2 = TermMaxOrderV2(address(res.vault.createOrder(res.market, _orderConfigParams())));
+
+        vm.warp(res.market.config().maturity + 1 days);
+
+        ITermMaxVault[] memory vaults = new ITermMaxVault[](3);
+        vaults[0] = ITermMaxVault(address(res.vault));
+        vaults[1] = ITermMaxVault(address(res.vault));
+        vaults[2] = ITermMaxVault(address(vault2));
+
+        ITermMaxOrder[] memory orders = new ITermMaxOrder[](3);
+        orders[0] = ITermMaxOrder(address(vaultOrder));
+        orders[1] = ITermMaxOrder(address(vaultOrder2));
+        orders[2] = ITermMaxOrder(address(order2));
+
+        vm.prank(deployer);
+        manager.batchRedeemOrders(vaults, orders);
+
+        // Redeemed orders are detached from their vault, so a second redemption is rejected
+        vm.startPrank(deployer);
+        vm.expectRevert(abi.encodeWithSelector(VaultErrors.UnauthorizedOrder.selector, address(vaultOrder)));
+        manager.batchRedeemOrders(vaults, orders);
+        vm.stopPrank();
+    }
+
+    function testBatchRedeemOrdersWithoutAuth() public {
+        ITermMaxVault[] memory vaults = new ITermMaxVault[](1);
+        vaults[0] = ITermMaxVault(address(res.vault));
+        ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
+        orders[0] = ITermMaxOrder(address(vaultOrder));
+
+        vm.startPrank(sender);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector, sender, manager.CONFIGURATOR_ROLE()
+            )
+        );
+        manager.batchRedeemOrders(vaults, orders);
+        vm.stopPrank();
+    }
+
+    function testBatchRedeemOrdersArrayLengthMismatch() public {
+        ITermMaxVault[] memory vaults = new ITermMaxVault[](2);
+        vaults[0] = ITermMaxVault(address(res.vault));
+        vaults[1] = ITermMaxVault(address(res.vault));
+        ITermMaxOrder[] memory orders = new ITermMaxOrder[](1);
+        orders[0] = ITermMaxOrder(address(vaultOrder));
+
+        vm.startPrank(deployer);
+        vm.expectRevert(VaultErrorsV2.ArrayLengthMismatch.selector);
+        manager.batchRedeemOrders(vaults, orders);
         vm.stopPrank();
     }
 }
